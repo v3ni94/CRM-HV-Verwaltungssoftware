@@ -12,6 +12,8 @@ export type ResolutionRow = {
   kind: string;
   majority_basis?: string | null;
   majority_check?: MajorityCheck | null;
+  allowed_majority?: string | null;
+  vote_deadline_at?: string | null;
 };
 
 /** Beschluss-Sammlung (M24, M25): number, date, subject, status; read only. */
@@ -37,6 +39,12 @@ export function ResolutionTable({ rows }: { rows: ResolutionRow[] }) {
             <td>{formatDate(r.decided_on)}</td>
             <td>
               {r.subject}
+              {r.kind === "circular" && r.allowed_majority ? (
+                <span className="block text-xs text-muted" data-testid="circular-majority">
+                  {t("allowedMajority")}: {r.allowed_majority === "simple" || r.allowed_majority === "unanimous" ? t(`majorities.${r.allowed_majority}`) : r.allowed_majority}
+                  {r.vote_deadline_at ? ` · ${t("voteDeadline")}: ${formatDate(r.vote_deadline_at)}` : ""}
+                </span>
+              ) : null}
               {r.majority_check ? <MajorityCheckLine check={r.majority_check} /> : null}
             </td>
             <td>{t(`kinds.${r.kind}`)}</td>

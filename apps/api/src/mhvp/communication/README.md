@@ -190,3 +190,4 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * `invoice_intake.py`: automatic invoice intake from mail attachments behind the tenant switch `invoice_intake_auto` (M14-05, default off)
 * `preparation.py`: mail preparation: sender to contact, role, unit, documents per property, reply draft (M34, rule M20-05)
 * `transport.py`: shared mail transport of a mailbox: Gmail `send_raw` or SMTP; used after four eyes approval and by system mails
+* `postal_providers.py`, `postal.py`, `postal_tasks.py`: Brief- und Postversand mit Statusrückmeldung (M23-01, rule M23-01, `docs/integrations/postdienst.md`): provider neutral `PostalProvider`, manual outgoing mail list, LetterXpress adapter (LXP API v3), tenant settings with encrypted credentials and release flag (default off), postal job per dispatch with status history, dunning case delivery evidence, beat job `communication-postal-status-poll`

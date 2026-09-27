@@ -4,7 +4,13 @@ import { notFound } from "next/navigation";
 import { CallAssistantSettings, type CallAssistant } from "@/components/mail/CallAssistantSettings";
 import { InvoiceForwardingSettings, type InvoiceForwarding } from "@/components/mail/InvoiceForwardingSettings";
 import { MailboxSettings, type Mailbox, type Member, type OAuthStatus } from "@/components/mail/MailboxSettings";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import {
+  MailApprovalSettings,
+  type DeputyMember,
+  type MailApprovalDeputy,
+  type MailApprovalMode,
+} from "@/components/mail/MailApprovalSettings";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -24,13 +30,18 @@ export default async function MailboxSettingsPage({
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
-  const [oauth, mailboxes, members, invoiceForwarding] = await Promise.all([
+  const [oauth, mailboxes, members, invoiceForwarding, tenantSettings] = await Promise.all([
     api.GET("/api/v1/mail/oauth/google"),
     api.GET("/api/v1/mail/mailboxes"),
     api.GET("/api/v1/tenant/members"),
     api.GET("/api/v1/mail/invoice-forwarding"),
+    api.GET("/api/v1/tenant/settings"),
   ]);
   const callAssistant = await api.GET("/api/v1/mail/call-assistant");
+  // Not yet in the generated api-client types until the next `make openapi` (run centrally,
+  // M20-04a); a plain fetch avoids a stale-type mismatch while the backend already serves it.
+  const deputiesRes = await serverFetch("/api/v1/mail/mail-approval/deputies");
+  const deputies: MailApprovalDeputy[] = deputiesRes.ok ? await deputiesRes.json() : [];
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -45,6 +56,16 @@ export default async function MailboxSettingsPage({
         oauth={(oauth.data ?? { client_id: null, configured: false, source: null, redirect_uri: "" }) as OAuthStatus}
         mailboxes={(mailboxes.data ?? []) as Mailbox[]}
         members={(members.data ?? []) as Member[]}
+      />
+      <MailApprovalSettings
+        initial={(tenantSettings.data?.mail_approval_mode ?? "external_only") as MailApprovalMode}
+        canUpdate={me.data?.permissions.includes("tenant_settings:update") ?? false}
+        deputies={deputies}
+        members={((members.data ?? []) as { user_id: string; display_name: string }[]).map((m) => ({
+          user_id: m.user_id,
+          display_name: m.display_name,
+        })) as DeputyMember[]}
+        currentUserId={me.data?.user_id ?? null}
       />
       <InvoiceForwardingSettings
         initial={

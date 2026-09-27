@@ -25,7 +25,7 @@ from mhvp.platform import services
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m8_import import BUCKET, _settings
-from tests.integration.test_m20_mail_approval import FakeGmail, _upload
+from tests.integration.test_m20_mail_approval import FakeGmail, _reauth, _upload
 
 pytestmark = pytest.mark.integration
 T = "/api/v1/tickets"
@@ -304,6 +304,8 @@ def test_ticket_thread_reply_with_tnr_and_inbound_assignment(
     assert second["subject"].count("TNR#") == 1
 
     # Vier-Augen-Freigabe sendet mit Cc, In-Reply-To und References; Fehler bleibt vermerkt.
+    # M20-04: die zweite Person weist sich vor der Freigabe erneut aus (Re-Auth, 5 Minuten).
+    _reauth(client, freigeber)
     fake.send_forbidden = True
     failed = client.post(f"{M}/messages/{first['id']}/approve", headers=freigeber)
     assert failed.status_code == 409, failed.text

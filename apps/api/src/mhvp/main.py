@@ -14,21 +14,32 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
 from mhvp.accounting.audit_export_routers import router as accounting_audit_export_router
+from mhvp.accounting.chart_release_routers import router as chart_release_router
+from mhvp.accounting.datev_check_routers import router as datev_check_router
 from mhvp.accounting.datev_mapping_routers import router as datev_mapping_router
 from mhvp.accounting.direct_debit_routers import router as direct_debit_router
+from mhvp.accounting.rent_invoice_routers import router as rent_invoice_router
 from mhvp.accounting.routers import intake_router as accounting_intake_router
 from mhvp.accounting.routers import router as accounting_router
+from mhvp.accounting.tax_routers import router as accounting_tax_router
 from mhvp.accounting.xrechnung import router as accounting_xrechnung_router
 from mhvp.ai.routers import router as ai_router
 from mhvp.automation.routers import router as automation_router
+from mhvp.banking.fints_routers import router as fints_router
 from mhvp.banking.routers import finapi_router
 from mhvp.banking.routers import router as banking_router
+from mhvp.billing.advance_routers import router as advance_rule_router
+from mhvp.billing.advance_routers import statement_router as advance_proposal_router
 from mhvp.billing.ai_check_routers import router as statement_ai_check_router
+from mhvp.billing.allocability_routers import router as operating_cost_type_router
+from mhvp.billing.allocability_routers import statement_router as allocability_router
+from mhvp.billing.heating_routers import router as heating_router
 from mhvp.billing.letter_routers import router as statement_letters_router
 from mhvp.billing.owner_statement_routers import router as owner_statement_router
 from mhvp.billing.routers import router as billing_router
 from mhvp.communication.dispatch import router as dispatch_router
 from mhvp.communication.gmail_push import router as gmail_push_router
+from mhvp.communication.postal import router as postal_router
 from mhvp.communication.routers import router as mail_router
 from mhvp.communication.telephony import router as telephony_router
 from mhvp.contacts.routers import router as contacts_router
@@ -47,6 +58,7 @@ from mhvp.core.middleware import CorrelationIdMiddleware
 from mhvp.core.problems import install_problem_handlers
 from mhvp.core.ratelimit import RateLimitMiddleware
 from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolver
+from mhvp.core.security_headers import SecurityHeadersMiddleware
 from mhvp.core.storage import create_s3_client
 from mhvp.core.versioning import ApiVersionMiddleware, mark_deprecated_routes
 from mhvp.documents.intake_routers import router as documents_intake_router
@@ -56,11 +68,13 @@ from mhvp.handover.imports import router as handover_imports_router
 from mhvp.handover.portal import router as handover_portal_router
 from mhvp.handover.portal import staff_router as handover_staff_portal_router
 from mhvp.handover.routers import router as handover_router
+from mhvp.hoa.assets import router as hoa_assets_router
 from mhvp.hoa.board import router as hoa_board_router
 from mhvp.hoa.finance import router as hoa_finance_router
 from mhvp.hoa.inspection import router as hoa_inspection_router
 from mhvp.hoa.levies import router as hoa_levies_router
 from mhvp.hoa.majority import router as hoa_majority_router
+from mhvp.hoa.meeting_rules import router as hoa_meeting_rules_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
 from mhvp.hoa.package import router as hoa_package_router
 from mhvp.hoa.routers import router as hoa_router
@@ -68,6 +82,8 @@ from mhvp.immoware.routers import router as immoware_router
 from mhvp.imports.list_import_routers import router as list_imports_router
 from mhvp.imports.reconciliation_routers import router as reconciliation_router
 from mhvp.imports.routers import router as imports_router
+from mhvp.imports.vollimport_routers import router as vollimport_router
+from mhvp.integrations.routers import router as lexoffice_router
 from mhvp.letting.rentlaw import platform_router as rentlaw_platform_router
 from mhvp.letting.rentlaw import tenant_router as rentlaw_router
 from mhvp.letting.routers import router as letting_router
@@ -76,6 +92,9 @@ from mhvp.objektakte.ai_call_routers import router as objektakte_ai_call_router
 from mhvp.objektakte.completeness_routers import router as objektakte_completeness_router
 from mhvp.objektakte.dms_routers import router as objektakte_dms_router
 from mhvp.objektakte.lists_routers import router as objektakte_lists_router
+from mhvp.objektakte.local_model_routers import router as objektakte_local_model_router
+from mhvp.objektakte.previews_routers import router as objektakte_previews_router
+from mhvp.objektakte.reconciliation_routers import router as objektakte_reconciliation_router
 from mhvp.objektakte.review_routers import router as objektakte_review_router
 from mhvp.objektakte.routers import router as objektakte_router
 from mhvp.objektakte.routers import sync_router as objektakte_sync_router
@@ -83,13 +102,18 @@ from mhvp.objektakte.rules_routers import router as objektakte_rules_router
 from mhvp.objektakte.webhook import router as objektakte_webhook_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.licensing import router as licensing_router
+from mhvp.platform.market_readiness import router as market_readiness_router
+from mhvp.platform.overview import router as platform_overview_router
 from mhvp.platform.routers import platform_router, tenant_router
 from mhvp.portal.board import router as portal_board_router
 from mhvp.portal.form_routers import admin as portal_form_admin_router
 from mhvp.portal.form_routers import router as portal_form_router
+from mhvp.portal.mandates import admin as portal_mandate_admin_router
+from mhvp.portal.mandates import router as portal_mandate_router
 from mhvp.portal.notice_routers import crm_router as notice_crm_router
 from mhvp.portal.notice_routers import portal_router as notice_portal_router
 from mhvp.portal.owner import router as portal_owner_router
+from mhvp.portal.owner_meetings import router as portal_owner_meetings_router
 from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.properties.routers import router as properties_router
@@ -100,6 +124,7 @@ from mhvp.receipts.routers import router as receipts_router
 from mhvp.sla.routers import router as sla_router
 from mhvp.sla.whatsapp_webhook import router as whatsapp_webhook_router
 from mhvp.tenant.routers import router as tenant_setup_router
+from mhvp.tickets.board import portal_router as portal_board_submissions_router
 from mhvp.tickets.routers import router as tickets_router
 from mhvp.tickets.work_order_proposal_routers import router as work_order_proposal_router
 from mhvp.workspace.ops import router as ops_router
@@ -214,6 +239,7 @@ def create_app(
     app.include_router(imports_router, prefix=API_PREFIX)
     app.include_router(list_imports_router, prefix=API_PREFIX)
     app.include_router(reconciliation_router, prefix=API_PREFIX)
+    app.include_router(vollimport_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)
     app.include_router(workspace_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
@@ -221,26 +247,41 @@ def create_app(
     app.include_router(accounting_intake_router, prefix=API_PREFIX)
     app.include_router(accounting_xrechnung_router, prefix=API_PREFIX)
     app.include_router(accounting_audit_export_router, prefix=API_PREFIX)
+    app.include_router(accounting_tax_router, prefix=API_PREFIX)
+    app.include_router(rent_invoice_router, prefix=API_PREFIX)
     app.include_router(datev_mapping_router, prefix=API_PREFIX)
+    app.include_router(datev_check_router, prefix=API_PREFIX)
+    app.include_router(chart_release_router, prefix=API_PREFIX)
     app.include_router(banking_router, prefix=API_PREFIX)
     app.include_router(direct_debit_router, prefix=API_PREFIX)
     app.include_router(finapi_router, prefix=API_PREFIX)
+    app.include_router(lexoffice_router, prefix=API_PREFIX)
+    app.include_router(fints_router, prefix=API_PREFIX)
     app.include_router(billing_router, prefix=API_PREFIX)
+    app.include_router(heating_router, prefix=API_PREFIX)
     app.include_router(statement_letters_router, prefix=API_PREFIX)
     app.include_router(owner_statement_router, prefix=API_PREFIX)
     app.include_router(statement_ai_check_router, prefix=API_PREFIX)
+    app.include_router(operating_cost_type_router, prefix=API_PREFIX)
+    app.include_router(allocability_router, prefix=API_PREFIX)
+    app.include_router(advance_rule_router, prefix=API_PREFIX)
+    app.include_router(advance_proposal_router, prefix=API_PREFIX)
     app.include_router(hoa_router, prefix=API_PREFIX)
     app.include_router(hoa_meetings_router, prefix=API_PREFIX)
+    app.include_router(hoa_meeting_rules_router, prefix=API_PREFIX)
     app.include_router(hoa_levies_router, prefix=API_PREFIX)
     app.include_router(hoa_board_router, prefix=API_PREFIX)
     app.include_router(hoa_majority_router, prefix=API_PREFIX)
     app.include_router(hoa_package_router, prefix=API_PREFIX)
     app.include_router(hoa_finance_router, prefix=API_PREFIX)
     app.include_router(hoa_inspection_router, prefix=API_PREFIX)
+    app.include_router(hoa_assets_router, prefix=API_PREFIX)
     app.include_router(letting_router, prefix=API_PREFIX)
     app.include_router(rentlaw_router, prefix=API_PREFIX)
     app.include_router(rentlaw_platform_router, prefix=API_PREFIX)
     app.include_router(licensing_router, prefix=API_PREFIX)
+    app.include_router(market_readiness_router, prefix=API_PREFIX)
+    app.include_router(platform_overview_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
     app.include_router(work_order_proposal_router, prefix=API_PREFIX)
     app.include_router(sla_router, prefix=API_PREFIX)
@@ -258,16 +299,24 @@ def create_app(
     app.include_router(objektakte_ai_call_router, prefix=API_PREFIX)
     app.include_router(objektakte_lists_router, prefix=API_PREFIX)
     app.include_router(objektakte_dms_router, prefix=API_PREFIX)
+    app.include_router(objektakte_previews_router, prefix=API_PREFIX)
+    app.include_router(objektakte_local_model_router, prefix=API_PREFIX)
+    app.include_router(objektakte_reconciliation_router, prefix=API_PREFIX)
     app.include_router(objektakte_webhook_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
     app.include_router(dispatch_router, prefix=API_PREFIX)
+    app.include_router(postal_router, prefix=API_PREFIX)
     app.include_router(telephony_router, prefix=API_PREFIX)
     app.include_router(portal_router, prefix=API_PREFIX)
     app.include_router(portal_admin_router, prefix=API_PREFIX)
     app.include_router(portal_board_router, prefix=API_PREFIX)
+    app.include_router(portal_board_submissions_router, prefix=API_PREFIX)
     app.include_router(portal_owner_router, prefix=API_PREFIX)
+    app.include_router(portal_owner_meetings_router, prefix=API_PREFIX)
     app.include_router(portal_form_router, prefix=API_PREFIX)
     app.include_router(portal_form_admin_router, prefix=API_PREFIX)
+    app.include_router(portal_mandate_router, prefix=API_PREFIX)
+    app.include_router(portal_mandate_admin_router, prefix=API_PREFIX)
     # Deprecation marks into the OpenAPI document after all routers (ADR 0009, A50).
     mark_deprecated_routes(app)
     # Order (inner to outer): idempotency, rate limit, correlation id (outermost, A48/A49).
@@ -275,6 +324,7 @@ def create_app(
     app.add_middleware(ApiVersionMiddleware, version=settings.app_version)
     app.add_middleware(IdempotencyMiddleware)
     app.add_middleware(RateLimitMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(CorrelationIdMiddleware)
     return app
 

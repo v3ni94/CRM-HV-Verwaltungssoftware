@@ -95,6 +95,8 @@ def test_check_clocks_counts_backfills_and_escalates(
         ),
         201,
     )
+    # M19-01: only values approved by the management govern a clock (tenant_admin here).
+    _ok(client.post(f"/api/v1/sla/rules/{rule['id']}/approve", json={"confirm": True}, headers=h))
     _ok(
         client.post(
             f"/api/v1/sla/rules/{rule['id']}/steps",

@@ -157,3 +157,88 @@ def upload() -> dict[str, int]:
     from mhvp.objektakte import upload as objektakte_upload
 
     return asyncio.run(objektakte_upload.upload_once(get_settings()))
+
+
+# --- M35-02: preview image takeover (mhvp.objektakte.previews) ---------------------------------
+
+
+async def import_previews_tenant_once(
+    settings: Settings,
+    tenant_id: uuid.UUID,
+    *,
+    render_missing: bool,
+    resume_id: uuid.UUID | None,
+    trigger: str = "worker",
+) -> dict[str, int]:
+    """One resumable run for one tenant. A missing objektakte file is rendered from the Drive
+    original only for image originals and only when the tenant has a Google Drive connection
+    (`mhvp.documents.tasks.store_for`, requests rate limited by `drive_quota`)."""
+    from sqlalchemy import select as sa_select
+
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.models import DmsConnection, Document, StorageKind
+    from mhvp.documents.tasks import store_for
+    from mhvp.objektakte import previews
+    from mhvp.objektakte.drive_quota import drive_http_client
+    from mhvp.objektakte.models import ObjektaktePreviewImportRun
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    store = BlobStore(settings)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            connection = await session.scalar(
+                sa_select(DmsConnection).where(
+                    DmsConnection.tenant_id == tenant_id,
+                    DmsConnection.kind == StorageKind.GOOGLE_DRIVE,
+                    DmsConnection.enabled.is_(True),
+                )
+            )
+            resume = await session.get(ObjektaktePreviewImportRun, resume_id) if resume_id else None
+            fetch = None
+            http = drive_http_client()
+            if render_missing and connection is not None:
+                drive = store_for(connection, http)
+
+                async def fetch(document: Document) -> bytes:
+                    data: bytes = await drive.download(document.storage_ref)  # type: ignore[attr-defined]
+                    return data
+
+            try:
+                run = await previews.import_previews(
+                    session,
+                    store,
+                    tenant_id,
+                    previews_dir=settings.objektakte_previews_dir,
+                    render_missing=render_missing,
+                    fetch_original=fetch,
+                    resume=resume,
+                    trigger=trigger,
+                )
+            finally:
+                await http.aclose()
+            return {
+                "processed": run.processed,
+                "imported": run.imported,
+                "rendered": run.rendered,
+                "missing": run.missing,
+                "failed": run.failed,
+            }
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.objektakte.import_previews_tenant")
+def import_previews_tenant(
+    tenant_id: str, render_missing: bool = False, resume_id: str | None = None
+) -> dict[str, int]:
+    return asyncio.run(
+        import_previews_tenant_once(
+            get_settings(),
+            uuid.UUID(tenant_id),
+            render_missing=render_missing,
+            resume_id=uuid.UUID(resume_id) if resume_id else None,
+        )
+    )

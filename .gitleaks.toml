@@ -1,0 +1,38 @@
+title = "mhvp gitleaks config"
+
+# Sicherheitspruefung 27.09.2026 (M27-02-03 / OE-M27-02-03): gitleaks laeuft mit der
+# eingebauten Regelbasis (siehe [extend]); dieser Abschnitt ergaenzt nur eine Allowlist fuer
+# Werte, die nachweislich Test- und CI-Dummys sind, keine echten Zugangsdaten. Ein echter Fund
+# wird bereinigt, nie hier eingetragen.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Bekannte Fixture- und CI-Dummywerte (kein echtes Secret)"
+
+regexes = [
+  # CI-Compose-Passwoerter aus .github/workflows/ci.yml (ephemere Service-Container, nur
+  # innerhalb des CI-Laufs gueltig, siehe env: CI_POSTGRES_PASSWORD u. a.).
+  '''ci-[a-z]+-pw''',
+  # Platzhalter in Vorlagen/.env.example/Dokumentation, nie eine echte Zugangsdaten.
+  '''change-me''',
+  # Beispiel-IBANs der Tests (apps/api/tests/**): Bundesbank-Testbankleitzahlen
+  # (100000000, 120300000, 500105175, ...) und rein synthetische Kontonummern. Keine echte
+  # Bankverbindung.
+  '''DE\d{2}(100000000|1203000000|500105175|370400440|120300000|502105170|501105170|100777770|512108001|382501100)\d{0,10}''',
+  # Frontend-Tests: erfundene Webhook-Secrets, keine echten Werte
+  # (apps/web-crm/src/components/settings/{TelephonySettings,AutomationAdmin}.test.tsx).
+  '''ein-langes-geheimnis-1234''',
+  '''geheim-0123456789ab''',
+  # Test-Stub-PEM (apps/api/tests/unit/test_m40_metering_adapters.py): kein echtes
+  # Zertifikat/Schluesselmaterial, nur die Buchstaben "AAA"/"BBB" als Platzhalter im Body.
+  '''-----BEGIN PRIVATE KEY-----\\nBBB\\n-----END PRIVATE KEY-----''',
+]
+
+paths = [
+  # Erzeugte/abgeleitete Artefakte, kein Quellcode.
+  '''(^|/)\.next(-e2e)?/''',
+  '''(^|/)node_modules/''',
+  '''(^|/)\.venv/''',
+  '''(^|/)__pycache__/''',
+]

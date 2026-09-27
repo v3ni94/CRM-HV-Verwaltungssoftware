@@ -100,7 +100,15 @@ Checked against the folder contents on 26.09.2026, the following files were not 
   (`allocation_key_code`, annex A.2) or not allocable; VAT option stays unset; 041805 stays
   unclassified. `fill_unset` fills only unset fields of existing template rows (never operator
   edits) and marks filled rows as drafts; existing ledgers are untouched.
+* `proration.py`: pure receivable rules M13-01 to M13-03 (`docs/rules/M13-01.md` to
+  `M13-03.md`): pro rata month by calendar days, 30/360 or full month with 8 decimal
+  intermediates, half up rounding and the rounding difference on the last segment; quarterly,
+  semiannual and annual instalments in advance or in arrears; VAT split. Used by
+  `receivables.compute` only when `TenantSettings.receivable_rules.enabled` is set (default
+  off); the calculation path is stored in `ReceivableRun.calculation`; posting such a run needs
+  release gate G1. The output tax account is mapped under the reserved code `vat_output`.
 * `numbering.py`: outgoing invoice numbering, gapless `PREFIX-JJJJ-000001` under a locked counter row (M13-04)
+* `rent_invoice.py`, `rent_invoice_models.py`, `rent_invoice_routers.py`: rent invoices and standing invoices with VAT for tenancies with a VAT option, built from the receivable items, numbered gapless per legal entity and year (`MR-JJJJ-000001`, migration 0210), PDF on the tenant letterhead filed as document, cancellation only by credit note, draft watermark behind G1 (rule M13-04 section Mietrechnung, OPEN_QUESTIONS M13-04a)
 * `schemas.py`: API schemas of the ledger (6.4), money as decimal strings, never float (6.9.8)
 * `tasks.py`: Celery job `accounting.dunning_run` (15.1, monthly on the 5th), preview runs only, never sent
 
@@ -117,3 +125,33 @@ booking_date)`, `journal_line(journal_entry_id)`, `journal_line(account_id)`,
 `invoice_line(invoice_id)`, `invoice_review(invoice_id)`,
 `direct_debit_run(tenant_id, status, collection_date)`. See
 `docs/reviews/2026-09-26-performance.md`.
+
+## Steuerentwürfe (M14-02, M14-03, M14-04, 27.09.2026)
+
+* `tax_models.py`: `accounting_tax_settings` (Schalter je Mandant, Standard aus: Vorsteuer,
+  Bauabzugsteuer mit Prozentsatz, § 35a, Freigabegrenzen je Rolle), `property_tax_profile`
+  (Umsatzsteueroption, Umsatzschlüssel), `supplier_tax_profile` (Bauleistung, Reverse Charge,
+  Freistellungsbescheinigung mit Gültigkeit und Dokument), `invoice_tax_data` (Steuersatz,
+  Vorsteuer, Vorschläge, Warnungen, bestätigter Einbehalt), `invoice_line_section35a` (Art,
+  Lohnanteil, Materialanteil), `invoice_second_approval` (Migration 0185).
+* `tax.py`: reine Rechenfunktionen mit vorgerechneten Tests (`tests/unit/test_m14_tax.py`),
+  `refresh_proposals` (deterministische Vorschläge und Warnungen), `assert_posting_allowed`
+  (Haken in `invoices.post`: zweite Freigabe über der Grenze, unentschiedener Einbehalt),
+  `section35a_summary` (Ausweis je Mietvertrag).
+* `tax_routers.py`: `/accounting/tax/...` (Einstellungen mit `tenant_settings:update`, Profile
+  und Rechnungsdaten mit `accounting:update`, Freigaben mit `accounting:approve` durch eine
+  andere Person, § 35a-Ausweis als JSON, PDF-Entwurf und abgelegtes Dokument). Regeln:
+  `docs/rules/M14-02.md`, `M14-03.md`, `M14-04.md`, Quellenstatus zu prüfen durch Steuerberater.
+
+### DATEV batch self check and chart of accounts release (M18-01, M10-01/M10-02, V8)
+
+* `datev_check.py`: pure formal check of a Buchungsstapel file (rules DC-01 to DC-22, each
+  with source status `belegt` or `zu_pruefen`; only documented rules produce errors), text
+  report and the 20 line sample batch for the tax advisor. `datev_check_routers.py`:
+  `/api/v1/accounting/datev/exports`, `.../exports/{id}/check` (POST runs, GET returns JSON
+  or text), `.../exports/{id}/download`, `/check-file`, `/sample-batch`. Export runs keep
+  their file (`export_run.content`, migration 0190). Rule `docs/rules/M18-06`.
+* `chart_release.py`, `chart_release_routers.py`: template status draft, in_review,
+  released (date, releaser, comment, optional tax advisor document), new version after a
+  change (`supersedes_id`), history, CSV/PDF export. Gate G1 is approved only with a
+  released template (`MHVP-GATE-0004`, checked in `mhvp.platform.routers._decide`).

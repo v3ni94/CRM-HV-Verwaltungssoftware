@@ -21,6 +21,7 @@ export type PortalAccount = {
   invitation_expires_at: string | null;
   activated_at: string | null;
   last_login_at: string | null;
+  magic_link_2fa: boolean;
 };
 
 type Invited = {
@@ -59,6 +60,8 @@ export function PortalAccessSection({
   const [loaded, setLoaded] = useState<Loaded>({ state: "loading" });
   const [exists, setExists] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [letterBusy, setLetterBusy] = useState(false);
+  const [securityBusy, setSecurityBusy] = useState(false);
 
   const load = useCallback(async () => {
     const res = await bff<PortalAccount[]>(
@@ -90,6 +93,51 @@ export function PortalAccessSection({
       return;
     }
     if (res.status === 409 && /Portalzugang/.test(res.message)) setExists(true);
+    setError(res.message);
+  }
+
+  /** M21-01: Einladung als Anschreiben (PDF mit QR-Code, 90 Tage gültiger Code). Rotiert den
+   *  Einladungscode auf dem Server, daher POST statt GET (kein wirkungsloser Vorababruf). */
+  async function downloadLetter() {
+    if (!account) return;
+    setLetterBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(`/api/bff/portal-admin/accounts/${account.id}/invitation-letter`, {
+        method: "POST",
+      });
+      if (!res.ok) {
+        setError(t("letterError"));
+        return;
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "einladung-kundenportal.pdf";
+      a.click();
+      URL.revokeObjectURL(url);
+      await load();
+    } catch {
+      setError(t("letterError"));
+    } finally {
+      setLetterBusy(false);
+    }
+  }
+
+  async function toggleTwoFactor(next: boolean) {
+    if (!account) return;
+    setSecurityBusy(true);
+    setError(null);
+    const res = await bff<null>(`/api/bff/portal-admin/accounts/${account.id}/security`, {
+      method: "PATCH",
+      body: JSON.stringify({ magic_link_2fa: next }),
+    });
+    setSecurityBusy(false);
+    if (res.ok) {
+      await load();
+      return;
+    }
     setError(res.message);
   }
 
@@ -135,6 +183,28 @@ export function PortalAccessSection({
             <div>{t("lastLogin", { date: formatDateTime(account.last_login_at) })}</div>
           ) : null}
         </dl>
+      ) : null}
+      {account && canInvite ? (
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            className={ui.button}
+            disabled={letterBusy}
+            onClick={() => void downloadLetter()}
+            data-testid="contact-portal-letter"
+          >
+            {letterBusy ? t("letterBusy") : t("letterButton")}
+          </button>
+          <label className="flex items-center gap-2 text-xs text-subtle">
+            <input
+              type="checkbox"
+              checked={account.magic_link_2fa}
+              disabled={securityBusy}
+              onChange={(e) => void toggleTwoFactor(e.target.checked)}
+            />
+            {t("twoFactorEmail")}
+          </label>
+        </div>
       ) : null}
       {!canInvite ? (
         <p className={ui.help}>{t("noPermission")}</p>

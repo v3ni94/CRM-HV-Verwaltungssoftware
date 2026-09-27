@@ -84,6 +84,7 @@ class DocumentOut(_Out):
     source: DocumentSource
     retention_profile_id: uuid.UUID | None
     retention_until: date | None
+    retention_base_on: date | None = None
     retention_hold_reason: str | None
     visibility: list[str]
     created_at: datetime
@@ -116,11 +117,16 @@ class DocumentPatch(_In):
     visibility: list[str] | None = None
     retention_profile_id: uuid.UUID | None = None
     retention_until: date | None = None
+    retention_base_on: date | None = Field(
+        default=None, description="Fristbeginn: Vertragsende, letzte Eintragung, Zweckende"
+    )
 
     @field_validator("visibility")
     @classmethod
     def _visibility(cls, value: list[str] | None) -> list[str] | None:
-        allowed = {"tenant", "owner", "provider", "board"}
+        # "internal": released for no portal role (M21-03); the list is never empty so that
+        # the choice is explicit.
+        allowed = {"internal", "tenant", "owner", "provider", "board"}
         if value is not None and (not value or set(value) - allowed):
             raise ValueError(f"erlaubt: {', '.join(sorted(allowed))}")
         return value
@@ -142,6 +148,71 @@ class CategoryIn(_In):
 class CategoryOut(CategoryIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
+    retention_profile_id: uuid.UUID | None = None
+
+
+class CategoryPatch(_In):
+    name: str | None = Field(default=None, min_length=1, max_length=200)
+    retention_profile_id: uuid.UUID | None = None
+
+
+class RetentionProfilePatch(_In):
+    legal_basis: str | None = Field(default=None, min_length=5)
+    retention_years: int | None = Field(default=None, ge=0, le=100)
+    retention_months: int | None = Field(default=None, ge=0, le=11)
+    permanent: bool | None = None
+    start_rule: RetentionStart | None = None
+    review_note: str | None = Field(default=None, max_length=200)
+
+
+class RetentionApplyOut(BaseModel):
+    assigned: int
+
+
+class TicketHoldOut(_Out):
+    ticket_id: uuid.UUID
+    retention_hold_reason: str | None
+
+
+class DeletionProposalItemOut(_Out):
+    id: uuid.UUID
+    document_id: uuid.UUID
+    title: str
+    sha256: str
+    category_code: str | None
+    document_class: str
+    retention_until: date
+    status: str
+    skip_reason: str | None
+    deleted_at: datetime | None
+    deleted_by: uuid.UUID | None
+    mirror_deletions: int
+
+
+class DeletionProposalOut(_Out):
+    id: uuid.UUID
+    status: str
+    reference_date: date
+    created_at: datetime
+    created_by: uuid.UUID | None
+    approved_by: uuid.UUID | None
+    approved_at: datetime | None
+    rejected_by: uuid.UUID | None
+    rejected_at: datetime | None
+    executed_by: uuid.UUID | None
+    executed_at: datetime | None
+    note: str | None
+    items: list[DeletionProposalItemOut] = []
+
+
+class DeletionProposalNoteIn(_In):
+    note: str | None = Field(default=None, max_length=500)
+
+
+class DeletionProposalExecuteOut(BaseModel):
+    proposal: DeletionProposalOut
+    deleted: int
+    skipped: int
 
 
 class RetentionProfileIn(_In):

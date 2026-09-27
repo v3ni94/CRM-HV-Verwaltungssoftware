@@ -44,6 +44,7 @@ class ReceiptDraftSource(StrEnum):
     MAIL_ATTACHMENT = "mail_attachment"
     PAPERLESS = "paperless"
     UPLOAD = "upload"
+    LEXOFFICE = "lexoffice"  # M13-lexoffice: imported voucher, see mhvp.integrations.lexoffice
 
 
 def _fk(target: str, *, nullable: bool = False, ondelete: str | None = None) -> Any:

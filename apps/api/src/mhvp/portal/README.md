@@ -23,6 +23,8 @@ Owner pages, read only (A51, section 14 role owner): `owner.py` serves
 and `GET /portal/hoa-account` (posted lines of the owner's debtor account in the community's
 ledger with balance; note "keine Abrechnung, keine Rechtsfolge"; no ledger means a note and no
 amounts). Role owner is required (grant `hoa_member_right`), everyone else gets 403.
+`owner_meetings.py` adds `GET /portal/meetings` (M25-03, V13): meetings of the own community
+after the invitation, with dial-in data only for hybrid or virtual meetings.
 
 Access paths (docs/rules/M21-06.md, D29 to D31): `access.visible_documents` is the single
 document filter for portal list and download; `access.document_scope_for_user` applies the same
@@ -68,3 +70,8 @@ users may enable the optional second factor and remember devices under Sicherhei
 Checked against the folder contents on 26.09.2026, the following files were not listed above:
 
 * `staff_access.py`: portal access for staff members per CRM role matrix (M2-08)
+* `mandates.py`: digital SEPA mandate from the portal as a proposal with Textform evidence
+  (PDF, time stamp, IP); staff decision in the CRM creates only a contact bank account with
+  mandate evidence, never a collecting mandate (M3-02 portal stage, G2). Model
+  `SepaMandateProposal` in `models.py`, migration 0174. Address proposals with validity date
+  and evidence: `routers.py` (`_address_payload`, `_apply_address`, M21-02).

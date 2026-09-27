@@ -419,6 +419,13 @@ class BankAccountIn(_Period):
     holder: str = Field(min_length=2, max_length=200)
     notes: str | None = None
     ledger_account_id: uuid.UUID | None = Field(default=None, description="Zugeordnetes Sachkonto")
+    is_default: bool = Field(
+        default=False,
+        description=(
+            "Standardkonto des Rechtsträgers (höchstens eines je Rechtsträger); Zahlungsziel "
+            "im Mahnschreiben (M16-13). Nicht für Kautionskonten."
+        ),
+    )
 
     @field_validator("iban")
     @classmethod
@@ -442,6 +449,7 @@ class BankAccountOut(_Out):
     valid_to: date | None
     notes: str | None = None
     ledger_account_id: uuid.UUID | None = None
+    is_default: bool = False
 
 
 class BillingPeriodIn(_In):

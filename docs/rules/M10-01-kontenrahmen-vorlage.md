@@ -33,3 +33,26 @@
   M10-01).
 - Umlagefähigkeit, Abrechnungsart und Umsatzsteueroption der Konten bleiben unbesetzt, bis
   M10-02 entschieden ist.
+
+## Nachtrag 27.09.2026: Freigabeworkflow (V8, Gate G1)
+
+- Jede Vorlage trägt einen Status `draft` (Entwurf), `in_review` (zur Prüfung) oder
+  `released` (freigegeben) (Migration 0190, `mhvp.accounting.chart_release`). Die Freigabe
+  speichert Datum, Freigeber, Kommentar und optional das Dokument der Steuerberatung
+  (`release_document_id`, Dokument muss im Mandanten existieren). Sie ist idempotent: eine
+  freigegebene Version wird nicht erneut freigegeben oder überschrieben.
+- Schnittstelle: `POST /accounting/templates/{id}/submit-review`,
+  `POST .../back-to-draft`, `POST .../release` (Body `comment`, `document_id`, Recht
+  `accounting:approve`), `POST .../versions` (neue Version als Entwurf,
+  `supersedes_id` zeigt auf die Vorgängerversion), `PUT .../accounts` (nur im Entwurf,
+  sonst `MHVP-BILL-0010`), `GET .../history`, `GET .../export?format=csv|pdf`.
+- Änderungen nach Freigabe erzeugen eine neue Version mit erneuter Prüfung und Freigabe;
+  die freigegebene Version bleibt unverändert und nachvollziehbar.
+- Gate G1 wird nur genehmigt, wenn im Mandanten eine freigegebene Vorlage existiert
+  (`MHVP-GATE-0004`, Prüfung in der Gate-Entscheidung `mhvp.platform.routers._decide`).
+  Der Antrag bleibt bis dahin offen. Die Freigabe der Vorlage ist keine Öffnung von G1; beide
+  Entscheidungen bleiben getrennt (Vier-Augen-Regel des Gates unverändert).
+- Zuständig für die Freigabe bleibt der Betreiber mit der Steuerberatung (V8). Das System
+  protokolliert die Entscheidung, es trifft sie nicht.
+- Tests: `apps/api/tests/integration/test_m18_datev_check_chart_release.py` (Workflow,
+  Sperre, neue Version, Gate ohne Freigabe geschlossen, Mandantentrennung).

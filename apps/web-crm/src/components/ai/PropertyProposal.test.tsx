@@ -17,6 +17,7 @@ const proposal: Proposal = {
   decision: "pending",
   decided_by: null,
   decided_at: null,
+  rejection_reason: null,
   import_run_id: null,
   proposed: {
     property: { number: null, name: "Musterstraße 1", management_type: "hoa", street: "Musterstraße", house_number: "1", postal_code: "40721", city: "Hilden" },

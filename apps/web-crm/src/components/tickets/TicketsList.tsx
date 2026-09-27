@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 import { StatusChip } from "@/components/ui/StatusChip";
 import { ResolutionDialog, isClosingStatus, type Resolution } from "@/components/tickets/ResolutionDialog";
@@ -35,13 +35,21 @@ const BULK_LIMIT_STANDARD = 10;
 export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ticket[]; canApprove: boolean }) {
   const t = useTranslations("Tickets");
   const router = useRouter();
-  const [tickets] = useState(initialTickets);
+  // Server component prop; without this effect a page change (e.g. via TicketsPagination) kept
+  // showing the previously rendered page because useState only reads its initial value once
+  // (Betreiberfehler 27.09.2026).
+  const [tickets, setTickets] = useState(initialTickets);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkStatus, setBulkStatus] = useState<string>("in_progress");
   const [busy, setBusy] = useState(false);
   const [askResolution, setAskResolution] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [result, setResult] = useState<{ changed: number; failed: { id: string; reason: string }[] } | null>(null);
+
+  useEffect(() => {
+    setTickets(initialTickets);
+    setSelected(new Set());
+  }, [initialTickets]);
 
   const selectedIds = useMemo(() => Array.from(selected), [selected]);
   const overLimit = !canApprove && selectedIds.length > BULK_LIMIT_STANDARD;

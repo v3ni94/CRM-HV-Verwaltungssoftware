@@ -42,7 +42,7 @@ async def _world(settings: Any) -> World:
     try:
         a, _ = await services.provision_tenant(factory, slug=f"po-{RUN}", name=f"Eigentümer {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("poadmin", "tenant_admin"), ("poreader", "read_only")]:
+        for name, role in [("poownadmin", "tenant_admin"), ("poreader", "read_only")]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -99,7 +99,7 @@ def _contact(c: TestClient, h: dict[str, str], q: str) -> str:
 
 
 def test_set_owner_then_tenancy_is_assigned(client: TestClient, world: World) -> None:
-    h = bearer(login(client, world, "poadmin"))
+    h = bearer(login(client, world, "poownadmin"))
     _ok(
         client.post(
             f"{BASE}/objektdaten",

@@ -51,6 +51,19 @@ def test_normalized_property_number_pads_and_rejects_out_of_range() -> None:
     assert importer._normalized_property_number(large) is None
 
 
+def test_party_source_id_is_prefixed_per_table() -> None:
+    """Kleinbefund 27.09.2026: objektakte's `parties_owner` and `parties_tenant` have separate
+    id sequences, so the same numeric id can name an owner and an unrelated tenant. The prefix
+    keeps `Contact.source_id` (and `contact_map`) from colliding between the two."""
+    owner_row = {"id": 5}
+    tenant_row = {"id": 5}
+    owner_id = importer._party_source_id("parties_owner", owner_row)
+    tenant_id = importer._party_source_id("parties_tenant", tenant_row)
+    assert owner_id == "owner:5"
+    assert tenant_id == "tenant:5"
+    assert owner_id != tenant_id
+
+
 def test_display_name_prefers_company_then_person_name() -> None:
     owner = {"company_name": "Musterfrau GmbH", "first_name": "Erika", "last_name": "Musterfrau"}
     assert importer._display_name(owner) == "Musterfrau GmbH"

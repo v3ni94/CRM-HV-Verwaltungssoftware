@@ -52,6 +52,32 @@ export function str(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
+/** Raw JSON POST against the API, for endpoints not yet in the generated schema
+ *  (M21-01: the coordinator regenerates openapi.json centrally). Never logs or otherwise
+ *  surfaces the request body (it may carry a magic link token or code). */
+export async function postJson(
+  path: string,
+  body: Record<string, unknown>,
+  userAgent?: string,
+): Promise<{ status: number; data: Record<string, unknown> | null }> {
+  const headers: Record<string, string> = { "content-type": "application/json" };
+  if (userAgent) headers["user-agent"] = userAgent;
+  const res = await fetch(`${apiBaseUrl()}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+    cache: "no-store",
+  });
+  const text = res.status === 204 ? "" : await res.text();
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = text ? (JSON.parse(text) as Record<string, unknown>) : null;
+  } catch {
+    data = null;
+  }
+  return { status: res.status, data };
+}
+
 /** Public origin of the request (honours the reverse proxy headers). */
 export function publicOrigin(request: Request): string {
   const url = new URL(request.url);

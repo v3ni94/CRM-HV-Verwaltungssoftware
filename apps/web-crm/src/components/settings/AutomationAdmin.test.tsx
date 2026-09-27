@@ -207,6 +207,45 @@ describe("AutomationAdmin", () => {
     ).toBeInTheDocument();
   });
 
+  it("sends the selected rule owner (M9-08 Kleinbefund 27.09.2026)", async () => {
+    const created: Rule = {
+      ...rule,
+      id: "r-owner",
+      name: "Mit Regelbesitzer",
+      owner_user_id: "u-1",
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () => jsonResponse(created, 201));
+    renderIntl(
+      <AutomationAdmin
+        initialRules={[]}
+        initialRuns={[]}
+        pickers={pickers}
+        canManage={true}
+      />,
+    );
+
+    await userEvent.click(screen.getByText("Neue Regel"));
+    await userEvent.type(screen.getByLabelText("Name"), "Mit Regelbesitzer");
+    await userEvent.selectOptions(screen.getByLabelText("Regelbesitzer"), "u-1");
+    await userEvent.selectOptions(
+      screen.getByLabelText("Aktionstyp"),
+      "notify",
+    );
+    await userEvent.click(screen.getByLabelText("Hausmeister"));
+    await userEvent.type(
+      screen.getByLabelText(/^Titel \(Platzhalter/),
+      "Hallo",
+    );
+    await userEvent.click(screen.getByText("Speichern"));
+
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [, init] = fetchMock.mock.calls[0]!;
+    const body = JSON.parse(init?.body as string);
+    expect(body.owner_user_id).toBe("u-1");
+  });
+
   it("offers related master data fields grouped and sends the field path (A81)", async () => {
     const created: Rule = {
       ...rule,

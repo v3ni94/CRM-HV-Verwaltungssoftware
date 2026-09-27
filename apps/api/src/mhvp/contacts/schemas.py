@@ -156,6 +156,13 @@ class ContactIn(_Strict):
     notes: str | None = Field(default=None, max_length=10_000)
     preferred_channel: PreferredChannel | None = None
     blocked: bool = False
+    is_consumer: bool | None = Field(
+        default=None,
+        description=(
+            "Verbrauchereigenschaft als Kennzeichen für das Mahnwesen (M16-03); null: nicht "
+            "beurteilt. Hinweis für die Prüfung, keine rechtliche Feststellung."
+        ),
+    )
     retention_profile_id: uuid.UUID | None = Field(
         default=None,
         description="Löschprofil (freigegebenes Aufbewahrungsprofil); daraus wird das "
@@ -216,6 +223,7 @@ class ContactPatch(_Strict):
     notes: str | None = None
     preferred_channel: PreferredChannel | None = None
     blocked: bool | None = None
+    is_consumer: bool | None = None
     retention_profile_id: uuid.UUID | None = None
     external_ids: dict[str, str] | None = None
     completeness: Completeness | None = None
@@ -344,6 +352,7 @@ class ContactOut(BaseModel):
     notes: str | None
     preferred_channel: PreferredChannel | None
     blocked: bool
+    is_consumer: bool | None = None
     blocked_at: datetime | None = None
     retention_profile_id: uuid.UUID | None = None
     delete_after: date | None = Field(

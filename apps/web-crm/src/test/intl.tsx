@@ -3,6 +3,8 @@ import { NextIntlClientProvider } from "next-intl";
 
 import messages from "../../messages/de.json";
 
+export { messages };
+
 export function renderIntl(ui: React.ReactElement) {
   return render(
     <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">

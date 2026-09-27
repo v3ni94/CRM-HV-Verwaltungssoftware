@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { CircularLowerMajoritySwitch } from "@/components/settings/CircularLowerMajoritySwitch";
 import { CompanySettings } from "@/components/settings/CompanySettings";
 import { BillingSettingsForm, type BillingSettings } from "@/components/settings/BillingSettings";
 import { ManagerEntitySetup, type ManagerEntityStatus } from "@/components/settings/ManagerEntitySetup";
@@ -29,6 +30,8 @@ export default async function CompanySettingsPage() {
   const tb = await getTranslations("BillingSettings");
   const managerRes = await serverFetch("/api/v1/tenant/manager-entity");
   const managerData: ManagerEntityStatus | null = managerRes.ok ? await managerRes.json() : null;
+  const circularRes = await serverFetch("/api/v1/hoa/circular-lower-majority");
+  const circularData: { enabled: boolean } | null = circularRes.ok ? await circularRes.json() : null;
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
@@ -48,6 +51,7 @@ export default async function CompanySettingsPage() {
         }}
         canUpdate={can("tenant_settings:update")}
       />
+      <CircularLowerMajoritySwitch initial={circularData?.enabled ?? false} canUpdate={can("tenant_settings:update")} />
       <section className="flex flex-col gap-2">
         <h2 className="text-lg font-semibold">{tb("title")}</h2>
         {billingData ? (

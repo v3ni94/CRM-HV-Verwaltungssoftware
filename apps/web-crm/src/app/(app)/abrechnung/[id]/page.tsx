@@ -1,6 +1,9 @@
 import { getTranslations } from "next-intl/server";
 
+import { AdvanceProposalsPanel } from "@/components/billing/AdvanceProposalsPanel";
 import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
+import { AllocabilityHints, type AllocabilityHint } from "@/components/billing/AllocabilityHints";
+import { HeatingPanel } from "@/components/billing/HeatingPanel";
 import { ResultTable, StatementWorkbench } from "@/components/billing/StatementWorkbench";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -15,6 +18,7 @@ type Snapshot = {
   hash: string;
   results?: { unit_number: string; costs: string; advances_due: string; advances_paid: string; balance: string }[];
   vacancy_owner_share?: string;
+  allocability_hints?: AllocabilityHint[];
 };
 
 export default async function StatementPage({ params }: { params: Promise<{ id: string }> }) {
@@ -65,6 +69,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
         status={String(data.status)}
         keys={((keys.data ?? []) as { id: string; code: string; name: string }[]).map((k) => ({ id: k.id, code: k.code, name: k.name }))}
       />
+      <HeatingPanel id={id} status={String(data.status)} />
       {snap?.results ? (
         <>
           <h2 className={ui.h2}>{t("results")}</h2>
@@ -74,6 +79,8 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
           ) : null}
         </>
       ) : null}
+      <AllocabilityHints id={id} initial={snap?.allocability_hints ?? null} />
+      <AdvanceProposalsPanel id={id} hasSnapshot={Boolean(snap)} snapshotHash={snap?.hash ?? null} />
       <AiPlausibilityCard kind="statements" id={id} snapshotHash={snap?.hash ?? null} />
     </div>
   );

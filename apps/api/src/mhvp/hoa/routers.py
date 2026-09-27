@@ -159,6 +159,7 @@ def _st_out(s: HoaStatement) -> dict[str, Any]:
         "addressing_rule_version": s.addressing_rule_version,
         "posted_entry_ids": s.posted_entry_ids,
         "reconciliation_notes": s.reconciliation_notes,
+        "loan_allocation": s.loan_allocation,
     }
 
 
@@ -291,6 +292,9 @@ async def list_resolutions(
                 "majority_basis": r.majority_basis,
                 "subject_kind": r.subject_kind,
                 "majority_check": r.majority_check,
+                "allowed_majority": r.allowed_majority,
+                "enabling_resolution_id": r.enabling_resolution_id,
+                "vote_deadline_at": r.vote_deadline_at,
             }
             for r in rows.all()
         ]
@@ -513,8 +517,89 @@ async def calculate_statement(
             sum((i.amount for i in items), Decimal("0.00")),
             list(st.reconciliation_notes or []),
         )
+        # M24-03: loans shown per unit only when the manager entered a loan with key and
+        # basis; the shares are information and never change the result.
+        if st.loan_allocation:
+            result["loans"] = await calc.loan_statement_block(
+                session, ledger, st.year, list(st.loan_allocation)
+            )
+            for unit in result["units"]:
+                share = result["loans"]["per_unit"].get(unit["unit_id"], {})
+                unit["loan_interest_share"] = share.get("interest", "0.00")
+                unit["loan_repayment_share"] = share.get("repayment", "0.00")
         st.snapshot, st.snapshot_hash = result, calc.digest(result)
         st.status = StatementStatus.CALCULATED
+        await session.flush()
+        return _st_out(st)
+
+
+class LoanAllocationIn(HoaBaseIn):
+    """One loan shown in the statement (M24-03): key, components and the documented basis."""
+
+    loan_id: uuid.UUID
+    allocation_key_id: uuid.UUID
+    components: list[str] = Field(default=["interest", "repayment"], min_length=1)
+    basis: str = Field(min_length=5, max_length=500)
+
+
+class LoanAllocationsIn(HoaBaseIn):
+    loans: list[LoanAllocationIn] = Field(max_length=50)
+
+
+@router.put(
+    "/statements/{statement_id}/loan-allocation",
+    summary="Darlehen in der Jahresabrechnung ausweisen (M24-03, nur Ausweis)",
+)
+async def put_loan_allocation(
+    statement_id: uuid.UUID,
+    body: LoanAllocationsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """Only while the statement is a draft; the next calculation adds the block `loans` to
+    the snapshot (year figures from booked items or the schedule, distribution by the key,
+    residual debt at the year end). The shares never enter the result (open decision M24-03).
+    Loan and key must belong to the community of the statement."""
+    from mhvp.hoa.models import HoaLoan
+    from mhvp.properties.models import AllocationKey
+
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id, with_for_update=True)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if st.status is not StatementStatus.DRAFT:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Darlehensausweis nur im Entwurf.")
+        ledger = await _hoa_ledger(session, st.ledger_id)
+        seen: set[uuid.UUID] = set()
+        rows: list[dict[str, Any]] = []
+        for item in body.loans:
+            if item.loan_id in seen:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Darlehen doppelt angegeben.")
+            seen.add(item.loan_id)
+            if any(c not in calc.LOAN_COMPONENTS for c in item.components):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Bestandteile nur interest oder repayment."
+                )
+            loan = await session.get(HoaLoan, item.loan_id)
+            if loan is None or loan.ledger_id != ledger.id:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Darlehen gehört nicht zu dieser GdWE."
+                )
+            key = await session.get(AllocationKey, item.allocation_key_id)
+            if key is None or key.property_id != ledger.property_id:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Verteilerschlüssel gehört nicht zum Objekt."
+                )
+            rows.append(
+                {
+                    "loan_id": str(item.loan_id),
+                    "allocation_key_id": str(item.allocation_key_id),
+                    "components": sorted(set(item.components)),
+                    "basis": item.basis,
+                }
+            )
+        st.loan_allocation = rows
+        st.updated_by = principal.user_id
         await session.flush()
         return _st_out(st)
 

@@ -177,6 +177,48 @@ export type ImportPreview = {
   created_ids: string[];
 };
 
+/** bved 3.10 Austauschdatei-Vorschau (POST /metering/connections/{id}/heiwako-import/preview). */
+export type HeiwakoFile = {
+  name: string;
+  kind: string | null;
+  record_counts: Record<string, number>;
+  errors: string[];
+  undocumented_record_types: string[];
+};
+export type HeiwakoBillingResult = {
+  external_billing_unit: string;
+  external_unit_number: string | null;
+  period_from: string;
+  period_to: string;
+  amount: string;
+  currency: string;
+  external_document_ref: string;
+  cost_type_key: string | null;
+  balance_gross: string | null;
+  prepayment_gross: string | null;
+};
+export type HeiwakoUser = {
+  external_billing_unit: string | null;
+  external_unit_number: string | null;
+  client_ref: string | null;
+  name: string | null;
+  occupancy_from: string | null;
+  occupancy_to: string | null;
+  vacancy_flag: number | null;
+};
+export type HeiwakoPreview = {
+  adapter: string;
+  spec_version: string;
+  files: HeiwakoFile[];
+  billing_results: HeiwakoBillingResult[];
+  users: HeiwakoUser[];
+  property_count: number;
+  reference_count: number;
+  image_count: number;
+  errors: string[];
+  stored: boolean;
+};
+
 /** Unit of the property with current occupants (GET /properties/{id}/units?with_occupants=true). */
 export type PropertyUnit = {
   id: string;

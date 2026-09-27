@@ -445,3 +445,217 @@ def test_direct_debit_requires_leading_ledger_and_own_account(
     refused = client.post(f"{D}", json=body, headers=h)
     assert refused.status_code == 409, refused.text
     assert "führende System" in refused.json()["detail"]
+
+
+def _setup_run(client: TestClient, world: World, number: str) -> tuple[dict[str, str], str, str]:
+    """A minimal single-payer run, approved and its file generated (M15-01 follow-up tests)."""
+    h = bearer(login(client, world, "ddadmin"))
+    approver = bearer(login(client, world, "ddapprover"))
+    acc_user = bearer(login(client, world, "ddacc"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": number, "name": f"Haus {number}", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    bank = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": OWN,
+                "holder": f"GdWE {number}",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    _ok(
+        client.put(
+            f"{D}/creditor-ids/legal-entities/{hoa}",
+            json={"sepa_creditor_id": CREDITOR_ID},
+            headers=h,
+        )
+    )
+    party, _ = _payer(client, h, f"P{number}", PAYER_A, {}, approver)
+    _contract(client, h, prop["id"], "01", party)
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    _ok(client.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=h))
+    acc = {
+        a["number"]: a["id"] for a in _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    for code, acc_number in [("hoa_fee", "060100"), ("reserve", "060200")]:
+        _ok(
+            client.put(
+                f"{A}/ledgers/{ledger}/payment-type-accounts",
+                json={"payment_type_code": code, "account_id": acc[acc_number]},
+                headers=h,
+            )
+        )
+    _receivables(client, h, ledger, "2026-03-01")
+    collection = (local_today() + timedelta(days=7)).isoformat()
+    run = _ok(
+        client.post(
+            f"{D}",
+            json={
+                "ledger_id": ledger,
+                "collection_date": collection,
+                "lead_days": 5,
+                "property_bank_account_id": bank,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{D}/{run['id']}/approve", headers=h))
+    _ok(client.post(f"{D}/{run['id']}/approve", headers=acc_user))
+    _ok(client.post(f"{D}/{run['id']}/file", headers=h))
+    return h, bank, str(run["id"])
+
+
+def test_direct_debit_bank_config_selects_pain008_version(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """The pain.008 version is configured per bank account (M15-01, ``payment_bank_config``);
+    the file generated for a run against that account follows the configured version."""
+    client, _ = clients
+    h = bearer(login(client, world, "ddadmin"))
+    approver = bearer(login(client, world, "ddapprover"))
+    acc_user = bearer(login(client, world, "ddacc"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "783", "name": "Haus 783", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    hoa = next(e["id"] for e in prop["legal_entities"] if e["kind"] == "hoa")
+    bank = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": OWN,
+                "holder": "GdWE 783",
+                "valid_from": "2020-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    _ok(
+        client.put(
+            f"{D}/creditor-ids/legal-entities/{hoa}",
+            json={"sepa_creditor_id": CREDITOR_ID},
+            headers=h,
+        )
+    )
+    _ok(
+        client.put(
+            f"/api/v1/banking/payment-bank-config/{bank}",
+            json={"pain008_version": "pain.008.001.08"},
+            headers=h,
+        )
+    )
+    party, _ = _payer(client, h, "P783", PAYER_A, {}, approver)
+    _contract(client, h, prop["id"], "01", party)
+    template = _ok(client.post(f"{A}/templates/default", headers=h), 201)
+    ledger = _ok(
+        client.post(
+            f"{A}/ledgers", json={"legal_entity_id": hoa, "template_id": template["id"]}, headers=h
+        ),
+        201,
+    )["id"]
+    _ok(client.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=h))
+    acc = {
+        a["number"]: a["id"] for a in _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+    }
+    for code, acc_number in [("hoa_fee", "060100"), ("reserve", "060200")]:
+        _ok(
+            client.put(
+                f"{A}/ledgers/{ledger}/payment-type-accounts",
+                json={"payment_type_code": code, "account_id": acc[acc_number]},
+                headers=h,
+            )
+        )
+    _receivables(client, h, ledger, "2026-03-01")
+    collection = (local_today() + timedelta(days=7)).isoformat()
+    run = _ok(
+        client.post(
+            f"{D}",
+            json={
+                "ledger_id": ledger,
+                "collection_date": collection,
+                "lead_days": 5,
+                "property_bank_account_id": bank,
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{D}/{run['id']}/approve", headers=h))
+    _ok(client.post(f"{D}/{run['id']}/approve", headers=acc_user))
+    generated = _ok(client.post(f"{D}/{run['id']}/file", headers=h))
+    assert generated["format"] == "pain.008.001.08"
+
+
+def test_direct_debit_download_protocol_and_submit(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """The download is checksummed and logged (M15-01 follow-up); submission is confirmed by a
+    human with a bank reference, requires G2 and has no effect when repeated (B08); another
+    tenant sees neither the file nor the protocol."""
+    client, open_g2 = clients
+    h, _, run_id = _setup_run(client, world, "790")
+    other = bearer(login(client, world, "ddother"))
+    gh = bearer(login(open_g2, world, "ddadmin"))
+
+    # Behind the closed gate neither download nor submission is possible.
+    assert client.get(f"{D}/{run_id}/file", headers=h).status_code == 403
+    assert (
+        client.post(f"{D}/{run_id}/submit", json={"reference": "x"}, headers=h).status_code == 403
+    )
+
+    # Tenant separation of the protocol.
+    assert client.get(f"{D}/{run_id}/downloads", headers=other).status_code == 404
+    assert _ok(client.get(f"{D}/{run_id}/downloads", headers=h)) == []
+
+    xml = open_g2.get(f"{D}/{run_id}/file", headers=gh)
+    assert xml.status_code == 200, xml.text
+    checksum = xml.headers["X-File-Sha256"]
+
+    protocol = _ok(open_g2.get(f"{D}/{run_id}/downloads", headers=gh))
+    assert len(protocol) == 1
+    assert protocol[0]["type"] == "direct_debit_run.file_downloaded"
+    assert protocol[0]["payload"]["file_sha256"] == checksum
+
+    # Submission needs a reference.
+    missing = open_g2.post(f"{D}/{run_id}/submit", json={"reference": ""}, headers=gh)
+    assert missing.status_code == 422, missing.text
+    confirmed = _ok(
+        open_g2.post(f"{D}/{run_id}/submit", json={"reference": "BANKREF-1"}, headers=gh)
+    )
+    assert confirmed["payload"]["reference"] == "BANKREF-1"
+
+    # Repeating the confirmation has no effect (B08): the first reference stays authoritative.
+    repeated = _ok(open_g2.post(f"{D}/{run_id}/submit", json={"reference": "OTHER"}, headers=gh))
+    assert repeated["payload"]["reference"] == "BANKREF-1"
+
+    protocol_after = _ok(open_g2.get(f"{D}/{run_id}/downloads", headers=gh))
+    assert [e["type"] for e in protocol_after] == [
+        "direct_debit_run.file_downloaded",
+        "direct_debit_run.submitted",
+    ]

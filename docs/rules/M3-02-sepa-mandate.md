@@ -63,3 +63,36 @@ Frage M5-01, Umsetzung vor G2.
 - Die KI darf keine Freigabe erteilen; KI-Importe und Ticketvorschläge legen Konten nur als
   `pending` an.
 
+
+## Portalstufe: digitales Mandat als Vorschlag (Nachtrag 27.09.2026)
+
+Typ: Fachliche Umsetzung (Abschnitt 14 Portale) und Produktschutz (Regel 0.1.6, G2). Der
+Mandatstext ist ein **Entwurf** ohne Quellenstatus im Anhang C; Wortlaut, Vorabankündigung und
+Einreichung bleiben offene Entscheidung (`docs/OPEN_QUESTIONS.md` M3-03). Tests
+`apps/api/tests/integration/test_m21_portal_mandate_address.py`, Portal
+`apps/web-portal/src/components/portal/SepaMandateForm.test.tsx`, CRM
+`apps/web-crm/src/components/contacts/PortalProposalsPanel.test.tsx`. Migration 0174.
+
+- `GET /api/v1/portal/sepa-mandates/preview?contract_id=` liefert für einen eigenen Vertrag
+  (Zugriffsmatrix, sonst 404) den Mandatstext mit Gläubiger-Identifikationsnummer des
+  Rechtsträgers (`legal_entity.sepa_creditor_id`, Rückfall Mandanteneinstellung wie im
+  Lastschriftlauf, `mhvp.accounting.direct_debit.creditor_identifier`), Mandatsreferenz
+  (Vertragsnummer, Datum, Zufallssuffix, höchstens 35 Zeichen) und Zahlungsart
+  `wiederkehrende Zahlung` (SEPA-Basislastschrift). Fehlt die Gläubiger-ID, wird mit 422
+  abgelehnt; die Verwaltung trägt sie im CRM ein.
+- `POST /api/v1/portal/sepa-mandates` verlangt `confirmed = true`, prüft die IBAN nach ISO
+  13616 (`mhvp.contacts.validation.normalise_iban`) und speichert den bestätigten Text,
+  Zeitstempel, IP-Adresse und Client als Textform-Nachweis: Tabelle
+  `portal_sepa_mandate_proposal` (IBAN verschlüsselt) und ein erzeugtes PDF
+  (`DocumentSource.GENERATED`, verknüpft mit Kontakt und Vertrag, für die Rolle des Vertrags
+  sichtbar). Ereignis `portal.sepa_mandate.proposed`.
+- Der Vorschlag wird **nie** von selbst aktiv. `POST
+  /api/v1/portal-admin/sepa-mandate-proposals/{id}/decide` (Recht `contacts:update`) übernimmt
+  oder lehnt ab (`portal.sepa_mandate.accepted` oder `.rejected`, zweite Entscheidung 409).
+  Übernahme legt nur eine `contact_bank_account`-Zeile mit Mandatsnachweis an (`sepa_enabled`,
+  `mandate_reference`, `mandate_signed_on`, `mandate_granted_via = portal`,
+  `mandate_document_id`); die IBAN bleibt `pending` bis zur Vier-Augen-Freigabe (M5-01). Ein
+  `sepa_mandate` (Einzugsmandat) entsteht hier nicht; es wird weiterhin nur über den
+  freigegebenen CRM-Pfad und erst nach G2 verwendet. Die KI entscheidet nie.
+- Portalnutzer sehen ausschließlich ihre eigenen Vorschläge (`GET /api/v1/portal/sepa-mandates`);
+  ein anderer Mandant sieht und entscheidet nichts (RLS, 404).

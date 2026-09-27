@@ -25,6 +25,8 @@ export type ContactMasterDataValues = {
   language?: string | null;
   preferred_channel?: "post" | "email" | "portal" | null;
   notes?: string | null;
+  /** Verbrauchereigenschaft fürs Mahnwesen (M16-03); null: nicht beurteilt. */
+  is_consumer?: boolean | null;
 };
 
 const CHANNELS = ["post", "email", "portal"] as const;
@@ -40,6 +42,13 @@ export function ContactMasterData({ contact, canEdit }: { contact: ContactMaster
     onSaved: (data) => setValues((prev) => ({ ...prev, ...data })),
   });
   const channels: InlineOption[] = CHANNELS.map((value) => ({ value, label: tl(`channel.${value}`) }));
+  const consumerOptions: InlineOption[] = [
+    { value: "true", label: tf("isConsumerYes") },
+    { value: "false", label: tf("isConsumerNo") },
+  ];
+  const saveConsumer = (name: string, value: unknown) => {
+    autosave.save(name, value === "true" ? true : value === "false" ? false : null);
+  };
   const field = (name: keyof ContactMasterDataValues) => ({
     name,
     value: values[name] as string | null | undefined,
@@ -79,6 +88,15 @@ export function ContactMasterData({ contact, canEdit }: { contact: ContactMaster
         <InlineField {...field("position")} label={tf("position")} maxLength={100} />
         <InlineField {...field("language")} label={tf("language")} maxLength={10} required />
         <InlineField {...field("preferred_channel")} label={tf("preferredChannel")} type="select" options={channels} />
+        <InlineField
+          {...field("is_consumer")}
+          onSave={saveConsumer}
+          label={tf("isConsumer")}
+          type="select"
+          options={consumerOptions}
+          help={tf("isConsumerHelp")}
+          testId="contact-is-consumer"
+        />
         <InlineField {...field("notes")} label={tf("notes")} type="textarea" rows={4} className="flex flex-col gap-1 sm:col-span-2" />
       </div>
     </EditableSection>

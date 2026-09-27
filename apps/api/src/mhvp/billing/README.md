@@ -15,6 +15,31 @@ Operating cost statements, economic plans, HOA fee statements, reserves, special
   snapshot only: costs, advances, result, advance proposal = costs / 12 labelled as proposal)
   and `letter_routers.py` (`/statements/{id}/letters/preview`, `/letters`, `/letters/send`
   always refused behind G3). Rule `docs/rules/A07-tenant-letters.md`.
+* BetrKV catalogue (M17-01, task 27.09.2026): `betrkv.py` (system catalogue § 2 Nr. 1 to 17
+  plus `V`/`I` exclusions, allocability yes/no/agreement_only, review hints) and
+  `allocability_routers.py` (`/billing/operating-cost-types`, account mapping via
+  `ledger_account.operating_cost_type`, `/statements/{id}/allocability-check`); hints also in
+  the snapshot (`allocability_hints`). Rule `docs/rules/M17-01-betrkv-katalog.md`.
+* Advance rule (M17-03): `advance_rule.py` (costs / 12 plus optional surcharge per tenant,
+  default 0; proposals with confirmation by a second person, letter text block) and
+  `advance_routers.py` (`/billing/advance-rule`, `/statements/{id}/advance-proposals`).
+  Never changes contract payments (§ 560 BGB, G3). Rule `docs/rules/M17-03-vorschussregel.md`.
+* Owner statement output (M17-05): `owner_statement_pdf.py` (payout block `settlement`, letter
+  on the tenant's letterhead via `mhvp.documents.letters`); PDF behind G3.
+  Rule `docs/rules/M17-05-eigentuemerabrechnung-ausgabe.md`. Migration 0170.
 
 Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`, tests under
 `apps/api/tests/billing/`. Register models in `mhvp/models.py` for Alembic autogenerate.
+
+## Heating statement draft (M17-02)
+
+`heating_calc.py` (pure Decimal calculation, rule version `heating-costs-draft-v1`, JSON trace),
+`heating_services.py` (inputs per statement, consumption import from `mhvp.metering`, feed as
+one external cost item with `external_amounts` per occupancy, consumption information) and
+`heating_routers.py` (`/statements/{id}/heating...`, `/billing/heating-rule-tables`).
+Configurable draft values with source status: consumption share 50 to 70 percent (default 70),
+hot water method (flat percent, measured energy, formula with draft factor), CO2 step table
+(fallback: `calc.CO2_RESIDENTIAL_STEPS`, to be verified) and degree days (default empty, time
+share with notice). Missing consumptions stop the calculation; unresolved CO2 facts keep the
+status `pruefen` and block the feed (D27). Rule `docs/rules/M17-02-heizkosten.md`, migration
+0162, tests `tests/unit/test_m17_heating_calc.py` and `tests/integration/test_m17_heating.py`.

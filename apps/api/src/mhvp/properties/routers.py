@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy import func, or_, select
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.banking import account_selection
 from mhvp.banking.routers import BankAccountListOut, account_list_out
@@ -1067,7 +1068,29 @@ def _account_out(a: PropertyBankAccount) -> s.BankAccountOut:
         valid_to=a.valid_to,
         notes=a.notes,
         ledger_account_id=a.ledger_account_id,
+        is_default=a.is_default,
     )
+
+
+async def _set_default_account(session: AsyncSession, account: PropertyBankAccount) -> None:
+    """Flag ``account`` as the default payment account of its legal entity (M16-13): at most
+    one per legal entity, never a deposit account."""
+    if account.kind is BankAccountKind.DEPOSIT:
+        raise svc.invalid("Ein Kautionskonto kann nicht Standardkonto sein (M16-13, D56).")
+    others = (
+        await session.scalars(
+            select(PropertyBankAccount).where(
+                PropertyBankAccount.legal_entity_id == account.legal_entity_id,
+                PropertyBankAccount.is_default.is_(True),
+                PropertyBankAccount.id != account.id,
+            )
+        )
+    ).all()
+    for other in others:
+        other.is_default = False
+    await session.flush()
+    account.is_default = True
+    await session.flush()
 
 
 @router.get("/properties/{property_id}/bank-accounts", summary="Bankkonten")
@@ -1114,10 +1137,12 @@ async def add_account(
             iban_fingerprint=crypto.fingerprint(body.iban),
             segregated=body.kind is BankAccountKind.DEPOSIT,
             created_by=principal.user_id,
-            **body.model_dump(),
+            **body.model_dump(exclude={"is_default"}),
         )
         session.add(account)
         await session.flush()
+        if body.is_default:
+            await _set_default_account(session, account)
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -1126,6 +1151,33 @@ async def add_account(
             entity_id=account.id,
             actor_user_id=principal.user_id,
             payload={"kind": body.kind.value, "legal_entity_id": str(entity.id)},
+        )
+        return _account_out(account)
+
+
+@router.post(
+    "/properties/{property_id}/bank-accounts/{account_id}/default",
+    summary="Bankkonto als Standardkonto des Rechtsträgers kennzeichnen (Zahlungsziel im Brief)",
+)
+async def set_default_account(
+    property_id: uuid.UUID,
+    account_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.BankAccountOut:
+    async with tenant_tx(request, principal) as session:
+        account = await _get(session, PropertyBankAccount, account_id)
+        if account.property_id != property_id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await _set_default_account(session, account)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="property_bank_account.default_set",
+            entity_type="property_bank_account",
+            entity_id=account.id,
+            actor_user_id=principal.user_id,
+            payload={"legal_entity_id": str(account.legal_entity_id)},
         )
         return _account_out(account)
 

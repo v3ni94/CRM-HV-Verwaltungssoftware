@@ -16,6 +16,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -111,4 +112,53 @@ class StatementEvent(IdMixin, TenantMixin, Base):
     note: Mapped[str | None] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+
+
+class HeatingRuleTableKind(StrEnum):
+    CO2_STEPS = "co2_steps"
+    DEGREE_DAYS = "degree_days"
+
+
+class HeatingRuleTable(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Configurable tables for the draft heating statement (M17-02): CO2 step model
+    (rows ``[{"from_kg_m2": "12", "tenant_percent": 90}, ...]``) and degree days
+    (rows ``{"1": "170", ..., "12": "160"}`` in promille, sum 1000). Values carry a source and
+    ``review_status``; nothing here is a released legal rule."""
+
+    __tablename__ = "heating_rule_table"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "kind", "valid_from", name="uq_heating_rule_table_kind_valid"
+        ),
+    )
+
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    rows: Mapped[Any] = mapped_column(JSONB, nullable=False, default=list)
+    source: Mapped[str] = mapped_column(Text, nullable=False)
+    review_status: Mapped[str] = mapped_column(String(16), nullable=False, default="zu_pruefen")
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class StatementHeating(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Heating and hot water inputs of one operating cost statement and the last draft result
+    (M17-02). ``consumptions`` holds one entry per occupancy key; ``result`` is the JSON
+    trace of ``heating_calc.calculate``; ``applied_item_id`` links the fed cost item."""
+
+    __tablename__ = "statement_heating"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "statement_id", name="uq_statement_heating_statement"),
+    )
+
+    statement_id: Mapped[uuid.UUID] = _fk("statement.id", ondelete="CASCADE")
+    total_costs: Mapped[Decimal | None] = mapped_column(MONEY)
+    settings: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    co2: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    consumptions: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    unit_totals: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    result_hash: Mapped[str | None] = mapped_column(String(64))
+    applied_item_id: Mapped[uuid.UUID | None] = _fk(
+        "statement_cost_item.id", nullable=True, ondelete="SET NULL"
     )

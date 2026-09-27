@@ -9,6 +9,7 @@ import { ContactActions } from "@/components/contacts/ContactActions";
 import { ContactMasterData } from "@/components/contacts/ContactMasterData";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
 import { PortalAccessSection } from "@/components/contacts/PortalAccessSection";
+import { PortalProposalsPanel } from "@/components/contacts/PortalProposalsPanel";
 import { RelationsPanel } from "@/components/contacts/RelationsPanel";
 import { RepresentativesPanel } from "@/components/contacts/RepresentativesPanel";
 import { RolePills } from "@/components/contacts/RolePills";
@@ -450,6 +451,12 @@ export default async function ContactDetailPage({
           emails={contact.emails}
           canInvite={canInvitePortal}
         />
+      ) : null}
+      {tab === "freigaben" ? (
+        <section>
+          <h2 className="mb-1 text-sm font-semibold">{t("portalProposals.title")}</h2>
+          <PortalProposalsPanel contactId={contact.id} canDecide={canInvitePortal} />
+        </section>
       ) : null}
       {tab === "kommunikation" ? (
         <section>

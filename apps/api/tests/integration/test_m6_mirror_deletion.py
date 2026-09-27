@@ -59,7 +59,7 @@ async def _world(settings: Any) -> World:
         a, _ = await services.provision_tenant(factory, slug=f"md-{RUN}", name=f"Spiegel {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"me-{RUN}", name=f"Fremd {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
-        for name, tenant in [("mdadmin", a), ("mdsecond", a), ("mdother", b)]:
+        for name, tenant in [("mdmiradmin", a), ("mdsecond", a), ("mdmirother", b)]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -187,7 +187,7 @@ def test_mirror_copies_are_deleted_with_journal(
     redis_url: str,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    h = bearer(login(client, world, "mdadmin"))
+    h = bearer(login(client, world, "mdmiradmin"))
     settings = _settings(database, redis_url)
     fake = FakeMirrors()
     for kind, body in (
@@ -262,7 +262,7 @@ def test_mirror_copies_are_deleted_with_journal(
     assert all(j.tenant_id == world.tenant_a and str(j.document_id) == doc["id"] for j in queued)
     requested = _events(client, h, "document.mirror_delete_requested", doc["id"])
     assert {e["payload"]["mirror"] for e in requested} == {"paperless", "google_drive"}
-    assert all(e["actor_user_id"] == str(world.users["mdadmin"]) for e in requested)
+    assert all(e["actor_user_id"] == str(world.users["mdmiradmin"]) for e in requested)
     deleted = _events(client, h, "document.deleted", doc["id"])
     assert len(deleted) == 1
     assert deleted[0]["payload"]["mirror_deletions"] == 2
@@ -274,12 +274,12 @@ def test_mirror_copies_are_deleted_with_journal(
     deletions = _ok(client.get("/api/v1/documents/deletions", headers=h), 200)
     mine = next(d for d in deletions if d["document_id"] == doc["id"])
     assert mine["status"] == "open"
-    assert mine["requested_by"] == str(world.users["mdadmin"])
+    assert mine["requested_by"] == str(world.users["mdmiradmin"])
     assert {(x["kind"], x["action"], x["status"]) for x in mine["steps"]} == {
         ("google_drive", "delete", "open"),
         ("paperless", "tag", "open"),
     }
-    other = bearer(login(client, world, "mdother"))
+    other = bearer(login(client, world, "mdmirother"))
     assert _ok(client.get("/api/v1/documents/deletions", headers=other), 200) == []
     assert (
         client.post(f"/api/v1/documents/deletions/{doc['id']}/retry", headers=other).status_code
@@ -378,7 +378,7 @@ def test_drive_permanent_delete_and_already_gone(
 ) -> None:
     """Drive: permanent delete is preferred; a copy that is gone already is journaled as
     such; a disabled connection is a journaled failure, never a silent drop."""
-    h = bearer(login(client, world, "mdadmin"))
+    h = bearer(login(client, world, "mdmiradmin"))
     settings = _settings(database, redis_url)
     fake = FakeMirrors()
 

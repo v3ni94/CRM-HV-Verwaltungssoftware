@@ -102,3 +102,30 @@ party named as exported (members carry `external_ids["immoware24_member"]`). Unc
 (Erbengemeinschaft, missing first names, two family names) stay one contact and are reported
 under `pruefung`. `zuordnung.import_party` finds the joint party of such members. Rule entry
 `docs/rules/M8-04-mehrpersonen-bevollmaechtigte.md`.
+
+## Vollimport mit Stichtag (27.09.2026, M8-01, M8-02, V9)
+
+`vollimport.py` runs all exports of one cut-off date in one go: `precheck` (encoding,
+delimiter, header comparison against `EXPORT_KINDS`, row count, duplicate keys, missing
+required fields, SHA-256) without database access, `run_full` with `mode` preview (the router
+rolls the savepoint back), apply (import via `objektdaten.apply_prepared`,
+`kontakte.apply_prepared`, `adressen.apply_address_list`, then reconciliation) or abgleich
+(comparison only). The reconciliation compares target (file rows) with actual (platform
+records) per entity by Immoware24 object number, unit source id and contact id and lists
+missing, duplicate and deviating records; `update_existing` lets a repeated import update
+object name, unit label and location (never the management type). A balance list becomes
+opening balance proposals per contract as a draft only (G1 closed, nothing posted).
+`vollimport_vertraege.py` adds the export kinds `mietvertraege` and `eigentuemervertraege`
+(column labels of the staging target fields): party via contact id, unit via object and unit
+number, key Immoware24 contract number (`import_external_key`, migration 0204) or
+object/unit/kind/start, rent and Hausgeld as contract payments with a monthly schedule
+(nothing posted, contracts `pending` approval, source `immoware24:vollimport`), domain rules
+of `contracts.services.creditor_entity` (no tenancy in pure HOA, SEV derived, landlord of
+rental objects from ownership rows). Its reconciliation adds per object counts and target
+sums (`je_objekt`). Opening balance entries are `zugeordnet` when exactly one contract
+matches at the cut-off date.
+`vollimport_routers.py` serves `/api/v1/imports/immoware24/vollimport` (export kinds,
+pre-check, run, list, JSON, PDF draft); stored runs live in `import_full_run` (migration 0191).
+Handbook: `docs/handbuch/import-abgleichbericht.md`, section Vollimport. Tests:
+`tests/unit/test_vollimport.py`, `tests/integration/test_vollimport.py` (synthetic 67 objects
+and 869 units from `tests/synthetic_immoware.py`).

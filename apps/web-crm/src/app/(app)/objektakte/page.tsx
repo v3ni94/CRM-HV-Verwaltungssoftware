@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { AiCostSummary } from "@/components/objektakte/AiCostSummary";
 import { ObjektakteLists, type PropertyOption } from "@/components/objektakte/ObjektakteLists";
+import { ReconciliationReport } from "@/components/objektakte/ReconciliationReport";
 import { ReviewCenter, type CategoryOption } from "@/components/objektakte/ReviewCenter";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -38,6 +39,7 @@ export default async function ObjektaktePage() {
       <ReviewCenter categories={categories} />
       <ObjektakteLists properties={properties} />
       <AiCostSummary properties={properties} />
+      <ReconciliationReport />
     </div>
   );
 }

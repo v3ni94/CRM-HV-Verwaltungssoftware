@@ -69,7 +69,7 @@ describe("DepositPanel", () => {
   afterEach(() => vi.restoreAllMocks());
 
   it("shows deposits, movements and saved drafts", () => {
-    renderIntl(<DepositPanel deposits={[deposit]} settlements={{ d1: [{ ...result, id: "s1" }] }} rates={[]} contractEndDate="2026-06-30" canUpdate={false} />);
+    renderIntl(<DepositPanel deposits={[deposit]} settlements={{ d1: [{ ...result, id: "s1" }] }} rates={[]} contractEndDate="2026-06-30" canUpdate={false} contractId="c1" />);
     expect(screen.getByText("Barkaution")).toBeInTheDocument();
     expect(screen.getByText("Guthaben: 1.012,00 EUR")).toBeInTheDocument();
     expect(screen.getByText(/01\.04\.2026, Verrechnung, 200,00 EUR, Schaden/)).toBeInTheDocument();
@@ -89,6 +89,7 @@ describe("DepositPanel", () => {
         ]}
         contractEndDate="2026-06-30"
         canUpdate={true}
+        contractId="c1"
       />,
     );
     await userEvent.click(screen.getByText("Kautionsabrechnung erstellen"));
@@ -119,7 +120,7 @@ describe("DepositPanel", () => {
   });
 
   it("blocks the reference rate mode while a year has no rate", async () => {
-    renderIntl(<DepositPanel deposits={[deposit]} settlements={{}} rates={[{ id: "r1", year: 2025, rate: "1.00000", note: null }]} contractEndDate="2026-06-30" canUpdate={true} />);
+    renderIntl(<DepositPanel deposits={[deposit]} settlements={{}} rates={[{ id: "r1", year: 2025, rate: "1.00000", note: null }]} contractEndDate="2026-06-30" canUpdate={true} contractId="c1" />);
     await userEvent.click(screen.getByText("Kautionsabrechnung erstellen"));
     await userEvent.selectOptions(screen.getByLabelText("Zinsart"), "reference_rate");
     expect(screen.getByRole("alert")).toHaveTextContent("Für 2026 ist kein Referenzzinssatz hinterlegt.");

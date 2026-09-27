@@ -93,6 +93,8 @@ def test_ticket_creation_starts_clock_and_rules_govern_it(client: TestClient, wo
         == 403
     )
 
+    # M19-01: only values approved by the management govern a clock (tenant_admin here).
+    _ok(client.post(f"/api/v1/sla/rules/{rule['id']}/approve", json={"confirm": True}, headers=h))
     step = _ok(
         client.post(
             f"/api/v1/sla/rules/{rule['id']}/steps",

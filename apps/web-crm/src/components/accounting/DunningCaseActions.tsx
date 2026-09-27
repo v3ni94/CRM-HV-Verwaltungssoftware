@@ -38,6 +38,8 @@ export function DunningCaseActions({
   const t = useTranslations("Dunning");
   const router = useRouter();
   const [channel, setChannel] = useState<Channel>("post");
+  // Zugang der Mahnung beim Schuldner, nur wenn bekannt (Verzugsmodus "erst nach Mahnung", M16-03).
+  const [receivedOn, setReceivedOn] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [prep, setPrep] = useState<Mahnbescheid | null>(null);
@@ -91,7 +93,7 @@ export function DunningCaseActions({
     setError(null);
     const res = await bff(`/api/bff/accounting/dunning-cases/${caseId}/mark-sent`, {
       method: "POST",
-      body: JSON.stringify({ channel }),
+      body: JSON.stringify({ channel, received_on: receivedOn || null }),
     });
     setBusy(false);
     if (res.ok) router.refresh();
@@ -192,6 +194,13 @@ export function DunningCaseActions({
             <option value="email">{t("channel.email")}</option>
             <option value="portal">{t("channel.portal")}</option>
           </select>
+          <input
+            type="date"
+            className={`${ui.input} w-40`}
+            value={receivedOn}
+            onChange={(e) => setReceivedOn(e.target.value)}
+            aria-label={t("receivedOn")}
+          />
           <button type="button" className={ui.buttonSm} onClick={markSent} disabled={busy}>
             {t("markSent")}
           </button>

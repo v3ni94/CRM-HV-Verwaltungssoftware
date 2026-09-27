@@ -458,3 +458,77 @@ def test_bulk_done_respects_mailbox_access_and_limit(client: TestClient, world: 
         ).status_code
         == 403
     )
+
+
+def test_messages_pagination(client: TestClient, world: World) -> None:
+    """Betreibermeldung 27.09.2026: echte Seitennavigation. ``page``/``page_size`` liefern
+    unterschiedliche, stabil sortierte Ausschnitte samt X-Total-Count/-Page/-Page-Size; die
+    Mandantentrennung gilt weiter (Tenant B sieht keine dieser Nachrichten)."""
+    h = bearer(login(client, world, "m20admin"))
+    hb = bearer(login(client, world, "m20adminb"))
+    sender = f"pg{RUN}@example.com"
+    ids: list[str] = []
+    for i in range(7):
+        doc = _upload(
+            client,
+            h,
+            f"pg{i}.eml",
+            _eml(sender, f"Paging {RUN} {i}", "Text", f"<pg{i}-{RUN}@x>"),
+        )
+        msg = _ok(client.post(f"{M}/ingest", json={"document_id": doc}, headers=h), 201)
+        ids.append(msg["id"])
+
+    resp1 = client.get(
+        f"{M}/messages",
+        params={"q": f"Paging {RUN}", "page": 1, "page_size": 3},
+        headers=h,
+    )
+    page1 = _ok(resp1)
+    assert len(page1) == 3
+    assert int(resp1.headers["x-total-count"]) == 7
+    assert resp1.headers["x-page"] == "1"
+    assert resp1.headers["x-page-size"] == "3"
+
+    resp2 = client.get(
+        f"{M}/messages",
+        params={"q": f"Paging {RUN}", "page": 2, "page_size": 3},
+        headers=h,
+    )
+    page2 = _ok(resp2)
+    assert len(page2) == 3
+    assert resp2.headers["x-page"] == "2"
+    # Stabile Sortierung (received_at/sent_at/created_at desc, id): keine Überschneidung,
+    # keine Lücke zwischen den Seiten.
+    assert {m["id"] for m in page1}.isdisjoint({m["id"] for m in page2})
+
+    resp3 = client.get(
+        f"{M}/messages",
+        params={"q": f"Paging {RUN}", "page": 3, "page_size": 3},
+        headers=h,
+    )
+    page3 = _ok(resp3)
+    assert len(page3) == 1
+    assert {m["id"] for m in page1} | {m["id"] for m in page2} | {m["id"] for m in page3} == set(
+        ids
+    )
+
+    # page_size über der Obergrenze (200) wird abgelehnt.
+    assert (
+        client.get(
+            f"{M}/messages", params={"q": f"Paging {RUN}", "page_size": 201}, headers=h
+        ).status_code
+        == 422
+    )
+    assert (
+        client.get(f"{M}/messages", params={"q": f"Paging {RUN}", "page": 0}, headers=h).status_code
+        == 422
+    )
+
+    # Ohne page_size gilt weiter limit (Abwärtskompatibilität), Seite 1.
+    legacy = client.get(f"{M}/messages", params={"q": f"Paging {RUN}", "limit": 3}, headers=h)
+    assert _ok(legacy) == page1
+    assert legacy.headers["x-page-size"] == "3"
+
+    # Mandantentrennung: Tenant B sieht keine dieser Nachrichten.
+    other = _ok(client.get(f"{M}/messages", params={"q": f"Paging {RUN}"}, headers=hb))
+    assert other == []

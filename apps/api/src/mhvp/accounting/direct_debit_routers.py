@@ -20,6 +20,7 @@ from mhvp.accounting import direct_debit as dd
 from mhvp.accounting.direct_debit_models import DirectDebitRun, DirectDebitRunStatus
 from mhvp.accounting.models import Ledger
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.ids import uuid7
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -51,6 +52,10 @@ class DirectDebitRunIn(PreviewIn):
 
 class CreditorIdIn(_In):
     sepa_creditor_id: str | None = Field(default=None, min_length=1, max_length=35)
+
+
+class DirectDebitSubmitIn(_In):
+    reference: str = Field(min_length=1, max_length=140)
 
 
 class DirectDebitOrderOut(BaseModel):
@@ -330,6 +335,7 @@ async def download_file(
         if document is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Datei nicht gefunden.")
         data = BlobStore(request.app.state.settings).get(document.storage_ref)
+        checksum = await dd.record_download(session, run, data, user_id=principal.user_id)
         if run.status is not DirectDebitRunStatus.EXPORTED:
             run.status = DirectDebitRunStatus.EXPORTED
             run.exported_at, run.exported_by = datetime.now(UTC), principal.user_id
@@ -346,18 +352,56 @@ async def download_file(
         return Response(
             content=data,
             media_type="application/xml",
-            headers={"Content-Disposition": f'attachment; filename="{document.filename}"'},
+            headers={
+                "Content-Disposition": content_disposition("attachment", document.filename),
+                "X-File-Sha256": checksum,
+            },
+        )
+
+
+@router.get("/{run_id}/downloads", summary="Download- und Einreichungsprotokoll")
+async def downloads(
+    run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        run = await session.get(DirectDebitRun, run_id)
+        if run is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return await dd.download_protocol(session, run)
+
+
+@router.post("/{run_id}/submit", summary="Einreichung bei der Bank bestätigen (G2)")
+async def submit_run(
+    run_id: uuid.UUID,
+    body: DirectDebitSubmitIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    await ensure_release_gate_open(
+        ReleaseGate.G2, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        run = await _run(session, run_id)
+        return await dd.submit_run(
+            session, run, user_id=principal.user_id, reference=body.reference
         )
 
 
 @router.post("/{run_id}/pre-notifications", summary="Vorabinformationen je Zahler (Entwurf)")
 async def pre_notifications(
-    run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+    run_id: uuid.UUID,
+    request: Request,
+    lead_days: int = Query(default=dd.PRE_NOTIFICATION_LEAD_DAYS_DEFAULT, ge=0, le=60),
+    principal: TenantPrincipal = Depends(CREATE),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         run = await _run(session, run_id)
         return await dd.create_pre_notifications(
-            session, BlobStore(request.app.state.settings), run, principal=principal
+            session,
+            BlobStore(request.app.state.settings),
+            run,
+            principal=principal,
+            lead_days=lead_days,
         )
 
 

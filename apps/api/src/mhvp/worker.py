@@ -35,10 +35,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.documents.paperless_webhook",
             "mhvp.documents.intake",
             "mhvp.documents.mirror_deletion",
+            "mhvp.documents.retention",
             "mhvp.ai.jobs",
             "mhvp.workspace.tasks",
             "mhvp.workspace.backup_verify",
             "mhvp.communication.tasks",
+            "mhvp.communication.postal_tasks",
             "mhvp.banking.tasks",
             "mhvp.accounting.tasks",
             "mhvp.letting.tasks",
@@ -116,6 +118,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.ai.examples_retention",
                 "schedule": crontab(hour=3, minute=45),
             },
+            # Monthly deletion proposal (M6-04, V17): lists documents whose released retention
+            # period ended; deletes nothing, approval and execution are two persons.
+            "documents-deletion-proposals": {
+                "task": "mhvp.documents.deletion_proposals",
+                "schedule": crontab(day_of_month=2, hour=4, minute=20),
+            },
             "letting-purge-prospects": {
                 "task": "mhvp.letting.purge_prospects",
                 "schedule": crontab(hour=3, minute=30),
@@ -165,6 +173,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.communication.archive_retry_all",
                 "schedule": 900.0,
                 "options": {"queue": "mail"},
+            },
+            # Statusabruf beim Postdienst (M23-01): alle 30 Minuten, nur Mandanten mit
+            # freigegebenem externem Anbieter; manuelle Aufträge werden nie abgefragt.
+            "communication-postal-status-poll": {
+                "task": "mhvp.communication.postal_status_poll_all",
+                "schedule": 1800.0,
+                "options": {"queue": "io"},
             },
             "workspace-reminders": {
                 "task": "mhvp.workspace.reminders",

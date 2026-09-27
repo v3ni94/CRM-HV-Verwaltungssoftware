@@ -22,7 +22,7 @@ from typing import Any
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.ai.models import AiExample, AiTask
+from mhvp.ai.models import AiExample, AiProposal, AiTask, AiTaskRun
 from mhvp.core.events import emit
 from mhvp.core.logging import get_logger
 
@@ -65,6 +65,36 @@ async def delete_examples_for_contact(session: AsyncSession, contact_id: uuid.UU
         )
     )
     return int(result.rowcount or 0)  # type: ignore[attr-defined]
+
+
+async def record_rejection(
+    session: AsyncSession,
+    *,
+    proposal: AiProposal,
+    run: AiTaskRun,
+    reason: str | None,
+    rejected_by: uuid.UUID | None,
+) -> AiExample | None:
+    """M34 Nachtrag 27.09.2026 (9.4 Erklärbarkeit): a rejected AI proposal with a reason is
+    stored as a learning example, `result.rejected = true`, so the k-nearest few-shot context
+    (9.1) also carries what the tenant did not want; retained/purged like every other example
+    (same tenant switch and clock, ADR 0010, `purge_expired_examples`). Returns ``None`` when
+    the tenant has not switched learning examples on, or no reason was given (nothing useful to
+    learn from a bare rejection)."""
+    if not reason or not reason.strip():
+        return None
+    if not await learning_examples_enabled(session, proposal.tenant_id):
+        return None
+    example = AiExample(
+        tenant_id=proposal.tenant_id,
+        created_by=rejected_by,
+        task=run.task,
+        features={"proposal_id": str(proposal.id), "entity_type": proposal.entity_type},
+        result={"rejected": True, "reason": reason.strip()[:2000], "proposed": proposal.proposed},
+        proposal_id=proposal.id,
+    )
+    session.add(example)
+    return example
 
 
 async def retention_months(session: AsyncSession, tenant_id: uuid.UUID) -> int:

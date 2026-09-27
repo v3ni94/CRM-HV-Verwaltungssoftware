@@ -103,7 +103,11 @@ describe("ContractCreateForm", () => {
     await user.type(screen.getByLabelText("Beginn"), "2026-10-01");
     await user.click(screen.getByLabelText("Mahnsperre"));
     await user.type(screen.getByLabelText("Begründung der Mahnsperre"), "Ratenvereinbarung");
+    // M13-01/M13-02: pro rata rule of the contract and payment mode of the schedule.
+    await user.selectOptions(screen.getByLabelText("Zeitanteilsregel"), "thirty_360");
     await user.click(screen.getByLabelText("Zahlungsplan gleich anlegen"));
+    await user.selectOptions(screen.getByLabelText("Zahlweise"), "arrears");
+    expect(screen.queryByLabelText("Betrag gilt")).not.toBeInTheDocument(); // monthly: amount is per month
     await user.clear(screen.getByLabelText("Fälligkeitstag"));
     await user.type(screen.getByLabelText("Fälligkeitstag"), "5");
     await user.clear(screen.getByLabelText("Gültig ab"));
@@ -132,9 +136,10 @@ describe("ContractCreateForm", () => {
       user_change_fee: false,
       allocation_loss_risk: false,
       vat_option: "none",
+      proration_method: "thirty_360",
       notes: "Übergabe am Monatsanfang",
     });
-    expect(JSON.parse(String(posts[1]![1]!.body))).toEqual({ interval: "monthly", due_day_rule: "day", due_day: 5, valid_from: "2026-10-01", valid_to: null });
+    expect(JSON.parse(String(posts[1]![1]!.body))).toEqual({ interval: "monthly", due_day_rule: "day", due_day: 5, valid_from: "2026-10-01", valid_to: null, payment_mode: "arrears", amount_basis: "per_month" });
     expect(JSON.parse(String(posts[2]![1]!.body))).toMatchObject({ kind: "cash", amount_due: "1500.00", installments: 1 });
   }, 20000);
 
@@ -260,6 +265,7 @@ describe("ContractEditForm", () => {
       user_change_fee: true,
       allocation_loss_risk: false,
       vat_option: "commercial_full_vat",
+      proration_method: null,
       notes: null,
     });
   });

@@ -10,6 +10,7 @@ import { AssignmentsCsv } from "./AssignmentsCsv";
 import { AssignmentsTable } from "./AssignmentsTable";
 import { AssignmentWizard } from "./AssignmentWizard";
 import { ConnectionsAdmin } from "./ConnectionsAdmin";
+import { HeiwakoImportDialog, isHeiwakoConnection } from "./HeiwakoImportDialog";
 import { MeteringDisabledNotice } from "./MeteringDisabledNotice";
 import { TransmissionsOverview } from "./TransmissionsOverview";
 
@@ -34,6 +35,9 @@ export function MeteringSettings({
   const [connections, setConnections] = useState(initial);
   const [wizard, setWizard] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
+  const [heiwakoConnectionId, setHeiwakoConnectionId] = useState<string | null>(null);
+  const heiwakoConnections = connections.filter(isHeiwakoConnection);
+  const heiwakoConnection = connections.find((c) => c.id === heiwakoConnectionId) ?? null;
 
   return (
     <div className="flex flex-col gap-6" data-testid="metering-settings">
@@ -52,6 +56,27 @@ export function MeteringSettings({
           }}
         />
       </section>
+      {heiwakoConnections.length > 0 ? (
+        <section className="flex flex-col gap-3" id="bved-austausch">
+          <h2 className={ui.h2}>{t("heiwako.sectionTitle")}</h2>
+          <div className="flex flex-wrap gap-2">
+            {heiwakoConnections.map((c) => (
+              <button
+                key={c.id}
+                type="button"
+                className={ui.buttonSm}
+                onClick={() => setHeiwakoConnectionId(c.id)}
+                data-testid={`heiwako-open-${c.id}`}
+              >
+                {c.display_name}
+              </button>
+            ))}
+          </div>
+          {heiwakoConnection ? (
+            <HeiwakoImportDialog connection={heiwakoConnection} onClose={() => setHeiwakoConnectionId(null)} />
+          ) : null}
+        </section>
+      ) : null}
       <section className="flex flex-col gap-3" id="zuordnungen">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className={ui.h2}>{t("assignment.overviewTitle")}</h2>

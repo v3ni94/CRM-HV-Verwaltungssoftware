@@ -30,6 +30,7 @@ from mhvp.core.events import emit
 from mhvp.core.logging import get_logger
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, TextStatus
+from mhvp.objektakte.masking import mask_identifiers
 
 log = get_logger("mhvp.ai.gateway")
 
@@ -52,6 +53,25 @@ RETRY_DELAYS_S: tuple[float, ...] = (3.0, 8.0)
 MTOK = Decimal(1_000_000)
 CHARS_PER_TOKEN = Decimal("3.5")
 CHUNKED_TASKS: frozenset[AiTask] = frozenset({AiTask.EXTRACT_CONTACTS, AiTask.EXTRACT_PROPERTY})
+
+# M34 Nachtrag 27.09.2026 (9.1 Datenschutz): tasks whose output does not need a raw IBAN,
+# e-mail address or phone number get ``mask_identifiers`` applied to the assembled document
+# text before it reaches the provider (names stay, e.g. for a salutation, per 9.1 "Textentwürfe
+# brauchen nur Anrede"). Extraction (`CHUNKED_TASKS`), `extract_invoice` (needs the creditor's
+# bank data), `propose_posting` (needs the payer's IBAN to match it) and `map_columns` (needs
+# the raw sample values to recognise a phone/IBAN/name column) are deliberately excluded (the
+# task cannot do its job masked, 9.1's "wo die Aufgabe es zulässt").
+MASKED_TASKS: frozenset[AiTask] = frozenset(
+    {
+        AiTask.ANSWER_QUESTION,
+        AiTask.SUMMARIZE,
+        AiTask.CHECK_STATEMENT,
+        AiTask.CLASSIFY_EMAIL,
+        AiTask.CLASSIFY_DOCUMENT,
+        AiTask.DRAFT_REPLY,
+        AiTask.CALL_SUMMARY,
+    }
+)
 # Fast table import (M7-06): deterministic column mapping instead of sending every row to the
 # LLM. extract_contacts uses the contact column model (``tasks.ColumnMappingResult``),
 # extract_property (A47) the owner/tenant list column model of ``table_mapper`` (units,
@@ -363,6 +383,8 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
                 f"Die Unterlagen sind zu umfangreich ({len(text)} Zeichen, höchstens "
                 f"{MAX_INPUT_CHARS}). Bitte in kleinere Teile aufteilen."
             )
+    if run.task in MASKED_TASKS:
+        text = mask_identifiers(text)
     return TaskInput(
         text=text, document_ids=document_ids, context=context, input_stats=input_stats, chunks=[]
     )

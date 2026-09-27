@@ -231,3 +231,34 @@ every other call (four eyes release, DPA evidence, opt-out, key), otherwise noth
   client, cost), `tests/integration/test_m7_ai_embeddings.py` (fake embedding client without
   network, index job and counters, masking, budget accounting, permission, ranking with hand made
   vectors, tenant separation, keyword fallback, budget stop and provider error).
+
+## M34 Nachtrag 27.09.2026: Erklärbarkeit (Ablehnungsgrund) und Maskierung des Prompt-Kontexts
+
+Soll-Ist-Abgleich Masterprompt 9 und 10 gegen `mhvp.ai` und `apps/web-crm/.../assistent`
+(Betreiberauftrag, nur Lücken ohne Anbieterfreigabe). Erklärbarkeit (Quelle, Konfidenz,
+„Warum?“) war bereits vollständig (`ProposalBadge`, `Reasoning` aus `AiTaskRun.output`); zwei
+Lücken geschlossen:
+
+* `POST /ai/proposals/{id}/reject` nimmt jetzt `{"reason": "..."}` (`RejectProposalIn`,
+  `ai_proposal.rejection_reason`, migration 0212) und legt bei gesetztem Grund und
+  eingeschaltetem Mandantenschalter (`tenant_settings.ai_learning_examples_enabled`, wie
+  `ticket_resolution`) ein `ai_example` mit `result.rejected = true` und dem Grund an
+  (`examples.record_rejection`), damit ein abgelehnter Vorschlag als Few-Shot-Gegenbeispiel in
+  die nächste Ausführung derselben Aufgabe einfließen kann; Retention wie jedes andere Beispiel
+  (`purge_expired_examples`, ADR 0010). Ohne Grund oder ohne Schalter wird nur die Ablehnung
+  selbst protokolliert (`ai_proposal.rejected` Ereignis), wie zuvor.
+* `gateway.build_input` maskierte bislang nur den Embedding-Text (`embeddings.py`); der
+  eigentliche Prompt-Kontext von `answer_question`, `summarize`, `check_statement`,
+  `classify_email`, `classify_document`, `draft_reply` und `call_summary` ging unmaskiert an den
+  Anbieter (9.1 „Pseudonymisierung von Namen und IBANs, wo die Aufgabe es zulässt“ war für
+  diesen Pfad nicht umgesetzt). Neu: `MASKED_TASKS` maskiert IBAN, E-Mail und Telefon
+  (`mask_identifiers`, Namen bleiben für die Anrede) für genau diese Aufgaben; `extract_contacts`/
+  `extract_property` (Kontext braucht die Rohdaten), `extract_invoice`/`propose_posting`
+  (brauchen die Bankverbindung) und `map_columns` (braucht die Rohwerte zur Spaltenerkennung)
+  bleiben bewusst ausgenommen. Test: `tests/unit/test_m34_ai_masking.py`.
+
+Offen (nicht in dieser Sitzung, siehe `docs/OPEN_QUESTIONS.md` M34-05/M34-06): Straßen- und
+Hausnummernmaskierung fehlt in `mhvp.objektakte.masking` weiterhin (nur die Namensheuristik
+erfasst zufällig manche Adressen); der Onboarding-Chat für neue Mitarbeiter (Kapitel 10, Rolle,
+Aufgaben, erste Schritte je Modul, `ui_preferences`) existiert nicht — `OnboardingWizard.tsx`
+(M27-03) ist die Mandantenanlage für Betreiber, kein Nutzer-Onboarding.

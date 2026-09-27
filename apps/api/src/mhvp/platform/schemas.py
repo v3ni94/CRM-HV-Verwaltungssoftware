@@ -72,6 +72,23 @@ class Branding(BaseModel):
         return value.upper() if value else value
 
 
+class ReceivableRulesConfig(BaseModel):
+    """M13-01 to M13-03 (docs/rules/M13-01.md to M13-03.md): receivable rules per tenant.
+    Default off; the tax adviser review of the rules is open, so nothing is posted by
+    assumption. ``proration_method`` is the tenant default for contracts without own rule."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = False
+    proration_method: Literal["calendar_days", "thirty_360", "full_month"] = "calendar_days"
+    vat_enabled: bool = False
+    # M13-01a (docs/OPEN_QUESTIONS.md): Mandanten-Standard für die Zahlweise
+    # (``mhvp.contracts.models.PaymentInterval``), den ein neuer Vertrag übernimmt, solange der
+    # Zahlungsplan keine eigene Angabe erhält (``ScheduleIn.interval is None``). ``None`` heißt
+    # weiterhin monatlich (bisheriges Verhalten ohne Mandantenvorgabe).
+    payment_interval: Literal["monthly", "quarterly", "semiannual", "annual"] | None = None
+
+
 class TenantSettingsOut(BaseModel):
     tenant_id: uuid.UUID
     company: CompanyData
@@ -88,6 +105,10 @@ class TenantSettingsOut(BaseModel):
     metering_module_enabled: bool = False
     # Regel M19-07, M19-04: deaktivierte eingebaute und eigene Erledigungsarten.
     resolution_kinds: ResolutionKindsConfig = Field(default_factory=ResolutionKindsConfig)
+    # M20-04 Vier-Augen-Prinzip beim Mailversand: all, external_only (Standard) oder off.
+    mail_approval_mode: str = "external_only"
+    # M13-01 to M13-03: Sollstellungsregeln je Mandant (Standard aus).
+    receivable_rules: ReceivableRulesConfig = Field(default_factory=ReceivableRulesConfig)
     version: int
 
 
@@ -101,6 +122,8 @@ class TenantSettingsPatch(BaseModel):
     ai_learning_examples_retention_months: int | None = Field(default=None, ge=1, le=120)
     metering_module_enabled: bool | None = None
     resolution_kinds: ResolutionKindsConfig | None = None
+    mail_approval_mode: str | None = Field(default=None, pattern="^(all|external_only|off)$")
+    receivable_rules: ReceivableRulesConfig | None = None
 
 
 def _mask(value: str | None) -> str | None:

@@ -4,6 +4,7 @@ import { ApprovalsColumn, type ApprovalCounts } from "@/components/dashboard/App
 import { Greeting } from "@/components/dashboard/Greeting";
 import { KpiStrip } from "@/components/dashboard/KpiStrip";
 import { MyTicketsColumn, type MyTicket } from "@/components/dashboard/MyTicketsColumn";
+import { TicketAnalytics } from "@/components/dashboard/TicketAnalytics";
 import { TodayColumn, type TodayItem } from "@/components/dashboard/TodayColumn";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -13,7 +14,7 @@ export const dynamic = "force-dynamic";
 
 /** Days shown in the column "Heute" beyond today (operator 27.09.2026). */
 const HORIZON_DAYS = 7;
-const TICKET_LIMIT = 10;
+const TICKET_LIMIT = 4;
 
 /** Routes of generated calendar entries without an own href (see KIND_LINKS of the old page). */
 const KIND_LINKS: Record<string, string> = {
@@ -82,6 +83,19 @@ export default async function StartPage() {
     load<ApprovalCounts>("/api/v1/workspace/approvals"),
   ]);
 
+  // Fallback (operator 27.09.2026): no ticket assigned to me -> show the tenant's most urgent
+  // open tickets instead, so the column is never empty, with a notice row.
+  let ticketsFallback = false;
+  let ticketsShown = tickets;
+  if (canReadTickets && userId && tickets.data !== null && tickets.data.length === 0) {
+    const tenantQuery = new URLSearchParams({ sort: "urgency", include_closed: "false", limit: String(TICKET_LIMIT) });
+    const tenantWide = await loadTickets(`/api/v1/tickets?${tenantQuery.toString()}`);
+    if (tenantWide.data !== null && tenantWide.data.length > 0) {
+      ticketsFallback = true;
+      ticketsShown = tenantWide;
+    }
+  }
+
   const todayItems: TodayItem[] = [
     ...(calendar.data?.items ?? []).map<TodayItem>((item, index) => ({
       id: item.calendar_entry_id ?? item.google_event_id ?? `${item.kind}-${item.date}-${index}`,
@@ -116,6 +130,10 @@ export default async function StartPage() {
           {s("loadError")}
         </p>
       )}
+      {/* Statistics and charts of the former start page (operator 27.09.2026): brought back
+       *  below the KPI strip; the analytics API is admin only since 1.34.1, so the card is
+       *  simply left out for everyone else instead of showing a load error. */}
+      {canSeeAnalytics ? <TicketAnalytics /> : null}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
         <div className="flex flex-col gap-2">
           {failed ? (
@@ -127,12 +145,17 @@ export default async function StartPage() {
         </div>
         {canReadTickets ? (
           <div className="flex flex-col gap-2">
-            {tickets.data === null ? (
+            {ticketsShown.data === null ? (
               <p role="alert" className={ui.alert}>
                 {s("loadError")}
               </p>
             ) : null}
-            <MyTicketsColumn tickets={tickets.data ?? []} listHref={listHref} total={tickets.total} />
+            <MyTicketsColumn
+              tickets={ticketsShown.data ?? []}
+              listHref={listHref}
+              total={ticketsFallback ? undefined : ticketsShown.total}
+              fallback={ticketsFallback}
+            />
           </div>
         ) : null}
         <div className="flex flex-col gap-2">

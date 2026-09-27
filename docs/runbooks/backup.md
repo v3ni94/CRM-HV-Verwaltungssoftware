@@ -204,6 +204,34 @@ laufende Produktionsdatenbank. Freigabe durch die Geschäftsführung, Verfahren 
    Befund) im Wiederherstellungsprotokoll festhalten; Wiederherstellungsverzeichnis und
    entschlüsselte Dateien löschen.
 
+## Restore-Übung (D47, M9-05, B18, M27-03)
+
+Ergänzt `scripts/backup-verify.sh` (lokaler Dump) und die vierteljährliche
+Point-in-Time-Recovery-Probe oben: `infra/scripts/restore-drill.sh` restauriert den neuesten
+Off-site-Lauf aus dem Hetzner-Bucket in eine Wegwerfdatenbank UND ein temporäres
+Objektspeicher-Verzeichnis, vergleicht Prüfsummen sowie Zeilen- und Objektzahlen mit der
+Produktion, misst die Dauer und schreibt ein Protokoll nach
+`docs/reviews/restore-YYYY-MM-DD.md`. Läuft nur mit dem privaten age-Schlüssel
+(`BACKUP_AGE_IDENTITY`), der wie beim monatlichen Test nur vorübergehend eingespielt wird
+(siehe "Schlüsselverwahrung" oben). Keine echten Zugangsdaten stehen im Skript oder im
+Protokoll; alle Werte kommen aus der Umgebung des Aufrufers oder einer `--env-file` wie
+`infra/env.backup.example`.
+
+Aufruf (Restore-Rechner oder Server, nie über die laufende Produktionsdatenbank):
+
+    infra/scripts/restore-drill.sh --env-file /opt/mhvp/.env.backup
+
+Optionen: `--stamp <STAMP>` prüft einen bestimmten Lauf statt des neuesten, `--skip-objects`
+lässt den Objektspeicher-Abgleich aus (nur Datenbank), `--keep-work` behält das temporäre
+Arbeitsverzeichnis zur Fehlersuche (sonst wird es beim Beenden gelöscht, ebenso die
+Wegwerfdatenbank). Exitcode 0 nur wenn alle Prüfungen bestehen; bei Fehlern bleibt das
+Protokoll erhalten und markiert die fehlgeschlagenen Zeilen mit `FAIL`.
+
+Empfehlung: monatlich zusammen mit `make backup-verify`, mindestens vierteljährlich vor der
+Point-in-Time-Recovery-Probe; Ergebnis im jeweiligen `docs/reviews/restore-YYYY-MM-DD.md`
+ablegen und bei einem `FAIL` den Betreiber informieren, bevor der nächste reguläre Lauf
+abgewartet wird.
+
 ### Prüfung im Betrieb
 
 * Wöchentlich: `docker compose ... exec postgres psql -U postgres -c "select last_archived_wal,

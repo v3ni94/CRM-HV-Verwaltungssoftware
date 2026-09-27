@@ -35,6 +35,20 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
   M2-01 vom 26.09.2026). Ist er eingeschaltet, kann beim Code-Schritt Dieses Gerät 90 Tage
   merken gewählt werden; gemerkte Geräte stehen unter Sicherheit und lassen sich dort
   abmelden.
+- Anmeldelink per E-Mail (M21-01): Auf der Anmeldeseite kann statt des Passworts ein
+  einmaliger Anmeldelink angefordert werden (nur E-Mail-Adresse eingeben). Der Link wird an
+  die hinterlegte Adresse verschickt, ist 15 Minuten gültig und einmal nutzbar; je Adresse
+  und Stunde werden höchstens fünf Anfragen angenommen. Die Antwort ist immer dieselbe,
+  unabhängig davon, ob ein Konto besteht. Ist unter Sicherheit für dieses Konto der optionale
+  Bestätigungscode per E-Mail eingeschaltet (durch die Verwaltung, Standard aus), folgt nach
+  dem Öffnen des Links eine zweite E-Mail mit einem sechsstelligen Code (10 Minuten gültig,
+  einmal nutzbar). Die bestehende Anmeldung mit Passwort bleibt unverändert möglich.
+- Einladungsbrief als PDF mit QR-Code (M21-01): Im Abschnitt Portalzugang der Kontaktakte
+  erzeugt Einladung als Anschreiben ein PDF auf dem Briefbogen des Mandanten mit dem
+  Einladungscode als Text und als QR-Code, für Kontakte, die postalisch erreicht werden. Der
+  Code in diesem Brief ist 90 Tage gültig (länger als der 14-tägige E-Mail-Einladungscode),
+  weil ein Brief erst mit Verzögerung ankommt. Jede neue Ausgabe des Briefs ersetzt einen
+  zuvor ausgegebenen Code; ein älterer, bereits verschickter Brief wird damit ungültig.
 - Installation als App (PWA): Das Portal bietet auf unterstützten Geräten Installieren an
   (unter iOS in Safari über Teilen und Zum Home-Bildschirm hinzufügen). Es werden keine
   Daten auf dem Gerät gespeichert; ohne Verbindung zeigt die App nur die Startseite mit dem
@@ -202,3 +216,24 @@ Auftrag.
 - **Zweiter Faktor wird abgefragt**: Der Nutzer hat ihn unter Sicherheit eingeschaltet;
   auf einem gemerkten Gerät entfällt die Abfrage 90 Tage lang. Ausschalten unter Sicherheit
   mit dem aktuellen Passwort.
+
+## Barrierefreiheit (V13)
+
+Das Portal ist auf semantische Struktur (eine Überschrift erster Ordnung je Seite, Landmarken
+`header`, `nav`, `main`, `footer`), vollständige Tastaturbedienung (Sprungmarke „Zum Inhalt
+springen“ vor Kopf und Navigation, sichtbarer Fokusring `mhvp-focus` auf jedem bedienbaren
+Element, Fokusreihenfolge entlang der Lesereihenfolge), beschriftete Formularfelder mit
+Fehlermeldungen über `aria-describedby`, Tabellen mit `scope`-Kopfzellen (`HoaAccountTable`,
+Kontoauszug), Bildern mit Alternativtext (zum Beispiel der TOTP-QR-Code unter Sicherheit) und
+reduzierte Bewegung (`prefers-reduced-motion`) angelegt. Neue Benachrichtigungen auf der
+Übersicht (`PortalNotifications`) werden über `aria-live="polite"` angesagt. Die Sprache steht
+im `html`-Tag der Anwendung. Das Layout bleibt bis 200 Prozent Zoom ohne horizontalen
+Verlust nutzbar (Fließlayout, Umbruch der Navigation unterhalb `md`).
+
+Die Erklärung zur Barrierefreiheit nach dem Barrierefreiheitsstärkungsgesetz (BFSG) steht ohne
+Anmeldung unter `/barrierefreiheit`; sie ist als Entwurf gekennzeichnet, offene Pflichtangaben
+(Ergebnis der externen Prüfung, Feedback-Kontakt, zuständige Überwachungsstelle) sind mit
+„[zu ergänzen]“ markiert, siehe `docs/OPEN_QUESTIONS.md` (M21-09). Automatisierte Prüfungen der
+Kernkomponenten (Navigation, Übersicht, Aushänge, Meldung, Kontoauszug/Hausgeldkonto) laufen mit
+`axe-core` über `vitest-axe` (`apps/web-portal/src/components/portal/Accessibility.axe.test.tsx`)
+als technisches Hilfsmittel; sie ersetzen keine externe Prüfung (`docs/ASSUMPTIONS.md` A-060).

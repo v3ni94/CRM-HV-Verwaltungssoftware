@@ -11,6 +11,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -21,6 +22,7 @@ from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.billing.status import StatementStatus
+from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 
@@ -76,6 +78,15 @@ class Resolution(IdMixin, TimestampMixin, TenantMixin, Base):
     # a protocol note only and never changes the status.
     subject_kind: Mapped[str | None] = mapped_column(String(32))
     majority_check: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    # Umlaufbeschluss mit abgesenkter Mehrheit (M25-02, migration 0166): admitted majority
+    # (unanimous, simple), the prior admitting resolution and the end of the voting period.
+    allowed_majority: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="unanimous", server_default="unanimous"
+    )
+    enabling_resolution_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("resolution.id", ondelete="RESTRICT")
+    )
+    vote_deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class EconomicPlan(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -130,6 +141,12 @@ class HoaStatement(IdMixin, TimestampMixin, TenantMixin, Base):
     reconciliation_notes: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
+    # M24-03: loans shown in the statement, entered by the manager with the legal basis
+    # [{loan_id, allocation_key_id, components, basis, source}]; information only, the shares
+    # never enter the result (open decision M24-03, migration 0171).
+    loan_allocation: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class HoaCostItem(IdMixin, TenantMixin, Base):
@@ -173,6 +190,17 @@ class Meeting(IdMixin, TimestampMixin, TenantMixin, Base):
     # or community rules with reference); never computed, shown in the deadline list (A41).
     resolution_deadline_at: Mapped[date | None] = mapped_column(Date)
     resolution_deadline_source: Mapped[str | None] = mapped_column(Text)
+    # M25-03 / V13: validity end of the resolution that admits virtual meetings (entered from
+    # the resolution wording, never computed), dial-in data of a hybrid or virtual meeting
+    # (encrypted at rest, shown to owners of the community in the portal only) and the
+    # short-notice record of the invitation (minutes note).
+    virtual_basis_valid_until: Mapped[date | None] = mapped_column(Date)
+    dial_in_url: Mapped[str | None] = mapped_column(EncryptedText())
+    dial_in_access: Mapped[str | None] = mapped_column(EncryptedText())
+    invitation_short_notice: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    invitation_short_notice_reason: Mapped[str | None] = mapped_column(Text)
 
 
 class AgendaItem(IdMixin, TenantMixin, Base):
@@ -463,3 +491,37 @@ class HoaMajorityRule(IdMixin, TimestampMixin, TenantMixin, Base):
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+# M24-02: asset report of a community per reporting date (W11, § 28 Abs. 4 WEG as estimate).
+
+
+class HoaAssetReport(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Asset report of a GdWE as of a date: reserve (Soll, Ist, use), bank balances per
+    account of the legal entity, receivables against owners, liabilities, loans and manual
+    other community assets, reconciled against the ledger. Draft behind G4; the snapshot is
+    recomputable and hashed, manual items are listed apart from the ledger figures."""
+
+    __tablename__ = "hoa_asset_report"
+    __table_args__ = (
+        Index("ix_hoa_asset_report_tenant_id", "tenant_id"),
+        Index("ix_hoa_asset_report_ledger_as_of", "ledger_id", "as_of"),
+    )
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
+    as_of: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft"
+    )  # draft, calculated, issued
+    reserve_opening: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal(0))
+    reserve_withdrawals: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal(0))
+    reserve_interest: Mapped[Decimal] = mapped_column(MONEY, nullable=False, default=Decimal(0))
+    # [{label, amount, note}] other community assets without a ledger account (manual)
+    manual_items: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    snapshot: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64))
+    issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(Text)

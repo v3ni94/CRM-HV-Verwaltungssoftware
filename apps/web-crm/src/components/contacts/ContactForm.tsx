@@ -236,6 +236,17 @@ export function ContactForm(props: Props) {
             ))}
           </select>
         </div>
+        <div>
+          <label htmlFor="f-is_consumer" className={ui.label}>
+            {t("isConsumer")}
+          </label>
+          <select id="f-is_consumer" className={ui.input} {...register("is_consumer")}>
+            <option value="">{t("noChannel")}</option>
+            <option value="true">{t("isConsumerYes")}</option>
+            <option value="false">{t("isConsumerNo")}</option>
+          </select>
+          <p className="text-xs text-muted">{t("isConsumerHelp")}</p>
+        </div>
         <Text name="tags" label={t("tags")} register={register} errors={errors} className="sm:col-span-2" />
         <label className="flex items-center gap-2 self-end text-sm">
           <input type="checkbox" {...register("blocked")} />

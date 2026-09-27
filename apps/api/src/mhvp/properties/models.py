@@ -707,6 +707,13 @@ class PropertyBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         CheckConstraint("kind <> 'deposit' OR segregated", name="deposit_segregated"),
         CheckConstraint("valid_to IS NULL OR valid_to >= valid_from", name="period_order"),
+        Index(
+            "uq_property_bank_account_default",
+            "tenant_id",
+            "legal_entity_id",
+            unique=True,
+            postgresql_where=text("is_default"),
+        ),
     )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
@@ -728,6 +735,9 @@ class PropertyBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     ledger_account_id: Mapped[uuid.UUID | None] = _fk(
         "ledger_account.id", nullable=True, ondelete="SET NULL"
     )
+    # Default payment account of the legal entity (at most one per legal entity): the account
+    # a dunning letter names for payment (M16-13). Never a deposit account.
+    is_default: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class MaintenanceItem(IdMixin, TimestampMixin, TenantMixin, Base):

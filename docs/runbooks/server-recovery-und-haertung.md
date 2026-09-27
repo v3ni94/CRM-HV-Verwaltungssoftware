@@ -178,6 +178,34 @@ anpassen. Vorfall 26.09.2026, zweiter Teil: Ein parallel arbeitender Chat hat di
 anmeldung erneut abgeschaltet (Historie /root/.bash_history). Regel: SSH-Konfiguration und
 Server-Neustarts nur aus einem Kanal und nur mit ausdrücklicher Freigabe des Betreibers.
 
+### C2b. Vorschlag zur weiteren Härtung (B18, offene Betreiberentscheidung)
+
+`infra/hardening/sshd_config.d/mhvp.conf` und
+`infra/hardening/fail2ban/jail.d/mhvp-sshd.conf.example` sind Vorschläge im Repository, keine
+Wirkkonfiguration; sie werden von keinem Skript automatisch verteilt. Sie verschärfen C2 nicht
+inhaltlich (dieselben Einstellungen), fügen aber `MaxAuthTries`, `LoginGraceTime` und ein
+fail2ban-Jail-Beispiel hinzu. Offen als B18 in `docs/OPEN_QUESTIONS.md`: ob und wann der
+Betreiber diese schärfere Stufe freigibt, insbesondere weil sie ohne eigene Ausnahme die
+Büro-IP-Sonderregel aus C2a mit einschließt.
+
+Rollout (erst nach ausdrücklicher Freigabe, Kontrollverbindung offen halten wie in Abschnitt C):
+
+    scp infra/hardening/sshd_config.d/mhvp.conf root@<server-ip>:/etc/ssh/sshd_config.d/0-mhvp.conf
+    ssh root@<server-ip> 'sshd -t && systemctl reload ssh'
+    # in einem zweiten Terminal Schlüssel-Login prüfen, danach erst die Kontrollverbindung schließen
+    # optional, nur wenn fail2ban installiert ist (Abschnitt C3):
+    scp infra/hardening/fail2ban/jail.d/mhvp-sshd.conf.example \
+      root@<server-ip>:/etc/fail2ban/jail.d/mhvp-sshd.conf
+    ssh root@<server-ip> 'fail2ban-client reload'
+
+Rollback (Zugangsverlust oder Fehlentscheidung):
+
+    ssh root@<server-ip> 'rm -f /etc/ssh/sshd_config.d/0-mhvp.conf && sshd -t && systemctl reload ssh'
+    ssh root@<server-ip> 'rm -f /etc/fail2ban/jail.d/mhvp-sshd.conf && fail2ban-client reload'
+
+Bei komplettem Zugangsverlust trotz Rollback: Abschnitt A (KVM-Konsole oder Rettungssystem),
+dort die Datei ebenfalls entfernen, bevor sshd neu gestartet wird.
+
 ### C3. fail2ban
 
 Falls installiert (`systemctl status fail2ban`): Jail `sshd` aktivieren und prüfen
@@ -190,6 +218,28 @@ Im Panel eine Firewall-Richtlinie für den Server anlegen, eingehend nur TCP 22,
 alles andere verwerfen. Port 22 nach Möglichkeit auf die festen IPs des Betreibers beschränken.
 Danach `ss -tulpn` und ein Portscan von außen zum Abgleich. Docker veröffentlicht Ports an der
 Host-Firewall (ufw) vorbei, die Panel-Firewall wirkt davor und ist deshalb maßgeblich.
+
+### C5. Secrets-Scan (`gitleaks`, M27-02-03)
+
+Vollständiger Secrets-Scan des Repositoriums (Historie und Arbeitsverzeichnis) mit
+`gitleaks`, Konfiguration `.gitleaks.toml` (Allowlist für bekannte Test-/CI-Dummys wie
+`ci-*-pw`, `change-me`, Beispiel-IBANs der Tests). Läuft verpflichtend in der CI
+(`.github/workflows/ci.yml`, Job `secrets-scan`, Container `zricethezav/gitleaks:v8.21.2`,
+Version festgepinnt) und ist Teil von `make lint` (`scripts/secrets-scan.sh`).
+
+Lokal ausführen, wenn das Binary vorhanden ist (sonst meldet `scripts/secrets-scan.sh` dies
+und bricht nicht ab):
+
+```bash
+gitleaks detect --source=. --config=.gitleaks.toml --redact --verbose
+# oder ohne lokal installiertes Binary, über den CI-Container:
+docker run --rm -v "$PWD:/repo" -w /repo zricethezav/gitleaks:v8.21.2 \
+  detect --source=/repo --config=/repo/.gitleaks.toml --redact --verbose
+```
+
+Ein echter Fund wird bereinigt (Secret rotieren, aus der Historie entfernen oder Repository
+neu aufsetzen, niemals nur in der Allowlist verstecken). Nur nachweislich harmlose
+Fixture-Werte aus Tests/CI kommen in die Allowlist, mit Begründung im Kommentar.
 
 ## D. Backup
 

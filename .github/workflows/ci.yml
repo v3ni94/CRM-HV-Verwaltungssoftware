@@ -28,6 +28,26 @@ jobs:
           persist-credentials: false
       - run: python3 scripts/sync_agent_docs.py --check
 
+  secrets-scan:
+    # Vollstaendiger Secrets-Scan der Historie dieses Pushs/PRs (Sicherheitspruefung 27.09.2026,
+    # Befund 6 / OE-M27-02-03; der bisherige Muster-Grep deckte nur den aktuellen Stand ab).
+    # Konfiguration und Allowlist: .gitleaks.toml.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: gitleaks
+        run: |
+          docker run --rm -v "$PWD:/repo" -w /repo "$GITLEAKS_IMAGE" \
+            detect --source=/repo --config=/repo/.gitleaks.toml --redact --verbose
+        env:
+          # Version festgepinnt (kein :latest); Digest kann in dieser Umgebung nicht aufgeloest
+          # werden (kein Registry-Zugriff beim Erstellen dieses Jobs), daher vorerst per Tag.
+          GITLEAKS_IMAGE: zricethezav/gitleaks:v8.21.2
+
   migrations-guard:
     # Sperre gegen Umnummerierung oder Loeschung gemergter Alembic-Migrationen (scripts/check-migrations.sh).
     runs-on: ubuntu-24.04

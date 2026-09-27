@@ -8,10 +8,10 @@ Two connector families exist today:
   read only, WebForm based. Primary path for unlimited banks going forward (operator
   decision 25.09.2026).
 
-HBCI/FinTS is intentionally **not** implemented; this module only keeps the seam (the
-`BankConnector` protocol) so a `FinTsConnector` can be added later without changing callers.
-`UnconfiguredConnector` still stands in for that and for any connector without a signed
-contract or credentials (EBICS, GoCardless).
+HBCI/FinTS PIN/TAN (operator decision 27.09.2026) lives in `mhvp.banking.fints` as a
+session based workflow (pause for TAN, resume in the worker) rather than behind this
+synchronous protocol, because every call may stop for a TAN; `UnconfiguredConnector` still
+stands in for any connector without a signed contract or credentials (EBICS, GoCardless).
 
 Credentials for online banking never touch this codebase: WebForm based connectors return a
 provider hosted URL (`WebFormHandle.url`) that the browser is redirected to; bank login and

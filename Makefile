@@ -34,12 +34,16 @@ e2e: ## Playwright smoke tests of both web apps (builds first)
 	pnpm build
 	pnpm e2e
 
-lint: ## ruff, eslint, agent docs sync check, i18n and client import guards
+lint: ## ruff, eslint, agent docs sync check, i18n, client import guards, secrets scan
 	cd apps/api && uv run ruff check . && uv run ruff format --check .
 	pnpm lint
 	python3 scripts/sync_agent_docs.py --check
 	python3 scripts/check_i18n.py
 	python3 scripts/check_client_imports.py
+	scripts/secrets-scan.sh
+
+secrets-scan: ## gitleaks over the working tree (skips with a notice if the binary is missing)
+	scripts/secrets-scan.sh
 
 i18n-check: ## de.json/en.json key parity, dashes and empty values
 	python3 scripts/check_i18n.py

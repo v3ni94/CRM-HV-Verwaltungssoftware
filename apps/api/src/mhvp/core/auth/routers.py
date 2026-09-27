@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import UTC, datetime
+from typing import Any
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, EmailStr, Field
@@ -121,6 +122,30 @@ class MeOut(BaseModel):
     platform_access_reason: str | None
     # Second factor switched on by the user (Einstellungen, Sicherheit); never mandatory.
     totp_enabled: bool = False
+    # UI preferences (operator 27.09.2026, migration 0182), served with getMe so the main
+    # navigation renders its stored state without a flash of the wrong layout.
+    ui_preferences: dict[str, Any] = Field(default_factory=dict)
+
+
+# Accepted keys of ``User.ui_preferences`` (rule: only these are ever written, unknown keys are
+# rejected so the bag stays a small, reviewable set rather than an arbitrary blob).
+_UI_PREFERENCE_KEYS = {"nav_expanded_groups"}
+
+
+class UiPreferencesUpdate(BaseModel):
+    """Partial update: only listed keys are merged into ``User.ui_preferences``. Unknown keys
+    are rejected (``extra="forbid"``) so the bag stays a small, reviewable set."""
+
+    model_config = {"extra": "forbid"}
+
+    nav_expanded_groups: list[str] | None = None
+
+    def as_patch(self) -> dict[str, Any]:
+        data = self.model_dump(exclude_unset=True)
+        unknown = set(data) - _UI_PREFERENCE_KEYS
+        if unknown:
+            raise ProblemError(ErrorCodes.VALIDATION)
+        return data
 
 
 def _settings(request: Request) -> Settings:
@@ -417,12 +442,14 @@ async def revoke_trusted_device(
 async def me(request: Request, principal: Principal = Depends(get_principal)) -> MeOut:
     email = name = None
     totp_enabled = False
+    ui_preferences: dict[str, Any] = {}
     if principal.user_id is not None:
         async with platform_transaction(sessions(request)) as session:
             user = await session.get(User, principal.user_id)
             if user is not None:
                 email, name = user.email, user.display_name
                 totp_enabled = user.totp_enabled
+                ui_preferences = dict(user.ui_preferences or {})
     return MeOut(
         user_id=principal.user_id,
         email=email,
@@ -434,4 +461,44 @@ async def me(request: Request, principal: Principal = Depends(get_principal)) ->
         is_superadmin=principal.is_superadmin,
         platform_access_reason=principal.platform_access_reason,
         totp_enabled=totp_enabled,
+        ui_preferences=ui_preferences,
+    )
+
+
+@router.patch("/me/preferences", summary="Eigene UI-Einstellungen speichern")
+async def update_my_preferences(
+    request: Request,
+    body: UiPreferencesUpdate,
+    principal: Principal = Depends(get_principal),
+) -> MeOut:
+    """Merge accepted keys into the caller's own ``ui_preferences`` (never another user's)."""
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    patch = body.as_patch()
+    async with platform_transaction(sessions(request)) as session:
+        user = await session.get(User, principal.user_id)
+        if user is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        merged = dict(user.ui_preferences or {})
+        for key, value in patch.items():
+            if value is None:
+                merged.pop(key, None)
+            else:
+                merged[key] = value
+        user.ui_preferences = merged
+        await session.flush()
+        email, name, totp_enabled = user.email, user.display_name, user.totp_enabled
+        ui_preferences = dict(user.ui_preferences)
+    return MeOut(
+        user_id=principal.user_id,
+        email=email,
+        display_name=name,
+        tenant_id=principal.tenant_id,
+        roles=list(principal.roles),
+        permissions=sorted(principal.permissions),
+        is_platform_admin=principal.is_platform_admin,
+        is_superadmin=principal.is_superadmin,
+        platform_access_reason=principal.platform_access_reason,
+        totp_enabled=totp_enabled,
+        ui_preferences=ui_preferences,
     )

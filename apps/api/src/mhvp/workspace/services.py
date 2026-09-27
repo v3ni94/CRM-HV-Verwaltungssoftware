@@ -125,6 +125,11 @@ async def derived_dates(
                             "property_id": c.property_id,
                         }
                     )
+    if properties:
+        # "Einladung spätestens" of planned owners' meetings (M25-03, mhvp.hoa.meeting_rules).
+        from mhvp.hoa.meeting_rules import invitation_deadlines
+
+        items += await invitation_deadlines(session, start, end)
     return items
 
 

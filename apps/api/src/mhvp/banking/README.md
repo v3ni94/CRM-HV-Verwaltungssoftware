@@ -25,6 +25,19 @@ Bank connectors (EBICS, aggregator, FinTS fallback, file import), transactions, 
   Spec and open points: `docs/integrations/finapi.md`; tests `tests/unit/test_finapi_client.py`,
   `tests/integration/test_m11_finapi.py`.
 
+* FinTS/HBCI PIN/TAN (M11-01 addendum, operator decision 27.09.2026, in addition to finAPI):
+  `fints.py` holds the institute lookup (`data/fints_institutes.txt`, externally maintained,
+  `search_institutes`, `blz_from_iban`), the pause/resume workflow on top of
+  `fints.client.FinTS3PinTanClient` (`start_session`/`continue_session`, opaque blobs from
+  `deconstruct`/`pause_dialog`/`get_data`, `Progress` for a TAN in the middle of the work)
+  and the return code mapping (`MHVP-BANK-0007` to `0016`). `fints_routers.py` exposes
+  `/banking/fints/*` (institutes, connections, sessions, tan, refresh, assign, delete);
+  `tasks.fints_step` (queue `bank`) runs one blocking step per session outside any database
+  transaction and persists to `bank_fints_session`. Login, PIN and client state are stored
+  encrypted on `FinTsConnection`; a rejected PIN is discarded (no automatic retry). Migration
+  0161, spec `docs/integrations/fints.md`, rule M11-07, tests `tests/unit/test_fints.py`,
+  `tests/integration/test_m11_fints.py` (fake client `tests/fints_fake.py`).
+
 * Consent reminder (A29, 8.2): `tasks.consent_reminders` (beat, daily) and the 06:00 `sync_all`
   both call `tasks.remind_consent_expiry`: ten days before the effective consent expiry
   (`FinApiConnection.consent_valid_until`, else `BankConnection.consent_valid_until`) every
@@ -94,6 +107,26 @@ Vorschlag oder Entwurf, nichts löst eine Zahlung aus.
 - Tests: `tests/integration/test_m15_payments.py` (`test_payment_run`,
   `test_d35_to_d38_payment_release_and_bank_feedback`).
 
+### Zahlungsdatei, Einreichung, Download-Protokoll (M15-01, M15-03, V2; 27.09.2026)
+
+- `pain001` erzeugt pain.001.001.03 oder pain.001.001.09 (Vorgabe 09), Version je
+  Auftraggeberkonto in `payment_bank_config` (`GET/PUT /banking/payment-bank-config/{account}`,
+  außerdem `pain008_version` und `submission_channel`). Beide Versionen werden in
+  `tests/unit/test_pain001_versions.py` gegen die ISO-20022-XSDs unter `tests/data/iso20022/`
+  validiert; `validate_pain001` prüft Struktur, Anzahl, Kontrollsummen und EndToEndId.
+- `POST /banking/payment-batches` (G2, Vier-Augen je Auftrag) legt die Datei als Dokument
+  ab und speichert `transaction_count`, `control_sum` und `file_sha256`; Status
+  `file_generated`. `GET /banking/payment-batches/{id}/file` (G2) prüft die abgelegten Bytes
+  gegen die Prüfsumme, protokolliert den Download in `payment_file_download` (Ereignis
+  `payment_batch.downloaded`) und liefert `X-Content-SHA256`.
+- `payment_submitters.PaymentSubmitter`: `FileDownloadSubmitter` (manueller Upload im
+  Onlinebanking, `POST /banking/payment-batches/{id}/submit` mit Bankreferenz nach mindestens
+  einem Download, Status `submitted`), `FintsSubmitter` und `ebics.EbicsSubmitter` als
+  Gerüste, die mit `MHVP-BANK-0017` ablehnen (Feature-Flags `MHVP_FINTS_PAYMENT_SUBMISSION`,
+  `MHVP_EBICS_PAYMENT_SUBMISSION`, Betreiberentscheidung V2, `docs/integrations/ebics.md`).
+- Migration `0197_payment_submission`; Regel `docs/rules/M15-01-pain-versions.md`; Runbook
+  `docs/runbooks/zahllauf-test.md`; Test `tests/integration/test_m15_payment_submission.py`.
+
 ## Kennzahlen des Bankabgleichs (A45, Abnahme M12)
 
 `matching_metrics.py` computes coverage (automatically and unambiguously assigned and posted
@@ -108,5 +141,21 @@ with the same `bank_transaction_id`. Endpoint `GET /api/v1/banking/matching-metr
 Checked against the folder contents on 26.09.2026, the following files were not listed above:
 
 * `ai_posting.py`: AI posting proposal `propose_posting` (M7-09, M12): input minimisation, tenant switch, proposal only, nothing posted
+* `posting_proposal.py` (27.09.2026, M12-01): deterministic stage 1 of the two stage posting proposal (bank rules, mandate reference, contract or invoice number, purpose determination, payer IBAN, amount) with source, confidence and reasoning per proposal, always active and without AI; `GET /transactions/{id}/posting-proposals` combines it with the stored AI proposals of stage 2 (`ai_posting.py`, tenant switch off by default). Independent set `tests/ai_eval/posting_stage1/cases.json` (200 cases), hit rate per class via `make ai-eval`; rule `docs/rules/M12-01-kontierung-zwei-stufen.md`
 * `allocation.py`: payer's determination (Tilgungsbestimmung) parsed from the payment purpose (M12-03, D39), deterministic, no AI
 * `invoice_matching.py`: invoice to bank transaction matching and draft payment proposal (M11-finapi stage 3, rule M11-06, G2 closed)
+
+## Bank specific CSV import (M11-02, docs/integrations/bank-csv.md)
+
+`csv_formats.py` recognises common German bank CSV exports (Sparkasse, Volksbank/Raiffeisen
+Atruvia, DKB, ING, N26, comdirect) from their actual header row only, plus a generic mapping
+path for anything else or a header change; only Sparkasse's CAMT-CSV header is verified
+against a real sample, the rest is flagged `zu_pruefen` (see the doc for the full list and
+`docs/OPEN_QUESTIONS.md` M11-02-csv-header-verification). Encoding (UTF-8/Windows-1252),
+delimiter, German decimal comma and several date formats are detected robustly; unreadable
+rows are reported, never silently dropped. Output is the same `RawTransaction`/`RawStatement`
+shape as CAMT/MT940, so `services.import_file` and its hash based duplicate protection (D05)
+apply unchanged. `models.BankCsvMapping` stores a user defined column mapping per account
+(migration 0168). Endpoints: `POST /banking/imports/csv/preview` (detected format, rows,
+errors, nothing saved), `POST /banking/imports/csv`, `POST`/`GET /banking/csv-mappings`.
+Tests: `tests/unit/test_csv_formats.py`.

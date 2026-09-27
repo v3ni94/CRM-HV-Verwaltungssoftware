@@ -52,7 +52,12 @@ export function PortalNotifications() {
     </>
   );
   return (
-    <section aria-labelledby="portal-notifications" className={ui.pageGap} data-testid="portal-notifications">
+    <section
+      aria-labelledby="portal-notifications"
+      aria-live="polite"
+      className={ui.pageGap}
+      data-testid="portal-notifications"
+    >
       <h2 id="portal-notifications" className="text-base font-semibold">
         {t("notifications.title")}
       </h2>

@@ -10,6 +10,7 @@ from sqlalchemy import Date, DateTime, ForeignKey, Index, Numeric, String, Text,
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
+from mhvp.core.crypto import EncryptedText
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 
@@ -72,6 +73,12 @@ class Prospect(IdMixin, TimestampMixin, TenantMixin, Base):
     viewing_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     notes: Mapped[str | None] = mapped_column(Text)
     delete_after: Mapped[date] = mapped_column(Date, nullable=False)
+    # Interessentenverwaltung (M28-01 supplement): where the inquiry came from (portal,
+    # manual, openimmo, flow) and the last rejection text block used, if any.
+    source: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="manual", server_default=text("'manual'")
+    )
+    rejection_template_id: Mapped[str | None] = mapped_column(String(32))
 
 
 class Listing(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -185,3 +192,91 @@ class FlowImportRun(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class OpenImmoImportRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    """OpenImmo import run (M26-02 supplement, docs/rules/M26-02.md): one uploaded OpenImmo
+    file with the parsed preview rows; only `apply` writes `listing` rows. Mirrors
+    `FlowImportRun` (preview/apply, idempotent via `external_ref`)."""
+
+    __tablename__ = "openimmo_import_run"
+
+    filename: Mapped[str] = mapped_column(String(300), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="previewed", server_default=text("'previewed'")
+    )
+    row_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, default=0, server_default=text("0")
+    )
+    created_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, default=0, server_default=text("0")
+    )
+    skipped_count: Mapped[int] = mapped_column(
+        sa.Integer, nullable=False, default=0, server_default=text("0")
+    )
+    rows: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BrokerTenantConfig(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Broker/portal-CRM adapter config (M28-01 stage 3, `mhvp.letting.broker_provider`).
+    One row per tenant and provider; credentials stored encrypted, feature flag `enabled`
+    default off (rule 0.1.1, ADR 0003 style, mirrors `LexofficeTenantConfig`)."""
+
+    __tablename__ = "broker_tenant_config"
+    __table_args__ = (
+        Index("ux_broker_tenant_config_tenant_provider", "tenant_id", "provider", unique=True),
+    )
+
+    # flowfact, propstack, onoffice
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    api_key: Mapped[str | None] = mapped_column(EncryptedText())
+    api_secret: Mapped[str | None] = mapped_column(EncryptedText())
+    base_url: Mapped[str | None] = mapped_column(String(300))
+    enabled: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    last_tested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_test_ok: Mapped[bool | None] = mapped_column(sa.Boolean)
+    last_test_message: Mapped[str | None] = mapped_column(Text)
+
+
+class ProspectViewing(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Viewing appointment for a prospect (M26/M28-01 supplement "Interessentenverwaltung");
+    a `Prospect` can have several appointments (calendar), unlike the single legacy
+    `Prospect.viewing_at` field, which stays for the most recent one."""
+
+    __tablename__ = "prospect_viewing"
+    __table_args__ = (Index("ix_prospect_viewing_prospect", "tenant_id", "prospect_id"),)
+
+    prospect_id: Mapped[uuid.UUID] = _fk("prospect.id", nullable=False, ondelete="CASCADE")
+    scheduled_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="proposed", server_default=text("'proposed'")
+    )  # proposed, confirmed, done, cancelled, no_show
+    location: Mapped[str | None] = mapped_column(String(300))
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class SelfDisclosureLink(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Portal link for a Selbstauskunft (self-disclosure) form (M26/M28-01 supplement).
+    The token is the only credential; the form itself and its privacy notice text live in
+    the portal app, this row only holds the submission (rule 0.1.13, DSGVO purpose
+    limitation: filled in only after the prospect has read the privacy notice, `consent_
+    privacy` must be true before `payload` is accepted, enforced by the router)."""
+
+    __tablename__ = "self_disclosure_link"
+    __table_args__ = (Index("ux_self_disclosure_link_token", "token", unique=True),)
+
+    prospect_id: Mapped[uuid.UUID] = _fk("prospect.id", nullable=False, ondelete="CASCADE")
+    token: Mapped[str] = mapped_column(String(96), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    consent_privacy: Mapped[bool] = mapped_column(
+        sa.Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    payload: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )

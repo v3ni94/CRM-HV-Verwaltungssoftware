@@ -1,0 +1,111 @@
+"use client";
+
+import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+
+import { bff } from "@/lib/bff";
+import { ui } from "@/lib/ui";
+
+type ConsumeResult = { status: "ok" } | { status: "code_required"; link_id: string; tenant_id: string };
+
+type State =
+  | { step: "consuming" }
+  | { step: "code"; linkId: string; tenantId: string }
+  | { step: "done" }
+  | { step: "error"; message: string };
+
+/** M21-01: redeems the link once on mount; "code_required" asks for the mailed e-mail code
+ *  (optional second factor, switched on per account by the management). The link itself is
+ *  never shown again, only the outcome. */
+export function MagicLinkConsume({ token }: { token?: string }) {
+  const t = useTranslations("Auth");
+  const router = useRouter();
+  const [state, setState] = useState<State>({ step: "consuming" });
+  const [code, setCode] = useState("");
+  const [busy, setBusy] = useState(false);
+  const consumed = useRef(false);
+
+  useEffect(() => {
+    if (!token) {
+      setState({ step: "error", message: t("magicLink.invalid") });
+      return;
+    }
+    if (consumed.current) return;
+    consumed.current = true;
+    void (async () => {
+      const result = await bff<ConsumeResult>("/api/session/magic-link/consume", {
+        method: "POST",
+        body: JSON.stringify({ token }),
+      });
+      if (!result.ok) {
+        setState({ step: "error", message: t("magicLink.invalid") });
+        return;
+      }
+      if (result.data.status === "ok") {
+        setState({ step: "done" });
+        router.push("/start");
+        router.refresh();
+        return;
+      }
+      setState({ step: "code", linkId: result.data.link_id, tenantId: result.data.tenant_id });
+    })();
+    // token is read once on mount; the link must not be redeemed a second time on a rerender.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function verifyCode(event: React.FormEvent) {
+    event.preventDefault();
+    if (state.step !== "code") return;
+    setBusy(true);
+    const result = await bff<{ status: string }>("/api/session/magic-link/verify-code", {
+      method: "POST",
+      body: JSON.stringify({ tenant_id: state.tenantId, link_id: state.linkId, code: code.trim() }),
+    });
+    setBusy(false);
+    if (!result.ok) {
+      setState({ step: "error", message: t("magicLink.invalid") });
+      return;
+    }
+    setState({ step: "done" });
+    router.push("/start");
+    router.refresh();
+  }
+
+  if (state.step === "consuming" || state.step === "done") {
+    return <p className="text-sm text-muted">{t("magicLink.checking")}</p>;
+  }
+  if (state.step === "error") {
+    return (
+      <div className="flex flex-col gap-3">
+        <p role="alert" className={ui.alert}>
+          {state.message}
+        </p>
+        <button type="button" className={ui.primary} onClick={() => router.push("/anmelden")}>
+          {t("magicLink.backToPassword")}
+        </button>
+      </div>
+    );
+  }
+  return (
+    <form onSubmit={verifyCode} noValidate className="flex flex-col gap-3" aria-label={t("magicLink.codeTitle")}>
+      <p className="text-sm text-muted">{t("magicLink.codeHint")}</p>
+      <div>
+        <label htmlFor="magic-link-code" className={ui.label}>
+          {t("code")}
+        </label>
+        <input
+          id="magic-link-code"
+          className={ui.input}
+          autoComplete="one-time-code"
+          autoFocus
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+        />
+      </div>
+      <button type="submit" className={ui.primary} disabled={busy}>
+        {busy ? t("submitting") : t("verify")}
+      </button>
+    </form>
+  );
+}

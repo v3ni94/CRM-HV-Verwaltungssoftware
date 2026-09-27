@@ -534,3 +534,29 @@ Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis
 * Im Code: Stufen 1 bis 5 (Datenmodell, Dokumentenmigration, Klassifikation mit Maskierung, Review Center, Listen, Vollständigkeitsprüfung, Nachforderungsschreiben, Berechtigungsschlüssel `objektakte:*`, Differenzimport mit Wasserstand und Löschmarkierungen, Synchronisationsstand im CRM), Regeln M35-01 bis M35-03, Celery-Jobs in `objektakte/tasks.py`, Router `routers`, `sync_router`, `review_routers`, `rules_routers`, `lists_routers`, `completeness_routers`, `ai_call_routers` (alle in `main.py` registriert).
 * Tests: Integrationstests `tests/integration/test_m35_*`, Vitest `SyncStatus` und weitere objektakte-Komponenten.
 * Offen: Entscheidungen in Abschnitt 7 (Datenhoheit gemappter Stammdatenfelder im Parallelbetrieb, Abschaltung), Benutzerabbildung, KI-Kosten, Listenablage und Anzeigenbilder laufen in anderer Sitzung (Lückenliste, Vorbemerkung). `contact.created` und `contact.updated` aus dem Differenzimport sind seit 26.09.2026 umgesetzt (Lückenliste A87, `tests/integration/test_a87_import_contact_events_apply.py`).
+
+## Technische Vorbereitung M35-01 bis M35-07 (27.09.2026)
+
+Auftrag: vorbereiten, was ohne Betreiberentscheidung möglich ist; Entscheidungen bleiben in
+`docs/OPEN_QUESTIONS.md` (Status je Punkt dort aktualisiert). Regel `docs/rules/M35-04.md`,
+Modul-README `apps/api/src/mhvp/objektakte/README.md`.
+
+- Vorschaubilder (M35-02): `mhvp.objektakte.previews` übernimmt Seitenbilder aus der
+  objektakte-Struktur `/data/previews/<id>/<seite>.jpg` in den Objektspeicher, rendert fehlende
+  Vorschauen für Bildoriginale (Pillow) neu und meldet PDF ohne Datei als `pending_render`
+  (kein PDF-Renderer im CRM, Prüfung der bestehenden Vorschau-Erzeugung: es gab keine, nur den
+  Paperless-Durchreich-Pfad `kind=preview`). Fortschritt und Wiederaufnahme über
+  `objektakte_preview_import_run` (Migration 0176). Endpunkte und Worker-Task, siehe README.
+- Schlüsselübergabe (M35-03): `python -m mhvp.objektakte.rekey --dry-run`, Roundtrip getestet;
+  Protokoll ohne Klartext; IBAN nur als `pending` Bankverbindung, Tokens nur auf Option.
+- Lokales Modell (M35-01): Format im objektakte-Quellcode geprüft (`apps/classification/stage2.py`:
+  scikit-learn, joblib, `labels.json`); Adapter hinter Mandantenflag, nur Vorschlag; Laufzeit
+  (`joblib`, `scikit-learn`) bewusst nicht als Abhängigkeit aufgenommen, Status meldet das.
+- Parallelbetrieb (M35-05/06): Abgleichbericht je Objekt als Endpunkt und CRM-Abschnitt;
+  Drive-Client hatte weder Ratenbegrenzung noch Backoff, beides ergänzt (`drive_quota`).
+- Archivierung (M35-07): Runbook-Entwurf `docs/runbooks/objektakte-archivierung.md`.
+- Tests: Unit (Rekey-Roundtrip, Abgleich, Quota-Transport, Modelladapter), Integration
+  (Vorschau-Import mit Wiederaufnahme und Endpunkten, Abgleichbericht gegen aufgezeichnetes
+  objektakte, Modellvorschlag hinter Flag), Vitest `ReconciliationReport`.
+- Offen bleibt: alle sieben Entscheidungen (siehe OPEN_QUESTIONS), außerdem die Wahl eines
+  PDF-Renderers, die gepinnte scikit-learn-Version, das tatsächliche Drive-Kontingent.

@@ -35,6 +35,7 @@ ACTION_TYPES: tuple[str, ...] = (
     "mail_draft",
     "letter_draft",
     "ai_task",
+    "create_task",
 )
 # Trigger kinds: a domain event type or a schedule (stage 2, A39).
 TRIGGER_KINDS: tuple[str, ...] = ("event", "schedule")
@@ -52,10 +53,17 @@ SETTABLE_TICKET_FIELDS: tuple[str, ...] = ("priority", "team_id", "category", "a
 RUN_STATUS_EXECUTED = "executed"
 RUN_STATUS_FAILED = "failed"
 RUN_STATUS_DRY_RUN = "dry_run"
-# Rule webhook deliveries (A82): same states as ``mhvp.core.webhooks.DeliveryStatus``.
+# Rule webhook deliveries (A82). ``dead`` is the terminal state after the retry plan is
+# exhausted (M9-08): 1, 5, 15, 60 minutes, at most 5 attempts, then the rule owner (the
+# member who last saved the rule) is notified. ``failed`` stays for backward compatibility
+# of rows written before this plan; it is treated like ``dead`` (no further retry).
 DELIVERY_PENDING = "pending"
 DELIVERY_SUCCEEDED = "succeeded"
 DELIVERY_FAILED = "failed"
+DELIVERY_DEAD = "dead"
+# Retry plan (M9-08, operator decision docs/OPEN_QUESTIONS.md M9-08): 1, 5, 15, 60 minutes.
+WEBHOOK_RETRY_SCHEDULE_SECONDS: tuple[int, ...] = (60, 300, 900, 3600)
+WEBHOOK_MAX_ATTEMPTS = 5
 
 
 class AutomationRule(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -90,6 +98,13 @@ class AutomationRule(IdMixin, TimestampMixin, TenantMixin, Base):
     # Ordered list of actions, each {"type": <ACTION_TYPES>, ...} (validated by the schemas).
     actions: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    # Optional rule owner (M9-08 Kleinbefund 27.09.2026): the member responsible for this rule,
+    # notified on a dead webhook delivery ahead of the last editor fallback in
+    # ``_notify_owner_dead``. Never set automatically; ``SET NULL`` so a deleted user does not
+    # block the rule.
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
     )
 
 
@@ -135,8 +150,10 @@ class AutomationWatermark(IdMixin, TenantMixin, Base):
 class AutomationWebhookDelivery(IdMixin, TimestampMixin, TenantMixin, Base):
     """Outbox of the ``webhook`` action (A82): one row per run and action position. The run
     enqueues the signed-at-send payload; the beat job delivers due rows after the retry
-    schedule of ``mhvp.core.webhooks`` (1 min, 5 min, 30 min, 2 h, 6 h, 24 h, then failed).
-    Manual redelivery resets a row to pending and keeps the attempt count."""
+    schedule ``WEBHOOK_RETRY_SCHEDULE_SECONDS`` (1, 5, 15, 60 minutes), at most
+    ``WEBHOOK_MAX_ATTEMPTS`` (5) attempts, then ``dead`` with a notification to the rule
+    owner (M9-08). Manual redelivery resets a dead row to pending with a fresh attempt
+    budget; a still-pending row keeps its attempt count."""
 
     __tablename__ = "automation_webhook_delivery"
     __table_args__ = (
@@ -166,3 +183,13 @@ class AutomationWebhookDelivery(IdMixin, TimestampMixin, TenantMixin, Base):
     last_status_code: Mapped[int | None] = mapped_column(Integer)
     last_error: Mapped[str | None] = mapped_column(String(200))
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Duration of the last attempt in milliseconds (M9-08).
+    last_duration_ms: Mapped[int | None] = mapped_column(Integer)
+    # Idempotency key sent as the ``Idempotency-Key`` header on every attempt of this row
+    # (stable across retries, set once when the row is created; M9-08).
+    idempotency_key: Mapped[str | None] = mapped_column(String(64))
+    # Whether the rule owner was already notified about the dead delivery (avoids duplicates
+    # on a beat pass that finds several dead deliveries at once).
+    owner_notified: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )

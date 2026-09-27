@@ -747,6 +747,7 @@ async def open_items(
                     "amount": item.amount,
                     "remaining": rest,
                     "contract_id": item.contract_id,
+                    "notice_received_on": item.notice_received_on,
                 }
             )
     return out

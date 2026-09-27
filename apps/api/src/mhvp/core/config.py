@@ -70,6 +70,13 @@ class Settings(BaseSettings):
     # Size limit of one export file the worker reads for the differential import (checked via
     # stat before reading). The upload path has its own 200 MB limit.
     objektakte_dump_max_bytes: int = Field(default=512 * 1024 * 1024, gt=0, le=4 * 1024**3)
+    # objektakte preview images (M35, open question M35-02): the worker side directory that
+    # holds objektakte's ``/data/previews`` tree (``<document id>/<page>.jpg``); read only, the
+    # takeover copies into the object store (`mhvp.objektakte.previews`).
+    objektakte_previews_dir: str = "/data/previews"
+    # objektakte local classification model (M35-01): ``<version>/model_a.joblib`` plus
+    # ``labels.json``; read only when the per tenant flag is on (`mhvp.objektakte.local_model`).
+    objektakte_models_dir: str = "/data/models"
     # objektakte read API (M29 Stufe 4, contract in docs/integrations/objektakte.md): base URL
     # (".../api/crm/v1/"), bearer token and the tenant (slug) whose data objektakte holds. The
     # integration is off while URL, token or tenant is empty. The names of the contract
@@ -194,6 +201,12 @@ class Settings(BaseSettings):
     # encrypted per tenant. Read only: no payment initiation (G2 closed).
     finapi_base_url_sandbox: str = "https://sandbox.finapi.io"
     finapi_base_url_live: str = "https://live.finapi.io"
+    # FinTS/HBCI PIN/TAN (M11-01 addendum, operator decision 27.09.2026): registration
+    # number of the product with the Deutsche Kreditwirtschaft (free "Antrag auf
+    # Produktregistrierung", docs/integrations/fints.md). Without it no FinTS connection is
+    # possible (python-fints 4 refuses to start a dialog). Read only, G2 stays closed.
+    fints_product_id: str | None = None
+    fints_product_version: str = "1.0"
 
     @model_validator(mode="after")
     def _guard_shared_environments(self) -> "Settings":

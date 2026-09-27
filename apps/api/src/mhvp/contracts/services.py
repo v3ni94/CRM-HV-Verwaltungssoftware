@@ -21,6 +21,7 @@ from mhvp.contracts.models import (
     DepositMovementKind,
     MandateStatus,
     MandateType,
+    PaymentInterval,
     PaymentSchedule,
     SepaMandate,
 )
@@ -257,6 +258,22 @@ async def add_payment(session: AsyncSession, contract: Contract, row: ContractPa
         previous.valid_to = row.valid_from - timedelta(days=1)
         await session.flush()
     session.add(row)
+
+
+async def default_payment_interval(session: AsyncSession, tenant_id: uuid.UUID) -> PaymentInterval:
+    """M13-01a: Mandanten-Standard für die Zahlweise (``TenantSettings.receivable_rules
+    .payment_interval``), den ein neuer Zahlungsplan übernimmt, wenn er selbst keine Angabe
+    trägt. Ohne Mandantenvorgabe bleibt es bei monatlich (bisheriges Verhalten)."""
+    from mhvp.platform.models import TenantSettings
+
+    raw = await session.scalar(
+        select(TenantSettings.receivable_rules).where(TenantSettings.tenant_id == tenant_id)
+    )
+    value = (raw or {}).get("payment_interval")
+    try:
+        return PaymentInterval(value) if value else PaymentInterval.MONTHLY
+    except ValueError:
+        return PaymentInterval.MONTHLY
 
 
 async def add_schedule(session: AsyncSession, contract: Contract, row: PaymentSchedule) -> None:

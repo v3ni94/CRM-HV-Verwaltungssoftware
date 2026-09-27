@@ -17,6 +17,7 @@ const proposal: Proposal = {
   decision: "pending",
   decided_by: null,
   decided_at: null,
+  rejection_reason: null,
   import_run_id: null,
   proposed: {
     questions: ["Ist Zeile 4 ein Mieter oder ein Eigentümer?"],

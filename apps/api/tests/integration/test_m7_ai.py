@@ -1664,3 +1664,89 @@ def test_table_import_without_role_asks_and_apply_role_sets_it_later(
         assert contact["roles"] == ["bank"]
     other = bearer(login(client, world, "m7other"))
     assert client.post(url, json={"role": "bank"}, headers=other).status_code == 404
+
+
+def test_masked_tasks_do_not_send_iban_or_email_to_the_provider(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    """M34 Nachtrag 27.09.2026 (9.1 Datenschutz): `summarize` and `answer_question` are in
+    `gateway.MASKED_TASKS`, so an IBAN, e-mail address and phone number in the source document
+    never reach the provider; the name stays (needed for a salutation, 9.1)."""
+    admin = _setup_provider(client, world)
+    doc = _upload(
+        client,
+        admin,
+        "uebergabe.txt",
+        (
+            f"Übergabeprotokoll {RUN}: Eigentümer Max Mustermann{RUN}, "
+            f"Musterstraße 12, 40000 Musterstadt. IBAN DE02120300000000202051, "
+            f"E-Mail max.mustermann.{RUN}@example.org, Telefon 0221 1234567."
+        ).encode(),
+        "text/plain",
+    )
+    fake.queue.append({"summary": "Übergabe erfasst.", "open_points": []})
+    run = _chat(client, admin, "summarize", "Fasse das Protokoll zusammen", [doc])
+    assert run["status"] == "succeeded", run
+    sent = fake.calls[-1]["messages"][-1]["content"]
+    assert "DE02120300000000202051" not in sent
+    assert f"max.mustermann.{RUN}@example.org" not in sent
+    assert "0221 1234567" not in sent
+    assert "[IBAN]" in sent
+    assert "[E-MAIL]" in sent
+    assert "[TELEFON]" in sent
+    assert f"Max Mustermann{RUN}" in sent  # name kept: needed for a salutation (9.1)
+
+
+def test_reject_reason_becomes_a_learning_example(
+    client: TestClient, world: World, fake: FakeProvider
+) -> None:
+    """M34 Nachtrag 27.09.2026 (9.4 Erklärbarkeit): a rejection reason is only kept as a
+    learning example (`ai_example`, ADR 0010) once the tenant switch is on; a bare rejection
+    (no reason, or the switch off) records nothing beyond the event."""
+    admin = _setup_provider(client, world)
+    _disable_fast_table_import(client, admin)
+    doc = _upload(
+        client, admin, "liste.txt", f"Falsch{RUN} Person, Nirgendweg 1".encode(), "text/plain"
+    )
+    fake.queue.append(
+        {"contacts": [_contact(first_name="Falsch", last_name=f"Person{RUN}")], "questions": []}
+    )
+    run = _chat(client, admin, "extract_contacts", "Kontakte anlegen", [doc])
+    rejected_without_switch = _ok(
+        client.post(
+            f"/api/v1/ai/proposals/{run['proposal_id']}/reject",
+            json={"reason": "Adresse falsch erkannt"},
+            headers=admin,
+        ),
+        200,
+    )
+    assert rejected_without_switch["rejection_reason"] == "Adresse falsch erkannt"
+    # Switch is off (default): the reason is stored on the proposal itself either way, but no
+    # learning example is created (asserted at the unit level in test_m34_ai_masking.py).
+    _ok(
+        client.patch(
+            "/api/v1/tenant/settings", json={"ai_learning_examples_enabled": True}, headers=admin
+        ),
+        200,
+    )
+    fake.queue.append(
+        {"contacts": [_contact(first_name="Falsch2", last_name=f"Person{RUN}")], "questions": []}
+    )
+    run2 = _chat(client, admin, "extract_contacts", "Kontakte anlegen", [doc])
+    without_reason = _ok(
+        client.post(f"/api/v1/ai/proposals/{run2['proposal_id']}/reject", headers=admin), 200
+    )
+    assert without_reason["rejection_reason"] is None
+    fake.queue.append(
+        {"contacts": [_contact(first_name="Falsch3", last_name=f"Person{RUN}")], "questions": []}
+    )
+    run3 = _chat(client, admin, "extract_contacts", "Kontakte anlegen", [doc])
+    with_reason = _ok(
+        client.post(
+            f"/api/v1/ai/proposals/{run3['proposal_id']}/reject",
+            json={"reason": "Dublette, existiert bereits"},
+            headers=admin,
+        ),
+        200,
+    )
+    assert with_reason["rejection_reason"] == "Dublette, existiert bereits"

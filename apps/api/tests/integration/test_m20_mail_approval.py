@@ -154,6 +154,12 @@ def _ok(response: Any, status: int = 200) -> Any:
     return response.json()
 
 
+def _reauth(c: TestClient, h: dict[str, str]) -> None:
+    """M20-04: Re-Auth-Nachweis (Passwort) vor der ersten Freigabe durch eine zweite Person;
+    gilt fünf Minuten und deckt so mehrere ``approve``-Aufrufe im selben Test ab."""
+    _ok(c.post(f"{M}/mail-approval/reauth", json={"password": PASSWORD}, headers=h))
+
+
 def _upload(c: TestClient, h: dict[str, str], name: str, data: bytes) -> str:
     return str(
         _ok(
@@ -220,7 +226,8 @@ def test_approval_workflow(client: TestClient, world: World, fake: FakeGmail) ->
     assert "Vier-Augen" in own.json()["detail"]
     _ok(client.put(flag_url, json={"required": False}, headers=h))
 
-    # Freigabe durch einen anderen Nutzer sendet über Gmail.
+    # Freigabe durch einen anderen Nutzer sendet über Gmail (M20-04: Re-Auth vorher).
+    _reauth(client, freigeber)
     sent = _ok(client.post(f"{M}/messages/{draft['id']}/approve", headers=freigeber))
     assert sent["status"] == "sent"
     assert sent["gmail_message_id"] == "sent1"
@@ -266,7 +273,8 @@ def test_reject_and_gmail_forbidden(client: TestClient, world: World, fake: Fake
     draft = _ok(client.post(f"{M}/messages/{msg['id']}/reply-draft", headers=h), 201)
     _ok(client.post(f"{M}/messages/{draft['id']}/submit", headers=h))
 
-    # 403 von Gmail: der Versand scheitert, Status bleibt pending.
+    # 403 von Gmail: der Versand scheitert, Status bleibt pending (M20-04: Re-Auth vorher).
+    _reauth(client, freigeber)
     fake.send_forbidden = True
     forbidden = client.post(f"{M}/messages/{draft['id']}/approve", headers=freigeber)
     assert forbidden.status_code == 409
@@ -326,6 +334,7 @@ def test_approve_never_sends_twice_after_commit_failure(
 
     h = bearer(login(client, world, "maadmin"))
     freigeber = bearer(login(client, world, "mafreigeber"))
+    _reauth(client, freigeber)  # M20-04: gilt für alle Freigaben dieses Tests (5 Minuten).
     box = _gmail_box(client, h, f"m1-{RUN}@example.com")
     _, draft = _pending_draft(client, h, box["id"], f"m1a-{RUN}")
 
@@ -411,6 +420,7 @@ def test_approve_requires_mailbox_access_and_excludes_last_editor(
         == 204
     )
     approver = bearer(login(client, world, "maapprover"))
+    _reauth(client, approver)
     box = _gmail_box(client, h, f"m16-{RUN}@example.com")
     doc = _upload(
         client, h, "m16.eml", _eml(f"m16-{RUN}@example.com", f"M16 {RUN}", f"<m16-{RUN}@x>")

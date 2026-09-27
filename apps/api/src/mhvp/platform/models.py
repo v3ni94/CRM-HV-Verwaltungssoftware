@@ -108,6 +108,12 @@ class User(IdMixin, TimestampMixin, Base):
     )
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
     last_login_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # UI preferences bag (operator 27.09.2026, migration 0182): only the accepted keys in
+    # ``mhvp.core.auth.routers`` are ever written; currently the collapsed/expanded state of the
+    # main navigation groups (key ``nav_expanded_groups``, list of group ids).
+    ui_preferences: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
 
 
 class PlatformSettings(IdMixin, TimestampMixin, Base):
@@ -355,6 +361,14 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     portal_role_permissions: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
+    # M13-01 to M13-03 (migration 0177, docs/rules/M13-01.md to M13-03.md): receivable rules
+    # of the tenant. Shape: {"enabled": bool, "proration_method": "calendar_days" |
+    # "thirty_360" | "full_month", "vat_enabled": bool}. Default off: pro rata amounts, non
+    # monthly instalments and VAT stay manual items until the operator releases the rules
+    # (draft behind G1, tax adviser review open).
+    receivable_rules: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     # M35 Stufe 3 (docs/plans/M35-objektakte-uebernahme.md, rule stage,
     # docs/rules/M35-02.md): {"auto_apply_threshold": float 0..1}. Missing key falls back to
     # `mhvp.objektakte.classification.DEFAULT_AUTO_APPLY_THRESHOLD`.
@@ -397,10 +411,33 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     call_assistant: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
+    # M20-04 Vier-Augen-Prinzip beim Mailversand (mhvp.communication.mail_approval, Migration
+    # 0173): ``all`` (jede ausgehende Mail braucht eine zweite Person), ``external_only`` (nur
+    # Mails an Kontakte der Kategorie Behörde/Gericht/Investor, Standard) oder ``off``
+    # (Verfasser darf eigene Entwürfe selbst versenden). Der Schalter steuert nur die
+    # Identitätsprüfung; die Re-Authentifizierung bei der Freigabe gilt unabhängig davon immer.
+    mail_approval_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="external_only", server_default="external_only"
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     # Messdienstleister module (stage 1): all write endpoints of /metering stay locked until the
     # tenant switches the module on (default off, master prompt Messdienstleister section 14).
     metering_module_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # Umlaufbeschluss mit abgesenkter Mehrheit (M25-02, migration 0166): default off, the
+    # circular resolution then stays unanimous in text form only.
+    hoa_circular_lower_majority_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    # Einladungsfrist in Wochen (M25-03, migration 0187): draft default 3, source status
+    # "to be verified"; the check only warns and asks for a documented reason.
+    hoa_invitation_weeks: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3, server_default="3"
+    )
+    # Virtuelle Versammlung (V13, migration 0187): default off, until then only presence and
+    # hybrid meetings can be created.
+    hoa_virtual_meetings_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
 

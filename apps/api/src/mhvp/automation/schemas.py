@@ -155,6 +155,27 @@ class LetterDraftAction(_In):
         return value
 
 
+class CreateTaskAction(_In):
+    """M9-08: creates a lightweight internal task (a ticket without a template, category
+    ``task``) for a member, optionally with a due date. Distinct from ``create_ticket``
+    (which needs a ticket template): a quick "Aufgabe anlegen" for reminders and follow-ups."""
+
+    type: Literal["create_task"]
+    title: str = Field(min_length=1, max_length=300)
+    description: str | None = Field(default=None, max_length=2000)
+    assignee_user_id: uuid.UUID | None = None
+    priority: str | None = None
+    # Due in N days from the run (schedule rules) or from the event (event rules).
+    due_in_days: int | None = Field(default=None, ge=0, le=3650)
+
+    @field_validator("priority")
+    @classmethod
+    def _priority(cls, value: str | None) -> str | None:
+        if value is not None and value not in {p.value for p in Priority}:
+            raise ValueError("Ungültige Priorität.")
+        return value
+
+
 class AiTaskAction(_In):
     """Starts an AI task through the gateway (proposal only, rule 0.1.6)."""
 
@@ -178,6 +199,7 @@ Action = (
     | MailDraftAction
     | LetterDraftAction
     | AiTaskAction
+    | CreateTaskAction
 )
 _ACTION_MODELS: dict[str, type[Action]] = {
     "create_ticket": CreateTicketAction,
@@ -187,6 +209,7 @@ _ACTION_MODELS: dict[str, type[Action]] = {
     "mail_draft": MailDraftAction,
     "letter_draft": LetterDraftAction,
     "ai_task": AiTaskAction,
+    "create_task": CreateTaskAction,
 }
 
 
@@ -279,6 +302,8 @@ class AutomationRuleIn(_In):
     schedule: dict[str, Any] | None = None
     conditions: dict[str, Any] = Field(default_factory=dict)
     actions: list[dict[str, Any]] = Field(min_length=1, max_length=MAX_ACTIONS)
+    # M9-08 Kleinbefund 27.09.2026: optional rule owner, notified on a dead webhook delivery.
+    owner_user_id: uuid.UUID | None = None
 
     @field_validator("trigger_event_type")
     @classmethod
@@ -318,6 +343,7 @@ class AutomationRulePatch(_In):
     schedule: dict[str, Any] | None = None
     conditions: dict[str, Any] | None = None
     actions: list[dict[str, Any]] | None = Field(default=None, min_length=1, max_length=MAX_ACTIONS)
+    owner_user_id: uuid.UUID | None = None
 
     @field_validator("trigger_kind")
     @classmethod

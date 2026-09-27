@@ -5,7 +5,11 @@ Stand: 26.09.2026, Version 1.25.0. Kapitel zu den Versionen 1.20 bis 1.22 ergän
 Dienstleisterverträge, IBAN-Freigabe, Energieausweis, Belegeingang, Einstellungen); Abschnitte
 zu 1.23.0 bis 1.25.0 ergänzt am 26.09.2026 (Erledigte ausblenden, Statusauswahl nach Rolle,
 Erledigungsnotiz und Lernen, Telefonassistenz Hallo Heidi, Wissen, Objektbezüge im Kontakt,
-Gmail-Archivierung, Listenimport mit Zuordnung, Rolle aus der Chatanweisung).
+Gmail-Archivierung, Listenimport mit Zuordnung, Rolle aus der Chatanweisung). Abschnitt
+"Neu in der Welle vom 27.09.2026" unten ergänzt am 27.09.2026 (Postfach-Vertretungen und
+Freigabemodus, Sollstellungsregeln, FinTS, Heizkosten, BetrKV-Katalog, Vorschussregel,
+Vermögensbericht, Umlaufbeschluss, Mahnwesen, Aufbewahrung, Postausgang, lexoffice,
+Magic-Link-Anmeldung, Mandantenübersicht, Objekt deaktivieren, Kautionsabrechnung als PDF).
 Produktive Buchführung, Zahlungen und Abrechnungen sind gesperrt (Freigabestufen G1 bis G5,
 Abschnitt 18.0). Die Plattform zeigt keine Geldkennzahlen, solange G1 nicht freigegeben ist.
 
@@ -42,6 +46,7 @@ Dokumente und Belege
 Finanzen
 
 - [Buchhaltung (Buchungskreis, Sollstellung, offene Posten, Bankabgleich, Mahnwesen, Zahlläufe)](buchhaltung.md)
+- [DATEV-Importtest (Testdatei, formale Selbstprüfung, Begleitschreiben)](datev-importtest.md)
 - [Banking](banking.md)
 - [WEG (Versammlung, Beschlüsse, Mehrheitsregeln, Abrechnung mit Überleitungsrechnung, Darlehen, Versicherungsfälle, Maßnahmen, Prüfauftrag, Einsichtsanfragen)](weg.md)
 - [Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)](abrechnung-miete.md)
@@ -63,13 +68,66 @@ System
 - [Einstellungen (Benutzer, Rollen, Postfächer mit Telefonassistenz, DMS, SLA, KI, Wissen, Telefonie, Portalformulare, Automatisierung, WEG, Kautionszinsen, DATEV)](einstellungen.md)
 - [Kataloge und benutzerdefinierte Felder](kataloge.md)
 - [Messdienstleister (Verbindungen, Einrichtungsassistent, Zuordnungsübersicht, CSV, Objektreiter, Einheitenzuordnung, Abruf)](messdienstleister.md)
+- [Verfahrensdokumentation (GoBD-orientierter Entwurf für den Steuerberater)](verfahrensdokumentation.md)
+- [Plattform (Mandanten, Preisstruktur, Freigabe G5, Onboarding Drittmandanten, Export)](plattform.md)
 
-Die folgenden Abschnitte fassen die Grundfunktionen der Startseite zusammen; Einzelheiten zu
-Auswertungen stehen im verlinkten Kapitel.
+## Neu in der Welle vom 27.09.2026
+
+Kurzüberblick je Modul, alle Punkte als Entwurf und teils fachlich noch offen (Einzelheiten
+und Freigabestufen im verlinkten Kapitel und in docs/rules):
+
+- **Postfächer** ([Einstellungen](einstellungen.md)): Vertretungsregelung für die
+  E-Mail-Freigabe und Mandantenmodus (alle Antworten, nur externe Empfänger oder keine
+  Pflichtfreigabe) unter Einstellungen, Postfächer. Die Pflege der einzelnen Vertretung hat
+  noch keinen eigenen Bedienweg, siehe Offene Punkte.
+- **Buchhaltung, Sollstellung** ([Buchhaltung](buchhaltung.md)): Mandantenvorgaben für die
+  Zeitanteilsregel (Kalendertage, 30/360, voller Monat) und die Umsatzsteueroption unter
+  Einstellungen, Buchhaltung, Steuern. Buchung bleibt hinter Gate G1 gesperrt.
+- **Bank, FinTS** ([Banking](banking.md)): FinTS/HBCI PIN/TAN als zweite, rein lesende
+  Bankanbindung neben finAPI; Zugangsdaten verschlüsselt, erneute Freigabe nach 90 Tagen.
+- **Betriebskostenabrechnung, Heizkosten** ([Abrechnung Miete](abrechnung-miete.md)): eigene
+  Heizkostenvorrechnung mit Verbrauchs- und Grundanteil, Warmwassertrennung und
+  CO2-Stufenmodell als Entwurf, hinter Gate G3.
+- **Betriebskostenabrechnung, BetrKV-Katalog** ([Abrechnung Miete](abrechnung-miete.md)):
+  Systemkatalog der Betriebskostenarten nach § 2 BetrKV mit Kennzeichen umlagefähig,
+  Kontenzuordnung und Prüfhinweisen in der Abrechnungsvorschau.
+- **Betriebskostenabrechnung, Vorschussregel** ([Abrechnung Miete](abrechnung-miete.md)):
+  Vorschlag neuer Vorauszahlungen aus dem Abrechnungsergebnis mit wählbarem
+  Sicherheitsaufschlag, Bestätigung durch eine zweite Person und Textbaustein für das
+  Anschreiben.
+- **WEG, Vermögensbericht** ([WEG](weg.md)): Vermögensbericht der Gemeinschaft zum Stichtag
+  (Rücklage, Bankbestände, Forderungen, Verbindlichkeiten, Darlehen) mit Abstimmung gegen die
+  Buchhaltung und sichtbarer Differenz; Ausgabe erst nach Gate G4.
+- **WEG, Umlaufbeschluss** ([WEG](weg.md)): Umlaufbeschluss mit abgesenkter Mehrheit als
+  Schalter je Mandant, Standard aus, fachlich und rechtlich noch nicht freigegeben.
+- **Mahnwesen, Konto und Verzug** ([Buchhaltung](buchhaltung.md)): Fälligkeit und Verzug
+  getrennt, Verzugsbeginn nur aus erfassten Tatsachen, Verzugszinsen nur als Entwurf.
+- **Aufbewahrung** ([Einstellungen](einstellungen.md)): Standard-Aufbewahrungsprofile je
+  Mandant, monatlicher Löschvorschlagslauf mit Vier-Augen-Freigabe und Löschprotokoll;
+  Löschung bleibt bis zur fachlichen Freigabe gesperrt.
+- **Postausgang** ([Kommunikation](kommunikation.md)): anbieterneutrale Post- und
+  Briefschnittstelle mit Postausgangsliste und Statusrückmeldung, kein Versand ohne Freigabe
+  je Mandant.
+- **lexoffice** ([Einstellungen](einstellungen.md)): Anbindung an lexoffice mit
+  Einstellungsseite, Testlauf und Protokoll der Export- und Importläufe je Mandant.
+- **Portal, Magic-Link-Anmeldung** ([Portal](portal.md)): einmaliger, zeitlich begrenzter
+  Anmeldelink für Mieter und Eigentümer, QR-Einladung im Brief, optionaler zweiter Faktor per
+  E-Mail-Code; die bestehende Passwortanmeldung bleibt bestehen.
+- **Mandantenübersicht** ([Plattform](plattform.md)): rein lesende, mandantenübergreifende
+  Sicht für Plattformadministratoren auf Kennzahlen und Listen der eigenen Mandanten, ohne
+  Buchungen, Forderungen, Bankbestände oder Belege.
+- **Objekt deaktivieren** ([Objekte und Einheiten](objekte-einheiten.md)): Objekte lassen sich
+  bei Beendigung des Verwaltungsverhältnisses deaktivieren, bleiben mit allen Daten erhalten
+  und verschwinden aus der Objektliste; Reaktivierung nur durch den Superadmin.
+- **Kautionsabrechnung als PDF** ([Verträge](vertraege.md)): die Kautionsabrechnung lässt sich
+  im Briefbogen des Mandanten als PDF erzeugen und am Vertrag ablegen.
 
 ## Anmelden und Mandant wählen
 
 Anmeldung mit E-Mail und Passwort. Das Passwort ist 6 bis 128 Zeichen lang und beginnt oder endet nicht mit einem Leerzeichen (Betreiberentscheidung vom 26.09.2026); nach 10 Fehlversuchen ist das Konto 15 Minuten gesperrt. Der zweite Faktor (Einmalcode aus einer Authenticator-App) ist freiwillig: Wer ihn unter Einstellungen, Meine Daten eingeschaltet hat, gibt nach dem Passwort den sechsstelligen Code ein und kann dabei Dieses Gerät 90 Tage merken wählen; auf diesem Gerät wird dann 90 Tage lang kein Code mehr abgefragt. Gemerkte Geräte lassen sich unter Meine Daten einzeln abmelden. Wer mehreren Mandanten angehört, wählt den Mandanten oben rechts. Alle Daten, Suchen und Benachrichtigungen gelten nur für den gewählten Mandanten.
+
+Die folgenden Abschnitte fassen die Grundfunktionen der Startseite zusammen; Einzelheiten zu
+Auswertungen stehen im verlinkten Kapitel.
 
 ## Start
 

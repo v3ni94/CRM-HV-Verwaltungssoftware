@@ -1165,6 +1165,128 @@ async def export_assignments(
     )
 
 
+# bved 3.10 file exchange (M40-02): preview only, nothing is stored ------------------------
+
+
+class HeiwakoFileOut(BaseModel):
+    name: str
+    kind: str | None
+    record_counts: dict[str, int]
+    errors: list[str]
+    undocumented_record_types: list[str]
+
+
+class HeiwakoBillingResultOut(BaseModel):
+    external_billing_unit: str
+    external_unit_number: str | None
+    period_from: date
+    period_to: date
+    amount: Decimal
+    currency: str
+    external_document_ref: str
+    cost_type_key: str | None
+    balance_gross: Decimal | None
+    prepayment_gross: Decimal | None
+
+
+class HeiwakoUserOut(BaseModel):
+    external_billing_unit: str | None
+    external_unit_number: str | None
+    client_ref: str | None
+    name: str | None
+    occupancy_from: date | None
+    occupancy_to: date | None
+    vacancy_flag: int | None
+
+
+class HeiwakoPreviewOut(BaseModel):
+    adapter: str
+    spec_version: str
+    files: list[HeiwakoFileOut]
+    billing_results: list[HeiwakoBillingResultOut]
+    users: list[HeiwakoUserOut]
+    property_count: int
+    reference_count: int
+    image_count: int
+    errors: list[str]
+    stored: bool = False
+
+
+@router.post(
+    "/connections/{connection_id}/heiwako-import/preview",
+    summary="bved 3.10 Austauschdateien prüfen (keine Speicherung)",
+)
+async def heiwako_import_preview(
+    connection_id: uuid.UUID,
+    request: Request,
+    files: list[UploadFile] = File(),
+    period_from: date | None = None,
+    principal: TenantPrincipal = Depends(SYNC),
+) -> HeiwakoPreviewOut:
+    """Parses DTA310, DTM310, DTD310 and DTE898 files of a file exchange provider (Techem,
+    Brunata Minol, BRUNATA-METRONA) and reports the records. Nothing is stored: the transfer
+    into billing results waits for an operator supplied example file (M40-02)."""
+    from mhvp.metering.adapters_heiwako import HeiwakoFileAdapter
+
+    if len(files) > 10:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Höchstens 10 Dateien je Aufruf.")
+    async with tenant_tx(request, principal) as session:
+        await services.ensure_module_enabled(session, principal.tenant_id)
+        connection = await services.get_connection(session, connection_id)
+    adapter = services._adapter(connection)
+    if not isinstance(adapter, HeiwakoFileAdapter):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Der Anbieter dieser Verbindung nutzt keinen Dateiaustausch nach bved 3.10.",
+        )
+    contents: dict[str, bytes] = {}
+    for upload in files:
+        raw = await upload.read()
+        contents[upload.filename or f"datei-{len(contents) + 1}"] = raw
+    currency = str(connection.config.get("currency") or "EUR")
+    result = adapter.import_files(contents, period_from=period_from, default_currency=currency)
+    return HeiwakoPreviewOut(
+        adapter=adapter.code,
+        spec_version=adapter.spec_version,
+        files=[HeiwakoFileOut(**f) for f in result.files],
+        billing_results=[
+            HeiwakoBillingResultOut(
+                external_billing_unit=b.external_billing_unit,
+                external_unit_number=b.external_unit_number,
+                period_from=b.period_from,
+                period_to=b.period_to,
+                amount=b.amount,
+                currency=b.currency,
+                external_document_ref=b.external_document_ref,
+                cost_type_key=b.payload.get("cost_type_key"),
+                balance_gross=_decimal_or_none(b.payload.get("balance_gross")),
+                prepayment_gross=_decimal_or_none(b.payload.get("prepayment_gross")),
+            )
+            for b in result.billing_results
+        ],
+        users=[
+            HeiwakoUserOut(
+                external_billing_unit=m.header.provider_property_number,
+                external_unit_number=m.header.provider_unit_number,
+                client_ref=m.client_ref,
+                name=m.user_names[0],
+                occupancy_from=m.occupancy_from,
+                occupancy_to=m.occupancy_to,
+                vacancy_flag=m.vacancy_flag,
+            )
+            for m in result.users
+        ],
+        property_count=len(result.properties),
+        reference_count=len(result.references),
+        image_count=len(result.images),
+        errors=result.errors,
+    )
+
+
+def _decimal_or_none(value: Any) -> Decimal | None:
+    return None if value is None else Decimal(str(value))
+
+
 # Controlled write workflows (section 12) ---------------------------------------------------
 
 

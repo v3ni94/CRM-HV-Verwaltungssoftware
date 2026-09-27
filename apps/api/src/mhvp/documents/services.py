@@ -14,9 +14,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.contacts.models import Contact, ContactAddress
 from mhvp.contracts.models import Contract
 from mhvp.core.config import Settings
+from mhvp.core.escaping import sanitize_filename
 from mhvp.core.ids import uuid7
+from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents import letters, scan
+from mhvp.documents import letters, retention, scan
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.dms import DmsError, GoogleDriveStore
 from mhvp.documents.models import (
@@ -40,6 +42,7 @@ from mhvp.handover.models import (
 )
 from mhvp.hoa.models import HoaInsuranceClaim, HoaLoan, HoaMeasure
 from mhvp.letting.models import Listing
+from mhvp.objektakte.drive_quota import drive_http_client
 from mhvp.platform.models import TenantSettings
 from mhvp.properties.models import Building, LegalEntity, Property, Unit
 from mhvp.tickets.models import Ticket, WorkOrder
@@ -75,6 +78,9 @@ LINKABLE: dict[str, Any] = {
     "document": Document,
 }
 VISIBILITY = frozenset({"tenant", "owner", "provider", "board"})
+
+
+_log = get_logger("mhvp.documents")
 
 
 def invalid(detail: str) -> ProblemError:
@@ -138,6 +144,18 @@ async def store_document(
     """
     for entity_type, entity_id, _ in links:
         await check_link_target(session, entity_type, entity_id)
+    filename, filename_flagged = sanitize_filename(filename)
+    if filename_flagged:
+        # Doppelendung wie ".pdf.exe" (Sicherheitspruefung 27.09.2026, Befund 4 /
+        # OE-M27-02-02): der Name wird trotzdem gespeichert (MIME-Allowlist und Magic-Byte-
+        # Pruefung entscheiden ueber den tatsaechlichen Inhalt), aber fuer die Nachvollziehbarkeit
+        # protokolliert.
+        _log.warning(
+            "document.filename_double_extension",
+            tenant_id=str(tenant_id),
+            filename=filename,
+            source=str(source),
+        )
     sha256 = hashlib.sha256(data).hexdigest()
     if scan_for_malware and source is not DocumentSource.GENERATED:
         await scan.scan_before_store(
@@ -173,6 +191,10 @@ async def store_document(
     )
     session.add(document)
     await session.flush()
+    # Retention matrix (M6-04): the category's mapped profile and the computed period.
+    await retention.assign_profile(
+        session, document, await retention.profile_for_category(session, category_id)
+    )
     for entity_type, entity_id, role in links:
         session.add(
             DocumentLink(
@@ -224,6 +246,9 @@ async def deletion_blocker(session: AsyncSession, document: Document, today: dat
     """Reason why the document must be kept, or None (6.9.5, D43, D46)."""
     if document.retention_hold_reason:
         return f"Löschungssperre: {document.retention_hold_reason}"
+    ticket_hold = await retention.ticket_hold(session, document.id)
+    if ticket_hold:
+        return f"Löschungssperre am Vorgang: {ticket_hold}"
     if document.retention_profile_id is None:
         return "Kein Aufbewahrungsprofil zugeordnet (Aufbewahrungsmatrix V17 offen)."
     profile = await session.get(RetentionProfile, document.retention_profile_id)
@@ -231,7 +256,11 @@ async def deletion_blocker(session: AsyncSession, document: Document, today: dat
         return "Das Aufbewahrungsprofil ist nicht freigegeben (Entwurf, M6-04)."
     if profile.permanent:
         return "Dauerhaft aufzubewahren (WEG-Dauerunterlage, S05)."
-    if document.retention_until is None or document.retention_until >= today:
+    if document.retention_until is None:
+        if retention.needs_base_date(profile) and document.retention_base_on is None:
+            return "Der Fristbeginn fehlt (Vertragsende, letzte Eintragung oder Zweckende)."
+        return "Die Aufbewahrungsfrist ist nicht berechnet."
+    if document.retention_until >= today:
         return "Die Aufbewahrungsfrist ist nicht abgelaufen."
     return None
 
@@ -376,7 +405,8 @@ async def download_from_drive(session: AsyncSession, request: Request, document:
     secret = json.loads(connection.secret or "{}")
     options = connection.options or {}
     timeout = getattr(request.app.state, "http_timeout", 60.0)
-    async with httpx.AsyncClient(timeout=timeout) as client:
+    # M35-06: rate limiting and backoff against the Drive quota (mhvp.objektakte.drive_quota).
+    async with drive_http_client(timeout=timeout) as client:
         store = GoogleDriveStore(
             root_folder_id=str(options.get("root_folder_id", "")),
             client_id=str(options.get("client_id", "")),

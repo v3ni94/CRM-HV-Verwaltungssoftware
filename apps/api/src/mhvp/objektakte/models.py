@@ -448,3 +448,46 @@ class ObjektakteAiCall(IdMixin, TimestampMixin, TenantMixin, Base):
     source_id: Mapped[str] = mapped_column(String(64), nullable=False)
     source_document_id: Mapped[str | None] = mapped_column(String(64))
     source_object_id: Mapped[str | None] = mapped_column(String(64))
+
+
+class PreviewImportStatus(StrEnum):
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+
+
+class ObjektaktePreviewImportRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    """M35 technical preparation, preview images (`docs/plans/M35-objektakte-uebernahme.md`
+    section 3.2, open question M35-02): one run of `mhvp.objektakte.previews.import_previews`
+    per tenant. Counters and the cursor (`last_document_id`, ordered by document id) let an
+    interrupted run resume where it stopped instead of re-reading every document; documents
+    that already carry `source_meta["preview"]` are skipped on resume. The run never holds
+    file content, only counts and the directory it read from."""
+
+    __tablename__ = "objektakte_preview_import_run"
+    __table_args__ = (Index("ix_objektakte_preview_import_run_tenant", "tenant_id", "started_at"),)
+
+    status: Mapped[PreviewImportStatus] = mapped_column(
+        _enum_col(PreviewImportStatus, "objektakte_preview_import_status"),
+        nullable=False,
+        default=PreviewImportStatus.RUNNING,
+        server_default=PreviewImportStatus.RUNNING.value,
+    )
+    trigger: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="manual", server_default="manual"
+    )
+    previews_dir: Mapped[str | None] = mapped_column(String(500))
+    render_missing: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    total: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    processed: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    imported: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    rendered: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    missing: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    skipped: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    failed: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    error: Mapped[str | None] = mapped_column(String(1000))

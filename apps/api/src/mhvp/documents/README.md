@@ -128,6 +128,15 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * `intake_routers.py`: document inbox proposals (A42): list, accept, reject
 * `mirror_deletion.py`: logged mirror steps after a deletion, Drive delete and Paperless tag "gelöscht" (A43, 6.9.5, M6-03, section above)
 * `property_filing.py`: direct filing of one document into a property's Drive year folder (M11-finapi stage 3)
+* `retention.py` (27.09.2026, M6-04, migration 0175): period computation per start rule, category
+  to profile mapping (`document_category.retention_profile_id`, `POST /retention-profiles/apply`),
+  hold per ticket (`/tickets/{id}/retention-hold`), the monthly deletion proposal job
+  `mhvp.documents.deletion_proposals` (`deletion_proposal`, `deletion_proposal_item` as the
+  deletion log) with four eyes approval (`/approve`, not the initiator) and separate execution
+  (`/execute`, not the approver), re-check of every document on the day of execution, and
+  `delete_now` shared with `DELETE /documents/{id}` (mirror steps per M6-03). Legal status of the
+  periods stays "zu prüfen durch Steuerberater" (rule `docs/rules/M6-04-aufbewahrungsprofile.md`,
+  assumption A-058). CRM: `/einstellungen/aufbewahrung`, `/dokumente/loeschvorschlaege`.
 
 ## Performance (Review 26.09.2026)
 

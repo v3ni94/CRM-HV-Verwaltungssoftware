@@ -5,6 +5,7 @@ from datetime import date, datetime
 from typing import Any
 
 from sqlalchemy import (
+    Boolean,
     CheckConstraint,
     Date,
     DateTime,
@@ -41,6 +42,9 @@ class PortalAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     invitation_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     invitation_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # M21-01: optional second factor by e-mail code on top of the magic link login, switched on
+    # per account by the management (portal-admin); off by default (Produktschutz, docs/rules).
+    magic_link_2fa: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class AccessGrant(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -98,3 +102,71 @@ class PortalReadReceipt(IdMixin, TimestampMixin, TenantMixin, Base):
     # opened (metadata retrieved through the portal) or downloaded (content retrieved)
     kind: Mapped[str] = mapped_column(String(16), nullable=False)
     occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class MagicLoginLink(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Magic link login (14 Portale, M21-01): a one time, time limited link e-mailed to the
+    account's address, next to the existing password login (which stays available). Only the
+    SHA-256 hash of the link token is stored, never the token itself (rule 0.1.13, no secret in
+    the database in clear text); the API never returns it in a response body and the request
+    log middleware never records a request body, so the raw token exists only in the outgoing
+    mail. Single use (``used_at``) and 15 minutes valid (``expires_at``, docs/rules M21-01).
+
+    The optional second factor (``PortalAccount.magic_link_2fa``) reuses the same row: an
+    e-mail code is generated only after the link itself was verified, stored the same way
+    (hash, 10 minutes, single use) and checked before a session is issued.
+    """
+
+    __tablename__ = "portal_magic_link"
+    __table_args__ = (
+        Index("ix_portal_magic_link_token", "tenant_id", "token_hash"),
+        Index("ix_portal_magic_link_account", "tenant_id", "account_id"),
+    )
+
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
+    token_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    code_hash: Mapped[str | None] = mapped_column(String(64))
+    code_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    code_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class SepaMandateProposal(IdMixin, TimestampMixin, TenantMixin, Base):
+    """A mandate confirmed in the portal, waiting for a staff decision (never active itself)."""
+
+    __tablename__ = "portal_sepa_mandate_proposal"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "reference", name="ux_portal_sepa_mandate_reference"),
+        Index("ix_portal_sepa_mandate_proposal_status", "tenant_id", "status"),
+    )
+
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id")
+    contact_id: Mapped[uuid.UUID] = _fk("contact.id")
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id")
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
+    creditor_id: Mapped[str] = mapped_column(String(35), nullable=False)
+    reference: Mapped[str] = mapped_column(String(35), nullable=False)
+    scheme: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="core", server_default="core"
+    )
+    sequence: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="recurrent", server_default="recurrent"
+    )
+    iban: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
+    iban_suffix: Mapped[str] = mapped_column(String(4), nullable=False)
+    iban_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    bic: Mapped[str | None] = mapped_column(String(11))
+    holder: Mapped[str] = mapped_column(String(200), nullable=False)
+    mandate_text: Mapped[str] = mapped_column(Text, nullable=False)
+    confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    confirmed_ip: Mapped[str | None] = mapped_column(String(64))
+    user_agent: Mapped[str | None] = mapped_column(String(300))
+    evidence_document_id: Mapped[uuid.UUID] = _fk("document.id")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="proposed", server_default="proposed"
+    )
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_note: Mapped[str | None] = mapped_column(Text)
+    contact_bank_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

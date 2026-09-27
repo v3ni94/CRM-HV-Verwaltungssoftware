@@ -64,6 +64,39 @@ describe("MyTicketsColumn", () => {
     expect(within(second).getByText("ohne Titel")).toBeInTheDocument();
     expect(screen.getByText("und 10 weitere")).toBeInTheDocument();
   });
+
+  it("shows at most four tickets and the remaining count via the server limit", () => {
+    const tickets = Array.from({ length: 4 }, (_, i) => ({
+      id: `t${i}`,
+      number: i + 1,
+      title: `Ticket ${i + 1}`,
+      status: "new",
+      priority: "normal",
+      sla_due_at: null,
+    }));
+    renderIntl(<MyTicketsColumn tickets={tickets} listHref="/tickets" total={7} />);
+    expect(screen.getAllByTestId("my-ticket")).toHaveLength(4);
+    expect(screen.getByText("und 3 weitere")).toBeInTheDocument();
+  });
+
+  it("shows the fallback notice when the tenant's most urgent tickets replace an empty assignment", () => {
+    renderIntl(
+      <MyTicketsColumn
+        listHref="/tickets"
+        fallback
+        tickets={[{ id: "a", number: 3, title: "Wasserschaden", status: "new", priority: "high", sla_due_at: null }]}
+      />,
+    );
+    expect(screen.getByTestId("my-tickets-fallback")).toHaveTextContent(
+      "Ihnen ist kein Ticket zugewiesen, hier die dringendsten offenen Tickets des Mandanten.",
+    );
+  });
+
+  it("does not show the fallback notice for an empty tenant-wide result either", () => {
+    renderIntl(<MyTicketsColumn tickets={[]} listHref="/tickets" fallback />);
+    expect(screen.queryByTestId("my-tickets-fallback")).toBeNull();
+    expect(screen.getByText("Ihnen ist kein offenes Ticket zugewiesen.")).toBeInTheDocument();
+  });
 });
 
 describe("ApprovalsColumn", () => {

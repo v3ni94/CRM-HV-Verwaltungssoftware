@@ -18,6 +18,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing import owner_statement as svc
+from mhvp.billing import owner_statement_pdf as owner_pdf
 from mhvp.billing.owner_statement import (
     OwnerStatement,
     OwnerStatementKind,
@@ -26,6 +27,7 @@ from mhvp.billing.owner_statement import (
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+from mhvp.documents import letters
 
 router = APIRouter(prefix="/billing/owner-statements", tags=["Abrechnung"])
 READ = require_permission("accounting:read")
@@ -68,6 +70,8 @@ def _out(st: OwnerStatement, *, with_snapshot: bool = True) -> dict[str, Any]:
         snap = st.snapshot or {}
         out["results"] = snap.get("results")
         out["findings"] = snap.get("findings", [])
+        # M17-05: payout block for the owner output, derived from the snapshot only.
+        out["settlement"] = owner_pdf.settlement(snap["results"]) if snap.get("results") else None
     return out
 
 
@@ -183,8 +187,38 @@ def _eur(value: str) -> str:
     return f"{text} EUR"
 
 
+async def render_letter_pdf(session: AsyncSession, request: Request, st: OwnerStatement) -> bytes:
+    """PDF on the tenant's letterhead via the letter blocks (M17-05); falls back to the plain
+    block list when the tenant's company data is incomplete (draft, never blocked by it)."""
+    from mhvp.documents import services as doc_services
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.properties.models import LegalEntity, Property
+    from mhvp.workspace.services import local_today
+
+    try:
+        head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
+    except ProblemError:
+        return render_pdf(st)
+    prop = await session.get(Property, st.property_id)
+    entity = await session.get(LegalEntity, st.legal_entity_id)
+    property_line = (
+        f"{prop.number} {prop.name}, {prop.street or ''} {prop.house_number or ''}, "
+        f"{prop.postal_code or ''} {prop.city or ''}".replace("  ", " ").strip(" ,")
+        if prop
+        else str(st.property_id)
+    )
+    letter = owner_pdf.build_letter(
+        st,
+        recipient_lines=[entity.name] if entity else [],
+        property_line=property_line,
+        letter_date=local_today(),
+        signatory=[s for s in (str(head.company.get("name", "")),) if s],
+    )
+    return letters.render_pdf(head, letter)
+
+
 def render_pdf(st: OwnerStatement) -> bytes:
-    """Plain PDF of the blocks (draft layout; letterhead follows with the G3 release)."""
+    """Plain PDF of the blocks (fallback without letterhead; see ``render_letter_pdf``)."""
     from reportlab.lib.pagesizes import A4
     from reportlab.pdfgen.canvas import Canvas
 
@@ -238,7 +272,7 @@ async def pdf(
         if st.status is not OwnerStatementStatus.INTERNALLY_APPROVED:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Ausgabe nur nach interner Freigabe.")
         return Response(
-            content=render_pdf(st),
+            content=await render_letter_pdf(session, request, st),
             media_type="application/pdf",
             headers={
                 "Content-Disposition": f'attachment; filename="eigentuemerabrechnung-{st.id}.pdf"'

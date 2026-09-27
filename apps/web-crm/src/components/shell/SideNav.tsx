@@ -12,6 +12,8 @@ export type NavGroup = { label: string; items: NavItem[] };
 
 const STORAGE_KEY = "mhvp.nav.collapsed";
 const RAIL_KEY = "mhvp.nav.rail.collapsed";
+const PREFERENCES_ENDPOINT = "/api/v1/auth/me/preferences";
+const SAVE_DEBOUNCE_MS = 500;
 
 function readJSON<T>(key: string, fallback: T): T {
   try {
@@ -37,8 +39,11 @@ function ItemIcon({ name }: { name?: string }) {
 
 /** The full sidebar rail: logo, grouped navigation and a collapse toggle. Renders as a calm
  *  dark anthracite rail on desktop (CI "Goldpunkt" gold active indicator) and as a horizontal
- *  scroller on small screens. Group collapse and the icon-only rail mode are both remembered
- *  per browser (localStorage); neither changes the routing or data of the pages themselves. */
+ *  scroller on small screens. Group expand state is server side per user (operator 27.09.2026:
+ *  all groups start collapsed, an opened group stays open until closed again, on every device)
+ *  and mirrored into localStorage only to avoid a flash while the save round trip is in flight.
+ *  The icon-only rail mode stays a per-browser preference (localStorage). Neither changes the
+ *  routing or data of the pages themselves. */
 export function SideNav({
   groups,
   label,
@@ -47,6 +52,8 @@ export function SideNav({
   area,
   collapseLabel,
   expandLabel,
+  initialExpandedGroups,
+  collapseAllLabel,
 }: {
   groups: NavGroup[];
   label: string;
@@ -55,6 +62,10 @@ export function SideNav({
   area: string;
   collapseLabel: string;
   expandLabel: string;
+  /** Group labels the signed in user last had open (from `GET /auth/me`, section see SideNav
+   *  doc comment). Undefined (not logged in yet) falls back to localStorage, then all closed. */
+  initialExpandedGroups?: string[];
+  collapseAllLabel?: string;
 }) {
   const pathname = usePathname();
   const search = useSearchParams();
@@ -63,17 +74,54 @@ export function SideNav({
     href.includes("?") ? current === href : pathname === href || pathname.startsWith(`${href}/`);
   const hasActive = (g: NavGroup) => g.items.some((item) => active(item.href));
 
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
+    const initial = initialExpandedGroups ?? readJSON<string[]>(STORAGE_KEY, []);
+    return Object.fromEntries(initial.map((l) => [l, true]));
+  });
   const [railCollapsed, setRailCollapsed] = useState(false);
+  const saveTimer = useState<{ current: ReturnType<typeof setTimeout> | null }>(() => ({
+    current: null,
+  }))[0];
   useEffect(() => {
-    setCollapsed(readJSON(STORAGE_KEY, {}));
+    if (initialExpandedGroups === undefined) {
+      setExpanded(Object.fromEntries(readJSON<string[]>(STORAGE_KEY, []).map((l) => [l, true])));
+    }
     setRailCollapsed(readJSON(RAIL_KEY, false));
+    // Only on mount: initialExpandedGroups is the server value for this render and must not be
+    // re-applied after the user has toggled a group.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  function persist(next: Record<string, boolean>) {
+    const groupLabels = Object.entries(next)
+      .filter(([, on]) => on)
+      .map(([l]) => l);
+    writeJSON(STORAGE_KEY, groupLabels);
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      fetch(PREFERENCES_ENDPOINT, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ nav_expanded_groups: groupLabels }),
+      }).catch(() => {
+        // offline or session expired: localStorage above still keeps this browser consistent
+      });
+    }, SAVE_DEBOUNCE_MS);
+  }
+
   function toggleGroup(groupLabel: string) {
-    setCollapsed((prev) => {
+    setExpanded((prev) => {
       const next = { ...prev, [groupLabel]: !prev[groupLabel] };
-      writeJSON(STORAGE_KEY, next);
+      persist(next);
+      return next;
+    });
+  }
+
+  function collapseAll() {
+    setExpanded(() => {
+      const next: Record<string, boolean> = {};
+      persist(next);
       return next;
     });
   }
@@ -109,7 +157,7 @@ export function SideNav({
         className="flex flex-1 gap-1 overflow-x-auto px-2 py-2 md:flex-col md:gap-1 md:overflow-y-auto md:overflow-x-visible md:px-3 md:py-4"
       >
         {groups.map((g) => {
-          const isCollapsed = Boolean(collapsed[g.label]) && !hasActive(g);
+          const isCollapsed = !expanded[g.label] && !hasActive(g);
           return (
             <div key={g.label} className="flex shrink-0 gap-1 md:mb-2 md:flex-col">
               {railCollapsed ? (
@@ -156,6 +204,15 @@ export function SideNav({
           );
         })}
       </nav>
+      {collapseAllLabel && !railCollapsed ? (
+        <button
+          type="button"
+          onClick={collapseAll}
+          className="hidden items-center justify-center gap-2 border-t border-rail-border px-3 py-2 text-xs font-medium text-rail-muted transition duration-150 hover:bg-rail-hover hover:text-rail-fg md:flex"
+        >
+          {collapseAllLabel}
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={toggleRail}

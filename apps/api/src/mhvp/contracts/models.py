@@ -186,6 +186,10 @@ class Contract(IdMixin, TimestampMixin, TenantMixin, Base):
         default=ContractVatOption.NONE,
     )
     sev_enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # M13-01 (migration 0177): pro rata rule of this contract for a start, end or amount change
+    # within a month (calendar_days, thirty_360, full_month); NULL uses the tenant default from
+    # ``TenantSettings.receivable_rules``. Applied only when the tenant has released the rules.
+    proration_method: Mapped[str | None] = mapped_column(String(16))
     # 6.9.11: the owner pays the SEV fee; the recipient is always the management tenant.
     sev_fee_debtor_party_id: Mapped[uuid.UUID | None] = _fk("party.id", nullable=True)
     title_transfer_date: Mapped[date | None] = mapped_column(Date)
@@ -280,6 +284,14 @@ class PaymentSchedule(IdMixin, TimestampMixin, TenantMixin, Base):
     due_day: Mapped[int] = mapped_column(Integer, nullable=False)
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_to: Mapped[date | None] = mapped_column(Date)
+    # M13-02 (migration 0177): instalment due in advance (first month of the period) or in
+    # arrears (last month); whether the contract amount is per month or per instalment.
+    payment_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="advance", server_default="advance"
+    )
+    amount_basis: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="per_month", server_default="per_month"
+    )
 
 
 class SepaMandate(IdMixin, TimestampMixin, TenantMixin, Base):

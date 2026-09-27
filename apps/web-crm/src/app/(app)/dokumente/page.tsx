@@ -49,6 +49,9 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
   return (
     <div className={ui.pageGap}>
       <PageHeader eyebrow={t("area")} title={t("title")} description={t("intro")} />
+      <p className={ui.small}>
+        <Link href="/dokumente/loeschvorschlaege">{t("deletionProposalsLink")}</Link>
+      </p>
       <DocumentListFilter q={q} draft={draft} />
       {!data ? (
         <p role="alert" className={ui.alert}>

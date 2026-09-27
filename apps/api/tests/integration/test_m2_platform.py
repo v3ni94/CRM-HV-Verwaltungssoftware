@@ -835,6 +835,18 @@ def test_release_gate_needs_second_person(client: TestClient, world: World) -> N
     tenant_admin_only = bearer(login(client, world, "admin"))
     assert client.post(url, json={}, headers=tenant_admin_only).status_code == 403
     other = login(client, world, "padmin")
+    # V8 (M10-01/M10-02): G1 is approved only with a released chart of accounts template.
+    without_chart = client.post(url, json={"comment": "geprüft"}, headers=bearer(other))
+    assert without_chart.status_code == 409, without_chart.text
+    assert without_chart.json()["code"] == "MHVP-GATE-0004"
+    template = client.post("/api/v1/accounting/templates/default", headers=tenant_admin_only)
+    assert template.status_code == 201, template.text
+    released = client.post(
+        f"/api/v1/accounting/templates/{template.json()['id']}/release",
+        json={"comment": "Testfreigabe"},
+        headers=tenant_admin_only,
+    )
+    assert released.status_code == 200, released.text
     approved = client.post(url, json={"comment": "geprüft"}, headers=bearer(other))
     assert approved.status_code == 200
     opened = client.get("/api/v1/tenant/release-gates", headers=admin).json()

@@ -52,6 +52,17 @@ describe("DunningSettingsForm", () => {
     expect((screen.getByLabelText("Gebühr ab Stufe") as HTMLInputElement).value).toBe("2");
   });
 
+  it("sends the chosen default start mode with the settings (M16-03)", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(jsonResponse({ ...EMPTY, default_start_mode: "calendar_due_date" }));
+    renderIntl(<DunningSettingsForm initial={EMPTY} canUpdate />);
+    const select = screen.getByLabelText("Verzugsmodus") as HTMLSelectElement;
+    expect(select.value).toBe("");
+    await userEvent.selectOptions(select, "calendar_due_date");
+    await userEvent.click(screen.getByText("Speichern"));
+    const body = JSON.parse(String(fetchSpy.mock.calls[0]?.[1]?.body));
+    expect(body.default_start_mode).toBe("calendar_due_date");
+  });
+
   it("sets the spread to the consumer preset value without touching the base rate", async () => {
     renderIntl(<DunningSettingsForm initial={EMPTY} canUpdate />);
     await userEvent.click(screen.getByText("Verbraucher (5)"));
@@ -99,6 +110,7 @@ describe("DunningSettingsForm", () => {
       interest_enabled: null,
       interest_base_rate: null,
       interest_spread: null,
+      default_start_mode: null,
     });
     expect(refresh).toHaveBeenCalled();
   });

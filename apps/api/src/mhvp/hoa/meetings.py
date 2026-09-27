@@ -7,7 +7,7 @@ individual community (Teilungserklärung, Vereinbarungen) are not known to the s
 
 import uuid
 from collections.abc import Sequence
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -19,6 +19,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.hoa import meeting_rules
 from mhvp.hoa.majority import SUBJECT_PATTERN, check_resolution
 from mhvp.hoa.models import (
     AgendaItem,
@@ -38,7 +39,9 @@ READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")
 ZERO = Decimal("0")
-INVITATION_WEEKS = 3  # § 24 Abs. 4 WEG (R05); urgency exception is a manual decision
+# Invitation period: tenant setting in weeks (M25-03, meeting_rules.invitation_weeks); the
+# module constant stays as the draft default of that setting.
+INVITATION_WEEKS = meeting_rules.DEFAULT_INVITATION_WEEKS
 
 
 class MeetingBaseIn(BaseModel):
@@ -54,6 +57,7 @@ class MeetingIn(MeetingBaseIn):
     voting_principle: str = Field(default="head", pattern="^(head|mea|unit)$")
     voting_principle_basis: str | None = Field(default=None, max_length=4000)
     virtual_basis_resolution_id: uuid.UUID | None = None
+    virtual_basis_valid_until: date | None = None
     resolution_deadline_at: date | None = None
     resolution_deadline_source: str | None = Field(default=None, max_length=4000)
 
@@ -147,13 +151,33 @@ class AnnounceIn(MeetingBaseIn):
     subject_kind: str | None = Field(default=None, pattern=SUBJECT_PATTERN)
 
 
+class MeetingConsentIn(MeetingBaseIn):
+    """One text form vote (M25-02): choice, channel and time of receipt as evidence."""
+
+    choice: str = Field(pattern="^(yes|no|abstain)$")
+    channel: str = Field(default="email", pattern="^(email|portal|letter|other)$")
+    received_at: datetime | None = None
+    evidence_document_id: uuid.UUID | None = None
+
+
 class CircularIn(MeetingBaseIn):
     legal_entity_id: uuid.UUID
     subject: str = Field(min_length=3, max_length=2000)
     wording: str = Field(min_length=3, max_length=20000)
     decided_on: date
-    consents: dict[uuid.UUID, str]  # ownership contract -> yes, no, abstain (text form)
+    # ownership contract -> yes, no, abstain (plain) or a MeetingConsentIn with text form evidence
+    consents: dict[uuid.UUID, str | MeetingConsentIn]
     evidence_document_id: uuid.UUID | None = None
+    # M25-02: "simple" only with the tenant switch, a prior admitting resolution, a subject
+    # kind (majority rule of the tenant) and a voting deadline.
+    allowed_majority: str = Field(default="unanimous", pattern="^(unanimous|simple)$")
+    enabling_resolution_id: uuid.UUID | None = None
+    vote_deadline_at: datetime | None = None
+    subject_kind: str | None = Field(default=None, pattern=SUBJECT_PATTERN)
+
+
+class CircularSwitchIn(MeetingBaseIn):
+    enabled: bool
 
 
 class EngagementIn(MeetingBaseIn):
@@ -249,7 +273,10 @@ async def _weight(
 # Meetings --------------------------------------------------------------------------------
 
 
-def _meeting_out(m: Meeting) -> dict[str, Any]:
+def _meeting_out(m: Meeting, *, weeks: int | None = None) -> dict[str, Any]:
+    latest = (
+        meeting_rules.latest_invitation_date(m.scheduled_at, weeks) if weeks is not None else None
+    )
     return {
         "id": m.id,
         "legal_entity_id": m.legal_entity_id,
@@ -264,6 +291,14 @@ def _meeting_out(m: Meeting) -> dict[str, Any]:
         "minutes_draft_document_id": m.minutes_draft_document_id,
         "resolution_deadline_at": m.resolution_deadline_at,
         "resolution_deadline_source": m.resolution_deadline_source,
+        # M25-03 / V13
+        "virtual_basis_resolution_id": m.virtual_basis_resolution_id,
+        "virtual_basis_valid_until": m.virtual_basis_valid_until,
+        "invitation_weeks": weeks,
+        "latest_invitation_at": latest,
+        "invitation_short_notice": m.invitation_short_notice,
+        "invitation_short_notice_reason": m.invitation_short_notice_reason,
+        "has_dial_in": bool(m.dial_in_url or m.dial_in_access),
     }
 
 
@@ -273,17 +308,16 @@ async def create_meeting(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         await _hoa_property(session, body.legal_entity_id)
-        if body.mode == "virtual":
-            basis = (
-                await session.get(Resolution, body.virtual_basis_resolution_id)
-                if body.virtual_basis_resolution_id
-                else None
-            )
-            if basis is None or basis.status not in {"positive", "final", "legally_binding"}:
-                raise ProblemError(
-                    ErrorCodes.VALIDATION,
-                    detail="Virtuelle Versammlung nur mit Beschlussgrundlage (R05).",
-                )
+        # Virtual form: tenant switch, enabling resolution with validity end (M25-03, V13).
+        await meeting_rules.validate_virtual_basis(
+            session,
+            tenant_id=principal.tenant_id,
+            legal_entity_id=body.legal_entity_id,
+            mode=body.mode,
+            scheduled_at=body.scheduled_at,
+            basis_id=body.virtual_basis_resolution_id,
+            valid_until=body.virtual_basis_valid_until,
+        )
         if body.voting_principle != "head" and not body.voting_principle_basis:
             raise ProblemError(
                 ErrorCodes.VALIDATION,
@@ -297,7 +331,8 @@ async def create_meeting(
         )
         session.add(row)
         await session.flush()
-        return _meeting_out(row)
+        weeks = await meeting_rules.invitation_weeks(session, principal.tenant_id)
+        return _meeting_out(row, weeks=weeks)
 
 
 @router.patch("/meetings/{meeting_id}", summary="Beschlussfrist der Versammlung (M9-07)")
@@ -376,18 +411,25 @@ async def invite(
         ).all()
         if not items:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Tagesordnung fehlt.")
-        earliest = body.invited_at + timedelta(weeks=INVITATION_WEEKS)
-        short = meeting.scheduled_at.date() < earliest
-        if short and not body.urgency_reason:
+        # Period per tenant setting (M25-03): warning and mandatory reason when the invitation
+        # is recorded after the latest dispatch date; the reason is noted in the minutes.
+        weeks = await meeting_rules.invitation_weeks(session, principal.tenant_id)
+        latest, short = meeting_rules.invitation_check(meeting.scheduled_at, body.invited_at, weeks)
+        if short and not (body.urgency_reason and body.urgency_reason.strip()):
             raise ProblemError(
                 ErrorCodes.VALIDATION,
                 detail=(
-                    f"Einladungsfrist unterschritten (orientierend frühestens {earliest:%d.%m.%Y},"
-                    " zu verifizieren). Kürzere Frist nur mit dokumentierter Dringlichkeit."
+                    f"Einladungsfrist von {weeks} Wochen unterschritten (spätester Versand "
+                    f"orientierend {latest:%d.%m.%Y}, zu verifizieren). Kürzere Frist nur mit "
+                    "dokumentierter Dringlichkeit; der Grund wird im Protokoll vermerkt."
                 ),
             )
         meeting.invited_at = body.invited_at
         meeting.status = "invited"
+        meeting.invitation_short_notice = short
+        meeting.invitation_short_notice_reason = (
+            body.urgency_reason.strip() if short and body.urgency_reason else None
+        )
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -398,7 +440,10 @@ async def invite(
             payload={"short_notice": short, "urgency_reason": body.urgency_reason},
         )
         await session.flush()
-        return _meeting_out(meeting) | {"short_notice": short}
+        return _meeting_out(meeting, weeks=weeks) | {
+            "short_notice": short,
+            "latest_invitation_at": latest,
+        }
 
 
 @router.post("/meetings/{meeting_id}/attendance", status_code=201, summary="Anwesenheit/Vollmacht")
@@ -694,24 +739,166 @@ async def announce(
         }
 
 
+CIRCULAR_LEGAL_NOTE = (
+    "Rechtsgrundlage der Absenkung zu prüfen (Einschätzung: § 23 Abs. 3 Satz 2 WEG, M25-02)"
+)
+ENABLING_STATUSES = {"positive", "final", "legally_binding"}
+
+
+async def circular_lower_majority_enabled(session: AsyncSession, tenant_id: uuid.UUID) -> bool:
+    from mhvp.platform.models import TenantSettings
+
+    return bool(
+        await session.scalar(
+            select(TenantSettings.hoa_circular_lower_majority_enabled).where(
+                TenantSettings.tenant_id == tenant_id
+            )
+        )
+    )
+
+
+def _consent(value: str | MeetingConsentIn) -> MeetingConsentIn:
+    return value if isinstance(value, MeetingConsentIn) else MeetingConsentIn(choice=value)
+
+
+def _late(consent: MeetingConsentIn, deadline: datetime | None) -> bool:
+    return (
+        deadline is not None and consent.received_at is not None and consent.received_at > deadline
+    )
+
+
+async def _enabling_resolution(session: AsyncSession, body: CircularIn) -> Resolution:
+    """The prior resolution that admitted the lower majority: same community (RLS keeps other
+    tenants invisible), positive and not younger than the circular resolution."""
+    code = ErrorCodes.HOA_CIRCULAR_ENABLING_RESOLUTION
+    if body.enabling_resolution_id is None:
+        raise ProblemError(code, detail="Zulassender Beschluss (Absenkungsbeschluss) fehlt.")
+    basis = await session.get(Resolution, body.enabling_resolution_id)
+    if basis is None or basis.legal_entity_id != body.legal_entity_id:
+        raise ProblemError(code, detail="Zulassender Beschluss nicht in dieser Gemeinschaft.")
+    if basis.status not in ENABLING_STATUSES:
+        raise ProblemError(code, detail="Zulassender Beschluss ist nicht positiv gefasst.")
+    if basis.decided_on > body.decided_on:
+        raise ProblemError(code, detail="Zulassender Beschluss liegt nach dem Umlaufbeschluss.")
+    if basis.allowed_majority == "simple":
+        raise ProblemError(
+            code, detail="Absenkung nur durch einen Beschluss ohne abgesenkte Mehrheit."
+        )
+    return basis
+
+
+async def _circular_tally(
+    session: AsyncSession,
+    prop: uuid.UUID,
+    members: Sequence[Any],
+    consents: dict[uuid.UUID, MeetingConsentIn],
+    deadline: datetime | None,
+    principle: str,
+    day: date,
+) -> dict[str, Any]:
+    """Counts the text form votes received in time by head (one vote per owner person, § 25
+    Abs. 2 WEG as in the meeting tally), by MEA or by unit; eligible is the total weight."""
+    sums = {"yes": ZERO, "no": ZERO, "abstain": ZERO}
+    eligible = ZERO
+    seen_heads: dict[uuid.UUID, str | None] = {}
+    late: list[str] = []
+    for contract in members:
+        weight = await _weight(session, principle, contract, prop, day)
+        consent = consents.get(contract.id)
+        choice: str | None = None
+        if consent is not None:
+            if _late(consent, deadline):
+                late.append(str(contract.id))
+            else:
+                choice = consent.choice
+        if principle == "head":
+            if contract.party_id in seen_heads:
+                previous = seen_heads[contract.party_id]
+                if previous is None and choice is not None:
+                    seen_heads[contract.party_id] = choice
+                    sums[choice] += weight
+                elif choice is not None and previous != choice:
+                    raise ProblemError(
+                        ErrorCodes.CONFLICT, detail="Uneinheitliche Stimmabgabe eines Eigentümers."
+                    )
+                continue
+            seen_heads[contract.party_id] = choice
+        eligible += weight
+        if choice is not None:
+            sums[choice] += weight
+    return {
+        "principle": principle,
+        "yes": f"{sums['yes'].normalize():f}",
+        "no": f"{sums['no'].normalize():f}",
+        "abstain": f"{sums['abstain'].normalize():f}",
+        "eligible": f"{eligible.normalize():f}",
+        "late": late,
+    }
+
+
 @router.post("/circular-resolutions", status_code=201, summary="Umlaufbeschluss (Textform)")
 async def circular(
     body: CircularIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
-    """Positive only if every owner agreed in text form (§ 23 Abs. 3 WEG); a lower majority
-    needs a prior resolution and is not implemented (open question M25-02)."""
+    """Unanimous: positive only if every owner agreed in text form (§ 23 Abs. 3 WEG).
+    Simple majority (M25-02, tenant switch, default off): only with a prior admitting
+    resolution of the community for this subject, a voting deadline and the majority rule of
+    the tenant for the subject kind (docs/rules/M25-02-umlaufbeschluss.md). The legal basis of
+    the lowered majority is an assessment to be checked by a lawyer, not a rule of the system."""
     from sqlalchemy import func
+
+    from mhvp.hoa.majority import BASIS_TO_PRINCIPLE, REACHED, evaluate, find_rule, spec_of
 
     async with tenant_tx(request, principal) as session:
         prop = await _hoa_property(session, body.legal_entity_id)
-        members = {c.id for c in await _members(session, prop, body.decided_on)}
-        unknown = set(body.consents) - members
+        members = await _members(session, prop, body.decided_on)
+        member_ids = {c.id for c in members}
+        consents = {k: _consent(v) for k, v in body.consents.items()}
+        unknown = set(consents) - member_ids
         if unknown:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Zustimmung von Nichteigentümern.")
-        missing = members - set(body.consents)
-        positive = not missing and all(c == "yes" for c in body.consents.values())
         if body.evidence_document_id is None:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Nachweis der Textform fehlt.")
+        deadline = body.vote_deadline_at
+        late = {k for k, c in consents.items() if _late(c, deadline)}
+        missing = (member_ids - set(consents)) | late
+        basis: Resolution | None = None
+        check: dict[str, Any] | None = None
+        tally: dict[str, Any] | None = None
+        if body.allowed_majority == "simple":
+            if not await circular_lower_majority_enabled(session, principal.tenant_id):
+                raise ProblemError(ErrorCodes.HOA_CIRCULAR_LOWER_MAJORITY_DISABLED)
+            basis = await _enabling_resolution(session, body)
+            if deadline is None:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Fristende für die Stimmabgabe fehlt."
+                )
+            if body.subject_kind is None:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Beschlussgegenstand für die Mehrheitsregel fehlt.",
+                )
+            rule = await find_rule(session, body.legal_entity_id, body.subject_kind)
+            spec = spec_of(rule)
+            principle = BASIS_TO_PRINCIPLE[spec.counting_basis]
+            tally = await _circular_tally(
+                session, prop, members, consents, deadline, principle, body.decided_on
+            )
+            check = evaluate(spec, tally, body.subject_kind) | {
+                "rule_id": str(rule.id) if rule else None,
+                "checked_at": datetime.now(UTC).isoformat(),
+            }
+            if check["result"] not in {REACHED, "nicht erreicht"}:
+                raise ProblemError(ErrorCodes.VALIDATION, detail=str(check.get("reason")))
+            positive = check["result"] == REACHED
+            majority_basis = (
+                f"Einfache Mehrheit im Umlaufverfahren nach zulassendem Beschluss Nr. "
+                f"{basis.number} vom {basis.decided_on.strftime('%d.%m.%Y')}; "
+                f"{check['rule_text']}; {CIRCULAR_LEGAL_NOTE}"
+            )
+        else:
+            positive = not missing and all(c.choice == "yes" for c in consents.values())
+            majority_basis = "Allstimmigkeit in Textform (§ 23 Abs. 3 WEG)"
         number = int(
             await session.scalar(
                 select(func.coalesce(func.max(Resolution.number), 0)).where(
@@ -720,6 +907,7 @@ async def circular(
             )
             or 0
         )
+        now = datetime.now(UTC)
         row = Resolution(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -730,16 +918,91 @@ async def circular(
             wording=body.wording,
             status="positive" if positive else "negative",
             kind="circular",
-            majority_basis="Allstimmigkeit in Textform (§ 23 Abs. 3 WEG)",
+            majority_basis=majority_basis,
+            subject_kind=body.subject_kind,
+            majority_check=check,
+            allowed_majority=body.allowed_majority,
+            enabling_resolution_id=basis.id if basis else None,
+            vote_deadline_at=deadline,
             votes={
-                "consents": {str(k): v for k, v in body.consents.items()},
+                "consents": {str(k): v.model_dump(mode="json") for k, v in consents.items()},
                 "missing": sorted(str(m) for m in missing),
+                "late": sorted(str(m) for m in late),
                 "evidence_document_id": str(body.evidence_document_id),
+                "allowed_majority": body.allowed_majority,
+                "tally": tally,
+                # Ergebnisfeststellung (protocol note in the resolution collection)
+                "protocol": {
+                    "determined_at": now.isoformat(),
+                    "determined_by": str(principal.user_id),
+                    "result": "positive" if positive else "negative",
+                    "vote_deadline_at": deadline.isoformat() if deadline else None,
+                    "enabling_resolution_id": str(basis.id) if basis else None,
+                },
             },
         )
         session.add(row)
         await session.flush()
-        return {"id": row.id, "number": row.number, "status": row.status, "missing": len(missing)}
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="resolution.circular_determined",
+            entity_type="resolution",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "status": row.status,
+                "allowed_majority": body.allowed_majority,
+                "enabling_resolution_id": str(basis.id) if basis else None,
+            },
+        )
+        return {
+            "id": row.id,
+            "number": row.number,
+            "status": row.status,
+            "missing": len(missing),
+            "late": len(late),
+            "tally": tally,
+            "majority_check": check,
+            "majority_basis": majority_basis,
+        }
+
+
+SETTINGS_READ = require_permission("tenant_settings:read")
+SETTINGS_UPDATE = require_permission("tenant_settings:update")
+
+
+@router.get("/circular-lower-majority", summary="Umlaufbeschluss mit einfacher Mehrheit (Schalter)")
+async def get_circular_switch(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
+) -> dict[str, bool]:
+    async with tenant_tx(request, principal) as session:
+        return {"enabled": await circular_lower_majority_enabled(session, principal.tenant_id)}
+
+
+@router.put("/circular-lower-majority", summary="Umlaufbeschluss mit einfacher Mehrheit setzen")
+async def put_circular_switch(
+    body: CircularSwitchIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS_UPDATE)
+) -> dict[str, bool]:
+    """Per tenant switch (M25-02), default off. Switching it on is an operator decision after
+    legal review; the system does not assert the admissibility of the lowered majority."""
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.hoa_circular_lower_majority_enabled = body.enabled
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="hoa_circular_lower_majority.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"enabled": body.enabled},
+        )
+        return {"enabled": body.enabled}
 
 
 # Board audit -----------------------------------------------------------------------------
@@ -1009,7 +1272,8 @@ async def list_meetings(
             .where(Meeting.legal_entity_id == legal_entity_id)
             .order_by(Meeting.scheduled_at.desc())
         )
-        return [_meeting_out(m) for m in rows.all()]
+        weeks = await meeting_rules.invitation_weeks(session, principal.tenant_id)
+        return [_meeting_out(m, weeks=weeks) for m in rows.all()]
 
 
 @router.get("/meetings/{meeting_id}", summary="Versammlung mit Tagesordnung und Anwesenheit")
@@ -1039,7 +1303,20 @@ async def get_meeting(
                 )
             ).all()
         }
-        return _meeting_out(meeting) | {
+        weeks = await meeting_rules.invitation_weeks(session, principal.tenant_id)
+        basis = (
+            await session.get(Resolution, meeting.virtual_basis_resolution_id)
+            if meeting.virtual_basis_resolution_id
+            else None
+        )
+        return _meeting_out(meeting, weeks=weeks) | {
+            "invitation_notice": meeting_rules.invitation_notice(meeting, basis),
+            "short_notice_note": meeting_rules.short_notice_note(meeting, weeks),
+            "virtual_basis": (
+                {"id": basis.id, "number": basis.number, "decided_on": basis.decided_on}
+                if basis
+                else None
+            ),
             "agenda": [
                 {
                     "id": i.id,
@@ -1102,6 +1379,7 @@ async def meeting_members(
                     "party_name": party.name if party else None,
                     "present": bool(att and att.present),
                     "proxy": bool(att and att.proxy_contact_id),
+                    "channel": meeting_rules.attendance_channel(att),
                     "votes": votes.get(c.id, {}),
                 }
             )

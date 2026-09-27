@@ -42,20 +42,31 @@ export default async function PortalLayout({ children }: { children: React.React
         { href: "/konto", label: t("nav.account") },
         { href: "/zaehlerstand", label: t("nav.meter") },
         { href: "/daten", label: t("nav.data") },
+        { href: "/lastschrift", label: t("nav.mandate") },
         // A51: owner pages (read only), shown only with the owner role.
         ...(me?.roles.includes("owner")
           ? [
               { href: "/beschluesse", label: t("nav.resolutions") },
+              { href: "/versammlungen", label: t("nav.meetings") },
               { href: "/ansprechpartner", label: t("nav.contacts") },
               { href: "/hausgeldkonto", label: t("nav.hoaAccount") },
             ]
           : []),
         ...(board ? [{ href: "/pruefung", label: t("nav.audit") }] : []),
+        // M19-02: submissions to the board (owner with the board contact category, or board role).
+        ...(me?.roles.includes("owner") || board ? [{ href: "/vorlagen", label: t("nav.submissions") }] : []),
       ];
   // Sicherheit (optional second factor, remembered devices) is available to every account.
   links.push({ href: "/sicherheit", label: t("nav.security") });
   return (
     <div className="flex min-h-screen flex-col">
+      {/* V13: skip link, only visible on keyboard focus, jumps past header and navigation. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-bg focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-fg focus:ring-2 focus:ring-gold/40"
+      >
+        {t("skipToContent")}
+      </a>
       <header className="border-b border-border bg-surface">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
@@ -76,11 +87,13 @@ export default async function PortalLayout({ children }: { children: React.React
           />
         </div>
       </header>
-      <main className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 px-4 py-6">
+      <main id="main-content" tabIndex={-1} className="mx-auto flex w-full max-w-4xl flex-1 flex-col gap-5 px-4 py-6">
         <InstallHint />
         {children}
       </main>
-      <footer className="mx-auto w-full max-w-4xl px-4 py-4 text-xs text-subtle">{t("footer")}</footer>
+      <footer className="mx-auto w-full max-w-4xl px-4 py-4 text-xs text-subtle">
+        {t("footer")} <Link href="/barrierefreiheit" className="underline hover:text-fg">{t("accessibilityLink")}</Link>
+      </footer>
     </div>
   );
 }

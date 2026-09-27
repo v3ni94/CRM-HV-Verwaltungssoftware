@@ -36,11 +36,16 @@ from mhvp.accounting.direct_debit_models import (
 )
 from mhvp.accounting.models import LeadingSystem, Ledger, OpenItem, OpenItemKind
 from mhvp.core import crypto
+from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
-PAIN_FORMAT = "pain.008.001.02"  # version to confirm with the banks (P05, M15-01)
+PAIN_FORMAT = "pain.008.001.02"  # default; agreed version per bank in PaymentBankConfig (M15-01)
+PAIN008_VERSIONS = ("pain.008.001.02", "pain.008.001.08")
 NAMESPACE = f"urn:iso:std:iso:20022:tech:xsd:{PAIN_FORMAT}"
 LOCAL_INSTRUMENT = "CORE"
+# Vorabinformation (Pre-Notification): Mindestfrist ist bankfachlich nicht abschließend geklärt
+# (Quellenstatus offen, M15-01); 14 Tage ist eine kaufmännisch übliche Annahme als Entwurfswert.
+PRE_NOTIFICATION_LEAD_DAYS_DEFAULT = 14
 REQUIRED_APPROVALS = 2
 ACTIVE_RUN_STATUSES = (
     DirectDebitRunStatus.DRAFT,
@@ -551,6 +556,10 @@ def _sub(parent: ET.Element, tag: str, text: str | None = None) -> ET.Element:
     return element
 
 
+def _namespace(version: str) -> str:
+    return f"urn:iso:std:iso:20022:tech:xsd:{version}"
+
+
 def pain008(
     run: DirectDebitRun,
     orders: list[DirectDebitOrder],
@@ -558,15 +567,23 @@ def pain008(
     creditor_iban: str,
     creditor_bic: str | None = None,
     created_at: datetime | None = None,
+    version: str = PAIN_FORMAT,
 ) -> bytes:
     """Customer direct debit initiation per the public ISO 20022 structure
     (CstmrDrctDbtInitn, GrpHdr, one PmtInf per sequence type with PmtTpInf/SeqTp,
-    DrctDbtTxInf with MndtRltdInf). Bank specific variants are unverified (P05, M15-01)."""
+    DrctDbtTxInf with MndtRltdInf), in the version agreed per bank account
+    (``PaymentBankConfig.pain008_version``, pain.008.001.02 or .08, M15-01). Bank specific
+    variants beyond the two public versions are unverified (P05, M15-01)."""
+    if version not in PAIN008_VERSIONS:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=f"Unbekannte pain.008-Version {version}.")
     if not orders:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Lastschriften im Lauf.")
-    ET.register_namespace("", NAMESPACE)
+    ns = _namespace(version)
+    modern = version == "pain.008.001.08"
+    bic_tag = "BICFI" if modern else "BIC"
+    ET.register_namespace("", ns)
     total = sum((o.amount for o in orders), Decimal("0.00"))
-    root = ET.Element(f"{{{NAMESPACE}}}Document")
+    root = ET.Element(f"{{{ns}}}Document")
     init = _sub(root, "CstmrDrctDbtInitn")
     header = _sub(init, "GrpHdr")
     _sub(header, "MsgId", run.message_id)
@@ -593,7 +610,7 @@ def pain008(
         _sub(_sub(_sub(info, "CdtrAcct"), "Id"), "IBAN", creditor_iban)
         agent = _sub(_sub(info, "CdtrAgt"), "FinInstnId")
         if creditor_bic:
-            _sub(agent, "BIC", creditor_bic)
+            _sub(agent, bic_tag, creditor_bic)
         else:
             _sub(_sub(agent, "Othr"), "Id", "NOTPROVIDED")
         _sub(info, "ChrgBr", "SLEV")
@@ -618,16 +635,20 @@ def pain008(
 
 
 def validate_pain008(data: bytes) -> list[str]:
-    """Structural check against the public pain.008.001.02 layout; no XSD is in the repository,
-    so this is a plausibility check and no claim of bank acceptance (M15-01)."""
+    """Structural and arithmetic check of a pain.008 file (either public version, .02 or .08);
+    the XSD check against both schemas runs in the tests, this check protects the stored file
+    against manipulation before hand-out and is no claim of bank acceptance (M15-01)."""
     errors: list[str] = []
     try:
         root = SafeElementTree.fromstring(data)
     except (ET.ParseError, ValueError) as exc:
         return [f"XML nicht lesbar: {exc}"]
-    ns = {"p": NAMESPACE}
-    if root.tag != f"{{{NAMESPACE}}}Document":
-        return [f"Wurzelelement ist nicht Document im Namensraum {NAMESPACE}."]
+    version = next(
+        (v for v in PAIN008_VERSIONS if root.tag == f"{{{_namespace(v)}}}Document"), None
+    )
+    if version is None:
+        return ["Wurzelelement ist nicht Document in einem bekannten pain.008-Namensraum."]
+    ns = {"p": _namespace(version)}
     init = root.find("p:CstmrDrctDbtInitn", ns)
     if init is None:
         return ["CstmrDrctDbtInitn fehlt."]
@@ -708,6 +729,7 @@ async def generate_file(
 ) -> tuple[bytes, uuid.UUID]:
     """Build, check and file the pain.008 as a document. Requires a fully approved run of a
     leading ledger; the document is never handed out here (download is behind G2)."""
+    from mhvp.banking.models import PaymentBankConfig
     from mhvp.documents import services as docs
     from mhvp.documents.models import DocumentSource, LinkRole
     from mhvp.properties.models import PropertyBankAccount
@@ -730,7 +752,15 @@ async def generate_file(
     bank = await session.get(PropertyBankAccount, run.property_bank_account_id)
     if bank is None:  # pragma: no cover
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-    xml = pain008(run, orders, creditor_iban=bank.iban, creditor_bic=bank.bic)
+    config = await session.scalar(
+        select(PaymentBankConfig).where(PaymentBankConfig.property_bank_account_id == bank.id)
+    )
+    version = (
+        config.pain008_version
+        if config and config.pain008_version in PAIN008_VERSIONS
+        else (PAIN_FORMAT)
+    )
+    xml = pain008(run, orders, creditor_iban=bank.iban, creditor_bic=bank.bic, version=version)
     problems = validate_pain008(xml)
     if problems:
         raise ProblemError(
@@ -741,7 +771,7 @@ async def generate_file(
         blobs,
         tenant_id=run.tenant_id,
         data=xml,
-        title=f"Lastschriftdatei {run.message_id} ({PAIN_FORMAT}), nicht übermittelt",
+        title=f"Lastschriftdatei {run.message_id} ({version}), nicht übermittelt",
         filename=f"{run.message_id}.xml",
         mime_type="application/xml",
         source=DocumentSource.GENERATED,
@@ -750,10 +780,98 @@ async def generate_file(
         created_by=user_id,
     )
     run.document_id = document.id
+    run.format = version
     run.status = DirectDebitRunStatus.FILE_GENERATED
     run.updated_by = user_id
     await session.flush()
     return xml, document.id
+
+
+# --- download protocol and submission (M15-01, analogous to pain.001 payment files) --------
+
+DOWNLOAD_EVENT = "direct_debit_run.file_downloaded"
+SUBMITTED_EVENT = "direct_debit_run.submitted"
+
+
+async def record_download(
+    session: AsyncSession, run: DirectDebitRun, data: bytes, *, user_id: uuid.UUID | None
+) -> str:
+    """Log one hand-out of the pain.008 file with its checksum (never deleted, M15-01; modelled
+    on ``payment_file_download``, kept as a domain event so no schema change is needed here)."""
+    from mhvp.banking.payments import file_sha256
+
+    checksum = file_sha256(data)
+    await emit(
+        session,
+        tenant_id=run.tenant_id,
+        type=DOWNLOAD_EVENT,
+        entity_type="direct_debit_run",
+        entity_id=run.id,
+        actor_user_id=user_id,
+        payload={"file_sha256": checksum, "document_id": str(run.document_id)},
+    )
+    return checksum
+
+
+async def download_protocol(session: AsyncSession, run: DirectDebitRun) -> list[dict[str, Any]]:
+    """Every download and submission of this run's file, oldest first (M15-01)."""
+    from mhvp.core.events import DomainEvent
+
+    rows = (
+        await session.scalars(
+            select(DomainEvent)
+            .where(
+                DomainEvent.tenant_id == run.tenant_id,
+                DomainEvent.entity_type == "direct_debit_run",
+                DomainEvent.entity_id == run.id,
+                DomainEvent.type.in_((DOWNLOAD_EVENT, SUBMITTED_EVENT)),
+            )
+            .order_by(DomainEvent.occurred_at)
+        )
+    ).all()
+    return [
+        {
+            "type": e.type,
+            "occurred_at": e.occurred_at.isoformat(),
+            "actor_user_id": str(e.actor_user_id) if e.actor_user_id else None,
+            "payload": e.payload,
+        }
+        for e in rows
+    ]
+
+
+async def submit_run(
+    session: AsyncSession, run: DirectDebitRun, *, user_id: uuid.UUID | None, reference: str | None
+) -> dict[str, Any]:
+    """Confirm the manual hand-over to the bank's online banking (analogous to
+    ``FileDownloadSubmitter``: a human statement, not a transmission, that names the bank's
+    reference or protocol number); repeated confirmation has no effect (B08)."""
+    if run.status not in (DirectDebitRunStatus.FILE_GENERATED, DirectDebitRunStatus.EXPORTED):
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Für den Lauf liegt keine ausgegebene Datei vor."
+        )
+    existing = next(
+        (e for e in await download_protocol(session, run) if e["type"] == SUBMITTED_EVENT), None
+    )
+    if existing is not None:
+        return existing  # repeated call has no effect (B08)
+    reference = (reference or "").strip()
+    if not reference:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Bankreferenz oder Protokollnummer der Einreichung angeben.",
+        )
+    payload = {"reference": reference[:140], "channel": "file"}
+    await emit(
+        session,
+        tenant_id=run.tenant_id,
+        type=SUBMITTED_EVENT,
+        entity_type="direct_debit_run",
+        entity_id=run.id,
+        actor_user_id=user_id,
+        payload=payload,
+    )
+    return {"type": SUBMITTED_EVENT, "payload": payload}
 
 
 def _eur(value: Decimal) -> str:
@@ -761,11 +879,16 @@ def _eur(value: Decimal) -> str:
 
 
 def pre_notification_text(
-    run: DirectDebitRun, orders: list[DirectDebitOrder], *, creditor_iban_masked: str
+    run: DirectDebitRun,
+    orders: list[DirectDebitOrder],
+    *,
+    creditor_iban_masked: str,
+    lead_days: int = PRE_NOTIFICATION_LEAD_DAYS_DEFAULT,
 ) -> str:
     """Advance information to one payer (Vorabinformation): every amount, the collection date,
     mandate reference and creditor identifier. Draft wording; the required minimum period
-    before the collection is open (M15-01) and is stated as to be checked."""
+    before the collection is configurable (default 14 days, Entwurfswert) and stated as an
+    open source status to be checked (M15-01)."""
     from mhvp.contacts.validation import mask_iban
 
     if not orders:
@@ -782,6 +905,7 @@ def pre_notification_text(
         f"Belastetes Konto: {mask_iban(first.debtor_iban)}",
         f"Empfängerkonto: {creditor_iban_masked}",
         f"Fälligkeit und Einzugsdatum: {run.collection_date:%d.%m.%Y}",
+        f"Vorlauffrist der Vorabinformation: mindestens {lead_days} Tage vor dem Einzug (Entwurf).",
         "",
         "Einzelbeträge:",
     ]
@@ -799,7 +923,12 @@ def pre_notification_text(
 
 
 async def create_pre_notifications(
-    session: AsyncSession, blobs: Any, run: DirectDebitRun, *, principal: Any
+    session: AsyncSession,
+    blobs: Any,
+    run: DirectDebitRun,
+    *,
+    principal: Any,
+    lead_days: int = PRE_NOTIFICATION_LEAD_DAYS_DEFAULT,
 ) -> list[dict[str, Any]]:
     """One draft per payer: text document filed at the contact plus a dispatch draft via
     ``mhvp.communication.dispatch`` (e-mail draft when an address exists, otherwise postal
@@ -843,7 +972,9 @@ async def create_pre_notifications(
                 }
             )
             continue
-        text = pre_notification_text(run, orders, creditor_iban_masked=creditor_masked)
+        text = pre_notification_text(
+            run, orders, creditor_iban_masked=creditor_masked, lead_days=lead_days
+        )
         document = await docs.store_document(
             session,
             blobs,

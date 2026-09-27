@@ -7,8 +7,31 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-/** Login step 1 (e-mail and password); the second factor follows on the next page. */
+import { MagicLinkForm } from "./MagicLinkForm";
+
+/** Login step 1 (e-mail and password); the second factor follows on the next page. Offers the
+ *  magic link (M21-01) as an alternative, next to the password (never a replacement). */
 export function LoginForm({ next }: { next?: string }) {
+  const t = useTranslations("Auth");
+  const [mode, setMode] = useState<"password" | "magic-link">("password");
+  if (mode === "magic-link") {
+    return (
+      <div className="flex flex-col gap-3">
+        <MagicLinkForm />
+        <button
+          type="button"
+          className="text-xs text-accent underline underline-offset-2 hover:no-underline"
+          onClick={() => setMode("password")}
+        >
+          {t("magicLink.backToPassword")}
+        </button>
+      </div>
+    );
+  }
+  return <PasswordLoginForm next={next} onMagicLink={() => setMode("magic-link")} />;
+}
+
+function PasswordLoginForm({ next, onMagicLink }: { next?: string; onMagicLink: () => void }) {
   const t = useTranslations("Auth");
   const router = useRouter();
   const [email, setEmail] = useState("");
@@ -87,6 +110,9 @@ export function LoginForm({ next }: { next?: string }) {
       </div>
       <button type="submit" className={ui.primary} disabled={busy}>
         {busy ? t("submitting") : t("submit")}
+      </button>
+      <button type="button" className="text-xs text-accent underline underline-offset-2 hover:no-underline" onClick={onMagicLink}>
+        {t("magicLink.useInstead")}
       </button>
     </form>
   );

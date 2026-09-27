@@ -1,8 +1,12 @@
 """Receivable runs (7.5 Sollstellung, 7.3): preview, post, reverse.
 
-Monthly components only. Proration within a month, non monthly intervals, workday due rules and
-VAT on receivables need a released rule (7.5: no free 30/360 method; M13-01 to M13-03) and are
-listed as manual items, never computed by assumption.
+Without released rules only full monthly components are computed. Proration within a month,
+non monthly intervals, workday due rules and VAT on receivables need a released rule (7.5: no
+free 30/360 method; M13-01 to M13-03) and are listed as manual items, never computed by
+assumption. When the tenant releases the rules (``TenantSettings.receivable_rules.enabled``,
+default off, draft behind G1) the run computes them with ``mhvp.accounting.proration`` and
+stores the calculation path on the run (``ReceivableRun.calculation``). The workday due rule
+stays open in both modes (no released holiday calendar).
 """
 
 import calendar
@@ -16,6 +20,7 @@ from typing import Any
 from sqlalchemy import func, or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.accounting import proration
 from mhvp.accounting import services as acc
 from mhvp.accounting.models import (
     EntryKind,
@@ -32,6 +37,30 @@ from mhvp.accounting.models import (
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 PRORATION = "Unterjähriger Beginn oder Wechsel: zeitanteilige Regel nicht freigegeben"
+VAT_MANUAL = "Umsatzsteuer auf Sollstellung: Steuerbehandlung nicht freigegeben"
+WORKDAY = "Fälligkeit nach Werktag: Feiertagskalender offen"
+# Reserved payment type code of ``PaymentTypeAccount`` for the output tax account (M13-03).
+VAT_OUTPUT_CODE = "vat_output"
+COMMERCIAL_VAT_OPTIONS = {"commercial_full_vat", "commercial_reduced_vat"}
+ITEM_ONLY = {"contract_number", "calculation"}
+
+
+async def load_rules(session: AsyncSession) -> dict[str, Any]:
+    """Receivable rules of the tenant (M13-01 to M13-03); missing keys mean default off."""
+    from mhvp.platform.models import TenantSettings
+
+    row = await session.scalar(select(TenantSettings))
+    raw = dict(row.receivable_rules or {}) if row is not None else {}
+    return {
+        "enabled": bool(raw.get("enabled", False)),
+        "proration_method": str(raw.get("proration_method") or proration.CALENDAR_DAYS),
+        "vat_enabled": bool(raw.get("vat_enabled", False)),
+    }
+
+
+def rules_applied(run: ReceivableRun) -> bool:
+    rules = (run.calculation or {}).get("rules") or {}
+    return bool(rules.get("enabled"))
 
 
 def month_bounds(period: date) -> tuple[date, date]:
@@ -91,6 +120,7 @@ async def compute(
         ).all()
     }
     items: list[dict[str, Any]] = []
+    rules = await load_rules(session)
     for contract in contracts:
         ledger = ledgers.get(contract.legal_entity_id)
         schedule = await session.scalar(
@@ -100,6 +130,21 @@ async def compute(
                 or_(PaymentSchedule.valid_to.is_(None), PaymentSchedule.valid_to >= last),
             )
         )
+        if schedule is None and rules["enabled"]:
+            # M13-01: a contract starting within the month has a schedule from its start; the
+            # schedule valid at the end of the covered part of the month applies.
+            covered_end = min(last, contract.end_date) if contract.end_date else last
+            schedule = await session.scalar(
+                select(PaymentSchedule)
+                .where(
+                    PaymentSchedule.contract_id == contract.id,
+                    PaymentSchedule.valid_from <= covered_end,
+                    or_(
+                        PaymentSchedule.valid_to.is_(None), PaymentSchedule.valid_to >= covered_end
+                    ),
+                )
+                .order_by(PaymentSchedule.valid_from.desc())
+            )
         payments = (
             await session.scalars(
                 select(ContractPayment).where(
@@ -112,6 +157,13 @@ async def compute(
         partial_contract = contract.start_date > first or (
             contract.end_date is not None and contract.end_date < last
         )
+        if rules["enabled"]:
+            items.extend(
+                _compute_with_rules(
+                    contract, list(payments), schedule, ledger, mapping, posted, first, rules
+                )
+            )
+            continue
         for p in sorted(payments, key=lambda x: (x.payment_type_code, x.valid_from)):
             item: dict[str, Any] = {
                 "contract_id": contract.id,
@@ -121,6 +173,10 @@ async def compute(
                 "payment_type_code": p.payment_type_code,
                 "amount": p.gross,
                 "vat_percent": p.vat_percent,
+                "net_amount": None,
+                "vat_amount": None,
+                "period_start": None,
+                "period_end": None,
                 "due_date": None,
                 "status": ItemStatus.READY,
                 "message": None,
@@ -151,13 +207,135 @@ async def compute(
                 if item["due_date"] is None:
                     mark(ItemStatus.MANUAL, "Fälligkeit nach Werktag: Feiertagskalender offen")
             if p.vat_percent != 0:
-                mark(
-                    ItemStatus.MANUAL,
-                    "Umsatzsteuer auf Sollstellung: Steuerbehandlung nicht freigegeben",
-                )
+                mark(ItemStatus.MANUAL, VAT_MANUAL)
             if p.gross <= 0:
                 mark(ItemStatus.MANUAL, "Betrag nicht positiv (Minderung): gesondert prüfen")
             items.append(item)
+    return items
+
+
+def _compute_with_rules(
+    contract: Any,
+    payments: list[Any],
+    schedule: Any,
+    ledger: Ledger | None,
+    mapping: dict[tuple[uuid.UUID, str], uuid.UUID],
+    posted: set[tuple[uuid.UUID, str]],
+    first: date,
+    rules: dict[str, Any],
+) -> list[dict[str, Any]]:
+    """One item per contract and component with the released rules (M13-01 to M13-03).
+
+    Several validity periods of one component within the month (amount change) become one
+    item with segments; the calculation path of every item is kept under ``calculation``.
+    """
+    items: list[dict[str, Any]] = []
+    method = contract.proration_method or rules["proration_method"]
+    by_code: dict[str, list[Any]] = {}
+    for p in sorted(payments, key=lambda x: (x.payment_type_code, x.valid_from)):
+        by_code.setdefault(p.payment_type_code, []).append(p)
+    for code, rows in by_code.items():
+        if (contract.id, code) in posted:
+            continue  # already posted for this period (B08)
+        current = rows[-1]
+        rates = {p.vat_percent for p in rows}
+        periods = [(p.valid_from, p.valid_to, p.net) for p in rows]
+        calc: dict[str, Any] = {
+            "contract_number": contract.number,
+            "payment_type_code": code,
+            "proration_method": method,
+            "contract_payment_ids": [str(p.id) for p in rows],
+        }
+        item: dict[str, Any] = {
+            "contract_id": contract.id,
+            "contract_number": contract.number,
+            "contract_payment_id": current.id,
+            "ledger_id": ledger.id if ledger else None,
+            "payment_type_code": code,
+            "amount": current.gross,
+            "vat_percent": current.vat_percent,
+            "net_amount": None,
+            "vat_amount": None,
+            "period_start": None,
+            "period_end": None,
+            "due_date": None,
+            "status": ItemStatus.READY,
+            "message": None,
+            "calculation": calc,
+        }
+
+        def mark(status: ItemStatus, message: str, item: dict[str, Any] = item) -> None:
+            if item["status"] is ItemStatus.READY:
+                item["status"], item["message"] = status, message
+
+        net_total: Decimal | None = None
+        if schedule is None:
+            mark(ItemStatus.BLOCKED, "Kein Zahlungsintervall für den ganzen Monat")
+        else:
+            interval = schedule.interval.value
+            if interval == "monthly":
+                month = proration.prorate_month(
+                    first,
+                    method,
+                    periods,
+                    contract_start=contract.start_date,
+                    contract_end=contract.end_date,
+                )
+                if not month.segments:
+                    continue  # nothing valid in this month
+                calc["month"] = month.as_json()
+                net_total = month.total
+                item["period_start"] = month.segments[0].start
+                item["period_end"] = month.segments[-1].end
+            else:
+                instalment = proration.instalment_for_month(
+                    first,
+                    interval=interval,
+                    anchor=schedule.valid_from,
+                    payment_mode=schedule.payment_mode,
+                    amount_basis=schedule.amount_basis,
+                    method=method,
+                    periods=periods,
+                    contract_start=contract.start_date,
+                    contract_end=contract.end_date,
+                )
+                if instalment is None:
+                    continue  # not due in this month
+                calc["instalment"] = instalment.as_json()
+                net_total = instalment.total
+                item["period_start"] = instalment.period_start
+                item["period_end"] = instalment.period_end
+            item["due_date"] = proration.due_date_for(
+                schedule.due_day_rule.value, schedule.due_day, first
+            )
+            if item["due_date"] is None:
+                mark(ItemStatus.MANUAL, WORKDAY)
+        if ledger is None:
+            mark(ItemStatus.BLOCKED, "Kein Buchungskreis für den Gläubiger")
+        elif (ledger.id, code) not in mapping:
+            mark(ItemStatus.BLOCKED, f"Kein Erlöskonto für Zahlungsart {code}")
+        # VAT (M13-03): only with the option on the contract, the released VAT rule, a ledger
+        # with VAT option and a mapped tax account; otherwise the item stays manual.
+        vat_percent = current.vat_percent
+        if len(rates) > 1:
+            mark(ItemStatus.MANUAL, "Steuersatzwechsel im Monat: gesondert prüfen")
+        if vat_percent != 0:
+            if contract.vat_option.value not in COMMERCIAL_VAT_OPTIONS:
+                mark(ItemStatus.MANUAL, "Steuersatz ohne Umsatzsteueroption am Vertrag: prüfen")
+            elif not rules["vat_enabled"]:
+                mark(ItemStatus.MANUAL, VAT_MANUAL)
+            elif ledger is not None and ledger.vat_mode.value != "option":
+                mark(ItemStatus.BLOCKED, "Buchungskreis ohne Umsatzsteueroption")
+            elif ledger is not None and (ledger.id, VAT_OUTPUT_CODE) not in mapping:
+                mark(ItemStatus.BLOCKED, "Kein Steuerkonto für die Umsatzsteuer (vat_output)")
+        if net_total is not None:
+            split = proration.split_vat(net_total, vat_percent)
+            calc["vat"] = {k: str(v) for k, v in split.items()}
+            item["net_amount"], item["vat_amount"] = split["net"], split["vat"]
+            item["amount"] = split["gross"]
+        if item["amount"] <= 0:
+            mark(ItemStatus.MANUAL, "Betrag nicht positiv (Minderung): gesondert prüfen")
+        items.append(item)
     return items
 
 
@@ -223,6 +401,10 @@ async def create_preview(
     summary["skipped_pending_approval"] = await pending_approval_count(
         session, first, scope, scope_id
     )
+    rules = await load_rules(session)
+    calculation: dict[str, Any] = {"rules": rules}
+    if rules["enabled"]:
+        calculation["items"] = [i["calculation"] for i in items if "calculation" in i]
     run = ReceivableRun(
         tenant_id=tenant_id,
         created_by=user_id,
@@ -231,6 +413,7 @@ async def create_preview(
         scope_id=scope_id,
         preview_hash=digest(items),
         totals=summary,
+        calculation=calculation,
     )
     session.add(run)
     await session.flush()
@@ -240,7 +423,7 @@ async def create_preview(
                 tenant_id=tenant_id,
                 run_id=run.id,
                 period_month=first,
-                **{k: v for k, v in i.items() if k != "contract_number"},
+                **{k: v for k, v in i.items() if k not in ITEM_ONLY},
             )
         )
     await session.flush()
@@ -327,10 +510,26 @@ async def post_run(
                 f"{run.period_month.isoformat()}"
             ),
         )
-        lines = [
-            acc.LineIn(debtor.id, item.amount, Decimal("0")),
-            acc.LineIn(mapping[(ledger.id, item.payment_type_code)], Decimal("0"), item.amount),
-        ]
+        lines = [acc.LineIn(debtor.id, item.amount, Decimal("0"))]
+        if item.vat_amount:
+            # M13-03: net on the revenue account, tax separately on the mapped tax account.
+            lines.append(
+                acc.LineIn(
+                    mapping[(ledger.id, item.payment_type_code)],
+                    Decimal("0"),
+                    item.net_amount or Decimal("0"),
+                    vat_percent=item.vat_percent,
+                    vat_amount=item.vat_amount,
+                    net_amount=item.net_amount,
+                )
+            )
+            lines.append(
+                acc.LineIn(mapping[(ledger.id, VAT_OUTPUT_CODE)], Decimal("0"), item.vat_amount)
+            )
+        else:
+            lines.append(
+                acc.LineIn(mapping[(ledger.id, item.payment_type_code)], Decimal("0"), item.amount)
+            )
         await acc.write_draft(session, ledger, entry, lines, [])
         await acc.post(session, ledger, entry, user_id)
         item.status, item.journal_entry_id = ItemStatus.POSTED, entry.id

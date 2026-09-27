@@ -45,6 +45,7 @@ export default async function DirectDebitRunsPage() {
                 <th>{t("creditor")}</th>
                 <th className="num">{t("count")}</th>
                 <th className="num">{t("controlSum")}</th>
+                <th>{t("version")}</th>
                 <th>{t("status")}</th>
                 <th>{t("actions")}</th>
               </tr>
@@ -65,6 +66,7 @@ export default async function DirectDebitRunsPage() {
                     ) : null}
                   </td>
                   <td className="num">{formatEur(r.control_sum)}</td>
+                  <td className="text-xs">{r.format}</td>
                   <td>
                     <StatusChip domain="directDebitRun" status={r.status} label={t(`status_${r.status}`)} />
                     {r.status === "draft" || r.status === "approved" ? (

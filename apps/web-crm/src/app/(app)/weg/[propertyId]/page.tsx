@@ -2,9 +2,11 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { AuditCreateForm } from "@/components/hoa/AuditCreateForm";
+import { CircularResolutionForm } from "@/components/hoa/CircularResolutionForm";
 import { FinanceCreate } from "@/components/hoa/FinanceForms";
 import { HoaCreate } from "@/components/hoa/HoaForms";
 import { LevyCreate } from "@/components/hoa/LevyForms";
+import { MeetingSettings } from "@/components/hoa/MeetingSettings";
 import { ResolutionTable } from "@/components/hoa/ResolutionTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
@@ -36,6 +38,21 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
     ? ((await auditsResponse.json()) as { id: string; period_from: string; period_to: string; purpose: string; status: string }[])
     : [];
   // Darlehen, Versicherungsfälle, Maßnahmen (W10, A59): recording and evidence, no posting.
+  // Umlaufbeschluss (M25-02): owners of the community for the text form votes and the per
+  // tenant switch for the lowered majority (default off).
+  const [owners, circularSwitch, meetingSettingsResponse] = await Promise.all([
+    ctx.api.GET("/api/v1/contracts", { params: { query: { property_id: ctx.property.id, kind: "ownership", limit: 500 } } }),
+    serverFetch("/api/v1/hoa/circular-lower-majority"),
+    // M25-03 / V13: Einladungsfrist in Wochen und Schalter für virtuelle Versammlungen.
+    serverFetch("/api/v1/hoa/meeting-settings"),
+  ]);
+  const meetingSettings = meetingSettingsResponse.ok
+    ? ((await meetingSettingsResponse.json()) as { invitation_weeks?: number; virtual_meetings_enabled?: boolean })
+    : null;
+  const circularOwners = ((owners.data ?? []) as { id: string; number?: string | null; end_date?: string | null }[])
+    .filter((c) => !c.end_date)
+    .map((c) => ({ id: String(c.id), label: String(c.number ?? c.id) }));
+  const lowerMajorityEnabled = circularSwitch.ok ? Boolean(((await circularSwitch.json()) as { enabled?: boolean }).enabled) : false;
   const [loans, claims, measures, accounts] = await Promise.all([
     ctx.api.GET("/api/v1/hoa/loans", { params: { query: { legal_entity_id: ctx.entity.id } } }),
     ctx.api.GET("/api/v1/hoa/insurance-claims", { params: { query: { legal_entity_id: ctx.entity.id } } }),
@@ -103,6 +120,15 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
           ))}
         </ul>
         <HoaCreate kind="meeting" legalEntityId={ctx.entity.id} basePath={base} />
+        {meetingSettings ? (
+          <MeetingSettings weeks={Number(meetingSettings.invitation_weeks ?? 3)} virtualEnabled={Boolean(meetingSettings.virtual_meetings_enabled)} />
+        ) : null}
+      </section>
+      <section className="flex flex-col gap-2" data-testid="hoa-asset-reports">
+        <h2 className={ui.h2}>{tf("assetReports")}</h2>
+        <Link href={`${base}/vermoegensbericht`} className="text-sm hover:underline">
+          {tf("assetReports")}
+        </Link>
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{tw("inspection")}</h2>
@@ -155,6 +181,7 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("collection")}</h2>
         <ResolutionTable rows={(resolutions.data ?? []) as never} />
+        <CircularResolutionForm legalEntityId={ctx.entity.id} owners={circularOwners} resolutions={claimResolutions} lowerMajorityEnabled={lowerMajorityEnabled} />
       </section>
     </div>
   );

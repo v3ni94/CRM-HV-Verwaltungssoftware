@@ -22,7 +22,7 @@ from mhvp.platform import services
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m8_import import BUCKET, _settings
-from tests.integration.test_m20_mail_approval import FakeGmail, _eml, _upload
+from tests.integration.test_m20_mail_approval import FakeGmail, _eml, _reauth, _upload
 
 pytestmark = pytest.mark.integration
 T = "/api/v1/tickets"
@@ -370,8 +370,10 @@ def test_preview_and_reply_requires_confirmation_and_uses_ticket_mailbox(
     events = _ok(client.get(f"{T}/{ticket_id}", headers=admin))["events"]
     assert any(e["kind"] == "reply_submitted" for e in events)
 
-    # Vier-Augen: eigener Entwurf nicht freigebbar; anderer Nutzer sendet mit Anhang.
+    # Vier-Augen: eigener Entwurf nicht freigebbar; anderer Nutzer sendet mit Anhang, nach
+    # Re-Auth (M20-04, nur für die echte Zweitfreigabe durch eine andere Person).
     assert client.post(f"{M}/messages/{sent_req['id']}/approve", headers=admin).status_code == 409
+    _reauth(client, freigeber)
     sent = _ok(client.post(f"{M}/messages/{sent_req['id']}/approve", headers=freigeber))
     assert sent["status"] == "sent"
     assert len(fake.sent) == 1

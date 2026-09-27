@@ -28,13 +28,27 @@
     "verify": "Confirm",
     "backToLogin": "Back to sign in",
     "rememberDevice": "Remember this device for 90 days",
-    "noTenant": "Your access is not assigned to a tenant. Please contact your management."
+    "noTenant": "Your access is not assigned to a tenant. Please contact your management.",
+    "magicLink": {
+      "title": "Login link",
+      "useInstead": "Use a login link by e-mail instead",
+      "backToPassword": "Back to the password login",
+      "hint": "Enter your e-mail address. We will send you a one time login link valid for 15 minutes.",
+      "request": "Send login link",
+      "sent": "If a portal account exists for this address, a login link has been sent. Please check your inbox.",
+      "checking": "Checking the login link...",
+      "invalid": "The login link is invalid, expired or already used.",
+      "codeTitle": "Confirmation code",
+      "codeHint": "We also sent you a confirmation code by e-mail. Please enter it here."
+    }
   },
   "Portal": {
     "title": "Portal",
     "handover": "Handover protocols",
     "logout": "Sign out",
     "footer": "All entries are stored by the property management. Internal notes of the management are not visible here.",
+    "skipToContent": "Skip to content",
+    "accessibilityLink": "Accessibility statement",
     "nav": {
       "start": "Overview",
       "documents": "Documents",
@@ -42,9 +56,11 @@
       "account": "Account statement",
       "meter": "Meter reading",
       "data": "Data change",
+      "mandate": "Direct debit",
       "orders": "Orders",
       "audit": "Audit room",
       "resolutions": "Resolutions",
+      "meetings": "Meetings",
       "contacts": "Contacts",
       "hoaAccount": "HOA fee account",
       "notices": "Notices",
@@ -52,6 +68,7 @@
       "open": "Open menu",
       "close": "Close menu",
       "label": "Main navigation",
+      "submissions": "Board submissions",
       "security": "Security"
     },
     "notifications": {
@@ -150,6 +167,35 @@
     "valueRequired": "Please enter a meter reading.",
     "dateRequired": "Please enter a reading date."
   },
+  "SepaMandate": {
+    "title": "SEPA direct debit mandate",
+    "intro": "You can grant the management a SEPA direct debit mandate for recurring payments. The mandate is submitted as a proposal and is used only after review and release by the management.",
+    "contract": "Contract",
+    "loadText": "Show mandate text",
+    "creditorId": "Creditor identifier",
+    "reference": "Mandate reference",
+    "sequence": "Payment type",
+    "recurrent": "recurring payment",
+    "holder": "Account holder (first and last name)",
+    "iban": "IBAN",
+    "bic": "BIC (optional)",
+    "confirm": "I am the account holder and grant the SEPA direct debit mandate above.",
+    "submit": "Grant mandate",
+    "submitted": "The mandate was submitted as a proposal. The management reviews and releases it; the evidence is available under Documents.",
+    "errorHolder": "Please enter the account holder.",
+    "errorIban": "Please enter a valid IBAN.",
+    "errorConfirm": "Please confirm the mandate.",
+    "errorContract": "Please choose a contract.",
+    "mine": "Your mandates",
+    "empty": "No mandate granted yet.",
+    "status": {
+      "proposed": "under review",
+      "accepted": "accepted",
+      "rejected": "rejected"
+    },
+    "confirmedAt": "Confirmed on",
+    "evidence": "Evidence (PDF)"
+  },
   "DataChange": {
     "title": "Data change",
     "kind": "Type of change",
@@ -166,8 +212,11 @@
       "city": "City",
       "number": "Phone number",
       "email": "E-mail address",
-      "iban": "IBAN"
+      "iban": "IBAN",
+      "valid_from": "Valid from",
+      "evidence": "Attach evidence (optional, PDF or photo, e.g. registration certificate)"
     },
+    "errorAddress": "Please enter street, postal code, city and the date from which the address applies.",
     "submit": "Propose change",
     "submitted": "The change was submitted as a proposal."
   },
@@ -509,6 +558,23 @@
     "pdfDraft": "Preview (draft)",
     "pdfFinal": "Protocol as PDF"
   },
+  "Meetings": {
+    "title": "Meetings",
+    "intro": "Owners' meetings of your community. The invitation sent by the management remains authoritative.",
+    "empty": "No meetings available.",
+    "ownersOnly": "This page is available to owners only.",
+    "dialIn": "Access data for online participation",
+    "mode": {
+      "presence": "In person",
+      "hybrid": "Hybrid",
+      "virtual": "Virtual"
+    },
+    "status": {
+      "invited": "invited",
+      "held": "held",
+      "closed": "closed"
+    }
+  },
   "Resolutions": {
     "title": "Resolutions",
     "intro": "Announced resolutions of your community. The resolution collection of the management remains authoritative.",
@@ -573,6 +639,25 @@
     "validUntil": "Valid until {date}",
     "validFrom": "Since {date}",
     "download": "Download attachment"
+  },
+  "BoardSubmissions": {
+    "title": "Submissions to the advisory board",
+    "roleNotice": "The management submits matters to you as a board member for information or for an opinion. Your vote is information for the management; the order and any payment stay with the management.",
+    "empty": "No submission.",
+    "kinds": { "info": "For information", "consent": "For an opinion" },
+    "dueOn": "Answer by {date}",
+    "overdue": "deadline passed",
+    "closed": "closed",
+    "amount": "Amount per quote: {amount}",
+    "tally": "So far: {approve} approve, {reject} reject, {comment} comment of {members} members",
+    "myVotes": "Your answers",
+    "vote": { "approve": "Approve", "reject": "Reject", "comment": "Comment" },
+    "comment": "Comment (required for a comment)",
+    "approve": "Approve",
+    "reject": "Reject",
+    "sendComment": "Send comment",
+    "saved": "Answer saved.",
+    "notPossible": "An answer is no longer possible."
   },
   "Audit": {
     "title": "Board audit room",
@@ -718,5 +803,20 @@
     "iosHint": "In Safari via Share and Add to Home Screen. No data is stored on the device.",
     "install": "Install",
     "dismiss": "Later"
+  },
+  "Accessibility": {
+    "title": "Accessibility statement",
+    "intro": "This statement covers the tenant and owner portal of the MH Verwaltungsplattform. It is a draft under the German Barrierefreiheitsstärkungsgesetz (BFSG) and its ordinance; legal review and sign-off are still pending.",
+    "statusTitle": "State of compliance",
+    "status": "The portal is developed against EN 301 549 and WCAG 2.1 level AA. A full conformance audit has not yet been completed. [to be added: result of the external audit]",
+    "scopeTitle": "Scope",
+    "scope": "This statement covers the tenant and owner portal reachable through this application. It does not cover third party linked documents or files uploaded by the management. [to be added: exceptions under § 3 BFSGV]",
+    "preparationTitle": "Preparation of this statement",
+    "preparation": "Prepared on 27.09.2026 based on an internal self-assessment. [to be added: date of the last review]",
+    "contactTitle": "Contact",
+    "contact": "We welcome feedback on accessibility barriers in this portal. [to be added: contact address for accessibility feedback]",
+    "enforcementTitle": "Enforcement procedure",
+    "enforcement": "If the response is unsatisfactory, the responsible monitoring body can be contacted. [to be added: responsible enforcement and monitoring body]",
+    "backToStart": "Back to overview"
   }
 }

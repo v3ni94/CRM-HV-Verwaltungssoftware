@@ -8,6 +8,7 @@ import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAcco
 import { ContractNotesSection } from "@/components/contracts/ContractNotesSection";
 import { ContractMandates } from "@/components/contracts/ContractMandates";
 import { DepositPanel } from "@/components/contracts/DepositPanel";
+import { RentInvoicePanel } from "@/components/contracts/RentInvoicePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getMe } from "@/lib/me";
 import { formatDate } from "@/lib/format";
@@ -163,7 +164,10 @@ export default async function ContractDetailPage({ params, searchParams }: { par
           meterLabels={meterLabels}
         />
       ) : null}
-      {contract.kind === "tenancy" ? <DepositPanel deposits={deposits} settlements={settlements} rates={rates} contractEndDate={contract.end_date} canUpdate={canUpdate} /> : null}
+      {contract.kind === "tenancy" ? (
+        <DepositPanel deposits={deposits} settlements={settlements} rates={rates} contractEndDate={contract.end_date} canUpdate={canUpdate} contractId={contract.id} />
+      ) : null}
+      {contract.kind === "tenancy" ? <RentInvoicePanel contractId={contract.id} vatOption={contract.vat_option} canUpdate={canUpdate} /> : null}
       <AuditLogPanel entityType="contract" entityId={contract.id} />
     </div>
   );

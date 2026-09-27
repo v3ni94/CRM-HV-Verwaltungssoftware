@@ -85,6 +85,7 @@ from mhvp.platform.schemas import (
     PasswordResetIn,
     PlatformSettingsOut,
     PlatformSettingsPatch,
+    ReceivableRulesConfig,
     RoleCreate,
     RoleOut,
     RolePermissions,
@@ -299,6 +300,16 @@ async def _decide(
             )
             if not bypass:
                 raise ProblemError(ErrorCodes.GATE_FOUR_EYES)
+        if approve and item.gate == ReleaseGate.G1.value:
+            # V8, M10-01/M10-02: productive bookkeeping needs a released chart of accounts.
+            from mhvp.accounting import chart_release
+
+            await chart_release.ensure_released_template(session)
+        if approve and item.gate == ReleaseGate.G5.value:
+            # M27-02: third party tenants need the complete evidence list and the superadmin.
+            from mhvp.platform.market_readiness import ensure_g5_release_allowed
+
+            await ensure_g5_release_allowed(session, tenant_id, principal)
         item.status = GateRequestStatus.APPROVED if approve else GateRequestStatus.REJECTED
         item.decided_by = principal.user_id
         item.decided_at = gates.now()
@@ -376,6 +387,8 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         ai_learning_examples_retention_months=row.ai_learning_examples_retention_months,
         metering_module_enabled=row.metering_module_enabled,
         resolution_kinds=ResolutionKindsConfig.model_validate(row.resolution_kinds or {}),
+        receivable_rules=ReceivableRulesConfig.model_validate(row.receivable_rules or {}),
+        mail_approval_mode=row.mail_approval_mode,
         version=row.version,
     )
 
@@ -416,6 +429,8 @@ async def patch_settings(
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "metering_module_enabled": row.metering_module_enabled,
             "resolution_kinds": row.resolution_kinds,
+            "receivable_rules": row.receivable_rules,
+            "mail_approval_mode": row.mail_approval_mode,
         }
         if body.company is not None:
             row.company = body.company.model_dump(mode="json")
@@ -436,6 +451,12 @@ async def patch_settings(
         if body.resolution_kinds is not None:
             # Regel M19-07, M19-04: Erledigungsarten je Mandant, Änderung protokolliert.
             row.resolution_kinds = body.resolution_kinds.model_dump(mode="json")
+        if body.receivable_rules is not None:
+            # M13-01 bis M13-03: Sollstellungsregeln je Mandant, Änderung protokolliert.
+            row.receivable_rules = body.receivable_rules.model_dump(mode="json")
+        if body.mail_approval_mode is not None:
+            # M20-04 Vier-Augen-Prinzip beim Mailversand, Änderung protokolliert.
+            row.mail_approval_mode = body.mail_approval_mode
         after = {
             "company": row.company,
             "branding": row.branding,
@@ -444,6 +465,8 @@ async def patch_settings(
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "metering_module_enabled": row.metering_module_enabled,
             "resolution_kinds": row.resolution_kinds,
+            "receivable_rules": row.receivable_rules,
+            "mail_approval_mode": row.mail_approval_mode,
         }
         changes = diff(before, after)
         if changes:

@@ -37,6 +37,7 @@ from mhvp.documents.models import (
     MirrorStatus,
     StorageKind,
 )
+from mhvp.objektakte.drive_quota import drive_http_client
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.properties.models import Property
 
@@ -166,7 +167,8 @@ async def mirror_once(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )
     factory = create_session_factory(engine)
-    http = client or httpx.AsyncClient(timeout=TIMEOUT_SECONDS)
+    # M35-06: Drive requests are rate limited with backoff (mhvp.objektakte.drive_quota).
+    http = client or drive_http_client(timeout=TIMEOUT_SECONDS)
     store = blobs or BlobStore(settings)
     processed = 0
     try:

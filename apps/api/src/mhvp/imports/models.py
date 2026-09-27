@@ -8,7 +8,18 @@ import uuid
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Boolean, Enum, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import (
+    Boolean,
+    Date,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -110,3 +121,63 @@ class StagingRow(IdMixin, TimestampMixin, TenantMixin, Base):
     errors: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
     entity_type: Mapped[str | None] = mapped_column(String(63))
     entity_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class FullRunStatus(StrEnum):
+    PREVIEW = "preview"  # dry run, nothing written (not stored)
+    APPLIED = "applied"  # import written and reconciled
+    RECONCILED = "reconciled"  # reconciliation only, nothing written
+
+
+class ImportFullRun(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One full import or reconciliation of the Immoware24 exports (M8-01, M8-02, V9).
+
+    ``cutoff_date`` marks the migration cut-off the files were exported for; ``files`` keeps
+    name, kind, SHA-256 and row count of every upload (proof of what was compared);
+    ``report`` holds the per entity target/actual comparison with the difference list;
+    ``opening_balances`` holds the balance proposals per contract as a draft only (G1 closed,
+    never posted). Repeating the run with the same files updates nothing twice: the keys are
+    the Immoware24 object number, unit number and contact id."""
+
+    __tablename__ = "import_full_run"
+    __table_args__ = (Index("ix_import_full_run_tenant_created", "tenant_id", "created_at"),)
+
+    status: Mapped[FullRunStatus] = mapped_column(
+        _enum(FullRunStatus, "import_full_run_status"), nullable=False
+    )
+    cutoff_date: Mapped[Any] = mapped_column(Date, nullable=False)
+    files: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    counts: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    report: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    opening_balances: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    differences: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    import_run_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("import_run.id", ondelete="SET NULL")
+    )
+
+
+class ImportExternalKey(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Key of a source system for a platform record the full import created or matched
+    (M8-01): for example the Immoware24 contract number of a contract. A repeated import
+    finds the record by this key and creates nothing twice; the record itself carries no
+    column for it (``mhvp.imports.vollimport_vertraege``)."""
+
+    __tablename__ = "import_external_key"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "source_system", "entity_type", "external_key"),
+        Index("ix_import_external_key_entity", "tenant_id", "entity_type", "entity_id"),
+    )
+
+    source_system: Mapped[str] = mapped_column(String(40), nullable=False)
+    entity_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    external_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    entity_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)

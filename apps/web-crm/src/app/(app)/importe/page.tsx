@@ -38,6 +38,9 @@ export default async function ImportsPage() {
         <Link href="/importe/abgleich" className="text-sm font-medium hover:underline">
           {t("reconciliationLink")}
         </Link>
+        <Link href="/importe/vollimport" className="text-sm font-medium hover:underline">
+          {t("fullImportLink")}
+        </Link>
       </p>
       {!data ? (
         <p role="alert" className={ui.alert}>

@@ -9,17 +9,46 @@ import asyncio
 from collections.abc import Iterator
 from typing import Any
 
+import boto3
 import pytest
 from fastapi.testclient import TestClient
+from moto import mock_aws
+from pydantic import SecretStr
 
 from mhvp.main import create_app
 from mhvp.platform import services
 from tests.integration.conftest import Database
-from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
+from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
+from tests.integration.test_m2_platform import _settings as base_settings
 from tests.integration.test_m5_contracts import IBAN, _ok, _party, _property, _unit
 
 pytestmark = pytest.mark.integration
 RATES = "/api/v1/deposit-interest-rates"
+BUCKET = "mhvp-deposit-settlements"
+COMPANY = {
+    "name": "Hausverwaltung Müller GmbH",
+    "legal_form": "GmbH",
+    "street": "Rheinpromenade 13",
+    "postal_code": "40789",
+    "city": "Monheim am Rhein",
+    "register_court": "Amtsgericht Düsseldorf",
+    "register_number": "HRB 104762",
+    "management": ["Timo Müller"],
+    "management_title": "Geschäftsführer",
+}
+
+
+def _settings(database: Database, redis_url: str) -> Any:
+    """Document store credentials for the settlement PDF endpoint (moto, see :func:`s3`)."""
+    return base_settings(
+        database,
+        redis_url,
+        s3_endpoint_url="https://s3.us-east-1.amazonaws.com",
+        s3_access_key_id=SecretStr("testing"),
+        s3_secret_access_key=SecretStr("testing"),
+        s3_bucket=BUCKET,
+        document_max_bytes=2_000_000,
+    )
 
 
 async def _world(settings: Any) -> World:
@@ -55,7 +84,14 @@ def world(database: Database, redis_url: str) -> World:
 
 
 @pytest.fixture
-def client(database: Database, redis_url: str) -> Iterator[TestClient]:
+def s3() -> Iterator[None]:
+    with mock_aws():
+        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+        yield
+
+
+@pytest.fixture
+def client(database: Database, redis_url: str, s3: None) -> Iterator[TestClient]:
     with TestClient(create_app(_settings(database, redis_url))) as test_client:
         yield test_client
 
@@ -264,3 +300,126 @@ def test_settlement_modes_and_g3_lock(client: TestClient, world: World) -> None:
     assert still["status"] == "draft"
     client.delete(f"{RATES}/2025", headers=h)
     client.delete(f"{RATES}/2026", headers=h)
+
+
+def _deposit_with_address(client: TestClient, h: dict[str, str]) -> tuple[str, str]:
+    """Same shape as :func:`_deposit_with_movements` but the tenant contact carries a full
+    postal address (letters need one, ``mhvp.documents.services.recipient``)."""
+    prop = _property(client, h, "953", "rental")
+    unit = _unit(client, h, prop["id"], "01")
+    owner, _ = _party(client, h, "Vermieter953", "company")
+    entity = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/owners",
+            json={"party_id": owner, "valid_from": "2020-01-01"},
+            headers=h,
+        )
+    )["legal_entity_id"]
+    tenant_contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "salutation": "Frau",
+                "first_name": "Mieterin953",
+                "last_name": f"Test{RUN}",
+                "addresses": [
+                    {
+                        "street": "Musterweg",
+                        "house_number": "9",
+                        "postal_code": "40789",
+                        "city": "Monheim am Rhein",
+                    }
+                ],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    tenant = _ok(
+        client.post(
+            "/api/v1/parties", json={"members": [{"contact_id": tenant_contact["id"]}]}, headers=h
+        )
+    )["id"]
+    contract = _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "tenancy",
+                "unit_id": unit,
+                "party_id": tenant,
+                "start_date": "2025-01-01",
+                "end_date": "2026-06-30",
+            },
+            headers=h,
+        )
+    )
+    account = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": entity,
+                "kind": "deposit",
+                "iban": IBAN,
+                "holder": "Kaution",
+                "valid_from": "2025-01-01",
+            },
+            headers=h,
+        )
+    )
+    deposit = _ok(
+        client.post(
+            f"/api/v1/contracts/{contract['id']}/deposits",
+            json={
+                "kind": "cash",
+                "amount_due": "1200.00",
+                "valid_from": "2025-01-01",
+                "property_bank_account_id": account["id"],
+            },
+            headers=h,
+        )
+    )
+    _ok(
+        client.post(
+            f"/api/v1/deposits/{deposit['id']}/movements",
+            json={"date": "2025-01-01", "amount": "1200.00", "kind": "payment"},
+            headers=h,
+        )
+    )
+    return str(deposit["id"]), str(contract["id"])
+
+
+def test_settlement_document(client: TestClient, world: World) -> None:
+    """Kautionsabrechnung als PDF-Entwurf (offener Restpunkt, M5-02): erzeugt und ablegt ein
+    Dokument, verknüpft mit Vertrag und Mieterkontakt, ohne Buchung oder Auszahlung."""
+    h = bearer(login(client, world, "ksadmin"))
+    other = bearer(login(client, world, "ksother", tenant_id=world.tenant_b))
+    _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h), 200)
+    deposit, contract = _deposit_with_address(client, h)
+    saved = _ok(
+        client.post(
+            f"/api/v1/deposits/{deposit}/settlements",
+            json={
+                "settlement_date": "2026-06-30",
+                "interest_mode": "none",
+                "deductions": [{"label": "Endreinigung", "amount": "80.00"}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    settlement_id = saved["id"]
+    endpoint = f"/api/v1/contracts/{contract}/deposit-settlements/{settlement_id}/document"
+
+    # Tenant separation: the foreign tenant cannot generate a document for this settlement.
+    assert client.post(endpoint, headers=other).status_code == 404
+
+    created = _ok(client.post(endpoint, headers=h), 201)
+    assert created["document_id"]
+    # 1.200,00 Einzahlung - 80,00 Einbehalt Endreinigung, keine Verrechnung/Zinsen.
+    assert created["payout_amount"] == "1120.00"
+
+    doc = _ok(client.get(f"/api/v1/documents/{created['document_id']}", headers=h), 200)
+    assert doc["mime_type"] == "application/pdf"
+    linked_types = {link["entity_type"] for link in doc["links"]}
+    assert {"contract", "contact"} <= linked_types

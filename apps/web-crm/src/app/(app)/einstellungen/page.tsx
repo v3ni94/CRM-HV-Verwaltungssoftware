@@ -26,6 +26,8 @@ export default async function SettingsPage() {
     { href: "/einstellungen/wissen", title: t("knowledge.title"), description: t("knowledge.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/postfaecher", title: t("mail.title"), description: t("mail.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/dms", title: t("dms.title"), description: t("dms.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/aufbewahrung", title: t("retention.title"), description: t("retention.description"), show: can("tenant_settings:update") },
+    { href: "/dokumente/loeschvorschlaege", title: t("deletionProposals.title"), description: t("deletionProposals.description"), show: can("documents:read") },
     { href: "/einstellungen/bank", title: t("bank.title"), description: t("bank.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/telefonie", title: t("telephony.title"), description: t("telephony.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/schnittstellen/messdienstleister", title: tm("card.title"), description: tm("card.description"), show: can("metering_data:read") },
@@ -64,6 +66,18 @@ export default async function SettingsPage() {
       title: t("datev.title"),
       description: t("datev.description"),
       show: can("accounting:read"),
+    },
+    {
+      href: "/einstellungen/buchhaltung/kontenrahmen",
+      title: t("chartRelease.title"),
+      description: t("chartRelease.description"),
+      show: can("accounting:read"),
+    },
+    {
+      href: "/einstellungen/buchhaltung/steuern",
+      title: t("taxes.title"),
+      description: t("taxes.description"),
+      show: can("tenant_settings:read"),
     },
     { href: "/einstellungen/immoware", title: t("immoware.title"), description: t("immoware.description"), show: can("immoware:read") },
     {

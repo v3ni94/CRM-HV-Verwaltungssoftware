@@ -6,7 +6,7 @@ Declaring the platform as leading system requires release gate G1 (18.0, 6.9.10)
 
 import uuid
 from collections.abc import Sequence
-from datetime import UTC, date, datetime
+from datetime import date
 from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
@@ -18,6 +18,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import (
+    chart_release,
     dunning,
     dunning_letters,
     invoices,
@@ -25,6 +26,7 @@ from mhvp.accounting import (
     receivables,
     reports,
     settlement,
+    tax,
     xrechnung,
 )
 from mhvp.accounting import services as svc
@@ -49,6 +51,7 @@ from mhvp.accounting.models import (
     LeadingSystem,
     Ledger,
     LedgerAccount,
+    OpenItem,
     PaymentTypeAccount,
     PostingStatus,
     ReceivableItem,
@@ -187,23 +190,24 @@ async def create_default_template(
     "/templates/{template_id}/release", summary="Vorlage freigeben (Betreiberentscheidung V8)"
 )
 async def release_template(
-    template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+    template_id: uuid.UUID,
+    request: Request,
+    body: chart_release.ReleaseIn | None = None,
+    principal: TenantPrincipal = Depends(APPROVE),
 ) -> ChartTemplateOut:
+    """Release with date, releaser, comment and optional tax advisor document (M10-01/M10-02,
+    V8). The workflow (draft, in_review, released, new version after a change) lives in
+    ``mhvp.accounting.chart_release``; a released version is never changed again."""
     async with tenant_tx(request, principal) as session:
         template = await _get(session, ChartTemplate, template_id)
-        if not template.released:
-            template.released, template.released_by = True, principal.user_id
-            template.released_at = datetime.now(UTC)
-            await emit(
-                session,
-                tenant_id=principal.tenant_id,
-                type="chart_template.released",
-                entity_type="chart_of_accounts_template",
-                entity_id=template.id,
-                actor_user_id=principal.user_id,
-                payload={"code": template.code, "version": template.version},
-            )
-            await session.flush()
+        template = await chart_release.release(
+            session,
+            template,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            comment=body.comment if body else None,
+            document_id=body.document_id if body else None,
+        )
         return ChartTemplateOut.model_validate(template)
 
 
@@ -874,6 +878,11 @@ def _run_out(run: ReceivableRun, items: list[ReceivableItem]) -> dict[str, Any]:
                 "contract_id": i.contract_id,
                 "payment_type_code": i.payment_type_code,
                 "amount": i.amount,
+                "net_amount": i.net_amount,
+                "vat_percent": i.vat_percent,
+                "vat_amount": i.vat_amount,
+                "period_start": i.period_start,
+                "period_end": i.period_end,
                 "due_date": i.due_date,
                 "status": i.status.value,
                 "message": i.message,
@@ -881,6 +890,7 @@ def _run_out(run: ReceivableRun, items: list[ReceivableItem]) -> dict[str, Any]:
             }
             for i in items
         ],
+        "calculation": run.calculation,
     }
 
 
@@ -908,7 +918,15 @@ async def set_mapping(
         account = await _get(session, LedgerAccount, body.account_id)
         if account.ledger_id != ledger.id:
             raise ProblemError(ErrorCodes.ACC_WRONG_ENTITY)
-        if account.category.value != "revenue":
+        # M13-03: the output tax of receivables is mapped under the reserved code
+        # ``vat_output`` to a tax account; every other code needs a revenue account.
+        if body.payment_type_code == receivables.VAT_OUTPUT_CODE:
+            if account.category.value != "tax":
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Die Umsatzsteuer der Sollstellung wird auf ein Steuerkonto gebucht.",
+                )
+        elif account.category.value != "revenue":
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Sollstellungen werden auf Erlöskonten gebucht."
             )
@@ -962,6 +980,11 @@ async def post_run(
         run = await session.get(ReceivableRun, run_id, with_for_update=True)
         if run is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if receivables.rules_applied(run):
+            # M13-01 to M13-03: computed pro rata, instalment or VAT items are drafts behind
+            # release gate G1 (tax adviser review of the rules is open).
+            resolver: ReleaseGateResolver = request.app.state.release_gate_resolver
+            await ensure_release_gate_open(ReleaseGate.G1, principal.tenant_id, resolver)
         try:
             await receivables.post_run(session, run, principal.user_id)
         except IntegrityError:
@@ -1179,6 +1202,7 @@ def _invoice_out(
         "findings": inv.findings,
         "lines": [
             {
+                "id": ln.id,  # M14-04: § 35a markers are set per line (tax_routers)
                 "account_id": ln.account_id,
                 "net": ln.net,
                 "vat_percent": ln.vat_percent,
@@ -1400,6 +1424,10 @@ async def release_invoice(
         if any("IBAN weicht" in f for f in inv.findings):
             raise ProblemError(ErrorCodes.CONFLICT, detail="Abweichende IBAN ist nicht bestätigt.")
         inv.released_by, inv.released_hash = principal.user_id, invoices.payment_hash(inv)
+        # M14-03 (mhvp.accounting.tax): records whether the releaser's role limit is exceeded;
+        # the posting then needs a second approval by a third person. Off by default.
+        exceeded = await tax.second_approval_required_for_release(session, inv, principal.roles)
+        await tax.mark_second_approval_required(session, inv, exceeded)
         await session.flush()
         return await _invoice_full(session, inv)
 
@@ -1531,6 +1559,11 @@ class DunningSettingsIn(BaseModel):
     interest_enabled: bool | None = None
     interest_base_rate: Decimal | None = Field(default=None, ge=0)
     interest_spread: Decimal | None = Field(default=None, ge=0)
+    # Verzugsbeginn (M16-03): after_notice_30_days, calendar_due_date, after_reminder; null
+    # means not decided (no default start shown, no interest computed).
+    default_start_mode: str | None = Field(
+        default=None, pattern="^(after_notice_30_days|calendar_due_date|after_reminder)$"
+    )
 
 
 class DunningSettingsPresetIn(BaseModel):
@@ -1593,7 +1626,7 @@ async def _dunning_out(
             ceiling[case.ledger_id] = (
                 max((int(lv["level"]) for lv in eff.levels), default=None) if eff else None
             )
-        out.append({**_case_out(case), "highest_level": ceiling[case.ledger_id]})
+        out.append({**await _case_out(session, case), "highest_level": ceiling[case.ledger_id]})
     return {
         "id": run.id,
         "run_date": run.run_date,
@@ -1614,6 +1647,7 @@ def _own_out(row: DunningSettings | None) -> dict[str, Any] | None:
         "interest_enabled": row.interest_enabled,
         "interest_base_rate": row.interest_base_rate,
         "interest_spread": row.interest_spread,
+        "default_start_mode": row.default_start_mode,
     }
 
 
@@ -1632,6 +1666,8 @@ def _dunning_settings_out(
             "interest_enabled": False,
             "interest_base_rate": None,
             "interest_spread": None,
+            "default_start_mode": None,
+            "default_start_modes": dunning.DEFAULT_MODE_LABELS,
             "status": "nicht eingerichtet",
             "sources": {},
             "own": None,
@@ -1647,6 +1683,8 @@ def _dunning_settings_out(
         "interest_enabled": eff.interest_enabled,
         "interest_base_rate": eff.interest_base_rate,
         "interest_spread": eff.interest_spread,
+        "default_start_mode": eff.default_start_mode,
+        "default_start_modes": dunning.DEFAULT_MODE_LABELS,
         "status": _settings_status(eff),
         "sources": eff.sources,
         "own": _own_out(own),
@@ -1769,6 +1807,7 @@ async def put_dunning_settings(
         row.fee_from_level = body.fee_from_level
         row.interest_base_rate = body.interest_base_rate
         row.interest_spread = body.interest_spread
+        row.default_start_mode = body.default_start_mode
         if override:
             row.threshold_amount = body.threshold_amount
             row.interest_enabled = body.interest_enabled
@@ -1947,10 +1986,72 @@ async def dunning_approve(
 class DunningMarkSentIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     channel: str = Field(pattern="^(post|email|portal)$")
+    # Zugang der Mahnung beim Schuldner, nur wenn bekannt (M16-03, Modus "erst nach Mahnung").
+    received_on: date | None = None
 
 
-def _case_out(case: DunningCase) -> dict[str, Any]:
+class OpenItemNoticeIn(BaseModel):
+    """Zugang der Zahlungsaufforderung (Rechnung, Abrechnung) beim Schuldner, von einer Person
+    erfasst; Grundlage des Verzugsmodus "30 Tage nach Fälligkeit und Zugang" (M16-03)."""
+
+    model_config = ConfigDict(extra="forbid")
+    notice_received_on: date | None
+
+
+async def _case_bank_out(session: AsyncSession, case: DunningCase) -> dict[str, Any] | None:
+    """Payment account of the letter, masked in the API (the full IBAN is printed only in
+    the letter itself, M16-13)."""
+    from mhvp.contacts.validation import mask_iban
+    from mhvp.properties.models import PropertyBankAccount
+
+    if case.bank_account_id is None:
+        return None
+    row = await session.get(PropertyBankAccount, case.bank_account_id)
+    if row is None:
+        return None
     return {
+        "id": row.id,
+        "holder": row.holder,
+        "iban_masked": mask_iban(row.iban),
+        "legal_entity_id": row.legal_entity_id,
+    }
+
+
+async def _case_ledger_out(session: AsyncSession, case: DunningCase) -> dict[str, Any]:
+    """Ledger, legal entity and property of the case, derived from ``ledger_id``
+    (M16-15). ``property_id``/``property_number`` are ``null`` when the ledger has no
+    property assigned (e.g. a legal entity level ledger without a single object)."""
+    from mhvp.properties.models import Property
+
+    property_id: uuid.UUID | None = None
+    property_number: str | None = None
+    ledger = await session.get(Ledger, case.ledger_id)
+    legal_entity_id = ledger.legal_entity_id if ledger is not None else None
+    if ledger is not None and ledger.property_id is not None:
+        property_id = ledger.property_id
+        prop = await session.get(Property, property_id)
+        if prop is not None:
+            property_number = prop.number
+    return {
+        "ledger_id": case.ledger_id,
+        "legal_entity_id": legal_entity_id,
+        "property_id": property_id,
+        "property_number": property_number,
+    }
+
+
+async def _case_out(session: AsyncSession, case: DunningCase) -> dict[str, Any]:
+    return {
+        **await _case_ledger_out(session, case),
+        "due_date": case.due_date,
+        "default_start": case.default_start,
+        "default_mode": case.default_mode,
+        "default_mode_label": (
+            dunning.DEFAULT_MODE_LABELS.get(case.default_mode) if case.default_mode else None
+        ),
+        "received_on": case.received_on,
+        "bank_account": await _case_bank_out(session, case),
+        "bank_warning": case.bank_warning,
         "id": case.id,
         "contract_id": case.contract_id,
         "debtor_account_id": case.debtor_account_id,
@@ -1986,8 +2087,33 @@ async def dunning_mark_sent(
         case = await session.get(DunningCase, case_id, with_for_update=True)
         if case is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        await dunning.mark_sent(session, case, body.channel, principal.user_id)
-        return _case_out(case)
+        await dunning.mark_sent(
+            session, case, body.channel, principal.user_id, received_on=body.received_on
+        )
+        return await _case_out(session, case)
+
+
+@router.patch(
+    "/open-items/{open_item_id}/notice-received",
+    summary="Zugang der Zahlungsaufforderung beim Schuldner erfassen (Verzugsmodus M16-03)",
+)
+async def open_item_notice_received(
+    open_item_id: uuid.UUID,
+    body: OpenItemNoticeIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        item = await session.get(OpenItem, open_item_id, with_for_update=True)
+        if item is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        item.notice_received_on = body.notice_received_on
+        await session.flush()
+        return {
+            "id": item.id,
+            "due_date": item.due_date,
+            "notice_received_on": item.notice_received_on,
+        }
 
 
 async def _letter_pdf(
@@ -2057,7 +2183,7 @@ async def dunning_letter_create(
             user_id=principal.user_id,
         )
         return {
-            **_case_out(case),
+            **await _case_out(session, case),
             "letter_document_id": document_id,
             "hinweis": dunning_letters.DRAFT_LABEL,
             "letter_warnings": draft.warnings,
@@ -2352,7 +2478,7 @@ async def export_datev(
                     "festgelegt (M18-01)."
                 ),
             )
-        data, rows = await reports.datev_csv(
+        data, rows, skipped = await reports.datev_csv(
             session,
             ledger,
             start,
@@ -2363,6 +2489,15 @@ async def export_datev(
             account_length=settings.datev_account_length,
             fiscal_year_start_month=settings.datev_fiscal_year_start_month,
         )
+        # M18-01 Folgepunkt: Splitbuchungen ohne eindeutige Summenseite werden nicht still
+        # weggelassen, sondern im Exportlog vermerkt (docs/rules/M18-06, zu prüfen durch
+        # Steuerberater).
+        note = "Kontenzuordnung angewendet"
+        if skipped:
+            note += (
+                f"; {len(skipped)} Splitbuchung(en) nicht abbildbar und ausgelassen, "
+                "siehe params.skipped_split_bookings"
+            )
         run = ExportRun(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -2374,7 +2509,11 @@ async def export_datev(
             sha256=reports.checksum(data),
             # A36: the Konto field carries the operator's mapping (datev_account_mapping);
             # unmapped accounts stopped the export before this point (MHVP-BILL-0008).
-            note="Kontenzuordnung angewendet",
+            note=note,
+            params={"skipped_split_bookings": skipped} if skipped else {},
+            # M18-01: the written file is kept for the formal self check
+            # (POST /accounting/datev/exports/{id}/check, mhvp.accounting.datev_check).
+            content=data.decode("utf-8"),
         )
         session.add(run)
         await emit(
@@ -2384,10 +2523,16 @@ async def export_datev(
             entity_type="export_run",
             entity_id=run.id,
             actor_user_id=principal.user_id,
-            payload={"format": run.format, "rows": rows},
+            payload={"format": run.format, "rows": rows, "skipped": len(skipped)},
         )
         await session.flush()
-        return {"id": run.id, "rows": rows, "sha256": run.sha256, "content": data.decode("utf-8")}
+        return {
+            "id": run.id,
+            "rows": rows,
+            "sha256": run.sha256,
+            "content": data.decode("utf-8"),
+            "skipped_split_bookings": skipped,
+        }
 
 
 # Invoice intake (M14, manual actions only; no automatic polling, see docs/OPEN_QUESTIONS.md

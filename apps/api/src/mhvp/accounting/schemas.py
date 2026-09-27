@@ -35,6 +35,13 @@ class ChartTemplateOut(BaseModel):
     version: int
     released: bool
     released_at: datetime | None
+    released_by: uuid.UUID | None = None
+    status: str = "draft"
+    review_requested_at: datetime | None = None
+    review_requested_by: uuid.UUID | None = None
+    release_comment: str | None = None
+    release_document_id: uuid.UUID | None = None
+    supersedes_id: uuid.UUID | None = None
     accounts: list[dict[str, Any]]
 
 

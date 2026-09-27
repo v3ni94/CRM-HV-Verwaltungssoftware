@@ -19,6 +19,8 @@ from mhvp.automation.models import (
     SETTABLE_TICKET_FIELDS,
     TRIGGER_KINDS,
     TRIGGER_SCHEDULE,
+    WEBHOOK_MAX_ATTEMPTS,
+    WEBHOOK_RETRY_SCHEDULE_SECONDS,
     AutomationRule,
     AutomationRun,
     AutomationWebhookDelivery,
@@ -57,6 +59,7 @@ _READ_ANY = ("tenant_settings:read", "tickets:read")
 KNOWN_EVENT_TYPES: tuple[str, ...] = (
     "ticket.created",
     "ticket.merged",
+    "ticket.status_changed",
     "sla.escalated",
     "contact.updated",
     "document.created",
@@ -67,6 +70,9 @@ KNOWN_EVENT_TYPES: tuple[str, ...] = (
     "payment_order.returned",
     "portal_account.invited",
 )
+# Condition field paths of a ticket that are computed, not stored (M9-08): Ticketalter and
+# Fristbezug (Tage vor Termin), usable with ``gt``/``lt`` like any other field.
+COMPUTED_TICKET_FIELDS: tuple[str, ...] = ("age_days", "due_in_days")
 
 
 async def _read_principal(request: Request) -> TenantPrincipal:
@@ -100,6 +106,7 @@ def _rule_out(rule: AutomationRule) -> dict[str, Any]:
         "last_scheduled_at": rule.last_scheduled_at,
         "conditions": rule.conditions,
         "actions": public_actions(rule.actions),
+        "owner_user_id": rule.owner_user_id,
         "created_at": rule.created_at,
         "updated_at": rule.updated_at,
     }
@@ -154,6 +161,11 @@ async def meta(principal: TenantPrincipal = Depends(_read_principal)) -> dict[st
         "condition_ops": ["eq", "ne", "contains", "gt", "lt"],
         # A81: related master data a condition may read, grouped for the form.
         "related_fields": {group: list(fields) for group, fields in RELATED_FIELDS.items()},
+        # M9-08: computed ticket condition fields (Ticketalter, Fristbezug) and the webhook
+        # retry plan, shown in the CRM delivery log.
+        "computed_ticket_fields": list(COMPUTED_TICKET_FIELDS),
+        "webhook_retry_schedule_seconds": list(WEBHOOK_RETRY_SCHEDULE_SECONDS),
+        "webhook_max_attempts": WEBHOOK_MAX_ATTEMPTS,
     }
 
 

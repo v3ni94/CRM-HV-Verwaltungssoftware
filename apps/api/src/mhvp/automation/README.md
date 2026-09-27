@@ -47,17 +47,22 @@ are history, not triggers.
   `mhvp.core.webhooks.pin_target` when the run enqueues the payload and again on every
   attempt (https only, no private addresses unless `webhook_allow_private_targets`, call
   pinned to the checked address).
-* Webhook retries (A82): the run does not call the target itself. It checks target and
-  secret, builds the payload and writes one `automation_webhook_delivery` row per webhook
-  action (due at the beat moment). `process_tenant` then sends the due deliveries of the
-  tenant (`deliver_due_webhooks`, rows locked with `SKIP LOCKED`, one httpx client per
-  pass); every attempt signs the stored body afresh (`X-MHVP-Signature`, `X-MHVP-Rule`,
-  `X-MHVP-Delivery`) with the secret of the rule action as stored now. Failures follow
-  `mhvp.core.webhooks.RETRY_SCHEDULE_SECONDS` (1 min, 5 min, 30 min, 2 h, 6 h, 24 h), then
-  the delivery is `failed`. Unsafe target or missing secret fail the run without a delivery.
+* Webhook retries (A82, M9-08, `docs/rules/M9-08.md`): the run does not call the target
+  itself. It checks target and secret, builds the payload and writes one
+  `automation_webhook_delivery` row per webhook action (due at the beat moment).
+  `process_tenant` then sends the due deliveries of the tenant (`deliver_due_webhooks`, rows
+  locked with `SKIP LOCKED`, one httpx client per pass); every attempt signs the stored body
+  afresh (`X-MHVP-Signature`, `X-MHVP-Rule`, `X-MHVP-Delivery`) with the secret of the rule
+  action as stored now, plus a stable `Idempotency-Key` (the delivery id, set once). Failures
+  follow `WEBHOOK_RETRY_SCHEDULE_SECONDS` (1, 5, 15, 60 minutes), at most
+  `WEBHOOK_MAX_ATTEMPTS` (5); the delivery then goes `dead` and the rule owner (its last
+  editor) gets one internal notification (`automation_webhook_dead`). Unsafe target or
+  missing secret fail the run without a delivery. Every attempt records the response code,
+  its duration (`last_duration_ms`) and, on the next due slot, the retry time.
   `POST /automation/webhook-deliveries/{id}/redeliver` (`tenant_settings:update`) resets a
-  delivery to pending; the attempt count is kept. The run log returns the deliveries as
-  `webhook_deliveries`. The CRM run log does not render them yet (API only).
+  delivery to pending; a `dead` row gets a fresh attempt budget, a still-pending row keeps its
+  count. The run log returns the deliveries as `webhook_deliveries`; the CRM run log renders
+  them with a resend button (`AutomationAdmin.tsx`).
 
 ## Permissions
 
@@ -77,9 +82,12 @@ are history, not triggers.
   document with links, queued AI run, secret never exposed, patch keeps the secret, schedule
   rule fires once per window, changed schedule resets the watermark, tenant separation.
 * `tests/integration/test_m9_automation_webhook_retry.py` and
-  `tests/unit/test_automation_webhook_retry.py` (A82): staged retry schedule, signed
-  attempts with delivery id, no double delivery per pass, exhausted schedule, manual
-  redelivery (permission, tenant separation), delivery log on the run.
+  `tests/unit/test_automation_webhook_retry.py` (A82, M9-08): staged retry schedule (1, 5, 15,
+  60 minutes), signed attempts with delivery id and stable idempotency key, no double
+  delivery per pass, `dead` after 5 attempts with an owner notification, manual redelivery
+  with a fresh attempt budget (permission, tenant separation), delivery log on the run.
+* `tests/unit/test_automation_m9_08.py`: computed condition fields `entity.age_days` and
+  `entity.due_in_days`, the `create_task` action schema.
 
 ## CRM
 

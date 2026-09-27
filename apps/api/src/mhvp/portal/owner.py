@@ -71,12 +71,23 @@ def _votes_summary(votes: dict[str, Any]) -> dict[str, Any] | None:
     if not votes:
         return None
     if "consents" in votes:
+        # M25-02: a consent is a plain choice or an object with the text form evidence; a
+        # simple majority circular resolution carries its weighted tally.
+        tally = votes.get("tally")
+        if isinstance(tally, dict) and "yes" in tally:
+            return {
+                "principle": tally.get("principle"),
+                "yes": tally.get("yes"),
+                "no": tally.get("no"),
+                "abstain": tally.get("abstain"),
+            }
         consents = votes.get("consents") or {}
+        choices = [v.get("choice") if isinstance(v, dict) else v for v in consents.values()]
         return {
             "principle": "text_form",
-            "yes": str(sum(1 for v in consents.values() if v == "yes")),
-            "no": str(sum(1 for v in consents.values() if v == "no")),
-            "abstain": str(sum(1 for v in consents.values() if v == "abstain")),
+            "yes": str(sum(1 for v in choices if v == "yes")),
+            "no": str(sum(1 for v in choices if v == "no")),
+            "abstain": str(sum(1 for v in choices if v == "abstain")),
         }
     if "yes" in votes:
         return {

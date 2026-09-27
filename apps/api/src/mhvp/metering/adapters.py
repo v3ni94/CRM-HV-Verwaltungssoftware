@@ -603,7 +603,8 @@ class FakeAdapter:
 _ADAPTERS: dict[str, MeteringAdapter] = {"manual": ManualAdapter(), "fake": FakeAdapter()}
 
 # Provider code to adapter code. ista and KALO are replaced by ``_register_real_adapters``
-# (stage 2); the others stay ``manual`` until their technical documentation exists (M40-02).
+# (stage 2); Techem, Brunata Minol and BRUNATA-METRONA get file exchange adapters (bved 3.10
+# files, no network, M40-02) until their online documentation exists.
 PROVIDER_ADAPTERS: dict[str, str] = {
     "ista": "manual",
     "techem": "manual",
@@ -630,11 +631,19 @@ def register_adapter(adapter: MeteringAdapter, *, provider_code: str) -> None:
 
 def _register_real_adapters() -> None:
     # Imported here: the real adapters depend on the record types above.
+    from mhvp.metering.adapters_heiwako import (
+        BrunataMetronaFileAdapter,
+        BrunataMinolFileAdapter,
+        TechemFileAdapter,
+    )
     from mhvp.metering.adapters_ista import IstaAdapter
     from mhvp.metering.adapters_kalo import KaloAdapter
 
     register_adapter(IstaAdapter(), provider_code="ista")
     register_adapter(KaloAdapter(), provider_code="kalo")
+    register_adapter(TechemFileAdapter(), provider_code="techem")
+    register_adapter(BrunataMinolFileAdapter(), provider_code="brunata_minol")
+    register_adapter(BrunataMetronaFileAdapter(), provider_code="brunata_metrona")
 
 
 _register_real_adapters()

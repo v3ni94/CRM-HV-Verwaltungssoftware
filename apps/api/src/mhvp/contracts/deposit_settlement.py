@@ -113,6 +113,10 @@ class DepositSettlement(IdMixin, TimestampMixin, TenantMixin, Base):
     payout_amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     note: Mapped[str | None] = mapped_column(Text)
     number: Mapped[str | None] = mapped_column(String(40))
+    # Generated settlement letter (M5-02 follow up, PDF): set once the document is created.
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id", ondelete="SET NULL")
+    )
 
 
 # Pure computation ------------------------------------------------------------------------

@@ -111,6 +111,9 @@ class DocumentCategory(IdMixin, TimestampMixin, TenantMixin, Base):
     # sessions); verify against migration 0060 if this looks wrong again.
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
+    # Retention matrix (M6-04, migration 0175): the profile that documents of this category
+    # receive when they are stored or recategorised; None keeps the document unassigned.
+    retention_profile_id: Mapped[uuid.UUID | None] = _fk("retention_profile.id", nullable=True)
 
 
 class RetentionProfile(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -205,6 +208,10 @@ class Document(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     retention_profile_id: Mapped[uuid.UUID | None] = _fk("retention_profile.id", nullable=True)
     retention_until: Mapped[date | None] = mapped_column(Date)
+    # Start of the period for rules that do not begin with the creation year (contract end,
+    # last entry, statement issued, purpose end); without it the period cannot be computed
+    # and the document stays locked (M6-04, migration 0175).
+    retention_base_on: Mapped[date | None] = mapped_column(Date)
     retention_hold_reason: Mapped[str | None] = mapped_column(Text)
     visibility: Mapped[list[str]] = mapped_column(ARRAY(String(16)), nullable=False)
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
@@ -330,3 +337,74 @@ class DocumentTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     category_id: Mapped[uuid.UUID | None] = _fk("document_category.id", nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+
+
+class DeletionProposalStatus(StrEnum):
+    OPEN = "open"  # proposed, waiting for the four eyes approval
+    APPROVED = "approved"  # approved, waiting for execution by a second person
+    EXECUTED = "executed"
+    REJECTED = "rejected"
+
+
+class DeletionItemStatus(StrEnum):
+    PROPOSED = "proposed"
+    DELETED = "deleted"
+    SKIPPED = "skipped"  # kept at execution time: hold, period not expired, profile changed
+
+
+class DeletionProposal(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Monthly (or manually started) list of documents whose retention period expired
+    (M6-04, 6.9.5, D46). Approval and execution are two separate persons; the items are the
+    deletion log (hash, category, class, time, approver) and stay after the documents are gone."""
+
+    __tablename__ = "deletion_proposal"
+    __table_args__ = (
+        Index("ix_deletion_proposal_tenant_id", "tenant_id"),
+        Index("ix_deletion_proposal_status", "tenant_id", "status"),
+    )
+
+    status: Mapped[DeletionProposalStatus] = mapped_column(
+        _enum(DeletionProposalStatus, "deletion_proposal_status"),
+        nullable=False,
+        default=DeletionProposalStatus.OPEN,
+    )
+    reference_date: Mapped[date] = mapped_column(Date, nullable=False)
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))  # None: job
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejected_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    executed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    executed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    note: Mapped[str | None] = mapped_column(String(500))
+
+
+class DeletionProposalItem(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One document of a deletion proposal; no foreign key to ``document`` because the row is
+    removed on execution and the item is the log entry that must survive it."""
+
+    __tablename__ = "deletion_proposal_item"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "proposal_id", "document_id"),
+        Index("ix_deletion_proposal_item_tenant_id", "tenant_id"),
+        Index("ix_deletion_proposal_item_document", "tenant_id", "document_id"),
+    )
+
+    proposal_id: Mapped[uuid.UUID] = _fk("deletion_proposal.id", ondelete="CASCADE")
+    document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    category_code: Mapped[str | None] = mapped_column(String(63))
+    document_class: Mapped[str] = mapped_column(String(63), nullable=False)
+    retention_until: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[DeletionItemStatus] = mapped_column(
+        _enum(DeletionItemStatus, "deletion_item_status"),
+        nullable=False,
+        default=DeletionItemStatus.PROPOSED,
+    )
+    skip_reason: Mapped[str | None] = mapped_column(Text)
+    deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    deleted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    mirror_deletions: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )

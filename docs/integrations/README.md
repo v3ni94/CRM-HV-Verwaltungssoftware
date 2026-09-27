@@ -4,16 +4,19 @@ Je Bestandstool und Fremdsystem entsteht hier ein Dossier nach Anhang B des Mast
 
 | Bestandstool | Erwartete Datei | Status |
 | --- | --- | --- |
-| Müller FLOW | `docs/integrations/mueller-flow.md` | offen |
+| Müller FLOW | `docs/integrations/mueller-flow.md` | `docs/integrations/dossier-flow.md` erstellt 27.09.2026 (nur Angaben aus dem Master-Prompt, Quelltext von FLOW liegt nicht vor, Lücken als [zu ergänzen durch Betreiber]) |
 | Immoware Hub Integrationsplattform | `docs/integrations/immoware-hub.md` | erstellt 25.09.2026, Empfehlung ablösen |
 | Mail optimierung | `docs/integrations/mail-optimierung.md` | erstellt 25.09.2026, Empfehlung übernehmen als Reiter Mail |
-| Übergabeprotokoll | `docs/integrations/uebergabeprotokoll.md` | offen |
-| Objektakte | `docs/integrations/objektakte.md` | Schnittstellenvertrag M29 Stufe 3/4 erstellt 26.09.2026 (lesende API, Webhooks); Dossier nach Anhang B offen |
-| smart-einzug | `docs/integrations/smart-einzug.md` | offen |
+| Übergabeprotokoll | `docs/integrations/uebergabeprotokoll.md` | `docs/integrations/dossier-uebergabeprotokoll.md` erstellt 27.09.2026 (Zielbild bereits als Modul `handover`/M30 umgesetzt, Bestandsprojekt selbst noch nicht erhoben) |
+| Objektakte | `docs/integrations/objektakte.md` | Schnittstellenvertrag M29 Stufe 3/4 erstellt 26.09.2026 (lesende API, Webhooks); `docs/integrations/dossier-objektakte.md` erstellt 27.09.2026 im Anhang-B-Format |
+| smart-einzug | `docs/integrations/smart-einzug.md` | `docs/integrations/dossier-smart-einzug.md` erstellt 27.09.2026 (nur Angaben aus dem Master-Prompt und dem Webhook-Vertrag A69, Quelltext liegt nicht vor) |
 | Paperless-ngx (Spiegel-DMS, Schlagwort "gelöscht" bei Löschung) | `docs/integrations/paperless.md` | erstellt 26.09.2026 (M6-01, M6-03) |
 | Google Drive (Spiegelablage, Löschung mit Papierkorb-Ersatz) | `docs/integrations/google-drive.md` | erstellt 26.09.2026 (M6-02, M6-03) |
 | Ausgehende Webhooks (Vertrag für alle Fremdsysteme) | `docs/integrations/webhooks.md` | erstellt 26.09.2026 (A69, `contact.updated`, `invoice.issued`) |
 | Gmail (Pub/Sub-Push, Vollabruf, Sicherheitsnetz) | `docs/integrations/gmail.md` | erstellt 26.09.2026 (Betreiberentscheidung Sofortabruf, M20-07) |
 | Messdienstleister (ista, Techem, KALO, Brunata Minol, BRUNATA-METRONA) | `docs/integrations/messdienstleister.md` | erstellt 26.09.2026 (M40-01, Stufe 1 ohne Anbieteradapter) |
+| Postdienst (Brief- und Postversand, LetterXpress LXP API v3, Postausgangsliste) | `docs/integrations/postdienst.md` | erstellt 27.09.2026 (M23-01, Adapter nach öffentlicher Dokumentation, Freigabe je Mandant Standard aus) |
+| FinTS/HBCI PIN/TAN (direkte Bankanbindung, Institutsliste extern gepflegt) | `docs/integrations/fints.md` | erstellt 27.09.2026 (M11-01 Nachtrag, DK-Produktregistrierung offen M11-42) |
+| EBICS (Einreichung von Zahlungsdateien, Gerüst ohne Client) | `docs/integrations/ebics.md` | erstellt 27.09.2026 (V2, M15-01; Vertrag, Initialisierung und Bibliotheksentscheidung offen) |
 
 Die Dateinamen sind ein Vorschlag nach dem Muster `docs/integrations/<tool>.md`. Mit Vorliegen aller Dossiers entsteht Version 2.1 des Master-Prompts (Abschnitt 19.3).

@@ -121,6 +121,53 @@ def test_apply_is_idempotent_by_source_id(client: TestClient, world: World) -> N
     assert fetched["import_run_id"] == run_id
 
 
+COLLIDING_ID_DUMP = r"""
+INSERT INTO `objects_managedobject` (`id`,`object_number`,`name`,`street`,`house_number`,
+`postal_code`,`city`,`management_type`)
+VALUES (12,'712','Haus Kollisionsweg','Kollisionsweg','1','40721','Hilden','weg');
+
+INSERT INTO `objects_unit` (`id`,`object_id`,`unit_number`,`unit_label`,`unit_type`)
+VALUES (111,12,'1','EG links','apartment');
+
+INSERT INTO `parties_owner` (`id`,`type`,`first_name`,`last_name`,`company_name`,`search_name`)
+VALUES (501,'natural_person','Erika','Eigentuemerin',NULL,'Eigentuemerin, Erika');
+
+INSERT INTO `parties_tenant` (`id`,`type`,`first_name`,`last_name`,`company_name`,`search_name`)
+VALUES (501,'natural_person','Max','Mieter',NULL,'Mieter, Max');
+
+INSERT INTO `parties_ownerunitassignment` (`id`,`owner_id`,`unit_id`,`valid_from`,`valid_to`,
+`share`)
+VALUES (511,501,111,'2020-01-01',NULL,'1.000000');
+"""
+
+
+def test_owner_and_tenant_with_the_same_objektakte_id_stay_separate_contacts(
+    client: TestClient, world: World
+) -> None:
+    """Kleinbefund 27.09.2026: `parties_owner` and `parties_tenant` have separate id sequences
+    in objektakte, so the same numeric id (here 501) can name two different people. Before the
+    fix, the second row was treated as an update of the first `Contact` and the two were merged
+    into one record; the prefixed `source_id` keeps them apart."""
+    admin = bearer(login(client, world, "oaadmin", world.tenant_a))
+    result = _ok(
+        client.post(
+            BASE,
+            params={"mode": "apply"},
+            files={"file": ("dump.sql", COLLIDING_ID_DUMP.encode("utf-8"), "application/sql")},
+            headers=admin,
+        )
+    )
+    assert result["created"]["contact"] == 2
+
+    contacts = _ok(client.get("/api/v1/contacts", params={"page_size": 100}, headers=admin))[
+        "items"
+    ]
+    owner = next(c for c in contacts if c["display_name"] == "Erika Eigentuemerin")
+    tenant = next(c for c in contacts if c["display_name"] == "Max Mieter")
+    assert owner["id"] != tenant["id"]
+    assert "eigentuemer" in owner["roles"]
+
+
 def test_read_only_member_cannot_apply(client: TestClient, world: World) -> None:
     reader = bearer(login(client, world, "oareader", world.tenant_a))
     response = _upload(client, reader, "preview")
@@ -326,12 +373,18 @@ def test_download_migrated_document_through_fake_drive_store(
     )
 
     fake = _FakeDrive(b"%PDF-1.4 Verwaltervertrag Original")
-    real_async_client = httpx.AsyncClient
 
-    def fake_async_client(*, timeout: float | None = None) -> httpx.AsyncClient:
-        return real_async_client(transport=httpx.MockTransport(fake.handler), timeout=timeout)
-
-    monkeypatch.setattr("mhvp.documents.services.httpx.AsyncClient", fake_async_client)
+    # M35-06: ``download_from_drive`` now builds its client through
+    # ``mhvp.objektakte.drive_quota.drive_http_client``, which wraps the default
+    # ``httpx.AsyncHTTPTransport`` in a rate limiting/retry transport (docs/plans/
+    # M35-objektakte-uebernahme.md section 4 item 1, drive_quota.py). Patch that wrapped
+    # transport so the quota wrapper still runs but the actual HTTP call is faked, instead of
+    # patching ``httpx.AsyncClient`` itself (which the quota client no longer calls without a
+    # ``transport=`` argument the previous, simpler fake did not accept).
+    monkeypatch.setattr(
+        "mhvp.objektakte.drive_quota.httpx.AsyncHTTPTransport",
+        lambda *args, **kwargs: httpx.MockTransport(fake.handler),
+    )
 
     response = client.get(f"/api/v1/documents/{migrated['id']}/content", headers=admin)
     assert response.status_code == 200, response.text

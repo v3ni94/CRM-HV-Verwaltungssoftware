@@ -675,6 +675,7 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
         notes=contact.notes,
         preferred_channel=contact.preferred_channel,
         blocked=contact.blocked,
+        is_consumer=contact.is_consumer,
         blocked_at=contact.blocked_at,
         retention_profile_id=contact.retention_profile_id,
         delete_after=contact.delete_after,

@@ -23,7 +23,8 @@ export type ActionType =
   | "webhook"
   | "mail_draft"
   | "letter_draft"
-  | "ai_task";
+  | "ai_task"
+  | "create_task";
 export type Action = Record<string, unknown> & { type: ActionType };
 export type TriggerKind = "event" | "schedule";
 export type Schedule = {
@@ -43,8 +44,26 @@ export type Rule = {
   last_scheduled_at?: string | null;
   conditions: Record<string, unknown>;
   actions: Action[];
+  // M9-08 Kleinbefund 27.09.2026: rule owner notified first on a dead webhook delivery,
+  // ahead of the last editor fallback.
+  owner_user_id?: string | null;
   created_at: string;
   updated_at: string;
+};
+export type WebhookDelivery = {
+  id: string;
+  run_id: string;
+  action_index: number;
+  url: string;
+  status: string;
+  attempts: number;
+  max_attempts: number;
+  next_attempt_at: string | null;
+  last_status_code: number | null;
+  last_error: string | null;
+  last_duration_ms: number | null;
+  idempotency_key: string | null;
+  delivered_at: string | null;
 };
 export type Run = {
   id: string;
@@ -57,6 +76,7 @@ export type Run = {
   status: string;
   error: string | null;
   actions: { type: string; ok?: boolean; detail?: string }[];
+  webhook_deliveries?: WebhookDelivery[];
 };
 export type Option = { id: string; label: string };
 export type Pickers = {
@@ -91,6 +111,8 @@ const FIELD_GROUPS = [
       "entity.team_id",
       "entity.source",
       "entity.status",
+      "entity.age_days",
+      "entity.due_in_days",
     ],
   },
   { key: "event", fields: ["payload.source", "payload.number"] },
@@ -217,6 +239,15 @@ export function defaultAction(type: ActionType, pickers: Pickers): Action {
       };
     case "ai_task":
       return { type, task: pickers.aiTasks[0] ?? "summarize", instruction: "" };
+    case "create_task":
+      return {
+        type,
+        title: "",
+        description: null,
+        assignee_user_id: null,
+        priority: null,
+        due_in_days: null,
+      };
   }
 }
 
@@ -261,6 +292,8 @@ export function summariseAction(a: Action, t: T, pickers: Pickers): string {
     return t("summary.letterDraft", {
       template: label(pickers.letterTemplates, a.template_id, ""),
     });
+  if (a.type === "create_task")
+    return t("summary.createTask", { title: String(a.title ?? "") });
   return t("summary.aiTask", { task: t(`aiTasks.${String(a.task)}`) });
 }
 
@@ -993,6 +1026,78 @@ function ActionEditor({
           <p className={ui.help}>{t("aiTaskHelp")}</p>
         </div>
       ) : null}
+      {action.type === "create_task" ? (
+        <div className="flex flex-col gap-2">
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("taskTitle")}</span>
+            <input
+              className={ui.input}
+              value={String(action.title ?? "")}
+              onChange={(e) => set({ title: e.target.value })}
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("taskDescription")}</span>
+            <input
+              className={ui.input}
+              value={String(action.description ?? "")}
+              onChange={(e) => set({ description: e.target.value || null })}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>
+                {t("ticketFields.assignee_user_id")}
+              </span>
+              <select
+                className={ui.input}
+                value={String(action.assignee_user_id ?? "")}
+                onChange={(e) =>
+                  set({ assignee_user_id: e.target.value || null })
+                }
+              >
+                <option value="">{t("none")}</option>
+                {pickers.members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("ticketFields.priority")}</span>
+              <select
+                className={ui.input}
+                value={String(action.priority ?? "")}
+                onChange={(e) => set({ priority: e.target.value || null })}
+              >
+                <option value="">{t("priorities.normal")}</option>
+                {PRIORITIES.map((p) => (
+                  <option key={p} value={p}>
+                    {t(`priorities.${p}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("taskDueInDays")}</span>
+              <input
+                className={ui.input}
+                type="number"
+                min={0}
+                value={String(action.due_in_days ?? "")}
+                onChange={(e) =>
+                  set({
+                    due_in_days: e.target.value
+                      ? Number(e.target.value)
+                      : null,
+                  })
+                }
+              />
+            </label>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1129,6 +1234,9 @@ function RuleForm({
   const [actions, setActions] = useState<Action[]>(
     initial?.actions ?? [defaultAction("set_ticket_field", pickers)],
   );
+  const [ownerUserId, setOwnerUserId] = useState<string>(
+    initial?.owner_user_id ?? "",
+  );
   // Expertenansicht: JSON des gesamten Regelkerns; Pflicht, wenn der Bedingungsbaum verschachtelt ist.
   const [expert, setExpert] = useState(parsed === null);
   const [raw, setRaw] = useState(() => JSON.stringify(currentBody(), null, 2));
@@ -1189,6 +1297,7 @@ function RuleForm({
     const body = {
       name: name.trim(),
       description: description.trim() || null,
+      owner_user_id: ownerUserId || null,
       ...core,
     };
     const res = initial
@@ -1232,6 +1341,23 @@ function RuleForm({
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("owner")}</span>
+        <select
+          aria-label={t("owner")}
+          className={ui.input}
+          value={ownerUserId}
+          onChange={(e) => setOwnerUserId(e.target.value)}
+        >
+          <option value="">{t("ownerNone")}</option>
+          {pickers.members.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.label}
+            </option>
+          ))}
+        </select>
+        <span className={ui.help}>{t("ownerHelp")}</span>
       </label>
       <div className="flex items-center justify-between gap-2">
         <p className={ui.help} data-testid="rule-sentence">
@@ -1554,6 +1680,18 @@ export function AutomationAdmin({
     else setError(res.message);
   }
 
+  async function redeliver(deliveryId: string) {
+    setBusyId(deliveryId);
+    setError(null);
+    const res = await bff<null>(
+      `/api/bff/automation/webhook-deliveries/${deliveryId}/redeliver`,
+      { method: "POST" },
+    );
+    setBusyId(null);
+    if (res.ok) await reloadRuns(runFilter);
+    else setError(res.message);
+  }
+
   return (
     <div className="flex flex-col gap-4">
       {error ? (
@@ -1716,6 +1854,65 @@ export function AutomationAdmin({
                     {run.actions
                       .map((a) => `${a.type}${a.detail ? `: ${a.detail}` : ""}`)
                       .join("; ")}
+                    {run.webhook_deliveries && run.webhook_deliveries.length > 0 ? (
+                      <ul className="mt-1 flex flex-col gap-1">
+                        {run.webhook_deliveries.map((d) => (
+                          <li
+                            key={d.id}
+                            className="flex flex-wrap items-center gap-2 text-xs"
+                          >
+                            <span
+                              className={
+                                d.status === "succeeded"
+                                  ? ui.badgeSuccess
+                                  : d.status === "dead"
+                                    ? ui.badgeDanger
+                                    : ui.badge
+                              }
+                            >
+                              {t(`deliveryStatuses.${d.status}`)}
+                            </span>
+                            <span className="truncate text-muted">{d.url}</span>
+                            <span className="text-muted">
+                              {t("attempts", {
+                                count: d.attempts,
+                                max: d.max_attempts,
+                              })}
+                            </span>
+                            {d.last_status_code ? (
+                              <span className="text-muted">
+                                HTTP {d.last_status_code}
+                              </span>
+                            ) : null}
+                            {d.last_duration_ms != null ? (
+                              <span className="text-muted">
+                                {d.last_duration_ms} ms
+                              </span>
+                            ) : null}
+                            {d.next_attempt_at ? (
+                              <span className="text-muted">
+                                {t("nextAttempt", {
+                                  time: formatDateTime(d.next_attempt_at),
+                                })}
+                              </span>
+                            ) : null}
+                            {canManage &&
+                            (d.status === "dead" ||
+                              d.status === "failed" ||
+                              d.status === "pending") ? (
+                              <button
+                                type="button"
+                                className={ui.buttonSm}
+                                disabled={busyId === d.id}
+                                onClick={() => void redeliver(d.id)}
+                              >
+                                {t("resend")}
+                              </button>
+                            ) : null}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
                   </td>
                 </tr>
               ))}

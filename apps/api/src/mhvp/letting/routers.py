@@ -7,6 +7,7 @@ demand is a legally relevant statement and needs G3 plus a documented legal revi
 import copy
 import io
 import re
+import secrets
 import uuid
 import zipfile
 from datetime import UTC, date, datetime, timedelta
@@ -25,8 +26,23 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents.models import Document, DocumentLink
 from mhvp.letting import flow_import as flow
-from mhvp.letting import openimmo, openimmo_schema
-from mhvp.letting.models import FlowImportRun, Listing, Prospect, RentIncreaseCase
+from mhvp.letting import openimmo, openimmo_import, openimmo_schema
+from mhvp.letting.broker_provider import (
+    BrokerListingPayload,
+    DocumentationRequiredError,
+    get_provider,
+)
+from mhvp.letting.models import (
+    BrokerTenantConfig,
+    FlowImportRun,
+    Listing,
+    OpenImmoImportRun,
+    Prospect,
+    ProspectViewing,
+    RentIncreaseCase,
+    SelfDisclosureLink,
+)
+from mhvp.letting.prospect_texts import list_templates, template_by_id
 from mhvp.platform.models import Tenant, User
 
 router = APIRouter(prefix="/letting", tags=["letting"])
@@ -35,6 +51,7 @@ CREATE = require_permission("contracts:create")
 UPDATE = require_permission("contracts:update")
 APPROVE = require_permission("contracts:approve")
 DELETE = require_permission("contracts:delete")
+SETTINGS = require_permission("tenant_settings:update")
 CENT = Decimal("0.01")
 LEGAL_NOTE = (
     "Rechenprüfung auf Grundlage erfasster Werte. Keine Aussage zur Zulässigkeit; "
@@ -85,6 +102,7 @@ class ProspectIn(LettingBaseIn):
     viewing_at: datetime | None = None
     notes: str | None = Field(default=None, max_length=4000)
     delete_after: date
+    source: str = Field(default="manual", pattern="^(manual|portal|openimmo|flow)$")
 
 
 class ProspectPatch(LettingBaseIn):
@@ -93,6 +111,38 @@ class ProspectPatch(LettingBaseIn):
     )
     viewing_at: datetime | None = None
     notes: str | None = Field(default=None, max_length=4000)
+    rejection_template_id: str | None = Field(default=None, max_length=32)
+
+
+class ProspectViewingIn(LettingBaseIn):
+    scheduled_at: datetime
+    location: str | None = Field(default=None, max_length=300)
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class ProspectViewingPatch(LettingBaseIn):
+    status: str | None = Field(
+        default=None, pattern="^(proposed|confirmed|done|cancelled|no_show)$"
+    )
+    scheduled_at: datetime | None = None
+    location: str | None = Field(default=None, max_length=300)
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class SelfDisclosureLinkIn(LettingBaseIn):
+    valid_days: int = Field(default=14, ge=1, le=90)
+
+
+class SelfDisclosureSubmitIn(LettingBaseIn):
+    consent_privacy: bool
+    payload: dict[str, Any] = Field(default_factory=dict)
+
+
+class BrokerConfigIn(LettingBaseIn):
+    api_key: str | None = Field(default=None, max_length=500)
+    api_secret: str | None = Field(default=None, max_length=500)
+    base_url: str | None = Field(default=None, max_length=300)
+    enabled: bool = False
 
 
 def _case_out(c: RentIncreaseCase) -> dict[str, Any]:
@@ -501,6 +551,8 @@ def _prospect_out(p: Prospect) -> dict[str, Any]:
         "viewing_at": p.viewing_at,
         "notes": p.notes,
         "delete_after": p.delete_after,
+        "source": p.source,
+        "rejection_template_id": p.rejection_template_id,
     }
 
 
@@ -1730,3 +1782,504 @@ async def listing_image_content(
             "Cache-Control": "private, no-store",
         },
     )
+
+
+# Prospect viewing appointments (Besichtigungstermine) ------------------------------------
+
+
+def _viewing_out(v: ProspectViewing) -> dict[str, Any]:
+    return {
+        "id": v.id,
+        "prospect_id": v.prospect_id,
+        "scheduled_at": v.scheduled_at,
+        "status": v.status,
+        "location": v.location,
+        "note": v.note,
+    }
+
+
+@router.post(
+    "/prospects/{prospect_id}/viewings", status_code=201, summary="Besichtigungstermin anlegen"
+)
+async def create_prospect_viewing(
+    prospect_id: uuid.UUID,
+    body: ProspectViewingIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        prospect = await session.get(Prospect, prospect_id)
+        if prospect is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = ProspectViewing(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            prospect_id=prospect_id,
+            scheduled_at=body.scheduled_at,
+            location=body.location,
+            note=body.note,
+        )
+        session.add(row)
+        prospect.viewing_at = body.scheduled_at
+        if prospect.status == "new":
+            prospect.status = "viewing"
+        await session.flush()
+        return _viewing_out(row)
+
+
+@router.get("/prospects/{prospect_id}/viewings", summary="Besichtigungstermine je Interessent")
+async def list_prospect_viewings(
+    prospect_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(ProspectViewing)
+            .where(ProspectViewing.prospect_id == prospect_id)
+            .order_by(ProspectViewing.scheduled_at)
+        )
+        return [_viewing_out(v) for v in rows.all()]
+
+
+@router.patch("/prospects/viewings/{viewing_id}", summary="Besichtigungstermin ändern")
+async def patch_prospect_viewing(
+    viewing_id: uuid.UUID,
+    body: ProspectViewingPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(ProspectViewing, viewing_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        for key, value in body.model_dump(exclude_none=True).items():
+            setattr(row, key, value)
+        await session.flush()
+        return _viewing_out(row)
+
+
+# Absage-Textbausteine (rejection templates) -----------------------------------------------
+
+
+@router.get("/prospects/rejection-templates", summary="Absage-Textbausteine")
+async def get_rejection_templates(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, str]]:
+    return list_templates()
+
+
+class ProspectRejectIn(LettingBaseIn):
+    template_id: str = Field(max_length=32)
+
+
+@router.post("/prospects/{prospect_id}/reject", summary="Interessent mit Textbaustein absagen")
+async def reject_prospect(
+    prospect_id: uuid.UUID,
+    body: ProspectRejectIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Sets the prospect to `rejected` and returns the chosen text block for a mail draft
+    (`mhvp.communication`); this endpoint never sends anything itself (rule 0.1.6)."""
+
+    template = template_by_id(body.template_id)
+    if template is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Unbekannter Textbaustein.")
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Prospect, prospect_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.status = "rejected"
+        row.rejection_template_id = body.template_id
+        await session.flush()
+        out = _prospect_out(row)
+        out["rejection_text"] = template["text"]
+        return out
+
+
+# Selbstauskunft (self-disclosure) portal link ----------------------------------------------
+
+PRIVACY_NOTICE = (
+    "Ihre Angaben werden ausschließlich zur Prüfung Ihrer Bewerbung um die genannte Wohnung "
+    "verwendet und nach Abschluss des Bewerbungsverfahrens gelöscht, sofern kein Mietverhältnis "
+    "zustande kommt. Eine Weitergabe an Dritte erfolgt nicht, außer soweit gesetzlich "
+    "vorgeschrieben. Sie können Ihre Einwilligung jederzeit für die Zukunft widerrufen."
+)
+
+
+def _self_disclosure_out(link: SelfDisclosureLink, *, portal_url: str | None) -> dict[str, Any]:
+    return {
+        "id": link.id,
+        "prospect_id": link.prospect_id,
+        "expires_at": link.expires_at,
+        "submitted_at": link.submitted_at,
+        "consent_privacy": link.consent_privacy,
+        "payload": link.payload,
+        "portal_url": portal_url,
+        "privacy_notice": PRIVACY_NOTICE,
+    }
+
+
+def _self_disclosure_portal_url(request: Request, token: str) -> str:
+    base = str(request.base_url).rstrip("/")
+    return f"{base}/portal/selbstauskunft/{token}"
+
+
+@router.post(
+    "/prospects/{prospect_id}/self-disclosure-link",
+    status_code=201,
+    summary="Selbstauskunft-Link erzeugen",
+)
+async def create_self_disclosure_link(
+    prospect_id: uuid.UUID,
+    body: SelfDisclosureLinkIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        prospect = await session.get(Prospect, prospect_id)
+        if prospect is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        token = f"{principal.tenant_id.hex}.{secrets.token_urlsafe(24)}"
+        link = SelfDisclosureLink(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            prospect_id=prospect_id,
+            token=token,
+            expires_at=datetime.now(UTC) + timedelta(days=body.valid_days),
+        )
+        session.add(link)
+        await session.flush()
+        return _self_disclosure_out(link, portal_url=_self_disclosure_portal_url(request, token))
+
+
+@router.get(
+    "/prospects/{prospect_id}/self-disclosure-links", summary="Selbstauskunft-Links je Interessent"
+)
+async def list_self_disclosure_links(
+    prospect_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(SelfDisclosureLink)
+            .where(SelfDisclosureLink.prospect_id == prospect_id)
+            .order_by(SelfDisclosureLink.created_at.desc())
+        )
+        return [_self_disclosure_out(link, portal_url=None) for link in rows.all()]
+
+
+@router.get(
+    "/self-disclosure/{token}",
+    summary="Selbstauskunft-Formular lesen (Portal, ohne Anmeldung)",
+)
+async def read_self_disclosure(token: str, request: Request) -> dict[str, Any]:
+    tenant_hex = token.split(".", 1)[0] if "." in token else ""
+    try:
+        tenant_id = uuid.UUID(hex=tenant_hex)
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND) from exc
+    from mhvp.core.auth.principal import sessions
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    async with tenant_transaction(sessions(request), tenant_id) as session:
+        link = await session.scalar(
+            select(SelfDisclosureLink).where(SelfDisclosureLink.token == token)
+        )
+        if link is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if link.expires_at < datetime.now(UTC):
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Der Link ist abgelaufen.")
+        return _self_disclosure_out(link, portal_url=None)
+
+
+@router.post(
+    "/self-disclosure/{token}",
+    summary="Selbstauskunft absenden (Portal, ohne Anmeldung)",
+)
+async def submit_self_disclosure(
+    token: str, body: SelfDisclosureSubmitIn, request: Request
+) -> dict[str, Any]:
+    if not body.consent_privacy:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Ohne Bestätigung des Datenschutzhinweises kann die Selbstauskunft nicht "
+            "übermittelt werden.",
+        )
+    tenant_hex = token.split(".", 1)[0] if "." in token else ""
+    try:
+        tenant_id = uuid.UUID(hex=tenant_hex)
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND) from exc
+    from mhvp.core.auth.principal import sessions
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    async with tenant_transaction(sessions(request), tenant_id) as session:
+        link = await session.scalar(
+            select(SelfDisclosureLink).where(SelfDisclosureLink.token == token)
+        )
+        if link is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if link.expires_at < datetime.now(UTC):
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Der Link ist abgelaufen.")
+        if link.submitted_at is not None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Die Selbstauskunft wurde bereits übermittelt."
+            )
+        link.consent_privacy = True
+        link.payload = body.payload
+        link.submitted_at = datetime.now(UTC)
+        await session.flush()
+        return _self_disclosure_out(link, portal_url=None)
+
+
+# BrokerProvider (M28-01 stage 3): tenant config, feature flag, sync -------------------------
+
+
+async def _broker_config(
+    session: Any, tenant_id: uuid.UUID, provider: str
+) -> BrokerTenantConfig | None:
+    result: BrokerTenantConfig | None = await session.scalar(
+        select(BrokerTenantConfig).where(
+            BrokerTenantConfig.tenant_id == tenant_id, BrokerTenantConfig.provider == provider
+        )
+    )
+    return result
+
+
+def _broker_config_out(config: BrokerTenantConfig | None, provider: str) -> dict[str, Any]:
+    if config is None:
+        return {
+            "provider": provider,
+            "enabled": False,
+            "api_key_set": False,
+            "base_url": None,
+            "last_tested_at": None,
+            "last_test_ok": None,
+            "last_test_message": None,
+        }
+    return {
+        "provider": config.provider,
+        "enabled": config.enabled,
+        "api_key_set": bool(config.api_key),
+        "base_url": config.base_url,
+        "last_tested_at": config.last_tested_at,
+        "last_test_ok": config.last_test_ok,
+        "last_test_message": config.last_test_message,
+    }
+
+
+@router.get("/broker/{provider}/config", summary="Makler-Anbindung lesen")
+async def get_broker_config(
+    provider: str, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        config = await _broker_config(session, principal.tenant_id, provider)
+        return _broker_config_out(config, provider)
+
+
+@router.put("/broker/{provider}/config", summary="Makler-Anbindung einrichten")
+async def put_broker_config(
+    provider: str,
+    body: BrokerConfigIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> dict[str, Any]:
+    if provider not in ("flowfact", "propstack", "onoffice"):
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Unbekannter Anbieter.")
+    async with tenant_tx(request, principal) as session:
+        config = await _broker_config(session, principal.tenant_id, provider)
+        if config is None:
+            config = BrokerTenantConfig(tenant_id=principal.tenant_id, provider=provider)
+            session.add(config)
+        if body.api_key is not None:
+            config.api_key = body.api_key
+        if body.api_secret is not None:
+            config.api_secret = body.api_secret
+        if body.base_url is not None:
+            config.base_url = body.base_url
+        config.enabled = body.enabled
+        if config.enabled and not config.api_key:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Ohne Zugangsdaten kann die Anbindung nicht aktiviert werden.",
+            )
+        await session.flush()
+        return _broker_config_out(config, provider)
+
+
+@router.post(
+    "/listings/{listing_id}/broker/{provider}/sync",
+    summary="Anzeige an den Makler-Provider übergeben",
+)
+async def sync_listing_to_broker(
+    listing_id: uuid.UUID,
+    provider: str,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Explicit, operator-triggered handover only (rule 0.1.6, never automatic). Fails with
+    `BROKER_NOT_CONFIGURED` while the feature flag is off, and with
+    `BROKER_DOCUMENTATION_REQUIRED` for every provider today (see
+    `mhvp.letting.broker_provider` module docstring: no verified endpoint contract yet)."""
+
+    async with tenant_tx(request, principal) as session:
+        listing = await session.get(Listing, listing_id)
+        if listing is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        config = await _broker_config(session, principal.tenant_id, provider)
+        if config is None or not config.enabled or not config.api_key:
+            raise ProblemError(ErrorCodes.BROKER_NOT_CONFIGURED)
+        client = get_provider(provider)
+        payload = BrokerListingPayload(
+            external_ref=str(listing.external_ref or listing.id),
+            title=listing.title,
+            kind=listing.kind,
+            object_type=listing.object_type,
+            price=str(listing.price) if listing.price is not None else None,
+            living_area_sqm=(
+                str(listing.living_area_sqm) if listing.living_area_sqm is not None else None
+            ),
+            rooms=str(listing.rooms) if listing.rooms is not None else None,
+            status=listing.status,
+        )
+        try:
+            result = client.create_or_update_listing(payload)
+        except DocumentationRequiredError as exc:
+            raise ProblemError(ErrorCodes.BROKER_DOCUMENTATION_REQUIRED, detail=str(exc)) from exc
+        listing.publication_ref = result.provider_entity_id
+        listing.publication_status = result.status
+        listing.published_at = datetime.now(UTC)
+        await session.flush()
+        return {
+            "listing_id": listing.id,
+            "provider": provider,
+            "provider_entity_id": result.provider_entity_id,
+            "status": result.status,
+        }
+
+
+# OpenImmo import (M26-02 supplement): preview/apply, mirrors the FLOW import ----------------
+
+
+@router.post(
+    "/openimmo-import/preview",
+    status_code=201,
+    summary="OpenImmo-Datei einlesen (Vorschau, keine Übernahme)",
+)
+async def preview_openimmo_import(
+    request: Request,
+    file: UploadFile = File(),
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    data = await file.read()
+    filename = file.filename or "openimmo.xml"
+    async with tenant_tx(request, principal) as session:
+        existing = await session.scalars(
+            select(Listing.external_ref).where(
+                Listing.external_ref.is_not(None), Listing.source == "openimmo_import"
+            )
+        )
+        existing_refs = {r for r in existing.all() if r}
+        try:
+            proposals = openimmo_import.parse_openimmo_upload(
+                data, filename, existing_external_refs=existing_refs
+            )
+        except openimmo_import.OpenImmoImportError as exc:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from exc
+        rows = [openimmo_import.proposal_to_row(p) for p in proposals]
+        run = OpenImmoImportRun(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            filename=filename,
+            row_count=len(rows),
+            rows=rows,
+        )
+        session.add(run)
+        await session.flush()
+        return {
+            "run_id": run.id,
+            "filename": run.filename,
+            "row_count": run.row_count,
+            "rows": run.rows,
+        }
+
+
+class OpenImmoApplyIn(LettingBaseIn):
+    property_id: uuid.UUID
+    unit_id: uuid.UUID
+
+
+@router.post(
+    "/openimmo-import/{run_id}/rows/{row_id}/apply",
+    status_code=201,
+    summary="Einzelne Vorschauzeile freigeben und Anzeige anlegen",
+)
+async def apply_openimmo_import_row(
+    run_id: uuid.UUID,
+    row_id: str,
+    body: OpenImmoApplyIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """One row at a time, after an operator has matched it to an existing property/unit
+    (M28-01: no automatic unit assignment, same open point as the FLOW import). Duplicate
+    `external_ref` rows (already imported) are refused."""
+
+    async with tenant_tx(request, principal) as session:
+        run = await session.get(OpenImmoImportRun, run_id)
+        if run is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row = next((r for r in run.rows if r.get("row_id") == row_id), None)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if row.get("status") == "applied":
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Zeile wurde bereits übernommen.")
+        external_ref = row.get("external_ref")
+        if external_ref:
+            duplicate = await session.scalar(
+                select(Listing).where(
+                    Listing.external_ref == external_ref, Listing.source == "openimmo_import"
+                )
+            )
+            if duplicate is not None:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Diese OpenImmo-ID wurde bereits als Anzeige übernommen.",
+                )
+        listing = Listing(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            property_id=body.property_id,
+            unit_id=body.unit_id,
+            kind=row.get("kind") or "rental",
+            status="draft",
+            title=row.get("title") or "OpenImmo-Import",
+            price=Decimal(row["price"]) if row.get("price") else None,
+            living_area_sqm=(
+                Decimal(row["living_area_sqm"]) if row.get("living_area_sqm") else None
+            ),
+            rooms=Decimal(row["rooms"]) if row.get("rooms") else None,
+            object_type=row.get("object_type") or "wohnung",
+            external_ref=external_ref,
+            source="openimmo_import",
+            notes=(
+                f"OpenImmo-Import, Kontaktvorschlag: {row.get('contact_proposal')!r} "
+                "(kein Kontakt automatisch angelegt, M26-02)."
+            ),
+        )
+        session.add(listing)
+        await session.flush()
+        row["status"] = "applied"
+        row["listing_id"] = str(listing.id)
+        flag_modified(run, "rows")
+        run.created_count = (run.created_count or 0) + 1
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="listing.openimmo_imported",
+            entity_type="listing",
+            entity_id=listing.id,
+            actor_user_id=principal.user_id,
+            payload={"run_id": str(run_id), "external_ref": external_ref},
+        )
+        return {"listing_id": listing.id, "run_id": run.id}

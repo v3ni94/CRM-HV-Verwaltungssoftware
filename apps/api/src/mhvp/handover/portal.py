@@ -17,6 +17,7 @@ from fastapi.responses import Response
 from sqlalchemy import or_, select
 
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
+from mhvp.core.escaping import content_disposition
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentLink
@@ -316,7 +317,7 @@ async def document_content(
         content=data,
         media_type=mime,
         headers={
-            "Content-Disposition": f'inline; filename="{filename}"',
+            "Content-Disposition": content_disposition("inline", filename),
             "X-Content-Type-Options": "nosniff",
             "Cache-Control": "private, no-store",
         },

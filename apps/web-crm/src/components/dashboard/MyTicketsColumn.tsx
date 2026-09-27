@@ -19,8 +19,20 @@ export type MyTicket = {
 };
 
 /** Column "Meine Tickets" (operator 27.09.2026): tickets assigned to me in urgency order with
- *  the attention colour, at most ten, link to the full list. Pure presentation. */
-export function MyTicketsColumn({ tickets, listHref, total }: { tickets: MyTicket[]; listHref: string; total?: number | null }) {
+ *  the attention colour, at most four, link to the full list. Without an assigned ticket
+ *  (`fallback`), the caller passes the tenant's most urgent open tickets instead and the
+ *  column says so, so it is never empty. Pure presentation. */
+export function MyTicketsColumn({
+  tickets,
+  listHref,
+  total,
+  fallback = false,
+}: {
+  tickets: MyTicket[];
+  listHref: string;
+  total?: number | null;
+  fallback?: boolean;
+}) {
   const s = useTranslations("StartPage");
   const t = useTranslations("Tickets");
   return (
@@ -34,6 +46,11 @@ export function MyTicketsColumn({ tickets, listHref, total }: { tickets: MyTicke
         </Link>
       </div>
       <p className="mt-1 text-xs text-subtle">{s("tickets.description")}</p>
+      {fallback && tickets.length > 0 ? (
+        <p className="mt-2 text-xs text-gold" data-testid="my-tickets-fallback">
+          {s("tickets.fallback")}
+        </p>
+      ) : null}
       {tickets.length === 0 ? (
         <p className="mt-4 text-sm text-muted">{s("tickets.empty")}</p>
       ) : (

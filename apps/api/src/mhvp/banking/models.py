@@ -19,9 +19,11 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    LargeBinary,
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -231,6 +233,18 @@ class PaymentBatch(IdMixin, TimestampMixin, TenantMixin, Base):
     document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
     submitted_via: Mapped[str | None] = mapped_column(String(16))
     bank_response: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    # M15-01: count and control sum of the file, checksum of the stored bytes, manual submission.
+    transaction_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    control_sum: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal(0), server_default="0"
+    )
+    file_sha256: Mapped[str | None] = mapped_column(String(64))
+    submission_channel: Mapped[str | None] = mapped_column(String(16))
+    submission_reference: Mapped[str | None] = mapped_column(String(140))
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    submitted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
 class PaymentOrder(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -272,6 +286,51 @@ class PaymentApproval(IdMixin, TenantMixin, Base):
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
     invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PaymentBankConfig(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Format and submission channel agreed with the bank of one ordering account (M15-01).
+    The versions are operator input confirmed with the bank; nothing here opens G2."""
+
+    __tablename__ = "payment_bank_config"
+    __table_args__ = (
+        UniqueConstraint("property_bank_account_id", name="uq_payment_bank_config_account"),
+    )
+
+    property_bank_account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("property_bank_account.id"), nullable=False
+    )
+    pain001_version: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pain.001.001.09", server_default="pain.001.001.09"
+    )
+    pain008_version: Mapped[str] = mapped_column(
+        String(20), nullable=False, default="pain.008.001.02", server_default="pain.008.001.02"
+    )
+    submission_channel: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="file", server_default="file"
+    )
+    confirmed_with_bank_on: Mapped[date | None] = mapped_column(Date)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class PaymentFileDownload(IdMixin, TenantMixin, Base):
+    """Every hand-out of a payment file (who, when, checksum); never deleted (M15-01)."""
+
+    __tablename__ = "payment_file_download"
+    __table_args__ = (Index("ix_payment_file_download_batch", "tenant_id", "batch_id"),)
+
+    batch_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("payment_batch.id", ondelete="CASCADE"), nullable=False
+    )
+    user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    downloaded_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    file_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    purpose: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="download", server_default="download"
+    )
+    client_ip: Mapped[str | None] = mapped_column(String(64))
 
 
 # --- finAPI (M11-finapi, read only) ----------------------------------------------------
@@ -470,3 +529,164 @@ class BankAccountAssignment(IdMixin, TimestampMixin, TenantMixin, Base):
     is_default: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+
+
+# --- FinTS/HBCI PIN/TAN (M11-01 addendum 27.09.2026, docs/integrations/fints.md) ------------
+
+
+class FinTsSessionStatus(StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    AWAITING_TAN = "awaiting_tan"
+    AWAITING_DECOUPLED = "awaiting_decoupled"
+    DONE = "done"
+    FAILED = "failed"
+
+
+class FinTsConnection(IdMixin, TimestampMixin, TenantMixin, Base):
+    """FinTS specific state of one `bank_connection` (connector `fints`). Login, PIN and the
+    python-fints client state (`deconstruct(including_private=True)`: system id, bank and
+    user parameter data, account numbers) are stored encrypted with the master key
+    (`EncryptedText`, like mailbox secrets). The PIN never leaves the server, is never logged
+    and never returned by the API. Read only: no payment (G2)."""
+
+    __tablename__ = "fints_connection"
+    __table_args__ = (
+        Index("uq_fints_connection_bank_connection", "bank_connection_id", unique=True),
+    )
+
+    bank_connection_id: Mapped[uuid.UUID] = _fk("bank_connection.id")
+    blz: Mapped[str] = mapped_column(String(8), nullable=False)
+    fints_url: Mapped[str] = mapped_column(String(300), nullable=False)
+    login: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
+    pin: Mapped[str | None] = mapped_column(EncryptedText())
+    # base64 of the opaque python-fints blob; None until the first successful dialog
+    client_data: Mapped[str | None] = mapped_column(EncryptedText())
+    tan_mechanism: Mapped[str | None] = mapped_column(String(3))
+    tan_mechanisms: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    tan_medium: Mapped[str | None] = mapped_column(String(32))
+    # last successful strong customer authentication (TAN); PSD2: due again after 90 days
+    last_sca_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # After a rejected login the stored PIN is not reused automatically (bank locks after
+    # three failures); the next attempt needs a fresh PIN entry.
+    pin_blocked: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    last_error: Mapped[str | None] = mapped_column(Text)
+    last_error_code: Mapped[str | None] = mapped_column(String(20))
+
+
+class FinTsAccountLink(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One SEPA account the bank reported for a FinTS connection, linked to at most one
+    internal `property_bank_account` (6.9.7). Unassigned accounts import nothing."""
+
+    __tablename__ = "fints_account_link"
+    __table_args__ = (
+        Index(
+            "uq_fints_account_link_iban",
+            "tenant_id",
+            "fints_connection_id",
+            "iban_fingerprint",
+            unique=True,
+        ),
+    )
+
+    fints_connection_id: Mapped[uuid.UUID] = _fk("fints_connection.id")
+    iban: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
+    iban_suffix: Mapped[str] = mapped_column(String(4), nullable=False)
+    iban_fingerprint: Mapped[str] = mapped_column(String(64), nullable=False, index=True)
+    bic: Mapped[str | None] = mapped_column(String(11))
+    account_number: Mapped[str | None] = mapped_column(String(30))
+    subaccount: Mapped[str | None] = mapped_column(String(30))
+    property_bank_account_id: Mapped[uuid.UUID | None] = _fk(
+        "property_bank_account.id", nullable=True
+    )
+    balance_booked: Mapped[Decimal | None] = mapped_column(MONEY)
+    balance_currency: Mapped[str | None] = mapped_column(String(3))
+    balance_as_of: Mapped[date | None] = mapped_column(Date)
+    balance_fetched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_transactions_fetch_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_synced_booking_date: Mapped[date | None] = mapped_column(Date)
+
+
+class FinTsSession(IdMixin, TimestampMixin, TenantMixin, Base):
+    """State of one asynchronous FinTS dialog (connect or refresh) that may pause for a TAN.
+    python-fints is blocking, so the worker (queue `bank`) runs each step and writes the
+    result here; the API only reads the status and hands in the TAN. The pending TAN request,
+    the paused dialog and the client state are opaque python-fints blobs, stored encrypted
+    (base64 in `EncryptedText`); a TAN itself is never stored. The challenge image
+    (photoTAN/matrix) is kept as bytes for display only."""
+
+    __tablename__ = "bank_fints_session"
+    __table_args__ = (
+        Index(
+            "ix_bank_fints_session_connection_status",
+            "tenant_id",
+            "fints_connection_id",
+            "status",
+        ),
+    )
+
+    fints_connection_id: Mapped[uuid.UUID] = _fk("fints_connection.id")
+    purpose: Mapped[str] = mapped_column(String(16), nullable=False)  # connect | refresh
+    status: Mapped[FinTsSessionStatus] = mapped_column(
+        _enum(FinTsSessionStatus, "bank_fints_session_status"), nullable=False
+    )
+    tan_mechanism: Mapped[str | None] = mapped_column(String(3))
+    challenge_text: Mapped[str | None] = mapped_column(Text)
+    challenge_hhduc: Mapped[str | None] = mapped_column(Text)
+    challenge_image_mime: Mapped[str | None] = mapped_column(String(64))
+    challenge_image: Mapped[bytes | None] = mapped_column(LargeBinary)
+    challenge_decoupled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    retry_data: Mapped[str | None] = mapped_column(EncryptedText())
+    dialog_data: Mapped[str | None] = mapped_column(EncryptedText())
+    client_data: Mapped[str | None] = mapped_column(EncryptedText())
+    # JSON of `fints.Progress` (accounts, balances, transactions collected so far); encrypted
+    # because it carries IBANs and transaction texts
+    progress: Mapped[str | None] = mapped_column(EncryptedText())
+    # a submitted TAN waits here only until the worker picks the step up, then it is cleared
+    pending_tan: Mapped[str | None] = mapped_column(EncryptedText())
+    sync_run_id: Mapped[uuid.UUID | None] = _fk("bank_sync_run.id", nullable=True)
+    since: Mapped[date | None] = mapped_column(Date)
+    until: Mapped[date | None] = mapped_column(Date)
+    error_code: Mapped[str | None] = mapped_column(String(20))
+    error_message: Mapped[str | None] = mapped_column(Text)
+    result: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+# --- Bank specific CSV import (M11-02, docs/integrations/bank-csv.md) ----------------------
+
+
+class BankCsvMapping(IdMixin, TimestampMixin, TenantMixin, Base):
+    """A user defined column mapping for the generic CSV import path, stored per account so
+    it does not have to be re-entered on every import (8.1). Recognised bank formats
+    (`mhvp.banking.csv_formats.KNOWN_FORMATS`) need no row here; this only holds mappings the
+    operator built by hand for a format this module does not recognise from its header."""
+
+    __tablename__ = "bank_csv_mapping"
+    __table_args__ = (
+        Index(
+            "uq_bank_csv_mapping_account_label",
+            "tenant_id",
+            "property_bank_account_id",
+            "label",
+            unique=True,
+        ),
+    )
+
+    # a hand built mapping has no meaning without its account: removed with it (no money)
+    property_bank_account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("property_bank_account.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    label: Mapped[str] = mapped_column(String(120), nullable=False)
+    mapping: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)

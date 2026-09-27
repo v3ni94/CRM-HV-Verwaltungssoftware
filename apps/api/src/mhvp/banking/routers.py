@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -29,7 +29,9 @@ from mhvp.banking.models import (
     FinApiConnection,
     FinApiTenantConfig,
     OrderStatus,
+    PaymentBankConfig,
     PaymentBatch,
+    PaymentFileDownload,
     PaymentOrder,
     RuleState,
     TransactionStatus,
@@ -446,6 +448,52 @@ async def get_ai_posting(
             "bank_transaction_id": tx_id,
             "proposals": [_posting_out(p) for p in proposals],
             "note": "Vorschlag der KI, keine Buchung.",
+        }
+
+
+@router.get(
+    "/transactions/{tx_id}/posting-proposals",
+    summary="Kontierungsvorschläge in zwei Stufen (Regel, Abgleich, KI) mit Konfidenz",
+)
+async def posting_proposals(
+    tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """M12-01: stage 1 is deterministic and always on (``mhvp.banking.posting_proposal``);
+    stage 2 lists stored AI proposals and says why the AI stage is blocked. Every entry
+    carries ``source`` (rule, match, ai), ``confidence`` and ``reasoning``; nothing is posted,
+    booking stays with ``POST /transactions/{tx_id}/book``."""
+    from mhvp.ai import gateway
+    from mhvp.banking import ai_posting, posting_proposal
+    from mhvp.banking.matching import ledger_for
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(BankTransaction, tx_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        stage1 = [p.as_dict() for p in await posting_proposal.stage1_for_transaction(session, row)]
+        # Web-CRM link from a split to its open item on the ledger page (Bankabgleich seite,
+        # operator 27.09.2026 remainder); read only, no extra query beyond the ledger lookup
+        # stage1_for_transaction already does.
+        ledger, _bank = await ledger_for(session, row)
+        ai_rows = await ai_posting.proposals_for(session, tx_id)
+        ai_items = [
+            {
+                **_posting_out(p),
+                "source": posting_proposal.SOURCE_AI,
+                "confidence": (p.proposed or {}).get("confidence"),
+                "reasoning": (p.proposed or {}).get("reasoning"),
+            }
+            for p in ai_rows
+        ]
+        blocked = await gateway.posting_block_reason(session)
+        return {
+            "bank_transaction_id": tx_id,
+            "amount": row.amount,
+            "ledger_id": ledger.id,
+            "stage1": stage1,
+            "ai": ai_items,
+            "ai_stage": {"enabled": blocked is None, "blocked_reason": blocked},
+            "note": "Vorschläge, keine Buchung. Buchung nur nach Prüfung und Freigabe.",
         }
 
 
@@ -1015,16 +1063,46 @@ async def create_batch(
         bank = await session.get(PropertyBankAccount, banks.pop())
         if bank is None:  # pragma: no cover
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        config = await _bank_config(session, bank.id)
+        version = config.pain001_version if config else payments.PAIN_FORMAT
         batch = PaymentBatch(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             property_bank_account_id=bank.id,
             message_id=f"MHVP{uuid.uuid4().hex[:24]}".upper(),
-            format=payments.PAIN_FORMAT,
+            format=version,
+            status="file_generated",
+            transaction_count=len(orders),
+            control_sum=payments.control_sum(orders),
         )
         session.add(batch)
         await session.flush()
-        xml = payments.pain001(batch.message_id, bank.holder, bank.iban, orders)
+        xml = payments.pain001(
+            batch.message_id, bank.holder, bank.iban, orders, version=version, debtor_bic=bank.bic
+        )
+        problems = payments.validate_pain001(xml)
+        if problems:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Zahlungsdatei fehlerhaft: " + " ".join(problems)
+            )
+        from mhvp.documents import services as docs
+        from mhvp.documents.models import DocumentSource, LinkRole
+
+        document = await docs.store_document(
+            session,
+            BlobStore(request.app.state.settings),
+            tenant_id=principal.tenant_id,
+            data=xml,
+            title=f"Zahlungsdatei {batch.message_id} ({version}), nicht übermittelt",
+            filename=f"{batch.message_id}.xml",
+            mime_type="application/xml",
+            source=DocumentSource.GENERATED,
+            category_id=None,
+            links=[("legal_entity", bank.legal_entity_id, LinkRole.GENERATED)],
+            created_by=principal.user_id,
+            scan_for_malware=False,
+        )
+        batch.document_id, batch.file_sha256 = document.id, payments.file_sha256(xml)
         for o in orders:
             o.status, o.batch_id = OrderStatus.EXPORTED, batch.id
         await emit(
@@ -1034,15 +1112,278 @@ async def create_batch(
             entity_type="payment_batch",
             entity_id=batch.id,
             actor_user_id=principal.user_id,
-            payload={"orders": len(orders), "format": batch.format},
+            payload={
+                "orders": len(orders),
+                "format": batch.format,
+                "control_sum": str(batch.control_sum),
+                "sha256": batch.file_sha256,
+            },
         )
         await session.flush()
+        return {**_batch_out(batch), "xml": xml.decode()}
+
+
+def _batch_out(batch: PaymentBatch) -> dict[str, Any]:
+    return {
+        "id": batch.id,
+        "message_id": batch.message_id,
+        "format": batch.format,
+        "status": batch.status,
+        "property_bank_account_id": batch.property_bank_account_id,
+        "transaction_count": batch.transaction_count,
+        "control_sum": str(batch.control_sum),
+        "file_sha256": batch.file_sha256,
+        "document_id": batch.document_id,
+        "submission_channel": batch.submission_channel,
+        "submission_reference": batch.submission_reference,
+        "submitted_at": batch.submitted_at,
+        "submitted_by": batch.submitted_by,
+        "created_at": batch.created_at,
+    }
+
+
+async def _bank_config(session: Any, account_id: uuid.UUID) -> PaymentBankConfig | None:
+    config: PaymentBankConfig | None = await session.scalar(
+        select(PaymentBankConfig).where(PaymentBankConfig.property_bank_account_id == account_id)
+    )
+    return config
+
+
+async def _batch(session: Any, batch_id: uuid.UUID, *, lock: bool = False) -> PaymentBatch:
+    batch: PaymentBatch | None = await session.get(PaymentBatch, batch_id, with_for_update=lock)
+    if batch is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Sammler nicht gefunden.")
+    return batch
+
+
+@router.get("/payment-batches", summary="Zahlungsdateien (Sammler)")
+async def list_batches(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(PaymentBatch).order_by(PaymentBatch.created_at.desc(), PaymentBatch.id)
+        )
+        return [_batch_out(b) for b in rows]
+
+
+@router.get("/payment-batches/{batch_id}", summary="Sammler mit Download-Protokoll")
+async def get_batch(
+    batch_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        batch = await _batch(session, batch_id)
+        downloads = list(
+            await session.scalars(
+                select(PaymentFileDownload)
+                .where(PaymentFileDownload.batch_id == batch.id)
+                .order_by(PaymentFileDownload.downloaded_at)
+            )
+        )
         return {
-            "id": batch.id,
-            "message_id": batch.message_id,
-            "format": batch.format,
-            "xml": xml.decode(),
+            **_batch_out(batch),
+            "downloads": [
+                {
+                    "id": d.id,
+                    "user_id": d.user_id,
+                    "downloaded_at": d.downloaded_at,
+                    "file_sha256": d.file_sha256,
+                    "purpose": d.purpose,
+                }
+                for d in downloads
+            ],
         }
+
+
+@router.get(
+    "/payment-batches/{batch_id}/file",
+    summary="Zahlungsdatei herunterladen (G2, protokolliert)",
+    response_class=Response,
+)
+async def download_batch_file(
+    batch_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> Response:
+    """Hand-out for the manual upload in the online banking (FileDownloadSubmitter). Every
+    hand-out is logged with user, time and checksum; the stored bytes are re-checked against
+    the checksum recorded at generation, so a manipulated document is never handed out."""
+    from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+
+    await ensure_release_gate_open(
+        ReleaseGate.G2, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        batch = await _batch(session, batch_id, lock=True)
+        if batch.document_id is None or not batch.file_sha256:
+            raise ProblemError(ErrorCodes.PAYMENT_FILE_STATE, detail="Keine Datei abgelegt.")
+        data = await _load_document_bytes(session, request, batch.document_id)
+        digest = payments.file_sha256(data)
+        if digest != batch.file_sha256 or payments.validate_pain001(data):
+            raise ProblemError(
+                ErrorCodes.PAYMENT_FILE_STATE,
+                detail="Die abgelegte Datei stimmt nicht mit der Prüfsumme des Sammlers überein.",
+            )
+        session.add(
+            PaymentFileDownload(
+                tenant_id=principal.tenant_id,
+                batch_id=batch.id,
+                user_id=principal.user_id,
+                file_sha256=digest,
+                purpose="download",
+                client_ip=(request.client.host if request.client else None),
+            )
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="payment_batch.downloaded",
+            entity_type="payment_batch",
+            entity_id=batch.id,
+            actor_user_id=principal.user_id,
+            payload={"sha256": digest, "format": batch.format},
+        )
+        await session.flush()
+        return Response(
+            content=data,
+            media_type="application/xml",
+            headers={
+                "Content-Disposition": f'attachment; filename="{batch.message_id}.xml"',
+                "X-Content-SHA256": digest,
+            },
+        )
+
+
+class PaymentBatchSubmitIn(_In):
+    channel: str | None = Field(default=None, pattern="^(file|fints|ebics)$")
+    reference: str | None = Field(default=None, max_length=140)
+
+
+@router.post("/payment-batches/{batch_id}/submit", summary="Einreichung (G2)")
+async def submit_batch(
+    batch_id: uuid.UUID,
+    body: PaymentBatchSubmitIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Channel ``file``: a person confirms the manual upload with the bank reference after at
+    least one logged download. ``fints`` and ``ebics`` are scaffolds and refuse
+    (MHVP-BANK-0017) until released by the operator (V2)."""
+    from mhvp.banking import payment_submitters
+    from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+
+    await ensure_release_gate_open(
+        ReleaseGate.G2, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        batch = await _batch(session, batch_id, lock=True)
+        config = await _bank_config(session, batch.property_bank_account_id)
+        channel = body.channel or (config.submission_channel if config else "file")
+        submitter = payment_submitters.submitter_for(channel)
+        if channel == "file":
+            downloaded = await session.scalar(
+                select(PaymentFileDownload.id).where(PaymentFileDownload.batch_id == batch.id)
+            )
+            if downloaded is None:
+                raise ProblemError(
+                    ErrorCodes.PAYMENT_FILE_STATE,
+                    detail="Die Datei wurde noch nicht heruntergeladen.",
+                )
+        data = b""
+        if batch.document_id is not None:
+            data = await _load_document_bytes(session, request, batch.document_id)
+        result = await submitter.submit(
+            session, batch, data, user_id=principal.user_id, reference=body.reference
+        )
+        if result.submitted:
+            for o in await session.scalars(
+                select(PaymentOrder).where(PaymentOrder.batch_id == batch.id)
+            ):
+                if o.status is OrderStatus.EXPORTED:
+                    o.status = OrderStatus.SUBMITTED
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="payment_batch.submitted",
+                entity_type="payment_batch",
+                entity_id=batch.id,
+                actor_user_id=principal.user_id,
+                payload={"channel": result.channel, "reference": result.reference},
+            )
+        await session.flush()
+        return {**_batch_out(batch), "channel": result.channel, "submitted": result.submitted}
+
+
+class BankConfigIn(_In):
+    pain001_version: str = Field(default=payments.PAIN_FORMAT)
+    pain008_version: str = Field(default="pain.008.001.02")
+    submission_channel: str = Field(default="file", pattern="^(file|fints|ebics)$")
+    confirmed_with_bank_on: date | None = None
+    notes: str | None = Field(default=None, max_length=2000)
+
+
+def _config_out(config: PaymentBankConfig) -> dict[str, Any]:
+    return {
+        "property_bank_account_id": config.property_bank_account_id,
+        "pain001_version": config.pain001_version,
+        "pain008_version": config.pain008_version,
+        "submission_channel": config.submission_channel,
+        "confirmed_with_bank_on": config.confirmed_with_bank_on,
+        "notes": config.notes,
+        "supported": {
+            "pain001": list(payments.PAIN001_VERSIONS),
+            "pain008": list(payments.PAIN008_VERSIONS),
+            "channels": list(payments.SUBMISSION_CHANNELS),
+        },
+    }
+
+
+@router.get("/payment-bank-config/{account_id}", summary="Zahlungsformat je Bankkonto")
+async def get_bank_config(
+    account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        config = await _bank_config(session, account_id)
+        if config is None:
+            config = PaymentBankConfig(  # defaults, not stored
+                tenant_id=principal.tenant_id,
+                property_bank_account_id=account_id,
+                pain001_version=payments.PAIN_FORMAT,
+                pain008_version=payments.PAIN008_VERSIONS[0],
+                submission_channel="file",
+            )
+        return _config_out(config)
+
+
+@router.put("/payment-bank-config/{account_id}", summary="Zahlungsformat je Bankkonto setzen")
+async def put_bank_config(
+    account_id: uuid.UUID,
+    body: BankConfigIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Operator input of the version and channel agreed with the bank (M15-01). Only the
+    versions the platform can generate and validate are accepted."""
+    from mhvp.properties.models import PropertyBankAccount
+
+    if body.pain001_version not in payments.PAIN001_VERSIONS:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="pain.001-Version nicht unterstützt.")
+    if body.pain008_version not in payments.PAIN008_VERSIONS:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="pain.008-Version nicht unterstützt.")
+    async with tenant_tx(request, principal) as session:
+        if await session.get(PropertyBankAccount, account_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Bankkonto nicht gefunden.")
+        config = await _bank_config(session, account_id)
+        if config is None:
+            config = PaymentBankConfig(
+                tenant_id=principal.tenant_id,
+                property_bank_account_id=account_id,
+                created_by=principal.user_id,
+            )
+            session.add(config)
+        for key, value in body.model_dump().items():
+            setattr(config, key, value)
+        config.updated_by = principal.user_id
+        await session.flush()
+        return _config_out(config)
 
 
 @router.post("/payment-batches/{batch_id}/bank-status", summary="Bankrückmeldung erfassen")
@@ -2115,3 +2456,224 @@ async def _single_account_out(session: Any, bank_account_id: uuid.UUID) -> BankA
         if item.id == bank_account_id:
             return account_list_out(item)
     raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)  # pragma: no cover
+
+
+# --- Bank specific CSV import (M11-02, docs/integrations/bank-csv.md) ----------------------
+
+from mhvp.banking import csv_formats  # noqa: E402
+from mhvp.banking.models import BankCsvMapping  # noqa: E402
+
+
+class CsvColumnMappingIn(_In):
+    booking_date: str
+    amount: str | None = None
+    amount_debit: str | None = None
+    amount_credit: str | None = None
+    value_date: str | None = None
+    counterpart_name: str | None = None
+    counterpart_iban: str | None = None
+    counterpart_bic: str | None = None
+    purpose: str | None = None
+    purpose_extra: list[str] = Field(default_factory=list)
+    end_to_end_id: str | None = None
+    mandate_reference: str | None = None
+    creditor_id: str | None = None
+    own_iban: str | None = None
+    bank_reference: str | None = None
+    currency: str | None = None
+
+
+def _column_mapping(body: CsvColumnMappingIn | dict[str, Any]) -> csv_formats.ColumnMapping:
+    data = body if isinstance(body, dict) else body.model_dump()
+    data = dict(data)
+    data["purpose_extra"] = tuple(data.get("purpose_extra") or ())
+    return csv_formats.ColumnMapping(**data)
+
+
+class CsvPreviewIn(_In):
+    document_id: uuid.UUID
+    mapping: CsvColumnMappingIn | None = None
+    own_iban: str | None = None
+
+
+class RowErrorOut(BaseModel):
+    line: int
+    message: str
+
+
+class CsvPreviewOut(BaseModel):
+    format_id: str
+    label: str
+    confidence: str
+    encoding: str
+    delimiter: str
+    headers: list[str]
+    row_count: int
+    sample_rows: list[dict[str, str]]
+    errors: list[RowErrorOut]
+    ready_to_import: bool
+
+
+class CsvImportIn(_In):
+    document_id: uuid.UUID
+    property_bank_account_id: uuid.UUID | None = None
+    mapping: CsvColumnMappingIn | None = None
+    mapping_id: uuid.UUID | None = None
+
+
+class CsvMappingIn(_In):
+    property_bank_account_id: uuid.UUID
+    label: str = Field(min_length=1, max_length=120)
+    mapping: CsvColumnMappingIn
+
+
+class CsvMappingOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    property_bank_account_id: uuid.UUID
+    label: str
+    mapping: dict[str, Any]
+
+
+async def _load_document_bytes(session: Any, request: Request, document_id: uuid.UUID) -> bytes:
+    document = await session.get(Document, document_id)
+    if document is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return BlobStore(request.app.state.settings).get(document.storage_ref)
+
+
+@router.post(
+    "/imports/csv/preview",
+    summary="Bank-CSV vor dem Import prüfen (erkanntes Format, Zeilen, Fehler)",
+)
+async def preview_csv_import(
+    body: CsvPreviewIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> CsvPreviewOut:
+    async with tenant_tx(request, principal) as session:
+        data = await _load_document_bytes(session, request, body.document_id)
+        try:
+            result = csv_formats.preview(
+                data,
+                mapping_override=_column_mapping(body.mapping) if body.mapping else None,
+                own_iban_override=body.own_iban,
+            )
+        except csv_formats.CsvImportError as exc:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from None
+        return CsvPreviewOut(
+            format_id=result.format_id,
+            label=result.label,
+            confidence=result.confidence,
+            encoding=result.encoding,
+            delimiter=result.delimiter,
+            headers=result.headers,
+            row_count=result.row_count,
+            sample_rows=result.sample_rows,
+            errors=[RowErrorOut(line=e.line, message=e.message) for e in result.errors],
+            ready_to_import=result.parsed is not None and not result.errors,
+        )
+
+
+@router.post(
+    "/imports/csv",
+    status_code=201,
+    summary="Bank-CSV importieren (erkanntes Format oder benutzerdefiniertes Mapping)",
+)
+async def import_csv(
+    body: CsvImportIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> SyncRunOut:
+    from mhvp.properties.models import PropertyBankAccount
+
+    async with tenant_tx(request, principal) as session:
+        data = await _load_document_bytes(session, request, body.document_id)
+        mapping_override = None
+        if body.mapping:
+            mapping_override = _column_mapping(body.mapping)
+        elif body.mapping_id:
+            stored = await session.get(BankCsvMapping, body.mapping_id)
+            if stored is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            mapping_override = _column_mapping(stored.mapping)
+        account = None
+        if body.property_bank_account_id:
+            account = await session.get(PropertyBankAccount, body.property_bank_account_id)
+            if account is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        try:
+            result = csv_formats.preview(
+                data,
+                mapping_override=mapping_override,
+                own_iban_override=account.iban if account else None,
+            )
+        except csv_formats.CsvImportError as exc:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from None
+        if result.errors:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    f"{len(result.errors)} Zeile(n) nicht lesbar, z. B. Zeile "
+                    f"{result.errors[0].line}: {result.errors[0].message}."
+                ),
+            )
+        if result.parsed is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    "Kein bekanntes Format erkannt und keine eigene IBAN ermittelbar; "
+                    "bitte Konto oder Mapping angeben."
+                ),
+            )
+        try:
+            run = await svc.import_file(
+                session,
+                tenant_id=principal.tenant_id,
+                user_id=principal.user_id,
+                parsed=result.parsed,
+                document_id=body.document_id,
+            )
+        except IntegrityError:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Der Import läuft gerade parallel."
+            ) from None
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="bank_sync_run.completed",
+            entity_type="bank_sync_run",
+            entity_id=run.id,
+            actor_user_id=principal.user_id,
+            payload=run.counts,
+        )
+        return SyncRunOut.model_validate(run)
+
+
+@router.post(
+    "/csv-mappings", status_code=201, summary="Benutzerdefiniertes CSV-Mapping je Konto speichern"
+)
+async def create_csv_mapping(
+    body: CsvMappingIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> CsvMappingOut:
+    async with tenant_tx(request, principal) as session:
+        row = BankCsvMapping(
+            tenant_id=principal.tenant_id,
+            property_bank_account_id=body.property_bank_account_id,
+            label=body.label,
+            mapping=body.mapping.model_dump(),
+        )
+        session.add(row)
+        await session.flush()
+        return CsvMappingOut.model_validate(row)
+
+
+@router.get("/csv-mappings", summary="Gespeicherte CSV-Mappings eines Kontos")
+async def list_csv_mappings(
+    request: Request,
+    property_bank_account_id: uuid.UUID,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[CsvMappingOut]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(BankCsvMapping)
+            .where(BankCsvMapping.property_bank_account_id == property_bank_account_id)
+            .order_by(BankCsvMapping.label)
+        )
+        return [CsvMappingOut.model_validate(r) for r in rows.all()]

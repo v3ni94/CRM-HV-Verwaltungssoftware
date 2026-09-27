@@ -15,8 +15,33 @@ export type ProviderIn = S["mhvp__ai__schemas__ProviderIn"];
 export type ContactChoice = S["ContactChoice"];
 export type PropertyChoice = S["PropertyChoice"];
 export type DocumentOut = S["DocumentOut"];
-export type KnowledgeEntry = S["KnowledgeEntryOut"];
-export type KnowledgeEntryIn = S["KnowledgeEntryIn"];
+/** M34-01 release workflow: the generated client type is widened locally with the fields the
+ * OpenAPI regeneration (run centrally, `make openapi`) will add for `KnowledgeEntryOut` so the
+ * CRM page can already use them. */
+export type KnowledgeStatus = "draft" | "in_review" | "approved" | "withdrawn";
+export type KnowledgeEntry = S["KnowledgeEntryOut"] & {
+  status?: KnowledgeStatus;
+  group_id?: string;
+  version?: number;
+  superseded_at?: string | null;
+  valid_from?: string | null;
+  valid_until?: string | null;
+  source_document_id?: string | null;
+  submitted_by?: string | null;
+  submitted_at?: string | null;
+  approved_by?: string | null;
+  approved_at?: string | null;
+  withdrawn_by?: string | null;
+  withdrawn_at?: string | null;
+  rejected_by?: string | null;
+  rejected_at?: string | null;
+  rejection_reason?: string | null;
+};
+export type KnowledgeEntryIn = S["KnowledgeEntryIn"] & {
+  valid_from?: string | null;
+  valid_until?: string | null;
+  source_document_id?: string | null;
+};
 export type PreparationCorrectionIn = S["PreparationCorrectionIn"];
 
 /** Mail preparation result (Welle 3 item 14, `mhvp.communication.preparation`). The API returns

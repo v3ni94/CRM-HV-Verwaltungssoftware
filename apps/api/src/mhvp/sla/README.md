@@ -27,3 +27,12 @@
 Hooks in anderen Modulen: `tickets.routers.create_ticket` startet die Uhr,
 `communication.routers.approve` setzt `first_response_at`, sobald die erste ausgehende Mail zu
 einem Ticket freigegeben wird.
+
+## Freigabe der SLA-Werte (M19-01, Migration 0203)
+
+`sla_rule` trägt `category` (Ticketkategorie, leer = alle) und `approval_status`
+(`draft`/`approved`, `approved_at`, `approved_by`). Neue Regeln, Presets und geänderte Zeiten
+sind Entwurf; `POST /sla/rules/{id}/approve` (`confirm`, `tenant_settings:update`) gibt frei,
+`.../revoke-approval` nimmt zurück. `service.resolve_rule` verwendet nur freigegebene Regeln
+(Kategorie vor allgemeiner Regel); ohne freigegebene Regel startet die Uhr ohne Fristen und
+protokolliert "keine SLA". Regel: `docs/rules/M19-01-sla-freigabe.md`.

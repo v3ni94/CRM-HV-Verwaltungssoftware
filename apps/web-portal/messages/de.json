@@ -28,13 +28,27 @@
     "verify": "Bestätigen",
     "backToLogin": "Zurück zur Anmeldung",
     "rememberDevice": "Dieses Gerät 90 Tage merken",
-    "noTenant": "Für Ihren Zugang ist kein Mandant freigeschaltet. Bitte wenden Sie sich an Ihre Verwaltung."
+    "noTenant": "Für Ihren Zugang ist kein Mandant freigeschaltet. Bitte wenden Sie sich an Ihre Verwaltung.",
+    "magicLink": {
+      "title": "Anmeldelink",
+      "useInstead": "Stattdessen Anmeldelink per E-Mail",
+      "backToPassword": "Zurück zur Anmeldung mit Passwort",
+      "hint": "Geben Sie Ihre E-Mail-Adresse ein. Wir senden Ihnen einen einmaligen Anmeldelink, der 15 Minuten gültig ist.",
+      "request": "Anmeldelink senden",
+      "sent": "Falls ein Portalzugang zu dieser Adresse besteht, wurde ein Anmeldelink versendet. Bitte prüfen Sie Ihr Postfach.",
+      "checking": "Anmeldelink wird geprüft...",
+      "invalid": "Der Anmeldelink ist ungültig, abgelaufen oder bereits verwendet.",
+      "codeTitle": "Bestätigungscode",
+      "codeHint": "Wir haben Ihnen zusätzlich einen Bestätigungscode per E-Mail gesendet. Bitte geben Sie ihn hier ein."
+    }
   },
   "Portal": {
     "title": "Portal",
     "handover": "Übergabeprotokolle",
     "logout": "Abmelden",
     "footer": "Alle Angaben werden bei der Hausverwaltung gespeichert. Interne Vermerke der Verwaltung sind hier nicht sichtbar.",
+    "skipToContent": "Zum Inhalt springen",
+    "accessibilityLink": "Erklärung zur Barrierefreiheit",
     "nav": {
       "start": "Übersicht",
       "documents": "Dokumente",
@@ -42,9 +56,11 @@
       "account": "Kontoauszug",
       "meter": "Zählerstand",
       "data": "Datenänderung",
+      "mandate": "Lastschrift",
       "orders": "Aufträge",
       "audit": "Prüfungsraum",
       "resolutions": "Beschlüsse",
+      "meetings": "Versammlungen",
       "contacts": "Ansprechpartner",
       "hoaAccount": "Hausgeldkonto",
       "notices": "Aushänge",
@@ -52,6 +68,7 @@
       "open": "Menü öffnen",
       "close": "Menü schließen",
       "label": "Hauptnavigation",
+      "submissions": "Beiratsvorlagen",
       "security": "Sicherheit"
     },
     "notifications": {
@@ -150,6 +167,35 @@
     "valueRequired": "Bitte einen Zählerstand eingeben.",
     "dateRequired": "Bitte ein Ablesedatum eingeben."
   },
+  "SepaMandate": {
+    "title": "SEPA-Lastschriftmandat",
+    "intro": "Sie können der Verwaltung ein SEPA-Lastschriftmandat für wiederkehrende Zahlungen erteilen. Das Mandat wird als Vorschlag übermittelt und erst nach Prüfung und Freigabe durch die Verwaltung verwendet.",
+    "contract": "Vertrag",
+    "loadText": "Mandatstext anzeigen",
+    "creditorId": "Gläubiger-Identifikationsnummer",
+    "reference": "Mandatsreferenz",
+    "sequence": "Zahlungsart",
+    "recurrent": "wiederkehrende Zahlung",
+    "holder": "Kontoinhaber (Vor- und Nachname)",
+    "iban": "IBAN",
+    "bic": "BIC (optional)",
+    "confirm": "Ich bin Kontoinhaber und erteile das oben stehende SEPA-Lastschriftmandat.",
+    "submit": "Mandat erteilen",
+    "submitted": "Das Mandat wurde als Vorschlag übermittelt. Die Verwaltung prüft es und gibt es frei; der Textform-Nachweis liegt unter Dokumente.",
+    "errorHolder": "Bitte den Kontoinhaber angeben.",
+    "errorIban": "Bitte eine gültige IBAN eingeben.",
+    "errorConfirm": "Bitte das Mandat bestätigen.",
+    "errorContract": "Bitte einen Vertrag wählen.",
+    "mine": "Ihre Mandate",
+    "empty": "Noch kein Mandat erteilt.",
+    "status": {
+      "proposed": "in Prüfung",
+      "accepted": "übernommen",
+      "rejected": "abgelehnt"
+    },
+    "confirmedAt": "Bestätigt am",
+    "evidence": "Nachweis (PDF)"
+  },
   "DataChange": {
     "title": "Datenänderung",
     "kind": "Art der Änderung",
@@ -166,8 +212,11 @@
       "city": "Ort",
       "number": "Telefonnummer",
       "email": "E-Mail-Adresse",
-      "iban": "IBAN"
+      "iban": "IBAN",
+      "valid_from": "Gültig ab",
+      "evidence": "Nachweis anhängen (optional, PDF oder Foto, zum Beispiel Meldebescheinigung)"
     },
+    "errorAddress": "Bitte Straße, Postleitzahl, Ort und das Datum angeben, ab dem die Anschrift gilt.",
     "submit": "Änderung vorschlagen",
     "submitted": "Die Änderung wurde als Vorschlag übermittelt."
   },
@@ -509,6 +558,23 @@
     "pdfDraft": "Vorschau (Entwurf)",
     "pdfFinal": "Protokoll als PDF"
   },
+  "Meetings": {
+    "title": "Versammlungen",
+    "intro": "Eigentümerversammlungen Ihrer Gemeinschaft. Maßgeblich bleibt die Einladung der Verwaltung.",
+    "empty": "Keine Versammlungen vorhanden.",
+    "ownersOnly": "Diese Seite steht nur Eigentümern zur Verfügung.",
+    "dialIn": "Zugangsdaten für die Online-Teilnahme",
+    "mode": {
+      "presence": "Präsenz",
+      "hybrid": "Hybrid",
+      "virtual": "Virtuell"
+    },
+    "status": {
+      "invited": "eingeladen",
+      "held": "durchgeführt",
+      "closed": "abgeschlossen"
+    }
+  },
   "Resolutions": {
     "title": "Beschlüsse",
     "intro": "Verkündete Beschlüsse Ihrer Gemeinschaft. Maßgeblich bleibt die Beschluss-Sammlung der Verwaltung.",
@@ -573,6 +639,25 @@
     "validUntil": "Gültig bis {date}",
     "validFrom": "Seit {date}",
     "download": "Anlage herunterladen"
+  },
+  "BoardSubmissions": {
+    "title": "Vorlagen an den Verwaltungsbeirat",
+    "roleNotice": "Die Verwaltung legt Ihnen als Beiratsmitglied Vorgänge zur Kenntnis oder um ein Votum vor. Ihr Votum ist eine Information für die Verwaltung; die Beauftragung und jede Zahlung bleiben bei der Verwaltung.",
+    "empty": "Keine Vorlage vorhanden.",
+    "kinds": { "info": "Zur Kenntnis", "consent": "Um Votum" },
+    "dueOn": "Rückmeldung bis {date}",
+    "overdue": "Frist abgelaufen",
+    "closed": "abgeschlossen",
+    "amount": "Betrag laut Angebot: {amount}",
+    "tally": "Bisher: {approve} Zustimmung, {reject} Ablehnung, {comment} Kommentar von {members} Mitgliedern",
+    "myVotes": "Ihre Rückmeldungen",
+    "vote": { "approve": "Zustimmung", "reject": "Ablehnung", "comment": "Kommentar" },
+    "comment": "Kommentar (bei Kommentar Pflicht)",
+    "approve": "Zustimmen",
+    "reject": "Ablehnen",
+    "sendComment": "Kommentar senden",
+    "saved": "Rückmeldung gespeichert.",
+    "notPossible": "Eine Rückmeldung ist nicht mehr möglich."
   },
   "Audit": {
     "title": "Prüfungsraum des Beirats",
@@ -718,5 +803,20 @@
     "iosHint": "In Safari über Teilen und Zum Home-Bildschirm hinzufügen. Es werden keine Daten auf dem Gerät gespeichert.",
     "install": "Installieren",
     "dismiss": "Später"
+  },
+  "Accessibility": {
+    "title": "Erklärung zur Barrierefreiheit",
+    "intro": "Diese Erklärung gilt für das Mieter- und Eigentümerportal der MH Verwaltungsplattform. Sie ist ein Entwurf im Sinne des Barrierefreiheitsstärkungsgesetzes (BFSG) und der zugehörigen Verordnung; die rechtliche Prüfung und Freigabe steht noch aus.",
+    "statusTitle": "Stand der Vereinbarkeit",
+    "status": "Das Portal wird nach den Anforderungen der EN 301 549 und WCAG 2.1 Stufe AA entwickelt. Eine vollständige Konformitätsprüfung wurde noch nicht abgeschlossen. [zu ergänzen: Ergebnis der externen Prüfung]",
+    "scopeTitle": "Geltungsbereich",
+    "scope": "Diese Erklärung bezieht sich auf das über diese Anwendung erreichbare Mieter- und Eigentümerportal. Nicht eingeschlossen sind verlinkte Dokumente Dritter und hochgeladene Dateien der Verwaltung. [zu ergänzen: Ausnahmen nach § 3 BFSGV]",
+    "preparationTitle": "Erstellung dieser Erklärung",
+    "preparation": "Erstellt am 27.09.2026 auf Grundlage einer internen Selbstbewertung. [zu ergänzen: Datum der letzten Überprüfung]",
+    "contactTitle": "Kontakt",
+    "contact": "Rückmeldungen zu Barrieren in diesem Portal nehmen wir gerne entgegen. [zu ergänzen: Kontaktadresse für Feedback zur Barrierefreiheit]",
+    "enforcementTitle": "Schlichtungsverfahren",
+    "enforcement": "Bei nicht zufriedenstellender Antwort besteht die Möglichkeit, sich an die zuständige Überwachungsstelle zu wenden. [zu ergänzen: zuständige Schlichtungs- und Überwachungsstelle]",
+    "backToStart": "Zur Übersicht"
   }
 }

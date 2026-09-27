@@ -113,12 +113,21 @@ export function MailDetail({
   const [error, setError] = useState<string | null>(null);
   const [rejectNote, setRejectNote] = useState("");
   const [showReject, setShowReject] = useState(false);
+  // M20-04 Vier-Augen-Prinzip: Re-Authentifizierung vor der Freigabe (5 Minuten gültig).
+  const [showReauth, setShowReauth] = useState(false);
+  const [reauthPassword, setReauthPassword] = useState("");
+  const [reauthTotp, setReauthTotp] = useState("");
+  const [reauthError, setReauthError] = useState<string | null>(null);
 
   useEffect(() => {
     setThread(null);
     setError(null);
     setShowReject(false);
     setRejectNote("");
+    setShowReauth(false);
+    setReauthPassword("");
+    setReauthTotp("");
+    setReauthError(null);
     if (!message) return;
     void bff<Message[]>(`/api/bff/mail/messages/${message.id}/thread`).then((res) => {
       if (res.ok) setThread(res.data);
@@ -175,8 +184,40 @@ export function MailDetail({
     else setError(res.message);
   };
   const approve = async () => {
-    const next = await act("/approve", "POST");
-    if (next) onUpdated(next);
+    setBusy(true);
+    setError(null);
+    const res = await bff<Message>(`/api/bff/mail/messages/${message.id}/approve`, { method: "POST" });
+    setBusy(false);
+    if (res.ok) {
+      onUpdated(res.data);
+      return;
+    }
+    if (res.problem?.code === "MHVP-COMM-0002") {
+      // M20-04: kein oder abgelaufener Re-Auth-Nachweis, Dialog statt Fehlermeldung.
+      setShowReauth(true);
+      return;
+    }
+    setError(res.message);
+  };
+  const confirmReauthAndApprove = async () => {
+    setBusy(true);
+    setReauthError(null);
+    const body =
+      reauthTotp.trim().length > 0 ? { totp_code: reauthTotp.trim() } : { password: reauthPassword };
+    const reauth = await bff<{ method: string }>("/api/bff/mail/mail-approval/reauth", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+    if (!reauth.ok) {
+      setBusy(false);
+      setReauthError(reauth.message);
+      return;
+    }
+    setReauthPassword("");
+    setReauthTotp("");
+    setBusy(false);
+    setShowReauth(false);
+    await approve();
   };
   const forwardInvoice = async () => {
     if (!window.confirm(ts("forwardInvoiceConfirm"))) return;
@@ -381,6 +422,61 @@ export function MailDetail({
         <p role="alert" className={ui.alert}>
           {error}
         </p>
+      ) : null}
+
+      {showReauth ? (
+        <div className={`${ui.card} flex flex-col gap-2`} data-testid="mail-reauth-dialog">
+          <h3 className="text-sm font-semibold">{t("reauth.title")}</h3>
+          <p className="text-xs text-muted">{t("reauth.hint")}</p>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("reauth.passwordLabel")}</span>
+            <input
+              type="password"
+              className={ui.input}
+              value={reauthPassword}
+              onChange={(e) => setReauthPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("reauth.totpLabel")}</span>
+            <input
+              type="text"
+              inputMode="numeric"
+              className={ui.input}
+              value={reauthTotp}
+              onChange={(e) => setReauthTotp(e.target.value)}
+            />
+          </label>
+          {reauthError ? (
+            <p role="alert" className={ui.alert}>
+              {reauthError}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className={ui.primary}
+              disabled={busy || (!reauthPassword && !reauthTotp)}
+              onClick={() => void confirmReauthAndApprove()}
+            >
+              {t("reauth.confirm")}
+            </button>
+            <button
+              type="button"
+              className={ui.button}
+              disabled={busy}
+              onClick={() => {
+                setShowReauth(false);
+                setReauthPassword("");
+                setReauthTotp("");
+                setReauthError(null);
+              }}
+            >
+              {t("reauth.cancel")}
+            </button>
+          </div>
+        </div>
       ) : null}
 
       {thread && thread.length > 1 ? (

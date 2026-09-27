@@ -10,6 +10,7 @@ from mhvp.sla.business_time import add_business_minutes, business_minutes_betwee
 from mhvp.sla.models import (
     ClockState,
     ClockType,
+    SlaApprovalStatus,
     SlaClock,
     SlaClockLog,
     SlaColor,
@@ -19,7 +20,9 @@ from mhvp.sla.models import (
 from mhvp.tickets.models import Priority
 
 # Startvorschläge aus docs/mail/04-status-und-sla.md, Abschnitt 6 (P0-P3), auf die fünf
-# Ticket-Prioritäten des CRM übertragen. Von der Geschäftsführung zu bestätigen.
+# Ticket-Prioritäten des CRM übertragen. Reiner Vorschlag zur Anzeige und für die Presets
+# (M19-01): seit Migration 0203 steuern nur von der Geschäftsführung freigegebene Regeln
+# eine Uhr; ohne freigegebene Regel gilt "keine SLA" (``NO_SLA_NOTE``).
 DEFAULT_RULES: dict[Priority, tuple[int, int]] = {
     Priority.IMMEDIATE: (10, 240),  # Notfall: Annahme 10 Min, Lösung 4 Std, Kalenderzeit
     Priority.URGENT: (240, 2 * 24 * 60),  # 4 Arbeitsstunden, 2 Arbeitstage
@@ -28,6 +31,7 @@ DEFAULT_RULES: dict[Priority, tuple[int, int]] = {
     Priority.LOW: (4 * 24 * 60, 10 * 24 * 60),
 }
 WARN_PERCENT = 50
+NO_SLA_NOTE = "keine SLA: keine freigegebene Regel für Priorität und Kategorie"
 
 
 async def get_calendar(session: AsyncSession, tenant_id: uuid.UUID) -> WorkCalendar:
@@ -40,17 +44,25 @@ async def get_calendar(session: AsyncSession, tenant_id: uuid.UUID) -> WorkCalen
 
 
 async def resolve_rule(
-    session: AsyncSession, tenant_id: uuid.UUID, priority: Priority
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    priority: Priority,
+    category: str | None = None,
 ) -> SlaRule | None:
-    """Liefert die aktive Regel der Priorität, falls hinterlegt. Ohne Regel gelten die
-    Startvorschläge (``DEFAULT_RULES``); es wird keine Regel-Zeile erzeugt."""
-    rule: SlaRule | None = await session.scalar(
-        select(SlaRule).where(
-            SlaRule.tenant_id == tenant_id,
-            SlaRule.priority == priority,
-            SlaRule.active.is_(True),
-        )
+    """Liefert die aktive, von der Geschäftsführung freigegebene Regel: zuerst die Regel der
+    Ticketkategorie, sonst die Regel ohne Kategorie. Entwürfe werden nie verwendet; ohne
+    freigegebene Regel gilt "keine SLA" (M19-01). Es wird keine Regel-Zeile erzeugt."""
+    base = select(SlaRule).where(
+        SlaRule.tenant_id == tenant_id,
+        SlaRule.priority == priority,
+        SlaRule.active.is_(True),
+        SlaRule.approval_status == SlaApprovalStatus.APPROVED.value,
     )
+    if category:
+        specific: SlaRule | None = await session.scalar(base.where(SlaRule.category == category))
+        if specific is not None:
+            return specific
+    rule: SlaRule | None = await session.scalar(base.where(SlaRule.category.is_(None)))
     return rule
 
 
@@ -70,38 +82,43 @@ async def start_clock(
     ticket_id: uuid.UUID,
     priority: Priority,
     started_at: datetime | None = None,
+    category: str | None = None,
 ) -> SlaClock:
     """Startet die Uhr eines Tickets bei Anlage (Hook in Ticket-Router, Gmail-Abruf und
     Portal). Idempotent: eine vorhandene Uhr bleibt. ``started_at`` erlaubt dem Nachlauf
-    (``mhvp.sla.tasks``), die Uhr rückwirkend ab Ticketanlage zu starten."""
+    (``mhvp.sla.tasks``), die Uhr rückwirkend ab Ticketanlage zu starten. Ohne freigegebene
+    Regel (M19-01) läuft die Uhr ohne Fristen ("keine SLA", Protokollhinweis); Ampel bleibt
+    grün und Eskalationsstufen greifen nicht."""
     existing = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == ticket_id))
     if existing is not None:
         return existing
     calendar = await get_calendar(session, tenant_id)
-    rule = await resolve_rule(session, tenant_id, priority)
+    rule = await resolve_rule(session, tenant_id, priority, category)
     now = started_at or datetime.now(UTC)
+    due_response_at = due_resolution_at = None
     if rule is not None:
-        response_minutes, resolution_minutes, clock_type = (
-            rule.response_minutes,
-            rule.resolution_minutes,
-            rule.clock_type,
-        )
-    else:
-        response_minutes, resolution_minutes = DEFAULT_RULES[priority]
-        clock_type = ClockType.CALENDAR if priority == Priority.IMMEDIATE else ClockType.BUSINESS
+        due_response_at = _due_at(calendar, now, rule.response_minutes, rule.clock_type)
+        due_resolution_at = _due_at(calendar, now, rule.resolution_minutes, rule.clock_type)
     clock = SlaClock(
         tenant_id=tenant_id,
         ticket_id=ticket_id,
         rule_id=rule.id if rule else None,
         started_at=now,
-        due_response_at=_due_at(calendar, now, response_minutes, clock_type),
-        due_resolution_at=_due_at(calendar, now, resolution_minutes, clock_type),
+        due_response_at=due_response_at,
+        due_resolution_at=due_resolution_at,
         state=ClockState.RUNNING,
         color=SlaColor.GREEN,
     )
     session.add(clock)
     await session.flush()
-    session.add(SlaClockLog(tenant_id=tenant_id, clock_id=clock.id, event="started"))
+    session.add(
+        SlaClockLog(
+            tenant_id=tenant_id,
+            clock_id=clock.id,
+            event="started",
+            note=None if rule is not None else NO_SLA_NOTE,
+        )
+    )
     return clock
 
 
@@ -123,7 +140,9 @@ async def backfill_clocks(session: AsyncSession, tenant_id: uuid.UUID, limit: in
     )
     started = 0
     for ticket in await session.scalars(open_without_clock):
-        await start_clock(session, tenant_id, ticket.id, ticket.priority, ticket.created_at)
+        await start_clock(
+            session, tenant_id, ticket.id, ticket.priority, ticket.created_at, ticket.category
+        )
         started += 1
     return started
 

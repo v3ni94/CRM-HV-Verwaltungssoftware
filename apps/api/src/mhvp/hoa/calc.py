@@ -736,3 +736,140 @@ async def cash_flow_reconciliation(
             "(Heizkostenabgrenzung, Zeitbezug, Vorjahr) oder Positionen korrigieren (W04)."
         ),
     }
+
+
+# M24-03: loans of the community in the annual statement -------------------------------------
+
+LOAN_COMPONENTS = ("interest", "repayment")
+LOAN_STATEMENT_NOTE = (
+    "Darlehensanteile sind Ausweis je Einheit nach dem angegebenen Schlüssel und der "
+    "angegebenen Grundlage. Sie gehen nicht in das Abrechnungsergebnis ein; ob und wie Zins "
+    "und Tilgung umgelegt werden, bleibt Entscheidung M24-03 (Betreiber mit Rechts- und "
+    "Steuerberatung). Zinsen als Kostenposition nur manuell mit belegter Grundlage."
+)
+
+
+async def loan_year_figures(session: AsyncSession, loan: Any, year: int) -> dict[str, Any]:
+    """Interest and repayment of a loan in a calendar year plus the residual debt at the year
+    end. Booked figures come from the loan items whose journal entry is posted in the year
+    (W10); when no item of a component is booked, the instalment schedule (A78) gives the
+    planned figure as orientation and the source says so. The residual debt at the year end is
+    disbursed minus repaid from booked items up to 31.12.; the schedule balance is shown apart.
+    Nothing is posted."""
+    from mhvp.accounting.models import EntryStatus, JournalEntry
+    from mhvp.hoa.models import HoaLoanItem
+
+    start, end = date(year, 1, 1), date(year, 12, 31)
+    rows = (
+        await session.execute(
+            select(HoaLoanItem, JournalEntry.status, JournalEntry.booking_date)
+            .outerjoin(JournalEntry, JournalEntry.id == HoaLoanItem.journal_entry_id)
+            .where(HoaLoanItem.loan_id == loan.id)
+            .order_by(HoaLoanItem.booking_date)
+        )
+    ).all()
+    booked: dict[str, Decimal] = {"interest": ZERO, "repayment": ZERO, "fee": ZERO}
+    disbursed = repaid = ZERO
+    for item, status, booking_date in rows:
+        if status is not EntryStatus.POSTED or booking_date is None:
+            continue
+        if booking_date <= end and item.kind == "disbursement":
+            disbursed += item.amount
+        if booking_date <= end and item.kind == "repayment":
+            repaid += item.amount
+        if start <= booking_date <= end and item.kind in booked:
+            booked[item.kind] += item.amount
+    planned: dict[str, Decimal] = {"interest": ZERO, "repayment": ZERO}
+    schedule_balance: Decimal | None = None
+    schedule_available = loan.instalment is not None or loan.term_months is not None
+    if schedule_available:
+        from mhvp.core.problems import ProblemError
+
+        try:
+            plan = loan_schedule(
+                loan.principal,
+                loan.interest_rate_percent,
+                loan.term_months,
+                loan.instalment,
+                loan.start_date,
+            )
+        except ProblemError:  # instalment below the first month's interest: no plan
+            schedule_available = False
+        else:
+            for r in plan["rows"]:
+                due = date.fromisoformat(str(r["due_date"]))
+                if start <= due <= end:
+                    planned["interest"] += Decimal(r["interest"])
+                    planned["repayment"] += Decimal(r["repayment"])
+                if due <= end:
+                    schedule_balance = Decimal(r["balance"])
+            if schedule_balance is None and loan.start_date <= end:
+                schedule_balance = loan.principal.quantize(CENT)
+    components = {}
+    for c in LOAN_COMPONENTS:
+        if booked[c] != ZERO:
+            source, amount = "booked", booked[c]
+        elif schedule_available and planned[c] != ZERO:
+            source, amount = "schedule", planned[c]
+        else:
+            source, amount = "none", ZERO
+        components[c] = {
+            "amount": str(amount),
+            "source": source,
+            "booked": str(booked[c]),
+            "planned": str(planned[c]) if schedule_available else None,
+        }
+    return {
+        "loan_id": str(loan.id),
+        "lender": loan.lender,
+        "reference": loan.reference,
+        "year": year,
+        "components": components,
+        "fees_booked": str(booked["fee"]),
+        "residual_booked": str(disbursed - repaid),
+        "residual_schedule": str(schedule_balance) if schedule_balance is not None else None,
+        "schedule_available": schedule_available,
+    }
+
+
+async def loan_statement_block(
+    session: AsyncSession, ledger: Any, year: int, allocation: list[dict[str, Any]]
+) -> dict[str, Any]:
+    """Loan block of the statement snapshot (M24-03): per configured loan the year figures
+    and their distribution over the units by the given key. `per_unit` sums the shares per
+    unit id; information only, never part of the result."""
+    from mhvp.hoa.models import HoaLoan
+
+    start, end = date(year, 1, 1), date(year, 12, 31)
+    loans_out: list[dict[str, Any]] = []
+    per_unit: dict[str, dict[str, Decimal]] = {}
+    numbers: dict[str, str] = {}
+    for cfg in allocation:
+        loan = await session.get(HoaLoan, uuid.UUID(str(cfg["loan_id"])))
+        if loan is None or loan.ledger_id != ledger.id:
+            continue
+        figures = await loan_year_figures(session, loan, year)
+        key_id = uuid.UUID(str(cfg["allocation_key_id"]))
+        weights = await unit_weights(session, ledger.property_id, key_id, start, end)
+        split: dict[str, dict[str, str]] = {}
+        for component in cfg.get("components", list(LOAN_COMPONENTS)):
+            total = Decimal(figures["components"][component]["amount"])
+            for (number, unit_id), value in distribute(total, weights).items():
+                numbers[unit_id] = number
+                split.setdefault(unit_id, {})[component] = str(value)
+                bucket = per_unit.setdefault(unit_id, dict.fromkeys(LOAN_COMPONENTS, ZERO))
+                bucket[component] += value
+        loans_out.append(
+            figures
+            | {
+                "allocation_key_id": str(key_id),
+                "components_shown": list(cfg.get("components", list(LOAN_COMPONENTS))),
+                "basis": str(cfg.get("basis", "")),
+                "split": split,
+            }
+        )
+    return {
+        "loans": loans_out,
+        "per_unit": {u: {c: str(v) for c, v in b.items()} for u, b in per_unit.items()},
+        "note_text": LOAN_STATEMENT_NOTE,
+    }

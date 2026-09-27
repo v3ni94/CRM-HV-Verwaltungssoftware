@@ -38,9 +38,20 @@ export default async function PlatformPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <p className={ui.notice}>{t("notice")}</p>
-      <Link className="text-sm underline" href="/plattform/mietrecht">
-        {t("rentLaw")}
-      </Link>
+      <nav className="flex flex-wrap gap-4 text-sm">
+        <Link className="underline" href="/plattform/mietrecht">
+          {t("rentLaw")}
+        </Link>
+        <Link className="underline" href="/plattform/preisliste">
+          {t("pricingLink")}
+        </Link>
+        <Link className="underline" href="/plattform/freigabe-g5">
+          {t("g5Link")}
+        </Link>
+        <Link className="underline" href="/plattform/onboarding">
+          {t("onboardingLink")}
+        </Link>
+      </nav>
       <TenantAdmin initialTenants={tenants.data ?? []} />
       {rows.map(({ tenant, readiness }) => (
         <section key={tenant.id} className={ui.card}>

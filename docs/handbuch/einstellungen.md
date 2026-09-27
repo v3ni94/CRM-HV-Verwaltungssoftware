@@ -252,3 +252,19 @@ entfernte Datensätze zur Fehlerdiagnose.
   Postfächer den OAuth-Client eintragen.
 - **Immoware24-Verbindung meldet Fehlgeschlagen**: Zugangsdaten, Basis-URL oder
   TLS-Prüfung stimmen nicht; letzte Läufe auf wiederkehrende Fehlermeldung prüfen.
+
+## Buchhaltung, Kontenrahmen
+
+Unter Buchhaltung, Kontenrahmen wird der Kontenrahmen des Mandanten freigegeben (V8). Jede
+Version hat den Status Entwurf, zur Prüfung oder freigegeben. Zur Prüfung geben und neue
+Version anlegen erfordern das Recht Buchhaltung ändern, die Freigabe das Recht Buchhaltung
+freigeben. Im Freigabedialog werden Kommentar und optional die Dokument-ID des
+Prüfschreibens der Steuerberatung erfasst; Datum und Freigeber werden protokolliert. Ein
+freigegebener Kontenrahmen wird nicht mehr geändert; Änderungen erzeugen eine neue Version
+mit erneuter Freigabe. Der Versionsverlauf zeigt alle Versionen. CSV und PDF exportieren den
+Kontenrahmen für die Steuerberatung. Die Freigabestufe G1 wird nur mit einem freigegebenen
+Kontenrahmen genehmigt.
+
+Unter Buchhaltung, DATEV steht zusätzlich die formale Prüfung des Buchungsstapels
+(Prüfbericht je Export, Testdatei für den Importtest, Prüfung beliebiger Dateien); siehe
+[DATEV-Importtest](datev-importtest.md).

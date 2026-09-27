@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { DatevCheckPanel, type DatevExportRun } from "@/components/settings/DatevCheckPanel";
 import { DatevMappingsAdmin, type DatevMapping, type LedgerOption } from "@/components/settings/DatevMappingsAdmin";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
@@ -24,9 +25,10 @@ export default async function DatevMappingsPage() {
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("accounting:read")) notFound();
   const canManage = permissions.includes("accounting:update");
-  const [mappings, ledgers] = await Promise.all([
+  const [mappings, ledgers, exports] = await Promise.all([
     getJson<DatevMapping[]>("/api/v1/accounting/datev-mappings?include_inactive=true", []),
     getJson<LedgerOption[]>("/api/v1/accounting/ledgers", []),
+    getJson<DatevExportRun[]>("/api/v1/accounting/datev/exports", []),
   ]);
   return (
     <div className="flex flex-col gap-4">
@@ -36,6 +38,7 @@ export default async function DatevMappingsPage() {
         ledgers={ledgers.map((l) => ({ id: l.id, name: l.name }))}
         canManage={canManage}
       />
+      <DatevCheckPanel initial={exports} canCheck={permissions.includes("accounting:export")} />
     </div>
   );
 }

@@ -11,7 +11,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.billing import calc
+from mhvp.billing import betrkv, calc
 from mhvp.billing.models import Statement, StatementCostItem, StatementSnapshot
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -233,6 +233,8 @@ async def check_item(
             "number": account.number,
             "allocation_category": account.allocation_category.value,
             "posted_in_period": str(posted),
+            # M17-01: catalogue position assigned by a person (mhvp.billing.betrkv).
+            "operating_cost_type": account.operating_cost_type,
         }
     if item.allocation_key_id is not None:
         key = await session.get(AllocationKey, item.allocation_key_id)
@@ -281,8 +283,16 @@ async def calculate(
     occ = await occupants(session, statement)
     per_key: dict[str, Decimal] = {o["key"]: Decimal("0.00") for o in occ}
     positions = []
+    allocability_hints: list[dict[str, str]] = []
     for item in items:
         facts = await check_item(session, statement, item, entity.kind)
+        allocability_hints.extend(
+            betrkv.position_hints(
+                label=item.label,
+                type_code=(facts["account"] or {}).get("operating_cost_type"),
+                allocation_category=(facts["account"] or {}).get("allocation_category"),
+            )
+        )
         if item.external_amounts:
             amounts = {k: Decimal(v) for k, v in item.external_amounts.items()}
             if sum(amounts.values(), Decimal("0")) != item.amount:
@@ -365,6 +375,8 @@ async def calculate(
         "vacancy_owner_share": str(vacancy),
         "total": str(sum((i.amount for i in items), Decimal("0.00"))),
         "deadline_orientation": period_deadline.isoformat(),
+        # M17-01: review hints of the preview (proposals for a person, no lock).
+        "allocability_hints": allocability_hints,
     }
     digest = hashlib.sha256(
         json.dumps({"inputs": inputs, "results": output}, sort_keys=True).encode()

@@ -1,7 +1,8 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { NextIntlClientProvider } from "next-intl";
 
-import { jsonResponse, renderIntl } from "@/test/intl";
+import { jsonResponse, messages, renderIntl } from "@/test/intl";
 
 import { TicketsList } from "./TicketsList";
 
@@ -52,6 +53,26 @@ describe("TicketsList bulk bar", () => {
     await userEvent.click(screen.getByLabelText("Alle auswählen"));
     expect(screen.getAllByText("Ohne Freigaberecht sind höchstens 10 Tickets je Aufruf möglich.").length).toBeGreaterThan(0);
     expect(screen.getByText("Status anwenden")).toBeDisabled();
+  });
+});
+
+describe("TicketsList page change (Betreiberfehler 27.09.2026)", () => {
+  it("replaces the shown tickets when initialTickets changes on a page navigation", () => {
+    const page1 = tickets;
+    const page2 = [
+      { id: "t3", number: 3, title: "Drittes Ticket", priority: "normal", status: "new", ...base, attention: "new" as const },
+    ];
+    const { rerender } = renderIntl(<TicketsList initialTickets={page1} canApprove={false} />);
+    expect(screen.getByText("Erstes Ticket")).toBeInTheDocument();
+    expect(screen.queryByText("Drittes Ticket")).not.toBeInTheDocument();
+
+    rerender(
+      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+        <TicketsList initialTickets={page2} canApprove={false} />
+      </NextIntlClientProvider>,
+    );
+    expect(screen.getByText("Drittes Ticket")).toBeInTheDocument();
+    expect(screen.queryByText("Erstes Ticket")).not.toBeInTheDocument();
   });
 });
 

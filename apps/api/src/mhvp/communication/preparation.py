@@ -27,6 +27,7 @@ from mhvp.ai.models import (
     AiKnowledgeEntry,
     AiKnowledgeKind,
     AiKnowledgeSource,
+    AiKnowledgeStatus,
     AiTask,
     AiTaskRun,
     RunStatus,
@@ -240,11 +241,23 @@ async def _knowledge_context(
     tenant_id: uuid.UUID,
     property_id: uuid.UUID | None,
     question: str | None = None,
-) -> str:
+) -> tuple[str, list[dict[str, Any]]]:
     """Knowledge entries of the tenant and the property, newest first; with a ``question`` and
     stored embeddings the entries are ranked by similarity instead (M7-03, keyword and recency
-    order stay the fallback)."""
-    query = select(AiKnowledgeEntry).where(AiKnowledgeEntry.deleted_at.is_(None))
+    order stay the fallback).
+
+    M34-01: only entries with ``status=approved`` (four eyes release), not superseded by a newer
+    version and, if a validity period is set, currently inside it, are used. Returns the context
+    text plus the list of entries actually used (id, version, title) so the caller can name them
+    in the AI answer's proof (Nachweis)."""
+    today = datetime.now(UTC).date()
+    query = select(AiKnowledgeEntry).where(
+        AiKnowledgeEntry.deleted_at.is_(None),
+        AiKnowledgeEntry.status == AiKnowledgeStatus.APPROVED,
+        AiKnowledgeEntry.superseded_at.is_(None),
+        (AiKnowledgeEntry.valid_from.is_(None)) | (AiKnowledgeEntry.valid_from <= today),
+        (AiKnowledgeEntry.valid_until.is_(None)) | (AiKnowledgeEntry.valid_until >= today),
+    )
     if property_id is not None:
         query = query.where(
             (AiKnowledgeEntry.property_id.is_(None)) | (AiKnowledgeEntry.property_id == property_id)
@@ -253,7 +266,7 @@ async def _knowledge_context(
         query = query.where(AiKnowledgeEntry.property_id.is_(None))
     rows = list(await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc())))
     if not rows:
-        return "-"
+        return "-", []
     if question:
         from mhvp.ai import embeddings
 
@@ -262,7 +275,13 @@ async def _knowledge_context(
         )
         if ranked:
             rows = ranked
-    return "\n".join(f"- ({r.kind.value}) {r.title}: {r.content}" for r in rows[:30])
+    used = rows[:30]
+    text = "\n".join(f"- ({r.kind.value}) {r.title}: {r.content}" for r in used)
+    used_refs = [
+        {"id": str(r.id), "group_id": str(r.group_id), "version": r.version, "title": r.title}
+        for r in used
+    ]
+    return text, used_refs
 
 
 async def _run_gateway_task(
@@ -312,7 +331,7 @@ async def prepare_for_message(
         documents += await _dms_documents(session, resolution.property_id, terms)
 
     body_excerpt = (message.body or "")[:MAX_EXCERPT]
-    knowledge = await _knowledge_context(
+    knowledge, knowledge_used = await _knowledge_context(
         session,
         message.tenant_id,
         resolution.property_id,
@@ -342,6 +361,7 @@ async def prepare_for_message(
         "role": resolution.role,
         "documents": documents,
         "reasons": resolution.reasons,
+        "knowledge_used": knowledge_used,
         "computed_at": datetime.now(UTC).isoformat(),
     }
     if run.status is RunStatus.SUCCEEDED and run.output:
@@ -382,6 +402,9 @@ async def record_correction(
         title=f"Korrektur zu Mail {message.subject or message.id}"[:200],
         content=note,
         source=AiKnowledgeSource.LEARNED,
+        group_id=uuid.uuid4(),
+        version=1,
+        status=AiKnowledgeStatus.DRAFT,
     )
     session.add(entry)
     suggestion = dict(message.suggestion or {})

@@ -27,7 +27,7 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.automation.models import (
-    DELIVERY_FAILED,
+    DELIVERY_DEAD,
     DELIVERY_PENDING,
     DELIVERY_SUCCEEDED,
     RUN_STATUS_DRY_RUN,
@@ -35,6 +35,8 @@ from mhvp.automation.models import (
     RUN_STATUS_FAILED,
     SCHEDULE_EVENT_TYPE,
     TRIGGER_SCHEDULE,
+    WEBHOOK_MAX_ATTEMPTS,
+    WEBHOOK_RETRY_SCHEDULE_SECONDS,
     AutomationRule,
     AutomationRun,
     AutomationWatermark,
@@ -54,6 +56,7 @@ from mhvp.automation.schedule import SCHEDULE_TZ, previous_due, window_event_id
 from mhvp.automation.schemas import (
     Action,
     AiTaskAction,
+    CreateTaskAction,
     CreateTicketAction,
     LetterDraftAction,
     MailDraftAction,
@@ -119,8 +122,19 @@ class ActionError(Exception):
 # --- context -------------------------------------------------------------------------------
 
 
-def ticket_context(ticket: Ticket) -> dict[str, Any]:
-    return {k: normalise(getattr(ticket, k)) for k in TICKET_CONTEXT_FIELDS}
+def ticket_context(ticket: Ticket, *, now: datetime | None = None) -> dict[str, Any]:
+    """Ticket fields plus derived condition fields (M9-08): ``age_days`` (whole days since
+    creation) and ``due_in_days`` (whole days until ``sla_due_at``, negative once overdue),
+    so a rule condition can read ``entity.age_days`` (Ticketalter) or ``entity.due_in_days``
+    (Fristbezug, Tage vor Termin) with the existing ``gt``/``lt`` operators. ``None`` when
+    the ticket has no deadline."""
+    context = {k: normalise(getattr(ticket, k)) for k in TICKET_CONTEXT_FIELDS}
+    now = now or datetime.now(UTC)
+    context["age_days"] = (now - ticket.created_at).days
+    context["due_in_days"] = (
+        (ticket.sla_due_at - now).days if ticket.sla_due_at is not None else None
+    )
+    return context
 
 
 async def build_context(
@@ -624,6 +638,94 @@ async def _set_ticket_field(
     return preview | {"ok": True, "detail": f"{action.field} gesetzt."}
 
 
+TASK_CATEGORY = "task"
+
+
+async def _create_task(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event_id: uuid.UUID,
+    action: CreateTaskAction,
+    context: dict[str, Any],
+    dry_run: bool,
+) -> dict[str, Any]:
+    """M9-08: a lightweight internal task, without a ticket template. Never a WEG resolution,
+    payment or approval (rule 0.1.6); it is a follow-up ticket in category ``task``."""
+    title = render(action.title, context) or action.title
+    description = render(action.description, context)
+    assignee = action.assignee_user_id
+    await _assert_member(session, tenant_id, assignee)
+    preview = {
+        "type": "create_task",
+        "title": title,
+        "assignee_user_id": str(assignee) if assignee else None,
+        "due_in_days": action.due_in_days,
+    }
+    if dry_run:
+        return preview | {"ok": True, "detail": "Testlauf: Aufgabe würde angelegt."}
+    priority = Priority(action.priority) if action.priority else Priority.NORMAL
+    from mhvp.tickets.routers import SLA_HOURS
+
+    hours = SLA_HOURS[priority]
+    sla_due_at = datetime.now(UTC) + timedelta(hours=hours)
+    if action.due_in_days is not None:
+        sla_due_at = datetime.now(UTC) + timedelta(days=action.due_in_days)
+    ticket = Ticket(
+        tenant_id=tenant_id,
+        created_by=None,
+        number=await next_number(session, tenant_id, "ticket"),
+        category=TASK_CATEGORY,
+        title=title,
+        internal_description=description,
+        priority=priority,
+        assignee_user_id=assignee,
+        source=TicketSource.MANUAL,
+        sla_due_at=sla_due_at,
+    )
+    session.add(ticket)
+    await session.flush()
+    from mhvp.sla.service import start_clock
+
+    await start_clock(session, tenant_id, ticket.id, ticket.priority)
+    session.add(
+        TicketEvent(
+            tenant_id=tenant_id,
+            ticket_id=ticket.id,
+            kind="created",
+            user_id=None,
+            data={"routing": "automation", "rule_id": str(rule.id), "rule_name": rule.name},
+        )
+    )
+    if assignee:
+        await notify(
+            session,
+            tenant_id=tenant_id,
+            user_id=assignee,
+            kind="ticket_assigned",
+            title=f"Aufgabe {ticket.number}: {ticket.title}",
+            entity_type="ticket",
+            entity_id=ticket.id,
+        )
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="ticket.created",
+        entity_type="ticket",
+        entity_id=ticket.id,
+        actor_user_id=None,
+        payload={"number": ticket.number, "source": ticket.source.value}
+        | automation_marker(rule.id, event_id),
+    )
+    return preview | {
+        "ok": True,
+        "entity_type": "ticket",
+        "entity_id": str(ticket.id),
+        "detail": f"Aufgabe {ticket.number} angelegt.",
+    }
+
+
 # --- stage 2 actions (A39) ---------------------------------------------------------------
 
 
@@ -738,22 +840,21 @@ async def _webhook(
 
 
 def schedule_after_attempt(delivery: AutomationWebhookDelivery, *, ok: bool, now: datetime) -> None:
-    """State transition after one attempt (``attempts`` already incremented): succeeded, or
-    the next slot of ``RETRY_SCHEDULE_SECONDS`` counted from ``now``, or failed once the
-    schedule is exhausted. Identical to ``mhvp.core.webhooks.attempt_delivery``."""
-    from mhvp.core.webhooks import RETRY_SCHEDULE_SECONDS
-
+    """State transition after one attempt (``attempts`` already incremented): succeeded, the
+    next slot of ``WEBHOOK_RETRY_SCHEDULE_SECONDS`` (1, 5, 15, 60 minutes) counted from
+    ``now``, or ``dead`` once ``WEBHOOK_MAX_ATTEMPTS`` (5) is reached (M9-08). The caller
+    (``deliver_due_webhooks``) notifies the rule owner exactly once a row goes dead."""
     if ok:
         delivery.status = DELIVERY_SUCCEEDED
         delivery.delivered_at = now
         delivery.next_attempt_at = None
-    elif delivery.attempts > len(RETRY_SCHEDULE_SECONDS):
-        delivery.status = DELIVERY_FAILED
+    elif delivery.attempts >= WEBHOOK_MAX_ATTEMPTS:
+        delivery.status = DELIVERY_DEAD
         delivery.next_attempt_at = None
     else:
         delivery.status = DELIVERY_PENDING
         delivery.next_attempt_at = now + timedelta(
-            seconds=RETRY_SCHEDULE_SECONDS[delivery.attempts - 1]
+            seconds=WEBHOOK_RETRY_SCHEDULE_SECONDS[delivery.attempts - 1]
         )
 
 
@@ -781,11 +882,15 @@ async def attempt_webhook_delivery(
     settings: Settings,
     now: datetime,
 ) -> bool:
-    """One signed attempt of a pending delivery; updates the row like the core webhooks do."""
+    """One signed attempt of a pending delivery; updates the row like the core webhooks do.
+    Every attempt of this delivery carries the same ``Idempotency-Key`` (set once when the
+    row was created, M9-08), so a receiver that saw an earlier attempt can recognise a retry
+    even when the response of that earlier attempt was lost."""
     from mhvp.core.webhooks import SIGNATURE_HEADER, UnsafeWebhookTargetError, pin_target, sign
 
     delivery.attempts += 1
     ok = False
+    started = time.monotonic()
     try:
         rule = await session.get(AutomationRule, delivery.rule_id)
         secret = _stored_webhook_secret(rule, delivery.action_index, delivery.url)
@@ -796,6 +901,7 @@ async def attempt_webhook_delivery(
             "X-MHVP-Event": delivery.event_type,
             "X-MHVP-Rule": str(delivery.rule_id),
             "X-MHVP-Delivery": str(delivery.id),
+            "Idempotency-Key": delivery.idempotency_key or str(delivery.id),
             SIGNATURE_HEADER: sign(secret, body, int(time.time())),
         }
         response = await client.post(
@@ -812,6 +918,7 @@ async def attempt_webhook_delivery(
         delivery.last_error = str(exc)[:200]
     except httpx.HTTPError as exc:
         delivery.last_error = type(exc).__name__[:200]
+    delivery.last_duration_ms = int((time.monotonic() - started) * 1000)
     schedule_after_attempt(delivery, ok=ok, now=now)
     return ok
 
@@ -849,12 +956,44 @@ async def deliver_due_webhooks(
                 session, delivery, client=client, settings=settings, now=now
             ):
                 totals["webhooks_failed"] += 1
+                if delivery.status == DELIVERY_DEAD and not delivery.owner_notified:
+                    await _notify_owner_dead(session, delivery)
+                    delivery.owner_notified = True
     await session.flush()
     return totals
 
 
+async def _notify_owner_dead(session: AsyncSession, delivery: AutomationWebhookDelivery) -> None:
+    """M9-08: after ``WEBHOOK_MAX_ATTEMPTS`` failed attempts, tell the rule owner that the
+    delivery is dead and needs a manual look or resend. Prefers the explicit
+    ``owner_user_id`` (Kleinbefund 27.09.2026); falls back to whoever last saved the rule, or
+    who created it, when no owner is set."""
+    rule = await session.get(AutomationRule, delivery.rule_id)
+    if rule is None:
+        return
+    owner_id = rule.owner_user_id or rule.updated_by or rule.created_by
+    if owner_id is None:
+        return
+    await notify(
+        session,
+        tenant_id=delivery.tenant_id,
+        user_id=owner_id,
+        kind="automation_webhook_dead",
+        title=f"Regel-Webhook fehlgeschlagen: {rule.name}",
+        body=f"Zustellung an {delivery.url} nach {delivery.attempts} Versuchen aufgegeben "
+        f"(letzter Fehler: {delivery.last_error or delivery.last_status_code}).",
+        entity_type="automation_rule",
+        entity_id=rule.id,
+    )
+
+
 def redeliver_webhook(delivery: AutomationWebhookDelivery, *, now: datetime | None = None) -> None:
-    """Manual redelivery from the API: back to pending, due now, attempt history kept."""
+    """Manual redelivery from the API (M9-08): back to pending, due now. A ``dead`` row gets a
+    fresh attempt budget (the operator has looked at it), a still-``pending`` or ``succeeded``
+    row keeps its attempt count so the log stays honest about how often it was tried."""
+    if delivery.status == DELIVERY_DEAD:
+        delivery.attempts = 0
+        delivery.owner_notified = False
     delivery.status = DELIVERY_PENDING
     delivery.next_attempt_at = now or datetime.now(UTC)
 
@@ -867,9 +1006,12 @@ def delivery_out(delivery: AutomationWebhookDelivery) -> dict[str, Any]:
         "url": delivery.url,
         "status": delivery.status,
         "attempts": delivery.attempts,
+        "max_attempts": WEBHOOK_MAX_ATTEMPTS,
         "next_attempt_at": delivery.next_attempt_at,
         "last_status_code": delivery.last_status_code,
         "last_error": delivery.last_error,
+        "last_duration_ms": delivery.last_duration_ms,
+        "idempotency_key": delivery.idempotency_key,
         "delivered_at": delivery.delivered_at,
     }
 
@@ -1250,6 +1392,16 @@ async def _execute_one(
             dry_run=dry_run,
             settings=settings,
         )
+    if isinstance(action, CreateTaskAction):
+        return await _create_task(
+            session,
+            tenant_id=tenant_id,
+            rule=rule,
+            event_id=event_id,
+            action=action,
+            context=context,
+            dry_run=dry_run,
+        )
     return await _set_ticket_field(
         session,
         tenant_id=tenant_id,
@@ -1473,6 +1625,9 @@ async def _record(
         )
         session.add(delivery)
         await session.flush()
+        # Stable across every retry of this row (M9-08); the id already is, this makes the
+        # intent explicit for receivers keying on ``Idempotency-Key`` instead.
+        delivery.idempotency_key = str(delivery.id)
         result["delivery_id"] = str(delivery.id)
     if pending:
         run.actions = [dict(a) for a in actions]

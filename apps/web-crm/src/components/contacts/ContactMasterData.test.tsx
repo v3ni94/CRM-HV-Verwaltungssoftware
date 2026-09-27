@@ -37,6 +37,19 @@ describe("ContactMasterData", () => {
     await waitFor(() => expect(screen.getByText("Neu")).toBeInTheDocument());
   });
 
+  it("saves the consumer flag as a boolean and shows the help text", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValue(jsonResponse({ ...contact, is_consumer: true, version: 4 }));
+    renderIntl(<ContactMasterData contact={{ ...contact, is_consumer: null }} canEdit />);
+    expect(screen.getByText("Kennzeichen für das Mahnwesen (M16-03), keine Angabe bedeutet nicht beurteilt. Dient nur der Prüfung, keine rechtliche Feststellung.")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Verbraucher bearbeiten" }));
+    await userEvent.selectOptions(screen.getByLabelText("Verbraucher"), "Ja");
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
+    const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(JSON.parse(String(init.body))).toEqual({ is_consumer: true });
+  });
+
   it("keeps a required field, hides editing without permission and shows the conflict on 412", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse({ type: "about:blank", title: "Konflikt", status: 412 }, 412));
     const { unmount } = renderIntl(<ContactMasterData contact={contact} canEdit={false} />);

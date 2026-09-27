@@ -23,7 +23,7 @@ for the Mahnbescheid preparation, never booked automatically.
 
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -67,6 +67,24 @@ INHERITABLE_FIELDS = (
     "interest_enabled",
     "interest_base_rate",
     "interest_spread",
+    "default_start_mode",
+)
+
+# Modes for the start of default (Verzugsbeginn, M16-03, docs/rules/M16-03.md). The
+# assessment behind each mode is marked "zu prüfen durch Rechtsanwalt"; the platform only
+# derives a date from stored facts and never asserts default in a letter.
+DEFAULT_MODE_AFTER_NOTICE = "after_notice_30_days"
+DEFAULT_MODE_CALENDAR = "calendar_due_date"
+DEFAULT_MODE_AFTER_REMINDER = "after_reminder"
+DEFAULT_MODES = (DEFAULT_MODE_AFTER_NOTICE, DEFAULT_MODE_CALENDAR, DEFAULT_MODE_AFTER_REMINDER)
+DEFAULT_MODE_LABELS: dict[str, str] = {
+    DEFAULT_MODE_AFTER_NOTICE: "30 Tage nach Fälligkeit und Zugang",
+    DEFAULT_MODE_CALENDAR: "kalendermäßig bestimmt (Vertragsfälligkeit)",
+    DEFAULT_MODE_AFTER_REMINDER: "erst nach Mahnung (Zugang der Mahnung)",
+}
+NOTICE_DAYS = 30
+NO_BANK_ACCOUNT_WARNING = (
+    "Kein Standardkonto des Forderungsinhabers hinterlegt: Mahnschreiben nicht freigebbar (M16-13)"
 )
 
 
@@ -85,6 +103,7 @@ class EffectiveSettings:
     interest_enabled: bool = False
     interest_base_rate: Decimal | None = None
     interest_spread: Decimal | None = None
+    default_start_mode: str | None = None
     sources: dict[str, str] = field(default_factory=dict)
     tenant_row: DunningSettings | None = None
     property_row: DunningSettings | None = None
@@ -232,6 +251,103 @@ def interest_amount_for(settings: EffectiveSettings, total: Decimal, days: int) 
     return amount.quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+@dataclass
+class DefaultStart:
+    """Result of the default start derivation for one case: ``start`` is ``None`` whenever a
+    fact the mode needs is not recorded (nothing is assumed, 0.1.3); ``note`` says why."""
+
+    mode: str | None
+    start: date | None
+    note: str
+
+
+def _add_days(value: date, days: int) -> date:
+    return value + timedelta(days=days)
+
+
+def default_start(
+    mode: str | None,
+    *,
+    items: list[dict[str, Any]],
+    reminder_received_on: date | None,
+) -> DefaultStart:
+    """Start of default (Verzugsbeginn) for the overdue items of one debtor, per mode
+    (M16-03). Every derivation is an assessment to be verified by a lawyer, not a legal
+    determination:
+
+    - ``calendar_due_date``: the day after the contractually fixed due date of the oldest item.
+    - ``after_notice_30_days``: for each item with a recorded receipt of the demand, the day
+      after 30 days from the later of due date and receipt; the earliest such day counts. Items
+      without a recorded receipt yield no start.
+    - ``after_reminder``: the day after the recorded receipt of a dunning letter.
+    - ``None``: no mode decided, no start."""
+    due_dates = [i["due_date"] for i in items if i.get("due_date")]
+    if mode is None:
+        return DefaultStart(
+            None, None, "Verzugsbeginn: Modus nicht festgelegt (Mandanteneinstellung)"
+        )
+    if mode == DEFAULT_MODE_CALENDAR:
+        if not due_dates:
+            return DefaultStart(mode, None, "Verzugsbeginn: keine Fälligkeit hinterlegt")
+        return DefaultStart(
+            mode, _add_days(min(due_dates), 1), "Verzugsbeginn: Tag nach kalendermäßiger Fälligkeit"
+        )
+    if mode == DEFAULT_MODE_AFTER_NOTICE:
+        starts = [
+            _add_days(max(i["due_date"], i["notice_received_on"]), NOTICE_DAYS + 1)
+            for i in items
+            if i.get("due_date") and i.get("notice_received_on")
+        ]
+        missing = sum(1 for i in items if not i.get("notice_received_on"))
+        if not starts:
+            return DefaultStart(
+                mode, None, "Verzugsbeginn: Zugangsdatum der Zahlungsaufforderung nicht erfasst"
+            )
+        note = f"Verzugsbeginn: {NOTICE_DAYS} Tage nach Fälligkeit und Zugang"
+        if missing:
+            note += f", {missing} Posten ohne erfasstes Zugangsdatum"
+        return DefaultStart(mode, min(starts), note)
+    if mode == DEFAULT_MODE_AFTER_REMINDER:
+        if reminder_received_on is None:
+            return DefaultStart(mode, None, "Verzugsbeginn: Zugang einer Mahnung nicht erfasst")
+        return DefaultStart(
+            mode, _add_days(reminder_received_on, 1), "Verzugsbeginn: Tag nach Zugang der Mahnung"
+        )
+    return DefaultStart(mode, None, f"Verzugsbeginn: unbekannter Modus {mode}")
+
+
+async def reminder_received_on(session: AsyncSession, account_id: uuid.UUID) -> date | None:
+    """Earliest recorded receipt of a sent dunning letter for the debtor account."""
+    value: date | None = await session.scalar(
+        select(DunningCase.received_on)
+        .where(
+            DunningCase.debtor_account_id == account_id,
+            DunningCase.status == "sent",
+            DunningCase.received_on.is_not(None),
+        )
+        .order_by(DunningCase.received_on.asc())
+        .limit(1)
+    )
+    return value
+
+
+async def payment_account(session: AsyncSession, ledger: Ledger, on: date) -> Any | None:
+    """The default bank account of the claim holder of ``ledger`` valid on ``on`` (M16-13):
+    the letter names this account for payment. Never a deposit account, never the account of
+    the managing company unless it holds the claim itself. ``None`` when none is flagged."""
+    from mhvp.properties.models import BankAccountKind, PropertyBankAccount
+
+    return await session.scalar(
+        select(PropertyBankAccount).where(
+            PropertyBankAccount.legal_entity_id == ledger.legal_entity_id,
+            PropertyBankAccount.is_default.is_(True),
+            PropertyBankAccount.kind != BankAccountKind.DEPOSIT,
+            PropertyBankAccount.valid_from <= on,
+            (PropertyBankAccount.valid_to.is_(None)) | (PropertyBankAccount.valid_to >= on),
+        )
+    )
+
+
 def reminder_guard(
     level: int, fee_amount: Decimal, interest_amount: Decimal
 ) -> tuple[Decimal, Decimal, str | None]:
@@ -294,12 +410,22 @@ async def preview(
                 reason = "Buchungskreis nicht führend: gemahnt wird im führenden System (6.9.10)"
             fee_amount = Decimal("0.00")
             interest_amount = Decimal("0.00")
+            # Due date and default are kept apart (M16-03): interest, when configured, counts
+            # only from a derivable default start, never from the due date.
+            verzug = default_start(
+                settings.default_start_mode if settings else None,
+                items=overdue,
+                reminder_received_on=await reminder_received_on(session, account_id),
+            )
+            default_days = (run_date - verzug.start).days if verzug.start else 0
             if reason is None and settings is not None:
                 fee_amount = fee_amount_for(settings, level) or Decimal("0.00")
                 # Interest is configured per ladder, not per level; the Zahlungserinnerung
                 # never carries it (M16-14), so it starts at level 2.
                 if level > REMINDER_LEVEL:
-                    interest_amount = interest_amount_for(settings, total, days)
+                    interest_amount = interest_amount_for(settings, total, default_days)
+            bank = await payment_account(session, ledger, run_date) if reason is None else None
+            bank_warning = NO_BANK_ACCOUNT_WARNING if reason is None and bank is None else None
             fee_amount, interest_amount, guard_note = reminder_guard(
                 level, fee_amount, interest_amount
             )
@@ -312,6 +438,11 @@ async def preview(
             )
             if guard_note:
                 case_reason = f"{case_reason}. {guard_note}"
+            if reason is None:
+                case_reason = f"{case_reason}. {verzug.note}"
+                if bank_warning:
+                    case_reason = f"{case_reason}. {bank_warning}"
+                    counts["bank_account_missing"] = counts.get("bank_account_missing", 0) + 1
             if reason is None and contract is not None:
                 # M23-07: the letter would reach the representative only; the warning is
                 # visible in the preview and stays on the case until legal advice.
@@ -343,6 +474,11 @@ async def preview(
                     interest_amount=interest_amount,
                     status="excluded" if reason else "proposed",
                     reason=case_reason,
+                    due_date=oldest,
+                    default_start=verzug.start,
+                    default_mode=verzug.mode,
+                    bank_account_id=bank.id if bank is not None else None,
+                    bank_warning=bank_warning,
                 )
             )
             counts["excluded" if reason else "proposed"] += 1
@@ -458,7 +594,11 @@ DELIVERY_CHANNELS = ("post", "email", "portal")
 
 
 async def mark_sent(
-    session: AsyncSession, case: DunningCase, channel: str, user_id: uuid.UUID | None
+    session: AsyncSession,
+    case: DunningCase,
+    channel: str,
+    user_id: uuid.UUID | None,
+    received_on: date | None = None,
 ) -> DunningCase:
     """Minimal manual delivery record (M16-09): only this lets the ladder advance to the next
     level, since ``last_level`` only counts cases with status ``sent``. Proof of actual
@@ -476,6 +616,8 @@ async def mark_sent(
     case.status = "sent"
     case.delivery_channel = channel
     case.delivered_at = datetime.now(UTC)
+    # Receipt (Zugang) is a fact a person records; it is never derived from the send date.
+    case.received_on = received_on
     case.updated_by = user_id
     await session.flush()
     return case
@@ -549,6 +691,10 @@ async def prepare_mahnbescheid(
 
 
 def case_warnings(case: DunningCase) -> list[str]:
-    """Warnings recorded in the case reason at preview time (M23-07)."""
+    """Warnings recorded in the case reason at preview time (M23-07) plus the missing payment
+    account of the claim holder (M16-13)."""
     reason = case.reason or ""
-    return [w for w in (recipients.REPRESENTATIVE_ONLY_WARNING,) if w in reason]
+    out = [w for w in (recipients.REPRESENTATIVE_ONLY_WARNING,) if w in reason]
+    if case.bank_warning:
+        out.append(case.bank_warning)
+    return out

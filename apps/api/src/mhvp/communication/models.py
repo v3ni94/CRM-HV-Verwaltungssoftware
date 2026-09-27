@@ -2,6 +2,7 @@
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
@@ -11,6 +12,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -269,3 +271,136 @@ class InvoiceIntakeAutoRun(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     message_id: Mapped[uuid.UUID | None] = _fk("message.id")
     task_run_id: Mapped[uuid.UUID | None] = _fk("ai_task_run.id")
+
+
+class MailApprovalReauth(IdMixin, TimestampMixin, TenantMixin, Base):
+    """M20-04: letzte erfolgreiche Re-Authentifizierung (Passwort oder TOTP) je Nutzer, gültig
+    für ``mhvp.communication.mail_approval.REAUTH_WINDOW`` (5 Minuten) vor einer Mailfreigabe.
+    Eine Zeile je (Mandant, Nutzer); ein erneuter Nachweis überschreibt die vorherige."""
+
+    __tablename__ = "mail_approval_reauth"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "user_id", name="uq_mail_approval_reauth_user"),
+    )
+
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    method: Mapped[str] = mapped_column(String(8), nullable=False)  # password, totp
+    verified_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class MailApprovalDeputy(IdMixin, TimestampMixin, TenantMixin, Base):
+    """M20-04 Vertretungsregel: befristete Vertretung, damit ein Stellvertreter bei
+    Abwesenheit eines Postfachnutzers dessen Mailfreigaben übernehmen kann. Es gibt noch kein
+    eigenes Abwesenheits-/HR-Modul (docs/ASSUMPTIONS.md M20-04); Zeitraum und Grund werden hier
+    manuell hinterlegt, keine automatische Ableitung aus Kalender oder Urlaubsplanung."""
+
+    __tablename__ = "mail_approval_deputy"
+    __table_args__ = (
+        Index("ix_mail_approval_deputy_absent", "tenant_id", "absent_user_id", "ends_at"),
+    )
+
+    absent_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    deputy_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(500))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PostalSettings(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Postversand je Mandant (M23-01, docs/rules/M23-01.md): Anbieter, Freigabe und
+    verschluesselte Zugangsdaten. Standard ``manual`` und ``enabled = false``: ohne
+    ausdrueckliche Freigabe reicht kein Endpunkt, Job oder Import einen Brief bei einem
+    externen Anbieter ein. Der API-Schluessel wird nie zurueckgegeben."""
+
+    __tablename__ = "postal_settings"
+    __table_args__ = (UniqueConstraint("tenant_id", name="uq_postal_settings_tenant"),)
+
+    provider: Mapped[str] = mapped_column(
+        String(32), nullable=False, default="manual", server_default="manual"
+    )  # manual, letterxpress (weitere ueber ``postal.register_provider``)
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    username: Mapped[str | None] = mapped_column(String(200))
+    api_key: Mapped[str | None] = mapped_column(EncryptedText())
+    # LetterXpress: ``test`` legt Auftraege nur in den Warenkorb, ``live`` versendet.
+    mode: Mapped[str] = mapped_column(
+        String(8), nullable=False, default="test", server_default="test"
+    )
+    default_color: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    default_duplex: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    default_registered: Mapped[str | None] = mapped_column(String(8))  # r1, r2
+    last_balance: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    last_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_error: Mapped[str | None] = mapped_column(Text)
+
+
+class PostalJob(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Auftrag beim Postdienst je Zustellung (``dispatch``). Status: submitted, printed, sent,
+    delivered, failed, cancelled. Die Statushistorie steht in ``postal_job_event``."""
+
+    __tablename__ = "postal_job"
+    __table_args__ = (
+        Index("ix_postal_job_dispatch", "tenant_id", "dispatch_id"),
+        Index("ix_postal_job_open", "tenant_id", "provider", "status"),
+    )
+
+    dispatch_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dispatch.id"), nullable=False
+    )
+    document_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id"), nullable=False
+    )
+    contact_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contact.id"), nullable=False
+    )
+    dunning_case_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dunning_case.id", ondelete="SET NULL"), nullable=True
+    )
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    provider_job_id: Mapped[str | None] = mapped_column(String(100))
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="submitted", server_default="submitted"
+    )
+    options: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
+    recipient_address: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=""
+    )
+    filename: Mapped[str | None] = mapped_column(String(255))
+    pages: Mapped[int | None] = mapped_column(Integer)
+    price: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    tracking_code: Mapped[str | None] = mapped_column(String(64))
+    tracking_status: Mapped[str | None] = mapped_column(Text)
+    error: Mapped[str | None] = mapped_column(Text)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_polled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PostalJobEvent(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Statushistorie eines Postauftrags (an der Zustellung sichtbar): Quelle ``provider``
+    (Statusabruf), ``manual`` (Erfassung im CRM) oder ``system``."""
+
+    __tablename__ = "postal_job_event"
+    __table_args__ = (Index("ix_postal_job_event_job", "tenant_id", "job_id"),)
+
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("postal_job.id", ondelete="CASCADE"), nullable=False
+    )
+    dispatch_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("dispatch.id"), nullable=False
+    )
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    source: Mapped[str] = mapped_column(String(16), nullable=False)
+    detail: Mapped[str | None] = mapped_column(Text)
+    raw: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)

@@ -7,6 +7,7 @@ import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketAppointmentButton } from "@/components/tickets/TicketAppointmentButton";
 import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvoiceButton";
+import { TicketBoardPanel } from "@/components/tickets/TicketBoardPanel";
 import { TicketChecklist } from "@/components/tickets/TicketChecklist";
 import { TicketComments, type TicketCommentRow } from "@/components/tickets/TicketComments";
 import { TicketEdit } from "@/components/tickets/TicketForms";
@@ -149,6 +150,14 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           <TicketMailAttachments attachments={attachments} />
           <TicketWorkOrders orders={workOrders} />
           <TicketProposals ticketId={ticketId} />
+          {data.property_id ? (
+            <TicketBoardPanel
+              ticketId={ticketId}
+              workOrders={workOrders.map((o) => ({ id: o.id, description: o.description }))}
+              canSubmit={me.data?.permissions.includes("tickets:update") ?? false}
+              canManagePolicy={me.data?.permissions.includes("tickets:approve") ?? false}
+            />
+          ) : null}
         </>
       )}
       <section className="flex min-w-0 flex-col gap-2">

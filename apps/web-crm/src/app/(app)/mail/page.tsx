@@ -15,6 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function MailPage() {
   const t = await getTranslations("Mail");
   const tPlaybooks = await getTranslations("MailPlaybooks");
+  const tPostal = await getTranslations("PostalOutbox");
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
@@ -24,9 +25,14 @@ export default async function MailPage() {
       <PageHeader
         title={t("title")}
         action={
-          <Link href="/mail/playbooks" className={ui.button}>
-            {tPlaybooks("title")}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/mail/postausgang" className={ui.button}>
+              {tPostal("title")}
+            </Link>
+            <Link href="/mail/playbooks" className={ui.button}>
+              {tPlaybooks("title")}
+            </Link>
+          </div>
         }
       />
       <MailWorkspace canApprove={permissions.includes("communication:approve")} canReadMembers={permissions.includes("members:read")} />

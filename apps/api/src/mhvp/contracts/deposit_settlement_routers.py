@@ -11,17 +11,22 @@ import uuid
 from datetime import date
 from decimal import Decimal
 from typing import Any, Self
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import select
 
 from mhvp.contracts import deposit_settlement as ds
+from mhvp.contracts import deposit_settlement_pdf as ds_pdf
 from mhvp.contracts.models import Contract, Deposit, DepositMovement, DepositMovementKind
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+from mhvp.documents import letters
+from mhvp.documents import services as docs
+from mhvp.workspace.services import local_today
 
 router = APIRouter(tags=["Verträge"])
 READ = require_permission("contracts:read")
@@ -432,3 +437,106 @@ async def release_settlement(
             payload={"payout_amount": str(row.payout_amount)},
         )
         return _row_out(row)
+
+
+# Document (PDF) ----------------------------------------------------------------------------
+
+
+@router.post(
+    "/contracts/{contract_id}/deposit-settlements/{settlement_id}/document",
+    status_code=201,
+    summary="Kautionsabrechnung als PDF-Entwurf erzeugen und ablegen (kein Versand)",
+)
+async def create_settlement_document(
+    contract_id: uuid.UUID,
+    settlement_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Renders the settlement draft as a letter (positions, interest per year, deductions with
+    reason, payout amount, masked tenant bank account), stores it and links it to the contract
+    and the tenant's contact. Never a payment instruction; the payout stays behind G3."""
+    from mhvp.documents.blobs import BlobStore
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(ds.DepositSettlement, settlement_id)
+        if row is None:
+            raise _nf()
+        deposit = await session.get(Deposit, row.deposit_id)
+        if deposit is None:
+            raise _nf()
+        contract = await session.get(Contract, contract_id)
+        if contract is None or deposit.contract_id != contract.id:
+            raise _nf()
+        letter_date = local_today()
+        head = await docs.letterhead(session, BlobStore(request.app.state.settings))
+        letter, tenant_contact_id, _unit_line = await ds_pdf.build_letter(
+            session, row=row, deposit=deposit, contract=contract, letter_date=letter_date, head=head
+        )
+        pdf = letters.render_pdf(head, letter)
+        document_id = await ds_pdf.store(
+            session,
+            BlobStore(request.app.state.settings),
+            row=row,
+            contract=contract,
+            tenant_contact_id=tenant_contact_id,
+            letter_date=letter_date,
+            pdf=pdf,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="deposit_settlement.document_created",
+            entity_type="deposit_settlement",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"document_id": str(document_id)},
+        )
+        return {
+            **_row_out(row).model_dump(mode="json"),
+            "document_id": document_id,
+            "hinweis": ds_pdf.DRAFT_LABEL,
+        }
+
+
+@router.get(
+    "/contracts/{contract_id}/deposit-settlements/{settlement_id}/document-preview",
+    summary="Kautionsabrechnung als PDF-Vorschau (nicht abgelegt, kein Versand)",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def preview_settlement_document(
+    contract_id: uuid.UUID,
+    settlement_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    from mhvp.documents.blobs import BlobStore
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(ds.DepositSettlement, settlement_id)
+        if row is None:
+            raise _nf()
+        deposit = await session.get(Deposit, row.deposit_id)
+        if deposit is None:
+            raise _nf()
+        contract = await session.get(Contract, contract_id)
+        if contract is None or deposit.contract_id != contract.id:
+            raise _nf()
+        letter_date = local_today()
+        head = await docs.letterhead(session, BlobStore(request.app.state.settings))
+        letter, _tenant_contact_id, _unit_line = await ds_pdf.build_letter(
+            session, row=row, deposit=deposit, contract=contract, letter_date=letter_date, head=head
+        )
+        pdf = letters.render_pdf(head, letter)
+    filename = quote(f"kautionsabrechnung_{contract_id}.pdf")
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )

@@ -3,6 +3,7 @@
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
+from enum import StrEnum
 from typing import Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
@@ -37,6 +38,28 @@ class _Out(BaseModel):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
 
 
+class ProrationMethod(StrEnum):
+    """M13-01: contract rule for a start, end or amount change within a month."""
+
+    CALENDAR_DAYS = "calendar_days"
+    THIRTY_360 = "thirty_360"
+    FULL_MONTH = "full_month"
+
+
+class PaymentMode(StrEnum):
+    """M13-02: instalment due in advance or in arrears."""
+
+    ADVANCE = "advance"
+    ARREARS = "arrears"
+
+
+class AmountBasis(StrEnum):
+    """M13-02: contract amount per month or per instalment."""
+
+    PER_MONTH = "per_month"
+    PER_INSTALMENT = "per_instalment"
+
+
 class ContractIn(_In):
     kind: ContractKind
     unit_id: uuid.UUID
@@ -54,6 +77,10 @@ class ContractIn(_In):
     user_change_fee: bool = False
     allocation_loss_risk: bool = False
     vat_option: ContractVatOption = ContractVatOption.NONE
+    proration_method: ProrationMethod | None = Field(
+        default=None,
+        description="Zeitanteilsregel des Vertrags (M13-01); leer: Standard des Mandanten",
+    )
     sev_enabled: bool = False
     sev_fee_debtor_party_id: uuid.UUID | None = None
     title_transfer_date: date | None = None
@@ -111,6 +138,7 @@ class ContractVersionIn(_In):
     user_change_fee: bool | None = None
     allocation_loss_risk: bool | None = None
     vat_option: ContractVatOption | None = None
+    proration_method: ProrationMethod | None = None
     notes: str | None = None
     move_in_on: date | None = None
     move_out_on: date | None = None
@@ -209,11 +237,15 @@ class PaymentOut(_Out):
 
 
 class ScheduleIn(_In):
-    interval: PaymentInterval = PaymentInterval.MONTHLY
+    # M13-01a: ``None`` übernimmt den Mandanten-Standard aus ``TenantSettings.receivable_rules
+    # .payment_interval`` (Router ``add_schedule``), ohne Mandantenvorgabe monatlich.
+    interval: PaymentInterval | None = None
     due_day_rule: DueDayRule = DueDayRule.DAY
     due_day: int = Field(default=3, ge=1, le=31)
     valid_from: date
     valid_to: date | None = None
+    payment_mode: PaymentMode = PaymentMode.ADVANCE
+    amount_basis: AmountBasis = AmountBasis.PER_MONTH
 
 
 class ScheduleOut(ScheduleIn):
@@ -250,6 +282,7 @@ class ContractOut(_Out):
     user_change_fee: bool
     allocation_loss_risk: bool
     vat_option: ContractVatOption
+    proration_method: ProrationMethod | None = None
     sev_enabled: bool
     sev_fee_debtor_party_id: uuid.UUID | None
     title_transfer_date: date | None

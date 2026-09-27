@@ -174,3 +174,13 @@ Optionales Arbeitsdatum des Tickets (`due_on`, Datum), gesetzt im Formular oder 
 `PATCH /tickets/{id}` (`null` löscht es). Der Kalenderleser `ticket_due`
 (`mhvp.workspace.jobs`) erzeugt daraus den Termin mit Erinnerung und die Zeile der
 Fristenliste; die SLA-Frist `sla_due_at` bleibt getrennt mit eigener Eskalation.
+
+## Beiratsbeteiligung (M19-02, Migration 0203)
+
+`board.py`: Vorlage eines Tickets oder Auftrags an den Verwaltungsbeirat einer GdWE
+(`POST /tickets/{id}/board-submissions`, Mitglieder = Objektkontakte der Kategorie `board`,
+Frist, Art `info`/`consent`), Rückmeldungen im Portal (`/portal/board/submissions`) und im CRM
+(`/tickets/board/submissions/{id}/votes`), Abschluss und Empfehlungsregel je Mandant
+(`/tickets/board/policy`). Alles steht als `ticket_event` im Verlauf. Das Votum ist
+Information; Auftragsfreigabe und Zahlung bleiben bei der Verwaltung
+(`docs/rules/M19-02-beiratsbeteiligung.md`).

@@ -36,6 +36,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/suggest$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-playbook$`) },
+  // Postausgang und Postdienst (M23-01): Aufträge, manuelle Erfassung, Statusabruf, Einstellungen.
+  { method: "GET", pattern: /^postal\/(jobs|jobs\/summary|settings)$/ },
+  { method: "GET", pattern: new RegExp(`^postal/jobs/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^postal/dispatches/${ID}/history$`) },
+  { method: "POST", pattern: /^postal\/jobs$/ },
+  { method: "POST", pattern: new RegExp(`^postal/jobs/${ID}/(manual|refresh|cancel)$`) },
+  { method: "PUT", pattern: /^postal\/settings$/ },
+  { method: "POST", pattern: /^postal\/settings\/test$/ },
   { method: "GET", pattern: /^mail\/playbooks$/ },
   { method: "POST", pattern: /^mail\/playbooks$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
@@ -68,6 +76,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/deposits$`) },
   { method: "GET", pattern: new RegExp(`^deposits/${ID}/settlements$`) },
   { method: "POST", pattern: new RegExp(`^deposits/${ID}/settlements(/preview)?$`) },
+  // Kautionsabrechnung als PDF-Entwurf ablegen (offener Restpunkt M5-02, PDF-Ausgabe).
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/deposit-settlements/${ID}/document$`) },
+  // Mietrechnung mit Umsatzsteuerausweis (M13-03 Folgepunkt, Regel M13-04): Liste, Erzeugen,
+  // PDF (Entwurf mit Wasserzeichen hinter G1), Storno nur durch Gutschrift.
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/rent-invoices$`) },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/rent-invoices$`) },
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/rent-invoices/${ID}/pdf$`) },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/rent-invoices/${ID}/credit-note$`) },
   { method: "GET", pattern: /^deposit-interest-rates$/ },
   { method: "PUT", pattern: /^deposit-interest-rates\/[0-9]{4}$/ },
   { method: "DELETE", pattern: /^deposit-interest-rates\/[0-9]{4}$/ },
@@ -132,6 +148,19 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Portalzugang einladen von der Kontaktakte aus (M21, Lückenliste A86).
   { method: "GET", pattern: /^portal-admin\/accounts$/ },
   { method: "POST", pattern: /^portal-admin\/accounts$/ },
+  // Magic-Link-Anmeldung (M21-01): zweiter Faktor per E-Mail-Code an/aus, Einladungsbrief als
+  // PDF mit QR-Code (Einladung als Anschreiben, 90 Tage gültiger Code).
+  { method: "PATCH", pattern: new RegExp(`^portal-admin/accounts/${ID}/security$`) },
+  { method: "POST", pattern: new RegExp(`^portal-admin/accounts/${ID}/invitation-letter$`) },
+  // Vorschläge aus dem Portal (M21-02 Adressänderung, M3-02 Portalstufe SEPA-Mandat): Liste je
+  // Kontakt und Entscheidung; das Annehmen eines Mandats legt nur eine Bankverbindung mit
+  // Nachweis an, nie ein aktives Einzugsmandat (G2).
+  { method: "GET", pattern: /^portal-admin\/change-requests$/ },
+  { method: "POST", pattern: new RegExp(`^portal-admin/change-requests/${ID}/decide$`) },
+  { method: "GET", pattern: /^portal-admin\/sepa-mandate-proposals$/ },
+  { method: "POST", pattern: new RegExp(`^portal-admin/sepa-mandate-proposals/${ID}/decide$`) },
+  // Freigabeflag je Dokument (M21-03): Sichtbarkeit intern, Eigentümer, Mieter, Dienstleister, Beirat.
+  { method: "PATCH", pattern: new RegExp(`^documents/${ID}$`) },
   // Portalformulare (A56): Vorlagen je Mandant.
   { method: "GET", pattern: /^portal-admin\/forms$/ },
   { method: "POST", pattern: /^portal-admin\/forms$/ },
@@ -187,6 +216,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^ai\/knowledge$/ },
   { method: "PUT", pattern: new RegExp(`^ai/knowledge/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^ai/knowledge/${ID}$`) },
+  // M34-01 Freigabeworkflow: Status, Vier-Augen-Freigabe und Versionsverlauf.
+  { method: "GET", pattern: new RegExp(`^ai/knowledge/${ID}/versions$`) },
+  { method: "POST", pattern: new RegExp(`^ai/knowledge/${ID}/(submit|approve|withdraw)$`) },
   // Mail-Vorbereitung (M34).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/preparation$`) },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/preparation$`) },
@@ -205,10 +237,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^imports\/immoware24\/lists\/zuordnung\/manuell$/ },
   // Abgleichberichte des Parallelbetriebs (A68): Liste, Erstellen, JSON, CSV, Spaltenzuordnung.
   { method: "GET", pattern: /^imports\/reconciliation-reports(\/columns)?$/ },
+  // Vollimport mit Stichtag (M8-01, M8-02, V9): Vorprüfung, Trockenlauf, Übernahme, Abgleichbericht.
+  { method: "GET", pattern: /^imports\/immoware24\/vollimport(\/exporttypen)?$/ },
+  { method: "POST", pattern: /^imports\/immoware24\/vollimport(\/vorpruefung)?$/ },
+  { method: "GET", pattern: new RegExp(`^imports/immoware24/vollimport/${ID}(/pdf)?$`) },
   { method: "POST", pattern: /^imports\/reconciliation-reports$/ },
   { method: "PUT", pattern: /^imports\/reconciliation-reports\/columns$/ },
   { method: "GET", pattern: new RegExp(`^imports/reconciliation-reports/${ID}(/csv)?$`) },
   // Evaluations (M18, 7.5): liquidity, payments by debtor, revenue; read only.
+  // Zugang der Zahlungsaufforderung an der Offene-Posten-Ansicht erfassen (M16-03, Restpunkt 27.09.2026).
+  { method: "PATCH", pattern: new RegExp(`^accounting/open-items/${ID}/notice-received$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/liquidity$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/payments-by-debtor$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/revenue$`) },
@@ -239,6 +277,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // document. The download stays behind G2 (API); nothing here transmits anything to a bank.
   { method: "GET", pattern: /^accounting\/direct-debits$/ },
   { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/(approve|cancel|file)$`) },
+  // Download hinter G2, Protokoll und Einreichungsbestätigung (M15-01 Folgepunkt).
+  { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/file$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/direct-debits/${ID}/downloads$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/direct-debits/${ID}/submit$`) },
   { method: "GET", pattern: /^banking\/payment-orders$/ },
   // finAPI (M11-finapi): read only aggregator onboarding, consent, fetch (Stufen 1-3).
   { method: "GET", pattern: /^banking\/finapi\/config$/ },
@@ -247,6 +289,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^banking\/finapi\/connections$/ },
   { method: "POST", pattern: new RegExp(`^banking/finapi/connections/${ID}/(check|reauthorize|disconnect|fetch)$`) },
   { method: "POST", pattern: new RegExp(`^banking/finapi/accounts/${ID}/(assign|fetch)$`) },
+  // FinTS/HBCI PIN/TAN (M11-01 Nachtrag 27.09.2026): Institutssuche, Verbindung, TAN-Sitzung, Konten.
+  { method: "GET", pattern: /^banking\/fints\/institutes$/ },
+  { method: "GET", pattern: /^banking\/fints\/connections$/ },
+  { method: "POST", pattern: /^banking\/fints\/connections$/ },
+  { method: "POST", pattern: new RegExp(`^banking/fints/connections/${ID}/(restart|refresh)$`) },
+  { method: "DELETE", pattern: new RegExp(`^banking/fints/connections/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^banking/fints/sessions/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^banking/fints/sessions/${ID}/tan$`) },
+  { method: "POST", pattern: new RegExp(`^banking/fints/accounts/${ID}/assign$`) },
   // Bankkontenauswahl: Kontenliste je Objekt und Rechtsträger, Zuordnung und Standardkonto.
   // Nur lesend und organisatorisch, kein Zahlungsverkehr (G2 bleibt geschlossen).
   { method: "GET", pattern: /^banking\/accounts$/ },
@@ -254,6 +305,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^banking/accounts/${ID}/assignments/${ID}$`) },
   { method: "PUT", pattern: new RegExp(`^banking/accounts/${ID}/legal-entity-default$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/bank-account-options$`) },
+  // Bankkonten des Rechtsträgers (M16-13): Standardkonto anzeigen und setzen (Restpunkt 27.09.2026).
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/bank-accounts$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/bank-accounts/${ID}/default$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/legal-entities$`) },
   // Eigentümer festlegen (operator 26.09.2026): Objekteigentümer der Mietverwaltung.
   { method: "GET", pattern: new RegExp(`^properties/${ID}/owners$`) },
@@ -287,6 +341,20 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Operating cost statements (M17): drafting and status steps; issuing needs G3 (API).
   { method: "POST", pattern: /^statements$/ },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/(cost-items|calculate|transition|new-version)$`) },
+  // Draft heating statement (M17-02): inputs, consumption import, preview and feed; G3 unchanged.
+  { method: "GET", pattern: new RegExp(`^statements/${ID}/heating(/consumption-info)?$`) },
+  { method: "PUT", pattern: new RegExp(`^statements/${ID}/heating(/consumptions)?$`) },
+  { method: "POST", pattern: new RegExp(`^statements/${ID}/heating/(import-consumptions|calculate|apply)$`) },
+  // Umlagefähigkeit (M17-01) und Vorschussregel (M17-03): Katalog, Zuordnung, Vorschläge mit Bestätigung.
+  { method: "GET", pattern: new RegExp(`^statements/${ID}/allocability-check$`) },
+  { method: "GET", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
+  { method: "POST", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
+  { method: "POST", pattern: new RegExp(`^statements/${ID}/advance-proposals/${ID}/(confirm|reject)$`) },
+  { method: "GET", pattern: /^billing\/advance-rule$/ },
+  { method: "PUT", pattern: /^billing\/advance-rule$/ },
+  { method: "GET", pattern: /^billing\/operating-cost-types$/ },
+  { method: "GET", pattern: /^billing\/operating-cost-types\/accounts$/ },
+  { method: "PUT", pattern: new RegExp(`^billing/operating-cost-types/accounts/${ID}$`) },
   // KI-Plausibilität eines Abrechnungsentwurfs (A35): Hinweise als Vorschlag, keine Wirkung.
   { method: "GET", pattern: new RegExp(`^(hoa/)?statements/${ID}/ai-check$`) },
   { method: "POST", pattern: new RegExp(`^(hoa/)?statements/${ID}/ai-check$`) },
@@ -300,6 +368,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^hoa\/(plans|statements|meetings|resolutions|special-levies)$/ },
   { method: "POST", pattern: new RegExp(`^hoa/special-levies/${ID}/(calculate|resolve|apply|amend)$`) },
   { method: "POST", pattern: /^hoa\/majority-rules$/ },
+  // Umlaufbeschluss mit abgesenkter Mehrheit (M25-02): recording and the per tenant switch.
+  { method: "POST", pattern: /^hoa\/circular-resolutions$/ },
+  { method: "GET", pattern: /^hoa\/circular-lower-majority$/ },
+  { method: "PUT", pattern: /^hoa\/circular-lower-majority$/ },
   // Darlehen, Versicherungsfälle, Maßnahmen (W10, A59) und erklärte Differenzen der
   // Überleitungsrechnung (W04, A60): Erfassung und Nachweis, keine Buchung.
   { method: "POST", pattern: /^hoa\/(loans|measures|insurance-claims)$/ },
@@ -496,6 +568,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^objektakte\/sync\/runs$/ },
   { method: "GET", pattern: /^objektakte\/sync\/deletions$/ },
   { method: "GET", pattern: /^objektakte\/ai-calls\/summary$/ },
+  // M35 Parallelbetrieb: Abgleichbericht objektakte gegen CRM, Vorschaubild-Übernahme, lokales Modell.
+  { method: "GET", pattern: /^objektakte\/reconciliation$/ },
+  { method: "GET", pattern: /^objektakte\/previews\/import$/ },
+  { method: "POST", pattern: /^objektakte\/previews\/import$/ },
+  { method: "GET", pattern: new RegExp(`^objektakte/previews/documents/${ID}$`) },
+  { method: "GET", pattern: /^objektakte\/local-model$/ },
+  { method: "POST", pattern: new RegExp(`^objektakte/local-model/cases/${ID}/propose$`) },
   // DMS-Seite mit Daten der Objektübernahme (M29 Stufe 4, Abruf serverseitig durch die API).
   { method: "GET", pattern: /^integrations\/objektakte\/objects\/[0-9A-Za-z]{1,16}\/documents$/ },
   { method: "POST", pattern: /^integrations\/objektakte\/objects\/[0-9A-Za-z]{1,16}\/documents\/link$/ },
@@ -590,11 +669,18 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^metering/assignments/${ID}/(units|consumption|billing-results)$`) },
   { method: "POST", pattern: new RegExp(`^metering/clearing-items/${ID}/resolve$`) },
   { method: "POST", pattern: /^metering\/assignments-import\/(preview|apply)$/ },
+  { method: "POST", pattern: new RegExp(`^metering/connections/${ID}/heiwako-import/preview$`) },
+  // Aufbewahrungsmatrix und Löschvorschläge (M6-04, V17): Profile, Kategoriezuordnung, Läufe.
+  { method: "PATCH", pattern: new RegExp(`^retention-profiles/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^retention-profiles/(${ID}/release|apply)$`) },
+  { method: "PATCH", pattern: new RegExp(`^document-categories/${ID}$`) },
+  { method: "POST", pattern: /^deletion-proposals$/ },
+  { method: "POST", pattern: new RegExp(`^deletion-proposals/${ID}/(approve|reject|execute)$`) },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
 const MULTIPART = new RegExp(
-  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|letting/listings/${ID}/images|metering/assignments-import/(preview|apply))$`,
+  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|imports/immoware24/vollimport(/vorpruefung)?|letting/listings/${ID}/images|metering/assignments-import/(preview|apply)|metering/connections/${ID}/heiwako-import/preview)$`,
 );
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -642,7 +728,14 @@ async function proxy(request: Request, context: Context): Promise<Response> {
     );
   }
   const out = new Headers({ "cache-control": "no-store" });
-  for (const name of ["content-type", "etag", "content-disposition", "x-total-count"]) {
+  for (const name of [
+    "content-type",
+    "etag",
+    "content-disposition",
+    "x-total-count",
+    "x-page",
+    "x-page-size",
+  ]) {
     const value = upstream.headers.get(name);
     if (value) out.set(name, value);
   }

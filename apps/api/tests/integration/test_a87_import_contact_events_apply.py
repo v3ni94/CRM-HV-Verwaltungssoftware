@@ -285,7 +285,7 @@ def test_objektakte_import_emits_contact_events_only_on_apply(
     assert created.payload == {"kind": "person", "source": "import.objektakte"}
     assert created.actor_user_id == world.users["a87admin"]
     assert created_audit is None
-    contact = asyncio.run(_contact_by_source(settings, world.tenant_a, "301"))
+    contact = asyncio.run(_contact_by_source(settings, world.tenant_a, "owner:301"))
     assert created.entity_id == contact.id
     assert contact.version == 1
 
@@ -312,7 +312,7 @@ def test_objektakte_import_emits_contact_events_only_on_apply(
         "last_name": {"old": "Musterfrau", "new": "Beispiel"},
         "display_name": {"old": contact.display_name, "new": "Erika Beispiel"},
     }
-    assert asyncio.run(_contact_by_source(settings, world.tenant_a, "301")).version == 2
+    assert asyncio.run(_contact_by_source(settings, world.tenant_a, "owner:301")).version == 2
 
     fourth = _sync(client, h, DUMP_V2)
     assert fourth["updated"] == {}

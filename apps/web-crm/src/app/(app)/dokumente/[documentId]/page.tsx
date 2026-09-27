@@ -1,8 +1,10 @@
 import { getTranslations } from "next-intl/server";
 
+import { DocumentVisibilityEditor } from "@/components/documents/DocumentVisibilityEditor";
 import { PortalReadReceipts, type PortalReadReceiptsOut } from "@/components/documents/PortalReadReceipts";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { getMe } from "@/lib/me";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -25,6 +27,9 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
   const { documentId } = await params;
   const t = await getTranslations("DocumentDetail");
   const api = serverApi();
+  const me = await getMe();
+  // Freigabeflag (M21-03) nur mit dem Recht, das die API für PATCH /documents verlangt.
+  const canEditVisibility = me.data?.permissions.includes("documents:update") ?? false;
   const { data, error, response } = await api.GET("/api/v1/documents/{document_id}", {
     params: { path: { document_id: documentId } },
   });
@@ -64,7 +69,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
         </div>
         <div className={ui.card}>
           <p className={ui.subtitle}>{t("visibility")}</p>
-          <p className="mt-1 text-sm">{data.visibility.length ? data.visibility.map((v) => t(`visibilityValues.${v}`)).join(", ") : t("visibilityNone")}</p>
+          <DocumentVisibilityEditor documentId={documentId} visibility={data.visibility} canEdit={canEditVisibility} />
         </div>
         <div className={ui.card}>
           <p className={ui.subtitle}>{t("links")}</p>

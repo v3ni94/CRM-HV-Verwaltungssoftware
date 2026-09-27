@@ -160,15 +160,33 @@ export function DepositPanel({
   rates,
   contractEndDate,
   canUpdate,
+  contractId,
 }: {
   deposits: DepositOut[];
   settlements: Record<string, DepositSettlementOut[]>;
   rates: ReferenceRate[];
   contractEndDate: string | null;
   canUpdate: boolean;
+  contractId: string;
 }) {
   const t = useTranslations("Deposits");
   const router = useRouter();
+  const [docBusy, setDocBusy] = useState<string | null>(null);
+  const [docError, setDocError] = useState<string | null>(null);
+
+  const createDocument = async (settlementId: string) => {
+    setDocBusy(settlementId);
+    setDocError(null);
+    const res = await bff<{ document_id: string }>(`/api/bff/contracts/${contractId}/deposit-settlements/${settlementId}/document`, {
+      method: "POST",
+    });
+    setDocBusy(null);
+    if (!res.ok) {
+      setDocError(res.message);
+      return;
+    }
+    router.refresh();
+  };
   const [open, setOpen] = useState<string | null>(null);
   const [date, setDate] = useState(contractEndDate ?? new Date().toISOString().slice(0, 10));
   const [mode, setMode] = useState<InterestMode>("individual");
@@ -277,6 +295,24 @@ export function DepositPanel({
                     {s.status === "draft" ? ` (${t("settlement.draft")})` : ""}
                   </summary>
                   <SettlementView s={s} />
+                  {canUpdate && s.id ? (
+                    <div className="mt-2 flex flex-col gap-1">
+                      <button
+                        type="button"
+                        className={ui.buttonSm}
+                        data-testid="deposit-settlement-create-document"
+                        disabled={docBusy === s.id}
+                        onClick={() => void createDocument(s.id!)}
+                      >
+                        {t("settlement.createDocument")}
+                      </button>
+                      {docError && docBusy === null ? (
+                        <p role="alert" className={ui.error}>
+                          {docError}
+                        </p>
+                      ) : null}
+                    </div>
+                  ) : null}
                 </details>
               ))}
             </li>

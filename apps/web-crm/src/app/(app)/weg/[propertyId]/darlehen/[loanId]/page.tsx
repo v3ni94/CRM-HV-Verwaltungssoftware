@@ -2,7 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { ItemForm } from "@/components/hoa/FinanceForms";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { formatDate, formatDecimal, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -39,16 +39,23 @@ type Comparison = {
   difference_interest: string;
 };
 type Schedule = { kind: "annuity" | "linear"; rows: ScheduleRow[]; months: number; interest_total: string; residual: string; note_text: string; comparison: Comparison[] };
+type AnnualComponent = { amount: string; source: "booked" | "schedule" | "none"; booked: string; planned: string | null };
+type Annual = { year: number; components: { interest: AnnualComponent; repayment: AnnualComponent }; fees_booked: string; residual_booked: string; residual_schedule: string | null; note_text: string };
 const KINDS = ["disbursement", "repayment", "interest", "fee"];
 
-export default async function LoanPage({ params }: { params: Promise<{ propertyId: string; loanId: string }> }) {
+export default async function LoanPage({ params, searchParams }: { params: Promise<{ propertyId: string; loanId: string }>; searchParams?: Promise<{ jahr?: string }> }) {
   const { propertyId, loanId } = await params;
   const t = await getTranslations("HoaFinance");
   const api = serverApi();
-  const [{ data, error, response }, scheduleResponse] = await Promise.all([
+  // M24-03: year figures (booked items or schedule) and residual debt at the year end.
+  const requested = Number((await searchParams)?.jahr ?? "");
+  const year = Number.isInteger(requested) && requested >= 2000 && requested <= 2100 ? requested : new Date().getFullYear() - 1;
+  const [{ data, error, response }, scheduleResponse, annualResponse] = await Promise.all([
     api.GET("/api/v1/hoa/loans/{loan_id}", { params: { path: { loan_id: loanId } } }),
     api.GET("/api/v1/hoa/loans/{loan_id}/schedule", { params: { path: { loan_id: loanId } } }),
+    serverFetch(`/api/v1/hoa/loans/${encodeURIComponent(loanId)}/annual?year=${year}`),
   ]);
+  const annual = annualResponse.ok ? ((await annualResponse.json()) as Annual) : null;
   redirectIfUnauthenticated(response);
   if (!data) return <p role="alert" className={ui.alert}>{problemMessage(error as Problem | undefined, response.status)}</p>;
   const d = data as unknown as Loan;
@@ -131,6 +138,43 @@ export default async function LoanPage({ params }: { params: Promise<{ propertyI
         </table>
       </div>
       <ItemForm target="loans" id={loanId} kinds={KINDS} />
+      {annual ? (
+        <section className={ui.card} data-testid="loan-annual">
+          <h2 className={ui.h2}>
+            {t("annual")} {annual.year}
+          </h2>
+          <p className="mt-1 text-sm text-muted">{annual.note_text}</p>
+          <form className="mt-2 flex items-end gap-2 text-sm">
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("annualYear")}</span>
+              <input name="jahr" type="number" min={2000} max={2100} defaultValue={annual.year} className={ui.input} />
+            </label>
+            <button type="submit" className={ui.secondary}>
+              {t("annualYear")}
+            </button>
+          </form>
+          <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-sm sm:grid-cols-4">
+            {(["interest", "repayment"] as const).map((c) => (
+              <div key={c} className="flex flex-col">
+                <dt className="text-xs text-muted">
+                  {t(c === "interest" ? "annualInterest" : "annualRepayment")} · {t(`annualSource.${annual.components[c].source}`)}
+                </dt>
+                <dd className="font-medium tabular-nums">{formatEur(annual.components[c].amount)}</dd>
+              </div>
+            ))}
+            <div className="flex flex-col">
+              <dt className="text-xs text-muted">{t("residualDebt")} 31.12.{annual.year}</dt>
+              <dd className="font-medium tabular-nums">{formatEur(annual.residual_booked)}</dd>
+            </div>
+            {annual.residual_schedule ? (
+              <div className="flex flex-col">
+                <dt className="text-xs text-muted">{t("residualSchedule")}</dt>
+                <dd className="font-medium tabular-nums">{formatEur(annual.residual_schedule)}</dd>
+              </div>
+            ) : null}
+          </dl>
+        </section>
+      ) : null}
       <section className={ui.card} data-testid="loan-schedule">
         <h2 className={ui.h2}>{t("schedule")}</h2>
         <p className="mt-1 text-sm text-muted">{t("scheduleNote")}</p>

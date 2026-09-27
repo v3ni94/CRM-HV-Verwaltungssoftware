@@ -1719,3 +1719,267 @@ def test_listing_openimmo_schema_check_and_lock(
         assert "unvollständig" in both.json()["detail"]
         assert "energy.status" in {m["field"] for m in both.json()["openimmo"]["missing"]}
         assert both.json()["openimmo"]["schema"]["valid"] is False
+
+
+def _prospect_unit(client: TestClient, h: dict[str, str], number: str) -> tuple[str, str]:
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": number,
+                "name": "Maklerhaus",
+                "management_type": "rental",
+                "city": f"Stadt {RUN}",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    building = _ok(
+        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
+        201,
+    )["id"]
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/units",
+            json={"building_id": building, "number": "01", "unit_type": "apartment"},
+            headers=h,
+        ),
+        201,
+    )["id"]
+    return prop["id"], unit
+
+
+def test_prospect_viewings_rejection_templates_and_self_disclosure(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    _, unit = _prospect_unit(client, h, "770")
+    _, contact = _party(client, h, "InteressentM28")
+    prospect = _ok(
+        client.post(
+            f"{L}/prospects",
+            json={
+                "unit_id": unit,
+                "contact_id": contact["id"],
+                "delete_after": "2027-03-31",
+                "source": "portal",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    assert prospect["source"] == "portal"
+
+    viewing = _ok(
+        client.post(
+            f"{L}/prospects/{prospect['id']}/viewings",
+            json={"scheduled_at": "2026-10-01T10:00:00Z", "location": "vor Ort"},
+            headers=h,
+        ),
+        201,
+    )
+    assert viewing["status"] == "proposed"
+    listed = _ok(client.get(f"{L}/prospects/{prospect['id']}/viewings", headers=h))
+    assert len(listed) == 1
+    confirmed = _ok(
+        client.patch(
+            f"{L}/prospects/viewings/{viewing['id']}", json={"status": "confirmed"}, headers=h
+        )
+    )
+    assert confirmed["status"] == "confirmed"
+    prospect_after = _ok(client.get(f"{L}/prospects", params={"unit_id": unit}, headers=h))[0]
+    assert prospect_after["status"] == "viewing"
+
+    templates = _ok(client.get(f"{L}/prospects/rejection-templates", headers=h))
+    assert templates
+    tid = templates[0]["id"]
+    rejected = _ok(
+        client.post(f"{L}/prospects/{prospect['id']}/reject", json={"template_id": tid}, headers=h)
+    )
+    assert rejected["status"] == "rejected"
+    assert rejected["rejection_template_id"] == tid
+    assert rejected["rejection_text"]
+    assert (
+        client.post(
+            f"{L}/prospects/{prospect['id']}/reject", json={"template_id": "unbekannt"}, headers=h
+        ).status_code
+        == 422
+    )
+
+    link = _ok(
+        client.post(f"{L}/prospects/{prospect['id']}/self-disclosure-link", json={}, headers=h),
+        201,
+    )
+    assert "selbstauskunft" in link["portal_url"]
+    token = link["portal_url"].rsplit("/", 1)[-1]
+
+    read = _ok(client.get(f"{L}/self-disclosure/{token}"))
+    assert read["submitted_at"] is None
+    assert "Datenschutz" in read["privacy_notice"] or "Bewerbung" in read["privacy_notice"]
+
+    denied = client.post(
+        f"{L}/self-disclosure/{token}",
+        json={"consent_privacy": False, "payload": {"income": "3000"}},
+    )
+    assert denied.status_code == 422
+
+    submitted = _ok(
+        client.post(
+            f"{L}/self-disclosure/{token}",
+            json={"consent_privacy": True, "payload": {"income": "3000"}},
+        )
+    )
+    assert submitted["submitted_at"] is not None
+    assert submitted["payload"] == {"income": "3000"}
+
+    again = client.post(
+        f"{L}/self-disclosure/{token}",
+        json={"consent_privacy": True, "payload": {}},
+    )
+    assert again.status_code == 422
+
+    links = _ok(client.get(f"{L}/prospects/{prospect['id']}/self-disclosure-links", headers=h))
+    assert links[0]["submitted_at"] is not None
+
+
+def test_broker_provider_feature_flag_and_documentation_required(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """M28-01 stage 3: no provider has a verified endpoint contract yet, so every sync fails
+    with BROKER_DOCUMENTATION_REQUIRED once the feature flag is on."""
+
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    _, unit = _prospect_unit(client, h, "771")
+    listing = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+
+    off = _ok(client.get(f"{L}/broker/flowfact/config", headers=h))
+    assert off == {
+        "provider": "flowfact",
+        "enabled": False,
+        "api_key_set": False,
+        "base_url": None,
+        "last_tested_at": None,
+        "last_test_ok": None,
+        "last_test_message": None,
+    }
+
+    assert (
+        client.put(
+            f"{L}/broker/flowfact/config",
+            json={"enabled": True},
+            headers=h,
+        ).status_code
+        == 422
+    )  # no api_key yet
+
+    on = _ok(
+        client.put(
+            f"{L}/broker/flowfact/config",
+            json={"api_key": "secret-token", "enabled": True},
+            headers=h,
+        )
+    )
+    assert on["enabled"] is True
+    assert on["api_key_set"] is True
+
+    sync = client.post(f"{L}/listings/{listing['id']}/broker/flowfact/sync", headers=h)
+    assert sync.status_code == 501
+    assert sync.json()["type"].endswith("MHVP-BRKR-0002")
+
+    _ok(client.put(f"{L}/broker/flowfact/config", json={"enabled": False}, headers=h))
+    not_configured = client.post(f"{L}/listings/{listing['id']}/broker/flowfact/sync", headers=h)
+    assert not_configured.status_code == 502
+
+
+def test_openimmo_import_preview_apply_duplicate_and_images(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    prop_id, unit = _prospect_unit(client, h, "772")
+
+    import base64
+
+    b64 = base64.b64encode(b"fakejpegbytes").decode()
+    xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<openimmo>
+  <uebertragung art="OFFLINE" umfang="TEIL" version="1.2.7"/>
+  <anbieter>
+    <firma>Test Makler GmbH</firma>
+    <ansprechpartner>
+      <vorname>Erika</vorname>
+      <nachname>Muster</nachname>
+      <email_direkt>erika@example.com</email_direkt>
+    </ansprechpartner>
+    <immobilie>
+      <objektkategorie>
+        <nutzungsart WOHNEN="true"/>
+        <vermarktungsart MIETE_PACHT="true"/>
+        <objektart><wohnung/></objektart>
+      </objektkategorie>
+      <geo><plz>12345</plz><ort>Teststadt</ort><strasse>Musterweg</strasse></geo>
+      <flaechen><wohnflaeche>55</wohnflaeche><anzahl_zimmer>2</anzahl_zimmer></flaechen>
+      <preise><kaltmiete><preis>700.00</preis></kaltmiete></preise>
+      <freitexte><objekttitel>Schöne Wohnung</objekttitel></freitexte>
+      <verwaltung_techn>
+        <objektnr_extern>OI-EXT-001</objektnr_extern>
+        <aktion aktionart="CHANGE"/>
+      </verwaltung_techn>
+      <anhaenge>
+        <anhang location="INLINE" gruppe="BILD">
+          <daten><pfad>bild1.jpg</pfad><base64>{b64}</base64></daten>
+        </anhang>
+        <anhang location="EXTERN" gruppe="BILD">
+          <daten><pfad>https://example.com/bild2.jpg</pfad></daten>
+        </anhang>
+      </anhaenge>
+    </immobilie>
+  </anbieter>
+</openimmo>"""
+
+    files = {"file": ("export.xml", xml.encode("utf-8"), "application/xml")}
+    preview = _ok(client.post(f"{L}/openimmo-import/preview", files=files, headers=h), 201)
+    assert preview["row_count"] == 1
+    row = preview["rows"][0]
+    assert row["external_ref"] == "OI-EXT-001"
+    assert row["is_duplicate"] is False
+    assert row["image_count"] == 1
+    assert row["external_image_hints"]
+    assert row["contact_proposal"]["company"] == "Test Makler GmbH"
+
+    applied = _ok(
+        client.post(
+            f"{L}/openimmo-import/{preview['run_id']}/rows/{row['row_id']}/apply",
+            json={"property_id": prop_id, "unit_id": unit},
+            headers=h,
+        ),
+        201,
+    )
+    listing = _ok(client.get(f"{L}/listings/{applied['listing_id']}", headers=h))
+    assert listing["source"] == "openimmo_import"
+    assert listing["external_ref"] == "OI-EXT-001"
+    assert Decimal(listing["price"]) == Decimal("700.00")
+
+    # second apply of the same row is refused
+    again = client.post(
+        f"{L}/openimmo-import/{preview['run_id']}/rows/{row['row_id']}/apply",
+        json={"property_id": prop_id, "unit_id": unit},
+        headers=h,
+    )
+    assert again.status_code == 422
+
+    # a second import of the same OpenImmo id is flagged as a duplicate in the preview
+    preview2 = _ok(
+        client.post(
+            f"{L}/openimmo-import/preview",
+            files={"file": ("export2.xml", xml.encode("utf-8"), "application/xml")},
+            headers=h,
+        ),
+        201,
+    )
+    assert preview2["rows"][0]["is_duplicate"] is True

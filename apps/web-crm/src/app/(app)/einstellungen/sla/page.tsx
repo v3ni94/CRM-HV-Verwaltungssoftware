@@ -34,6 +34,8 @@ export default async function SlaSettingsPage() {
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("sla:read")) notFound();
   const canManage = permissions.includes("sla:update");
+  // M19-01: approval of SLA values is reserved to the management (tenant settings right).
+  const canApprove = permissions.includes("tenant_settings:update");
   const [rules, onCall, currentOnCall, calendar, alerts, members, smsGateway, whatsappConfig] = await Promise.all([
     getJson<SlaRule[]>("/api/v1/sla/rules", []),
     getJson<OnCallSchedule[]>("/api/v1/sla/on-call", []),
@@ -77,6 +79,7 @@ export default async function SlaSettingsPage() {
         alerts={alerts}
         members={(members.data ?? []) as Member[]}
         canManage={canManage}
+        canApprove={canApprove}
         smsGateway={smsGateway}
         whatsappConfig={whatsappConfig}
       />

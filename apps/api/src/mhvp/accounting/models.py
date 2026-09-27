@@ -154,6 +154,20 @@ class ChartTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     released: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Release workflow (M10-01/M10-02, V8, migration 0190): draft -> in_review -> released.
+    # A released version is immutable; changes create a new version that supersedes it.
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft", server_default="draft"
+    )
+    review_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    review_requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    release_comment: Mapped[str | None] = mapped_column(Text)
+    release_document_id: Mapped[uuid.UUID | None] = _fk(
+        "document.id", nullable=True, ondelete="SET NULL"
+    )
+    supersedes_id: Mapped[uuid.UUID | None] = _fk(
+        "chart_of_accounts_template.id", nullable=True, ondelete="SET NULL"
+    )
     # [{number, name, category, type, statement_kind, allocation_category, vat_option,
     #   relevant_for_cash_report, applies_to: [hoa, rental_owner, sev_owner, manager]}]
     accounts: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
@@ -231,6 +245,9 @@ class LedgerAccount(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(StatementKind, "statement_kind"), nullable=False, default=StatementKind.NONE
     )
     section_35a_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # M17-01: code of the system catalogue of operating cost types (mhvp.billing.betrkv,
+    # § 2 BetrKV numbers 1 to 17, "V" administration, "I" maintenance); a person assigns it.
+    operating_cost_type: Mapped[str | None] = mapped_column(String(4))
     # Template review marker (M10-01): "none" or "entwurf" (proposal, tax adviser release open).
     review_status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="none", server_default="none"
@@ -379,6 +396,9 @@ class OpenItem(IdMixin, TimestampMixin, TenantMixin, Base):
     contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
     component: Mapped[str | None] = mapped_column(String(63))  # payment type code
     written_off: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Date the debtor received the demand (Rechnung, Abrechnung, Zahlungsaufforderung) as
+    # recorded by a person; needed for default mode ``after_notice_30_days`` (M16-03).
+    notice_received_on: Mapped[date | None] = mapped_column(Date)
 
 
 class OpenItemSettlement(IdMixin, TenantMixin, Base):
@@ -433,6 +453,11 @@ class ReceivableRun(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     preview_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     totals: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # M13-01 to M13-03 (migration 0177): calculation path of the run (rules applied, segments,
+    # fractions, rounding, instalment periods, VAT split) per item; empty for legacy runs.
+    calculation: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     posted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
@@ -460,6 +485,12 @@ class ReceivableItem(IdMixin, TimestampMixin, TenantMixin, Base):
     payment_type_code: Mapped[str] = mapped_column(String(63), nullable=False)
     amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     vat_percent: Mapped[Decimal] = mapped_column(RATE, nullable=False, default=Decimal(0))
+    # M13-03 (migration 0177): net and tax part of ``amount`` (gross) when the VAT rule is
+    # released; M13-01/02: the period the item covers (a part of the month or an instalment).
+    net_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    vat_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    period_start: Mapped[date | None] = mapped_column(Date)
+    period_end: Mapped[date | None] = mapped_column(Date)
     due_date: Mapped[date | None] = mapped_column(Date)
     status: Mapped[ItemStatus] = mapped_column(
         _enum(ItemStatus, "receivable_item_status"), nullable=False
@@ -643,6 +674,12 @@ class DunningSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # value here. The run stays disabled while this is empty.
     interest_base_rate: Mapped[Decimal | None] = mapped_column(RATE)
     interest_spread: Mapped[Decimal | None] = mapped_column(RATE)
+    # How the start of default (Verzug) is determined for the debtors of this scope (M16-03,
+    # docs/rules/M16-03.md): ``after_notice_30_days`` (30 days after due date and receipt of
+    # the demand, only with a recorded receipt date), ``calendar_due_date`` (due date fixed by
+    # the contract) or ``after_reminder`` (receipt of the dunning letter). NULL: not decided,
+    # no default start is shown and no interest is computed. Object rows inherit (M16-10).
+    default_start_mode: Mapped[str | None] = mapped_column(String(32), nullable=True)
 
 
 class DunningRun(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -677,6 +714,21 @@ class DunningCase(IdMixin, TimestampMixin, TenantMixin, Base):
     fee_invoice_draft_id: Mapped[uuid.UUID | None] = _fk(
         "dunning_fee_invoice_draft.id", nullable=True
     )
+    # Due date and default (Verzug) are kept apart (M16-03): ``due_date`` is the oldest due
+    # date of the open items, ``default_start`` the computed start of default under
+    # ``default_mode`` (NULL when it cannot be determined from stored facts).
+    due_date: Mapped[date | None] = mapped_column(Date)
+    default_start: Mapped[date | None] = mapped_column(Date)
+    default_mode: Mapped[str | None] = mapped_column(String(32))
+    # Receipt of this dunning letter by the debtor as recorded by a person (mode
+    # ``after_reminder`` starts default from here, never from ``delivered_at``).
+    received_on: Mapped[date | None] = mapped_column(Date)
+    # Payment account printed in the letter: the default account of the claim holder
+    # (M16-13). NULL with ``bank_warning`` set blocks the letter.
+    bank_account_id: Mapped[uuid.UUID | None] = _fk(
+        "property_bank_account.id", nullable=True, ondelete="SET NULL"
+    )
+    bank_warning: Mapped[str | None] = mapped_column(Text)
 
 
 class DunningFeeInvoiceDraft(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -747,6 +799,10 @@ class ExportRun(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     error: Mapped[str | None] = mapped_column(Text)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # DATEV batch self check (M18-01, migration 0190): the written file and the last report.
+    content: Mapped[str | None] = mapped_column(Text)
+    check_report: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class AdminFeeInvoiceStatus(StrEnum):

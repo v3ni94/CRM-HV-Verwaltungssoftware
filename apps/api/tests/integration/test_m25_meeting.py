@@ -117,8 +117,9 @@ def test_meeting_votes_circular_audit(client: TestClient, world: World) -> None:
         )["id"]
 
     base = {"legal_entity_id": hoa, "scheduled_at": "2026-06-20T10:00:00+02:00"}
+    # Virtual form is locked per tenant (M25-03, V13, default off): 403 before any basis check.
     assert (
-        client.post(f"{H}/meetings", json=base | {"mode": "virtual"}, headers=h).status_code == 422
+        client.post(f"{H}/meetings", json=base | {"mode": "virtual"}, headers=h).status_code == 403
     )
     assert (
         client.post(f"{H}/meetings", json=base | {"voting_principle": "mea"}, headers=h).status_code
@@ -623,16 +624,31 @@ def test_d53_virtual_meeting_needs_basis_and_documents_disruption(
     assert positive["status"] == "positive"
 
     base = {"legal_entity_id": hoa, "scheduled_at": "2026-08-20T18:00:00+02:00", "mode": "virtual"}
-    for body in (base, base | {"virtual_basis_resolution_id": negative["id"]}):
+    basis = {
+        "virtual_basis_resolution_id": positive["id"],
+        "virtual_basis_valid_until": "2029-03-01",
+    }
+    # M25-03 / V13: the virtual form needs the tenant switch (default off) ...
+    locked = client.post(f"{H}/meetings", json=base | basis, headers=h)
+    assert locked.status_code == 403, locked.text
+    assert locked.json()["code"] == "MHVP-HOA-0003"
+    _ok(
+        client.put(
+            f"{H}/meeting-settings",
+            json={"invitation_weeks": 3, "virtual_meetings_enabled": True},
+            headers=h,
+        )
+    )
+    # ... and a positive enabling resolution with a validity end.
+    for body in (
+        base,
+        base | {"virtual_basis_resolution_id": negative["id"]},
+        base | {"virtual_basis_resolution_id": positive["id"]},
+    ):
         refused = client.post(f"{H}/meetings", json=body, headers=h)
         assert refused.status_code == 422, refused.text
-        assert "Beschlussgrundlage" in refused.json()["detail"]
-    meeting = _ok(
-        client.post(
-            f"{H}/meetings", json=base | {"virtual_basis_resolution_id": positive["id"]}, headers=h
-        ),
-        201,
-    )
+        assert refused.json()["code"] == "MHVP-HOA-0004"
+    meeting = _ok(client.post(f"{H}/meetings", json=base | basis, headers=h), 201)
     mid = meeting["id"]
     assert meeting["mode"] == "virtual"
     item = _ok(

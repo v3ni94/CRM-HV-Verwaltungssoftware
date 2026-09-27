@@ -6,7 +6,7 @@ import { jsonResponse, renderIntl } from "@/test/intl";
 
 import { KnowledgeSettings } from "./KnowledgeSettings";
 
-const entry: KnowledgeEntry = {
+const entry = {
   id: "01920000-0000-7000-8000-0000000000k1",
   property_id: null,
   kind: "workflow",
@@ -16,7 +16,7 @@ const entry: KnowledgeEntry = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
   created_by: null,
-};
+} as unknown as KnowledgeEntry;
 
 describe("KnowledgeSettings", () => {
   afterEach(() => vi.unstubAllGlobals());

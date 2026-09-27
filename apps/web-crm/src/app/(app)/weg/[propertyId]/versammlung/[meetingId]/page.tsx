@@ -2,9 +2,10 @@ import { getTranslations } from "next-intl/server";
 
 import { MajorityRules, MeetingPanel, type MajorityRule } from "@/components/hoa/HoaForms";
 import { MeetingDeadlineForm } from "@/components/hoa/MeetingDeadlineForm";
+import { MeetingFormPanel, type AttendanceRow, type MeetingFormData } from "@/components/hoa/MeetingFormPanel";
 import { MemberVoting } from "@/components/hoa/MemberVoting";
 import { ProtocolDraft } from "@/components/hoa/ProtocolDraft";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -15,10 +16,13 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
   const { meetingId } = await params;
   const t = await getTranslations("HoaWork");
   const api = serverApi();
-  const [{ data, error, response }, members] = await Promise.all([
+  const [{ data, error, response }, members, attendanceResponse] = await Promise.all([
     api.GET("/api/v1/hoa/meetings/{meeting_id}", { params: { path: { meeting_id: meetingId } } }),
     api.GET("/api/v1/hoa/meetings/{meeting_id}/members", { params: { path: { meeting_id: meetingId } } }),
+    // M25-03: Teilnahmenachweis mit Kanal (Präsenz, online, Vollmacht).
+    serverFetch(`/api/v1/hoa/meetings/${encodeURIComponent(meetingId)}/attendance-list`),
   ]);
+  const attendance = attendanceResponse.ok ? (((await attendanceResponse.json()) as { rows?: AttendanceRow[] }).rows ?? []) : [];
   redirectIfUnauthenticated(response);
   const entity = String(data?.legal_entity_id ?? "");
   const rules = data
@@ -36,6 +40,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
         {t("represented", { n: Number(data.represented ?? 0), proxies: Number(data.proxies ?? 0) })}
       </p>
       <p className={ui.notice}>{t("meetingNotice")}</p>
+      <MeetingFormPanel meetingId={meetingId} data={data as unknown as MeetingFormData} attendance={attendance} />
       {data.mode === "virtual" ? (
         <MeetingDeadlineForm
           meetingId={meetingId}

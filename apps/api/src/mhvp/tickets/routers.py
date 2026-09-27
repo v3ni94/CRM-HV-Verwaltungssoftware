@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.validation import InvalidValueError, normalise_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -1256,8 +1257,6 @@ async def ticket_mail_attachment_content(
     """Liefert nur Dokumente, die Anhang einer für den Benutzer sichtbaren Mail dieses
     Tickets sind (Ticket-Bezug statt allgemeiner Dokumentenzugriff). Bilder und PDF werden
     inline zur Vorschau ausgeliefert, alles andere und ``download=true`` als Download."""
-    from urllib.parse import quote
-
     from mhvp.documents import services as document_services
     from mhvp.documents.blobs import BlobStore
     from mhvp.documents.models import Document, StorageKind
@@ -1283,7 +1282,7 @@ async def ticket_mail_attachment_content(
         content=data,
         media_type=mime if inline else "application/octet-stream",
         headers={
-            "Content-Disposition": f"{disposition}; filename*=UTF-8''{quote(filename)}",
+            "Content-Disposition": content_disposition(disposition, filename),
             "X-Content-Type-Options": "nosniff",
             "Content-Security-Policy": _ATTACHMENT_CSP,
             "Cache-Control": "private, no-store",
@@ -1398,7 +1397,9 @@ async def create_ticket(
         await session.flush()
         from mhvp.sla.service import start_clock
 
-        await start_clock(session, principal.tenant_id, ticket.id, ticket.priority)
+        await start_clock(
+            session, principal.tenant_id, ticket.id, ticket.priority, category=ticket.category
+        )
         await _event(
             session,
             ticket,
@@ -1498,7 +1499,9 @@ async def merge_tickets(
             )
             session.add(target)
             await session.flush()
-            await start_clock(session, principal.tenant_id, target.id, target.priority)
+            await start_clock(
+                session, principal.tenant_id, target.id, target.priority, category=target.category
+            )
         else:
             target.visible_for = sorted(
                 {*target.visible_for, *(v for t in sources for v in t.visible_for)}
@@ -2500,6 +2503,8 @@ async def order_step(
         return _order_out(order)
 
 
+from mhvp.tickets.board import router as board_router  # noqa: E402
 from mhvp.tickets.proposals import router as proposals_router  # noqa: E402
 
 router.include_router(proposals_router)
+router.include_router(board_router)

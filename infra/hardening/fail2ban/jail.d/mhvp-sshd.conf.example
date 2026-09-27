@@ -1,0 +1,17 @@
+# Vorschlag (Betreiberentscheidung B18). Beispiel, keine Wirkkonfiguration; Endung .example,
+# damit die Datei nicht versehentlich als /etc/fail2ban/jail.d/mhvp-sshd.conf übernommen wird.
+# Erst nach Installation von fail2ban durch den Betreiber (docs/runbooks/
+# server-recovery-und-haertung.md Abschnitt C3) und nach Prüfung gegen die bestehende
+# Ausnahme für die Büro-IP (Abschnitt C2a, Datei /etc/fail2ban/jail.d/10-mhvp-ignoreip.local,
+# die Vorrang vor diesem Beispiel behält).
+
+[sshd]
+enabled = true
+port    = ssh
+backend = systemd
+maxretry = 5
+findtime = 10m
+bantime  = 1h
+bantime.increment = true
+bantime.factor = 4
+bantime.maxtime = 1w

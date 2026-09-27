@@ -4,6 +4,7 @@ reminder 10 days before expiry."""
 import asyncio
 import uuid
 from datetime import UTC, date, datetime, timedelta
+from typing import Any
 
 from celery import shared_task
 from sqlalchemy import select
@@ -533,3 +534,329 @@ async def _finapi_scheduled_fetch_all(settings: Settings) -> dict[str, int]:
     finally:
         await engine.dispose()
     return totals
+
+
+# --- FinTS/HBCI PIN/TAN step (M11-01 addendum 27.09.2026, docs/integrations/fints.md) --------
+
+FINTS_STEP_TIMEOUT_MINUTES = 15
+
+
+def _ensure_crypto(settings: Settings) -> None:
+    from mhvp.core import crypto
+
+    if settings.master_key is not None and not crypto.is_configured():
+        crypto.set_master_key(crypto.decode_master_key(settings.master_key.get_secret_value()))
+
+
+async def _fints_apply_result(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    fs: Any,
+    fc: Any,
+    conn: BankConnection,
+    result: Any,
+    tan_used: bool,
+) -> dict[str, int]:
+    """Second transaction of a step: persists what the (blocking) dialog produced."""
+    import json
+    from dataclasses import asdict
+    from decimal import Decimal
+
+    from mhvp.banking import fints as fints_mod
+    from mhvp.banking import services as svc
+    from mhvp.banking.models import FinTsAccountLink, FinTsSessionStatus
+    from mhvp.core import crypto
+    from mhvp.properties.models import PropertyBankAccount
+
+    fc.tan_mechanisms = [asdict(m) for m in result.tan_mechanisms]
+    fc.tan_mechanism = result.tan_mechanism
+    fc.tan_medium = result.tan_medium
+    if result.client_data:
+        fc.client_data = fints_mod.encode_blob(result.client_data)
+    fs.tan_mechanism = result.tan_mechanism
+    fs.progress = json.dumps(result.progress.to_json()) if result.progress else None
+    fs.expires_at = datetime.now(UTC) + timedelta(minutes=FINTS_STEP_TIMEOUT_MINUTES)
+    counts = {"new": 0, "duplicates": 0, "possible_duplicates": 0, "transfers": 0}
+
+    if result.status != "done":
+        ch = result.challenge
+        fs.status = (
+            FinTsSessionStatus.AWAITING_DECOUPLED
+            if result.status == "awaiting_decoupled"
+            else FinTsSessionStatus.AWAITING_TAN
+        )
+        fs.challenge_text = ch.text if ch else None
+        fs.challenge_hhduc = ch.hhduc if ch else None
+        fs.challenge_image_mime = ch.image_mime if ch else None
+        fs.challenge_image = ch.image if ch else None
+        fs.challenge_decoupled = bool(ch and ch.decoupled)
+        fs.retry_data = fints_mod.encode_blob(ch.retry_data) if ch else None
+        fs.dialog_data = fints_mod.encode_blob(ch.dialog_data) if ch else None
+        fs.client_data = fints_mod.encode_blob(ch.client_data) if ch else None
+        fs.result = {**fs.result, "tan_used": True}
+        conn.status = ConnectionStatus.WEB_FORM_PENDING
+        return counts
+
+    # done: clear every opaque blob, apply accounts, balances and transactions
+    fs.status = FinTsSessionStatus.DONE
+    fs.challenge_text = fs.challenge_hhduc = fs.challenge_image_mime = None
+    fs.challenge_image = None
+    fs.retry_data = fs.dialog_data = fs.client_data = fs.pending_tan = None
+    fs.progress = None
+    if tan_used or fs.result.get("tan_used"):
+        fc.last_sca_at = datetime.now(UTC)
+    fc.last_error = fc.last_error_code = None
+    fc.pin_blocked = False
+    conn.status = ConnectionStatus.ACTIVE
+    conn.error_message = None
+    conn.last_sync_at = datetime.now(UTC)
+    progress = result.progress
+    accounts = progress.accounts if progress and progress.accounts else []
+    links_by_iban: dict[str, Any] = {}
+    for snap in accounts:
+        iban = snap["iban"]
+        fp = crypto.fingerprint(iban)
+        link = await session.scalar(
+            select(FinTsAccountLink).where(
+                FinTsAccountLink.fints_connection_id == fc.id,
+                FinTsAccountLink.iban_fingerprint == fp,
+            )
+        )
+        if link is None:
+            link = FinTsAccountLink(
+                tenant_id=tenant_id,
+                fints_connection_id=fc.id,
+                iban=iban,
+                iban_suffix=iban[-4:],
+                iban_fingerprint=fp,
+            )
+            session.add(link)
+        link.bic = snap.get("bic")
+        link.account_number = snap.get("account_number")
+        link.subaccount = snap.get("subaccount")
+        if snap.get("balance") is not None:
+            link.balance_booked = Decimal(snap["balance"])
+            link.balance_currency = snap.get("currency")
+            link.balance_as_of = (
+                date.fromisoformat(snap["balance_date"]) if snap.get("balance_date") else None
+            )
+            link.balance_fetched_at = datetime.now(UTC)
+        await session.flush()
+        links_by_iban[iban] = link
+    fs.result = {**fs.result, "accounts": len(accounts)}
+
+    run = await session.get(BankSyncRun, fs.sync_run_id) if fs.sync_run_id else None
+    if progress and progress.with_transactions:
+        newest_by_link: dict[uuid.UUID, date] = {}
+        for iban, rows in progress.transactions.items():
+            link = links_by_iban.get(iban)
+            if link is None or link.property_bank_account_id is None:
+                continue
+            account = await session.get(PropertyBankAccount, link.property_bank_account_id)
+            if account is None or run is None:
+                continue
+            raws = [fints_mod.raw_from_json(r) for r in rows]
+            page_counts = await svc.import_finapi_transactions(
+                session,
+                tenant_id=tenant_id,
+                property_bank_account_id=account.id,
+                legal_entity_id=account.legal_entity_id,
+                iban_fingerprint=account.iban_fingerprint,
+                run=run,
+                transactions=raws,
+            )
+            for k, v in page_counts.items():
+                counts[k] += v
+            link.last_transactions_fetch_at = datetime.now(UTC)
+            if raws:
+                newest_by_link[link.id] = max(r.booking_date for r in raws)
+        for link in links_by_iban.values():
+            newest = newest_by_link.get(link.id)
+            if newest is not None and (
+                link.last_synced_booking_date is None or newest >= link.last_synced_booking_date
+            ):
+                link.last_synced_booking_date = newest
+        if run is not None:
+            run.status, run.counts = "done", counts
+        fs.result = {**fs.result, **counts}
+    return counts
+
+
+async def _fints_step_once(
+    settings: Settings, tenant_id: uuid.UUID, session_id: uuid.UUID
+) -> dict[str, Any]:
+    """One step of a FinTS session: open the dialog (or answer the pending TAN), run until
+    the next TAN request or completion, persist. The blocking python-fints call runs outside
+    any database transaction (first transaction reads and marks `running`, second one
+    writes the outcome). Never logs login, PIN or TAN."""
+    import json
+
+    from mhvp.banking import fints as fints_mod
+    from mhvp.banking.models import FinTsConnection, FinTsSession, FinTsSessionStatus
+    from mhvp.core.problems import ErrorCodes
+
+    _ensure_crypto(settings)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            fs = await session.get(FinTsSession, session_id, with_for_update=True)
+            if fs is None or fs.status not in (
+                FinTsSessionStatus.QUEUED,
+                FinTsSessionStatus.AWAITING_TAN,
+                FinTsSessionStatus.AWAITING_DECOUPLED,
+            ):
+                return {"skipped": 1}
+            fc = await session.get(FinTsConnection, fs.fints_connection_id, with_for_update=True)
+            if fc is None:
+                fs.status, fs.error_message = FinTsSessionStatus.FAILED, "Verbindung fehlt."
+                await session.flush()
+                return {"failed": 1}
+            product_id = settings.fints_product_id
+            if not product_id:
+                error = ErrorCodes.FINTS_NOT_CONFIGURED
+                fs.status, fs.error_code, fs.error_message = (
+                    FinTsSessionStatus.FAILED,
+                    error.code,
+                    error.title,
+                )
+                await session.flush()
+                return {"failed": 1}
+            if fc.pin is None:
+                error = ErrorCodes.FINTS_PIN_BLOCKED
+                fs.status, fs.error_code, fs.error_message = (
+                    FinTsSessionStatus.FAILED,
+                    error.code,
+                    error.title,
+                )
+                await session.flush()
+                return {"failed": 1}
+            creds = fints_mod.Credentials(
+                blz=fc.blz,
+                fints_url=fc.fints_url,
+                login=fc.login,
+                pin=fc.pin,
+                product_id=product_id,
+                product_version=settings.fints_product_version,
+            )
+            awaiting = fs.retry_data is not None
+            challenge = (
+                fints_mod.Challenge(
+                    text=fs.challenge_text,
+                    image_mime=fs.challenge_image_mime,
+                    image=fs.challenge_image,
+                    hhduc=fs.challenge_hhduc,
+                    decoupled=fs.challenge_decoupled,
+                    retry_data=fints_mod.decode_blob(fs.retry_data) or b"",
+                    dialog_data=fints_mod.decode_blob(fs.dialog_data) or b"",
+                    client_data=fints_mod.decode_blob(fs.client_data) or b"",
+                )
+                if awaiting
+                else None
+            )
+            tan = fs.pending_tan
+            fs.pending_tan = None
+            progress = (
+                fints_mod.Progress.from_json(json.loads(fs.progress))
+                if fs.progress
+                else fints_mod.Progress(
+                    with_transactions=fs.purpose == "refresh",
+                    since=fs.since.isoformat() if fs.since else None,
+                    until=fs.until.isoformat() if fs.until else None,
+                )
+            )
+            client_data = fints_mod.decode_blob(fc.client_data)
+            tan_mechanism, tan_medium = fc.tan_mechanism, fc.tan_medium
+            fs.status = FinTsSessionStatus.RUNNING
+            await session.flush()
+
+        outcome: Any = None
+        problem: ProblemError | None = None
+        try:
+            if challenge is not None:
+                outcome = await asyncio.to_thread(
+                    fints_mod.continue_session,
+                    creds,
+                    challenge=challenge,
+                    tan=tan,
+                    tan_mechanism=tan_mechanism,
+                    tan_medium=tan_medium,
+                    progress=progress,
+                )
+            else:
+                outcome = await asyncio.to_thread(
+                    fints_mod.start_session,
+                    creds,
+                    client_data=client_data,
+                    tan_mechanism=tan_mechanism,
+                    tan_medium=tan_medium,
+                    progress=progress,
+                )
+        except ProblemError as exc:
+            problem = exc
+        except Exception as exc:  # defensive: mapping already happened in fints_mod
+            problem = fints_mod.problem_for_exception(exc)
+
+        async with tenant_transaction(factory, tenant_id) as session:
+            fs = await session.get(FinTsSession, session_id, with_for_update=True)
+            if fs is None:  # pragma: no cover
+                return {"failed": 1}
+            fc = await session.get(FinTsConnection, fs.fints_connection_id, with_for_update=True)
+            if fc is None:  # pragma: no cover
+                return {"failed": 1}
+            conn = await session.get(BankConnection, fc.bank_connection_id, with_for_update=True)
+            if conn is None:  # pragma: no cover
+                return {"failed": 1}
+            if problem is not None:
+                code = problem.error.code
+                message = problem.detail or problem.error.title
+                fs.status, fs.error_code, fs.error_message = (
+                    FinTsSessionStatus.FAILED,
+                    code,
+                    message,
+                )
+                fs.retry_data = fs.dialog_data = fs.client_data = fs.pending_tan = None
+                fs.challenge_image = None
+                fc.last_error, fc.last_error_code = message, code
+                if code in (
+                    ErrorCodes.FINTS_PIN_REJECTED.code,
+                    ErrorCodes.FINTS_ACCOUNT_LOCKED.code,
+                ):
+                    # No automatic retry with the same PIN (bank locks after three failures).
+                    fc.pin_blocked = True
+                    fc.pin = None
+                    conn.status = ConnectionStatus.ERROR
+                elif code == ErrorCodes.FINTS_SCA_REQUIRED.code:
+                    conn.status = ConnectionStatus.UPDATE_REQUIRED
+                elif conn.status != ConnectionStatus.ACTIVE:
+                    conn.status = ConnectionStatus.ERROR
+                conn.error_message = message
+                if fs.sync_run_id:
+                    run = await session.get(BankSyncRun, fs.sync_run_id)
+                    if run is not None:
+                        run.status, run.errors = "failed", [f"{code}: {message}"]
+                await session.flush()
+                return {"failed": 1, "code": code}
+            counts = await _fints_apply_result(
+                session,
+                tenant_id=tenant_id,
+                fs=fs,
+                fc=fc,
+                conn=conn,
+                result=outcome,
+                tan_used=awaiting,
+            )
+            await session.flush()
+            return {"status": fs.status.value, **counts}
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.banking.fints_step", queue="bank")
+def fints_step(tenant_id: str, session_id: str) -> dict[str, Any]:
+    return asyncio.run(
+        _fints_step_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(session_id))
+    )

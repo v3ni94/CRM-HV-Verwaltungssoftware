@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
+import { LoanAllocationForm, type LoanAllocationRow } from "@/components/hoa/AssetReportForms";
 import { ReconciliationNotes } from "@/components/hoa/FinanceForms";
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
 import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
@@ -13,7 +14,9 @@ import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-type Unit = { unit_number: string; cost_share: string; advances_resolved: string; advances_paid: string; result: string; arrears: string; information_total: string };
+type Unit = { unit_number: string; cost_share: string; advances_resolved: string; advances_paid: string; result: string; arrears: string; information_total: string; loan_interest_share?: string; loan_repayment_share?: string };
+type LoanBlockRow = { loan_id: string; lender: string; reference: string | null; basis: string; residual_booked: string; components: Record<string, { amount: string; source: string }> };
+type LoanBlock = { loans: LoanBlockRow[]; note_text: string };
 type Reserve = { opening: string; contributions_paid: string; contributions_open: string; withdrawals: string; interest: string; closing: string };
 type Recon = {
   cash: { accounts: { number: string; name: string; opening: string; opening_migration?: string; closing: string }[]; opening: string; inflows: string; outflows: string; closing: string };
@@ -50,7 +53,12 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   const diff = supersedes
     ? ((await ctx.api.GET("/api/v1/hoa/statements/{statement_id}/diff", { params: { path: { statement_id: stId }, query: { against: supersedes } } })).data as StatementDiff | undefined) ?? null
     : null;
-  const snap = data.snapshot as { units?: Unit[]; reserve?: Reserve } | null;
+  const snap = data.snapshot as { units?: Unit[]; reserve?: Reserve; loans?: LoanBlock } | null;
+  // M24-03: loans of the community for the display configuration (draft only).
+  const loansResponse = data.status === "draft" ? await ctx.api.GET("/api/v1/hoa/loans", { params: { query: { legal_entity_id: ctx.entity.id } } }) : null;
+  const loanOptions = ((loansResponse?.data ?? []) as { id: string; lender: string; reference?: string | null }[]).map((l) => ({ id: String(l.id), label: `${String(l.lender)}${l.reference ? ` ${String(l.reference)}` : ""}` }));
+  const loanAllocation = ((data as { loan_allocation?: LoanAllocationRow[] }).loan_allocation ?? []) as LoanAllocationRow[];
+  const showLoanShares = Boolean(snap?.loans?.loans.length);
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -95,6 +103,8 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
               <th className="num">{t("result")}</th>
               <th className="num">{t("arrears")}</th>
               <th className="num">{t("information")}</th>
+              {showLoanShares ? <th className="num">{tf("loanInterestShare")}</th> : null}
+              {showLoanShares ? <th className="num">{tf("loanRepaymentShare")}</th> : null}
             </tr>
           </thead>
           <tbody>
@@ -106,12 +116,45 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
                 <td className="num">{formatEur(u.result)}</td>
                 <td className="num">{formatEur(u.arrears)}</td>
                 <td className="text-right tabular-nums text-muted">{formatEur(u.information_total)}</td>
+                {showLoanShares ? <td className="text-right tabular-nums text-muted">{formatEur(u.loan_interest_share ?? "0")}</td> : null}
+                {showLoanShares ? <td className="text-right tabular-nums text-muted">{formatEur(u.loan_repayment_share ?? "0")}</td> : null}
               </tr>
             ))}
           </tbody>
         </table>
 </div>
       ) : null}
+      {snap?.loans ? (
+        <section className={ui.card} data-testid="statement-loans">
+          <h2 className={ui.h2}>{tf("loanAllocation")}</h2>
+          <p className="mt-1 text-sm text-muted">{snap.loans.note_text}</p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="mhvp-table">
+              <thead>
+                <tr>
+                  <th>{tf("loanAllocationLoan")}</th>
+                  <th className="num">{tf("annualInterest")}</th>
+                  <th className="num">{tf("annualRepayment")}</th>
+                  <th className="num">{tf("residualDebt")}</th>
+                  <th>{tf("loanAllocationBasis")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {snap.loans.loans.map((l) => (
+                  <tr key={l.loan_id}>
+                    <td>{l.lender}{l.reference ? ` ${l.reference}` : ""}</td>
+                    <td className="num">{formatEur(l.components.interest?.amount ?? "0")} · {tf(`annualSource.${l.components.interest?.source ?? "none"}`)}</td>
+                    <td className="num">{formatEur(l.components.repayment?.amount ?? "0")} · {tf(`annualSource.${l.components.repayment?.source ?? "none"}`)}</td>
+                    <td className="num">{formatEur(l.residual_booked)}</td>
+                    <td className="text-muted">{l.basis}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
+      {data.status === "draft" ? <LoanAllocationForm statementId={stId} loans={loanOptions} keys={ctx.keys} current={loanAllocation} /> : null}
       {diff ? <StatementVersionDiff diff={diff} /> : null}
       {recon ? (
         <section className={ui.card} data-testid="reconciliation">

@@ -6,8 +6,8 @@
 | Title | Kaution: getrennte Verwahrung, Verzinsung je Jahr als Bewegung, Kautionsabrechnung bei Vertragsende als Entwurf mit wählbarer Zinsart |
 | Scope | Mietverhältnisse (`contract.kind = tenancy`) mit Kaution (`deposit`), alle Mandanten; Tabellen `deposit_settlement` und `deposit_interest_reference_rate` (Domäne `contracts`, RLS je Mandant, Migration 0138); keine Buchung, keine Zahlung, keine Forderung (G1, G3 unberührt) |
 | Source status | Offene Entscheidung, Typ Fachliche Umsetzung mit Produktschutz. Betreiberentscheidung vom 26.09.2026 (docs/OPEN_QUESTIONS.md, M5-02): Standardregel "Kaution getrennt verwahren, Zinsen je Jahr als Bewegung erfassen, Abrechnung bei Vertragsende als Entwurf". Quellenregister Anhang C: § 551 BGB ist als ergänzend geprüfter Baustein für Wohnraummietsicherheiten benannt (Vermögenstrennung, Zinszuordnung, D56); welcher Zinssatz für die Verzinsung rechtlich maßgeblich ist, ist nicht aus dem Register belegt und **durch Rechtsberatung zu bestätigen**. Eigentümer: Betreiber mit Rechtsberatung. Betroffenes Tor: G3 (Freigabe der Abrechnung), G1 (Bewegungen als Buchung ab M10) |
-| Acceptance case | keine Nummer in Anhang D; D56 (Kaution bleibt ihrer Vermögenssphäre und Zinszuordnung zugeordnet) als Leitfall. Tests mit handgerechneten Erwartungswerten (Regel 0.1.8): `apps/api/tests/unit/test_m5_deposit_settlement.py` (drei Zinsarten, Schaltjahr, Rundung, Raten), `apps/api/tests/integration/test_m5_deposit_settlement.py` (API, Mandantentrennung, G3-Sperre); CRM `apps/web-crm/src/components/contracts/DepositPanel.test.tsx`, `apps/web-crm/src/components/settings/DepositInterestRatesAdmin.test.tsx` |
-| Implementation | `mhvp.contracts.deposit_settlement` (Modelle, Berechnung), `mhvp.contracts.deposit_settlement_routers` (`GET /deposit-interest-rates`, `PUT`/`DELETE /deposit-interest-rates/{year}`, `POST /deposits/{id}/settlements/preview`, `POST`/`GET /deposits/{id}/settlements`, `POST /deposit-settlements/{id}/release` hinter G3), CRM Vertragsdetail (Abschnitt Kautionen) und Einstellungen, Kautionszinsen; Regelversion 1 |
+| Acceptance case | keine Nummer in Anhang D; D56 (Kaution bleibt ihrer Vermögenssphäre und Zinszuordnung zugeordnet) als Leitfall. Tests mit handgerechneten Erwartungswerten (Regel 0.1.8): `apps/api/tests/unit/test_m5_deposit_settlement.py` (drei Zinsarten, Schaltjahr, Rundung, Raten), `apps/api/tests/integration/test_m5_deposit_settlement.py` (API, Mandantentrennung, G3-Sperre, PDF-Dokument: `test_settlement_document`); CRM `apps/web-crm/src/components/contracts/DepositPanel.test.tsx`, `apps/web-crm/src/components/settings/DepositInterestRatesAdmin.test.tsx` |
+| Implementation | `mhvp.contracts.deposit_settlement` (Modelle, Berechnung), `mhvp.contracts.deposit_settlement_routers` (`GET /deposit-interest-rates`, `PUT`/`DELETE /deposit-interest-rates/{year}`, `POST /deposits/{id}/settlements/preview`, `POST`/`GET /deposits/{id}/settlements`, `POST /deposit-settlements/{id}/release` hinter G3, `POST /contracts/{id}/deposit-settlements/{sid}/document` und `GET .../document-preview`), `mhvp.contracts.deposit_settlement_pdf` (Briefaufbau, Speicherung, Verknüpfung), CRM Vertragsdetail (Abschnitt Kautionen, Knopf "Abrechnung als PDF erzeugen und ablegen") und Einstellungen, Kautionszinsen; Regelversion 2 (27.09.2026, PDF-Ausgabe ergänzt) |
 | Change reason | Betreiberentscheidung M5-02 vom 26.09.2026; zuvor waren Verzinsung und Abrechnung nicht umgesetzt (nur Soll, Raten, Bewegungen) |
 
 ## Regeln
@@ -49,9 +49,17 @@
   Freigabe ändert sich am Entwurf nichts; die Auszahlung selbst bleibt ein manueller Vorgang
   (Bewegung `payout`, Zahlung erst hinter G2).
 - Ausgabe: JSON-Datensatz (Kaution, Zinsen je Jahr mit Satz und Tagen, erfasste
-  Verrechnungen und Auszahlungen, Einbehalte, Auszahlungsbetrag). Ein PDF der
-  Kautionsabrechnung existiert nicht (Hinweis im Handbuch); es ist ein offener Punkt für die
-  Briefvorlagen (A07).
+  Verrechnungen und Auszahlungen, Einbehalte, Auszahlungsbetrag). Zusätzlich erzeugt
+  `POST /contracts/{id}/deposit-settlements/{sid}/document` (Restpunkt vom 27.09.2026,
+  `mhvp.contracts.deposit_settlement_pdf`) die Abrechnung als PDF-Entwurf auf dem
+  Briefbogen des Mandanten (`mhvp.documents.letters`, DIN 5008): Positionen des
+  Kautionsguthabens, Zinsverlauf je Jahr (Zinsart, Satz, Tage, Betrag, sofern verzinst),
+  Einbehalte mit Begründung, Auszahlungsbetrag und die maskierte Bankverbindung des
+  Mieters (`mhvp.ai.table_mapper.mask_iban`). Das Dokument wird im Dokumentenindex
+  abgelegt und mit Vertrag und Mieterkontakt verknüpft (`deposit_settlement.document_id`,
+  Migration 0184); es bucht nichts und weist nichts aus (kein `MHVP-GATE`-Bezug, G1/G3
+  bleiben unberührt). Welcher Zinssatz rechtsverbindlich maßgeblich ist, bleibt weiterhin
+  eine Einschätzung im Brieftext, keine Rechtsauskunft.
 
 ## Rechenbeispiel (Erwartungswert von Hand, Regel 0.1.8)
 

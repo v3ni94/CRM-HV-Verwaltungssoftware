@@ -16,6 +16,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import services as acc
+from mhvp.accounting import tax
 from mhvp.accounting.models import (
     AccountCategory,
     AccountType,
@@ -297,6 +298,9 @@ async def post(session: AsyncSession, invoice: Invoice, user_id: uuid.UUID | Non
             ErrorCodes.ACC_VAT_NOT_RELEASED,
             detail="Vorsteuerbehandlung für diesen Buchungskreis ist nicht freigegeben (M14-02).",
         )
+    # M14-03 / M14-04 (mhvp.accounting.tax): second approval above the role limit and an
+    # undecided withholding proposal block the posting; silent while the switches are off.
+    await tax.assert_posting_allowed(session, invoice)
     creditor = await creditor_account(session, ledger, invoice.provider_contact_id)
     invoice.creditor_account_id = creditor.id
     lines = list(

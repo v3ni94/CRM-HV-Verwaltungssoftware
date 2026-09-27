@@ -21,7 +21,7 @@ from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
 from tests.integration.test_m8_import import BUCKET, _settings
 from tests.integration.test_m19_ticket_reply_templates import _ok
-from tests.integration.test_m20_mail_approval import FakeGmail, _eml, _upload
+from tests.integration.test_m20_mail_approval import FakeGmail, _eml, _reauth, _upload
 
 pytestmark = pytest.mark.integration
 T = "/api/v1/tickets"
@@ -222,7 +222,9 @@ def test_regular_approver_sends_directly_and_flag_requires_second_person(
     azubi_notes = _ok(client.get("/api/v1/workspace/notifications", headers=azubi))
     assert not [n for n in azubi_notes if n["entity_id"] == draft["id"]]
 
-    # Zweite Person gibt frei; Nachvollziehbarkeit im Mailverlauf und in den Ereignissen.
+    # Zweite Person gibt frei (M20-04: mit Re-Auth, anders als beim Direktversand oben);
+    # Nachvollziehbarkeit im Mailverlauf und in den Ereignissen.
+    _reauth(client, admin)
     released = _ok(client.post(f"{M}/messages/{draft['id']}/approve", headers=admin))
     assert released["status"] == "sent"
     assert len(fake.sent) == 2

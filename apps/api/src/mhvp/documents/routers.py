@@ -5,7 +5,6 @@ import json
 import uuid
 from datetime import UTC, date, datetime
 from typing import Annotated, Any
-from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, File, Form, Query, Request, Response, UploadFile
@@ -16,13 +15,17 @@ from sqlalchemy.exc import IntegrityError
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import session_allowed_legal_entity_ids
+from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents import letters, mirror_deletion
+from mhvp.documents import letters, mirror_deletion, retention
 from mhvp.documents import schemas as s
 from mhvp.documents import services as svc
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import (
+    DeletionProposal,
+    DeletionProposalItem,
+    DeletionProposalStatus,
     DmsConnection,
     Document,
     DocumentCategory,
@@ -47,6 +50,7 @@ from mhvp.documents.paperless_search import (
     parse_field_id,
 )
 from mhvp.handover import images
+from mhvp.tickets.models import Ticket
 
 router = APIRouter(tags=["Dokumente"])
 READ = require_permission("documents:read")
@@ -190,6 +194,9 @@ async def upload(
         link_items = _LINKS.validate_json(links) if links else []
     except ValidationError as exc:
         raise svc.invalid(f"links ungültig: {exc.errors()[0]['msg']}") from None
+    # ``store_document`` normalises the name again (path parts, control characters, NFC,
+    # length); this call keeps the naive fallback so ``title`` defaults to something readable
+    # even before the full sanitisation runs.
     filename = (file.filename or "upload").replace("/", "_").replace("\\", "_")
     async with tenant_tx(request, principal) as session:
         if category_id is not None:
@@ -415,12 +422,11 @@ async def download(
         else:
             data = _blobs(request).get(document.storage_ref)
         await _event(session, principal, "document.downloaded", document.id)
-    name = quote(document.filename)
     return Response(
         content=data,
         media_type=document.mime_type,
         headers={
-            "Content-Disposition": f"attachment; filename*=UTF-8''{name}",
+            "Content-Disposition": content_disposition("attachment", document.filename),
             "X-Content-Type-Options": "nosniff",
             "Cache-Control": "private, no-store",
         },
@@ -443,6 +449,18 @@ async def patch_document(
             await _get(session, RetentionProfile, changes["retention_profile_id"])
         for key, value in changes.items():
             setattr(document, key, value)
+        # Retention matrix (M6-04): a new category takes the mapped profile, a new profile or
+        # base date recomputes the period; an explicit retention_until stays as given.
+        if "retention_until" not in changes:
+            profile: RetentionProfile | None = None
+            if "retention_profile_id" in changes and document.retention_profile_id:
+                profile = await session.get(RetentionProfile, document.retention_profile_id)
+            elif "category_id" in changes:
+                profile = await retention.profile_for_category(session, document.category_id)
+            elif "retention_base_on" in changes and document.retention_profile_id:
+                profile = await session.get(RetentionProfile, document.retention_profile_id)
+            if profile is not None:
+                await retention.assign_profile(session, document, profile)
         await _event(session, principal, "document.updated", document.id, fields=sorted(changes))
         return await _out(session, document)
 
@@ -550,37 +568,18 @@ async def delete_document(
         blocker = await svc.deletion_blocker(session, document, _today())
         if blocker is not None:  # changed in between
             raise ProblemError(ErrorCodes.RETENTION_LOCKED, detail=blocker)
-        mirrors = (
-            await session.scalars(
-                select(DocumentMirror).where(
-                    DocumentMirror.document_id == document.id,
-                    DocumentMirror.status != MirrorStatus.PENDING,
-                )
-            )
-        ).all()
         # A43 (6.9.5, M6-03, operator decision 26.09.2026): the Drive copy is deleted and the
         # Paperless document tagged "gelöscht" by a logged job after this deletion; the steps
-        # are journaled here, in the same transaction, and the deletion stays "offen" until
-        # every step succeeded (GET /documents/deletions).
-        jobs = await mirror_deletion.request(
+        # are journaled in the same transaction, and the deletion stays "offen" until every
+        # step succeeded (GET /documents/deletions). Shared with the proposal run (M6-04).
+        deleted = await retention.delete_now(
             session,
+            _blobs(request),
+            document,
             tenant_id=principal.tenant_id,
-            document_id=document.id,
-            mirrors=list(mirrors),
             actor_user_id=principal.user_id,
         )
-        _blobs(request).delete(document.storage_ref)
-        await _event(
-            session,
-            principal,
-            "document.deleted",
-            document.id,
-            sha256=document.sha256,
-            profile=document.retention_profile_id,
-            mirror_deletions=len(jobs),
-        )
-        await session.delete(document)
-    mirror_deletion.enqueue(jobs)
+    mirror_deletion.enqueue(deleted.jobs)
     return Response(status_code=204)
 
 
@@ -638,6 +637,34 @@ async def create_category(
         row = DocumentCategory(tenant_id=principal.tenant_id, **body.model_dump())
         session.add(row)
         await _flush(session, f"Kategorie {body.code} besteht bereits.")
+        return s.CategoryOut.model_validate(row)
+
+
+@router.patch("/document-categories/{category_id}", summary="Kategorie ändern (Profilzuordnung)")
+async def patch_category(
+    category_id: uuid.UUID,
+    body: s.CategoryPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> s.CategoryOut:
+    """Maps a document category to a retention profile (M6-04). Documents stored or
+    recategorised afterwards take the profile; ``POST /retention-profiles/apply`` assigns
+    it to existing documents without a profile."""
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, DocumentCategory, category_id)
+        changes = body.model_dump(exclude_unset=True)
+        if changes.get("retention_profile_id"):
+            await _get(session, RetentionProfile, changes["retention_profile_id"])
+        for key, value in changes.items():
+            setattr(row, key, value)
+        await _event(
+            session,
+            principal,
+            "document_category.updated",
+            row.id,
+            fields=sorted(changes),
+            retention_profile_id=row.retention_profile_id,
+        )
         return s.CategoryOut.model_validate(row)
 
 
@@ -701,6 +728,206 @@ async def release_profile(
             previous_review_note=previous_note,
         )
         return s.RetentionProfileOut.model_validate(row)
+
+
+@router.patch("/retention-profiles/{profile_id}", summary="Aufbewahrungsprofil bearbeiten")
+async def patch_profile(
+    profile_id: uuid.UUID,
+    body: s.RetentionProfilePatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> s.RetentionProfileOut:
+    """Edits a profile (M6-04). A released profile becomes a draft again with the editor as
+    author, so the change needs a new release by a second person; documents keep their
+    computed date until the profile is applied again."""
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, RetentionProfile, profile_id)
+        changes = body.model_dump(exclude_unset=True)
+        if not changes:
+            return s.RetentionProfileOut.model_validate(row)
+        for key, value in changes.items():
+            setattr(row, key, value)
+        if not row.permanent and row.retention_years == 0 and row.retention_months == 0:
+            raise svc.invalid("Frist fehlt: Jahre oder Monate angeben oder dauerhaft wählen.")
+        was_released = row.released_at is not None
+        row.released_at, row.released_by = None, None
+        row.created_by = principal.user_id
+        if not row.review_note:
+            row.review_note = "Geändert, erneute Freigabe erforderlich"
+        await _flush(session, "Das Profil konnte nicht gespeichert werden.")
+        await _event(
+            session,
+            principal,
+            "retention_profile.updated",
+            row.id,
+            fields=sorted(changes),
+            was_released=was_released,
+            retention_years=row.retention_years,
+            retention_months=row.retention_months,
+            permanent=row.permanent,
+            start_rule=row.start_rule.value,
+        )
+        return s.RetentionProfileOut.model_validate(row)
+
+
+@router.post("/retention-profiles/apply", summary="Profile nach Kategoriezuordnung anwenden")
+async def apply_profiles(
+    request: Request,
+    all_documents: bool = Query(
+        default=False, description="auch bereits zugeordnete Dokumente neu berechnen"
+    ),
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> s.RetentionApplyOut:
+    async with tenant_tx(request, principal) as session:
+        assigned = await retention.apply_category_mapping(
+            session, only_unassigned=not all_documents
+        )
+        await _event(
+            session, principal, "retention_profile.applied", principal.tenant_id, assigned=assigned
+        )
+        return s.RetentionApplyOut(assigned=assigned)
+
+
+# Holds per ticket (Vorgang) and deletion proposals (M6-04) --------------------------------
+
+
+@router.post("/tickets/{ticket_id}/retention-hold", summary="Löschungssperre am Vorgang setzen")
+async def set_ticket_hold(
+    ticket_id: uuid.UUID,
+    body: s.HoldIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.TicketHoldOut:
+    """While set, no document linked to the ticket is deleted (Rechtsstreit, Beweissicherung)."""
+    async with tenant_tx(request, principal) as session:
+        ticket = await _get(session, Ticket, ticket_id)
+        ticket.retention_hold_reason = body.reason
+        await _event(session, principal, "ticket.hold_set", ticket.id, reason=body.reason)
+        return s.TicketHoldOut(
+            ticket_id=ticket.id, retention_hold_reason=ticket.retention_hold_reason
+        )
+
+
+@router.delete("/tickets/{ticket_id}/retention-hold", summary="Löschungssperre am Vorgang aufheben")
+async def clear_ticket_hold(
+    ticket_id: uuid.UUID,
+    body: s.HoldIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> s.TicketHoldOut:
+    async with tenant_tx(request, principal) as session:
+        ticket = await _get(session, Ticket, ticket_id)
+        previous = ticket.retention_hold_reason
+        ticket.retention_hold_reason = None
+        await _event(
+            session,
+            principal,
+            "ticket.hold_cleared",
+            ticket.id,
+            reason=body.reason,
+            previous=previous,
+        )
+        return s.TicketHoldOut(ticket_id=ticket.id, retention_hold_reason=None)
+
+
+async def _proposal_out(session: Any, proposal: DeletionProposal) -> s.DeletionProposalOut:
+    await session.flush()
+    await session.refresh(proposal)
+    out = s.DeletionProposalOut.model_validate(proposal)
+    out.items = [
+        s.DeletionProposalItemOut.model_validate(i)
+        for i in (
+            await session.scalars(
+                select(DeletionProposalItem)
+                .where(DeletionProposalItem.proposal_id == proposal.id)
+                .order_by(DeletionProposalItem.retention_until, DeletionProposalItem.title)
+            )
+        ).all()
+    ]
+    return out
+
+
+@router.get("/deletion-proposals", summary="Löschvorschläge")
+async def list_deletion_proposals(
+    request: Request,
+    status: DeletionProposalStatus | None = Query(default=None),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[s.DeletionProposalOut]:
+    async with tenant_tx(request, principal) as session:
+        query = select(DeletionProposal).order_by(DeletionProposal.created_at.desc()).limit(100)
+        if status is not None:
+            query = query.where(DeletionProposal.status == status)
+        rows = (await session.scalars(query)).all()
+        return [await _proposal_out(session, r) for r in rows]
+
+
+@router.post("/deletion-proposals", status_code=201, summary="Löschvorschlag jetzt erstellen")
+async def create_deletion_proposal(
+    request: Request, principal: TenantPrincipal = Depends(DELETE)
+) -> s.DeletionProposalOut:
+    """Same run as the monthly job (``mhvp.documents.deletion_proposals``), started by hand.
+    Answers 409 when no document is due; nothing is deleted here."""
+    async with tenant_tx(request, principal) as session:
+        proposal = await retention.propose(
+            session, tenant_id=principal.tenant_id, today=_today(), created_by=principal.user_id
+        )
+        if proposal is None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Kein Dokument ist fällig oder alle fälligen sind bereits vorgeschlagen.",
+            )
+        return await _proposal_out(session, proposal)
+
+
+@router.get("/deletion-proposals/{proposal_id}", summary="Löschvorschlag lesen")
+async def get_deletion_proposal(
+    proposal_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> s.DeletionProposalOut:
+    async with tenant_tx(request, principal) as session:
+        return await _proposal_out(session, await _get(session, DeletionProposal, proposal_id))
+
+
+@router.post("/deletion-proposals/{proposal_id}/approve", summary="Löschvorschlag freigeben")
+async def approve_deletion_proposal(
+    proposal_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> s.DeletionProposalOut:
+    """Four eyes: not by the person who started the proposal (MHVP-GATE-0002)."""
+    async with tenant_tx(request, principal) as session:
+        proposal = await _get(session, DeletionProposal, proposal_id)
+        await retention.approve(session, proposal, user_id=principal.user_id)
+        return await _proposal_out(session, proposal)
+
+
+@router.post("/deletion-proposals/{proposal_id}/reject", summary="Löschvorschlag ablehnen")
+async def reject_deletion_proposal(
+    proposal_id: uuid.UUID,
+    body: s.DeletionProposalNoteIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> s.DeletionProposalOut:
+    async with tenant_tx(request, principal) as session:
+        proposal = await _get(session, DeletionProposal, proposal_id)
+        await retention.reject(session, proposal, user_id=principal.user_id, note=body.note)
+        return await _proposal_out(session, proposal)
+
+
+@router.post("/deletion-proposals/{proposal_id}/execute", summary="Löschvorschlag ausführen")
+async def execute_deletion_proposal(
+    proposal_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(DELETE)
+) -> s.DeletionProposalExecuteOut:
+    """Deletes the approved documents (index, S3 original, mirror steps per M6-03). Four eyes
+    again: not by the approver. Every document is re-checked on the day of execution and kept
+    with a logged reason when a hold or a period blocks it."""
+    async with tenant_tx(request, principal) as session:
+        proposal = await _get(session, DeletionProposal, proposal_id)
+        result = await retention.execute(
+            session, proposal, blobs=_blobs(request), user_id=principal.user_id, today=_today()
+        )
+        out = await _proposal_out(session, proposal)
+    mirror_deletion.enqueue(result.jobs)
+    return s.DeletionProposalExecuteOut(
+        proposal=out, deleted=result.deleted, skipped=result.skipped
+    )
 
 
 # DMS connections -------------------------------------------------------------------------
@@ -1277,7 +1504,7 @@ async def dms_document_file(
             await client.aclose()
         headers = {}
         if kind == "download" and file.filename:
-            headers["Content-Disposition"] = f'attachment; filename="{quote(file.filename)}"'
+            headers["Content-Disposition"] = content_disposition("attachment", file.filename)
         return StreamingResponse(
             iter([file.content]), media_type=file.content_type, headers=headers
         )

@@ -45,5 +45,54 @@
 - Die Zuordnung von Dokumenten zu einem Profil und die Berechnung von `retention_until` bleiben
   manuell (Feld am Dokument); eine automatische Ableitung aus Kategorie oder Rechtsträger ist
   nicht Teil dieser Regel (offen, V17).
-- Keine CRM-Seite für Aufbewahrungsprofile: Anzeige und Freigabe erfolgen über die API, bis die
-  Steuerberatung die Matrix geprüft hat.
+- CRM: Seite Einstellungen, Aufbewahrung (Profile bearbeiten, freigeben, Kategorien zuordnen)
+  und Seite Dokumente, Löschvorschläge (Nachtrag 27.09.2026 unten). Die Seiten ändern nichts an
+  der Sperre: ohne freigegebenes Profil wird kein Dokument gelöscht.
+
+## Nachtrag 27.09.2026: Aufbewahrungsmatrix produktiv (Migration 0175)
+
+Quellenstatus unverändert: Offene Entscheidung, zu prüfen durch Steuerberater (V17). Die
+folgenden Regeln sind Fachliche Umsetzung und Produktschutz, keine Rechtsgrundlage.
+
+- Zuordnung Dokumentkategorie zu Profil (`document_category.retention_profile_id`,
+  `PATCH /document-categories/{id}`). Ein Dokument erhält beim Speichern oder beim Wechsel der
+  Kategorie das zugeordnete Profil und die berechnete Frist; `POST /retention-profiles/apply`
+  ordnet den Bestand ohne Profil nach (`all_documents=true` berechnet alle neu). Eine manuell
+  gesetzte `retention_until` wird nicht überschrieben.
+- Fristberechnung (`mhvp.documents.retention.compute_retention_until`, Annahme A-058):
+  `end_of_year_created` 31.12. des Entstehungsjahres plus Frist; `contract_end`,
+  `end_of_year_last_entry`, `statement_issued` 31.12. des Jahres des Basisdatums
+  `document.retention_base_on` plus Frist; `purpose_end` Basisdatum plus Frist tagesgenau;
+  `permanent` kein Datum. Fehlt das Basisdatum, bleibt die Frist leer und das Dokument gesperrt
+  ("Der Fristbeginn fehlt").
+- Sperre je Vorgang: `POST/DELETE /tickets/{id}/retention-hold` (`documents:update` setzen,
+  `documents:approve` aufheben, Ereignisse `ticket.hold_set`, `ticket.hold_cleared`). Jedes an
+  den Vorgang gebundene Dokument ist gesperrt, solange die Sperre besteht; die Sperre je
+  Dokument bleibt unverändert.
+- Löschvorschlagslauf: Beat `mhvp.documents.deletion_proposals` (monatlich, 2. des Monats
+  04:20) oder `POST /deletion-proposals` (manuell, `documents:delete`). Er listet nur Dokumente
+  mit freigegebenem Profil, abgelaufener Frist vor dem Stichtag und ohne Sperre, die nicht
+  bereits in einem offenen Vorschlag stehen; er löscht nichts. Ohne fällige Dokumente entsteht
+  kein Vorschlag.
+- Vier-Augen-Prinzip: Freigabe (`/approve`, `documents:approve`) nicht durch die Person, die
+  den Lauf gestartet hat; Ausführung (`/execute`, `documents:delete`) nicht durch den Freigeber.
+  Beim Beat-Lauf sind damit immer zwei Personen beteiligt. Ablehnung (`/reject`) mit Notiz.
+- Ausführung: jedes Dokument wird am Ausführungstag erneut mit `deletion_blocker` geprüft
+  (Sperre, Vorgangssperre, Frist, Profil) und bei geändertem Inhaltshash zurückgehalten;
+  zurückgehaltene Dokumente bleiben mit Grund im Protokoll (`skipped`) und lösen
+  `document.deletion_refused` aus. Gelöschte Dokumente laufen über denselben Weg wie
+  `DELETE /documents/{id}` (`retention.delete_now`: Index, Original, Spiegelschritte nach
+  M6-03: Drive löschen, Paperless Schlagwort "gelöscht").
+- Löschprotokoll: `deletion_proposal_item` je Dokument mit Titel, SHA-256, Kategorie,
+  Unterlagenklasse, Fristende, Status, Zeitpunkt, ausführender Person und Anzahl der
+  Spiegelschritte; der Vorschlag trägt Ersteller, Freigeber und Ausführenden. Das Ereignis
+  `document.deleted` enthält zusätzlich `proposal_id` und `approved_by`, so dass das
+  Löschjournal (A44) den Lauf nachvollziehen kann.
+- Profil bearbeiten (`PATCH /retention-profiles/{id}`): ein freigegebenes Profil wird wieder
+  zum Entwurf mit dem Bearbeiter als Ersteller und braucht eine neue Freigabe durch eine
+  zweite Person (`retention_profile.updated`); bereits berechnete Fristen bleiben, bis das
+  Profil erneut angewendet wird.
+- Tests: `tests/unit/test_retention_period.py` (Fristberechnung),
+  `tests/integration/test_m6_04_retention_matrix.py` (Zuordnung und Frist, Vorgangssperre,
+  Vier-Augen bei Freigabe und Ausführung, Protokoll, Nachprüfung bei Ausführung, monatlicher
+  Lauf, Mandantentrennung).

@@ -17,8 +17,9 @@ import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
-from xml.sax.saxutils import escape
+from xml.etree import ElementTree as ET
 
+from defusedxml import ElementTree as SafeElementTree  # type: ignore[import-untyped]
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -41,7 +42,7 @@ from mhvp.banking.models import (
 from mhvp.core import crypto
 from mhvp.core.problems import ErrorCodes, ProblemError
 
-PAIN_FORMAT = "pain.001.001.09"  # version to confirm with the banks (P05, M15-01)
+PAIN_FORMAT = "pain.001.001.09"  # default; agreed version per bank in PaymentBankConfig (M15-01)
 REQUIRED_APPROVALS = 2
 
 
@@ -310,28 +311,176 @@ async def approve(
     return order
 
 
-def pain001(batch_id: str, debtor_name: str, debtor_iban: str, orders: list[PaymentOrder]) -> bytes:
-    """Credit transfer initiation. Structure per ISO 20022; version to be confirmed (P05)."""
-    total = sum((o.amount for o in orders), Decimal("0.00"))
-    tx = "".join(
-        f"<CdtTrfTxInf><PmtId><EndToEndId>{escape(o.end_to_end_id)}</EndToEndId></PmtId>"
-        f'<Amt><InstdAmt Ccy="EUR">{o.amount}</InstdAmt></Amt>'
-        f"<Cdtr><Nm>{escape(o.counterpart_name[:70])}</Nm></Cdtr>"
-        f"<CdtrAcct><Id><IBAN>{escape(o.counterpart_iban)}</IBAN></Id></CdtrAcct>"
-        f"<RmtInf><Ustrd>{escape(o.purpose)}</Ustrd></RmtInf></CdtTrfTxInf>"
-        for o in orders
+PAIN001_VERSIONS = ("pain.001.001.03", "pain.001.001.09")
+PAIN008_VERSIONS = ("pain.008.001.02", "pain.008.001.08")
+SUBMISSION_CHANNELS = ("file", "fints", "ebics")
+
+
+def _namespace(version: str) -> str:
+    return f"urn:iso:std:iso:20022:tech:xsd:{version}"
+
+
+def _sub(parent: ET.Element, tag: str, text: str | None = None) -> ET.Element:
+    element = ET.SubElement(parent, tag)
+    if text is not None:
+        element.text = text
+    return element
+
+
+def file_sha256(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+
+def control_sum(orders: list[PaymentOrder]) -> Decimal:
+    return sum((o.amount for o in orders), Decimal("0.00"))
+
+
+def pain001(
+    batch_id: str,
+    debtor_name: str,
+    debtor_iban: str,
+    orders: list[PaymentOrder],
+    *,
+    version: str = PAIN_FORMAT,
+    debtor_bic: str | None = None,
+    created_at: datetime | None = None,
+) -> bytes:
+    """Customer credit transfer initiation (CstmrCdtTrfInitn) in the ISO 20022 version agreed
+    with the bank: pain.001.001.03 (DK until 2025) or pain.001.001.09 (DK from 11/2025). The
+    two differ in the agent identifier (BIC versus BICFI) and the requested execution date
+    (plain date versus Dt choice). Validated against the public XSDs in the tests; bank
+    specific restrictions remain unverified (P05, M15-01)."""
+    if version not in PAIN001_VERSIONS:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=f"Unbekannte pain.001-Version {version}.")
+    if not orders:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Aufträge im Sammler.")
+    from mhvp.accounting.direct_debit import sepa_text
+
+    ns = _namespace(version)
+    modern = version == "pain.001.001.09"
+    bic_tag = "BICFI" if modern else "BIC"
+    ET.register_namespace("", ns)
+    total = control_sum(orders)
+    root = ET.Element(f"{{{ns}}}Document")
+    init = _sub(root, "CstmrCdtTrfInitn")
+    header = _sub(init, "GrpHdr")
+    _sub(header, "MsgId", batch_id[:35])
+    _sub(header, "CreDtTm", f"{created_at or datetime.now(UTC):%Y-%m-%dT%H:%M:%S}")
+    _sub(header, "NbOfTxs", str(len(orders)))
+    _sub(header, "CtrlSum", f"{total:.2f}")
+    _sub(_sub(header, "InitgPty"), "Nm", sepa_text(debtor_name, 70))
+    groups: dict[date, list[PaymentOrder]] = {}
+    for o in orders:
+        groups.setdefault(o.execution_date, []).append(o)
+    for index, execution in enumerate(sorted(groups), start=1):
+        batch = groups[execution]
+        info = _sub(init, "PmtInf")
+        _sub(info, "PmtInfId", f"{batch_id}-{index}"[:35])
+        _sub(info, "PmtMtd", "TRF")
+        _sub(info, "BtchBookg", "true")
+        _sub(info, "NbOfTxs", str(len(batch)))
+        _sub(info, "CtrlSum", f"{control_sum(batch):.2f}")
+        _sub(_sub(_sub(info, "PmtTpInf"), "SvcLvl"), "Cd", "SEPA")
+        if modern:
+            _sub(_sub(info, "ReqdExctnDt"), "Dt", execution.isoformat())
+        else:
+            _sub(info, "ReqdExctnDt", execution.isoformat())
+        _sub(_sub(info, "Dbtr"), "Nm", sepa_text(debtor_name, 70))
+        _sub(_sub(_sub(info, "DbtrAcct"), "Id"), "IBAN", debtor_iban)
+        agent = _sub(_sub(info, "DbtrAgt"), "FinInstnId")
+        if debtor_bic:
+            _sub(agent, bic_tag, debtor_bic)
+        else:
+            _sub(_sub(agent, "Othr"), "Id", "NOTPROVIDED")
+        _sub(info, "ChrgBr", "SLEV")
+        for o in batch:
+            tx = _sub(info, "CdtTrfTxInf")
+            _sub(_sub(tx, "PmtId"), "EndToEndId", o.end_to_end_id[:35])
+            amount = _sub(_sub(tx, "Amt"), "InstdAmt", f"{o.amount:.2f}")
+            amount.set("Ccy", "EUR")
+            _sub(_sub(tx, "Cdtr"), "Nm", sepa_text(o.counterpart_name, 70))
+            _sub(_sub(_sub(tx, "CdtrAcct"), "Id"), "IBAN", o.counterpart_iban)
+            _sub(_sub(tx, "RmtInf"), "Ustrd", sepa_text(o.purpose, 140))
+    body = ET.tostring(root, encoding="unicode").encode()
+    return b'<?xml version="1.0" encoding="UTF-8"?>' + body
+
+
+def validate_pain001(data: bytes) -> list[str]:
+    """Structural and arithmetic check of a pain.001 file (count and control sum per block
+    and in total, unique EndToEndId, EUR amounts greater than 0). The XSD check runs in the
+    tests; this check protects the stored file against manipulation before hand-out."""
+    errors: list[str] = []
+    try:
+        root = SafeElementTree.fromstring(data)
+    except (ET.ParseError, ValueError) as exc:
+        return [f"XML nicht lesbar: {exc}"]
+    version = next(
+        (v for v in PAIN001_VERSIONS if root.tag == f"{{{_namespace(v)}}}Document"), None
     )
-    execution = min(o.execution_date for o in orders).isoformat()
-    xml = (
-        '<?xml version="1.0" encoding="UTF-8"?>'
-        f'<Document xmlns="urn:iso:std:iso:20022:tech:xsd:{PAIN_FORMAT}">'
-        f"<CstmrCdtTrfInitn><GrpHdr><MsgId>{batch_id}</MsgId><CreDtTm>{datetime.now(UTC):%Y-%m-%dT%H:%M:%S}</CreDtTm>"
-        f"<NbOfTxs>{len(orders)}</NbOfTxs><CtrlSum>{total}</CtrlSum><InitgPty><Nm>{escape(debtor_name[:70])}</Nm></InitgPty></GrpHdr>"
-        f"<PmtInf><PmtInfId>{batch_id}</PmtInfId><PmtMtd>TRF</PmtMtd><NbOfTxs>{len(orders)}</NbOfTxs><CtrlSum>{total}</CtrlSum>"
-        f"<ReqdExctnDt><Dt>{execution}</Dt></ReqdExctnDt><Dbtr><Nm>{escape(debtor_name[:70])}</Nm></Dbtr>"
-        f"<DbtrAcct><Id><IBAN>{escape(debtor_iban)}</IBAN></Id></DbtrAcct>{tx}</PmtInf></CstmrCdtTrfInitn></Document>"
-    )
-    return xml.encode()
+    if version is None:
+        return ["Wurzelelement ist nicht Document in einem bekannten pain.001-Namensraum."]
+    ns = {"p": _namespace(version)}
+    init = root.find("p:CstmrCdtTrfInitn", ns)
+    if init is None:
+        return ["CstmrCdtTrfInitn fehlt."]
+    header = init.find("p:GrpHdr", ns)
+    if header is None:
+        return ["GrpHdr fehlt."]
+    for tag in ("MsgId", "CreDtTm", "NbOfTxs", "CtrlSum", "InitgPty/p:Nm"):
+        if not (header.findtext(f"p:{tag}", namespaces=ns) or "").strip():
+            errors.append(f"GrpHdr/{tag} fehlt.")
+    infos = init.findall("p:PmtInf", ns)
+    if not infos:
+        errors.append("Kein PmtInf.")
+    all_tx: list[ET.Element] = []
+    total = Decimal("0.00")
+    for info in infos:
+        for tag in ("PmtInfId", "PmtMtd", "NbOfTxs", "CtrlSum", "Dbtr/p:Nm"):
+            if not (info.findtext(f"p:{tag}", namespaces=ns) or "").strip():
+                errors.append(f"PmtInf/{tag} fehlt.")
+        if info.findtext("p:PmtMtd", namespaces=ns) != "TRF":
+            errors.append("PmtInf/PmtMtd muss TRF sein.")
+        date_text = info.findtext("p:ReqdExctnDt/p:Dt", namespaces=ns) or info.findtext(
+            "p:ReqdExctnDt", namespaces=ns
+        )
+        if not (date_text or "").strip():
+            errors.append("PmtInf/ReqdExctnDt fehlt.")
+        if not (info.findtext("p:DbtrAcct/p:Id/p:IBAN", namespaces=ns) or "").strip():
+            errors.append("PmtInf/DbtrAcct/Id/IBAN fehlt.")
+        if info.find("p:DbtrAgt/p:FinInstnId", ns) is None:
+            errors.append("PmtInf/DbtrAgt fehlt.")
+        txs = info.findall("p:CdtTrfTxInf", ns)
+        if str(len(txs)) != info.findtext("p:NbOfTxs", namespaces=ns):
+            errors.append("PmtInf/NbOfTxs stimmt nicht mit der Anzahl der Überweisungen überein.")
+        info_sum = Decimal("0.00")
+        for tx in txs:
+            for tag in ("PmtId/p:EndToEndId", "Cdtr/p:Nm", "CdtrAcct/p:Id/p:IBAN"):
+                if not (tx.findtext(f"p:{tag}", namespaces=ns) or "").strip():
+                    errors.append(f"CdtTrfTxInf/{tag} fehlt.")
+            amount = tx.find("p:Amt/p:InstdAmt", ns)
+            if amount is None or amount.get("Ccy") != "EUR":
+                errors.append("CdtTrfTxInf/Amt/InstdAmt fehlt oder Währung ist nicht EUR.")
+                continue
+            try:
+                value = Decimal(amount.text or "")
+            except ArithmeticError:
+                errors.append("CdtTrfTxInf/Amt/InstdAmt ist kein Betrag.")
+                continue
+            if value <= 0:
+                errors.append("CdtTrfTxInf/Amt/InstdAmt muss größer als 0 sein.")
+            info_sum += value
+        if f"{info_sum:.2f}" != info.findtext("p:CtrlSum", namespaces=ns):
+            errors.append("PmtInf/CtrlSum stimmt nicht mit der Summe der Überweisungen überein.")
+        all_tx.extend(txs)
+        total += info_sum
+    if str(len(all_tx)) != header.findtext("p:NbOfTxs", namespaces=ns):
+        errors.append("GrpHdr/NbOfTxs stimmt nicht mit der Anzahl der Überweisungen überein.")
+    if f"{total:.2f}" != header.findtext("p:CtrlSum", namespaces=ns):
+        errors.append("GrpHdr/CtrlSum stimmt nicht mit der Kontrollsumme überein.")
+    e2e = [t.findtext("p:PmtId/p:EndToEndId", namespaces=ns) for t in all_tx]
+    if len(set(e2e)) != len(e2e):
+        errors.append("EndToEndId ist nicht eindeutig.")
+    return errors
 
 
 async def record_execution(

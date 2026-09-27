@@ -17,6 +17,7 @@ from sqlalchemy import (
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     String,
     Text,
@@ -74,12 +75,41 @@ class AlertChannel(StrEnum):
     WHATSAPP = "whatsapp"
 
 
+class SlaApprovalStatus(StrEnum):
+    """Freigabestatus einer SLA-Regel (M19-01): Werte sind Vorschlag (``draft``), bis die
+    Geschäftsführung sie freigibt (``approved``). Nur freigegebene Regeln steuern Uhren und
+    Eskalationsstufen; ohne freigegebene Regel gilt "keine SLA"."""
+
+    DRAFT = "draft"
+    APPROVED = "approved"
+
+
 class SlaRule(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "sla_rule"
-    __table_args__ = (UniqueConstraint("tenant_id", "priority"),)
+    # Eine Regel je Mandant, Priorität und Kategorie; ``category`` NULL = alle Kategorien
+    # (Migration 0203 ersetzt die frühere Eindeutigkeit je Priorität).
+    __table_args__ = (
+        Index(
+            "uq_sla_rule_tenant_priority_category",
+            "tenant_id",
+            "priority",
+            text("coalesce(category, '')"),
+            unique=True,
+        ),
+    )
 
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     priority: Mapped[Priority] = mapped_column(_enum(Priority, "ticket_priority"), nullable=False)
+    # Ticketkategorie (``ticket.category``), NULL = Regel für alle Kategorien (M19-01).
+    category: Mapped[str | None] = mapped_column(String(100))
+    approval_status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default=SlaApprovalStatus.DRAFT.value,
+        server_default=SlaApprovalStatus.DRAFT.value,
+    )
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     response_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     resolution_minutes: Mapped[int] = mapped_column(Integer, nullable=False)
     clock_type: Mapped[ClockType] = mapped_column(

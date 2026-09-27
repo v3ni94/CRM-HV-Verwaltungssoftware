@@ -7,6 +7,7 @@ import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { PropertyMeteringTab } from "@/components/metering/PropertyMeteringTab";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
+import { LegalEntityBankAccounts } from "@/components/properties/LegalEntityBankAccounts";
 import { PropertyMasterData, type PropertyMaster } from "@/components/properties/PropertyMasterData";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
 import { PropertyTermination, type Termination } from "@/components/properties/PropertyTermination";
@@ -242,6 +243,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       <ServiceProvidersPanel rows={providerRows} />
 
       <PropertyBankAccounts propertyId={propertyId} legalEntities={(data.legal_entities ?? []).map((e) => ({ id: e.id, kind: e.kind, name: e.name }))} />
+      <LegalEntityBankAccounts
+        propertyId={propertyId}
+        legalEntities={(data.legal_entities ?? []).map((e) => ({ id: e.id, kind: e.kind, name: e.name }))}
+        canEdit={canEdit}
+      />
       {bankAccounts.length ? (
         <section className={ui.card} data-testid="property-bank-ledger">
           <h2 className={ui.subtitle}>{t("bankAccountsLedger")}</h2>

@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from mhvp.ai.models import (
     AiKnowledgeKind,
     AiKnowledgeSource,
+    AiKnowledgeStatus,
     AiProvider,
     AiTask,
     Decision,
@@ -205,6 +206,13 @@ class ProposalOut(_Out):
     decided_by: uuid.UUID | None
     decided_at: datetime | None
     import_run_id: uuid.UUID | None
+    rejection_reason: str | None
+
+
+class RejectProposalIn(_In):
+    """POST /ai/proposals/{id}/reject (M34 Nachtrag 27.09.2026, 9.4 Erklärbarkeit)."""
+
+    reason: str | None = Field(default=None, max_length=2000)
 
 
 class ContactChoice(_In):
@@ -297,6 +305,9 @@ class KnowledgeEntryIn(_In):
     kind: AiKnowledgeKind
     title: str = Field(min_length=1, max_length=200)
     content: str = Field(min_length=1)
+    valid_from: date | None = None
+    valid_until: date | None = None
+    source_document_id: uuid.UUID | None = None
 
 
 class KnowledgeEntryOut(_Out):
@@ -306,9 +317,31 @@ class KnowledgeEntryOut(_Out):
     title: str
     content: str
     source: AiKnowledgeSource
+    status: AiKnowledgeStatus
+    group_id: uuid.UUID
+    version: int
+    superseded_at: datetime | None
+    valid_from: date | None
+    valid_until: date | None
+    source_document_id: uuid.UUID | None
+    submitted_by: uuid.UUID | None
+    submitted_at: datetime | None
+    approved_by: uuid.UUID | None
+    approved_at: datetime | None
+    withdrawn_by: uuid.UUID | None
+    withdrawn_at: datetime | None
+    rejected_by: uuid.UUID | None
+    rejected_at: datetime | None
+    rejection_reason: str | None
     created_at: datetime
     updated_at: datetime
     created_by: uuid.UUID | None
+
+
+class KnowledgeRejectIn(_In):
+    """POST /ai/knowledge/{id}/reject (M34-01 Kleinbefund 27.09.2026)."""
+
+    reason: str = Field(min_length=1, max_length=2000)
 
 
 # Mail preparation (Welle 3 item 14) -------------------------------------------------------

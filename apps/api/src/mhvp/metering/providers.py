@@ -85,6 +85,12 @@ SOURCES: dict[str, str] = {
     "Q9": "https://www.ista.com/developer-portal/haeufig-gestellte-fragen/",
     "Q10": "https://www.ista.com/developer-portal/artikel/on-site-roles-20-fuer-hka/",
     "Q11": "https://www.ista.com/developer-portal/artikel/billing-input/",
+    "Q12": "https://www.minol.de/heizkostenabrechnung/datenaustausch-integrierte-abrechnung/",
+    "Q13": "https://www.techem.com/de/de/immobilienservices/data-exchange-services",
+    "Q14": (
+        "https://bved.info/wp-content/uploads/2025/12/"
+        "2025-09-10_bved_datenaustausch_310_dritte-Erweiterung.pdf"
+    ),
 }
 
 _YES = DocumentedSupport.YES
@@ -126,11 +132,12 @@ PROVIDERS: tuple[Provider, ...] = (
                 _DOC,
                 "Q2",
                 "DXS und DXS Dynamic API werden angeboten; die Angebotsseite ersetzt keine "
-                "technische Endpunktdokumentation.",
+                "technische Endpunktdokumentation. Dateiaustausch nach bved-Standard (E898, "
+                "LM- und BK-Sätze) genannt (Q2, Q13); Import der Dateien im CRM (Q14).",
             )
             for function in Function
         },
-        sources=("Q2",),
+        sources=("Q2", "Q13", "Q14"),
         research_note=RECHECK,
         auth_note="Nicht dokumentiert in den geprüften Quellen.",
     ),
@@ -166,9 +173,14 @@ PROVIDERS: tuple[Provider, ...] = (
             Function.ROLES: FunctionSupport(_UNC, "Q4"),
             Function.BILLING_UNIT_DATA: FunctionSupport(_UNC, "Q4"),
             Function.BILLING_INPUT: FunctionSupport(_UNC, "Q4"),
-            Function.BILLING_RESULT: FunctionSupport(_UNC, "Q4"),
+            Function.BILLING_RESULT: FunctionSupport(
+                _UNC,
+                "Q4, Q12",
+                "Kein Webservice belegt; Abrechnungsergebnisse als D-Satz nach bved 3.10 "
+                "(Q12), Import der Dateien im CRM (Q14).",
+            ),
         },
-        sources=("Q4", "Q6", "Q7"),
+        sources=("Q4", "Q6", "Q7", "Q12", "Q14"),
         research_note=RECHECK,
     ),
     Provider(

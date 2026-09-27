@@ -611,3 +611,168 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Überprüfung spätestens bei Meilenstein | Abnahme P1 AP2, spätestens vor M26-03 |
 | Datum | 26.09.2026 |
 
+## A-054
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Ein CSV-Umsatzimport ohne erkanntes Bankformat und ohne eigene IBAN-Spalte (z. B. DKB) wird nur importiert, wenn Konto oder Mapping ausdrücklich angegeben werden; ohne diese Angabe liefert die Vorschau nur Zeilenzahl und Fehler, ohne zu importieren. Der Dublettenschutz nutzt denselben Inhalts-Hash wie CAMT/MT940 (IBAN, Datum, Betrag, Verwendungszweck, End-to-End-Referenz); eine Bankreferenz gibt es bei CSV meist nicht, daher greift überwiegend die Hash-Prüfung mit Status "zur Prüfung" bei Übereinstimmung, nie automatisches Verwerfen (D05). |
+| Begründung | Ein CSV-Format ohne eigene IBAN darf nicht raten, welchem Konto ein Umsatz gehört (Rechtsträgertrennung, Abschnitt 8); Regel 0.1.3 verbietet erfundene Kontobezüge. |
+| Kennzeichnung | unkritisch, kein Geldfluss (nur Bankdatenimport, kein Zahlungsauftrag, G2 bleibt zu) |
+| Betroffene Bereiche | `mhvp.banking.csv_formats`, `POST /banking/imports/csv`, `POST /banking/imports/csv/preview` |
+| Überprüfung spätestens bei Meilenstein | Abnahme M11 (Umsatzimport) |
+| Datum | 27.09.2026 |
+
+## A-055
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der lexoffice-Belegimport (`mhvp.integrations.lexoffice`, M13-lexoffice) legt je gefundenem Voucher zunächst die rohe lexoffice-JSON als Dokument ab (`mime_type application/json`), nicht die eigentliche PDF-Datei, weil die Verknüpfung eines Vouchers mit seiner Datei in der erreichbaren Dokumentation nicht bestätigt ist. Der `ReceiptDraft` übernimmt nur unverifizierte Rohdaten mit einer Warnung; Export-Payloads (Voucher, Kontakt) werden von diesem Modul nicht selbst gebaut, sondern unverändert vom Aufrufer durchgereicht. |
+| Begründung | Rule 0.1.3: kein erfundenes Feldschema für Eingangsrechnungs-Voucher oder Kontakte, da die WebFetch-Recherche dafür keine vollständige Referenz lieferte (docs/integrations/lexoffice.md). |
+| Kennzeichnung | kritisch für den produktiven lexoffice-Export (Geldwirkung, Gate G1 zusätzlich zum Feature-Flag gesperrt); Import selbst unkritisch (nur Belegentwurf, keine Buchung) |
+| Betroffene Bereiche | `mhvp.integrations.lexoffice`, `mhvp.integrations.routers`, `mhvp.receipts` (`ReceiptDraftSource.LEXOFFICE`) |
+| Überprüfung spätestens bei Meilenstein | vor Freigabe G1 für einen Mandanten mit aktivierter lexoffice-Anbindung |
+| Datum | 27.09.2026 |
+
+## A-056
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Die Heizkosten-Vorrechnung (M17-02) verwendet als Entwurfswerte: Verbrauchsanteil 70 Prozent, Warmwasserformel mit Faktor 2,5 kWh/(m³·K) und Bezugstemperatur 10 °C, CO2-Stufentabelle Wohngebäude aus der Code-Fassung vom 23.09.2026 und eine leere Gradtagstabelle (Grundkosten bei Nutzerwechsel nach Zeitanteil mit Hinweis). Der Import aus `mhvp.metering` ordnet Periodenverbräuche mit den Kennungen `heating` und `hot_water` zu. |
+| Begründung | Rule 0.1.3: keine erfundenen Rechtsregeln; alle Werte sind je Mandant konfigurierbar (`heating_rule_table`, Einstellungen je Abrechnung) und tragen den Status zu prüfen. Das Ergebnis ist ein Entwurf ohne Geldwirkung; die Ausgabe der Abrechnung bleibt hinter G3. |
+| Kennzeichnung | unkritisch für den Entwurfsbetrieb; kritisch vor Ausgabe an Mieter (G3), siehe OPEN_QUESTIONS M17-02 |
+| Betroffene Bereiche | `mhvp.billing.heating_calc`, `mhvp.billing.heating_services`, `mhvp.billing.heating_routers`, CRM `HeatingPanel` |
+| Überprüfung spätestens bei Meilenstein | vor Freigabe G3 für den ersten Mandanten |
+| Datum | 27.09.2026 |
+
+## A-057
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Bei nicht monatlichen Zahlungsplänen gilt der am Vertrag erfasste Betrag je Monat (`amount_basis = per_month`); die Rate ist die Summe der Monatsbeträge des Ratenzeitraums. Ratenzeiträume beginnen mit dem Monat des Zahlungsplanbeginns. Bei der Regel "voller Monat" gilt der am letzten erfassten Tag des Monats gültige Betrag. |
+| Begründung | Bestandsdaten aus Immoware24 führen Beträge je Monat; ein Betrag je Rate ist je Zahlungsplan wählbar (`per_instalment`). Die Regeln wirken nur nach Freigabe je Mandant (M13-01, M13-02) und hinter G1, bis dahin bleiben die Posten manuell. |
+| Kennzeichnung | unkritisch für den Entwurfsbetrieb, geldwirksam erst nach Freigabe |
+| Betroffene Bereiche | `mhvp.accounting.proration`, `mhvp.accounting.receivables`, `PaymentSchedule.amount_basis`, `docs/rules/M13-01.md`, `docs/rules/M13-02.md` |
+| Überprüfung spätestens bei Meilenstein | G1 (Betreiber mit Steuerberatung, OPEN_QUESTIONS M13-02) |
+| Datum | 27.09.2026 |
+
+## A-058
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Fristbeginn der Aufbewahrungsmatrix (M6-04): bei `end_of_year_created` das Jahresende des Entstehungsjahres; bei `contract_end`, `end_of_year_last_entry` und `statement_issued` das Jahresende des Jahres des Basisdatums am Dokument (`retention_base_on`); bei `purpose_end` das Basisdatum tagesgenau; `permanent` ohne Datum. Fehlt das Basisdatum, wird keine Frist berechnet und das Dokument bleibt gesperrt. Der Löschvorschlagslauf läuft monatlich am 2. um 04:20 |
+| Begründung | Rule 0.1.3: keine erfundene Rechtsregel. Das Jahresende als Beginn verlängert die Frist gegenüber einem tagesgenauen Beginn und verkürzt sie nie; bei personenbezogenen Daten mit Zweckende wird nicht verlängert, damit keine Daten ohne Zweck länger als nötig bleiben. Die Werte und Startregeln je Profil sind je Mandant änderbar und tragen den Status zu prüfen durch Steuerberater (OPEN_QUESTIONS M6-04) |
+| Kennzeichnung | unkritisch für Entwurfsprofile (kein freigegebenes Profil, keine Löschung); kritisch vor Freigabe eines Profils je Mandant |
+| Betroffene Bereiche | `mhvp.documents.retention`, `mhvp.documents.services.deletion_blocker`, CRM Einstellungen Aufbewahrung, Dokumente Löschvorschläge |
+| Überprüfung spätestens bei Meilenstein | vor Freigabe des ersten Aufbewahrungsprofils je Mandant (V17) |
+| Datum | 27.09.2026 |
+
+## A-057
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Die Ableitung des Verzugsbeginns je Modus (docs/rules/M16-03.md) verwendet als Entwurfsregeln: "kalendermäßig bestimmt" beginnt am Tag nach der Vertragsfälligkeit; "30 Tage nach Fälligkeit und Zugang" beginnt am Tag nach Ablauf von 30 Tagen ab dem späteren von Fälligkeit und erfasstem Zugang der Zahlungsaufforderung; "erst nach Mahnung" beginnt am Tag nach dem erfassten Zugang der Mahnung. Welche Alternative für welche Forderungsart (Hausgeld, Miete, Nachzahlung aus Abrechnung) und welchen Beteiligten (Verbraucher, Unternehmer) gilt, ist nicht abgebildet; der Betreiber wählt den Modus je Mandant |
+| Begründung | Rule 0.1.3: keine erfundenen Rechtsregeln. Die Plattform leitet nur aus erfassten Tatsachen ab und lässt den Verzugsbeginn offen, wenn die Tatsache fehlt. Verzugszinsen bleiben informatorischer Entwurf hinter G1 (M16-01); das Mahnschreiben behauptet keinen Verzug |
+| Kennzeichnung | kritisch vor jeder Geltendmachung von Verzugszinsen oder Verzugsschaden (G1, Mahnbescheid); unkritisch für die Anzeige in der Vorschau, solange der Modus nicht gesetzt ist |
+| Betroffene Bereiche | `mhvp.accounting.dunning.default_start`, `DunningSettings.default_start_mode`, CRM Mahnwesen Einstellungen und Mahnlauf-Seite |
+| Überprüfung spätestens bei Meilenstein | vor Freigabe G1 (Betreiber mit Rechtsanwalt, OPEN_QUESTIONS M16-03) |
+| Datum | 27.09.2026 |
+
+## A-059
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Gültigkeitsfristen und Ratenbegrenzung der Magic-Link-Anmeldung des Kundenportals (M21-01) sind Produktschutz, keine Rechtsregel: Anmeldelink 15 Minuten, einmal nutzbar; optionaler E-Mail-Code (zweiter Faktor) 10 Minuten, einmal nutzbar; QR-Einladungscode für den postalischen Brief 90 Tage; höchstens fünf Linkanfragen je E-Mail-Adresse und Stunde |
+| Begründung | Rule 0.1.3: keine erfundene Rechtsregel, kalkulierte Sicherheitsfristen nach Üblichkeit vergleichbarer Anmeldeverfahren (Passwort-Reset, Magic-Link-Anbieter); der Betreiber kann die Werte in einer künftigen Konfiguration je Mandant ändern, aktuell fest im Code (`mhvp.portal.magic_link`, `mhvp.portal.routers.QR_INVITE_DAYS`) |
+| Kennzeichnung | unkritisch: kein Geld-, Beweis- oder Fristbezug im Rechtssinn; betrifft nur die technische Anmeldesicherheit |
+| Betroffene Bereiche | `mhvp.portal.magic_link`, `mhvp.portal.routers` (`invitation-letter`, `magic-link/*`), `apps/web-portal` Anmeldeseite |
+| Überprüfung spätestens bei Meilenstein | vor G5 (dritte Parteien im Portal), Sicherheitsreview |
+| Datum | 27.09.2026 |
+
+## A-060
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Die automatisierten Prüfungen zu V13 (Barrierefreiheit, `axe-core` über `vitest-axe` auf den Kernkomponenten des Portals: Navigation, Übersicht, Aushänge, Meldung, Kontoauszug/Hausgeldkonto) sind ein technisches Hilfsmittel gegen WCAG 2.1 AA, keine vollständige Konformitätsprüfung nach EN 301 549 und kein Ersatz für eine externe Prüfung oder Nutzertests mit assistierender Technologie. Server-Komponenten (RSC-Seiten) werden nicht direkt gerendert, sondern über ihre client-seitigen Kernbausteine geprüft |
+| Begründung | Rule 0.1.9/0.1.14: Tests belegen den technischen Befund, nicht die rechtliche Erfüllung des BFSG; Werkzeuggrenzen (automatisierte Prüfung erkennt nur einen Teil möglicher Barrieren) offen ausweisen |
+| Kennzeichnung | unkritisch für den Portalbetrieb; kritisch nur im Zusammenhang mit der BFSG-Erklärung unter `/barrierefreiheit`, deren rechtliche Freigabe (M21-09) noch aussteht |
+| Betroffene Bereiche | `apps/web-portal/src/components/portal/Accessibility.axe.test.tsx`, `apps/web-portal/src/app/barrierefreiheit/page.tsx` |
+| Überprüfung spätestens bei Meilenstein | vor G5, bei externer Barrierefreiheitsprüfung (M21-09) |
+| Datum | 27.09.2026 |
+
+## A-061
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Einladungsfrist der Eigentümerversammlung: Entwurfswert 3 Wochen je Mandant (`tenant_settings.hoa_invitation_weeks`), spätester Versand = Versammlungstag minus Wochen, ohne Regel zu Fristbeginn (Absendung oder Zugang) und Zählweise. Hybride Versammlungen (Präsenz mit Online-Teilnahme) sind ohne Schalter und ohne zulassenden Beschluss anlegbar; nur die rein virtuelle Form ist gesperrt (Schalter je Mandant, Beschluss mit Gültigkeitsende). Einwahldaten gelten als vertraulich und werden nur Eigentümern der GdWE im Portal gezeigt. |
+| Begründung | Rule 0.1.3: keine erfundene Rechtsregel; der Wert ist je Mandant einstellbar, die Prüfung warnt nur und verlangt einen dokumentierten Grund, der im Protokoll steht. Ob hybride Versammlungen einen Beschluss brauchen, ist nicht geprüft (OPEN_QUESTIONS M25-03, V13). |
+| Kennzeichnung | unkritisch für die Planung; kritisch vor produktivem Einsatz virtueller Versammlungen (Anfechtbarkeit von Beschlüssen, G4) |
+| Betroffene Bereiche | `mhvp.hoa.meeting_rules`, `mhvp.hoa.meetings`, `mhvp.hoa.protocol`, `mhvp.portal.owner_meetings`, `mhvp.workspace.services.derived_dates`, CRM `MeetingFormPanel`, `MeetingSettings`, Portal `/versammlungen` |
+| Überprüfung spätestens bei Meilenstein | vor Freigabe des Schalters `hoa_virtual_meetings_enabled` für den ersten Mandanten, vor G4 |
+| Datum | 27.09.2026 |
+
+## A-061
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Steuerentwürfe des Rechnungseingangs (M14-02/03/04): Der Vorsteuerabzug wird als Vorsteuerbetrag mal Umsatzschlüssel des Objekts (Prozentsatz, vom Betreiber gepflegt) berechnet; Einheiten mit gültiger Option gelten als optiert. Der Einbehalt Bauabzugsteuer wird mit einem Entwurfswert von 15 Prozent des Bruttobetrags vorgeschlagen, wenn ein als Bauleistung gekennzeichneter Lieferant am Rechnungsdatum keine Freistellungsbescheinigung mit Dokument hat. Der § 35a-Ausweis je Mietvertrag zählt Positionen mit Einheit voll und übrige Positionen mit einem vom Aufrufer übergebenen Verteilungsanteil. Alle Werte sind Vorschläge hinter Mandantenschaltern (Standard aus). |
+| Begründung | 7.2, 7.9.1 (PÜ03), 0.1.3 und 0.1.6: Entwurfsbetrieb ohne Rechtsbehauptung; die fachliche Freigabe der Sätze, Schlüssel und Belege liegt beim Steuerberater (OPEN_QUESTIONS M14-02, M14-03, M14-04). |
+| Kennzeichnung | unkritisch, solange die Schalter aus sind; kritisch vor Aktivierung je Mandant |
+| Betroffene Bereiche | Rechnungseingang, Betriebskostenabrechnung (§ 35a), Zahllauf (Einbehalt als Merkposten) |
+| Überprüfung spätestens bei Meilenstein | G1 (Vorsteuer, Grenzen), G3 (§ 35a-Ausweis), G2 (Einbehalt) |
+| Datum | 27.09.2026 |
+
+## A-062
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | bved Standard-Datenaustausch 3.10 (Messdienstleister, Dateiadapter M40-02): Datumsfelder sind sechsstellig TTMMJJ ohne Jahrhundertregel im Standard (Q14). Der Parser liest zweistellige Jahre 00 bis 69 als 2000 bis 2069 und 70 bis 99 als 1970 bis 1999. Der Betrag eines Abrechnungsergebnisses ist wie beim bved Billing Result der Bruttogesamtbetrag der Kostenart (D-Satz Feld 8); Saldo und Vorauszahlungen bleiben nachrichtlich im Payload. Endet der Nutzungszeitraum eines D-Satzes nach dem Abrechnungszeitraum des L-Satzes, wird der Zeitraum auf das Ende des L-Satzes begrenzt. |
+| Begründung | 0.1.3: keine erfundene Regel; die Jahrhundertregel ist nur Interpretation eines Formatfelds und wird an echten Beispieldateien bestätigt (OPEN_QUESTIONS M40-02). Es wird nichts gespeichert, solange die Vorschau nicht freigeschaltet ist. |
+| Kennzeichnung | unkritisch (nur Vorschau, keine Speicherung, keine Geldwirkung) |
+| Betroffene Bereiche | Messdienstleister, Dateiimport bved 3.10 |
+| Überprüfung spätestens bei Meilenstein | Freischaltung der Übernahme von Abrechnungsergebnissen aus Dateien (M40-02), vor G3 und G4 |
+| Datum | 27.09.2026 |
+
+## A-063
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Vier-Augen-Prinzip beim Mailversand (M20-04, `mhvp.communication.mail_approval`): (1) Der Kompetenzkatalog kennt bisher nur den Kontakttyp `authority` (Behörde); bis zu einer eigenen Kontaktkategorie für Gericht und Investor gelten zusätzlich die Kontakt-Tags `gericht`/`gerichte` und `investor`/`investoren` als externe Empfänger im Sinne des Modus `external_only`. Eine Nachricht ohne verknüpften Kontakt gilt vorsorglich als externer Empfänger. (2) Es existiert kein eigenes Abwesenheits- oder Vertretungsmodul; die Vertretungsregel bei Abwesenheit wird über eine eigene, schlanke Tabelle (`mail_approval_deputy`: abwesender Nutzer, Stellvertreter, Zeitraum, Grund als Freitext) geführt, ohne Verknüpfung zu einer Kalender- oder Urlaubsplanung. (3) Die Re-Authentifizierung (Passwort oder TOTP) gilt für die Freigabe durch eine zweite Person und den Superadmin-Bypass (ADR 0011); ein reiner Direktversand einer eigenen Ticketantwort ohne zweite Person (M20-03, Modus `off`, Ticket-Ausnahme) braucht keinen erneuten Nachweis, da hier keine zweite Freigabe stattfindet. |
+| Begründung | 0.1.3: keine erfundene Rechtsregel, nur ein Produktschutz-Notbehelf, bis der Betreiber eine eigene Kontaktkategorie und ein Abwesenheitsmodul entscheidet (siehe `docs/OPEN_QUESTIONS.md` M20-04). Geldwirkung besteht nicht; das Risiko ist Fehlversand oder Kontoübernahme, dagegen wirken Re-Auth und Vier-Augen unabhängig von der genauen Kategorisierung. |
+| Kennzeichnung | unkritisch für den Betrieb (Standardmodus `external_only` bleibt konservativ, da ein Kontakt ohne Kontakt als extern gilt); zu prüfen vor einer harten Zusage an Behörden/Gerichte, dass die Tag-Erkennung lückenlos ist |
+| Betroffene Bereiche | Kommunikation, Mailversand, Vier-Augen-Prinzip |
+| Überprüfung spätestens bei Meilenstein | Entscheidung eines eigenen Kontakttyps Gericht/Investor und eines Abwesenheits-/Vertretungsmoduls (M20-04) |
+| Datum | 27.09.2026 |
+
+## A-064
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Preisstruktur (M27-01, `mhvp.platform.market_readiness.DEFAULT_PRICING`): Stufen S bis XL mit den Einheitenbereichen 1 bis 100, 101 bis 500, 501 bis 2.000 und ab 2.001, Zusatzmodule WEG, Buchhaltung, Banking, Portal, KI, eine Testphase ohne Dauer. Beträge sind nicht gesetzt. |
+| Begründung | Regel 0.1.3: keine erfundenen Zahlen. Die Bereiche sind nur eine editierbare Ausgangsstruktur, damit der Betreiber Beträge und Grenzen pflegen kann; ein Angebot bleibt Entwurf, solange Beträge fehlen. |
+| Kennzeichnung | unkritisch (kein Betrag, keine Geldwirkung); vor dem ersten Angebot an einen Drittmandanten durch den Betreiber zu bestätigen (OPEN_QUESTIONS M27-01-01) |
+| Betroffene Bereiche | `mhvp.platform.market_readiness`, CRM `/plattform/preisliste`, Angebots-PDF |
+| Überprüfung spätestens bei Meilenstein | vor G5 des ersten Drittmandanten |
+| Datum | 27.09.2026 |
+
+## A-065
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Mietrechnung mit Umsatzsteuerausweis (M13-04a): Nummernkreis je Rechtsträger und Jahr mit dem festen Präfix `MR` (`MR-JJJJ-000001`), Steuerkennung des Rechtsträgers aus den Kontaktkennungen der Partei (USt-IdNr. vor Steuernummer), Rechnungsdatum standardmäßig der Erstellungstag, Dauerrechnung als eine Position je Monat aus den Sollstellungsposten |
+| Begründung | 0.1.3: keine erfundene Rechtsregel; die Werte sind technische Vorgaben, damit der Entwurf abnehmbar ist. Präfix und Feldliste entscheidet der Betreiber mit dem Steuerberater (OPEN_QUESTIONS M13-04a) |
+| Kennzeichnung | unkritisch, solange G1 geschlossen ist (nur Entwurf mit Wasserzeichen, kein Versand, keine Buchung); vor G1 zu bestätigen |
+| Betroffene Bereiche | `mhvp.accounting.rent_invoice`, `rent_invoice_number_counter`, CRM Vertragsseite (Mietrechnungen) |
+| Überprüfung spätestens bei Meilenstein | G1 des ersten Mandanten mit Gewerbemietverträgen mit Option |
+| Datum | 27.09.2026 |
+
+## A-066
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Kontierungsvorschlag `is_deposit` (M12-01 Restpunkt, Kontierungsagent-Befund 22.09.2026): `open_item` trägt keine Forderungsart, die eine Kaution von Miete oder Hausgeld unterscheidet (`OpenItemKind` kennt nur receivable/payable, die Spalte `component` wird von `_apply_open_items` nie befüllt). `mhvp.banking.posting_proposal.stage1_for_transaction` leitet `is_deposit` stattdessen über den Vertrag ab: ein offener `Deposit`-Datensatz (`mhvp.contracts.models.Deposit`, Status `open`) desselben Vertrags mit exakt gleichem `amount_due` wie der offene Posten. Keine neue Spalte angelegt. |
+| Begründung | 0.1.3/18.2: additive Spalten nur nach Rücksprache; die Ableitung über den Vertrag ist eine Heuristik (Betragsübereinstimmung), kein sicherer Fremdschlüssel, und kann bei zwei gleich hohen offenen Posten desselben Vertrags danebengreifen. |
+| Kennzeichnung | unkritisch (nur ein Vorschlag, keine Buchung, 0.1.6); vor einer verlässlicheren Verknüpfung (z. B. `open_item.deposit_id`) durch den Betreiber zu bestätigen |
+| Betroffene Bereiche | `mhvp.banking.posting_proposal` (`_is_deposit_item`, `stage1_for_transaction`) |
+| Überprüfung spätestens bei Meilenstein | vor G2 (Zahlungsauslösung), wenn Kautionsvorschläge häufiger automatisiert bestätigt werden |
+| Datum | 27.09.2026 |
+

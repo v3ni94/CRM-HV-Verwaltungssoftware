@@ -9,20 +9,21 @@ from email.message import EmailMessage
 from email.utils import make_msgid
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai import schemas as ai_s
-from mhvp.communication import attachments, mail, services, transport
-from mhvp.communication.models import Mailbox, MailboxUser, Message, Playbook
+from mhvp.communication import attachments, mail, mail_approval, services, transport
+from mhvp.communication.models import MailApprovalDeputy, Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
-from mhvp.core.db.tenancy import after_commit, tenant_transaction
+from mhvp.core.db.tenancy import after_commit, platform_transaction, tenant_transaction
 from mhvp.core.escaping import LIKE_ESCAPE, escape_like
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.platform.services import gate_superadmin_bypass_enabled
 from mhvp.tickets import tnr
 
 log = logging.getLogger(__name__)
@@ -323,7 +324,23 @@ async def mailbox_accessible(
             MailboxUser.mailbox_id == mailbox.id, MailboxUser.user_id == principal.user_id
         )
     )
-    return grant is not None
+    if grant is not None:
+        return True
+    # M20-04 Vertretungsregel: ein befristet eingetragener Stellvertreter (docs/rules/M20-04)
+    # erhält für die Dauer der Vertretung den Postfachzugriff eines abwesenden Nutzers.
+    granted_users = await session.execute(
+        select(MailboxUser.user_id).where(MailboxUser.mailbox_id == mailbox.id)
+    )
+    absent_ids = {u for (u,) in granted_users}
+    return (
+        await mail_approval.deputises_for_any(
+            session,
+            tenant_id=principal.tenant_id,
+            deputy_user_id=principal.user_id,
+            absent_user_ids=absent_ids,
+        )
+        is not None
+    )
 
 
 async def _live_mailbox(
@@ -798,9 +815,25 @@ def _messages_query(
     return query
 
 
-@router.get("/messages", summary="Vorgangsliste (ohne Text, mit Vorschau)")
+@router.get(
+    "/messages",
+    summary="Vorgangsliste (ohne Text, mit Vorschau)",
+    responses={
+        200: {
+            "headers": {
+                "X-Total-Count": {
+                    "description": "Gesamtzahl der Nachrichten der Filterung",
+                    "schema": {"type": "integer"},
+                },
+                "X-Page": {"description": "Aktuelle Seite", "schema": {"type": "integer"}},
+                "X-Page-Size": {"description": "Einträge je Seite", "schema": {"type": "integer"}},
+            }
+        }
+    },
+)
 async def messages(
     request: Request,
+    response: Response,
     status: str | None = None,
     contact_id: uuid.UUID | None = None,
     direction: str | None = Query(default=None, pattern="^(in|out)$"),
@@ -815,10 +848,22 @@ async def messages(
         ),
     ),
     limit: int = Query(default=100, ge=1, le=500),
+    page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
+    page_size: int | None = Query(
+        default=None,
+        ge=1,
+        le=200,
+        description="Einträge je Seite (max. 200); ohne Angabe gilt limit (erste Seite)",
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     """Rows carry ``body_preview`` (200 characters) instead of ``body`` and ``body_html``
-    (Review 26.09.2026, M3); ``GET /mail/messages/{id}`` delivers the full text."""
+    (Review 26.09.2026, M3); ``GET /mail/messages/{id}`` delivers the full text.
+
+    Paginierung (Betreibermeldung 27.09.2026): die Antwort bleibt eine Liste (bestehende
+    Aufrufer, ``limit`` weiter unterstützt); Gesamtzahl und Seite stehen in den Kopfzeilen
+    ``X-Total-Count``, ``X-Page`` und ``X-Page-Size``. Stabile Sortierung
+    ``received_at desc, id`` (Seitenwechsel liefert keine Duplikate/Lücken)."""
     async with tenant_tx(request, principal) as session:
         query = _messages_query(
             principal,
@@ -829,8 +874,21 @@ async def messages(
             mailbox_id=mailbox_id,
             q=q,
             include_closed=include_closed,
-        ).order_by(Message.created_at.desc())
-        return [_list_out(m) for m in (await session.scalars(query.limit(limit))).all()]
+        )
+        size = page_size or limit
+        total = (
+            await session.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
+            or 0
+        )
+        query = query.order_by(
+            func.coalesce(Message.received_at, Message.sent_at, Message.created_at).desc(),
+            Message.id.desc(),
+        )
+        rows = (await session.scalars(query.offset((page - 1) * size).limit(size))).all()
+        response.headers["X-Total-Count"] = str(total)
+        response.headers["X-Page"] = str(page)
+        response.headers["X-Page-Size"] = str(size)
+        return [_list_out(m) for m in rows]
 
 
 @router.get("/messages/count", summary="Anzahl der Nachrichten je Filter")
@@ -1271,6 +1329,184 @@ async def patch_draft(
         return _out(row)
 
 
+class MailApprovalReauthIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    password: str | None = None
+    totp_code: str | None = None
+
+
+@router.post(
+    "/mail-approval/reauth",
+    summary="Re-Authentifizierung vor einer Mailfreigabe (M20-04, 5 Minuten gültig)",
+)
+async def mail_approval_reauth(
+    body: MailApprovalReauthIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Bestätigt Passwort oder TOTP frisch, unabhängig von der bestehenden Anmeldesitzung
+    (M20-04). ``mhvp.platform.models.User`` liegt mandantenübergreifend (keine RLS), der
+    Nachweis selbst wird mandantenbezogen in ``mail_approval_reauth`` gespeichert."""
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.NOT_AUTHENTICATED)
+    from mhvp.platform.models import User
+
+    async with platform_transaction(sessions(request)) as session:
+        user = await session.get(User, principal.user_id)
+        if user is None or not user.active:
+            raise ProblemError(ErrorCodes.INVALID_CREDENTIALS)
+        method = mail_approval.verify_identity(
+            user, password=body.password, totp_code=body.totp_code
+        )
+    async with tenant_tx(request, principal) as session:
+        result = await mail_approval.record_reauth(
+            session, tenant_id=principal.tenant_id, user_id=principal.user_id, method=method
+        )
+    return {"method": result.method, "verified_at": result.verified_at.isoformat()}
+
+
+# Vertretungen (M20-04a): Pflege von ``MailApprovalDeputy`` -----------------------------
+
+
+class MailApprovalDeputyIn(_In):
+    absent_user_id: uuid.UUID
+    deputy_user_id: uuid.UUID
+    starts_at: datetime
+    ends_at: datetime
+    note: str | None = Field(default=None, max_length=500)
+
+
+class MailApprovalDeputyOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+
+    id: uuid.UUID
+    absent_user_id: uuid.UUID
+    deputy_user_id: uuid.UUID
+    starts_at: datetime
+    ends_at: datetime
+    note: str | None
+    revoked_at: datetime | None
+
+
+async def _assert_tenant_member(
+    session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID
+) -> None:
+    from mhvp.platform.models import Membership
+
+    row = await session.scalar(
+        select(Membership.id).where(
+            Membership.tenant_id == tenant_id, Membership.user_id == user_id
+        )
+    )
+    if row is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Der Nutzer gehört nicht zu diesem Mandanten."
+        )
+
+
+def _assert_own_deputy_or_admin(principal: TenantPrincipal, absent_user_id: uuid.UUID) -> None:
+    """M20-04a: Recht ``tenant_settings:update`` verwaltet beliebige Vertretungen; ohne dieses
+    Recht darf ein Nutzer nur seine eigene Abwesenheit vertreten lassen (``absent_user_id``
+    ist dann er selbst)."""
+    if principal.has("tenant_settings:update"):
+        return
+    if principal.user_id is not None and principal.user_id == absent_user_id:
+        return
+    raise ProblemError(
+        ErrorCodes.FORBIDDEN,
+        detail="Nur für die eigene Vertretung oder mit dem Recht Mandanteneinstellungen ändern.",
+    )
+
+
+@router.get("/mail-approval/deputies", summary="Vertretungen (M20-04a)")
+async def list_mail_approval_deputies(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[MailApprovalDeputyOut]:
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(
+                select(MailApprovalDeputy)
+                .where(MailApprovalDeputy.revoked_at.is_(None))
+                .order_by(MailApprovalDeputy.starts_at.desc())
+            )
+        ).all()
+        return [MailApprovalDeputyOut.model_validate(r) for r in rows]
+
+
+@router.post("/mail-approval/deputies", status_code=201, summary="Vertretung anlegen (M20-04a)")
+async def create_mail_approval_deputy(
+    body: MailApprovalDeputyIn, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> MailApprovalDeputyOut:
+    _assert_own_deputy_or_admin(principal, body.absent_user_id)
+    if body.absent_user_id == body.deputy_user_id:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Vertretener und Vertreter dürfen nicht identisch sein."
+        )
+    if body.ends_at <= body.starts_at:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Das Ende der Vertretung muss nach dem Beginn liegen."
+        )
+    async with tenant_tx(request, principal) as session:
+        await _assert_tenant_member(session, principal.tenant_id, body.absent_user_id)
+        await _assert_tenant_member(session, principal.tenant_id, body.deputy_user_id)
+        row = MailApprovalDeputy(
+            tenant_id=principal.tenant_id,
+            absent_user_id=body.absent_user_id,
+            deputy_user_id=body.deputy_user_id,
+            starts_at=body.starts_at,
+            ends_at=body.ends_at,
+            note=body.note,
+        )
+        session.add(row)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="mail_approval_deputy.created",
+            entity_type="mail_approval_deputy",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "absent_user_id": str(row.absent_user_id),
+                "deputy_user_id": str(row.deputy_user_id),
+                "starts_at": row.starts_at.isoformat(),
+                "ends_at": row.ends_at.isoformat(),
+            },
+        )
+        return MailApprovalDeputyOut.model_validate(row)
+
+
+@router.delete(
+    "/mail-approval/deputies/{deputy_id}",
+    status_code=204,
+    summary="Vertretung widerrufen (M20-04a)",
+)
+async def delete_mail_approval_deputy(
+    deputy_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(MailApprovalDeputy, deputy_id)
+        if row is None or row.revoked_at is not None:
+            raise ProblemError(ErrorCodes.NOT_FOUND)
+        _assert_own_deputy_or_admin(principal, row.absent_user_id)
+        row.revoked_at = datetime.now(UTC)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="mail_approval_deputy.revoked",
+            entity_type="mail_approval_deputy",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "absent_user_id": str(row.absent_user_id),
+                "deputy_user_id": str(row.deputy_user_id),
+            },
+        )
+    return Response(status_code=204)
+
+
 @router.post("/messages/{message_id}/submit", summary="Entwurf zur Freigabe einreichen")
 async def submit(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
@@ -1449,12 +1685,36 @@ async def approve_and_send(
                 ErrorCodes.CONFLICT, detail="Nur eingereichte Entwürfe können freigegeben werden."
             )
         self_approval = principal.user_id in (row.submitted_by, row.created_by, row.updated_by)
-        if self_approval and not await _self_approval_allowed(session, row, principal):
-            raise ProblemError(
-                ErrorCodes.CONFLICT,
-                detail="Vier-Augen-Prinzip: eigene oder selbst bearbeitete Entwürfe können "
-                "nicht freigegeben werden.",
+        # M20-04: das Vier-Augen-Kennzeichen des Verfassers (M20-03, Azubi/neuer Mitarbeiter)
+        # gilt unabhängig vom Mandantenmodus immer; darüber hinaus greift die Konfiguration
+        # (alle Mails, nur externe Empfänger, aus).
+        identity_check_required = row.author_approval_required or (
+            await mail_approval.four_eyes_required(session, row)
+        )
+        superadmin_bypass = False
+        if (
+            self_approval
+            and identity_check_required
+            and not await _self_approval_allowed(session, row, principal)
+        ):
+            superadmin_bypass = principal.is_superadmin and await gate_superadmin_bypass_enabled(
+                session
             )
+            if not superadmin_bypass:
+                raise ProblemError(
+                    ErrorCodes.MAIL_APPROVAL_FOUR_EYES,
+                    detail="Vier-Augen-Prinzip: eigene oder selbst bearbeitete Entwürfe können "
+                    "nicht freigegeben werden.",
+                )
+        # M20-04: die Freigabe durch eine zweite Person (oder der Superadmin-Bypass) braucht
+        # einen höchstens 5 Minuten alten Re-Auth-Nachweis (Passwort oder TOTP); der reine
+        # Direktversand einer eigenen Ticketantwort (M20-03, keine zweite Identität beteiligt)
+        # bleibt davon unberührt, da hier keine zweite Freigabe stattfindet.
+        if not self_approval or superadmin_bypass:
+            reauthed = principal.user_id is not None and await mail_approval.has_recent_reauth(
+                session, principal.tenant_id, principal.user_id
+            )
+            mail_approval.require_recent_reauth(reauthed)
         box = _assert_sendable_box(
             await session.get(Mailbox, row.mailbox_id) if row.mailbox_id else None
         )
@@ -1489,10 +1749,27 @@ async def approve_and_send(
                             "drafted_by": str(row.created_by) if row.created_by else None,
                             "author_approval_required": row.author_approval_required,
                             "author_approval_reason": row.author_approval_reason,
+                            # M20-04 Nachvollziehbarkeit beider Identitäten und des Bypasses.
+                            "superadmin_bypass": superadmin_bypass,
+                            "four_eyes": not superadmin_bypass,
                         },
                         user_id=principal.user_id,
                     )
                 )
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="mail.approved",
+                entity_type="message",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                payload={
+                    "drafted_by": str(row.created_by) if row.created_by else None,
+                    "approved_by": str(principal.user_id),
+                    "self_approved": self_approval,
+                    "superadmin_bypass": superadmin_bypass,
+                },
+            )
         await session.flush()
 
     send_failure: str | None = None

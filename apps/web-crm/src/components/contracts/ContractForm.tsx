@@ -25,6 +25,12 @@ export type DueDayRule = "day" | "workday" | "last_day" | "day_next_month";
 export type DepositKind = "cash" | "savings_book" | "insurance" | "guarantee" | "fixed_deposit" | "letter_of_comfort" | "other";
 export type ManagementType = "rental" | "hoa" | "hoa_with_sev";
 
+/** M13-01: Zeitanteilsregel des Vertrags; null = Standard des Mandanten. */
+export type ProrationMethod = "calendar_days" | "thirty_360" | "full_month";
+/** M13-02: Zahlweise der Rate (im Voraus oder nachschüssig) und Bedeutung des Betrags. */
+export type PaymentMode = "advance" | "arrears";
+export type AmountBasis = "per_month" | "per_instalment";
+
 export type ScheduleOut = {
   id: string;
   interval: PaymentInterval;
@@ -32,6 +38,8 @@ export type ScheduleOut = {
   due_day: number;
   valid_from: string;
   valid_to: string | null;
+  payment_mode?: PaymentMode;
+  amount_basis?: AmountBasis;
 };
 
 export type ContractOut = {
@@ -57,6 +65,7 @@ export type ContractOut = {
   user_change_fee: boolean;
   allocation_loss_risk: boolean;
   vat_option: ContractVatOption;
+  proration_method?: ProrationMethod | null;
   sev_enabled: boolean;
   sev_fee_debtor_party_id: string | null;
   title_transfer_date: string | null;
@@ -83,6 +92,9 @@ export type MandateOption = { id: string; reference: string; iban_masked: string
 const VAT_OPTIONS: ContractVatOption[] = ["none", "commercial_no_vat", "commercial_full_vat", "commercial_reduced_vat"];
 const ACQUISITION_KINDS: AcquisitionKind[] = ["purchase", "first_acquisition", "inheritance", "foreclosure", "gift", "other"];
 const INTERVALS: PaymentInterval[] = ["monthly", "quarterly", "semiannual", "annual"];
+const PRORATION_METHODS: Array<ProrationMethod | ""> = ["", "calendar_days", "thirty_360", "full_month"];
+const PAYMENT_MODES: PaymentMode[] = ["advance", "arrears"];
+const AMOUNT_BASES: AmountBasis[] = ["per_month", "per_instalment"];
 const DUE_DAY_RULES: DueDayRule[] = ["day", "workday", "last_day", "day_next_month"];
 const DEPOSIT_KINDS: DepositKind[] = ["cash", "savings_book", "insurance", "guarantee", "fixed_deposit", "letter_of_comfort", "other"];
 const ROLES = ["mieter", "eigentuemer"] as const;
@@ -257,6 +269,7 @@ const CREATE_FIELDS = [
   "user_change_fee",
   "allocation_loss_risk",
   "vat_option",
+  "proration_method",
   "sev_enabled",
   "sev_fee_debtor_party_id",
   "title_transfer_date",
@@ -266,7 +279,7 @@ const CREATE_FIELDS = [
   "notes",
 ] as const;
 
-type ScheduleState = { enabled: boolean; interval: PaymentInterval; due_day_rule: DueDayRule; due_day: string; valid_from: string; valid_to: string };
+type ScheduleState = { enabled: boolean; interval: PaymentInterval; due_day_rule: DueDayRule; due_day: string; valid_from: string; valid_to: string; payment_mode: PaymentMode; amount_basis: AmountBasis };
 type DepositState = { enabled: boolean; kind: DepositKind; amount: string; installments: string; valid_from: string; interest_rule: string };
 
 function ScheduleFields({ value, onChange, errors }: { value: ScheduleState; onChange: (s: ScheduleState) => void; errors: FieldErrors }) {
@@ -300,7 +313,44 @@ function ScheduleFields({ value, onChange, errors }: { value: ScheduleState; onC
       <Field label={t("schedule.validTo")} error={errors["valid_to"]}>
         <input className={ui.input} type="date" value={value.valid_to} onChange={(e) => onChange({ ...value, valid_to: e.target.value })} />
       </Field>
+      <Field label={t("schedule.paymentMode")} help={t("schedule.paymentModeHelp")} error={errors["payment_mode"]}>
+        <select className={ui.input} value={value.payment_mode} onChange={(e) => onChange({ ...value, payment_mode: e.target.value as PaymentMode })}>
+          {PAYMENT_MODES.map((m) => (
+            <option key={m} value={m}>
+              {t(`paymentModes.${m}`)}
+            </option>
+          ))}
+        </select>
+      </Field>
+      {value.interval !== "monthly" ? (
+        <Field label={t("schedule.amountBasis")} help={t("schedule.amountBasisHelp")} error={errors["amount_basis"]}>
+          <select className={ui.input} value={value.amount_basis} onChange={(e) => onChange({ ...value, amount_basis: e.target.value as AmountBasis })}>
+            {AMOUNT_BASES.map((b) => (
+              <option key={b} value={b}>
+                {t(`amountBases.${b}`)}
+              </option>
+            ))}
+          </select>
+        </Field>
+      ) : null}
     </div>
+  );
+}
+
+/** M13-01: Zeitanteilsregel (leer = Standard des Mandanten); wirkt erst nach Freigabe der
+ *  Sollstellungsregeln je Mandant und hinter Freigabestufe G1. */
+function ProrationField({ value, onChange, error }: { value: ProrationMethod | ""; onChange: (v: ProrationMethod | "") => void; error?: string }) {
+  const t = useTranslations("ContractForm");
+  return (
+    <Field label={t("fields.prorationMethod")} help={t("fields.prorationMethodHelp")} error={error}>
+      <select className={ui.input} value={value} onChange={(e) => onChange(e.target.value as ProrationMethod | "")}>
+        {PRORATION_METHODS.map((m) => (
+          <option key={m || "default"} value={m}>
+            {t(`prorationMethods.${m || "default"}`)}
+          </option>
+        ))}
+      </select>
+    </Field>
   );
 }
 
@@ -311,6 +361,8 @@ function scheduleBody(s: ScheduleState) {
     due_day: Number(s.due_day),
     valid_from: s.valid_from,
     valid_to: s.valid_to || null,
+    payment_mode: s.payment_mode,
+    amount_basis: s.interval === "monthly" ? "per_month" : s.amount_basis,
   };
 }
 
@@ -340,6 +392,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
   const [userChangeFee, setUserChangeFee] = useState(false);
   const [allocationLossRisk, setAllocationLossRisk] = useState(false);
   const [vatOption, setVatOption] = useState<ContractVatOption>("none");
+  const [prorationMethod, setProrationMethod] = useState<ProrationMethod | "">("");
   const [sevEnabled, setSevEnabled] = useState(false);
   const [sevDebtor, setSevDebtor] = useState<ContactOption | null>(null);
   const [titleTransfer, setTitleTransfer] = useState("");
@@ -347,7 +400,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
   const [acquisitionKind, setAcquisitionKind] = useState<AcquisitionKind | "">("");
   const [succession, setSuccession] = useState(false);
   const [notes, setNotes] = useState("");
-  const [schedule, setSchedule] = useState<ScheduleState>({ enabled: false, interval: "monthly", due_day_rule: "day", due_day: "3", valid_from: today, valid_to: "" });
+  const [schedule, setSchedule] = useState<ScheduleState>({ enabled: false, interval: "monthly", due_day_rule: "day", due_day: "3", valid_from: today, valid_to: "", payment_mode: "advance", amount_basis: "per_month" });
   const [deposit, setDeposit] = useState<DepositState>({ enabled: false, kind: "cash", amount: "", installments: "1", valid_from: today, interest_rule: "" });
 
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -456,6 +509,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
       user_change_fee: userChangeFee,
       allocation_loss_risk: allocationLossRisk,
       vat_option: vatOption,
+      proration_method: prorationMethod || null,
       notes: notes.trim() || null,
     };
     if (kind === "ownership") {
@@ -644,6 +698,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
               ))}
             </select>
           </Field>
+          <ProrationField value={prorationMethod} onChange={setProrationMethod} error={errors["proration_method"]} />
         </div>
         <Check label={t("fields.directDebit")} checked={directDebit} onChange={setDirectDebit} />
         {directDebit ? (
@@ -747,6 +802,7 @@ const VERSION_FIELDS = [
   "user_change_fee",
   "allocation_loss_risk",
   "vat_option",
+  "proration_method",
   "notes",
 ] as const;
 
@@ -775,6 +831,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
   const [userChangeFee, setUserChangeFee] = useState(contract.user_change_fee);
   const [allocationLossRisk, setAllocationLossRisk] = useState(contract.allocation_loss_risk);
   const [vatOption, setVatOption] = useState<ContractVatOption>(contract.vat_option);
+  const [prorationMethod, setProrationMethod] = useState<ProrationMethod | "">(contract.proration_method ?? "");
   const [notes, setNotes] = useState(contract.notes ?? "");
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -788,7 +845,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
   const [termErrors, setTermErrors] = useState<FieldErrors>({});
   const [termError, setTermError] = useState<string | null>(null);
 
-  const [schedule, setSchedule] = useState<ScheduleState>({ enabled: true, interval: "monthly", due_day_rule: "day", due_day: "3", valid_from: today, valid_to: "" });
+  const [schedule, setSchedule] = useState<ScheduleState>({ enabled: true, interval: "monthly", due_day_rule: "day", due_day: "3", valid_from: today, valid_to: "", payment_mode: "advance", amount_basis: "per_month" });
   const [scheduleErrors, setScheduleErrors] = useState<FieldErrors>({});
   const [scheduleError, setScheduleError] = useState<string | null>(null);
   const [scheduleDone, setScheduleDone] = useState<ScheduleOut[]>(contract.schedules);
@@ -828,6 +885,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
       user_change_fee: userChangeFee,
       allocation_loss_risk: allocationLossRisk,
       vat_option: vatOption,
+      proration_method: prorationMethod || null,
       notes: notes.trim() || null,
     };
     setBusy(true);
@@ -948,6 +1006,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
               ))}
             </select>
           </Field>
+          <ProrationField value={prorationMethod} onChange={setProrationMethod} error={errors["proration_method"]} />
           {contract.kind === "tenancy" ? (
             <Field label={t("fields.rentIncreaseBlockUntil")} error={errors["rent_increase_block_until"]}>
               <input className={ui.input} type="date" value={rentBlockUntil} onChange={(e) => setRentBlockUntil(e.target.value)} />

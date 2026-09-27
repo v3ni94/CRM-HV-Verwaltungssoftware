@@ -15,9 +15,11 @@ Text modules (A33): every level has a neutral standard text (Zahlungserinnerung,
 Mahnung, keyed by level number) consisting of an intro paragraph, the Forderungsaufstellung
 table (Posten, Fälligkeit, Betrag, Summe) and a request paragraph. ``letter_text`` per level
 replaces the request paragraph and may use the placeholders of :data:`PLACEHOLDERS`.
-``{frist}`` only yields a date when ``payment_days`` is set, ``{bankverbindung}`` only names an
-account when one is released for the letter (M16-13, no storage yet: the caller passes
-``bank_account=None`` and the sentence falls back to "auf das Ihnen bekannte Konto").
+``{frist}`` only yields a date when ``payment_days`` is set. ``{bankverbindung}`` names the
+default bank account of the claim holder (the legal entity that owns the receivable, M16-13,
+docs/rules/M16-13.md) with holder and full IBAN, because it is the payment target; without
+such an account no letter is built (422, the preview carries the warning). The text sample
+of the settings form has no case and therefore no account.
 
 Dispatch stays locked: no endpoint sends a letter (G1/G2 closed, M16-02). Every PDF carries
 ``Entwurf`` in the info block; only a person can mark a case as sent (``mark_sent``).
@@ -61,8 +63,8 @@ HISTORY_TABLE = "historie"
 PLACEHOLDERS: dict[str, str] = {
     "frist": 'Phrase "bis zum TT.MM.JJJJ", leer ohne hinterlegte Zahlungsfrist (payment_days)',
     "bankverbindung": (
-        'Phrase "auf das Konto ..." mit freigegebener Bankverbindung, sonst '
-        '"auf das Ihnen bekannte Konto"'
+        'Phrase "auf das Konto von <Kontoinhaber>, IBAN <IBAN>" mit dem Standardkonto des '
+        "Forderungsinhabers (Rechtsträger, dem die Forderung gehört, M16-13)"
     ),
     "gesamtbetrag": "zu zahlender Gesamtbetrag im Format 1.234,56 EUR",
     "forderungsinhaber": "Name des Forderungsinhabers (Rechtsträger)",
@@ -234,6 +236,42 @@ def claim_table(items: list[dict[str, Any]], fee: Decimal, interest: Decimal) ->
     return ClaimTable(rows=rows, total=total, fee=fee, interest=interest)
 
 
+@dataclass(frozen=True)
+class PaymentAccount:
+    """The account a letter names for payment: holder and full IBAN of the claim holder's
+    default account (M16-13). Full, not masked, because the debtor has to transfer to it."""
+
+    id: uuid.UUID
+    holder: str
+    iban: str
+    bic: str | None = None
+    bank_name: str | None = None
+
+    @property
+    def iban_grouped(self) -> str:
+        compact = self.iban.replace(" ", "")
+        return " ".join(compact[i : i + 4] for i in range(0, len(compact), 4))
+
+    def phrase(self) -> str:
+        text = f"auf das Konto von {self.holder}, IBAN {self.iban_grouped}"
+        if self.bic:
+            text += f", BIC {self.bic}"
+        return text
+
+    def info_line(self) -> str:
+        parts = [self.holder, f"IBAN {self.iban_grouped}"]
+        if self.bank_name:
+            parts.append(self.bank_name)
+        return ", ".join(parts)
+
+
+NO_ACCOUNT_DETAIL = (
+    "Für den Forderungsinhaber ist kein Standardkonto hinterlegt. Das Mahnschreiben nennt "
+    "die Zahlung auf das Konto des Rechtsträgers, dem die Forderung gehört; bitte zuerst ein "
+    "Bankkonto des Rechtsträgers als Standardkonto kennzeichnen (M16-13)."
+)
+
+
 def placeholder_values(
     *,
     grand_total: Decimal,
@@ -241,12 +279,12 @@ def placeholder_values(
     object_line: str,
     level_text: str,
     payment_deadline: date | None,
-    bank_account: str | None,
+    bank_account: PaymentAccount | None,
 ) -> dict[str, str]:
     return {
         "frist": f"bis zum {fmt_date(payment_deadline)}" if payment_deadline else "",
         "bankverbindung": (
-            f"auf das Konto {bank_account}" if bank_account else "auf das Ihnen bekannte Konto"
+            bank_account.phrase() if bank_account else "auf das Ihnen bekannte Konto"
         ),
         "gesamtbetrag": fmt_eur(grand_total),
         "forderungsinhaber": claim_holder,
@@ -286,7 +324,7 @@ def compose(
     interest: Decimal,
     payment_deadline: date | None,
     letter_text: str | None,
-    bank_account: str | None,
+    bank_account: PaymentAccount | None,
 ) -> LetterText:
     table = claim_table(items, fee, interest)
     values = placeholder_values(
@@ -315,10 +353,10 @@ def sample_preview(
     fee_amount: Decimal | None,
     payment_days: int | None,
     letter_date: date,
-    bank_account: str | None = None,
 ) -> dict[str, Any]:
     """Text of a level with sample items for the settings form (A33). Fee only when a value
-    is given, deadline only from ``payment_days``, no bank account unless released."""
+    is given, deadline only from ``payment_days``; the sample has no case and therefore
+    names no account (the real letter always names the claim holder's default account)."""
     text = compose(
         level=level,
         level_text=level_text or standard_level_text(level),
@@ -332,7 +370,7 @@ def sample_preview(
             letter_date + timedelta(days=int(payment_days)) if payment_days is not None else None
         ),
         letter_text=letter_text,
-        bank_account=bank_account,
+        bank_account=None,
     )
     return {
         "level": level,
@@ -506,21 +544,45 @@ async def context(session: AsyncSession, case: DunningCase) -> CaseContext:
     )
 
 
+async def resolve_payment_account(
+    session: AsyncSession, case: DunningCase, ledger: Ledger, on: date
+) -> PaymentAccount:
+    """The claim holder's default account for the letter (M16-13): the account recorded at
+    preview time, or, when one was flagged since, the current default. Without one the
+    letter is not released (422) and the case keeps its warning."""
+    from mhvp.properties.models import PropertyBankAccount
+
+    row = (
+        await session.get(PropertyBankAccount, case.bank_account_id)
+        if case.bank_account_id is not None
+        else None
+    )
+    if row is None or not row.is_default or row.legal_entity_id != ledger.legal_entity_id:
+        row = await dunning.payment_account(session, ledger, on)
+    if row is None:
+        case.bank_warning = dunning.NO_BANK_ACCOUNT_WARNING
+        raise ProblemError(ErrorCodes.VALIDATION, detail=NO_ACCOUNT_DETAIL)
+    case.bank_account_id = row.id
+    case.bank_warning = None
+    return PaymentAccount(
+        id=row.id, holder=row.holder, iban=row.iban, bic=row.bic, bank_name=row.bank_name
+    )
+
+
 async def build(
     session: AsyncSession,
     case: DunningCase,
     head: letters.Letterhead,
     letter_date: date,
-    *,
-    bank_account: str | None = None,
 ) -> LetterDraft:
-    """Assemble the letter for a case from stored data only. ``bank_account`` is the released
-    account text of the claim holder; until M16-13 is decided the caller passes ``None``."""
+    """Assemble the letter for a case from stored data only. The payment account is the
+    default account of the claim holder (M16-13); without one the letter is refused."""
     if case.status == "excluded":
         raise ProblemError(
             ErrorCodes.CONFLICT, detail="Für ausgeschlossene Fälle wird kein Mahnschreiben erzeugt."
         )
     ctx = await context(session, case)
+    bank_account = await resolve_payment_account(session, case, ctx.ledger, letter_date)
     payment_deadline = (
         letter_date + timedelta(days=ctx.payment_days) if ctx.payment_days is not None else None
     )
@@ -532,6 +594,7 @@ async def build(
     ]
     if ctx.property_line:
         info.append(("Objekt", ctx.property_line))
+    info.append(("Zahlung an", bank_account.info_line()))
     signatory = [str(head.company.get("name", "")), f"im Auftrag von {ctx.claim_holder_name}"]
     copies: list[letters.Letter] = []
     for delivery in ctx.deliveries:

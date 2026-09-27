@@ -171,6 +171,9 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     time_spent_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     merged_into_ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
+    # Löschungssperre je Vorgang (M6-04, Migration 0175): solange gesetzt, wird kein an den
+    # Vorgang gebundenes Dokument gelöscht (Rechtsstreit, Beweissicherung).
+    retention_hold_reason: Mapped[str | None] = mapped_column(Text)
     # Erledigungsnotiz beim Abschluss (Betreiberauftrag 26.09.2026, mhvp.tickets.status):
     # Art aus ResolutionKind, Freitext, abschließender Nutzer.
     resolution_kind: Mapped[str | None] = mapped_column(String(32))

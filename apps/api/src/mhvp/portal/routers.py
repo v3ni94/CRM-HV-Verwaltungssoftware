@@ -19,18 +19,21 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.core.auth import service as auth_service
 from mhvp.core.auth.principal import (
     TenantPrincipal,
     get_principal,
     require_permission,
+    resolve_host_tenant,
     sessions,
     tenant_tx,
 )
+from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.portal import access, read_receipts
+from mhvp.portal import access, magic_link, read_receipts
 from mhvp.portal.models import ChangeRequest, PortalAccount
 from mhvp.workspace.models import Notification
 from mhvp.workspace.routers import NotificationOut, notification_out
@@ -40,6 +43,10 @@ router = APIRouter(prefix="/portal", tags=["Portal"])
 admin = APIRouter(prefix="/portal-admin", tags=["Portal Verwaltung"])
 MANAGE = require_permission("contacts:update")
 INVITE_DAYS = 14
+# M21-01: the QR invitation code printed on the letter is valid longer than the e-mail
+# invitation (INVITE_DAYS) because a letter reaches the recipient by post, days after issuing;
+# Produktschutz, docs/rules M21-01, not a legal deadline.
+QR_INVITE_DAYS = 90
 KINDS = ("address", "phone", "email", "bank_account", "meter_reading", "invoice_submission")
 # A55: the portal accepts photos and PDF only (damage report, quote, invoice); other types of
 # the general document pipeline (text, CSV, XML) stay CRM side.
@@ -78,6 +85,9 @@ class PortalCommentIn(_In):
 
 class PortalChangeIn(_In):
     kind: str = Field(pattern="^(address|phone|email|bank_account)$")
+    # address (M21-02): street, house_number, postal_code, city, optional addition and
+    # country, valid_from (ISO date, required), optional document_id of an own upload as
+    # evidence (registration certificate). Other kinds keep their single value.
     payload: dict[str, str]
 
 
@@ -252,6 +262,8 @@ class PortalAccountOut(BaseModel):
     invitation_expires_at: datetime | None
     activated_at: datetime | None
     last_login_at: datetime | None
+    # M21-01: optional e-mail code second factor on top of the magic link login.
+    magic_link_2fa: bool
 
 
 @admin.get("/accounts", summary="Portalzugänge eines Kontakts")
@@ -287,6 +299,7 @@ async def list_accounts(
                 invitation_expires_at=account.invitation_expires_at,
                 activated_at=account.activated_at,
                 last_login_at=user.last_login_at,
+                magic_link_2fa=account.magic_link_2fa,
             )
             for account, user in rows
         ]
@@ -316,14 +329,156 @@ async def resync(
         return {"grants": await access.sync_grants(session, account)}
 
 
+class PortalSecurityIn(_In):
+    magic_link_2fa: bool
+
+
+@admin.patch("/accounts/{account_id}/security", status_code=204, summary="Sicherheitsoptionen")
+async def set_security(
+    account_id: uuid.UUID,
+    body: PortalSecurityIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(MANAGE),
+) -> Response:
+    """Switches the optional e-mail code second factor of the magic link login on or off
+    (M21-01); off by default, never mandatory (mirrors TOTP, operator 26.09.2026, M2-01)."""
+    async with tenant_tx(request, principal) as session:
+        account = await session.get(PortalAccount, account_id)
+        if account is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        account.magic_link_2fa = body.magic_link_2fa
+    return Response(status_code=204)
+
+
+def _invitation_letter_text(
+    *, name: str | None, token: str, expires_at: datetime | None, portal_url: str | None
+) -> tuple[str, str]:
+    """Subject and body of the printed invitation letter (M21-01), shared with the QR code
+    printed below it. The code exists in clear text only while this text and the PDF are
+    built; it is stored as a hash (rule 0.1.13)."""
+    greeting = f"Guten Tag {name}," if name else "Guten Tag,"
+    where = (
+        f"Bitte rufen Sie das Kundenportal unter {portal_url} auf"
+        if portal_url
+        else "Bitte rufen Sie das Kundenportal der Verwaltung auf"
+    )
+    valid = (
+        f"Der Einladungscode ist bis zum {expires_at.astimezone(UTC):%d.%m.%Y} gültig und kann "
+        "nur einmal verwendet werden."
+        if expires_at is not None
+        else "Der Einladungscode kann nur einmal verwendet werden."
+    )
+    body = (
+        f"{greeting}\n\n"
+        "für Sie wurde ein Zugang zum Kundenportal eingerichtet. Dort erhalten Sie Ihre "
+        "Unterlagen, können Anliegen melden und Zählerstände mitteilen.\n\n"
+        f"{where} und geben Sie bei der Aktivierung den folgenden Einladungscode ein:\n"
+        f"{token}\n\n"
+        f"{valid}\n\n"
+        "Bei der Aktivierung vergeben Sie ein Passwort. Für die künftige Anmeldung genügt "
+        "wahlweise auch ein einmaliger Link, den Sie sich im Portal an Ihre E-Mail-Adresse "
+        "senden lassen können.\n\n"
+        "Bitte geben Sie den Einladungscode nicht an Dritte weiter."
+    )
+    return "Zugang zum Kundenportal", body
+
+
+def _invitation_qr(url: str | None) -> Any:
+    from mhvp.documents import letters
+
+    if not url:
+        return None
+    return letters.LetterQr(
+        payload=url, caption="Einladungslink zum Scannen mit dem Smartphone oder zum Eingeben:"
+    )
+
+
+@admin.post(
+    "/accounts/{account_id}/invitation-letter",
+    summary="Einladung als Anschreiben (PDF, neuer Einladungscode, 90 Tage gültig)",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def invitation_letter(
+    account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> Response:
+    """Letter on the tenant letterhead (M6 renderer) with a QR invitation code, for contacts
+    reached by post. POST, not GET: issuing the letter rotates the invitation code (a prefetch
+    must not invalidate a code already handed out); the code is valid 90 days (``QR_INVITE_DAYS``,
+    longer than the e-mail invitation) because a letter reaches the recipient with a delay."""
+    from mhvp.documents import letters
+    from mhvp.documents import services as documents_services
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.platform.models import User
+    from mhvp.workspace.services import local_today
+
+    portal_base = getattr(request.app.state.settings, "web_portal_url", None)
+    portal_base = str(portal_base).rstrip("/") if portal_base else None
+    async with tenant_tx(request, principal) as session:
+        account = await session.get(PortalAccount, account_id)
+        if account is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        head = await documents_services.letterhead(session, BlobStore(request.app.state.settings))
+        secret = secrets.token_urlsafe(32)
+        account.invitation_hash = _hash(secret)
+        account.invitation_expires_at = datetime.now(UTC) + timedelta(days=QR_INVITE_DAYS)
+        token = f"{principal.tenant_id.hex}.{secret}"
+        name: str | None
+        try:
+            _contact, lines, _data = await documents_services.recipient(session, account.contact_id)
+            name = lines[0]
+        except ProblemError:
+            user = await session.scalar(select(User.display_name).where(User.id == account.user_id))
+            lines, name = [user or ""], user
+        subject, text = _invitation_letter_text(
+            name=name, token=token, expires_at=account.invitation_expires_at, portal_url=portal_base
+        )
+        content = letters.render_pdf(
+            head,
+            letters.Letter(
+                recipient_lines=lines,
+                subject=letters.render_text("{{ s }}", {"s": subject}),
+                body=letters.render_text("{{ b }}", {"b": text}),
+                letter_date=local_today(),
+                qr=_invitation_qr(invitation_url(request, token)),
+            ),
+        )
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="portal_account.invitation_letter",
+            entity_type="portal_account",
+            entity_id=account.id,
+            actor_user_id=principal.user_id,
+            payload={},
+        )
+    return Response(
+        content=content,
+        media_type="application/pdf",
+        headers={
+            "content-disposition": 'attachment; filename="einladung-kundenportal.pdf"',
+            "cache-control": "no-store",
+        },
+    )
+
+
 @admin.get("/change-requests", summary="Vorschläge aus dem Portal")
 async def change_requests(
-    request: Request, principal: TenantPrincipal = Depends(MANAGE)
+    request: Request,
+    principal: TenantPrincipal = Depends(MANAGE),
+    contact_id: uuid.UUID | None = None,
+    status: str | None = None,
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
-        rows = await session.scalars(
-            select(ChangeRequest).order_by(ChangeRequest.created_at.desc()).limit(500)
+        query = select(ChangeRequest, PortalAccount.contact_id).join(
+            PortalAccount, PortalAccount.id == ChangeRequest.account_id
         )
+        if contact_id is not None:
+            query = query.where(PortalAccount.contact_id == contact_id)
+        if status is not None:
+            query = query.where(ChangeRequest.status == status)
+        rows = await session.execute(query.order_by(ChangeRequest.created_at.desc()).limit(500))
         return [
             {
                 "id": r.id,
@@ -331,8 +486,11 @@ async def change_requests(
                 "status": r.status,
                 "payload": json.loads(r.payload),
                 "account_id": r.account_id,
+                "contact_id": cid,
+                "created_at": r.created_at,
+                "decision_note": r.decision_note,
             }
-            for r in rows.all()
+            for r, cid in rows.all()
         ]
 
 
@@ -397,7 +555,9 @@ async def decide(
                         valid_from=local_today(),
                     )
                 )
-            # address and invoice submissions are applied manually in the CRM (M21-02, M22-01)
+            elif row.kind == "address":
+                await _apply_address(session, principal, row, account.contact_id, payload)
+            # invoice submissions are applied manually in the CRM (M22-01)
         row.status, row.decided_by, row.decision_note = (
             ("accepted" if body.accept else "rejected"),
             principal.user_id,
@@ -405,6 +565,60 @@ async def decide(
         )
         await session.flush()
         return {"id": row.id, "status": row.status}
+
+
+async def _apply_address(
+    session: AsyncSession,
+    principal: TenantPrincipal,
+    row: ChangeRequest,
+    contact_id: uuid.UUID,
+    payload: dict[str, Any],
+) -> None:
+    """M21-02: the accepted proposal becomes a postal address of the contact with its date of
+    validity. When the date has come it becomes the primary address, otherwise it is stored
+    beside the current one (the staff member switches it on the date); the change is
+    written as event ``contact.address_changed``."""
+    from mhvp.contacts.models import AddressLabel, ContactAddress
+
+    valid_from = date.fromisoformat(payload["valid_from"])
+    due = valid_from <= local_today()
+    if due:
+        await session.execute(
+            update(ContactAddress)
+            .where(ContactAddress.contact_id == contact_id, ContactAddress.is_primary.is_(True))
+            .values(is_primary=False)
+        )
+    address = ContactAddress(
+        tenant_id=row.tenant_id,
+        contact_id=contact_id,
+        label=AddressLabel.POSTAL,
+        street=payload.get("street") or None,
+        house_number=payload.get("house_number") or None,
+        postal_code=payload.get("postal_code") or None,
+        city=payload.get("city") or None,
+        addition=payload.get("addition") or None,
+        country=payload.get("country") or "DE",
+        is_primary=due,
+        valid_from=valid_from,
+    )
+    session.add(address)
+    await session.flush()
+    await emit(
+        session,
+        tenant_id=row.tenant_id,
+        type="contact.address_changed",
+        entity_type="contact",
+        entity_id=contact_id,
+        actor_user_id=principal.user_id,
+        payload={
+            "change_request_id": str(row.id),
+            "address_id": str(address.id),
+            "valid_from": payload["valid_from"],
+            "is_primary": due,
+            "evidence_document_id": payload.get("document_id"),
+            "source": "portal",
+        },
+    )
 
 
 # Portal ---------------------------------------------------------------------------------
@@ -448,6 +662,107 @@ async def accept(body: PortalAcceptIn, request: Request) -> dict[str, str]:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         user.password_hash = passwords.hash_password(body.password)
     return {"status": "active"}
+
+
+class MagicLinkRequestIn(_In):
+    email: str = Field(min_length=3, max_length=320)
+    # Only needed when the request does not reach the API through a host mapped to one tenant
+    # (``resolve_host_tenant``); the portal frontend of a mapped domain never sends it.
+    tenant_id: uuid.UUID | None = None
+
+
+class MagicLinkConsumeIn(_In):
+    token: str = Field(min_length=10, max_length=200)
+
+
+class MagicLinkCodeIn(_In):
+    tenant_id: uuid.UUID
+    link_id: uuid.UUID
+    code: str = Field(min_length=6, max_length=8)
+
+
+class MagicLinkOut(BaseModel):
+    """Never carries the link token or the e-mail code (rule 0.1.13); ``code_required`` means
+    the account switched on the optional e-mail code second factor (M21-01)."""
+
+    status: str
+    link_id: uuid.UUID | None = None
+    tenant_id: uuid.UUID | None = None
+    access_token: str | None = None
+    token_type: str = "Bearer"  # noqa: S105 - fixed scheme name, not a secret
+    expires_in: int | None = None
+    refresh_token: str | None = None
+
+
+def _settings(request: Request) -> Settings:
+    settings: Settings = request.app.state.settings
+    return settings
+
+
+def _issued_out(status: str, issued: auth_service.IssuedTokens) -> MagicLinkOut:
+    return MagicLinkOut(
+        status=status,
+        tenant_id=issued.tenant_id,
+        access_token=issued.access_token,
+        expires_in=issued.expires_in,
+        refresh_token=issued.refresh_token,
+    )
+
+
+@router.post(
+    "/magic-link/request", status_code=204, summary="Anmeldelink per E-Mail anfordern (M21-01)"
+)
+async def magic_link_request(body: MagicLinkRequestIn, request: Request) -> Response:
+    """Always answers 204, whether or not the address has a portal account (no enumeration,
+    rule 0.1.13); rate limited per address (``magic_link.RATE_LIMIT_PER_HOUR``)."""
+    tenant_id = body.tenant_id or await resolve_host_tenant(request)
+    if tenant_id is not None:
+        settings = _settings(request)
+        redis = request.app.state.resources.redis
+        portal_url = getattr(settings, "web_portal_url", None)
+        async with tenant_transaction(sessions(request), tenant_id) as session:
+            await magic_link.request_link(
+                session,
+                settings,
+                redis,
+                tenant_id=tenant_id,
+                email=body.email,
+                portal_url=str(portal_url) if portal_url else None,
+            )
+    return Response(status_code=204)
+
+
+@router.post("/magic-link/consume", summary="Anmeldelink einlösen (M21-01)")
+async def magic_link_consume(body: MagicLinkConsumeIn, request: Request) -> MagicLinkOut:
+    settings = _settings(request)
+    redis = request.app.state.resources.redis
+    portal_url = getattr(settings, "web_portal_url", None)
+    result = await magic_link.consume_link(
+        sessions(request),
+        settings,
+        redis,
+        token=body.token,
+        user_agent=request.headers.get("user-agent"),
+        portal_url=str(portal_url) if portal_url else None,
+    )
+    if result.status == "code_required":
+        tenant_id, _secret = magic_link.parse_token(body.token)
+        return MagicLinkOut(status="code_required", link_id=result.link_id, tenant_id=tenant_id)
+    assert result.issued is not None  # noqa: S101 - status "ok" always carries issued tokens
+    return _issued_out("ok", result.issued)
+
+
+@router.post("/magic-link/verify-code", summary="Bestätigungscode prüfen, Sitzung ausstellen")
+async def magic_link_verify_code(body: MagicLinkCodeIn, request: Request) -> MagicLinkOut:
+    issued = await magic_link.verify_code(
+        sessions(request),
+        _settings(request),
+        tenant_id=body.tenant_id,
+        link_id=body.link_id,
+        code=body.code,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return _issued_out("ok", issued)
 
 
 async def portal_user(request: Request) -> tuple[TenantPrincipal, PortalAccount]:
@@ -937,8 +1252,47 @@ async def propose(
     body: PortalChangeIn, request: Request, ctx: Portal = Depends(portal_user)
 ) -> dict[str, Any]:
     principal, account = ctx
+    payload = dict(body.payload)
+    if body.kind == "address":
+        payload = _address_payload(payload)
     async with tenant_tx(request, principal) as session:
-        return await _propose(session, principal, account, body.kind, body.payload)
+        if body.kind == "address" and payload.get("document_id"):
+            from mhvp.documents.models import Document
+
+            doc = await session.get(Document, uuid.UUID(payload["document_id"]))
+            if doc is None or doc.created_by != principal.user_id:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Der Nachweis muss eine eigene Datei sein."
+                )
+        return await _propose(session, principal, account, body.kind, payload)
+
+
+ADDRESS_FIELDS = ("street", "house_number", "postal_code", "city", "addition", "country")
+
+
+def _address_payload(payload: dict[str, str]) -> dict[str, str]:
+    """Validate an address proposal (M21-02): street, postal code, city and the date from
+    which the address applies are required; the evidence document is optional."""
+    out = {k: (payload.get(k) or "").strip() for k in ADDRESS_FIELDS}
+    if not out["street"] or not out["postal_code"] or not out["city"]:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Straße, Postleitzahl und Ort sind erforderlich."
+        )
+    out["country"] = (out["country"] or "DE").upper()[:2]
+    try:
+        raw = (payload.get("valid_from") or "").strip()
+        out["valid_from"] = date.fromisoformat(raw).isoformat()
+    except ValueError as exc:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Bitte angeben, ab wann die Anschrift gilt."
+        ) from exc
+    document_id = (payload.get("document_id") or "").strip()
+    if document_id:
+        try:
+            out["document_id"] = str(uuid.UUID(document_id))
+        except ValueError as exc:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Nachweis ungültig.") from exc
+    return out
 
 
 @router.post("/meter-readings", status_code=201, summary="Zählerstand melden (Vorschlag)")

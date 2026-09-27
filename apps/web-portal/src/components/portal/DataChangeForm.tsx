@@ -17,7 +17,8 @@ const FIELDS: Record<Kind, string[]> = {
 };
 
 /** Datenänderung (M21): Anschrift, Telefon, E-Mail oder Bankverbindung als Vorschlag; die
- *  Verwaltung prüft und übernimmt die Änderung. */
+ *  Verwaltung prüft und übernimmt die Änderung. Anschrift (M21-02) mit Gültigkeitsdatum und
+ *  optionalem Nachweis (eigener Upload über /portal/uploads, als document_id übergeben). */
 export function DataChangeForm() {
   const t = useTranslations("DataChange");
   const tPortal = useTranslations("Portal");
@@ -26,6 +27,8 @@ export function DataChangeForm() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const [validFrom, setValidFrom] = useState("");
+  const [evidence, setEvidence] = useState<File | null>(null);
 
   function setField(name: string, v: string) {
     setValues((prev) => ({ ...prev, [name]: v }));
@@ -40,7 +43,25 @@ export function DataChangeForm() {
       setError(t("submitted"));
       return;
     }
+    if (kind === "address") {
+      if (!payload.street || !payload.postal_code || !payload.city || !validFrom) {
+        setError(t("errorAddress"));
+        return;
+      }
+      payload.valid_from = validFrom;
+    }
     setBusy(true);
+    if (kind === "address" && evidence) {
+      const form = new FormData();
+      form.append("file", evidence, evidence.name);
+      const upload = await bff<{ id: string }>("/api/bff/portal/uploads", { method: "POST", body: form });
+      if (!upload.ok) {
+        setBusy(false);
+        setError(upload.message);
+        return;
+      }
+      payload.document_id = upload.data.id;
+    }
     const result = await bff<{ id: string }>("/api/bff/portal/change-requests", {
       method: "POST",
       body: JSON.stringify({ kind, payload }),
@@ -52,6 +73,8 @@ export function DataChangeForm() {
     }
     setDone(true);
     setValues({});
+    setValidFrom("");
+    setEvidence(null);
   }
 
   return (
@@ -95,6 +118,28 @@ export function DataChangeForm() {
           />
         </div>
       ))}
+      {kind === "address" ? (
+        <>
+          <div>
+            <label htmlFor="field-valid_from" className={ui.label}>
+              {t("fields.valid_from")}
+            </label>
+            <input id="field-valid_from" type="date" className={ui.input} value={validFrom} onChange={(e) => setValidFrom(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="field-evidence" className={ui.label}>
+              {t("fields.evidence")}
+            </label>
+            <input
+              id="field-evidence"
+              type="file"
+              accept="application/pdf,image/jpeg,image/png,image/heic"
+              className={ui.input}
+              onChange={(e) => setEvidence(e.target.files?.[0] ?? null)}
+            />
+          </div>
+        </>
+      ) : null}
       <p className={ui.help}>{tPortal("proposalNotice")}</p>
       <div className={ui.formActions}>
         <button type="submit" className={`${ui.primary} ${ui.actionFull}`} disabled={busy}>

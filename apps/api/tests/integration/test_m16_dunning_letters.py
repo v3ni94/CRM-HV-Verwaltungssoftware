@@ -203,7 +203,27 @@ def _hoa_property(c: TestClient, h: dict[str, str], number: str, name: str) -> t
                 headers=h,
             )
         )
+    # Default account of the WEG: the payment target every dunning letter names (M16-13).
+    _ok(
+        c.post(
+            f"/api/v1/properties/{prop['id']}/bank-accounts",
+            json={
+                "legal_entity_id": hoa,
+                "kind": "hoa",
+                "iban": HOA_IBAN,
+                "holder": f"WEG {name}",
+                "valid_from": "2020-01-01",
+                "is_default": True,
+            },
+            headers=h,
+        ),
+        201,
+    )
     return prop["id"], ledger
+
+
+HOA_IBAN = "DE89370400440532013000"
+HOA_IBAN_GROUPED = "DE89 3704 0044 0532 0130 00"
 
 
 TENANT_LEVELS = [
@@ -287,6 +307,7 @@ def test_object_override_inherits_tenant_default(
         "interest_enabled": "mandant",
         "interest_base_rate": "mandant",
         "interest_spread": "mandant",
+        "default_start_mode": "mandant",
     }
     assert override["threshold_amount"] == "50.00"
     assert override["fee_from_level"] == 2
@@ -617,7 +638,8 @@ def test_letter_text_modules_and_claim_table(
     """A33: every level has a neutral standard text with the Forderungsaufstellung (Posten,
     Fälligkeit, Betrag, Summe); ``letter_text`` per level replaces the request paragraph and
     may use placeholders. ``{frist}`` only yields a date with ``payment_days``,
-    ``{bankverbindung}`` falls back to "das Ihnen bekannte Konto" (M16-12, M16-13); unknown
+    ``{bankverbindung}`` names the claim holder's default account in a letter and falls back
+    to "das Ihnen bekannte Konto" only in the case free text sample (M16-12, M16-13); unknown
     placeholders are refused when saving."""
     _, gated = clients
     gh = bearer(login(gated, world, "dladmin"))
@@ -727,9 +749,10 @@ def test_letter_text_modules_and_claim_table(
     assert "Summe" in text
     assert "03.03.2026" in text  # due date of the March receivable (due day 3)
     assert "350,00 EUR" in text
-    assert "Bitte gleichen Sie 350,00 EUR auf das Ihnen bekannte Konto aus." in text.replace(
-        "\n", " "
-    )
+    assert (
+        "Bitte gleichen Sie 350,00 EUR auf das Konto von WEG Mahnhaus Bausteine, "
+        f"IBAN {HOA_IBAN_GROUPED} aus."
+    ) in text.replace("\n", " ")
     assert "bis zum" not in text  # no payment_days configured, hence no date
     assert "Verzug" not in text
     assert "Entwurf" in text

@@ -85,12 +85,15 @@ describe("BFF proxy", () => {
     ["POST", `banking/transactions/${ID}/ignore`],
     ["POST", `banking/payment-orders/${ID}/approve`],
     // Bankabgleich-Kennzahlen (A45) und Lastschriftläufe (M15): der Download der pain.008
-    // bleibt hinter G2 und ist nicht freigeschaltet (kein GET .../file).
+    // ist erreichbar, die API sperrt ihn selbst hinter G2 (M15-01 Folgepunkt).
     ["GET", "banking/matching-metrics"],
     ["GET", "accounting/direct-debits"],
     ["POST", `accounting/direct-debits/${ID}/approve`],
     ["POST", `accounting/direct-debits/${ID}/cancel`],
     ["POST", `accounting/direct-debits/${ID}/file`],
+    ["GET", `accounting/direct-debits/${ID}/file`],
+    ["GET", `accounting/direct-debits/${ID}/downloads`],
+    ["POST", `accounting/direct-debits/${ID}/submit`],
     ["POST", "statements"],
     ["POST", `statements/${ID}/calculate`],
     ["POST", `hoa/statements/${ID}/post`],

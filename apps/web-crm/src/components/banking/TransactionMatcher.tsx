@@ -8,40 +8,87 @@ import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-type Candidate = {
-  open_item_id: string;
-  remaining: string;
-  score: number;
-  reasons: string[];
+type Split = { open_item_id: string; amount: string; contract_id?: string | null };
+type Proposal = {
+  source: "rule" | "match" | "ai";
+  kind: string;
+  confidence: number | null;
+  reasoning: string[] | string | null;
+  account_number: string | null;
+  rule_id?: string | null;
+  splits?: Split[];
+  unambiguous?: boolean;
 };
-type Candidates = { candidates: Candidate[]; unambiguous_open_item_id: string | null; note: string };
+type AiProposal = Proposal & {
+  id: string;
+  decision: string;
+  proposed?: { splits?: Split[] };
+};
+type Proposals = {
+  stage1: Proposal[];
+  ai: AiProposal[];
+  ai_stage: { enabled: boolean; blocked_reason: string | null };
+  note: string;
+  ledger_id?: string | null;
+};
 
-/** Match proposals (M12): shown with reasons; booking needs an explicit click and confirmation.
- *  The settled amount is the smaller of payment and remaining open amount (partial payments). */
-export function TransactionMatcher({ txId, amount }: { txId: string; amount: string }) {
+const SOURCE_KEY = {
+  rule: "sourceRule",
+  match: "sourceMatch",
+  ai: "sourceAi",
+} as const;
+
+function reasons(value: Proposal["reasoning"]): string {
+  if (!value) return "";
+  return Array.isArray(value) ? value.join(", ") : value;
+}
+
+/** Two stage posting proposals (M12-01): stage 1 is deterministic (rule, match), stage 2 the AI
+ *  proposal when released. Every entry shows source, confidence and reasoning; booking needs an
+ *  explicit click and confirmation and settles the proposed splits (never more than the payment). */
+export function TransactionMatcher({
+  txId,
+  amount,
+}: {
+  txId: string;
+  amount: string;
+}) {
   const t = useTranslations("Bank");
   const router = useRouter();
-  const [data, setData] = useState<Candidates | null>(null);
+  const [data, setData] = useState<Proposals | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     setBusy(true);
     setError(null);
-    const res = await bff<Candidates>(`/api/bff/banking/transactions/${txId}/candidates`);
+    const res = await bff<Proposals>(
+      `/api/bff/banking/transactions/${txId}/posting-proposals`,
+    );
     setBusy(false);
     if (res.ok) setData(res.data);
     else setError(res.message);
   };
-  const book = async (c: Candidate) => {
-    const cents = Math.min(Math.round(Number(amount) * 100), Math.round(Number(c.remaining) * 100));
-    const settle = (cents / 100).toFixed(2);
-    if (!window.confirm(t("confirmBook", { amount: formatEur(settle) }))) return;
+  const book = async (splits: Split[]) => {
+    const total = splits.reduce(
+      (sum, s) => sum + Math.round(Number(s.amount) * 100),
+      0,
+    );
+    const settle = (
+      Math.min(Math.round(Math.abs(Number(amount)) * 100), total) / 100
+    ).toFixed(2);
+    if (!window.confirm(t("confirmBook", { amount: formatEur(settle) })))
+      return;
     setBusy(true);
     setError(null);
     const res = await bff(`/api/bff/banking/transactions/${txId}/book`, {
       method: "POST",
-      body: JSON.stringify({ settlements: [{ open_item_id: c.open_item_id, amount: settle }] }),
+      body: JSON.stringify({
+        settlements: splits.map((s) => ({
+          open_item_id: s.open_item_id,
+          amount: s.amount,
+        })),
+      }),
     });
     setBusy(false);
     if (res.ok) router.refresh();
@@ -59,13 +106,98 @@ export function TransactionMatcher({ txId, amount }: { txId: string; amount: str
     if (res.ok) router.refresh();
     else setError(res.message);
   };
+  const kindLabel = (kind: string) =>
+    t.has(`kind.${kind}`) ? t(`kind.${kind}`) : kind;
+  const row = (p: Proposal, key: string, splits: Split[] | undefined) => (
+    <li key={key} className="flex flex-wrap items-center gap-2">
+      <span className="rounded bg-surface px-1 font-medium">
+        {t(SOURCE_KEY[p.source])}
+      </span>
+      <span>{kindLabel(p.kind)}</span>
+      {p.confidence !== null && p.confidence !== undefined ? (
+        <span className="tabular-nums">
+          {t("confidence", { value: Math.round(p.confidence * 100) })}
+        </span>
+      ) : null}
+      {splits && splits.length > 0 ? (
+        <span className="tabular-nums">
+          {formatEur(
+            splits.reduce((sum, s) => sum + Number(s.amount), 0).toFixed(2),
+          )}
+        </span>
+      ) : null}
+      {p.account_number ? (
+        <span className="text-muted">{p.account_number}</span>
+      ) : null}
+      <span className="text-muted">{reasons(p.reasoning)}</span>
+      {p.unambiguous ? (
+        <span className="rounded bg-surface px-1">{t("unambiguous")}</span>
+      ) : null}
+      {splits && splits.length > 0 ? (
+        <span className="flex flex-wrap gap-2">
+          {splits.map((s) => (
+            <span key={s.open_item_id} className="flex gap-1">
+              {data?.ledger_id ? (
+                <a
+                  className="underline"
+                  href={`/buchhaltung/${data.ledger_id}#open-item-${s.open_item_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("openItemLink")}
+                </a>
+              ) : null}
+              {s.contract_id ? (
+                <a
+                  className="underline"
+                  href={`/vertraege/${s.contract_id}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {t("contractLink")}
+                </a>
+              ) : null}
+            </span>
+          ))}
+        </span>
+      ) : null}
+      {splits && splits.length > 0 ? (
+        <button
+          type="button"
+          className={ui.button}
+          onClick={() => book(splits)}
+          disabled={busy}
+        >
+          {t("book")}
+        </button>
+      ) : null}
+    </li>
+  );
+  const entries = data
+    ? [
+        ...data.stage1.map((p, i) => row(p, `s1-${i}`, p.splits)),
+        ...data.ai.map((p) =>
+          row({ ...p, source: "ai" }, `ai-${p.id}`, p.proposed?.splits),
+        ),
+      ]
+    : [];
   return (
     <div className="flex flex-col gap-1">
       <div className="flex gap-2">
-        <button type="button" className={ui.button} onClick={load} disabled={busy}>
+        <button
+          type="button"
+          className={ui.button}
+          onClick={load}
+          disabled={busy}
+        >
           {t("proposals")}
         </button>
-        <button type="button" className={ui.button} onClick={ignore} disabled={busy}>
+        <button
+          type="button"
+          className={ui.button}
+          onClick={ignore}
+          disabled={busy}
+        >
           {t("ignore")}
         </button>
       </div>
@@ -75,25 +207,19 @@ export function TransactionMatcher({ txId, amount }: { txId: string; amount: str
         </span>
       ) : null}
       {data ? (
-        data.candidates.length === 0 ? (
-          <span className="text-xs text-muted">{t("noCandidates")}</span>
-        ) : (
-          <ul className="flex flex-col gap-1 text-xs">
-            {data.candidates.map((c) => (
-              <li key={c.open_item_id} className="flex flex-wrap items-center gap-2">
-                <span className="tabular-nums">{formatEur(c.remaining)}</span>
-                <span className="text-muted">{c.reasons.join(", ")}</span>
-                {c.open_item_id === data.unambiguous_open_item_id ? (
-                  <span className="rounded bg-surface px-1">{t("unambiguous")}</span>
-                ) : null}
-                <button type="button" className={ui.button} onClick={() => book(c)} disabled={busy}>
-                  {t("book")}
-                </button>
-              </li>
-            ))}
-            <li className="text-muted">{data.note}</li>
-          </ul>
-        )
+        <ul className="flex flex-col gap-1 text-xs">
+          {entries.length === 0 ? (
+            <li className="text-muted">{t("noCandidates")}</li>
+          ) : (
+            entries
+          )}
+          <li className="text-muted">
+            {data.ai_stage.enabled
+              ? t("aiActive")
+              : t("aiBlocked", { reason: data.ai_stage.blocked_reason ?? "" })}
+          </li>
+          <li className="text-muted">{t("proposalNote")}</li>
+        </ul>
       ) : null}
     </div>
   );

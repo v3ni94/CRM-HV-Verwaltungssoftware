@@ -267,5 +267,5 @@ def test_reports_and_exports(client: TestClient, world: World) -> None:
         ),
         201,
     )
-    assert datev["content"].startswith('"EXTF";"7";"21";"Buchungsstapel"')
+    assert datev["content"].startswith('"EXTF";"700";"21";"Buchungsstapel";"7"')
     assert "001200" not in datev["content"].split("\r\n", 2)[2]

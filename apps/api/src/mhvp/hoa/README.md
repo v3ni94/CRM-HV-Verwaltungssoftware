@@ -16,6 +16,15 @@ Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`,
   check (D18) and the resolution validity block (D54).
 * `levies.py`: special levies with instalments, amendments and earmarked report (W09, D20).
 * `meetings.py`: owners' meeting, circular resolutions, board audit (M25).
+  Circular resolutions (M25-02): unanimous in text form by default; a simple majority only
+  with the tenant switch `hoa_circular_lower_majority_enabled` (default off), a prior
+  admitting resolution of the community, a voting deadline and the tenant's majority rule for
+  the subject kind (`docs/rules/M25-02-umlaufbeschluss.md`, legal review open).
+* `meeting_rules.py`: invitation period per tenant (latest dispatch date, short notice only
+  with a documented reason noted in the minutes, calendar source "Einladung spätestens"),
+  virtual form behind the tenant switch with enabling resolution and validity end, dial-in
+  data (encrypted, owners in the portal only), attendance list with channel (M25-03, V13,
+  `docs/rules/M25-03-einladung-virtuell.md`, migration 0187).
 * `protocol.py`: minutes draft of a meeting from a placeholder template as PDF on the tenant
   letterhead (A62); a draft without legal effect, the signed minutes stay linked separately.
 * Reserve block of the statement: Soll, Ist, open contributions, bank balance and explained
@@ -42,3 +51,17 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 
 * `inspection.py`: inspection requests outside the portal with history and deterministic provision package (A61, rule A61); router registered in `main.py`
 * `majority.py`: majority rules per subject kind and automatic check on a resolution, no status change (M25-01, rule M25-01, migration 0125); router registered in `main.py`
+
+## Addendum 27.09.2026 (M24-02, M24-03)
+
+* `assets.py`: asset report per reporting date (W11, rule M24-02): `hoa_asset_report` (migration
+  0171, RLS), endpoints `/hoa/asset-reports` (create, list, get, patch, calculate, transition
+  `issued` behind G4, PDF draft on the tenant letterhead with watermark). Blocks: reserve Soll and
+  Ist, bank per account, receivables per unit, payables and owner credits, loans with residual
+  debt, manual items; reconciliation against the ledger with visible differences, never settled.
+  `GET /hoa/loans/{id}/annual?year=`: interest, repayment and residual debt of a year
+  (`calc.loan_year_figures`, booked items or schedule as orientation).
+* `routers.py`: `PUT /hoa/statements/{id}/loan-allocation` (draft only, key and basis required,
+  column `hoa_statement.loan_allocation`); `calculate` adds the block `loans` and the per unit
+  shares `loan_interest_share` and `loan_repayment_share` (rule M24-03, information only, the
+  result stays unchanged). Tests: `tests/integration/test_m24_asset_report.py`.

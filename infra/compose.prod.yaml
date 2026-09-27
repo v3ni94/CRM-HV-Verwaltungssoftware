@@ -162,6 +162,7 @@ services:
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.referrerPolicy=strict-origin-when-cross-origin"
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.stsSeconds=31536000"
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.stsIncludeSubdomains=true"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-headers.headers.customresponseheaders.Permissions-Policy=camera=(), microphone=(), geolocation=(), payment=()"
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.average=100"
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.burst=200"
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.period=1s"

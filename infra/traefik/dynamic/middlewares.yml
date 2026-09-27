@@ -7,6 +7,8 @@ http:
         frameDeny: true
         contentTypeNosniff: true
         referrerPolicy: strict-origin-when-cross-origin
+        customResponseHeaders:
+          Permissions-Policy: "camera=(), microphone=(), geolocation=(), payment=()"
         # No HSTS in dev (plain HTTP on *.localhost); HSTS is set in production only.
     api-ratelimit:
       rateLimit:

@@ -284,8 +284,11 @@ def test_datev_mapping_crud_import_report_and_export(client: TestClient, world: 
         201,
     )
     content = export["content"]
-    assert content.startswith('"EXTF";"7";"21";"Buchungsstapel"')
-    assert export["rows"] == 5
+    assert content.startswith('"EXTF";"700";"21";"Buchungsstapel";"7"')
+    # Konto/Gegenkonto pairs per booking (docs/rules/M18-06): the three line opening balance
+    # becomes two rows against the single credit side, the two line fee one row.
+    assert export["rows"] == 3
+    assert export["skipped_split_bookings"] == []
     body = content.split("\r\n", 2)[2]
     assert '"1200"' in body
     assert '"1250"' in body

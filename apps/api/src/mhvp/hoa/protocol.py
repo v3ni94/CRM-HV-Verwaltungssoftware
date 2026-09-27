@@ -20,6 +20,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.documents import letters
+from mhvp.hoa import meeting_rules
 from mhvp.hoa.models import AgendaItem, Attendance, Meeting, Resolution
 
 _LOCAL = ZoneInfo("Europe/Berlin")  # meeting time as invited, same choice as the letter date
@@ -39,7 +40,8 @@ Datum und Uhrzeit: {{ versammlung.datum }}, {{ versammlung.uhrzeit }} Uhr
 Ort: {{ versammlung.ort }}
 Form: {{ versammlung.form }}
 Einladung vom: {{ versammlung.einladung }}
-Versammlungsleitung: {{ leitung.name }}
+{% if versammlung.fristvermerk %}{{ versammlung.fristvermerk }}
+{% endif %}Versammlungsleitung: {{ leitung.name }}
 Stimmprinzip: {{ versammlung.stimmprinzip }}
 
 Tagesordnung
@@ -168,7 +170,7 @@ async def build_context(
                 proxy = await session.get(Contact, att.proxy_contact_id)
                 status = f"vertreten durch {proxy.display_name if proxy else PLACEHOLDER}"
             else:
-                status = "anwesend (online)" if att.online else "anwesend"
+                status = "anwesend (online)" if att.online else "anwesend (Präsenz)"
         else:
             status = "nicht anwesend"
         rows.append(
@@ -233,6 +235,11 @@ async def build_context(
             "ort": meeting.location or PLACEHOLDER,
             "form": MEETING_MODE.get(meeting.mode, meeting.mode),
             "einladung": _fmt_date(meeting.invited_at),
+            # M25-03: note when the invitation was recorded after the latest dispatch date
+            "fristvermerk": meeting_rules.short_notice_note(
+                meeting, await meeting_rules.invitation_weeks(session, meeting.tenant_id)
+            )
+            or "",
             "stimmprinzip": PRINCIPLE.get(meeting.voting_principle, meeting.voting_principle),
         },
         "leitung": {"name": chair.display_name if chair else PLACEHOLDER},

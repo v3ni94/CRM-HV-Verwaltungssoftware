@@ -67,3 +67,13 @@ und Vertrag mit der Steuerberatung zu klären ist.
   in dieser Aufgabe nicht gebaut (OPEN_QUESTIONS M10-02).
 - Für Betriebskostenarten ohne Konto in Anhang A.1 werden keine Nummern erfunden; sie
   werden mit der Steuerberatung festgelegt (OPEN_QUESTIONS M10-02).
+
+## Nachtrag 27.09.2026: Freigabe der Vorbelegung
+
+- Die Vorbelegung der Kostenkonten (Umlagefähigkeit, Abrechnungsart, Umsatzsteueroption)
+  wird zusammen mit dem Kontenrahmen freigegeben (Freigabeworkflow, Nachtrag in M10-01).
+  Bis zur Freigabe bleibt sie Entwurf; der Export als CSV/PDF für die Steuerberatung
+  (`GET /accounting/templates/{id}/export`) enthält je Konto Kategorie, Typ,
+  Abrechnungsart, Umlagefähigkeit, Umsatzsteueroption, Prüfstatus und Vermerk.
+- Eine Änderung der Vorbelegung nach Freigabe erfolgt nur in einer neuen Version der
+  Vorlage. Bestehende Buchungskreise werden dadurch nicht verändert (7.2).

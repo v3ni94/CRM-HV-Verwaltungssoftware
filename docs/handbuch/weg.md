@@ -114,6 +114,25 @@ Status der Versammlung: geplant, eingeladen, eröffnet, geschlossen. Über die S
 stehen außerdem bereit: Umlaufbeschluss in Textform und Vermerk einer technischen Störung
 bei Online-Teilnahme.
 
+### Umlaufbeschluss
+
+Unter der Beschluss-Sammlung der Gemeinschaft lässt sich ein Umlaufbeschluss erfassen:
+Gegenstand, Beschlusstext, Datum der Feststellung, je Eigentümer die in Textform
+eingegangene Stimme mit Kanal (E-Mail, Portal, Brief, Sonstiges) und Eingangszeitpunkt, das
+Fristende für die Stimmabgabe und der Nachweis der Textform als Datei. Standard ist die
+Allstimmigkeit: positiv nur, wenn alle Eigentümer fristgerecht mit Ja gestimmt haben.
+
+Die zugelassene Mehrheit "einfache Mehrheit" steht nur zur Verfügung, wenn der Schalter des
+Mandanten gesetzt ist (Schnittstelle `PUT /hoa/circular-lower-majority`, Standard aus,
+Freigabe erst nach Rechtsprüfung). Dann sind der zulassende Beschluss aus der
+Beschluss-Sammlung (Absenkungsbeschluss, positiv gefasst und vor dem Umlaufbeschluss), das
+Fristende und der Beschlussgegenstand Pflicht. Die Plattform zählt nach der Mehrheitsregel
+des Mandanten für den Gegenstand (Köpfe, Miteigentumsanteile oder Einheiten), lässt
+verspätete Stimmen unberücksichtigt und stellt das Ergebnis mit Auszählung, Verweis auf den
+zulassenden Beschluss und dem Vermerk "zu prüfen" in der Beschluss-Sammlung fest. Die
+Zulässigkeit der Absenkung ist eine rechtliche Einschätzung und keine Feststellung des
+Systems (docs/rules/M25-02-umlaufbeschluss.md).
+
 ### Protokollentwurf
 
 Protokollentwurf erzeugen (Recht Buchhaltung anlegen) erstellt aus Tagesordnung, Anwesenheit

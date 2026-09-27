@@ -85,3 +85,63 @@ describe("SlaSettings WhatsApp tab", () => {
     ).toBeInTheDocument();
   });
 });
+
+describe("SlaSettings rules approval (M19-01)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const draft = {
+    id: "r1",
+    name: "Hoch",
+    priority: "high" as const,
+    response_minutes: 60,
+    resolution_minutes: 600,
+    clock_type: "calendar" as const,
+    active: true,
+    channels_by_level: null,
+    category: null,
+    approval_status: "draft" as const,
+    approved_at: null,
+    approved_by: null,
+  };
+
+  it("marks a draft, approves it through the dialog only after confirmation and omits approval fields from PATCH", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/bff/sla/rules/r1/approve") && method === "POST") {
+        expect(JSON.parse(String(init?.body))).toEqual({ confirm: true, note: "GF" });
+        return jsonResponse({ ...draft, approval_status: "approved", approved_at: "2026-09-27T10:00:00Z", approved_by: "u1" }, 200);
+      }
+      if (url.endsWith("/api/bff/sla/rules/r1") && method === "PATCH") {
+        const body = JSON.parse(String(init?.body));
+        expect(body.approval_status).toBeUndefined();
+        expect(body.approved_at).toBeUndefined();
+        return jsonResponse({ ...draft, active: false }, 200);
+      }
+      if (url.endsWith("/api/bff/sla/rules/r1/steps")) return jsonResponse([], 200);
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    renderIntl(<SlaSettings {...baseProps} rules={[draft]} canApprove whatsappConfig={EMPTY_WHATSAPP_CONFIG} />);
+    expect(screen.getByText("Entwurf, nicht wirksam")).toBeInTheDocument();
+    expect(screen.getByText("alle Kategorien")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Freigeben" }));
+    const submit = screen.getByRole("button", { name: "Freigabe bestätigen" });
+    expect(submit).toBeDisabled();
+    await userEvent.click(screen.getByLabelText("Ich habe die Werte geprüft und gebe sie als Geschäftsführung frei."));
+    await userEvent.type(screen.getByLabelText("Vermerk (optional)"), "GF");
+    await userEvent.click(submit);
+    await waitFor(() => expect(screen.getByText("Regel freigegeben.")).toBeInTheDocument());
+    expect(screen.getByText(/freigegeben am/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Freigabe zurücknehmen" })).toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Deaktivieren" }));
+    await waitFor(() => expect(fetchMock.mock.calls.some(([, init]) => init?.method === "PATCH")).toBe(true));
+  });
+
+  it("shows no approval button without the management right", () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse([], 200));
+    renderIntl(<SlaSettings {...baseProps} rules={[draft]} whatsappConfig={EMPTY_WHATSAPP_CONFIG} />);
+    expect(screen.getByText("Entwurf, nicht wirksam")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Freigeben" })).toBeNull();
+  });
+});

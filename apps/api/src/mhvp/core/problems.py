@@ -100,6 +100,12 @@ class ErrorCodes:
     OIDC_INVALID = ErrorCode(
         "MHVP-AUTH-0010", 400, "Anmeldeanfrage ungültig", "OIDC request invalid (RFC 6749)."
     )
+    MAGIC_LINK_INVALID = ErrorCode(
+        "MHVP-AUTH-0011",
+        401,
+        "Anmeldelink ungültig oder abgelaufen",
+        "Magic link token unknown, expired or already used (M21-01).",
+    )
     RESOURCE_NOT_FOUND = ErrorCode(
         "MHVP-PLAT-0001", 404, "Datensatz nicht gefunden", "Entity not found in this tenant."
     )
@@ -138,6 +144,20 @@ class ErrorCodes:
     )
     GATE_STATE = ErrorCode(
         "MHVP-GATE-0003", 409, "Freigabeantrag nicht im passenden Zustand", "Invalid state."
+    )
+    GATE_CHART_NOT_RELEASED = ErrorCode(
+        "MHVP-GATE-0004",
+        409,
+        "Kontenrahmen nicht freigegeben",
+        "G1 needs a chart of accounts template in status released for the tenant (V8, "
+        "M10-01/M10-02); the request stays open until a version is released.",
+    )
+    GATE_G5_EVIDENCE_MISSING = ErrorCode(
+        "MHVP-GATE-0005",
+        409,
+        "G5-Nachweise unvollständig oder Freigabe nicht durch den Superadmin",
+        "G5 needs every evidence item done with a linked document and the superadmin as "
+        "approver (M27-02); the request stays open until then.",
     )
     RETENTION_LOCKED = ErrorCode(
         "MHVP-DOC-0001",
@@ -247,6 +267,15 @@ class ErrorCodes:
             "receivables with VAT are not posted automatically (M14-02, M13-03, D45)."
         ),
     )
+    ACC_APPROVAL_LIMIT = ErrorCode(
+        "MHVP-ACC-0006",
+        409,
+        "Zweite Freigabe erforderlich",
+        (
+            "The invoice exceeds the approval limit of the releasing person's roles; a second "
+            "approval by a third person is required before posting (M14-03)."
+        ),
+    )
     AI_POSTING_NOT_RELEASED = ErrorCode(
         "MHVP-AI-0001",
         403,
@@ -337,6 +366,95 @@ class ErrorCodes:
             "next scheduled or manual fetch picks up where the cursor stopped."
         ),
     )
+    # FinTS/HBCI (M11-01 addendum 27.09.2026, docs/integrations/fints.md section 5).
+    FINTS_NOT_CONFIGURED = ErrorCode(
+        "MHVP-BANK-0007",
+        501,
+        "FinTS ist nicht eingerichtet (Produktregistrierung fehlt)",
+        (
+            "MHVP_FINTS_PRODUCT_ID is empty. Register the product with the Deutsche "
+            "Kreditwirtschaft and set the registration number (docs/integrations/fints.md)."
+        ),
+    )
+    FINTS_INSTITUTE_NOT_CONNECTABLE = ErrorCode(
+        "MHVP-BANK-0008",
+        422,
+        "Institut bietet keinen FinTS-Zugang",
+        "The institute list has no FinTS URL for this BLZ; direct access is not possible.",
+    )
+    FINTS_PIN_REJECTED = ErrorCode(
+        "MHVP-BANK-0009",
+        502,
+        "Bank hat Anmeldename oder PIN abgelehnt",
+        (
+            "The bank rejected the login (return codes 9340, 9910, 9930, 9931, 9942 or an "
+            "error during dialog initialisation). No automatic retry: three failures lock the "
+            "access at the bank."
+        ),
+    )
+    FINTS_ACCOUNT_LOCKED = ErrorCode(
+        "MHVP-BANK-0010",
+        502,
+        "Bankzugang gesperrt",
+        "The bank reports a locked access (3938/9931); unlock it with the bank first.",
+    )
+    FINTS_TAN_REJECTED = ErrorCode(
+        "MHVP-BANK-0011",
+        502,
+        "Bank hat die TAN abgelehnt",
+        "The bank rejected the TAN (9941 ff). Start the step again with a new TAN.",
+    )
+    FINTS_SCA_REQUIRED = ErrorCode(
+        "MHVP-BANK-0012",
+        409,
+        "Erneute Freigabe (TAN) nötig",
+        (
+            "The bank requires strong customer authentication (9075), typically every 90 days "
+            "(PSD2). Start a new TAN session for this connection."
+        ),
+    )
+    FINTS_UNAVAILABLE = ErrorCode(
+        "MHVP-BANK-0013",
+        503,
+        "Bank nicht erreichbar",
+        "The FinTS server did not answer or the connection failed.",
+    )
+    FINTS_BANK_REJECTED = ErrorCode(
+        "MHVP-BANK-0014",
+        502,
+        "Bank hat die Anfrage abgelehnt",
+        "The bank answered with an error return code (9xxx) not mapped more specifically.",
+    )
+    FINTS_STATE = ErrorCode(
+        "MHVP-BANK-0015",
+        409,
+        "FinTS-Sitzung ist im falschen Zustand",
+        "The requested action does not match the session or connection state.",
+    )
+    FINTS_PIN_BLOCKED = ErrorCode(
+        "MHVP-BANK-0016",
+        409,
+        "PIN nach Fehlversuch gesperrt, neue Eingabe nötig",
+        (
+            "After a rejected login the stored PIN is not reused automatically (the bank locks "
+            "the access after three failures). Enter the PIN again to continue."
+        ),
+    )
+    PAYMENT_CHANNEL_UNAVAILABLE = ErrorCode(
+        "MHVP-BANK-0017",
+        409,
+        "Einreichungsweg nicht verfügbar",
+        (
+            "The submission channel (FinTS or EBICS) is prepared but not activated: contract, "
+            "initialisation or feature flag missing (M15-01, V2). Use the file channel."
+        ),
+    )
+    PAYMENT_FILE_STATE = ErrorCode(
+        "MHVP-BANK-0018",
+        409,
+        "Zahlungsdatei im falschen Zustand",
+        "The batch has no stored file, was already submitted or its checksum does not match.",
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,
@@ -368,6 +486,20 @@ class ErrorCodes:
         "Posted lines use CRM accounts without a DatevAccountMapping for the ledger and "
         "booking date; the batch is not written with raw account numbers (A36, M18-04).",
     )
+    DATEV_EXPORT_CONTENT_MISSING = ErrorCode(
+        "MHVP-BILL-0009",
+        409,
+        "Exportdatei nicht gespeichert",
+        "The export run has no stored content (written before migration 0190); the formal "
+        "check needs the exact file. Create the export again (M18-01).",
+    )
+    CHART_TEMPLATE_NOT_DRAFT = ErrorCode(
+        "MHVP-BILL-0010",
+        409,
+        "Kontenrahmen ist nicht im Entwurf",
+        "Accounts of a template in review or released cannot be changed; create a new "
+        "version instead (M10-01, V8).",
+    )
     BILLING_LEITWEG_ID_MISSING = ErrorCode(
         "MHVP-BILL-0005",
         409,
@@ -385,6 +517,32 @@ class ErrorCodes:
         409,
         "XRechnung nur für ausgestellte Rechnungen",
         "XRechnung XML is generated only for issued or released outgoing invoices (A12).",
+    )
+    RENT_INVOICE_NOT_ALLOWED = ErrorCode(
+        "MHVP-BILL-0011",
+        409,
+        "Mietrechnung nicht möglich",
+        "Contract without VAT option or receivable items without a released VAT split "
+        "(rule M13-04, Mietrechnung).",
+    )
+    RENT_INVOICE_TAX_ID_MISSING = ErrorCode(
+        "MHVP-BILL-0012",
+        409,
+        "Steuernummer oder USt-IdNr. des Rechtsträgers fehlt",
+        "The legal entity has neither a tax number nor a VAT id in the master data; the "
+        "rent invoice is not issued (rule M13-04, Mietrechnung).",
+    )
+    RENT_INVOICE_NO_ITEMS = ErrorCode(
+        "MHVP-BILL-0013",
+        409,
+        "Keine Sollstellungsposten im Zeitraum",
+        "No posted or ready receivable items of the contract in the period.",
+    )
+    RENT_INVOICE_CANCELLED = ErrorCode(
+        "MHVP-BILL-0014",
+        409,
+        "Rechnung bereits storniert",
+        "The rent invoice is already cancelled by a credit note, or is a credit note itself.",
     )
     # Messdienstleister module (stage 1).
     METERING_MODULE_DISABLED = ErrorCode(
@@ -490,6 +648,108 @@ class ErrorCodes:
         422,
         "Verwaltungsende liegt vor dem Kündigungsdatum",
         "effective_date must not be before notice_date.",
+    )
+    # lexoffice (M13-lexoffice, docs/integrations/lexoffice.md).
+    LEXOFFICE_NOT_CONFIGURED = ErrorCode(
+        "MHVP-LEXO-0001",
+        502,
+        "lexoffice ist für diesen Mandanten nicht eingerichtet",
+        "No LexofficeTenantConfig with an API key for this tenant, or the feature flag is off.",
+    )
+    LEXOFFICE_UNAVAILABLE = ErrorCode(
+        "MHVP-LEXO-0002",
+        503,
+        "lexoffice nicht erreichbar",
+        "Request to the lexoffice public REST API failed or was rejected.",
+    )
+    LEXOFFICE_AUTH = ErrorCode(
+        "MHVP-LEXO-0003",
+        502,
+        "lexoffice-Zugangsdaten abgelehnt",
+        "lexoffice answered 401/403: the stored API key was rejected.",
+    )
+    LEXOFFICE_RATE_LIMITED = ErrorCode(
+        "MHVP-LEXO-0004",
+        503,
+        "lexoffice-Anfragelimit erreicht",
+        "lexoffice answered 429 (rate limit, 2 req/s documented). Not retried automatically.",
+    )
+    LEXOFFICE_GATE_CLOSED = ErrorCode(
+        "MHVP-LEXO-0005",
+        403,
+        "lexoffice-Export ist für diesen Mandanten gesperrt",
+        (
+            "Export to lexoffice needs release gate G1 (productive bookkeeping) open and the "
+            "lexoffice feature flag enabled for the tenant; both default closed/off."
+        ),
+    )
+    # BrokerProvider (M28-01 stage 3, mhvp.letting.broker_provider).
+    BROKER_NOT_CONFIGURED = ErrorCode(
+        "MHVP-BRKR-0001",
+        502,
+        "Makler-Anbindung ist für diesen Mandanten nicht eingerichtet",
+        "No enabled BrokerTenantConfig with credentials for this tenant/provider.",
+    )
+    BROKER_DOCUMENTATION_REQUIRED = ErrorCode(
+        "MHVP-BRKR-0002",
+        501,
+        "Für diese Operation liegt keine belegte Schnittstellendokumentation vor",
+        (
+            "BrokerProvider raised DocumentationRequiredError: no verified public endpoint "
+            "contract for this operation/provider (rule 0.1.3)."
+        ),
+    )
+    # M20-04 Vier-Augen-Prinzip beim Mailversand (mhvp.communication.mail_approval).
+    MAIL_APPROVAL_FOUR_EYES = ErrorCode(
+        "MHVP-COMM-0001",
+        409,
+        "Freigabe durch eine zweite Person erforderlich",
+        (
+            "Mail approval needs a second, different user identity than the draft's author; "
+            "a superadmin bypass exists only behind the gate_superadmin_bypass platform flag "
+            "(ADR 0011)."
+        ),
+    )
+    MAIL_APPROVAL_REAUTH_REQUIRED = ErrorCode(
+        "MHVP-COMM-0002",
+        401,
+        "Re-Authentifizierung erforderlich",
+        (
+            "Mail approval needs a fresh password or TOTP confirmation, valid for 5 minutes "
+            "(mhvp.communication.mail_approval.REAUTH_WINDOW)."
+        ),
+    )
+    # WEG circular resolution with a lowered majority (M25-02).
+    HOA_CIRCULAR_LOWER_MAJORITY_DISABLED = ErrorCode(
+        "MHVP-HOA-0001",
+        403,
+        "Umlaufbeschluss mit einfacher Mehrheit ist für diesen Mandanten nicht freigeschaltet",
+        "tenant_settings.hoa_circular_lower_majority_enabled is false (default off).",
+    )
+    HOA_CIRCULAR_ENABLING_RESOLUTION = ErrorCode(
+        "MHVP-HOA-0002",
+        422,
+        "Umlaufbeschluss mit einfacher Mehrheit braucht einen zulassenden Beschluss",
+        (
+            "A positive prior resolution of the same community that admits the lower majority "
+            "for this subject is required (M25-02)."
+        ),
+    )
+    # WEG virtual meeting (M25-03, V13).
+    HOA_VIRTUAL_MEETINGS_DISABLED = ErrorCode(
+        "MHVP-HOA-0003",
+        403,
+        "Virtuelle Versammlungen sind für diesen Mandanten nicht freigeschaltet",
+        "tenant_settings.hoa_virtual_meetings_enabled is false (default off, V13).",
+    )
+    HOA_VIRTUAL_BASIS_RESOLUTION = ErrorCode(
+        "MHVP-HOA-0004",
+        422,
+        "Virtuelle Versammlung braucht einen zulassenden Beschluss mit Gültigkeitsende",
+        (
+            "A positive, final or legally binding resolution of the same community that admits "
+            "virtual meetings, with a validity end on or after the meeting day (M25-03)."
+        ),
     )
 
 

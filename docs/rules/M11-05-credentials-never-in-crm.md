@@ -28,3 +28,10 @@
 - Eine serverseitige Banksuche wird nicht nachgebildet, solange kein verifizierter
   Such-Endpunkt vorliegt (`docs/integrations/finapi.md`): die Bankauswahl geschieht innerhalb
   des WebForms selbst, nicht durch eine erfundene Anfrage der Plattform.
+
+## Nachtrag 27.09.2026 (FinTS PIN/TAN)
+
+Für die direkte FinTS/HBCI-Anbindung (Betreiberentscheidung 27.09.2026) gilt diese Regel
+nicht: Anmeldename und PIN werden dort verschlüsselt gespeichert, weil die Bank den
+Dialog nur damit öffnet. Die Schutzregeln dafür stehen in `M11-07`
+(`docs/rules/M11-07-fints-pin-tan.md`); finAPI bleibt unverändert ohne Zugangsdaten im CRM.

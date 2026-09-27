@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.config import get_settings
+from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.sla.channels import (
     SMS_TEST_TEXT,
@@ -26,6 +27,7 @@ from mhvp.sla.models import (
     EmergencyAlert,
     EscalationStep,
     OnCallSchedule,
+    SlaApprovalStatus,
     SlaClock,
     SlaColor,
     SlaRule,
@@ -41,6 +43,8 @@ from mhvp.tickets.models import Priority
 router = APIRouter(prefix="/sla", tags=["SLA und Bereitschaft"])
 READ = require_permission("sla:read")
 MANAGE = require_permission("sla:update")
+# Freigabe der SLA-Werte durch die Geschäftsführung (M19-01): Mandantenverwaltung.
+APPROVE = require_permission("tenant_settings:update")
 TICKETS_READ = require_permission("tickets:read")
 
 
@@ -51,6 +55,11 @@ class _In(BaseModel):
 class SlaRuleIn(_In):
     name: str = Field(min_length=1, max_length=200)
     priority: Priority
+    category: str | None = Field(
+        default=None,
+        max_length=100,
+        description="Ticketkategorie; leer = Regel für alle Kategorien (M19-01).",
+    )
     response_minutes: int = Field(ge=1, le=100_000)
     resolution_minutes: int = Field(ge=1, le=1_000_000)
     clock_type: ClockType = ClockType.BUSINESS
@@ -62,6 +71,7 @@ class SlaRuleIn(_In):
 
     def data(self) -> dict[str, Any]:
         values = self.model_dump()
+        values["category"] = (self.category or "").strip() or None
         if self.channels_by_level is not None:
             values["channels_by_level"] = {
                 k: [c.value for c in v] for k, v in self.channels_by_level.items()
@@ -141,6 +151,10 @@ def _rule_out(row: SlaRule) -> dict[str, Any]:
         "clock_type": row.clock_type.value,
         "active": row.active,
         "channels_by_level": row.channels_by_level,
+        "category": row.category,
+        "approval_status": row.approval_status,
+        "approved_at": row.approved_at,
+        "approved_by": str(row.approved_by) if row.approved_by else None,
     }
 
 
@@ -255,16 +269,12 @@ async def create_rule(
     body: SlaRuleIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        existing = await session.scalar(
-            select(SlaRule).where(
-                SlaRule.tenant_id == principal.tenant_id, SlaRule.priority == body.priority
-            )
-        )
-        if existing is not None:
-            raise ProblemError(
-                ErrorCodes.CONFLICT, detail="Für diese Priorität besteht bereits eine Regel."
-            )
         data = body.data()
+        if await _same_rule(session, principal.tenant_id, body.priority, data["category"]):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Für diese Priorität und Kategorie besteht bereits eine Regel.",
+            )
         _check_channels(data["channels_by_level"])
         rule = SlaRule(tenant_id=principal.tenant_id, created_by=principal.user_id, **data)
         session.add(rule)
@@ -285,9 +295,113 @@ async def update_rule(
             raise ProblemError(ErrorCodes.NOT_FOUND)
         data = body.data()
         _check_channels(data["channels_by_level"])
+        other = await _same_rule(session, principal.tenant_id, body.priority, data["category"])
+        if other is not None and other.id != rule.id:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Für diese Priorität und Kategorie besteht bereits eine Regel.",
+            )
+        # Geänderte Zeiten oder Kategorie heben die Freigabe auf (M19-01): die Geschäftsführung
+        # gibt die neuen Werte erneut frei. Aktiv/Inaktiv und Kanäle berühren die Werte nicht.
+        values_changed = any(
+            getattr(rule, key) != value
+            for key, value in data.items()
+            if key
+            in ("priority", "category", "response_minutes", "resolution_minutes", "clock_type")
+        )
         for key, value in data.items():
             setattr(rule, key, value)
+        if values_changed and rule.approval_status == SlaApprovalStatus.APPROVED.value:
+            _set_draft(rule)
         rule.updated_by = principal.user_id
+        await session.flush()
+        return _rule_out(rule)
+
+
+async def _same_rule(
+    session: Any, tenant_id: uuid.UUID, priority: Priority, category: str | None
+) -> SlaRule | None:
+    query = select(SlaRule).where(SlaRule.tenant_id == tenant_id, SlaRule.priority == priority)
+    query = query.where(
+        SlaRule.category == category if category is not None else SlaRule.category.is_(None)
+    )
+    rule: SlaRule | None = await session.scalar(query)
+    return rule
+
+
+def _set_draft(rule: SlaRule) -> None:
+    rule.approval_status = SlaApprovalStatus.DRAFT.value
+    rule.approved_at = None
+    rule.approved_by = None
+
+
+class SlaApprovalIn(_In):
+    """Freigabe durch die Geschäftsführung (M19-01): Bestätigung ist Pflicht, Vermerk optional."""
+
+    confirm: bool = Field(description="Bestätigung, dass die Werte geprüft und freigegeben sind.")
+    note: str | None = Field(default=None, max_length=500)
+
+
+@router.post(
+    "/rules/{rule_id}/approve",
+    summary="SLA-Regel durch die Geschäftsführung freigeben (M19-01)",
+)
+async def approve_rule(
+    rule_id: uuid.UUID,
+    body: SlaApprovalIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Erst freigegebene Werte steuern Uhren und Eskalationsstufen; bis dahin gilt "keine
+    SLA". Freigabe verlangt ``tenant_settings:update`` (Geschäftsführung, Mandantenverwaltung),
+    wird mit Datum und Benutzer protokolliert und gilt nur für neu gestartete Uhren."""
+    if not body.confirm:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Freigabe nicht bestätigt.")
+    async with tenant_tx(request, principal) as session:
+        rule = await session.get(SlaRule, rule_id)
+        if rule is None:
+            raise ProblemError(ErrorCodes.NOT_FOUND)
+        if rule.approval_status != SlaApprovalStatus.APPROVED.value:
+            rule.approval_status = SlaApprovalStatus.APPROVED.value
+            rule.approved_at = datetime.now(UTC)
+            rule.approved_by = principal.user_id
+            rule.updated_by = principal.user_id
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="sla.rule_approved",
+                entity_type="sla_rule",
+                entity_id=rule.id,
+                actor_user_id=principal.user_id,
+                payload={"note": body.note, "priority": rule.priority.value},
+            )
+        await session.flush()
+        return _rule_out(rule)
+
+
+@router.post(
+    "/rules/{rule_id}/revoke-approval",
+    summary="Freigabe einer SLA-Regel zurücknehmen (zurück auf Entwurf)",
+)
+async def revoke_rule_approval(
+    rule_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        rule = await session.get(SlaRule, rule_id)
+        if rule is None:
+            raise ProblemError(ErrorCodes.NOT_FOUND)
+        if rule.approval_status == SlaApprovalStatus.APPROVED.value:
+            _set_draft(rule)
+            rule.updated_by = principal.user_id
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="sla.rule_approval_revoked",
+                entity_type="sla_rule",
+                entity_id=rule.id,
+                actor_user_id=principal.user_id,
+                payload={"priority": rule.priority.value},
+            )
         await session.flush()
         return _rule_out(rule)
 
@@ -318,18 +432,16 @@ PRESET_NAMES = {
 async def load_presets(
     request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> list[dict[str, Any]]:
-    """Setzt für jede Priorität ohne bestehende Regel eine Vorschlagsregel (Antwort-/Lösungszeit)
-    und den Geschäftszeitenkalender Mo-Fr 08:00-17:00 Europe/Berlin; bestehende Regeln und ein
-    bereits gepflegter Kalender bleiben unverändert. Feiertage NRW pflegt der Betreiber selbst
-    (``holidays`` bleibt eine einfache Liste, kein Automatismus)."""
+    """Setzt für jede Priorität ohne bestehende Regel (ohne Kategorie) eine Vorschlagsregel als
+    Entwurf (Antwort-/Lösungszeit; Freigabe durch die Geschäftsführung über
+    ``/rules/{id}/approve``, M19-01) und den Geschäftszeitenkalender Mo-Fr 08:00-17:00
+    Europe/Berlin; bestehende Regeln und ein bereits gepflegter Kalender bleiben unverändert.
+    Feiertage NRW pflegt der Betreiber selbst (``holidays`` bleibt eine einfache Liste, kein
+    Automatismus)."""
     async with tenant_tx(request, principal) as session:
         created: list[SlaRule] = []
         for priority, (response_minutes, resolution_minutes) in PRESET_RULES.items():
-            existing = await session.scalar(
-                select(SlaRule).where(
-                    SlaRule.tenant_id == principal.tenant_id, SlaRule.priority == priority
-                )
-            )
+            existing = await _same_rule(session, principal.tenant_id, priority, None)
             if existing is not None:
                 created.append(existing)
                 continue

@@ -292,6 +292,64 @@ def score_case(task: AiTask, case: dict[str, Any]) -> list[tuple[Any, Any]]:
     return SCORERS[task](output, case["expected"])
 
 
+STAGE1_FOLDER = "posting_stage1"
+STAGE1_THRESHOLD = 0.9
+
+
+def stage1_hit(case: dict[str, Any]) -> tuple[bool, dict[str, Any]]:
+    """One case of the independent stage 1 set (M12-02): the proposal of the expected source
+    must carry the expected kind, the expected open items, the expected ``unambiguous`` flag
+    and, for rules, the rule id. Returns the hit and the proposal for the report."""
+    from mhvp.banking import posting_proposal
+
+    proposals = posting_proposal.propose(
+        case["tx"], case.get("rules"), case.get("open_items"), case.get("payables")
+    )
+    expected = case["expected"]
+    got = next((p for p in proposals if p.source == expected["source"]), proposals[-1])
+    hit = (
+        got.source == expected["source"]
+        and got.kind == expected["kind"]
+        and sorted(s["open_item_id"] for s in got.splits) == sorted(expected["open_item_ids"])
+        and got.unambiguous == bool(expected.get("unambiguous", False))
+        and (expected.get("rule_id") is None or got.rule_id == expected["rule_id"])
+        and not got.postable
+    )
+    return hit, got.as_dict()
+
+
+def load_stage1_cases(folder: Path) -> list[dict[str, Any]]:
+    path = folder / STAGE1_FOLDER / "cases.json"
+    return list(json.loads(path.read_text("utf-8"))) if path.exists() else []
+
+
+def evaluate_stage1(folder: Path) -> dict[str, Any]:
+    """Hit rate of the deterministic stage 1 (no AI) per case class and in total; misses are
+    listed with id so the report in ``docs/reviews`` can name them."""
+    cases = load_stage1_cases(folder)
+    per_class: dict[str, dict[str, int]] = {}
+    misses: list[str] = []
+    for case in cases:
+        hit, _ = stage1_hit(case)
+        bucket = per_class.setdefault(case["class"], {"cases": 0, "hits": 0})
+        bucket["cases"] += 1
+        if hit:
+            bucket["hits"] += 1
+        else:
+            misses.append(case["id"])
+    hits = sum(b["hits"] for b in per_class.values())
+    return {
+        "cases": len(cases),
+        "hits": hits,
+        "hit_rate": round(hits / len(cases), 4) if cases else 0.0,
+        "classes": {
+            name: {**b, "hit_rate": round(b["hits"] / b["cases"], 4)}
+            for name, b in sorted(per_class.items())
+        },
+        "misses": misses,
+    }
+
+
 def evaluate(folder: Path) -> dict[str, dict[str, float]]:
     report: dict[str, dict[str, float]] = {}
     for task in (*SCORERS, *INPUT_SCORERS):
@@ -307,10 +365,13 @@ def evaluate(folder: Path) -> dict[str, dict[str, float]]:
 def main(argv: list[str]) -> int:
     folder = Path(argv[1]) if len(argv) > 1 else Path("tests/ai_eval")
     report = evaluate(folder)
-    print(json.dumps(report, indent=2))  # noqa: T201 - CLI output
+    stage1 = evaluate_stage1(folder)
+    print(json.dumps({**report, STAGE1_FOLDER: stage1}, indent=2))  # noqa: T201 - CLI output
     failed = [
         t for t, r in report.items() if r["cases"] < min_cases(t) or r["field_f1"] < THRESHOLD
     ]
+    if stage1["cases"] and stage1["hit_rate"] < STAGE1_THRESHOLD:
+        failed.append(STAGE1_FOLDER)
     return 1 if failed else 0
 
 

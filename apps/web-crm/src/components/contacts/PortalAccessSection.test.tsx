@@ -23,6 +23,7 @@ const ACCOUNT: PortalAccount = {
   invitation_expires_at: "2026-10-10T08:00:00Z",
   activated_at: null,
   last_login_at: null,
+  magic_link_2fa: false,
 };
 
 describe("PortalAccessSection", () => {
@@ -113,5 +114,34 @@ describe("PortalAccessSection", () => {
     await waitFor(() => expect(screen.getByText("Kein Portalzugang")).toBeInTheDocument());
     expect(screen.queryByRole("button", { name: "Einladen" })).not.toBeInTheDocument();
     expect(screen.getByText("Einladen nur mit dem Recht contacts:update.")).toBeInTheDocument();
+  });
+
+  it("downloads the invitation letter as PDF and toggles the e-mail code second factor (M21-01)", async () => {
+    fetchMock
+      .mockResolvedValueOnce(jsonResponse([ACCOUNT]))
+      .mockResolvedValueOnce(new Response("%PDF-1.4", { status: 200 }))
+      .mockResolvedValueOnce(jsonResponse([ACCOUNT]))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(jsonResponse([{ ...ACCOUNT, magic_link_2fa: true }]));
+    // createObjectURL/revokeObjectURL and <a>.click() are not implemented in jsdom.
+    const createUrl = vi.fn(() => "blob:test");
+    const revokeUrl = vi.fn();
+    vi.stubGlobal("URL", { ...URL, createObjectURL: createUrl, revokeObjectURL: revokeUrl });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => {});
+
+    renderIntl(<PortalAccessSection contactId={CONTACT} displayName="Erika Mustermann" emails={EMAILS} canInvite />);
+    await waitFor(() => expect(screen.getByTestId("contact-portal-letter")).toBeInTheDocument());
+
+    await userEvent.click(screen.getByTestId("contact-portal-letter"));
+    await waitFor(() => expect(createUrl).toHaveBeenCalled());
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(`/api/bff/portal-admin/accounts/${ACCOUNT.id}/invitation-letter`);
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: "POST" });
+    expect(click).toHaveBeenCalled();
+
+    await userEvent.click(screen.getByRole("checkbox", { name: "Zweiter Faktor per E-Mail-Code beim Anmeldelink" }));
+    await waitFor(() => expect(fetchMock.mock.calls[3]).toBeDefined());
+    expect(String(fetchMock.mock.calls[3]?.[0])).toBe(`/api/bff/portal-admin/accounts/${ACCOUNT.id}/security`);
+    expect(JSON.parse(String(fetchMock.mock.calls[3]?.[1]?.body))).toEqual({ magic_link_2fa: true });
+    await waitFor(() => expect(screen.getByRole("checkbox")).toBeChecked());
   });
 });

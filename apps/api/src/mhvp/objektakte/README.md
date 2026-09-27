@@ -200,3 +200,18 @@ Tests: `tests/unit/test_m29_objektakte_remote.py`, `tests/integration/test_m29_d
 Im Abgleich mit dem Ordnerinhalt am 26.09.2026 fehlten oben:
 
 * `tasks.py`: Celery-Jobs der objektakte-Übernahme, Stufe 5 (täglicher Differenzimport je Mandant, Standard aus)
+
+## Technische Vorbereitung offener Betreiberentscheidungen (27.09.2026, Regel M35-04)
+
+| Punkt | Modul | Endpunkte / Aufruf |
+| --- | --- | --- |
+| M35-02 Vorschaubilder | `previews.py`, `previews_routers.py`, Tabelle `objektakte_preview_import_run` (Migration 0176), Celery `mhvp.objektakte.import_previews_tenant` | `GET/POST /objektakte/previews/import` (`objektakte:read` / `objektakte:approve`), `GET /objektakte/previews/documents/{id}?page=` |
+| M35-03 Schlüsselübergabe | `rekey.py` | `python -m mhvp.objektakte.rekey --dump export.sql --tenant <slug> --dry-run [--protocol p.json] [--tokens-target dms_connection]`; Schlüssel nur über `OBJEKTAKTE_IBAN_KEY`, `OBJEKTAKTE_IBAN_HMAC_KEY`, `OBJEKTAKTE_TOKEN_KEY`, `MHVP_MASTER_KEY` |
+| M35-01 lokales Modell | `local_model.py`, `local_model_routers.py`; Flag `TenantSettings.objektakte_classification["local_model"]` | `GET /objektakte/local-model`, `POST /objektakte/local-model/cases/{case_id}/propose` (`objektakte:update`), immer nur Vorschlag |
+| M35-05 Parallelbetrieb | `reconciliation.py`, `reconciliation_routers.py`; CRM-Seite Objektakte, Abschnitt "Abgleich objektakte gegen CRM" | `GET /objektakte/reconciliation?number=` (`objektakte:read`) |
+| M35-06 Drive-Kontingent | `drive_quota.py` (`DriveQuotaTransport`, `drive_http_client`) | eingebunden in `mhvp.documents.tasks` (Spiegel-Worker) und `mhvp.documents.services.download_from_drive` |
+| M35-07 Archivierung | `docs/runbooks/objektakte-archivierung.md` | Runbook-Entwurf, Frist und Ort offen |
+
+Einstellungen: `MHVP_OBJEKTAKTE_PREVIEWS_DIR` (Standard `/data/previews`), `MHVP_OBJEKTAKTE_MODELS_DIR`
+(Standard `/data/models`). Tests: `tests/unit/test_m35_{rekey,reconciliation,drive_quota,local_model}.py`,
+`tests/integration/test_m35_previews.py`, `tests/integration/test_m35_reconciliation_local_model.py`.

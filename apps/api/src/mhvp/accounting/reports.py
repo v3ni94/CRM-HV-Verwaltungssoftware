@@ -232,8 +232,47 @@ def checksum(data: bytes) -> str:
 # notes; every other header field is left empty and documented there rather than guessed.
 
 DATEV_FORMAT_NAME = "Buchungsstapel"
+# Header field 2 (Versionsnummer des Formats) and field 5 (Formatversion) as documented in the
+# public DATEV examples ("EXTF";700;21;"Buchungsstapel";7); the self check in
+# ``mhvp.accounting.datev_check`` (rules DC-02, DC-04) verifies exactly these values.
+DATEV_VERSION_NUMBER = 700
 DATEV_FORMAT_VERSION = 7
 DATEV_CATEGORY = 21
+
+
+def _split_group_target(
+    lines: list[tuple[JournalLine, LedgerAccount]],
+) -> tuple[tuple[JournalLine, LedgerAccount], list[tuple[JournalLine, LedgerAccount]]] | None:
+    """Docs/rules/M18-06 (Entwurf, zu prüfen durch Steuerberater): the summing side of a split
+    booking is the side with exactly one line; every line of the other side gets that line's
+    account as Gegenkonto. Returns ``None`` when neither side has exactly one line (booking not
+    representable this way)."""
+    debit = [(line, account) for line, account in lines if line.debit]
+    credit = [(line, account) for line, account in lines if line.credit]
+    if len(debit) == 1 and len(credit) != 1:
+        return debit[0], credit
+    if len(credit) == 1 and len(debit) != 1:
+        return credit[0], debit
+    return None
+
+
+def _stapel_row(
+    entry: JournalEntry,
+    line: JournalLine,
+    konto: str,
+    gegenkonto: str,
+) -> list[str]:
+    amount = line.debit if line.debit else line.credit
+    soll_haben = "S" if line.debit else "H"
+    return [
+        str(amount).replace(".", ","),
+        soll_haben,
+        konto,
+        gegenkonto,
+        f"{entry.booking_date:%d%m}",
+        (line.text or entry.text or "")[:60],
+        entry.reference or "",
+    ]
 
 
 async def datev_csv(
@@ -247,13 +286,22 @@ async def datev_csv(
     chart_of_accounts: str,
     account_length: int | None,
     fiscal_year_start_month: int,
-) -> tuple[bytes, int]:
+) -> tuple[bytes, int, list[dict[str, Any]]]:
     """DATEV EXTF Buchungsstapel CSV. Requires the three operator-entered parameters; the caller
     checks their presence (MHVP-BILL-0004) before calling this. The "Konto" field carries the
     DATEV Sachkonto from the operator's mapping (``mhvp.accounting.datev_mapping``, A36,
     M18-04) resolved per ledger and booking date. When any posted line has no mapping the
     export stops with MHVP-BILL-0008 and the list of missing accounts; raw CRM numbers are
-    never written silently."""
+    never written silently.
+
+    Konto/Gegenkonto pairing (M18-01 Folgepunkt, docs/rules/M18-06, Entwurf, Quellenstatus
+    "zu prüfen durch Steuerberater"): a booking with exactly two lines (one Soll, one Haben)
+    becomes one Stapelzeile, Konto the Soll line, Gegenkonto the Haben line. A split booking
+    (more than two lines) is written one Stapelzeile per line of the non summing side, each
+    against the summing side's account as Gegenkonto (``_split_group_target``); a split
+    booking with no single summing side cannot be represented this way and is left out of
+    the file (never silently), reported in the returned ``skipped`` list with the Beleg-ID so
+    the caller can show a "Splitbuchung nicht abbildbar" notice."""
     ensure_ledger_in_scope(session, ledger)
     rows = (
         await session.execute(
@@ -270,8 +318,8 @@ async def datev_csv(
     ).all()
     resolver = await datev_mapping.load_resolver(session, ledger)
     missing: dict[str, dict[str, Any]] = {}
-    mapped: list[str] = []
-    for entry, _line, account in rows:
+    account_target: dict[Any, str] = {}
+    for entry, line, account in rows:
         target = resolver.resolve(account.number, entry.booking_date)
         if target is None:
             item = missing.setdefault(
@@ -288,7 +336,7 @@ async def datev_csv(
             item["first_booking_date"] = min(item["first_booking_date"], entry.booking_date)
             item["last_booking_date"] = max(item["last_booking_date"], entry.booking_date)
             continue
-        mapped.append(target)
+        account_target[line.id] = target
     if missing:
         codes = ", ".join(sorted(missing))
         raise ProblemError(
@@ -315,10 +363,10 @@ async def datev_csv(
     generated = f"{local_today():%Y%m%d}000000000"
     header = [
         "EXTF",
-        str(DATEV_FORMAT_VERSION),
+        str(DATEV_VERSION_NUMBER),
         str(DATEV_CATEGORY),
         DATEV_FORMAT_NAME,
-        "9",
+        str(DATEV_FORMAT_VERSION),
         generated,
         "",
         "RE",
@@ -350,18 +398,45 @@ async def datev_csv(
             "Belegfeld 1",
         ]
     )
-    for (entry, line, _account), datev_account in zip(rows, mapped, strict=True):
-        amount = line.debit if line.debit else line.credit
-        soll_haben = "S" if line.debit else "H"
-        writer.writerow(
-            [
-                str(amount).replace(".", ","),
-                soll_haben,
-                datev_account,
-                "",
-                f"{entry.booking_date:%d%m}",
-                (line.text or entry.text or "")[:60],
-                entry.reference or "",
-            ]
-        )
-    return out.getvalue().encode("utf-8"), len(rows)
+    groups: list[tuple[JournalEntry, list[tuple[JournalLine, LedgerAccount]]]] = []
+    for entry, line, account in rows:
+        if not groups or groups[-1][0].id != entry.id:
+            groups.append((entry, []))
+        groups[-1][1].append((line, account))
+
+    skipped: list[dict[str, Any]] = []
+    stapel_rows = 0
+    for entry, lines in groups:
+        debit_lines = [(line, account) for line, account in lines if line.debit]
+        credit_lines = [(line, account) for line, account in lines if line.credit]
+        if len(lines) == 2 and len(debit_lines) == 1 and len(credit_lines) == 1:
+            (d_line, _d_account) = debit_lines[0]
+            (c_line, _c_account) = credit_lines[0]
+            writer.writerow(
+                _stapel_row(entry, d_line, account_target[d_line.id], account_target[c_line.id])
+            )
+            stapel_rows += 1
+            continue
+        split = _split_group_target(lines)
+        if split is None:
+            skipped.append(
+                {
+                    "journal_entry_id": str(entry.id),
+                    "document_id": str(entry.document_id) if entry.document_id else None,
+                    "reference": entry.reference,
+                    "message": (
+                        "Splitbuchung nicht abbildbar: weder die Soll- noch die Habenseite "
+                        "hat genau eine Zeile (docs/rules/M18-06, zu prüfen durch "
+                        "Steuerberater). Buchung wurde ausgelassen."
+                    ),
+                }
+            )
+            continue
+        (summen_line, _summen_account), split_lines = split
+        summen_target = account_target[summen_line.id]
+        for split_line, _split_account in split_lines:
+            writer.writerow(
+                _stapel_row(entry, split_line, account_target[split_line.id], summen_target)
+            )
+            stapel_rows += 1
+    return out.getvalue().encode("utf-8"), stapel_rows, skipped

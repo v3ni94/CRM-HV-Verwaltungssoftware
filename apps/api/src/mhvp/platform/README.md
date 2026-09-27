@@ -54,3 +54,17 @@ Checked against the folder contents on 26.09.2026, the following files were not 
   `GET /platform/ops/metrics` (JSON und Prometheus). Alle anderen Endpunkte weisen den
   Schlüssel mit 403 ab. Kein Schema, keine Migration. Tests:
   `tests/integration/test_m9_ops_metrics_key.py`; Runbook `docs/runbooks/monitoring.md` 3.1.
+
+## Marktreife: Preisstruktur, G5-Nachweise, Onboarding (M27-01 bis M27-03, 27.09.2026)
+
+* `mhvp.platform.market_readiness`, Migration 0199. Plattformtabelle ohne RLS:
+  `pricing_plan_item` (Struktur ohne Beträge, Angebot als PDF-Entwurf). Mandantentabellen mit
+  `tenant_id` und RLS (ADR 0002), nur über Plattformrollen im Mandantenkontext erreichbar:
+  `g5_evidence` (acht Nachweise je Mandant, `done` nur mit Dokument des Mandanten),
+  `tenant_export_request` (Antrag, Freigabe durch zweite Person, Download als ZIP mit JSON je
+  Entität, gelesen im RLS-Kontext des Mandanten, ohne Geheimnisspalten).
+* G5: `_decide` ruft `ensure_g5_release_allowed` (alle Nachweise erledigt, Genehmigender ist der
+  Superadmin), sonst `MHVP-GATE-0005`. `readiness` zeigt die Liste (`g5_evidence`, `g5_ready`).
+* `POST /platform/onboarding`: `provision_tenant` plus Rechtsträger (`manager`, `rental_owner`,
+  `sev_owner`), erster Administrator (`tenant_admin`), Feature-Flags aus, Gates geschlossen,
+  Willkommens-E-Mail nur als Entwurf in der Antwort. Regeln `docs/rules/M27-01.md` bis `M27-03.md`.

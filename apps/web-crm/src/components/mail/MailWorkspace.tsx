@@ -1,16 +1,21 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 
+import { Pagination } from "@/components/ui/Pagination";
 import type { Preparation } from "@/lib/ai";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 import { MailDetail } from "./MailDetail";
 import { MailList } from "./MailList";
+
+// Seitengröße der Nachrichtenliste (Betreibermeldung 27.09.2026): echte Seitensteuerung statt
+// "Seite 2, 3 zeigt weiter Seite 1"; GET /mail/messages meldet die Gesamtzahl in X-Total-Count.
+const PAGE_SIZE = 50;
 
 export type Message = {
   id: string;
@@ -67,6 +72,8 @@ export type Mailbox = { id: string; address: string; archive_scope_missing?: boo
 
 type Tab = "inbox" | "drafts" | "pending" | "sent";
 
+const TABS: Tab[] = ["inbox", "drafts", "pending", "sent"];
+
 const INBOX_STATUSES = ["new", "assigned", "done"] as const;
 
 function queryFor(
@@ -75,6 +82,7 @@ function queryFor(
   mailboxId: string,
   q: string,
   showClosed = false,
+  page = 1,
 ): string {
   const params = new URLSearchParams();
   if (tab === "inbox") {
@@ -94,6 +102,8 @@ function queryFor(
   }
   if (mailboxId) params.set("mailbox_id", mailboxId);
   if (q.trim()) params.set("q", q.trim());
+  params.set("page", String(page));
+  params.set("page_size", String(PAGE_SIZE));
   return params.toString();
 }
 
@@ -105,7 +115,13 @@ export function MailWorkspace({
   canReadMembers: boolean;
 }) {
   const t = useTranslations("Mail");
-  const [tab, setTab] = useState<Tab>("inbox");
+  // Reiterwahl per URL (?tab=), vorwählbar und beim Wechsel geschrieben (offener Restpunkt,
+  // additiv neben dem Paging der Nachrichtenliste).
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window === "undefined") return "inbox";
+    const fromUrl = new URLSearchParams(window.location.search).get("tab");
+    return fromUrl && TABS.includes(fromUrl as Tab) ? (fromUrl as Tab) : "inbox";
+  });
   const [status, setStatus] = useState("");
   const [q, setQ] = useState("");
   const [queryText, setQueryText] = useState("");
@@ -128,6 +144,13 @@ export function MailWorkspace({
   const [detail, setDetail] = useState<Message | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Seite der Nachrichtenliste, im URL-Zustand als ?seite= (Betreibermeldung 27.09.2026).
+  const [page, setPage] = useState<number>(() => {
+    if (typeof window === "undefined") return 1;
+    const raw = Number.parseInt(new URLSearchParams(window.location.search).get("seite") ?? "1", 10);
+    return Number.isFinite(raw) && raw > 0 ? raw : 1;
+  });
+  const [totalCount, setTotalCount] = useState(0);
 
   useEffect(() => {
     void bff<Mailbox[]>("/api/bff/mail/mailboxes").then((res) => {
@@ -147,15 +170,17 @@ export function MailWorkspace({
       activeMailbox: string,
       activeQ: string,
       activeShowClosed: boolean,
+      activePage: number,
     ) => {
       setBusy(true);
       setError(null);
       void bff<Message[]>(
-        `/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ, activeShowClosed)}`,
+        `/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ, activeShowClosed, activePage)}`,
       ).then((res) => {
         setBusy(false);
         if (res.ok) {
           setMessages(res.data);
+          setTotalCount(res.totalCount ?? res.data.length);
           setSelectedId((prev) =>
             prev && res.data.some((m) => m.id === prev)
               ? prev
@@ -163,6 +188,7 @@ export function MailWorkspace({
           );
         } else {
           setMessages([]);
+          setTotalCount(0);
           setError(res.message);
         }
       });
@@ -171,8 +197,36 @@ export function MailWorkspace({
   );
 
   useEffect(() => {
-    load(tab, status, mailboxId, q, showClosed);
-  }, [tab, status, mailboxId, q, showClosed, load]);
+    load(tab, status, mailboxId, q, showClosed, page);
+  }, [tab, status, mailboxId, q, showClosed, page, load]);
+
+  // Filterwechsel setzt auf Seite 1 zurück (Betreibermeldung 27.09.2026); der Seitenwechsel
+  // selbst löst load() über den Effekt oben aus. Der erste Durchlauf beim Einhängen darf eine
+  // Seite aus dem URL-Zustand (?seite=) nicht überschreiben.
+  const filtersMounted = useRef(false);
+  useEffect(() => {
+    if (!filtersMounted.current) {
+      filtersMounted.current = true;
+      return;
+    }
+    setPage(1);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("seite");
+      window.history.replaceState(null, "", url.toString());
+    }
+  }, [tab, status, mailboxId, q, showClosed]);
+
+  const changePage = (next: number) => {
+    setPage(next);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (next > 1) url.searchParams.set("seite", String(next));
+      else url.searchParams.delete("seite");
+      window.history.replaceState(null, "", url.toString());
+      window.scrollTo({ top: 0 });
+    }
+  };
 
   // Badge "Freigaben": count endpoint instead of loading the whole pending list (M3).
   const loadPendingCount = useCallback(() => {
@@ -201,7 +255,7 @@ export function MailWorkspace({
     };
   }, [selectedId]);
 
-  const refresh = () => load(tab, status, mailboxId, q, showClosed);
+  const refresh = () => load(tab, status, mailboxId, q, showClosed, page);
 
   const toggleClosed = (next: boolean) => {
     setShowClosed(next);
@@ -261,6 +315,8 @@ export function MailWorkspace({
           <button
             key={tabItem.key}
             type="button"
+            role="tab"
+            aria-selected={tab === tabItem.key}
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
               tab === tabItem.key
                 ? "bg-accent text-accent-fg"
@@ -269,6 +325,11 @@ export function MailWorkspace({
             onClick={() => {
               setTab(tabItem.key);
               setStatus("");
+              if (typeof window !== "undefined") {
+                const url = new URL(window.location.href);
+                url.searchParams.set("tab", tabItem.key);
+                window.history.replaceState(null, "", url.toString());
+              }
             }}
           >
             {tabItem.label}
@@ -354,7 +415,7 @@ export function MailWorkspace({
         </p>
       ) : null}
       <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
-        <div className={`min-w-0 ${selectedId ? "hidden md:block" : ""}`}>
+        <div className={`min-w-0 flex flex-col gap-3 ${selectedId ? "hidden md:flex" : ""}`}>
           <MailList
             messages={messages}
             selectedId={selectedId}
@@ -362,6 +423,23 @@ export function MailWorkspace({
             loading={busy && messages === null}
             onBulkChanged={onBulkChanged}
           />
+          {messages && messages.length > 0 ? (
+            <Pagination
+              page={page}
+              pageSize={PAGE_SIZE}
+              total={totalCount}
+              shown={messages.length}
+              control={{ kind: "button", onChange: changePage, disabled: busy }}
+              labels={{
+                label: t("pagination.label"),
+                range: (from, to, total) => t("pagination.range", { from, to, total }),
+                page: (currentPage, pages) => t("pagination.page", { page: currentPage, pages }),
+                prev: t("pagination.prev"),
+                next: t("pagination.next"),
+              }}
+              testId="mail-pagination"
+            />
+          ) : null}
         </div>
         <div className={`min-w-0 ${selectedId ? "" : "hidden md:block"}`}>
           {selectedId ? (

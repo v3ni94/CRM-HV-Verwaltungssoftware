@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import func, or_, select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 from mhvp.documents import letters
@@ -809,7 +810,7 @@ async def get_pdf(
         return Response(
             content,
             media_type="application/pdf",
-            headers={"Content-Disposition": f'{disposition}; filename="{filename}"'},
+            headers={"Content-Disposition": content_disposition(disposition, filename)},
         )
 
 

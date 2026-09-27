@@ -282,16 +282,6 @@ async def usage(
     }
 
 
-G5_EVIDENCE = (
-    "Betriebsprüfung",
-    "Datenschutzprüfung",
-    "Sicherheitsprüfung mit Penetrationstest",
-    "Leistungsumfang und Grenzen",
-    "Verfahrensdokumentation",
-    "Support- und Rückfallprozess",
-)
-
-
 @router.get("/tenants/{tenant_id}/readiness", summary="Onboarding- und G5-Status")
 async def readiness(
     tenant_id: uuid.UUID,
@@ -320,8 +310,15 @@ async def readiness(
             )
         ).all()
     counter = await count_usage(factory, tenant_id, day)
+    from mhvp.platform.market_readiness import evidence_checklist, missing_g5_evidence
+
     async with tenant_transaction(factory, tenant_id) as session:
         properties = int(await session.scalar(select(func.count(Property.id))) or 0)
+        g5_items = [
+            {"item": e["label"], "done": e["done"], "code": e["code"]}
+            for e in await evidence_checklist(session, tenant_id)
+        ]
+        g5_ready = not await missing_g5_evidence(session, tenant_id)
     quota = sum(lic.unit_quota for lic in licenses if lic.module == "core")
     resolver = request.app.state.release_gate_resolver
     gates = {g.value: await resolver.is_open(tenant_id, g) for g in ReleaseGate}
@@ -337,9 +334,9 @@ async def readiness(
         "checklist": checklist,
         "usage": {"units": counter.units, "users": counter.users, "unit_quota": quota},
         "gates": gates,
-        "g5_evidence": [{"item": e, "done": False} for e in G5_EVIDENCE],
-        "g5_ready": False,
-        "note": "G5-Nachweise sind manuell zu führen; der Status öffnet kein Gate.",
+        "g5_evidence": g5_items,
+        "g5_ready": g5_ready,
+        "note": "G5-Nachweise (M27-02) öffnen kein Gate; Freigabe nur über den Antrag G5.",
     }
 
 

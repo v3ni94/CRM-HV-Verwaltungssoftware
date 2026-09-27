@@ -828,9 +828,10 @@ async def add_schedule(
 ) -> s.ScheduleOut:
     async with tenant_tx(request, principal) as session:
         contract = await _get(session, Contract, contract_id)
-        row = PaymentSchedule(
-            tenant_id=principal.tenant_id, contract_id=contract.id, **body.model_dump()
-        )
+        data = body.model_dump()
+        if data["interval"] is None:
+            data["interval"] = await svc.default_payment_interval(session, principal.tenant_id)
+        row = PaymentSchedule(tenant_id=principal.tenant_id, contract_id=contract.id, **data)
         await svc.add_schedule(session, contract, row)
         await _flush(session, "Der Zahlungsplan überschneidet sich mit einem bestehenden.")
         return s.ScheduleOut.model_validate(row)

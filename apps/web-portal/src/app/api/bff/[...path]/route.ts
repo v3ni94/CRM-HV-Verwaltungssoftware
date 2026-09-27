@@ -30,6 +30,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/forms$/ },
   { method: "POST", pattern: new RegExp(`^portal/forms/${ID}/submissions$`) },
   { method: "POST", pattern: /^portal\/change-requests$/ },
+  // M3-02 Portalstufe: digitales SEPA-Lastschriftmandat als Vorschlag (Freigabe im CRM, G2).
+  { method: "GET", pattern: /^portal\/sepa-mandates\/preview$/ },
+  { method: "GET", pattern: /^portal\/sepa-mandates$/ },
+  { method: "POST", pattern: /^portal\/sepa-mandates$/ },
   { method: "POST", pattern: /^portal\/meter-readings$/ },
   { method: "GET", pattern: /^portal\/account$/ },
   // A51 Portal Eigentümer, lesend: Beschlüsse, Ansprechpartner, Hausgeldkonto.

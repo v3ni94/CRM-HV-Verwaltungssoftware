@@ -22,7 +22,24 @@ export type SlaRule = {
   clock_type: ClockType;
   active: boolean;
   channels_by_level?: Record<string, AlertChannel[]> | null;
+  // M19-01: rule per category (null = all) with approval by the management.
+  category?: string | null;
+  approval_status?: "draft" | "approved";
+  approved_at?: string | null;
+  approved_by?: string | null;
 };
+
+export type SlaRuleBody = Omit<SlaRule, "id" | "approval_status" | "approved_at" | "approved_by">;
+
+/** Request body for PATCH: the approval fields are read only and rejected by the API. */
+export function ruleBody(rule: SlaRule): SlaRuleBody {
+  const { id: _id, approval_status: _s, approved_at: _a, approved_by: _b, ...rest } = rule;
+  void _id;
+  void _s;
+  void _a;
+  void _b;
+  return rest;
+}
 
 export type EscalationStep = {
   id: string;
@@ -268,12 +285,13 @@ function RuleForm({
   onCancel,
 }: {
   initial: SlaRule | null;
-  onSave: (body: Omit<SlaRule, "id">) => Promise<boolean>;
+  onSave: (body: SlaRuleBody) => Promise<boolean>;
   onCancel: () => void;
 }) {
   const t = useTranslations("Sla");
   const [name, setName] = useState(initial?.name ?? "");
   const [priority, setPriority] = useState<Priority>(initial?.priority ?? "normal");
+  const [category, setCategory] = useState(initial?.category ?? "");
   const [responseMinutes, setResponseMinutes] = useState(initial?.response_minutes ?? 60);
   const [resolutionMinutes, setResolutionMinutes] = useState(initial?.resolution_minutes ?? 480);
   const [clockType, setClockType] = useState<ClockType>(initial?.clock_type ?? "business");
@@ -285,6 +303,7 @@ function RuleForm({
     const ok = await onSave({
       name: name.trim(),
       priority,
+      category: category.trim() || null,
       response_minutes: responseMinutes,
       resolution_minutes: resolutionMinutes,
       clock_type: clockType,
@@ -301,6 +320,16 @@ function RuleForm({
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("rules.name")}</span>
         <input className={ui.input} value={name} onChange={(e) => setName(e.target.value)} />
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("rules.category")}</span>
+        <input
+          className={ui.input}
+          value={category}
+          placeholder={t("rules.categoryAll")}
+          title={t("rules.categoryHelp")}
+          onChange={(e) => setCategory(e.target.value)}
+        />
       </label>
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("rules.priority")}</span>
@@ -363,14 +392,88 @@ function RuleForm({
   );
 }
 
-function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members: Member[]; canManage: boolean }) {
+/** Freigabedialog (M19-01): explicit confirmation by the management, logged with date and user. */
+function ApprovalDialog({ rule, onDone, onCancel }: { rule: SlaRule; onDone: (rule: SlaRule) => void; onCancel: () => void }) {
+  const t = useTranslations("Sla");
+  const [confirm, setConfirm] = useState(false);
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const submit = async () => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<SlaRule>(`/api/bff/sla/rules/${rule.id}/approve`, {
+      method: "POST",
+      body: JSON.stringify({ confirm: true, note: note.trim() || null }),
+    });
+    setBusy(false);
+    if (res.ok) onDone(res.data);
+    else setError(res.message);
+  };
+  return (
+    <div role="dialog" aria-labelledby={`sla-approve-${rule.id}`} className="flex flex-col gap-2 rounded-md border border-border p-3">
+      <h3 id={`sla-approve-${rule.id}`} className="text-sm font-semibold">
+        {t("rules.approval.dialogTitle")}
+      </h3>
+      <p className="text-sm">
+        {t("rules.approval.dialogText", {
+          response: rule.response_minutes,
+          resolution: rule.resolution_minutes,
+          priority: t(`priorities.${rule.priority}`),
+        })}
+      </p>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={confirm} onChange={(e) => setConfirm(e.target.checked)} />
+        {t("rules.approval.confirm")}
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("rules.approval.note")}</span>
+        <input className={ui.input} value={note} maxLength={500} onChange={(e) => setNote(e.target.value)} />
+      </label>
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
+      <div className="flex gap-2">
+        <button type="button" className={ui.primary} disabled={!confirm || busy} onClick={() => void submit()}>
+          {t("rules.approval.submit")}
+        </button>
+        <button type="button" className={ui.button} onClick={onCancel}>
+          {t("rules.approval.cancel")}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function RulesTab({
+  initial,
+  members,
+  canManage,
+  canApprove,
+}: {
+  initial: SlaRule[];
+  members: Member[];
+  canManage: boolean;
+  canApprove: boolean;
+}) {
   const t = useTranslations("Sla");
   const [rules, setRules] = useState(initial);
   const [creating, setCreating] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const create = async (body: Omit<SlaRule, "id">) => {
+  const revoke = async (rule: SlaRule) => {
+    setError(null);
+    const res = await bff<SlaRule>(`/api/bff/sla/rules/${rule.id}/revoke-approval`, { method: "POST" });
+    if (res.ok) setRules((prev) => prev.map((r) => (r.id === rule.id ? res.data : r)));
+    else setError(res.message);
+  };
+
+  const create = async (body: SlaRuleBody) => {
     setError(null);
     const res = await bff<SlaRule>("/api/bff/sla/rules", { method: "POST", body: JSON.stringify(body) });
     if (res.ok) {
@@ -381,7 +484,7 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
     return false;
   };
 
-  const update = async (id: string, body: Omit<SlaRule, "id">) => {
+  const update = async (id: string, body: SlaRuleBody) => {
     setError(null);
     const res = await bff<SlaRule>(`/api/bff/sla/rules/${id}`, { method: "PATCH", body: JSON.stringify(body) });
     if (res.ok) {
@@ -401,10 +504,10 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
 
   const toggleActive = async (rule: SlaRule) => {
     setError(null);
-    const { id, ...rest } = rule;
+    const id = rule.id;
     const res = await bff<SlaRule>(`/api/bff/sla/rules/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ ...rest, active: !rule.active }),
+      body: JSON.stringify({ ...ruleBody(rule), active: !rule.active }),
     });
     if (res.ok) setRules((prev) => prev.map((r) => (r.id === id ? res.data : r)));
     else setError(res.message);
@@ -412,10 +515,10 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
 
   const saveChannels = async (rule: SlaRule, channels: ChannelsByLevel) => {
     setError(null);
-    const { id, ...rest } = rule;
+    const id = rule.id;
     const res = await bff<SlaRule>(`/api/bff/sla/rules/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ ...rest, channels_by_level: channels }),
+      body: JSON.stringify({ ...ruleBody(rule), channels_by_level: channels }),
     });
     if (res.ok) {
       setRules((prev) => prev.map((r) => (r.id === id ? res.data : r)));
@@ -440,9 +543,15 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
           </div>
         ) : null}
       </div>
+      <p className={ui.help}>{t("rules.approval.hint")}</p>
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
+        </p>
+      ) : null}
+      {notice ? (
+        <p role="status" className={ui.success}>
+          {notice}
         </p>
       ) : null}
       {creating ? <RuleForm initial={null} onSave={create} onCancel={() => setCreating(false)} /> : null}
@@ -464,6 +573,12 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
                   <span className="font-medium">{r.name}</span>
                   <span className={ui.badgeGold}>{t(`priorities.${r.priority}`)}</span>
                   <span className={ui.badge}>{t(`clockTypes.${r.clock_type}`)}</span>
+                  <span className={ui.badge}>{r.category ? r.category : t("rules.categoryAll")}</span>
+                  {r.approval_status === "approved" ? (
+                    <span className={ui.badgeSuccess}>{t("rules.approval.approved", { date: formatDateTime(r.approved_at) })}</span>
+                  ) : (
+                    <span className={ui.badgeWarning}>{t("rules.approval.draft")}</span>
+                  )}
                   {!r.active ? <span className={ui.badgeWarning}>{t("rules.inactive")}</span> : null}
                 </div>
                 <p className="text-xs text-muted">
@@ -479,6 +594,27 @@ function RulesTab({ initial, members, canManage }: { initial: SlaRule[]; members
                       {r.active ? t("rules.deactivate") : t("rules.activate")}
                     </button>
                   </div>
+                ) : null}
+                {canApprove && r.approval_status !== "approved" && approvingId !== r.id ? (
+                  <button type="button" className={ui.buttonSm} onClick={() => setApprovingId(r.id)}>
+                    {t("rules.approval.approve")}
+                  </button>
+                ) : null}
+                {canApprove && r.approval_status === "approved" ? (
+                  <button type="button" className={ui.buttonSm} onClick={() => void revoke(r)}>
+                    {t("rules.approval.revoke")}
+                  </button>
+                ) : null}
+                {approvingId === r.id ? (
+                  <ApprovalDialog
+                    rule={r}
+                    onCancel={() => setApprovingId(null)}
+                    onDone={(updated) => {
+                      setRules((prev) => prev.map((x) => (x.id === updated.id ? updated : x)));
+                      setApprovingId(null);
+                      setNotice(t("rules.approval.done"));
+                    }}
+                  />
                 ) : null}
                 <ChannelsByLevelEditor
                   value={r.channels_by_level}
@@ -1176,6 +1312,7 @@ export function SlaSettings({
   alerts,
   members,
   canManage,
+  canApprove = false,
   smsGateway = EMPTY_SMS_GATEWAY,
   whatsappConfig = EMPTY_WHATSAPP_CONFIG,
 }: {
@@ -1186,6 +1323,8 @@ export function SlaSettings({
   alerts: EmergencyAlert[];
   members: Member[];
   canManage: boolean;
+  /** M19-01: approval of SLA values by the management (tenant_settings:update). */
+  canApprove?: boolean;
   smsGateway?: SmsGatewayConfig;
   whatsappConfig?: WhatsAppConfig;
 }) {
@@ -1207,7 +1346,7 @@ export function SlaSettings({
           </button>
         ))}
       </div>
-      {tab === "rules" ? <RulesTab initial={rules} members={members} canManage={canManage} /> : null}
+      {tab === "rules" ? <RulesTab initial={rules} members={members} canManage={canManage} canApprove={canApprove} /> : null}
       {tab === "onCall" ? (
         <OnCallTab initial={onCall} current={currentOnCall} members={members} canManage={canManage} />
       ) : null}

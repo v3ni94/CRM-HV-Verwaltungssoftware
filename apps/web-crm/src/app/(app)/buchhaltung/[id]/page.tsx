@@ -7,6 +7,7 @@ import { TicketsPagination } from "@/components/tickets/TicketsPagination";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -34,6 +35,8 @@ export default async function LedgerPage({
   const page = Math.max(1, Number.parseInt(sp.page ?? "1", 10) || 1);
   const today = new Date().toISOString().slice(0, 10);
   const api = serverApi();
+  const me = await getMe();
+  const canEditOpenItems = me.data?.permissions.includes("accounting:update") ?? false;
   const [ledger, journal, trial, open, accounts] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}", { params: { path: { ledger_id: id } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/entries", { params: { path: { ledger_id: id }, query: { limit: 100 } } }),
@@ -104,7 +107,7 @@ export default async function LedgerPage({
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{tr("openItems", { date: formatDate(today) })}</h2>
-        <OpenItemsTable rows={openRows} />
+        <OpenItemsTable rows={openRows} canEdit={canEditOpenItems} />
         <SettlementProposalPanel ledgerId={id} debtors={debtors} bankAccounts={bankAccounts} today={today} />
       </section>
       <section className="flex flex-col gap-2">

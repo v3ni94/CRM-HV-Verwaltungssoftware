@@ -26,6 +26,7 @@ export type DunningOwnRow = {
   interest_enabled: boolean | null;
   interest_base_rate: string | null;
   interest_spread: string | null;
+  default_start_mode?: string | null;
 };
 
 /** Wirksame Werte (nach Vererbung); `sources` nennt je Feld die Quelle, `own` ist die
@@ -37,6 +38,8 @@ export type DunningSettings = {
   interest_enabled: boolean;
   interest_base_rate: string | null;
   interest_spread: string | null;
+  /** Verzugsbeginn (M16-03): after_notice_30_days, calendar_due_date, after_reminder oder null. */
+  default_start_mode?: string | null;
   status: string;
   sources?: Partial<Record<string, DunningSource>>;
   own?: DunningOwnRow | null;
@@ -53,6 +56,9 @@ export type LetterTextPreview = {
   placeholders: Record<string, string>;
   hinweis: string;
 };
+
+/** Verzugsmodi der Mandanteneinstellung (docs/rules/M16-03.md); "" bedeutet nicht festgelegt. */
+export const DEFAULT_START_MODES = ["after_notice_30_days", "calendar_due_date", "after_reminder"] as const;
 
 const PLACEHOLDERS = ["{frist}", "{bankverbindung}", "{gesamtbetrag}", "{forderungsinhaber}", "{objekt}", "{stufe}"];
 
@@ -103,6 +109,10 @@ export function DunningSettingsForm({
   const [interestEnabled, setInterestEnabled] = useState(initial.interest_enabled);
   const [baseRate, setBaseRate] = useState(initial.interest_base_rate ?? "");
   const [spread, setSpread] = useState(initial.interest_spread ?? "");
+  const [defaultStartMode, setDefaultStartMode] = useState(initial.default_start_mode ?? "");
+  const [inheritDefaultStart, setInheritDefaultStart] = useState(
+    isOverride && (own?.default_start_mode ?? null) === null,
+  );
   // Objektmodus: ein Abschnitt erbt, solange die gespeicherte Objektzeile dort NULL hat.
   const [inheritLadder, setInheritLadder] = useState(isOverride && (own?.levels ?? null) === null);
   const [inheritThreshold, setInheritThreshold] = useState(
@@ -203,6 +213,7 @@ export function DunningSettingsForm({
           interest_enabled: inheritInterest ? null : interestEnabled,
           interest_base_rate: inheritInterest ? null : baseRate || null,
           interest_spread: inheritInterest ? null : spread || null,
+          default_start_mode: inheritDefaultStart ? null : defaultStartMode || null,
         }
       : {
           property_id: null,
@@ -212,6 +223,7 @@ export function DunningSettingsForm({
           interest_enabled: interestEnabled,
           interest_base_rate: baseRate || null,
           interest_spread: spread || null,
+          default_start_mode: defaultStartMode || null,
         };
     const result = await bff<DunningSettings>("/api/bff/accounting/dunning-settings", {
       method: "PUT",
@@ -557,6 +569,41 @@ export function DunningSettingsForm({
           <span>{t("interestEnabled")}</span>
         </label>
         <p className={ui.help}>{t("interestEnabledHint")}</p>
+      </div>
+
+      <h3 className={`${ui.h2} mt-6 text-base`}>
+        {t("defaultStartSection")}
+        {source("default_start_mode") ? <span className={`${ui.badge} ml-2`}>{source("default_start_mode")}</span> : null}
+      </h3>
+      {isOverride ? (
+        <label className="mt-2 flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={inheritDefaultStart}
+            onChange={(e) => setInheritDefaultStart(e.target.checked)}
+            disabled={!editable}
+          />
+          <span>{t("inheritDefaultStart")}</span>
+        </label>
+      ) : null}
+      <div className="mt-2 flex flex-col gap-2">
+        <label className="flex items-center gap-2 text-sm">
+          <span className={ui.label}>{t("defaultStartMode")}</span>
+          <select
+            className={`${ui.input} w-full max-w-md`}
+            value={defaultStartMode}
+            onChange={(e) => setDefaultStartMode(e.target.value)}
+            disabled={!editable || (isOverride && inheritDefaultStart)}
+          >
+            <option value="">{t("defaultStartModeNone")}</option>
+            {DEFAULT_START_MODES.map((mode) => (
+              <option key={mode} value={mode}>
+                {t(`defaultStartModes.${mode}`)}
+              </option>
+            ))}
+          </select>
+        </label>
+        <p className={ui.help}>{t("defaultStartHint")}</p>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">

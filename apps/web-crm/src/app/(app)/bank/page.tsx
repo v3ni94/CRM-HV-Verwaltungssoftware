@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { BankAccountOverview } from "@/components/banking/BankAccountOverview";
 import { FinApiConnections } from "@/components/banking/FinApiConnections";
+import { FinTsConnections } from "@/components/banking/FinTsConnections";
 import { MatchingMetricsCard } from "@/components/banking/MatchingMetricsCard";
 import { StatementImport } from "@/components/banking/StatementImport";
 import { TransactionMatcher } from "@/components/banking/TransactionMatcher";
@@ -46,6 +47,7 @@ export default async function BankPage() {
         </Link>
       </nav>
       <BankAccountOverview />
+      <FinTsConnections />
       <FinApiConnections />
       <StatementImport />
       <MatchingMetricsCard />

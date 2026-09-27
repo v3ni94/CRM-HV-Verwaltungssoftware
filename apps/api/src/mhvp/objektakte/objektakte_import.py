@@ -20,7 +20,11 @@ Tables understood here (objektakte apps `objects`, `parties`; see that repositor
 - `parties_owner` / `parties_tenant` -> `mhvp.contacts.models.Contact` (matched by `source_id`
   for idempotency; otherwise always created, since a name based contact match risks merging two
   different people, which rule 0.1.3 treats as a data protection risk needing a released rule
-  first, not an assumption here).
+  first, not an assumption here). `source_id` is prefixed per source table (``owner:<id>`` /
+  ``tenant:<id>``, see `_party_source_id`, Kleinbefund 27.09.2026): objektakte keeps separate id
+  sequences for owners and tenants, so an unprefixed id can collide between the two tables and
+  wrongly merge two different people into one `Contact` row. Migration 0205 re-keys rows created
+  before this fix.
 - `parties_ownerunitassignment` -> `mhvp.objektakte.models.ObjektakteAssignment` (staging table,
   M35 Stufe 1 note in the plan): the CRM has no unit level ownership/tenancy model yet that
   matches objektakte's time valid assignment row, so every row lands here, keyed by its
@@ -139,6 +143,17 @@ def _row_hash(row: dict[str, Any]) -> str:
 
 def _source_id(row: dict[str, Any]) -> str:
     return str(row.get("id"))
+
+
+# Party table -> Contact.source_id prefix (Kleinbefund 27.09.2026): objektakte's
+# `parties_owner`/`parties_tenant` are separate tables with their own id sequences, so the same
+# numeric id can name an owner and an unrelated tenant. The prefix keeps them apart in
+# `Contact.source_id` (unique per tenant and source_system) and in `contact_map` below.
+_PARTY_SOURCE_PREFIX = {"parties_owner": "owner", "parties_tenant": "tenant"}
+
+
+def _party_source_id(table: str, row: dict[str, Any]) -> str:
+    return f"{_PARTY_SOURCE_PREFIX[table]}:{_source_id(row)}"
 
 
 def _json_dict(value: Any) -> dict[str, Any] | None:
@@ -357,7 +372,11 @@ async def build_plan(
         ("parties_ownerunitassignment", ObjektakteAssignment),
     ):
         existing = existing_contacts if model is Contact else existing_assignments
-        dup = sum(1 for row in tables.get(table, []) if _source_id(row) in existing)
+        dup = sum(
+            1
+            for row in tables.get(table, [])
+            if (_party_source_id(table, row) if model is Contact else _source_id(row)) in existing
+        )
         if dup:
             plan.duplicates[table] = dup
 
@@ -779,7 +798,7 @@ async def apply_tables(
     contact_map.update(existing_contacts)
     for table, role in (("parties_owner", "eigentuemer"), ("parties_tenant", "mieter")):
         for row in tables.get(table, []):
-            source_id = _source_id(row)
+            source_id = _party_source_id(table, row)
             if source_id in existing_contacts:
                 contact_map[source_id] = existing_contacts[source_id]
                 existing_contact = existing_contact_rows[source_id]
@@ -862,7 +881,7 @@ async def apply_tables(
                 existing_assignment_rows[source_id],
                 {
                     "unit_id": unit_map.get(str(row.get("unit_id"))),
-                    "contact_id": contact_map.get(str(row.get("owner_id"))),
+                    "contact_id": contact_map.get(f"owner:{row.get('owner_id')}"),
                     "valid_from": _to_date(row.get("valid_from")),
                     "valid_to": _to_date(row.get("valid_to")),
                     "share": _to_decimal(row.get("share")),
@@ -877,7 +896,7 @@ async def apply_tables(
             ObjektakteAssignment(
                 tenant_id=tenant_id,
                 unit_id=unit_map.get(str(row.get("unit_id"))),
-                contact_id=contact_map.get(str(row.get("owner_id"))),
+                contact_id=contact_map.get(f"owner:{row.get('owner_id')}"),
                 role=PartyAssignmentRole.OWNER,
                 valid_from=_to_date(row.get("valid_from")),
                 valid_to=_to_date(row.get("valid_to")),
@@ -900,7 +919,7 @@ async def apply_tables(
         {
             cid
             for row in tables.get("parties_ownerunitassignment", [])
-            if (cid := contact_map.get(str(row.get("owner_id")))) is not None
+            if (cid := contact_map.get(f"owner:{row.get('owner_id')}")) is not None
         },
     )
 
@@ -1536,7 +1555,7 @@ async def _mark_missing_sources(
         if source_table == "parties":
             if not any(t in tables for t in _PARTY_TABLES):
                 continue
-            present = {_source_id(r) for t in _PARTY_TABLES for r in tables.get(t, [])}
+            present = {_party_source_id(t, r) for t in _PARTY_TABLES for r in tables.get(t, [])}
         elif source_table in tables:
             present = {_source_id(r) for r in tables[source_table]}
         else:

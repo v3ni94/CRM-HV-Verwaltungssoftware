@@ -227,6 +227,9 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(PreferredChannel, "preferred_channel")
     )
     blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Consumer property (Verbraucher) as a plain flag for the dunning module (M16-03): NULL
+    # means not assessed. It is a note for the reviewer, never a legal determination.
+    is_consumer: Mapped[bool | None] = mapped_column(Boolean, nullable=True)
     # Block date and deletion reservation (4.1; operator decision 26.09.2026): ``delete_after``
     # is computed from the retention profile and only shown as due, the deletion itself stays a
     # manual four eyes step on the existing deletion path. No automatic deletion job.
@@ -277,6 +280,9 @@ class ContactAddress(IdMixin, TimestampMixin, TenantMixin, Base):
     country: Mapped[str] = mapped_column(String(2), nullable=False, default="DE")
     addition: Mapped[str | None] = mapped_column(String(200))
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # M21-02: date from which an address proposed in the portal applies (migration 0174);
+    # empty for addresses recorded in the CRM.
+    valid_from: Mapped[date | None] = mapped_column(Date)
 
 
 class ContactPhone(IdMixin, TimestampMixin, TenantMixin, Base):

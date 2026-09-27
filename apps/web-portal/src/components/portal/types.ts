@@ -280,3 +280,39 @@ export type PortalForm = {
   audience: "tenant" | "owner" | "all";
   fields: PortalFormField[];
 };
+
+/** M25-03 / V13: Versammlung der eigenen Gemeinschaft; Einwahldaten nur bei hybrider oder
+ *  virtueller Form nach Einladung und nur für Eigentümer. */
+export type PortalMeeting = {
+  id: string;
+  legal_entity_name: string | null;
+  kind: string;
+  mode: string;
+  mode_label: string;
+  scheduled_at: string;
+  location: string | null;
+  status: string;
+  invited_at: string | null;
+  notice: string | null;
+  dial_in_url: string | null;
+  dial_in_access: string | null;
+  dial_in_note: string | null;
+};
+
+/** M19-02: submission to the board as the portal shows it (no CRM user ids, no other member's
+ *  comments beyond the tally). */
+export type PortalBoardSubmission = {
+  id: string;
+  kind: "info" | "consent";
+  title: string;
+  note: string | null;
+  amount: string | null;
+  due_on: string;
+  status: "open" | "closed";
+  overdue: boolean;
+  can_vote: boolean;
+  tally: { approve: number; reject: number; comment: number };
+  member_count: number;
+  my_votes: { id: string; vote: "approve" | "reject" | "comment"; comment: string | null; created_at: string }[];
+  created_at: string;
+};

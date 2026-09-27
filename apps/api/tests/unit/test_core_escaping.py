@@ -51,3 +51,40 @@ def test_content_disposition() -> None:
         pass
     else:  # pragma: no cover
         raise AssertionError("kind must be inline or attachment")
+
+
+def test_sanitize_filename_strips_path_and_control_characters() -> None:
+    """Sicherheitspruefung 27.09.2026, Befund 4 / OE-M27-02-02: Original-Dateinamen werden
+    beim Speichern bereinigt (Pfadanteile, Steuerzeichen, NFC, Laenge, Doppelendungen)."""
+    from mhvp.core.escaping import sanitize_filename
+
+    name, flagged = sanitize_filename("../../etc/passwd")
+    assert name == "passwd"
+    assert not flagged
+
+    name, flagged = sanitize_filename("..\\..\\Windows\\System32\\evil.txt")
+    assert name == "evil.txt"
+    assert not flagged
+
+    name, flagged = sanitize_filename("re\x00chnung\x07.pdf")
+    assert name == "rechnung.pdf"
+
+    # NFC normalisation: decomposed "e" + combining acute becomes the precomposed form.
+    name, _ = sanitize_filename("café.pdf")
+    assert name == "café.pdf"
+
+    name, flagged = sanitize_filename("rechnung.pdf.exe")
+    assert name == "rechnung.pdf.exe"
+    assert flagged
+    name, flagged = sanitize_filename("archiv.tar.gz")
+    assert not flagged
+
+    long_name = "a" * 300 + ".pdf"
+    name, _ = sanitize_filename(long_name)
+    assert len(name) == 255
+    assert name.endswith(".pdf")
+
+    name, _ = sanitize_filename("")
+    assert name == "datei"
+    name, _ = sanitize_filename("...")
+    assert name == "datei"

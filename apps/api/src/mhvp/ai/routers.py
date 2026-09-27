@@ -9,13 +9,14 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.ai import connection_test, embeddings, gateway, imports, jobs, providers, tasks
+from mhvp.ai import connection_test, embeddings, examples, gateway, imports, jobs, providers, tasks
 from mhvp.ai import schemas as s
 from mhvp.ai.models import (
     AiConversation,
     AiExample,
     AiKnowledgeEntry,
     AiKnowledgeKind,
+    AiKnowledgeStatus,
     AiMessage,
     AiProposal,
     AiProvider,
@@ -881,13 +882,32 @@ async def _pending(session: Any, proposal_id: uuid.UUID) -> AiProposal:
 
 @router.post("/ai/proposals/{proposal_id}/reject", summary="Vorschlag verwerfen")
 async def reject_proposal(
-    proposal_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+    proposal_id: uuid.UUID,
+    request: Request,
+    body: s.RejectProposalIn | None = None,
+    principal: TenantPrincipal = Depends(CREATE),
 ) -> s.ProposalOut:
     async with tenant_tx(request, principal) as session:
         proposal = await _pending(session, proposal_id)
         proposal.decision, proposal.decided_by = Decision.REJECTED, principal.user_id
         proposal.decided_at = datetime.now(UTC)
-        await _event(session, principal, "ai_proposal.rejected", proposal.id)
+        reason = body.reason if body is not None else None
+        proposal.rejection_reason = reason.strip() if reason else None
+        run_row = await _get(session, AiTaskRun, proposal.task_run_id)
+        await examples.record_rejection(
+            session,
+            proposal=proposal,
+            run=run_row,
+            reason=proposal.rejection_reason,
+            rejected_by=principal.user_id,
+        )
+        await _event(
+            session,
+            principal,
+            "ai_proposal.rejected",
+            proposal.id,
+            reason=proposal.rejection_reason,
+        )
         return s.ProposalOut.model_validate(proposal)
 
 
@@ -1037,6 +1057,13 @@ async def apply_import_role(
 # Knowledge base (Welle 3 item 14): manually curated per tenant and optionally per property,
 # plus entries learned from mail preparation corrections (mhvp.communication.preparation). Read
 # only context for AI runs; never written by AI on its own (rule 0.1.6).
+#
+# M34-01 release workflow: draft -> in_review -> approved or back to draft (reject, with a
+# reason), or -> withdrawn from any state. A change to a non-draft entry creates a new version
+# (old row superseded, kept readable); release and reject need four eyes (reviewer != author of
+# that version, rule 0.1.6 no self approval). Only
+# ``approved``, non superseded, currently valid entries feed AI runs (_knowledge_context in
+# mhvp.communication.preparation).
 
 
 async def _knowledge_entry(session: Any, entry_id: uuid.UUID) -> Any:
@@ -1051,15 +1078,35 @@ async def list_knowledge(
     request: Request,
     property_id: uuid.UUID | None = None,
     kind: AiKnowledgeKind | None = None,
+    status: AiKnowledgeStatus | None = None,
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.KnowledgeEntryOut]:
     async with tenant_tx(request, principal) as session:
+        # Current view: latest (non superseded) version per group, unless a status filter asks
+        # for a specific state across history.
         query = select(AiKnowledgeEntry).where(AiKnowledgeEntry.deleted_at.is_(None))
+        if status is not None:
+            query = query.where(AiKnowledgeEntry.status == status)
+        else:
+            query = query.where(AiKnowledgeEntry.superseded_at.is_(None))
         if property_id is not None:
             query = query.where(AiKnowledgeEntry.property_id == property_id)
         if kind is not None:
             query = query.where(AiKnowledgeEntry.kind == kind)
         rows = (await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc()))).all()
+        return [s.KnowledgeEntryOut.model_validate(r) for r in rows]
+
+
+@router.get("/ai/knowledge/{entry_id}/versions", summary="Versionsverlauf")
+async def list_knowledge_versions(
+    entry_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.KnowledgeEntryOut]:
+    async with tenant_tx(request, principal) as session:
+        anchor = await session.get(AiKnowledgeEntry, entry_id)
+        if anchor is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        query = select(AiKnowledgeEntry).where(AiKnowledgeEntry.group_id == anchor.group_id)
+        rows = (await session.scalars(query.order_by(AiKnowledgeEntry.version.asc()))).all()
         return [s.KnowledgeEntryOut.model_validate(r) for r in rows]
 
 
@@ -1079,6 +1126,12 @@ async def create_knowledge(
             kind=body.kind,
             title=body.title,
             content=body.content,
+            group_id=uuid.uuid4(),
+            version=1,
+            status=AiKnowledgeStatus.DRAFT,
+            valid_from=body.valid_from,
+            valid_until=body.valid_until,
+            source_document_id=body.source_document_id,
         )
         session.add(row)
         await session.flush()
@@ -1086,7 +1139,7 @@ async def create_knowledge(
         return s.KnowledgeEntryOut.model_validate(row)
 
 
-@router.put("/ai/knowledge/{entry_id}", summary="Wissenseintrag ändern")
+@router.put("/ai/knowledge/{entry_id}", summary="Wissenseintrag ändern (neue Version)")
 async def update_knowledge(
     entry_id: uuid.UUID,
     body: s.KnowledgeEntryIn,
@@ -1096,16 +1149,149 @@ async def update_knowledge(
     from mhvp.properties.models import Property
 
     async with tenant_tx(request, principal) as session:
-        row = await _knowledge_entry(session, entry_id)
+        current = await _knowledge_entry(session, entry_id)
+        if current.superseded_at is not None:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Nicht die aktuelle Version.")
         if body.property_id is not None:
             await _get(session, Property, body.property_id)
-        row.property_id = body.property_id
-        row.kind = body.kind
-        row.title = body.title
-        row.content = body.content
+        if current.status == AiKnowledgeStatus.DRAFT:
+            # A draft is not yet released to anyone, so it is edited in place; no history value
+            # would be lost.
+            current.property_id = body.property_id
+            current.kind = body.kind
+            current.title = body.title
+            current.content = body.content
+            current.valid_from = body.valid_from
+            current.valid_until = body.valid_until
+            current.source_document_id = body.source_document_id
+            current.updated_by = principal.user_id
+            await session.flush()
+            await _event(
+                session, principal, "ai_knowledge.updated", current.id, kind=body.kind.value
+            )
+            await session.refresh(current)
+            return s.KnowledgeEntryOut.model_validate(current)
+        now = datetime.now(UTC)
+        current.superseded_at = now
+        new_row = AiKnowledgeEntry(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            property_id=body.property_id,
+            kind=body.kind,
+            title=body.title,
+            content=body.content,
+            group_id=current.group_id,
+            version=current.version + 1,
+            status=AiKnowledgeStatus.DRAFT,
+            valid_from=body.valid_from,
+            valid_until=body.valid_until,
+            source_document_id=body.source_document_id,
+        )
+        session.add(new_row)
+        await session.flush()
+        await _event(
+            session,
+            principal,
+            "ai_knowledge.version_created",
+            new_row.id,
+            kind=body.kind.value,
+            previous_id=str(current.id),
+            version=new_row.version,
+        )
+        return s.KnowledgeEntryOut.model_validate(new_row)
+
+
+@router.post("/ai/knowledge/{entry_id}/submit", summary="Wissenseintrag zur Prüfung einreichen")
+async def submit_knowledge(
+    entry_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> s.KnowledgeEntryOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _knowledge_entry(session, entry_id)
+        if row.status != AiKnowledgeStatus.DRAFT:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nur ein Entwurf kann zur Prüfung eingereicht werden."
+            )
+        row.status = AiKnowledgeStatus.IN_REVIEW
+        row.submitted_by = principal.user_id
+        row.submitted_at = datetime.now(UTC)
         row.updated_by = principal.user_id
         await session.flush()
-        await _event(session, principal, "ai_knowledge.updated", row.id, kind=body.kind.value)
+        await _event(session, principal, "ai_knowledge.submitted", row.id)
+        await session.refresh(row)
+        return s.KnowledgeEntryOut.model_validate(row)
+
+
+@router.post("/ai/knowledge/{entry_id}/approve", summary="Wissenseintrag freigeben")
+async def approve_knowledge(
+    entry_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> s.KnowledgeEntryOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _knowledge_entry(session, entry_id)
+        if row.status != AiKnowledgeStatus.IN_REVIEW:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nur ein Eintrag zur Prüfung kann freigegeben werden."
+            )
+        if row.created_by is not None and row.created_by == principal.user_id:
+            # Four eyes (rule 0.1.6): the approver must not be the author of this version.
+            raise ProblemError(
+                ErrorCodes.FORBIDDEN,
+                detail="Vier-Augen-Prinzip: Verfasser kann den eigenen Eintrag nicht freigeben.",
+            )
+        row.status = AiKnowledgeStatus.APPROVED
+        row.approved_by = principal.user_id
+        row.approved_at = datetime.now(UTC)
+        row.updated_by = principal.user_id
+        await session.flush()
+        await _event(session, principal, "ai_knowledge.approved", row.id)
+        await session.refresh(row)
+        return s.KnowledgeEntryOut.model_validate(row)
+
+
+@router.post("/ai/knowledge/{entry_id}/reject", summary="Wissenseintrag zurückweisen")
+async def reject_knowledge(
+    entry_id: uuid.UUID,
+    body: s.KnowledgeRejectIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> s.KnowledgeEntryOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _knowledge_entry(session, entry_id)
+        if row.status != AiKnowledgeStatus.IN_REVIEW:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Nur ein Eintrag zur Prüfung kann zurückgewiesen werden.",
+            )
+        if row.created_by is not None and row.created_by == principal.user_id:
+            # Four eyes (rule 0.1.6), same as approve: the reviewer must not be the author.
+            raise ProblemError(
+                ErrorCodes.FORBIDDEN,
+                detail="Vier-Augen-Prinzip: Verfasser kann den eigenen Eintrag nicht zurückweisen.",
+            )
+        row.status = AiKnowledgeStatus.DRAFT
+        row.rejected_by = principal.user_id
+        row.rejected_at = datetime.now(UTC)
+        row.rejection_reason = body.reason
+        row.updated_by = principal.user_id
+        await session.flush()
+        await _event(session, principal, "ai_knowledge.rejected", row.id, reason=body.reason)
+        await session.refresh(row)
+        return s.KnowledgeEntryOut.model_validate(row)
+
+
+@router.post("/ai/knowledge/{entry_id}/withdraw", summary="Wissenseintrag zurückziehen")
+async def withdraw_knowledge(
+    entry_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> s.KnowledgeEntryOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _knowledge_entry(session, entry_id)
+        if row.status == AiKnowledgeStatus.WITHDRAWN:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Bereits zurückgezogen.")
+        row.status = AiKnowledgeStatus.WITHDRAWN
+        row.withdrawn_by = principal.user_id
+        row.withdrawn_at = datetime.now(UTC)
+        row.updated_by = principal.user_id
+        await session.flush()
+        await _event(session, principal, "ai_knowledge.withdrawn", row.id)
         await session.refresh(row)
         return s.KnowledgeEntryOut.model_validate(row)
 

@@ -90,6 +90,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/importe", label: t("imports"), icon: "imports" },
         { href: "/einstellungen", label: t("settings"), icon: "settings" },
         ...(me?.is_platform_admin ? [{ href: "/plattform", label: t("platform"), icon: "platform" }] : []),
+        ...(me?.is_platform_admin ? [{ href: "/plattform/uebersicht", label: t("platformOverview"), icon: "platform" }] : []),
       ],
     },
   ].filter((g) => g.items.length > 0);
@@ -107,6 +108,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           area={tHome("area")}
           collapseLabel={t("navCollapse")}
           expandLabel={t("navExpand")}
+          initialExpandedGroups={
+            (me as { ui_preferences?: { nav_expanded_groups?: string[] } } | null | undefined)
+              ?.ui_preferences?.nav_expanded_groups
+          }
+          collapseAllLabel={t("navCollapseAll")}
         />
       </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
