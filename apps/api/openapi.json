@@ -6567,6 +6567,17 @@
             "title": "Connected",
             "type": "boolean"
           },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
           "source": {
             "title": "Source",
             "type": "string"

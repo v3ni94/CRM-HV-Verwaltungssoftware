@@ -8,7 +8,7 @@ import { ui } from "@/lib/ui";
 
 /** M20-04 Vier-Augen-Prinzip beim Mailversand (docs/rules): Mandantenmodus
  *  `all` | `external_only` | `off` über `PATCH /tenant/settings`, Feld `mail_approval_mode`.
- *  Vertretungen (`MailApprovalDeputy`, M20-04a) über `GET/POST/DELETE /mail-approval/deputies`:
+ *  Vertretungen (`MailApprovalDeputy`, M20-04a) über `GET/POST/DELETE /mail/mail-approval/deputies`:
  *  jedes Mitglied darf seine eigene Abwesenheit vertreten lassen, das Recht
  *  `tenant_settings:update` verwaltet beliebige Vertretungen. */
 export type MailApprovalMode = "all" | "external_only" | "off";
@@ -51,7 +51,7 @@ function DeputiesSection({
     event.preventDefault();
     setBusy(true);
     setError(null);
-    const res = await bff<MailApprovalDeputy>("/api/bff/mail-approval/deputies", {
+    const res = await bff<MailApprovalDeputy>("/api/bff/mail/mail-approval/deputies", {
       method: "POST",
       body: JSON.stringify({
         absent_user_id: canUpdate ? absentUserId : currentUserId,
@@ -77,7 +77,7 @@ function DeputiesSection({
   async function remove(id: string) {
     setBusy(true);
     setError(null);
-    const res = await bff<null>(`/api/bff/mail-approval/deputies/${id}`, { method: "DELETE" });
+    const res = await bff<null>(`/api/bff/mail/mail-approval/deputies/${id}`, { method: "DELETE" });
     setBusy(false);
     if (res.ok) {
       setRows(rows.filter((r) => r.id !== id));

@@ -1308,6 +1308,7 @@
     "calendarTarget": "Kalender",
     "calendarNotConnected": "nicht verbunden",
     "calendarNotConnectedHint": "Für das Postfach {address} ist die Google-Kalenderfreigabe noch nicht erteilt.",
+    "calendarSyncError": "Der Google Kalender des Postfachs {address} konnte nicht gelesen werden ({error}). Bitte das Postfach neu verbinden; interne Termine und Fristen werden weiter angezeigt.",
     "toMailboxSettings": "Zu den Postfächern",
     "allDay": "Ganztägig",
     "notes": "Notiz",

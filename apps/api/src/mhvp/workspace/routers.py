@@ -2,10 +2,12 @@
 
 import datetime as dt
 import json
+import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
+import httpx
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import (
@@ -31,6 +33,8 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace import jobs, links, services
 from mhvp.workspace import ticket_analytics as ticket_analytics_module
 from mhvp.workspace.models import CalendarEntry, CalendarEvent, Notification, SavedFilter
+
+log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/workspace", tags=["Arbeitsplatz"])
 
@@ -197,6 +201,10 @@ class CalendarNotice(BaseModel):
     source: str  # default | own
     address: str
     connected: bool  # calendar_enabled and a refresh token is stored
+    # Set when the Google calendar of this mailbox could not be read (expired or revoked
+    # refresh token, missing calendar scope, Google unreachable). The rest of the calendar is
+    # still returned (operator report 27.09.2026: a GCalError turned the whole page into 500).
+    error: str | None = None
 
 
 class CalendarOut(BaseModel):
@@ -1009,6 +1017,19 @@ async def _link_rows(
     return {row.google_event_id: row for row in rows.all()}
 
 
+GCAL_UNREACHABLE = "Google Kalender ist derzeit nicht erreichbar."
+
+
+async def _write_client(session: Any, settings: Any, mailbox: Mailbox) -> gcal.GCalClient:
+    """Google client for a write; a missing OAuth client or refresh token is a 409 with the
+    reason instead of an unhandled 500 (operator report 27.09.2026)."""
+    try:
+        client_id, client_secret = await gmail.oauth_client(session, settings)
+        return gcal.make_client(client_id, client_secret, mailbox)
+    except (gcal.GCalError, gmail.GmailError) as exc:
+        raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+
+
 async def _fetch_google_items(
     request: Request,
     session: Any,
@@ -1032,14 +1053,23 @@ async def _fetch_google_items(
     if cached:
         events = json.loads(cached)
     else:
-        client_id, client_secret = await gmail.oauth_client(session, settings)
-        client = gcal.make_client(client_id, client_secret, mailbox)
         try:
-            time_min = datetime.combine(start, dt.time.min, tzinfo=UTC)
-            time_max = datetime.combine(end + timedelta(days=1), dt.time.min, tzinfo=UTC)
-            events = await client.list_events(mailbox.calendar_id, time_min, time_max)
-        finally:
-            await client.aclose()
+            client_id, client_secret = await gmail.oauth_client(session, settings)
+            client = gcal.make_client(client_id, client_secret, mailbox)
+            try:
+                time_min = datetime.combine(start, dt.time.min, tzinfo=UTC)
+                time_max = datetime.combine(end + timedelta(days=1), dt.time.min, tzinfo=UTC)
+                events = await client.list_events(mailbox.calendar_id, time_min, time_max)
+            finally:
+                await client.aclose()
+        except (gcal.GCalError, gmail.GmailError) as exc:
+            log.warning("google_calendar_unavailable", extra={"mailbox_id": str(mailbox.id)})
+            notice.error = str(exc)
+            return [], notice
+        except httpx.HTTPError:
+            log.warning("google_calendar_unreachable", extra={"mailbox_id": str(mailbox.id)})
+            notice.error = GCAL_UNREACHABLE
+            return [], notice
         await redis.set(key, json.dumps(events), ex=GCAL_CACHE_TTL)
     links = await _link_rows(session, tenant_id, mailbox.id)
     items = []
@@ -1272,8 +1302,7 @@ async def create_entry(
                 ErrorCodes.CONFLICT,
                 detail="Für dieses Ziel ist kein verbundener Google-Kalender vorhanden.",
             )
-        client_id, client_secret = await gmail.oauth_client(session, settings)
-        client = gcal.make_client(client_id, client_secret, mailbox)
+        client = await _write_client(session, settings, mailbox)
         try:
             # Rule M23-05 ("Einladungen nur nach Bestätigung"): created without attendees and
             # sendUpdates=none regardless; attendees are only ever sent via the separate,
@@ -1283,6 +1312,8 @@ async def create_entry(
             )
         except gcal.GCalError as exc:
             raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        except httpx.HTTPError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=GCAL_UNREACHABLE) from exc
         finally:
             await client.aclose()
         start, _end = _event_dates(event)
@@ -1373,8 +1404,7 @@ async def send_invite(
             )
         if not link.attendees:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Teilnehmer hinterlegt.")
-        client_id, client_secret = await gmail.oauth_client(session, settings)
-        client = gcal.make_client(client_id, client_secret, mailbox)
+        client = await _write_client(session, settings, mailbox)
         try:
             event = await client.patch_event(
                 mailbox.calendar_id,
@@ -1384,6 +1414,8 @@ async def send_invite(
             )
         except gcal.GCalError as exc:
             raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        except httpx.HTTPError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=GCAL_UNREACHABLE) from exc
         finally:
             await client.aclose()
         link.status = "invited"
@@ -1445,14 +1477,15 @@ async def patch_google_entry(
                 patch["end"] = {"date": (body.ends_on + timedelta(days=1)).isoformat()}
         if not patch:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Keine Änderung angegeben.")
-        client_id, client_secret = await gmail.oauth_client(session, settings)
-        client = gcal.make_client(client_id, client_secret, mailbox)
+        client = await _write_client(session, settings, mailbox)
         try:
             event = await client.patch_event(
                 mailbox.calendar_id, event_id, patch, send_updates="none"
             )
         except gcal.GCalError as exc:
             raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        except httpx.HTTPError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=GCAL_UNREACHABLE) from exc
         finally:
             await client.aclose()
         if link is not None:
@@ -1474,12 +1507,13 @@ async def delete_google_entry(
         # Cancelling notifies attendees only when invitations were actually sent before.
         link = await _link_for(session, mailbox.id, event_id)
         send_updates = "all" if link is not None and link.status == "invited" else "none"
-        client_id, client_secret = await gmail.oauth_client(session, settings)
-        client = gcal.make_client(client_id, client_secret, mailbox)
+        client = await _write_client(session, settings, mailbox)
         try:
             await client.delete_event(mailbox.calendar_id, event_id, send_updates=send_updates)
         except gcal.GCalError as exc:
             raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        except httpx.HTTPError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=GCAL_UNREACHABLE) from exc
         finally:
             await client.aclose()
         if link is not None:

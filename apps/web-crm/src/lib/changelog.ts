@@ -29,6 +29,26 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
+    version: "1.35.2",
+    date: "27.09.2026",
+    title: "Tickets, Kalender und gesperrte Funktionen im CRM wieder erreichbar",
+    changes: [
+      "Tickets: Beim Setzen von Erledigt, Geschlossen oder Abgelehnt, auch für mehrere Tickets gleichzeitig, erschien \"Erledigungsarten konnten nicht geladen werden\", weil der CRM-Proxy den Abruf der Erledigungsarten nicht weiterleitete (Betreibermeldung 27.09.2026); die Einstellungsseite der Erledigungsarten war ebenso betroffen.",
+      "CRM-Proxy: 71 weitere Aufrufe freigeschaltet, die vorhandene Oberflächen nutzen, bisher aber mit \"Nicht gefunden\" scheiterten, u. a. Beiratsbeteiligung an Tickets, SLA-Freigabe, Übermittlungen im Messwesen, Vermögensbericht und Belegprüfung der WEG, Absage und Selbstauskunft für Interessenten, Kontenrahmen-Freigabe, DATEV-Selbstprüfung, Steuereinstellungen, Vertreterbeziehungen bei Kontakten sowie Preisliste, G5-Nachweise, Onboarding und Mandantenexport für Plattformadministratoren; die Berechtigungen prüft weiterhin die API.",
+      "Postfach: Vertretungen im Vier-Augen-Verfahren riefen einen falschen Pfad auf und ließen sich weder anlegen noch löschen; korrigiert.",
+      "Kalender: Scheitert der Google-Abruf eines Postfachs, etwa bei abgelaufener oder widerrufener Freigabe, zeigt der Kalender die übrigen Termine und Fristen weiter an und nennt den Grund mit Link zu den Postfach-Einstellungen, statt mit einem Serverfehler abzubrechen; Anlegen, Ändern und Löschen von Google-Terminen melden den Grund ebenfalls.",
+      "Qualität: Neuer Prüftest gleicht alle Proxy-Aufrufe der Oberfläche mit der Freigabeliste ab, damit fehlende Freigaben nicht mehr unbemerkt ausgeliefert werden.",
+    ],
+  },
+  {
+    version: "1.35.1",
+    date: "27.09.2026",
+    title: "Startfehler nach dem Update behoben",
+    changes: [
+      "Startfehler behoben (Betreibermeldung 27.09.2026): Nach dem Update auf 1.35.0 zeigte jeder Browser, der das CRM vorher genutzt hatte, nur \"Application error\", weil der Menüzustand aus 1.34.x in einem anderen Format im Browser gespeichert war; das Hauptmenü liest den alten Wert jetzt fehlertolerant und startet dann eingeklappt.",
+    ],
+  },
+  {
     version: "1.35.0",
     date: "27.09.2026",
     title: "Bankanbindung FinTS, Heizkosten, Steuern, Aufbewahrung, WEG-Einladung, Vollimport Verträge und 40 weitere Module",

@@ -346,4 +346,19 @@ describe("CalendarView with Google sources", () => {
       ).toBe(true),
     );
   });
+
+  it("keeps the calendar and shows the reason when Google refuses a connected mailbox (operator 27.09.2026)", async () => {
+    const failing = calendarResponse();
+    failing.notices = [
+      { source: "default", address: "info@example.com", connected: true, error: "Token-Abruf fehlgeschlagen (HTTP 400)." } as never,
+      { source: "own", address: "timo@muellerhv.de", connected: true },
+    ];
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse(failing)));
+    renderIntl(<CalendarView initialYear={2026} initialMonth={8} />);
+    expect(await screen.findByText("Begehung")).toBeInTheDocument();
+    const hint = screen.getByTestId("calendar-sync-error");
+    expect(hint).toHaveTextContent("info@example.com");
+    expect(hint).toHaveTextContent("Token-Abruf fehlgeschlagen (HTTP 400).");
+    expect(screen.getAllByTestId("calendar-sync-error")).toHaveLength(1);
+  });
 });

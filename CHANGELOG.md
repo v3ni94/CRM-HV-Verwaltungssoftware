@@ -13,6 +13,18 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 - Zuordnungsprüfung mit Rückfrage: jede eingehende Mail und jedes Ticket wird auf Kontakt, Verwaltungsobjekt und Einheit geprüft; sichere Treffer werden begründet übernommen, unsichere als Frage "Handelt es sich um ...?" mit Ja und Nein (und Suche bei Nein) in Mail- und Ticketansicht angezeigt, Entscheidungen werden protokolliert (Migration 0216, Annahme A-068 zu Schwellenwerten).
 - CI: Formatierung der Migration 0195, eindeutige Schemanamen (AssignmentDecideIn), Dublettenerkennung ohne Message-ID nur noch für Mails ohne Kopfzeile, damit getrennte Anrufnotizen nicht zusammengeführt werden.
 
+## 1.35.2 (27.09.2026) Tickets, Kalender und gesperrte Funktionen im CRM wieder erreichbar
+
+- Tickets: Beim Setzen von Erledigt, Geschlossen oder Abgelehnt, auch für mehrere Tickets gleichzeitig, erschien "Erledigungsarten konnten nicht geladen werden", weil der CRM-Proxy den Abruf der Erledigungsarten nicht weiterleitete (Betreibermeldung 27.09.2026); die Einstellungsseite der Erledigungsarten war ebenso betroffen.
+- CRM-Proxy: 71 weitere Aufrufe freigeschaltet, die vorhandene Oberflächen nutzen, bisher aber mit "Nicht gefunden" scheiterten, u. a. Beiratsbeteiligung an Tickets, SLA-Freigabe, Übermittlungen im Messwesen, Vermögensbericht und Belegprüfung der WEG, Absage und Selbstauskunft für Interessenten, Kontenrahmen-Freigabe, DATEV-Selbstprüfung, Steuereinstellungen, Vertreterbeziehungen bei Kontakten sowie Preisliste, G5-Nachweise, Onboarding und Mandantenexport für Plattformadministratoren; die Berechtigungen prüft weiterhin die API.
+- Postfach: Vertretungen im Vier-Augen-Verfahren riefen einen falschen Pfad auf und ließen sich weder anlegen noch löschen; korrigiert.
+- Kalender: Scheitert der Google-Abruf eines Postfachs, etwa bei abgelaufener oder widerrufener Freigabe, zeigt der Kalender die übrigen Termine und Fristen weiter an und nennt den Grund mit Link zu den Postfach-Einstellungen, statt mit einem Serverfehler abzubrechen; Anlegen, Ändern und Löschen von Google-Terminen melden den Grund ebenfalls.
+- Qualität: Neuer Prüftest gleicht alle Proxy-Aufrufe der Oberfläche mit der Freigabeliste ab, damit fehlende Freigaben nicht mehr unbemerkt ausgeliefert werden.
+
+## 1.35.1 (27.09.2026) Startfehler nach dem Update behoben
+
+- Startfehler behoben (Betreibermeldung 27.09.2026): Nach dem Update auf 1.35.0 zeigte jeder Browser, der das CRM vorher genutzt hatte, nur "Application error", weil der Menüzustand aus 1.34.x in einem anderen Format im Browser gespeichert war; das Hauptmenü liest den alten Wert jetzt fehlertolerant und startet dann eingeklappt.
+
 ## 1.35.0 (27.09.2026) Bankanbindung FinTS, Heizkosten, Steuern, Aufbewahrung, WEG-Einladung, Vollimport Verträge und 40 weitere Module
 
 - Betrieb: Restore-Übung (infra/scripts/restore-drill.sh) mit Protokoll unter docs/reviews, SSH-Härtungsvorschlag (infra/hardening), GoBD-Verfahrensdokumentation als Entwurf und Parallelbetriebsplan Immoware24 (Migration 0179 No-op).

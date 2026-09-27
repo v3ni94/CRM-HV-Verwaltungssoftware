@@ -40,7 +40,7 @@ export type CalendarItem = {
   recurrence?: { frequency: string; interval: number; until: string | null } | null;
 };
 
-export type CalendarNotice = { source: "default" | "own"; address: string; connected: boolean };
+export type CalendarNotice = { source: "default" | "own"; address: string; connected: boolean; error?: string | null };
 export type CalendarOut = { items: CalendarItem[]; notices: CalendarNotice[] };
 
 function iso(d: Date): string {
@@ -172,6 +172,8 @@ export function CalendarView({
   );
   const filtered = items.filter((i) => visible[i.source]);
   const unconnected = notices.filter((n) => !n.connected);
+  // Connected, but Google refused or was unreachable: the rest of the calendar still shows.
+  const failing = notices.filter((n) => n.connected && n.error);
 
   const label =
     view === "month"
@@ -221,6 +223,15 @@ export function CalendarView({
       {unconnected.map((n) => (
         <p key={n.source} className={ui.notice}>
           {t("calendarNotConnectedHint", { address: n.address })}{" "}
+          <Link href="/einstellungen/postfaecher" className="underline">
+            {t("toMailboxSettings")}
+          </Link>
+        </p>
+      ))}
+
+      {failing.map((n) => (
+        <p key={`error-${n.source}`} className={ui.notice} data-testid="calendar-sync-error">
+          {t("calendarSyncError", { address: n.address, error: n.error ?? "" })}{" "}
           <Link href="/einstellungen/postfaecher" className="underline">
             {t("toMailboxSettings")}
           </Link>
