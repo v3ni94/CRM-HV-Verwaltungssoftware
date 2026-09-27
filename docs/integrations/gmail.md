@@ -127,6 +127,62 @@ docker compose exec worker python -m mhvp.communication.backfill --tenant hvm --
   bis zum Ablauf ins Leere (204 ohne Postfach). `GmailClient.stop` steht für einen späteren
   aktiven Abbruch bereit.
 
+## Archivierung bei Erledigt: Betrieb und Diagnose (27.09.2026)
+
+Erledigte Mails und geschlossene Tickets werden über die Warteschlange `mail` bei Gmail
+archiviert (Labels INBOX und UNREAD entfernt); den Stand trägt jede Mail in
+`archive_status` (pending, archived, skipped, failed, scope_missing), `archive_error`,
+`archive_attempted_at` und `archived_at`. Der Beat `communication-archive-retry` holt alle 15
+Minuten liegen gebliebene Aufträge der letzten 30 Tage nach; `POST /mail/messages/{id}/archive`
+holt eine Mail sofort nach. Fehlt dem Consent die Berechtigung `gmail.modify`
+(`mailbox.archive_scope_missing`), muss das Postfach unter Einstellungen, Postfächer neu
+verbunden werden (Consent-URL mit `prompt=consent` und `include_granted_scopes=true`); der
+Rückruf holt die offenen Aufträge danach automatisch nach.
+
+Diagnose auf dem Server (Verzeichnis `/opt/mhvp`, Dienstnamen aus `infra/compose.prod.yaml`:
+`api`, `worker`, `beat`, `postgres`):
+
+```bash
+cd /opt/mhvp
+
+# 1. Postfächer ohne Archivberechtigung und letzter Fehler je Postfach
+./mhvp.sh exec -T postgres psql -U postgres -d mhvp -c \
+  "SELECT address, enabled, archive_on_ticket_done, archive_scope_missing, left(last_error, 120) AS last_error
+     FROM mailbox WHERE kind = 'gmail' AND deleted_at IS NULL ORDER BY address"
+
+# 2. Erledigte Eingangsmails der letzten 30 Tage ohne Archivierung, je Stand
+./mhvp.sh exec -T postgres psql -U postgres -d mhvp -c \
+  "SELECT coalesce(archive_status, 'kein Vermerk') AS stand, count(*)
+     FROM message
+    WHERE direction = 'in' AND gmail_message_id IS NOT NULL AND archived_at IS NULL
+      AND created_at >= now() - interval '30 days'
+      AND (status = 'done' OR archive_status IN ('pending', 'failed', 'scope_missing'))
+    GROUP BY 1 ORDER BY 2 DESC"
+
+# 3. Letzte Fehler der Archivierung
+./mhvp.sh exec -T postgres psql -U postgres -d mhvp -c \
+  "SELECT archive_attempted_at, archive_status, left(archive_error, 100) AS fehler, left(subject, 60) AS betreff
+     FROM message WHERE archive_status IN ('failed', 'scope_missing')
+    ORDER BY archive_attempted_at DESC NULLS LAST LIMIT 20"
+
+# 4. Hat der Worker die Tasks registriert und hört er auf die Warteschlange mail?
+./mhvp.sh exec -T worker celery -A mhvp.worker inspect registered | grep archive
+./mhvp.sh exec -T worker celery -A mhvp.worker inspect active_queues | grep -E "name|mail"
+
+# 5. Nachholen sofort anstoßen (alle Mandanten) und Ergebnis lesen
+./mhvp.sh exec -T api python -c "import asyncio; from mhvp.core.config import get_settings; \
+from mhvp.communication.tasks import archive_retry_all_once; \
+print(asyncio.run(archive_retry_all_once(get_settings())))"
+
+# 6. Worker-Protokoll auf Archivfehler prüfen
+./mhvp.sh logs --since 24h worker | grep -iE "archive|crypto|master_key" | tail -50
+```
+
+Erwartung nach der Korrektur: Punkt 1 zeigt `archive_scope_missing = f` (sonst Postfach neu
+verbinden), Punkt 2 nur Zeilen mit `pending` jünger als 15 Minuten, Punkt 4 die fünf
+Tasks `mhvp.communication.archive_message`, `archive_messages`, `archive_ticket_messages`,
+`archive_retry`, `archive_retry_all` und die Warteschlange `mail`.
+
 ## Tests
 
 `apps/api/tests/unit/test_gmail_push.py` (Umschlag, OIDC gegen lokalen Schlüssel, Fälligkeit

@@ -489,6 +489,122 @@ def test_letter_pdf_draft_and_send_locked(
     )
 
 
+def _representative(
+    c: TestClient, h: dict[str, str], owner: str, mode: str
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Authorised representative of ``owner`` with the given delivery rule (M8-04)."""
+    rep = _ok(
+        c.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "salutation": "Herr",
+                "first_name": "Jan",
+                "last_name": f"Vertreter{RUN}",
+                "addresses": [
+                    {
+                        "street": "Rheinpromenade",
+                        "house_number": "13",
+                        "postal_code": "40789",
+                        "city": "Monheim am Rhein",
+                    }
+                ],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    relation = _ok(
+        c.post(
+            f"/api/v1/contacts/{owner}/relations",
+            json={"related_contact_id": rep["id"], "kind": "representative", "delivery_mode": mode},
+            headers=h,
+        ),
+        201,
+    )
+    return rep, relation
+
+
+def test_letter_follows_delivery_rule_of_representatives(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """M23-07 (operator decision 27.09.2026): the delivery rule of authorised representatives
+    applies to dunning letters. ``both`` yields one PDF with a copy per recipient, the copy
+    for the representative names the debtor ("für ..."); ``representative_only`` yields the
+    representative's letter only, the preview carries the warning on the case and the filed
+    document is linked to both contacts."""
+    _, gated = clients
+    gh = bearer(login(gated, world, "dladmin"))
+    acc_user = bearer(login(gated, world, "dlacc"))
+    prop, ledger = _hoa_property(gated, gh, "779", "Mahnhaus Vollmacht")
+    contract = _debtor_contract(gated, gh, prop, "01")
+    debtor = _ok(gated.get(f"/api/v1/parties/{contract['party_id']}", headers=gh))["members"][0]
+    _ok(gated.post(f"{A}/ledgers/{ledger}/leading", json={"leading_system": "mhvp"}, headers=gh))
+    run = _ok(
+        gated.post(f"{A}/receivable-runs", json={"period_month": "2026-03-01"}, headers=gh), 201
+    )
+    _ok(gated.post(f"{A}/receivable-runs/{run['id']}/post", headers=gh))
+    _ok(
+        gated.put(
+            f"{A}/dunning-settings",
+            json={
+                "levels": [
+                    {"level": 1, "min_days_overdue": 5, "text": "Zahlungserinnerung"},
+                    {"level": 2, "min_days_overdue": 5, "text": "Mahnung"},
+                ],
+                "threshold_amount": "20.00",
+                "interest_enabled": False,
+            },
+            headers=gh,
+        )
+    )
+    _ok(gated.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=gh))
+    rep, relation = _representative(gated, gh, debtor["contact_id"], "both")
+
+    _, case = _fee_level_case(gated, gh, acc_user, contract["id"], "2026-03-20", "2026-04-10")
+    assert case["warnings"] == []
+    text = _pdf_text(gated.post(f"{A}/dunning-cases/{case['id']}/letter-preview", headers=gh))
+    assert text.count("Mahnung: offene Forderungen") == 2  # one copy per recipient
+    assert f"Sehr geehrte Frau Schuldner{RUN}" in text
+    assert f"Sehr geehrter Herr Vertreter{RUN}" in text
+    assert f"für {debtor['display_name']}" in text
+    stored = _ok(gated.post(f"{A}/dunning-cases/{case['id']}/letter", headers=gh), 201)
+    assert stored["letter_warnings"] == []
+    document = _ok(gated.get(f"/api/v1/documents/{stored['letter_document_id']}", headers=gh))
+    contacts = {x["entity_id"] for x in document["links"] if x["entity_type"] == "contact"}
+    assert contacts == {debtor["contact_id"], rep["id"]}
+
+    # Representative only: warning in the preview (journaled in the case reason) and on the
+    # generated letter; the letter goes to the representative "für" the debtor.
+    _ok(
+        gated.patch(
+            f"/api/v1/contacts/{debtor['contact_id']}/contact-relations/{relation['id']}",
+            json={"delivery_mode": "representative_only", "fields": ["delivery_mode"]},
+            headers=gh,
+        )
+    )
+    again = _ok(gated.post(f"{A}/dunning-runs", json={"run_date": "2026-04-12"}, headers=gh), 201)
+    only = next(c for c in again["cases"] if c["contract_id"] == contract["id"])
+    assert only["status"] == "proposed"
+    assert only["warnings"] == [
+        "Zustellung nur an den Bevollmächtigten: ob die Mahnung damit dem Vollmachtgeber "
+        "zugeht, ist anwaltlich zu klären (M23-07)"
+    ]
+    assert only["warnings"][0] in only["reason"]
+    assert again["totals"]["representative_only"] == 1
+    listed = _ok(gated.get(f"{A}/dunning-runs/{again['id']}", headers=gh))
+    assert next(c for c in listed["cases"] if c["id"] == only["id"])["warnings"] == only["warnings"]
+    text = _pdf_text(gated.post(f"{A}/dunning-cases/{only['id']}/letter-preview", headers=gh))
+    assert text.count("Mahnung: offene Forderungen") == 1
+    assert f"Sehr geehrte Frau Schuldner{RUN}" not in text
+    assert f"für {debtor['display_name']}" in text
+    filed = _ok(gated.post(f"{A}/dunning-cases/{only['id']}/letter", headers=gh), 201)
+    assert filed["letter_warnings"] == only["warnings"]
+    document = _ok(gated.get(f"/api/v1/documents/{filed['letter_document_id']}", headers=gh))
+    contacts = {x["entity_id"] for x in document["links"] if x["entity_type"] == "contact"}
+    assert contacts == {debtor["contact_id"], rep["id"]}
+
+
 def _pdf_text(response: Any) -> str:
     assert response.status_code == 200, response.text
     assert response.headers["content-type"] == "application/pdf"

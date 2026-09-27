@@ -253,3 +253,245 @@ def test_generated_calendar_entries(
     )
     assert ("building", ids["building"], "energy_certificate") not in rows
     assert ("maintenance_item", uuid.UUID(item["id"]), "maintenance") not in rows
+
+
+def test_expand_occurrences() -> None:
+    """Recurrence expansion (B.30): weekly, monthly with month end clipping, yearly with
+    end date; nothing without a rule outside the window."""
+    from mhvp.workspace.jobs import expand_occurrences
+
+    start, end = date(2026, 1, 1), date(2026, 12, 31)
+    assert expand_occurrences(date(2026, 3, 1), None, start, end) == [date(2026, 3, 1)]
+    assert expand_occurrences(date(2027, 3, 1), None, start, end) == []
+    weekly = {"frequency": "weekly", "interval": 2, "until": "2026-02-15"}
+    assert expand_occurrences(date(2026, 1, 5), weekly, start, end) == [
+        date(2026, 1, 5),
+        date(2026, 1, 19),
+        date(2026, 2, 2),
+    ]
+    monthly = {"frequency": "monthly", "interval": 1, "until": "2026-04-30"}
+    assert expand_occurrences(date(2026, 1, 31), monthly, start, end) == [
+        date(2026, 1, 31),
+        date(2026, 2, 28),
+        date(2026, 3, 31),
+        date(2026, 4, 30),
+    ]
+    yearly = {"frequency": "yearly", "interval": 1, "until": None}
+    assert expand_occurrences(date(2024, 2, 29), yearly, start, date(2028, 12, 31)) == [
+        date(2026, 2, 28),
+        date(2027, 2, 28),
+        date(2028, 2, 29),
+    ]
+    # Window starts after the first occurrence: only the later ones.
+    assert expand_occurrences(date(2026, 1, 5), weekly, date(2026, 1, 10), end) == [
+        date(2026, 1, 19),
+        date(2026, 2, 2),
+    ]
+
+
+def test_reminders_recurrence_meeting_and_ticket_due(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """Meeting entries link to the property page of the HOA, reminder codes notify once
+    per code and occurrence via the deadline job, recurring manual entries are expanded
+    in the calendar and the deadline list, and ``ticket.due_on`` feeds ``ticket_due``."""
+    from mhvp.workspace.models import Notification
+
+    settings = _settings(database, redis_url)
+    h = bearer(login(client, world, "cadmin"))
+    prop = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "952",
+                "name": f"WEG Kalender {RUN}",
+                "management_type": "hoa",
+                "city": "Monheim am Rhein",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    property_id = uuid.UUID(prop["id"])
+
+    async def _meeting(session: Any) -> uuid.UUID:
+        from datetime import UTC, datetime
+
+        from mhvp.hoa.models import Meeting
+        from mhvp.properties.models import LegalEntity, LegalEntityKind
+
+        # An HOA property carries its legal entity from creation on.
+        entity = await session.scalar(
+            select(LegalEntity).where(
+                LegalEntity.property_id == property_id, LegalEntity.kind == LegalEntityKind.HOA
+            )
+        )
+        assert entity is not None
+        meeting = Meeting(
+            tenant_id=world.tenant_a,
+            legal_entity_id=entity.id,
+            scheduled_at=datetime(TODAY.year, TODAY.month, TODAY.day, 10, tzinfo=UTC)
+            + timedelta(days=20),
+        )
+        session.add(meeting)
+        await session.flush()
+        return meeting.id
+
+    meeting_id = asyncio.run(_with_session(settings, world.tenant_a, _meeting))
+
+    # Ticket due date: optional, set on create, cleared and set again by patch.
+    ticket = _ok(
+        client.post(
+            "/api/v1/tickets",
+            json={"title": f"Frist {RUN}", "due_on": (TODAY + timedelta(days=3)).isoformat()},
+            headers=h,
+        ),
+        201,
+    )
+    assert ticket["due_on"] == (TODAY + timedelta(days=3)).isoformat()
+    assert ticket["sla_due_at"] is not None  # SLA stays separate
+    cleared = _ok(client.patch(f"/api/v1/tickets/{ticket['id']}", json={"due_on": None}, headers=h))
+    assert cleared["due_on"] is None
+    unchanged = _ok(
+        client.patch(f"/api/v1/tickets/{ticket['id']}", json={"priority": "high"}, headers=h)
+    )
+    assert unchanged["due_on"] is None
+    ticket = _ok(
+        client.patch(
+            f"/api/v1/tickets/{ticket['id']}",
+            json={"due_on": (TODAY + timedelta(days=3)).isoformat()},
+            headers=h,
+        )
+    )
+    assert ticket["due_on"] == (TODAY + timedelta(days=3)).isoformat()
+
+    # Manual recurring entry with a reminder: weekly from tomorrow for three weeks.
+    assert (
+        client.post(
+            f"{W}/calendar",
+            json={"title": "x", "starts_on": TODAY.isoformat(), "reminders": ["2w"]},
+            headers=h,
+        ).status_code
+        == 422
+    )
+    entry = _ok(
+        client.post(
+            f"{W}/calendar",
+            json={
+                "title": f"Jour fixe {RUN}",
+                "starts_on": (TODAY + timedelta(days=1)).isoformat(),
+                "reminders": ["1d"],
+                "recurrence": {
+                    "frequency": "weekly",
+                    "interval": 1,
+                    "until": (TODAY + timedelta(days=21)).isoformat(),
+                },
+            },
+            headers=h,
+        ),
+        201,
+    )
+    entry_id = entry["entity_id"]
+    assert entry["recurrence"]["frequency"] == "weekly"
+    assert entry["reminders"] == ["1d"]
+    start, end = TODAY.isoformat(), (TODAY + timedelta(days=30)).isoformat()
+    cal = _ok(client.get(f"{W}/calendar", params={"start": start, "end": end}, headers=h))["items"]
+    occurrences = [c for c in cal if c["entity_id"] == entry_id]
+    assert [c["date"] for c in occurrences] == [
+        (TODAY + timedelta(days=d)).isoformat() for d in (1, 8, 15)
+    ]
+    assert all(c["recurrence"] and c["editable"] for c in occurrences)
+    # Later window: only the remaining occurrence, nothing persisted per occurrence.
+    later = _ok(
+        client.get(
+            f"{W}/calendar",
+            params={"start": (TODAY + timedelta(days=10)).isoformat(), "end": end},
+            headers=h,
+        )
+    )["items"]
+    assert [c["date"] for c in later if c["entity_id"] == entry_id] == [
+        (TODAY + timedelta(days=15)).isoformat()
+    ]
+
+    async def _count_entries(session: Any) -> int:
+        return len(
+            (
+                await session.scalars(
+                    select(CalendarEntry.id).where(CalendarEntry.id == uuid.UUID(entry_id))
+                )
+            ).all()
+        )
+
+    assert asyncio.run(_with_session(settings, world.tenant_a, _count_entries)) == 1
+
+    # Deadline list: the occurrences as kind "appointment" with the calendar link.
+    rows = _ok(
+        client.get(
+            f"{W}/deadlines", params={"kind": "appointment", "from": start, "to": end}, headers=h
+        )
+    )
+    mine = [r for r in rows if r["source_id"] == entry_id]
+    assert [r["due_on"] for r in mine] == [
+        (TODAY + timedelta(days=d)).isoformat() for d in (1, 8, 15)
+    ]
+    assert mine[0]["href"] == f"/kalender?termin={entry_id}&datum={TODAY + timedelta(days=1)}"
+    assert mine[0]["lead_days"] == 1
+
+    # Job: meeting entry with the property route, ticket_due entry, reminder of the manual
+    # entry (tomorrow, code 1d) exactly once.
+    first = asyncio.run(deadlines_once(settings, TODAY))
+    assert first["reminders"] >= 1
+    cal = _ok(client.get(f"{W}/calendar", params={"start": start, "end": end}, headers=h))["items"]
+    meeting_items = [c for c in cal if c["entity_id"] == str(meeting_id)]
+    assert len(meeting_items) == 1
+    assert meeting_items[0]["href"] == f"/weg/{prop['id']}/versammlung/{meeting_id}"
+    assert meeting_items[0]["property_id"] == prop["id"]
+    ticket_items = [c for c in cal if c["entity_id"] == ticket["id"]]
+    assert len(ticket_items) == 1
+    assert ticket_items[0]["kind"] == "ticket_due"
+    assert ticket_items[0]["href"] == f"/tickets/{ticket['id']}"
+    meeting_rows = _ok(client.get(f"{W}/deadlines", params={"kind": "meeting"}, headers=h))
+    assert [r["href"] for r in meeting_rows if r["source_id"] == str(meeting_id)] == [
+        f"/weg/{prop['id']}/versammlung/{meeting_id}"
+    ]
+
+    def _reminders(target: str) -> list[dict[str, Any]]:
+        notes = _ok(client.get(f"{W}/notifications", headers=h))
+        return [n for n in notes if n["kind"] == "calendar_reminder" and n["target_id"] == target]
+
+    manual_notes = _reminders(entry_id)
+    assert len(manual_notes) == 1
+    assert manual_notes[0]["href"].startswith(f"/kalender?termin={entry_id}")
+    assert _reminders(ticket["id"]) == []  # due in three days, reminder 1d not yet reached
+    second = asyncio.run(deadlines_once(settings, TODAY))
+    assert second["reminders"] == 0
+    assert len(_reminders(entry_id)) == 1
+
+    # Two days later: the ticket reminder fires once and links to the ticket; the list based
+    # lead time notification of the same ticket is a different kind (no double reminder).
+    later_day = TODAY + timedelta(days=2)
+    asyncio.run(deadlines_once(settings, later_day))
+    ticket_notes = _reminders(ticket["id"])
+    assert len(ticket_notes) == 1
+    assert ticket_notes[0]["href"] == f"/tickets/{ticket['id']}"
+    asyncio.run(deadlines_once(settings, later_day))
+    assert len(_reminders(ticket["id"])) == 1
+    # The next occurrence of the recurring entry (day 8) is reminded on its own day; an
+    # unread reminder of the same entry is not duplicated (``notify`` idempotency), so the
+    # first one is read before.
+    _ok(
+        client.post(f"{W}/notifications/read", json=[manual_notes[0]["id"]], headers=h),
+        204,
+    )
+    asyncio.run(deadlines_once(settings, TODAY + timedelta(days=7)))
+    assert len(_reminders(entry_id)) == 2
+
+    async def _sent(session: Any) -> list[str]:
+        row = await session.scalar(
+            select(CalendarEntry).where(CalendarEntry.id == uuid.UUID(entry_id))
+        )
+        return list(row.reminders_sent)
+
+    sent = asyncio.run(_with_session(settings, world.tenant_a, _sent))
+    assert f"1d@{TODAY + timedelta(days=8)}" in sent
+    assert isinstance(Notification, type)

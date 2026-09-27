@@ -76,3 +76,31 @@ describe("Tickets", () => {
     expect(options).toEqual(["new", "in_progress", "waiting", "done", "closed", "rejected"]);
   });
 });
+
+describe("Ticket due date", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("sends the due date on create only when set", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      if (String(input).includes("/tickets/templates")) return jsonResponse([]);
+      return jsonResponse({ id: ID }, 201);
+    });
+    renderIntl(<TicketCreate />);
+    await userEvent.type(screen.getByLabelText("Titel"), "Frist prüfen");
+    await userEvent.type(screen.getByLabelText("Fälligkeit"), "2026-10-15");
+    await userEvent.click(screen.getByText("Ticket anlegen"));
+    await waitFor(() => expect(push).toHaveBeenCalledWith(`/tickets/${ID}`));
+    const createCall = fetchMock.mock.calls.find((c) => !String(c[0]).includes("/templates"));
+    expect(JSON.parse(createCall?.[1]?.body as string)).toMatchObject({ title: "Frist prüfen", due_on: "2026-10-15" });
+  });
+
+  it("patches and clears the due date inline", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}));
+    renderIntl(<TicketEdit id={ID} status="new" priority="normal" dueOn="2026-10-15" />);
+    expect(screen.getByLabelText("Fälligkeit")).toHaveValue("2026-10-15");
+    await userEvent.click(screen.getByRole("button", { name: "Fälligkeit entfernen" }));
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+    const patch = fetchMock.mock.calls.find(([, init]) => init?.method === "PATCH");
+    expect(JSON.parse(patch?.[1]?.body as string)).toEqual({ due_on: null });
+  });
+});

@@ -17,6 +17,33 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.31.0",
+    date: "27.09.2026",
+    title:
+      "Betreiberentscheidungen vom 27.09.2026: Gmail-Archivierung repariert, Objektdeaktivierung, Kalender, Messdienstleister Abgleich, Design, Statusseite, Virenscan",
+    changes: [
+      "Tickets und Objekte: Serverfehler auf /tickets behoben (Helfer asAttention lag in einem Client-Modul und wurde auf dem Server aufgerufen), API-Ausfälle erscheinen auf der Ticketliste als Hinweis statt als Absturz, Übersetzungskonflikt in der Objektliste bereinigt, neue Prüfung gegen Aufrufe von Client-Exporten aus Server-Komponenten in make lint (Betreibermeldung 27.09.2026).",
+      "Kontakte: Rollenfilter (Eigentümer, Mieter, Verwalter usw.) lieferte einen internen Fehler und keine Kontakte, Abfrage korrigiert (Betreibermeldung 27.09.2026).",
+      "Erledigt schreibt wieder nach Gmail zurück (Betreibermeldung 27.09.2026): Mail erledigt (einzeln, Sammelaktion), Ticket erledigt, geschlossen oder abgelehnt (Ticketdetail, Ticketliste, Sammelstatus, Lösungsarten, automatischer Abschluss per Mail) und Zusammenführen archivieren alle verknüpften Gmail-Nachrichten (Labels INBOX und UNREAD entfernt, auch später zugeordnete Mails und Mails desselben Threads); Ursache im Worker behoben (Schlüssel für die Postfach-Token wurde in den Ticket- und Sammeljobs nicht gesetzt); Stand je Mail sichtbar (archive_status, Fehler, Zeitpunkt, Migration 0158) mit Knopf Archivierung jetzt nachholen; fehlende Berechtigung gmail.modify wird im Postfach und unter Einstellungen, Postfächer mit Knopf Erneut mit Google verbinden angezeigt, die Consent-URL erzwingt die Zustimmung, nach der Neuverbindung werden offene Archivierungen automatisch nachgeholt; Nachholjob alle 15 Minuten für die letzten 30 Tage, Endpunkt POST /mail/messages/{id}/archive, Diagnosebefehle in docs/integrations/gmail.md",
+      "Virenscan vor der Dokumentablage (Betreiberentscheidung 27.09.2026): jede Datei aus CRM, Portalen, Postfach, Messdienstleistern und Importen wird vor dem Speichern per ClamAV (INSTREAM über TCP) geprüft; ein Fund weist die Datei mit MHVP-DOC-0008 ab und wird mit Signaturname im Ereignisprotokoll festgehalten, ohne dass der Inhalt gespeichert wird; Modi off, warn, enforce (Produktion nur enforce), bei nicht erreichbarem Scanner im Modus enforce Abweisung mit MHVP-DOC-0009; Dienst clamav im Compose-Stack, Bereitschaftsprüfung clamav, Runbook docs/runbooks/virenscan.md",
+      "Befehlspalette (Strg+K, Cmd+K, Schaltfläche in der Kopfzeile) ersetzt die globale Suche: Datensätze, Aktionen und Navigation in einem Eingabefeld, gefiltert nach Berechtigungen, mit zuletzt geöffneten Datensätzen je Benutzer; neuer Statuschip mit Symbol, Klartext und Erklärung in Ticketliste, Postfach, Mahn- und Lastschriftläufen, Freigabestufen und Zählerzuordnungen.",
+      "Startseite als persönlicher Arbeitsplatz (Designvorschlag 2): Spalten Heute, Meine Tickets und Freigaben, Kennzahlen des Mandanten als kompakte Leiste; Benachrichtigungen springen direkt ins Ticket oder in den Kalender.",
+      "Anmeldung: Ziel nach der Anmeldung bleibt erhalten (auch über Zwei-Faktor-Schritt und Mandantenwahl).",
+      "KI: HNSW-Index für Einbettungen, Einbettungsstand im CRM sichtbar, Aufbewahrung der Lernbeispiele 24 Monate mit Mandantenschalter (Migration 0154).",
+      "Betrieb: WAL-Archivierung und Basissicherung nach Hetzner S3 mit age-Verschlüsselung, Playwright-Kernpfade gegen das Backend erweitert.",
+      "Stammdaten: Objektart als Katalog-Auswahl (aktive Einträge, inaktiver Bestandswert bleibt sichtbar); Zusatzfelder werden beim Speichern geprüft (Gültigkeit je Verwaltungsart, Pflicht, Standardwert bei Anlage, Min/Max, Auswahl, Eindeutigkeit je Mandant) mit Feldfehlern; Vertragsliste filtert per URL nach Objekt und Einheit, Ticketliste nach Vertrag.",
+      'Zustellregel für Bevollmächtigte gilt jetzt auch für Mahnschreiben, Betriebskostenabrechnungsschreiben, Einzelbriefe und Einzelzustellungen (Vorgabe beide Empfänger, Zeile "für <Vollmachtgeber>" beim Bevollmächtigten); Mahnlauf-Vorschau warnt, wenn eine Mahnung nur den Bevollmächtigten erreicht (M23-07, mit Rechtsvorbehalt).',
+      "Kalender: Versammlungstermine verlinken auf die Versammlung im WEG-Bereich, Erinnerungscodes erzeugen je Code und Termin genau eine Benachrichtigung mit Sprung zur Quelle, manuelle Termine können sich wöchentlich, monatlich oder jährlich bis zu einem Enddatum wiederholen (Anzeige in Kalender und Fristenliste ohne Speicherung der Einzeltermine), Tickets erhalten eine optionale Fälligkeit im Formular, im Detail und in der Liste (Migration 0155).",
+      "Messdienstleister: Ordnungsbegriffsabgleich als eigener Ablauf (Vorschau intern/extern, bewusste Übermittlung, Bearbeitungsstatus beim Anbieter, Ergebnisabruf als Verifikationsbasis der Zuordnung; ista sendSetup, Migration 0156); Audit-Änderungsprotokoll für Vertragsversionen und Gebäude.",
+      "Startseite leitet direkt weiter (angemeldet zum Dashboard, sonst zur Anmeldung), Loginseite optisch überarbeitet mit Claim und Hilfetext, Dashboard begrüßt persönlich mit Vornamen und tageszeitabhängigem, täglich wechselndem Text.",
+      "Ruhiges Typografie- und Farbsystem (Designvorschlag 4): Schrift Inter über next/font, feste Schriftskala, 8-Punkt-Abstandsraster, Karten mit Haarlinien statt Schatten, Farbe nur als Bedeutung mit kalibriertem Dunkelmodus, einheitlicher Fokusring, Tabellenziffern; gemeinsame Tokens in packages/ui, Dokumentation mit Kontrasttabelle in docs/design/tokens.md (neutrale Werte bis zur Freigabe der Unternehmensfarben M1-08).",
+      "Postfach: Reiter und Filterleiste (Status, Erledigte, Postfach, Suche, Aktualisieren) sauber in zwei Zeilen angeordnet, Filterfelder mit fester Breite.",
+      "CRM lädt die Schrift Inter über next/font im Grundlayout.",
+      "Objekte: Verwaltung beenden mit Kündigendem, Kündigungsdatum, Verwaltungsende, Nachfolgern und Kündigungsschreiben; deaktivierte Objekte verschwinden aus der Objektliste, der Superadmin kann sie einblenden und wieder aktivieren (Regel M4-05, Migration 0157).",
+      "Überwachung: Uptime Kuma mit Embedded MariaDB, neuer Dienst Beszel (Hub und Agent) zeigt Auslastung von Server und Containern (CPU, RAM, Platte, Netzwerk), Statusseite und Runbook verknüpft.",
+    ],
+  },
+  {
     version: "1.30.0",
     date: "27.09.2026",
     title:
@@ -51,8 +78,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     changes: [
       "Messdienstleister (neues Modul mhvp.metering, Stufe 1 Backend, Regel M40-01, Migration 0145): Anbieterkatalog ista, Techem, KALO, Brunata Minol, BRUNATA-METRONA und Sonstige mit ehrlicher Funktionsanzeige in vier Dimensionen (dokumentiert, Adapter, Kontofreigabe, Verbindungstest) und Recherchestand 26.09.2026 (Quellen Q1 bis Q11, vor Implementierung erneut prüfen); zentrale Verbindungen je Mandant mit verschlüsselten Geheimnissen (nur setzen, nie auslesen), Test und Produktion getrennt, Verbindungstest nur lesend; Objektzuordnung zu externen Abrechnungseinheiten mit Leistungsbereich, Gültigkeit, Prüfstatus, Gruppierung, Konfliktprüfung, Versionsprüfung (409) und Anbieterwechsel mit Historie; Einheitenzuordnung mit getrennten Empfängern und Belegungsstatus; manueller Abruf als persistenter Auftrag, Klärungsbereich, Verbrauchswerte und Abrechnungsergebnisse versioniert ohne Buchung; CSV-Vorlage, Vorschau, Übernahme und Export; Rechte metering_connections:manage, metering_assignments:update, metering_sync:run, metering_data:read, metering_users:submit, metering_billing:order; Mandantenschalter metering_module_enabled (Standard aus); Endpunkte unter /metering; keine Anbieteradapter (Stufe 2, OPEN_QUESTIONS M40-01 bis M40-03); Oberfläche folgt",
       "Tickets: Ampel je Ticketzeile nach Zeit ohne Reaktion unsererseits (gelb neu, orange ab 24 Stunden, rot ab 96 Stunden, grün erledigt), serverseitig berechnet (last_staff_activity_at, last_inbound_at, last_activity_at, attention), nur Handlungen von Mitarbeitern zählen, eingehende Mails und Portalkommentare setzen die Uhr nicht zurück; Standardsortierung Dringlichkeit (Erledigte zuletzt), Filterhaken Nach Eingang; Legende, Textmarke mit Dauer und farbiger Rand in Übersicht, Meine Tickets, Startseite und Reiter Tickets; Reiter Tickets blendet Erledigte standardmäßig aus (Umschalter Erledigte anzeigen); Regel M19-09, Handbuch Tickets",
-      "Buchhaltung: Kostenkonten der Kontenrahmen-Vorlage als Entwurf nach der Betriebskostenverordnung vorbelegt (M10-02, Betreiberentscheidung 26.09.2026): Konten der Betriebskostenarten des Katalogs umlagefähig mit Abrechnungsart Betriebskosten und Schlüsselvorschlag (Wohnfläche, Verbrauch für Heizung, Warmwasser und Wasser), Heizungsreparaturen nicht umlagefähig, Rauchwarnmelder ohne Einordnung, Umsatzsteueroption bleibt offen; je Zeile Prüfkennzeichen Entwurf mit Vermerk \"Freigabe durch Steuerberatung offen\"; Seed füllt nur unbesetzte Felder und verändert eigene Einträge und bestehende Buchungskreise nicht; Zuordnungstabelle in Regel M10-02, Handbuch Buchhaltung",
-      "Dokumente: Löschung gespiegelter Dokumente nach Betreiberentscheidung M6-03 vom 26.09.2026: Drive-Kopie wird gelöscht (endgültig, ersatzweise Papierkorb, im Journal vermerkt), Paperless-Dokument bleibt erhalten und erhält das Schlagwort \"gelöscht\" (wird angelegt, falls es fehlt), beide Schritte im Löschjournal mit Erfolg oder Fehler, Löschung \"offen\" bis beide Schritte gelungen sind, Wiederholung per Task, neue Endpunkte GET /documents/deletions und POST /documents/deletions/{id}/retry (Migration 0143), Sperre gespiegelter Dokumente entfällt, Restore-Wiederanwendung behandelt gespiegelte Dokumente gleich",
+      'Buchhaltung: Kostenkonten der Kontenrahmen-Vorlage als Entwurf nach der Betriebskostenverordnung vorbelegt (M10-02, Betreiberentscheidung 26.09.2026): Konten der Betriebskostenarten des Katalogs umlagefähig mit Abrechnungsart Betriebskosten und Schlüsselvorschlag (Wohnfläche, Verbrauch für Heizung, Warmwasser und Wasser), Heizungsreparaturen nicht umlagefähig, Rauchwarnmelder ohne Einordnung, Umsatzsteueroption bleibt offen; je Zeile Prüfkennzeichen Entwurf mit Vermerk "Freigabe durch Steuerberatung offen"; Seed füllt nur unbesetzte Felder und verändert eigene Einträge und bestehende Buchungskreise nicht; Zuordnungstabelle in Regel M10-02, Handbuch Buchhaltung',
+      'Dokumente: Löschung gespiegelter Dokumente nach Betreiberentscheidung M6-03 vom 26.09.2026: Drive-Kopie wird gelöscht (endgültig, ersatzweise Papierkorb, im Journal vermerkt), Paperless-Dokument bleibt erhalten und erhält das Schlagwort "gelöscht" (wird angelegt, falls es fehlt), beide Schritte im Löschjournal mit Erfolg oder Fehler, Löschung "offen" bis beide Schritte gelungen sind, Wiederholung per Task, neue Endpunkte GET /documents/deletions und POST /documents/deletions/{id}/retry (Migration 0143), Sperre gespiegelter Dokumente entfällt, Restore-Wiederanwendung behandelt gespiegelte Dokumente gleich',
       "Bank: finAPI (M11-01, Betreiberentscheidung 26.09.2026: Aggregator finAPI zuerst, Datei-Import bleibt, EBICS später): Konten- und Umsatzabruf hinter der bestehenden Aggregator-Schnittstelle, OAuth2 Client-Token plus technischer finAPI-Benutzer und Benutzer-Token je Bankverbindung (verschlüsselt, kein Auto-Update durch den Anbieter), WebForm-Import ohne Bankzugangsdaten, inkrementeller Umsatzabruf je Konto mit Cursor und Überlappung, idempotenter Upsert nach Transaktions-ID, Beträge als NUMERIC, Standard-Basis-URL je Rechenzentrum (Sandbox oder Live, Einstellungen MHVP_FINAPI_BASE_URL_SANDBOX und _LIVE), Fehlercodes MHVP-BANK-0005 (Zugangsdaten abgelehnt) und MHVP-BANK-0006 (Ratenlimit, ohne automatische Wiederholung), Migration 0141; keine Zahlungsauslösung, G2 bleibt geschlossen; Doku docs/integrations/finapi.md",
       "KI: Einbettungen und Ähnlichkeitssuche (M7-03, Betreiberentscheidung 26.09.2026): OpenAI text-embedding-3-small über den vorhandenen Adapter (EU-Endpunkt bei Region eu), Speicherung in pgvector je Mandant mit RLS (Tabelle ai_embedding, Migration 0142), Indexlauf als Celery-Aufgabe in Stapeln mit Budgetzählung (Aufgabe embed) und maskierter Eingabe, answer_question und Wissensbasis der Mail-Vorbereitung suchen per Ähnlichkeit mit Schlüsselwort-Rückfall, neue Endpunkte POST /ai/embeddings/reindex und GET /ai/embeddings/status",
       "Betrieb: Lesezugang der Überwachung auf die Betriebskennzahlen (M9-04a, Betreiberentscheidung 26.09.2026): neues Recht platform:metrics:read, das nur ein von einem Plattformadministrator erzeugter API-Schlüssel trägt (POST, GET, DELETE /platform/ops/metrics-keys, Geheimnis einmalig, Ereignisse api_key.created und api_key.revoked, Ratenlimit wie jeder Schlüssel), GET /platform/ops/metrics (JSON und Prometheus) nimmt Plattformadministrator-Sitzung oder diesen Schlüssel an, jeder andere Endpunkt weist den Schlüssel ab, keine Migration; Runbook monitoring.md 3.1 mit Anleitung für Uptime Kuma",
@@ -78,12 +105,15 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "1.27.1",
     date: "26.09.2026",
     title: "Erledigungsnotiz für Administratoren optional",
-    changes: ["Tickets: Administratoren schließen ohne Erledigungsnotiz, für alle anderen bleibt sie Pflicht"],
+    changes: [
+      "Tickets: Administratoren schließen ohne Erledigungsnotiz, für alle anderen bleibt sie Pflicht",
+    ],
   },
   {
     version: "1.27.0",
     date: "26.09.2026",
-    title: "Zuordnung im Bericht, Objekteigentümer, Freigabe der Importverträge",
+    title:
+      "Zuordnung im Bericht, Objekteigentümer, Freigabe der Importverträge",
     changes: [
       "Import: offene Zuordnungen direkt im Bericht per Kontaktauswahl abschließen, Vermieter dabei festlegen",
       "Objekte: Eigentümer festlegen auf der Objektseite, Reiter Ohne Eigentümer",
@@ -103,7 +133,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.26.0",
     date: "26.09.2026",
-    title: "Portalzugang am Kontakt, IBAN-Ablehnungsgrund, Importereignisse, Dokumentliste, Telefonassistenz-Korrekturen",
+    title:
+      "Portalzugang am Kontakt, IBAN-Ablehnungsgrund, Importereignisse, Dokumentliste, Telefonassistenz-Korrekturen",
     changes: [
       "Kontakte: Abschnitt Portalzugang auf der Kontaktakte mit Status (kein Zugang, eingeladen, aktiv, gesperrt), Einladung mit QR-Code und neuem Leseendpunkt GET /portal-admin/accounts?contact_id (A86, CRM-Teil)",
       "Kontakte: Ablehnungsgrund der IBAN-Freigabe wird gespeichert und angezeigt (rejected_reason, rejected_by, rejected_at, Migration 0132), Kontaktliste zeigt den Hinweis IBAN wartet auf Freigabe ohne N+1",
@@ -148,7 +179,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.24.0",
     date: "26.09.2026",
-    title: "Ticketfilter, Erledigungsnotiz, Hallo Heidi, Wissensdatenbank, Assistent-Rolle",
+    title:
+      "Ticketfilter, Erledigungsnotiz, Hallo Heidi, Wissensdatenbank, Assistent-Rolle",
     changes: [
       "Tickets und Mail: erledigte Vorgänge ausgeblendet, Umschalter Erledigte anzeigen, Statusauswahl nach Rolle",
       "Tickets: Erledigungsnotiz beim Abschluss, jeder Abschluss wird als Lernbeispiel gespeichert",
@@ -168,7 +200,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.23.0",
     date: "26.09.2026",
-    title: "Objektbezüge im Kontakt, CSV-Zuordnung, Gmail-Archivierung, Ticketfilter",
+    title:
+      "Objektbezüge im Kontakt, CSV-Zuordnung, Gmail-Archivierung, Ticketfilter",
     changes: [
       "Kontakte: Beziehungen zu Objekten und Einheiten auf der Kontaktseite, Reiter Tickets, Rollen Mieter und Eigentümer werden automatisch abgeleitet",
       "Import: Zuordnung von Eigentümern und Mietern aus den Objektdaten zu Einheiten mit Verträgen und vereinbartem Zahlbetrag",

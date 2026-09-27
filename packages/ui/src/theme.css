@@ -1,0 +1,87 @@
+/*
+ * Shared Tailwind v4 theme for both web apps: maps the MHVP tokens (tokens.css) to Tailwind
+ * utilities (bg-*, text-*, border-*, ring-*, font-*, rounded-*, shadow-*, spacing). Imported by
+ * apps/web-crm and apps/web-portal after tokens.css. Values stay `inline` so tenant branding
+ * can override the underlying variables at runtime (V14).
+ */
+@theme inline {
+  --color-bg: var(--mhvp-color-bg);
+  --color-surface: var(--mhvp-color-surface);
+  --color-surface-2: var(--mhvp-color-surface-2);
+  --color-fg: var(--mhvp-color-fg);
+  --color-muted: var(--mhvp-color-muted);
+  --color-subtle: var(--mhvp-color-subtle);
+  --color-border: var(--mhvp-color-border);
+  --color-border-soft: var(--mhvp-color-border-soft);
+  --color-hairline: var(--mhvp-color-hairline);
+  --color-primary: var(--mhvp-color-primary);
+  --color-primary-fg: var(--mhvp-color-primary-fg);
+  --color-primary-hover: var(--mhvp-color-primary-hover);
+  --color-accent: var(--mhvp-color-accent);
+  --color-accent-fg: var(--mhvp-color-accent-fg);
+  --color-accent-soft: var(--mhvp-color-accent-soft);
+  --color-accent-tint: var(--mhvp-color-accent-tint);
+  --color-focus: var(--mhvp-focus-ring-color);
+  --color-success-bg: var(--mhvp-color-success-bg);
+  --color-success-fg: var(--mhvp-color-success-fg);
+  --color-success-line: var(--mhvp-color-success-line);
+  --color-warning-bg: var(--mhvp-color-warning-bg);
+  --color-warning-fg: var(--mhvp-color-warning-fg);
+  --color-warning-line: var(--mhvp-color-warning-line);
+  --color-danger-bg: var(--mhvp-color-danger-bg);
+  --color-danger-fg: var(--mhvp-color-danger-fg);
+  --color-danger-line: var(--mhvp-color-danger-line);
+  --color-info-bg: var(--mhvp-color-info-bg);
+  --color-info-fg: var(--mhvp-color-info-fg);
+  --color-info-line: var(--mhvp-color-info-line);
+  --color-muted-bg: var(--mhvp-color-muted-bg);
+  --color-muted-fg: var(--mhvp-color-muted-fg);
+  --color-rail-bg: var(--mhvp-color-rail-bg);
+  --color-rail-fg: var(--mhvp-color-rail-fg);
+  --color-rail-muted: var(--mhvp-color-rail-muted);
+  --color-rail-border: var(--mhvp-color-rail-border);
+  --color-rail-hover: var(--mhvp-color-rail-hover);
+  --color-rail-active: var(--mhvp-color-rail-active);
+  /* Legacy aliases (gold resolves to the accent until M1-08 is decided). */
+  --color-gold: var(--mhvp-color-gold);
+  --color-gold-soft: var(--mhvp-color-gold-soft);
+  --color-gold-tint: var(--mhvp-color-gold-tint);
+  --color-anthracite-soft: var(--mhvp-color-anthracite-soft);
+
+  --font-sans: var(--mhvp-font-sans);
+  --font-mono: var(--mhvp-font-mono);
+
+  --text-display: var(--mhvp-font-display-size);
+  --text-display--line-height: var(--mhvp-font-display-line);
+  --text-display--letter-spacing: var(--mhvp-font-display-tracking);
+  --text-display--font-weight: var(--mhvp-font-display-weight);
+  --text-h1: var(--mhvp-font-h1-size);
+  --text-h1--line-height: var(--mhvp-font-h1-line);
+  --text-h1--letter-spacing: var(--mhvp-font-h1-tracking);
+  --text-h1--font-weight: var(--mhvp-font-h1-weight);
+  --text-h2: var(--mhvp-font-h2-size);
+  --text-h2--line-height: var(--mhvp-font-h2-line);
+  --text-h2--letter-spacing: var(--mhvp-font-h2-tracking);
+  --text-h2--font-weight: var(--mhvp-font-h2-weight);
+  --text-h3: var(--mhvp-font-h3-size);
+  --text-h3--line-height: var(--mhvp-font-h3-line);
+  --text-h3--font-weight: var(--mhvp-font-h3-weight);
+  --text-body: var(--mhvp-font-body-size);
+  --text-body--line-height: var(--mhvp-font-body-line);
+  --text-small: var(--mhvp-font-small-size);
+  --text-small--line-height: var(--mhvp-font-small-line);
+  --text-mono: var(--mhvp-font-mono-size);
+  --text-mono--line-height: var(--mhvp-font-mono-line);
+
+  --radius-sm: var(--mhvp-radius-sm);
+  --radius-md: var(--mhvp-radius-md);
+  --radius-lg: var(--mhvp-radius-lg);
+  --radius-xl: var(--mhvp-radius-xl);
+  --radius-card: var(--mhvp-radius-lg);
+
+  --shadow-xs: var(--mhvp-shadow-xs);
+  --shadow-sm: var(--mhvp-shadow-sm);
+  --shadow-md: var(--mhvp-shadow-md);
+  --shadow-lg: var(--mhvp-shadow-lg);
+  --shadow-card: var(--mhvp-shadow-card);
+}

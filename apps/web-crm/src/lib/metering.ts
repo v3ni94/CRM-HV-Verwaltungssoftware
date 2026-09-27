@@ -234,7 +234,7 @@ export type Transmission = {
   id: string;
   connection_id: string;
   property_assignment_id: string;
-  kind: "roles" | "billing_input";
+  kind: "roles" | "billing_input" | "billing_unit_setup";
   period_from: string | null;
   period_to: string | null;
   status: string;
@@ -262,4 +262,14 @@ export type Transmission = {
   created_at: string;
 };
 
-export const TRANSMISSION_KINDS = ["roles", "billing_input"] as const;
+export const TRANSMISSION_KINDS = ["roles", "billing_input", "billing_unit_setup"] as const;
+
+/** Preview row of the Ordnungsbegriffsabgleich (summary.units of kind billing_unit_setup). */
+export type SetupUnitRow = {
+  unit_number: string;
+  unit_label: string | null;
+  external_unit_number: string;
+  occupancy_status: string;
+  known_at_provider: boolean;
+  matched: boolean | null;
+};

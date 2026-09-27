@@ -50,6 +50,8 @@ PORTAL_LIST_ROUTES: dict[str, str] = {
 
 # Targets that open the calendar with the entry focused (CRM page /kalender?termin=<id>).
 APPOINTMENT_TYPES = frozenset({"appointment", "calendar_entry", "calendar_event"})
+# Targets whose route needs the property id, resolved from the generated calendar entry.
+PROPERTY_HINT_TYPES = frozenset({"meter", "building", "owners_meeting", "contact_note"})
 
 
 def target_href(
@@ -144,4 +146,23 @@ async def resolve_hints(
             )
         ).all():
             properties[item_id] = property_id
+    # Sources of generated calendar entries (meter, building, owners_meeting, contact_note):
+    # the generated entry carries the property of the source (reminder notifications).
+    source_ids = {
+        r.entity_id
+        for r in rows
+        if r.entity_type in PROPERTY_HINT_TYPES and r.entity_id and r.entity_id not in properties
+    }
+    if source_ids:
+        for source_id, property_id in (
+            await session.execute(
+                select(CalendarEntry.source_id, CalendarEntry.property_id).where(
+                    CalendarEntry.source_id.in_(source_ids),
+                    CalendarEntry.owner_user_id.is_(None),
+                    CalendarEntry.property_id.is_not(None),
+                )
+            )
+        ).all():
+            if source_id is not None and property_id is not None:
+                properties.setdefault(source_id, property_id)
     return dates, properties

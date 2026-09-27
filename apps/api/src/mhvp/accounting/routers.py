@@ -1966,6 +1966,7 @@ def _case_out(case: DunningCase) -> dict[str, Any]:
         "delivery_channel": case.delivery_channel,
         "delivered_at": case.delivered_at,
         "letter_document_id": case.letter_document_id,
+        "warnings": dunning.case_warnings(case),
     }
 
 
@@ -2059,6 +2060,7 @@ async def dunning_letter_create(
             **_case_out(case),
             "letter_document_id": document_id,
             "hinweis": dunning_letters.DRAFT_LABEL,
+            "letter_warnings": draft.warnings,
         }
 
 

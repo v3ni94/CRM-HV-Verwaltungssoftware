@@ -156,11 +156,32 @@ class WriteOutcome:
     FAILED = "failed"
 
 
+@dataclass(frozen=True)
+class SetupStatus:
+    """Processing state of an asynchronous Ordnungsbegriffsabgleich at the provider (bved
+    billing-unit-data ``BillingUnitSetupStatus``: ``OPEN``, ``IN_PROGRESS``, ``COMPLETED``).
+    ``result`` is the ``SetupResult`` (``matched``, ``additional``) once the status is
+    ``COMPLETED``; ``found`` is false when the provider list does not carry the unit."""
+
+    status: str
+    found: bool = True
+    result: dict[str, Any] | None = None
+    raw: dict[str, Any] = field(default_factory=dict)
+
+
+SETUP_OPEN = "OPEN"
+SETUP_IN_PROGRESS = "IN_PROGRESS"
+SETUP_COMPLETED = "COMPLETED"
+
+
 class MeteringAdapter(Protocol):
     code: str
     spec_source: str
     spec_version: str
     implemented: frozenset[Function]
+    # Source of the documented setup submission (bved billing-unit-data ``sendSetup``) or
+    # ``None`` ("Dokumentation erforderlich"): then the workflow stays at the local preview.
+    setup_submission: str | None
     required_secrets: frozenset[str]
 
     def test_connection(
@@ -210,10 +231,24 @@ class MeteringAdapter(Protocol):
         external_billing_unit: str,
         residential_units: Sequence[Mapping[str, Any]],
         customer_number: str,
-    ) -> str:
+        pm_number: str | None = None,
+    ) -> WriteResult:
         """Writing step of the Ordnungsbegriffsabgleich (bved billing unit data ``sendSetup``).
-        Returns the provider transaction id. Never retried after a timeout (case 11). Not
-        offered by any endpoint while ``write_sync_enabled`` is off (M40-03)."""
+        ``accepted`` carries the provider transaction id and means accepted for processing
+        only, never "vollständig zugeordnet" (Q8). Never retried after a timeout (case 11).
+        Reachable only through the transmission workflow with ``write_sync_enabled``."""
+        ...
+
+    def fetch_billing_unit_setup(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+    ) -> SetupStatus:
+        """Read only: processing status of the setup at the provider and, when completed, the
+        ``SetupResult`` (``GET .../billingunits`` and ``GET .../setup/{billingunit}``)."""
         ...
 
     def fetch_billing_template(
@@ -270,6 +305,7 @@ class ManualAdapter:
     spec_source = "keine (manuelle Verwaltung)"
     spec_version = "n/a"
     implemented: frozenset[Function] = frozenset()
+    setup_submission: str | None = None
     required_secrets: frozenset[str] = frozenset()
 
     def test_connection(
@@ -292,7 +328,10 @@ class ManualAdapter:
     def acknowledge_document(self, **kwargs: Any) -> None:
         raise NotImplementedError("kein Adapter")
 
-    def submit_billing_unit_setup(self, **kwargs: Any) -> str:
+    def submit_billing_unit_setup(self, **kwargs: Any) -> WriteResult:
+        raise NotImplementedError("kein Adapter")
+
+    def fetch_billing_unit_setup(self, **kwargs: Any) -> SetupStatus:
         raise NotImplementedError("kein Adapter")
 
     def fetch_billing_template(self, **kwargs: Any) -> dict[str, Any]:
@@ -311,6 +350,7 @@ class FakeAdapter:
 
     code = "fake"
     spec_source = "Testdouble, keine Anbieterspezifikation"
+    setup_submission: str | None = "Testdouble (bved billing-unit-data 1.0.2 sendSetup)"
     spec_version = "test"
     implemented: frozenset[Function] = frozenset(
         {
@@ -330,6 +370,8 @@ class FakeAdapter:
         self.downloads: list[str] = []
         # Test observation only: every write call as (kind, action, external unit, payload).
         self.writes: list[tuple[str, str, str, dict[str, Any]]] = []
+        # Test observation only: polled external billing units of the setup status.
+        self.setup_polls: list[str] = []
 
     def test_connection(
         self, *, config: Mapping[str, Any], secrets: Mapping[str, str], environment: str
@@ -440,8 +482,42 @@ class FakeAdapter:
     ) -> None:
         self.acknowledged.append(document.external_id)
 
-    def submit_billing_unit_setup(self, **kwargs: Any) -> str:
-        raise NotImplementedError("Testdouble: schreibende Vorgänge sind gesperrt.")
+    def submit_billing_unit_setup(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        residential_units: Sequence[Mapping[str, Any]],
+        customer_number: str,
+        pm_number: str | None = None,
+    ) -> WriteResult:
+        body = {
+            "billingunitMscnumber": external_billing_unit,
+            "customerMscnumber": customer_number,
+            "residentialunits": [dict(u) for u in residential_units],
+            **({"billingunitPmnumber": pm_number} if pm_number else {}),
+        }
+        return self._write("billing_unit_setup", "SEND", external_billing_unit, body, config)
+
+    def fetch_billing_unit_setup(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+    ) -> SetupStatus:
+        """Scripted through ``config``: ``fake_setup_status`` (``OPEN``, ``IN_PROGRESS``,
+        ``COMPLETED``; default ``IN_PROGRESS``) and ``fake_setup_result`` (``SetupResult``)."""
+        self.setup_polls.append(external_billing_unit)
+        status = str(config.get("fake_setup_status", SETUP_IN_PROGRESS))
+        result = config.get("fake_setup_result")
+        return SetupStatus(
+            status=status,
+            result=dict(result) if status == SETUP_COMPLETED and isinstance(result, dict) else None,
+        )
 
     def fetch_billing_template(
         self,

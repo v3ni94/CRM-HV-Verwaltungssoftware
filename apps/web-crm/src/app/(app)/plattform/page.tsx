@@ -6,6 +6,7 @@ import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { StatusChip } from "@/components/ui/StatusChip";
 
 export const dynamic = "force-dynamic";
 
@@ -61,8 +62,9 @@ export default async function PlatformPage() {
                 <h3 className="text-xs text-muted">{t("gates")}</h3>
                 <ul>
                   {Object.entries(readiness.gates).map(([g, open]) => (
-                    <li key={g}>
-                      {g}: {open ? t("open") : t("closed")}
+                    <li key={g} className="flex items-center gap-2">
+                      <span>{g}</span>
+                      <StatusChip domain="gate" status={open ? "open" : "closed"} />
                     </li>
                   ))}
                 </ul>

@@ -54,6 +54,7 @@ def test_placeholder_secrets_refused_in_prod() -> None:
         "s3_secret_access_key": SecretStr("secret"),
         "master_key": SecretStr("a2V5"),
         "jwt_private_key": SecretStr("pem"),
+        "clamav_mode": "enforce",
     }
     with pytest.raises(ValidationError, match="MHVP_DATABASE_URL still contains"):
         make_settings(

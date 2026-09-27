@@ -30,6 +30,12 @@ x-app-env: &app-env
   MHVP_API_PUBLIC_URL: ${MHVP_API_PUBLIC_URL:-}
   MHVP_WEB_CRM_URL: ${MHVP_WEB_CRM_URL:-}
   MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS: ${MHVP_WEBHOOK_ALLOW_PRIVATE_TARGETS:-false}
+  # Malware scan before storing documents (docs/runbooks/virenscan.md). Dev default off; the
+  # clamav service below is started with --profile clamav when MHVP_CLAMAV_MODE=warn|enforce.
+  MHVP_CLAMAV_MODE: ${MHVP_CLAMAV_MODE:-off}
+  MHVP_CLAMAV_HOST: ${MHVP_CLAMAV_HOST:-clamav}
+  MHVP_CLAMAV_PORT: ${MHVP_CLAMAV_PORT:-3310}
+  MHVP_CLAMAV_TIMEOUT_SECONDS: ${MHVP_CLAMAV_TIMEOUT_SECONDS:-30}
   # uvicorn trusts X-Forwarded-* only from these addresses (set to the Traefik network).
   FORWARDED_ALLOW_IPS: ${MHVP_FORWARDED_ALLOW_IPS:-127.0.0.1}
 
@@ -109,6 +115,30 @@ services:
       timeout: 5s
       retries: 12
       start_period: 20s
+
+  clamav:
+    # ClamAV daemon with freshclam signature updates (operator decision 27.09.2026). The API
+    # streams every document over TCP 3310 (INSTREAM); no file is shared with the container.
+    # Dev: only started with --profile clamav; prod/staging overlay removes the profile.
+    <<: *hardening
+    image: clamav/clamav:1.4
+    profiles:
+      - clamav
+    environment:
+      CLAMAV_NO_FRESHCLAMD: "false"
+      CLAMD_STARTUP_TIMEOUT: "1800"
+      # Larger than MHVP_DOCUMENT_MAX_BYTES so that no upload is truncated by clamd itself.
+      CLAMD_CONF_StreamMaxLength: 200M
+      CLAMD_CONF_MaxFileSize: 200M
+      CLAMD_CONF_MaxScanSize: 400M
+    volumes:
+      - clamav-data:/var/lib/clamav
+    healthcheck:
+      test: ["CMD", "clamdcheck.sh"]
+      interval: 60s
+      timeout: 10s
+      retries: 5
+      start_period: 600s
 
   migrate:
     <<: *hardening
@@ -191,3 +221,4 @@ volumes:
   postgres-data:
   redis-data:
   objectstore-data:
+  clamav-data:

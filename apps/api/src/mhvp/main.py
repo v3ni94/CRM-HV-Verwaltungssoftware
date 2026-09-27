@@ -93,6 +93,7 @@ from mhvp.portal.routers import router as portal_router
 from mhvp.properties.routers import router as properties_router
 from mhvp.properties.routers_catalogs import router as catalogs_router
 from mhvp.properties.routers_patch import router as properties_patch_router
+from mhvp.properties.routers_termination import router as properties_termination_router
 from mhvp.receipts.routers import router as receipts_router
 from mhvp.sla.routers import router as sla_router
 from mhvp.sla.whatsapp_webhook import router as whatsapp_webhook_router
@@ -120,13 +121,16 @@ ReadinessChecksFactory = Callable[[Settings, Resources], dict[str, ReadinessChec
 
 
 def default_readiness_checks(settings: Settings, resources: Resources) -> dict[str, ReadinessCheck]:
-    return {
+    checks = {
         "database": health.database_check(resources.engine),
         "database_role": health.database_role_check(resources.engine),
         "migrations": health.migrations_check(resources.engine, settings.alembic_config),
         "redis": health.redis_check(resources.redis),
         "object_storage": health.object_storage_check(settings, resources.s3),
     }
+    if settings.clamav_mode != "off":
+        checks["clamav"] = health.clamav_check(settings)
+    return checks
 
 
 def create_app(
@@ -191,6 +195,7 @@ def create_app(
     app.include_router(properties_router, prefix=API_PREFIX)
     app.include_router(catalogs_router, prefix=API_PREFIX)
     app.include_router(properties_patch_router, prefix=API_PREFIX)
+    app.include_router(properties_termination_router, prefix=API_PREFIX)
     app.include_router(notice_crm_router, prefix=API_PREFIX)
     app.include_router(notice_portal_router, prefix=API_PREFIX)
     app.include_router(contracts_router, prefix=API_PREFIX)

@@ -114,6 +114,9 @@ class TransmissionKind(StrEnum):
 
     ROLES = "roles"
     BILLING_INPUT = "billing_input"
+    # Ordnungsbegriffsabgleich (Q8, bved billing-unit-data ``sendSetup``): asynchronous at the
+    # provider, the result is fetched separately and never assumed from the acceptance.
+    BILLING_UNIT_SETUP = "billing_unit_setup"
 
 
 class TransmissionStatus(StrEnum):
@@ -122,6 +125,8 @@ class TransmissionStatus(StrEnum):
     RELEASED = "released"  # explicitly released against the checked fingerprint
     SUPERSEDED = "superseded"  # payload or relevant assignments changed after check/release
     ORDERED = "ordered"  # binding send accepted by the provider (transaction id)
+    WAITING_PROVIDER = "waiting_provider"  # accepted, asynchronous processing at the provider
+    COMPLETED = "completed"  # provider result fetched and applied (billing unit setup)
     REJECTED = "rejected"  # binding send rejected by the provider (validation errors)
     UNCLEAR = "unclear"  # write timeout: outcome unknown, manual clarification, no retry
     FAILED = "failed"  # technical failure before the request left the process

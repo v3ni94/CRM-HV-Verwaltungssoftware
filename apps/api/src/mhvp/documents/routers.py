@@ -902,16 +902,20 @@ async def _template(session: Any, template_id: uuid.UUID) -> DocumentTemplate:
 async def preview_letter(
     body: s.LetterIn, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> Response:
+    from mhvp.contacts.recipients import resolve_recipients
+
     async with tenant_tx(request, principal) as session:
         template = await _template(session, body.template_id)
         head = await svc.letterhead(session, _blobs(request))
+        first = (await resolve_recipients(session, [body.contact_id]))[0]
         pdf, _ = await _letter(
             session,
             request,
             principal,
             template,
             head,
-            contact_id=body.contact_id,
+            contact_id=first.contact_id,
+            represents=first.represents,
             property_id=body.property_id,
             unit_id=body.unit_id,
             contract_id=body.contract_id,
@@ -929,29 +933,39 @@ async def preview_letter(
 @router.post("/letters", status_code=201, summary="Brief erzeugen und ablegen")
 async def create_letter(
     body: s.LetterIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
-) -> s.DocumentOut:
-    """Generated letters are filed and linked automatically (11.3); nothing is sent."""
+) -> s.LetterOut:
+    """Generated letters are filed and linked automatically (11.3); nothing is sent. The
+    recipients follow the delivery rule of authorised representatives (M23-07): the first
+    document is returned, further copies (representative or represented contact) in
+    ``further_documents``."""
+    from mhvp.contacts.recipients import resolve_recipients
+
     async with tenant_tx(request, principal) as session:
         template = await _template(session, body.template_id)
         head = await svc.letterhead(session, _blobs(request))
-        _, document = await _letter(
-            session,
-            request,
-            principal,
-            template,
-            head,
-            contact_id=body.contact_id,
-            property_id=body.property_id,
-            unit_id=body.unit_id,
-            contract_id=body.contract_id,
-            letter_date=body.letter_date or _today(),
-            reference=body.reference,
-            fields=body.fields,
-            signatory=body.signatory,
-            store=True,
-        )
-        assert document is not None  # noqa: S101 - store=True
-        return await _out(session, document)
+        documents = []
+        for recipient in await resolve_recipients(session, [body.contact_id]):
+            _, document = await _letter(
+                session,
+                request,
+                principal,
+                template,
+                head,
+                contact_id=recipient.contact_id,
+                represents=recipient.represents,
+                property_id=body.property_id,
+                unit_id=body.unit_id,
+                contract_id=body.contract_id,
+                letter_date=body.letter_date or _today(),
+                reference=body.reference,
+                fields=body.fields,
+                signatory=body.signatory,
+                store=True,
+            )
+            assert document is not None  # noqa: S101 - store=True
+            documents.append(await _out(session, document))
+        first, *further = documents
+        return s.LetterOut(**first.model_dump(), further_documents=further)
 
 
 @router.post("/letters/serial", status_code=201, summary="Serienbrief erzeugen")

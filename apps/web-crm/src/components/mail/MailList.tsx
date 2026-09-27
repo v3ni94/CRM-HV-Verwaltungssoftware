@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type MouseEvent } from "react";
 
 import { useTranslations } from "next-intl";
 
+import { StatusChip } from "@/components/ui/StatusChip";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -13,13 +14,6 @@ import type { Message } from "./MailWorkspace";
 function counterpart(message: Message): string {
   if (message.direction === "in") return message.from_address ?? "";
   return message.to_addresses.join(", ");
-}
-
-function statusBadgeClass(status: string): string {
-  if (status === "done" || status === "sent") return ui.badgeSuccess;
-  if (status === "pending") return ui.badgeWarning;
-  if (status === "draft") return ui.badge;
-  return ui.badgeGold;
 }
 
 type BulkResult = { changed: string[]; failed: { id: string; reason: string }[] };
@@ -180,7 +174,7 @@ export function MailList({
                 </div>
                 <p className="min-w-0 truncate text-sm text-muted">{message.subject || t("noSubject")}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                  <span className={statusBadgeClass(message.status)}>{t(`status.${message.status}`)}</span>
+                  <StatusChip domain="mail" status={message.status} label={t(`status.${message.status}`)} />
                   {message.ticket_id ? <span className={ui.badge}>{t("ticketBadge")}</span> : null}
                   {category ? <span className={ui.badge}>{category}</span> : null}
                 </div>

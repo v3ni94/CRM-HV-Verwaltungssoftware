@@ -4,21 +4,13 @@ import Link from "next/link";
 import { DirectDebitRunActions } from "@/components/banking/DirectDebitRunActions";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { StatusChip } from "@/components/ui/StatusChip";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_VARIANT: Record<string, StatusPillVariant> = {
-  draft: "neutral",
-  approved: "gold",
-  file_generated: "warning",
-  exported: "success",
-  cancelled: "neutral",
-};
 
 /** Lastschriftläufe (M15, 7.5 SEPA): Liste mit Vier-Augen-Freigabe und Datei als Dokument.
  *  Der Download der pain.008-Datei ist bis G2 gesperrt (API); der Grund steht am Lauf. */
@@ -74,7 +66,7 @@ export default async function DirectDebitRunsPage() {
                   </td>
                   <td className="num">{formatEur(r.control_sum)}</td>
                   <td>
-                    <StatusPill variant={STATUS_VARIANT[r.status] ?? "neutral"} label={t(`status_${r.status}`)} />
+                    <StatusChip domain="directDebitRun" status={r.status} label={t(`status_${r.status}`)} />
                     {r.status === "draft" || r.status === "approved" ? (
                       <span className="block text-xs text-muted">{t("approvals", { n: r.approvals })}</span>
                     ) : null}

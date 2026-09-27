@@ -116,6 +116,8 @@ class MeOut(BaseModel):
     roles: list[str]
     permissions: list[str]
     is_platform_admin: bool
+    # The single superadmin (ADR 0011): only true together with is_platform_admin.
+    is_superadmin: bool = False
     platform_access_reason: str | None
     # Second factor switched on by the user (Einstellungen, Sicherheit); never mandatory.
     totp_enabled: bool = False
@@ -429,6 +431,7 @@ async def me(request: Request, principal: Principal = Depends(get_principal)) ->
         roles=list(principal.roles),
         permissions=sorted(principal.permissions),
         is_platform_admin=principal.is_platform_admin,
+        is_superadmin=principal.is_superadmin,
         platform_access_reason=principal.platform_access_reason,
         totp_enabled=totp_enabled,
     )

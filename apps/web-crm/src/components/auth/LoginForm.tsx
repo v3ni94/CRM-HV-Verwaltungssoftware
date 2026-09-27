@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { z } from "zod";
 
 import { bff } from "@/lib/bff";
+import { safeNext, withNext } from "@/lib/next-path";
 import { ui } from "@/lib/ui";
 
 type Values = { email: string; password: string };
@@ -28,7 +29,7 @@ export function LoginForm({ next }: { next?: string }) {
 
   const onSubmit = handleSubmit(async (values) => {
     setError(null);
-    const result = await bff<{ status: string }>("/api/session/login", {
+    const result = await bff<{ status: string; tenant_id?: string | null }>("/api/session/login", {
       method: "POST",
       body: JSON.stringify(values),
     });
@@ -38,15 +39,12 @@ export function LoginForm({ next }: { next?: string }) {
     }
     if (result.data.status === "ok") {
       // Password alone was enough (no second factor enabled, or a trusted device).
-      const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/kontakte";
-      router.push(target);
+      // Without a selected tenant the tenant selection comes first and keeps the target.
+      router.push(result.data.tenant_id ? safeNext(next) : withNext("/mandant", next));
       router.refresh();
       return;
     }
-    const params = new URLSearchParams();
-    if (next) params.set("next", next);
-    const query = params.toString();
-    router.push(`/anmelden/zweiter-faktor${query ? `?${query}` : ""}`);
+    router.push(withNext("/anmelden/zweiter-faktor", next));
   });
 
   return (

@@ -24,6 +24,7 @@ Dispatch stays locked: no endpoint sends a letter (G1/G2 closed, M16-02). Every 
 """
 
 import html
+import io
 import re
 import uuid
 from dataclasses import dataclass, field
@@ -31,6 +32,7 @@ from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 
+from pypdf import PdfReader, PdfWriter
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -43,6 +45,7 @@ from mhvp.accounting.models import (
     Ledger,
     OpenItem,
 )
+from mhvp.contacts import recipients
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
 from mhvp.documents import services as docs
@@ -348,6 +351,16 @@ def standard_level_text(level: int) -> str:
 
 
 @dataclass
+class Delivery:
+    """One addressee of the letter (debtor or authorised representative)."""
+
+    contact: Any
+    recipient_lines: list[str]
+    greeting: str
+    represents: uuid.UUID | None = None
+
+
+@dataclass
 class LetterDraft:
     letter: letters.Letter
     contact_id: uuid.UUID
@@ -356,6 +369,10 @@ class LetterDraft:
     level_text: str
     filename: str
     title: str = ""
+    # Further copies of the letter (one per additional recipient, M23-07); ``letter`` is
+    # the first. ``render`` bundles them in one PDF.
+    copies: list[letters.Letter] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -377,6 +394,8 @@ class CaseContext:
     letter_text: str | None
     items: list[dict[str, Any]]
     links: list[tuple[str, uuid.UUID]] = field(default_factory=list)
+    deliveries: list[Delivery] = field(default_factory=list)
+    warnings: list[str] = field(default_factory=list)
 
 
 async def _labelled_items(
@@ -401,7 +420,6 @@ async def _labelled_items(
 
 
 async def context(session: AsyncSession, case: DunningCase) -> CaseContext:
-    from mhvp.contacts.models import Party, PartyMember
     from mhvp.contracts.models import Contract
     from mhvp.properties.models import LegalEntity, Property, Unit
 
@@ -414,22 +432,32 @@ async def context(session: AsyncSession, case: DunningCase) -> CaseContext:
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Dem Mahnfall ist kein Vertrag zugeordnet."
         )
-    party = await session.get(Party, contract.party_id)
-    member = (
-        await session.scalar(
-            select(PartyMember)
-            .where(PartyMember.party_id == party.id)
-            .order_by(PartyMember.created_at)
-            .limit(1)
-        )
-        if party is not None
-        else None
-    )
-    if member is None:
+    debtor_id = await recipients.debtor_contact_id(session, contract.party_id)
+    if debtor_id is None:
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Der Schuldner hat keinen Kontakt mit Anschrift."
         )
-    contact, recipient_lines, recipient = await docs.recipient(session, member.contact_id)
+    # Delivery rule of authorised representatives (M23-07, operator decision 27.09.2026):
+    # one letter per resolved recipient, the debtor first when it receives itself.
+    targets = await recipients.resolve_recipients(session, [debtor_id])
+    deliveries: list[Delivery] = []
+    for target in targets:
+        contact, recipient_lines, recipient = await docs.recipient(session, target.contact_id)
+        if target.represents is not None:
+            represented = await docs.recipient_name(session, target.represents)
+            recipient_lines.insert(1, f"für {represented}")
+        deliveries.append(
+            Delivery(
+                contact=contact,
+                recipient_lines=recipient_lines,
+                greeting=str(recipient["anrede"]),
+                represents=target.represents,
+            )
+        )
+    contact = deliveries[0].contact
+    warnings: list[str] = []
+    if recipients.representative_only(targets, debtor_id):
+        warnings.append(recipients.REPRESENTATIVE_ONLY_WARNING)
     unit = await session.get(Unit, contract.unit_id) if contract.unit_id else None
     prop = await session.get(Property, ledger.property_id) if ledger.property_id else None
 
@@ -451,14 +479,22 @@ async def context(session: AsyncSession, case: DunningCase) -> CaseContext:
         links.append(("unit", unit.id))
     if prop is not None:
         links.append(("property", prop.id))
+    # Every further recipient (representative or represented debtor) is linked once.
+    others = [d.contact.id for d in deliveries[1:]]
+    others += [d.represents for d in deliveries if d.represents is not None]
+    for other in others:
+        if other != contact.id and ("contact", other) not in links:
+            links.append(("contact", other))
     return CaseContext(
         ledger=ledger,
         claim_holder_name=claim_holder.name if claim_holder else "dem Forderungsinhaber",
         claim_holder_kind=claim_holder.kind.value if claim_holder else "",
         contract=contract,
         contact=contact,
-        recipient_lines=recipient_lines,
-        greeting=str(recipient["anrede"]),
+        recipient_lines=deliveries[0].recipient_lines,
+        greeting=deliveries[0].greeting,
+        deliveries=deliveries,
+        warnings=warnings,
         object_line=", ".join(object_parts) or f"Vertrag {contract.number}",
         property_line=property_line,
         settings=settings,
@@ -488,19 +524,6 @@ async def build(
     payment_deadline = (
         letter_date + timedelta(days=ctx.payment_days) if ctx.payment_days is not None else None
     )
-    text = compose(
-        level=case.level,
-        level_text=ctx.level_text,
-        greeting=ctx.greeting,
-        claim_holder=ctx.claim_holder_name,
-        object_line=ctx.object_line,
-        items=ctx.items,
-        fee=case.fee_amount,
-        interest=case.interest_amount,
-        payment_deadline=payment_deadline,
-        letter_text=ctx.letter_text,
-        bank_account=bank_account,
-    )
     subject = html.escape(f"{ctx.level_text}: offene Forderungen, {ctx.object_line}")
     info = [
         ("Status", DRAFT_LABEL),
@@ -510,29 +533,58 @@ async def build(
     if ctx.property_line:
         info.append(("Objekt", ctx.property_line))
     signatory = [str(head.company.get("name", "")), f"im Auftrag von {ctx.claim_holder_name}"]
-    letter = letters.Letter(
-        recipient_lines=ctx.recipient_lines,
-        subject=subject,
-        body=text.body(),
-        letter_date=letter_date,
-        info=info,
-        signatory=[s for s in signatory if s],
-        tables={TABLE_NAME: text.table.as_table()},
-    )
+    copies: list[letters.Letter] = []
+    for delivery in ctx.deliveries:
+        text = compose(
+            level=case.level,
+            level_text=ctx.level_text,
+            greeting=delivery.greeting,
+            claim_holder=ctx.claim_holder_name,
+            object_line=ctx.object_line,
+            items=ctx.items,
+            fee=case.fee_amount,
+            interest=case.interest_amount,
+            payment_deadline=payment_deadline,
+            letter_text=ctx.letter_text,
+            bank_account=bank_account,
+        )
+        copies.append(
+            letters.Letter(
+                recipient_lines=delivery.recipient_lines,
+                subject=subject,
+                body=text.body(),
+                letter_date=letter_date,
+                info=info,
+                signatory=[s for s in signatory if s],
+                tables={TABLE_NAME: text.table.as_table()},
+            )
+        )
     filename = f"{letter_date.isoformat()}_mahnung_stufe{case.level}_{ctx.contact.display_name}.pdf"
     return LetterDraft(
-        letter=letter,
+        letter=copies[0],
         contact_id=ctx.contact.id,
         contact_name=ctx.contact.display_name,
         links=ctx.links,
         level_text=ctx.level_text,
         filename=filename[:255],
         title=f"{ctx.level_text} (Entwurf), {ctx.contact.display_name}",
+        copies=copies,
+        warnings=list(ctx.warnings),
     )
 
 
 def render(head: letters.Letterhead, draft: LetterDraft) -> bytes:
-    return letters.render_pdf(head, draft.letter)
+    """One PDF; with several recipients (delivery rule) the copies follow each other."""
+    copies = draft.copies or [draft.letter]
+    if len(copies) == 1:
+        return letters.render_pdf(head, copies[0])
+    writer = PdfWriter()
+    for copy in copies:
+        for page in PdfReader(io.BytesIO(letters.render_pdf(head, copy))).pages:
+            writer.add_page(page)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
 
 
 async def store(

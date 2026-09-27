@@ -67,4 +67,28 @@ describe("MailboxSettings", () => {
     expect(screen.getByTestId("backfill-status").textContent).toContain("Vollabruf abgeschlossen");
     expect(screen.getByTestId("backfill-status").textContent).toContain("120 Nachrichten");
   });
+
+  it("warns when the archive permission is missing and reconnects with Google", async () => {
+    const assign = vi.fn();
+    vi.spyOn(window, "location", "get").mockReturnValue({ ...window.location, assign } as Location);
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/api/bff/mail/oauth/google/start") && init?.method === "POST") {
+        return jsonResponse({ url: "https://accounts.google.com/o/oauth2/v2/auth?prompt=consent" }, 200);
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+
+    renderIntl(<MailboxSettings oauth={oauth} mailboxes={[{ ...box, archive_scope_missing: true }]} members={[]} />);
+
+    const banner = screen.getByTestId("archive-scope-missing");
+    expect(banner.textContent).toContain("Postfach neu verbinden, Berechtigung zum Archivieren fehlt");
+    await userEvent.click(screen.getByRole("button", { name: "Erneut mit Google verbinden" }));
+    await waitFor(() => expect(assign).toHaveBeenCalledWith("https://accounts.google.com/o/oauth2/v2/auth?prompt=consent"));
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith("/oauth/google/start") && init?.method === "POST")).toBe(true);
+  });
+
+  it("shows no archive warning for a mailbox with the permission", () => {
+    renderIntl(<MailboxSettings oauth={oauth} mailboxes={[{ ...box, archive_scope_missing: false }]} members={[]} />);
+    expect(screen.queryByTestId("archive-scope-missing")).not.toBeInTheDocument();
+  });
 });

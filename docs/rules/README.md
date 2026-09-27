@@ -30,6 +30,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M2-02](M2-02.md) | Freigabestufen: Vier-Augen-Prinzip und Superadmin-Umgehung nur hinter Plattformschalter (ADR 0011) | M2, 18.0 | implemented, not accepted |
 | [M2-01](M2-01.md) | Passwortregel und Kontosperre, zweiter Faktor freiwillig, gemerkte Geräte 90 Tage | M2, 3.4 | implemented, not accepted |
 | [M2-07](M2-07.md) | Löschen nur Administrator | M2 | implemented, not accepted |
+| [M4-05](M4-05-objekt-deaktivieren.md) | Objekt deaktivieren bei Beendigung des Verwaltungsverhältnisses, Reaktivierung nur durch den Superadmin | M4, 6.2 | implemented, not accepted |
 | [M10-01](M10-01-kontenrahmen-vorlage.md) | Kontenrahmen-Vorlage nach Anhang A.1 mit vorgeschlagenen Erlöskonten der Mietverwaltung (`review_status = "entwurf"`, Freigabe durch Steuerberatung offen) | M10, 7.2, A.1 | implemented, not accepted (Offene Entscheidung V8, M10-02) |
 | [M10-02](M10-02-kostenkonten-vorbelegung.md) | Kostenkonten der Vorlage als Entwurf nach BetrKV vorbelegt (umlagefähig mit üblichem Schlüssel, sonst nicht umlagefähig, Umsatzsteueroption offen), Seed füllt nur unbesetzte Felder | M10, 7.2, A.1, A.2 | implemented, not accepted (Offene Entscheidung mit Steuerberatung) |
 | [M8-04](M8-04-mehrpersonen-bevollmaechtigte.md) | Mehrpersonen-Parteien aus dem Adressbuch als eine Partei mit Mitgliedern, unklare Fälle zur Prüfung; Bevollmächtigte mit Zustellregel für Versand, Serienbriefe und WEG-Einladungen | M8, M3, M23, 6.1 | implemented, not accepted |

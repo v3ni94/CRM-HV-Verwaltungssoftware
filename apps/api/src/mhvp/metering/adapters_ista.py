@@ -35,6 +35,9 @@ class IstaAdapter(BvedAdapterBase):
         "bved 1.0.2 / 1.0.3 / 1.2.1 / 1.3, geprüft 26.09.2026; on-site-roles 2.0.2 und "
         "billing-input 1.0.3, geprüft 27.09.2026"
     )
+    # Ordnungsbegriffsabgleich (Q8): ``POST /billingunitdata/v1/billingunits/setup/{billingunit}``
+    # (operationId sendSetup) is in the loaded bved billing-unit-data 1.0.2 specification.
+    setup_submission: str | None = "bved billing-unit-data 1.0.2, sendSetup (Q6, Q8)"
     implemented = frozenset(
         {
             Function.BILLING_UNIT_DATA,

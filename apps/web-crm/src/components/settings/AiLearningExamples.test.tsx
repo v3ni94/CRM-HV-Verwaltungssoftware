@@ -31,6 +31,33 @@ describe("AiLearningExamples", () => {
     );
   });
 
+  it("saves the retention months and rejects values outside 1 to 120", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/api/bff/tenant/settings") && init?.method === "PATCH") {
+        return jsonResponse({ ai_learning_examples_retention_months: JSON.parse(String(init.body)).ai_learning_examples_retention_months });
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    renderIntl(<AiLearningExamples initial canUpdate initialRetentionMonths={24} />);
+    const user = userEvent.setup();
+    const input = screen.getByTestId("ai-learning-examples-retention");
+    expect(input).toHaveValue(24);
+    await user.clear(input);
+    await user.type(input, "0");
+    await user.click(screen.getByRole("button", { name: "Aufbewahrung speichern" }));
+    expect(screen.getByRole("alert")).toHaveTextContent("zwischen 1 und 120");
+    expect(fetchMock).not.toHaveBeenCalled();
+
+    await user.clear(input);
+    await user.type(input, "12");
+    await user.click(screen.getByRole("button", { name: "Aufbewahrung speichern" }));
+    await waitFor(() => expect(screen.getByText("Gespeichert.")).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/bff/tenant/settings",
+      expect.objectContaining({ method: "PATCH", body: JSON.stringify({ ai_learning_examples_retention_months: 12 }) }),
+    );
+  });
+
   it("is read only without the update permission", () => {
     renderIntl(<AiLearningExamples initial={false} canUpdate={false} />);
     expect(screen.getByRole("checkbox")).toBeDisabled();

@@ -36,7 +36,11 @@ export default async function CompanySettingsPage() {
       <ManagerEntitySetup initial={managerData} canUpdate={can("tenant_settings:update")} />
       <TicketReplyApprovalAll initial={settings.data.ticket_reply_approval_all} canUpdate={can("tenant_settings:update")} />
       <MeteringModuleSwitch initial={settings.data.metering_module_enabled ?? false} canUpdate={can("tenant_settings:update")} />
-      <AiLearningExamples initial={settings.data.ai_learning_examples_enabled ?? false} canUpdate={can("tenant_settings:update")} />
+      <AiLearningExamples
+        initial={settings.data.ai_learning_examples_enabled ?? false}
+        initialRetentionMonths={settings.data.ai_learning_examples_retention_months ?? 24}
+        canUpdate={can("tenant_settings:update")}
+      />
       <ResolutionKindsSettings
         initial={{
           disabled: settings.data.resolution_kinds?.disabled ?? [],

@@ -195,6 +195,22 @@ def object_storage_check(settings: Settings, client: "S3Client | None") -> Readi
     return check
 
 
+def clamav_check(settings: Settings) -> ReadinessCheck:
+    """Reachability of clamd (``mhvp.documents.scan``); registered only when the scan is on.
+    Exposed under ``clamav`` in the readiness report so monitoring sees a scanner outage."""
+
+    async def check() -> None:
+        from mhvp.documents.scan import scanner_from_settings
+
+        scanner = scanner_from_settings(settings)
+        if scanner is None:
+            raise HealthCheckFailedError("not configured")
+        if not await asyncio.to_thread(scanner.ping):
+            raise HealthCheckFailedError("unavailable")
+
+    return check
+
+
 class ReadinessCache:
     """Single flight plus short TTL so a flood of /ready calls cannot exhaust the pool."""
 

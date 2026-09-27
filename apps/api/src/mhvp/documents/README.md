@@ -19,6 +19,13 @@ letter templates, PDF letters and serial letters.
   unreachable store with `MHVP-DOC-0007` (503, `application/problem+json`, ADR 0004); the
   underlying boto error is logged, the upload aborts before an index row exists
   (`services.store_document` writes the object first, then the row).
+* Malware scan (operator decision 27.09.2026, `scan.py`): `store_document` streams every
+  file to clamd (`INSTREAM`, TCP) before the blob is written, except platform generated PDFs
+  (`DocumentSource.GENERATED`) or `scan_for_malware=False`. A finding answers
+  `MHVP-DOC-0008` (422) and is journaled as `document.malware_rejected` with the signature in
+  an own transaction; an unreachable scanner answers `MHVP-DOC-0009` (503) in mode `enforce`
+  and journals `document.scan_skipped` in mode `warn`. Settings `MHVP_CLAMAV_*`, readiness
+  check `clamav`, runbook `docs/runbooks/virenscan.md`.
 * Drafts: an automatically generated letter (A83, `mhvp.automation`) is marked with
   `Document.source_meta["is_draft"] = true`; `GET /documents?is_draft=true|false` filters on
   that marker (missing key counts as not a draft) and `DocumentHit.is_draft` exposes it.

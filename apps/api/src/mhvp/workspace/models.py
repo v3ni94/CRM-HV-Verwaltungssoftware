@@ -91,11 +91,18 @@ class CalendarEntry(IdMixin, TimestampMixin, TenantMixin, Base):
         String(48), nullable=False, default="appointment", server_default=text("'appointment'")
     )
     # Reminder codes before the start (spec B.30): "0", "5min", "1h", "1d", "14d", "1m",
-    # "3m", "6m"; evaluated by the notification of the deadline list, not by a separate job.
+    # "3m", "6m"; the deadline job (``jobs.notify_reminders``) turns each code into one
+    # notification when its offset is reached.
     reminders: Mapped[list[Any]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
-    # None or {"frequency": daily|weekly|monthly|yearly, "interval": n, "until": date}.
+    # Codes already notified as "<code>@<occurrence date>" (migration 0154): idempotency of
+    # the reminder notifications, per occurrence for recurring entries.
+    reminders_sent: Mapped[list[Any]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    # None or {"frequency": weekly|monthly|yearly, "interval": n, "until": "JJJJ-MM-TT"};
+    # manual entries only, expanded on read (``jobs.expand_occurrences``), never persisted.
     recurrence: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 

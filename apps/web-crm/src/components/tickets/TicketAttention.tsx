@@ -4,39 +4,12 @@ import { useTranslations } from "next-intl";
 
 /** Traffic light of the ticket lists (operator 26.09.2026, rule M19-09). The level is derived
  * on the server from the last staff reaction (status change, assignment, staff comment,
- * outbound mail, work order); the CRM only maps it to colours and an accessible text. */
-export type Attention = "none" | "new" | "stale_24h" | "stale_96h" | "closed";
+ * outbound mail, work order); the CRM only maps it to colours and an accessible text.
+ * Types and pure helpers (asAttention, hoursSince, ATTENTION_BORDER) live in ./attention.ts so
+ * that server components can call them; this file holds the client components only. */
+import { ATTENTION_DOT, ATTENTION_LEVELS, hoursSince, type Attention } from "@/components/tickets/attention";
 
-export const ATTENTION_LEVELS: Attention[] = ["stale_96h", "stale_24h", "new", "closed"];
-
-/** Left border colour per level: green closed, yellow new, orange 24 h, red 96 h. */
-export const ATTENTION_BORDER: Record<Attention, string> = {
-  none: "border-l-4 border-l-transparent",
-  new: "border-l-4 border-l-yellow-400",
-  stale_24h: "border-l-4 border-l-orange-500",
-  stale_96h: "border-l-4 border-l-red-600",
-  closed: "border-l-4 border-l-emerald-500",
-};
-
-const ATTENTION_DOT: Record<Attention, string> = {
-  none: "bg-transparent",
-  new: "bg-yellow-400",
-  stale_24h: "bg-orange-500",
-  stale_96h: "bg-red-600",
-  closed: "bg-emerald-500",
-};
-
-export function asAttention(value: unknown): Attention {
-  return value === "new" || value === "stale_24h" || value === "stale_96h" || value === "closed" ? value : "none";
-}
-
-/** Whole hours since the reference time, never negative. */
-export function hoursSince(iso: string | null | undefined, now: Date = new Date()): number {
-  if (!iso) return 0;
-  const at = new Date(iso).getTime();
-  if (Number.isNaN(at)) return 0;
-  return Math.max(0, Math.floor((now.getTime() - at) / 3_600_000));
-}
+export type { Attention } from "@/components/tickets/attention";
 
 /** Accessible text such as "Seit 3 Tagen ohne Reaktion"; empty for level none. */
 export function useAttentionLabel(): (attention: Attention, lastActivityAt: string | null | undefined) => string {

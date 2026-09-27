@@ -20,10 +20,13 @@ import httpx
 from mhvp.core.webhooks import PinnedTarget
 from mhvp.metering import bved
 from mhvp.metering.adapters import (
+    SETUP_COMPLETED,
+    SETUP_OPEN,
     ConnectionTestResult,
     DocumentRecord,
     ExternalBillingUnitData,
     FetchResult,
+    SetupStatus,
     TestOutcome,
     WriteResult,
 )
@@ -58,6 +61,9 @@ class BvedAdapterBase:
     spec_source = ""
     spec_version = ""
     implemented: frozenset[Function] = frozenset()
+    # Documented setup submission (bved billing-unit-data 1.0.2 ``sendSetup``), set by the
+    # provider adapter when the operation is in its loaded specification.
+    setup_submission: str | None = None
     required_secrets: frozenset[str] = frozenset()  # checked per family instead
     families: ClassVar[dict[Function, Family]] = {}
     # Test injection: transport (httpx.MockTransport), pin (no DNS) and sleep (no backoff wait).
@@ -429,7 +435,12 @@ class BvedAdapterBase:
         external_billing_unit: str,
         residential_units: Sequence[Mapping[str, Any]],
         customer_number: str,
-    ) -> str:
+        pm_number: str | None = None,
+    ) -> WriteResult:
+        if self.setup_submission is None:
+            raise NotImplementedError(
+                "Übermittlung des Ordnungsbegriffsabgleichs: Dokumentation erforderlich."
+            )
         self.check_environment(config, environment)
         family = self._family(Function.BILLING_UNIT_DATA)
         base = self.base_url(config, environment, family)
@@ -442,7 +453,49 @@ class BvedAdapterBase:
                 billing_unit=external_billing_unit,
                 customer_number=customer_number,
                 residential_units=residential_units,
-                pm_number=None,
+                pm_number=pm_number,
+            )
+
+    def fetch_billing_unit_setup(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+    ) -> SetupStatus:
+        """Read only (Q8): the billing unit list carries ``setupstatus``; the ``SetupResult``
+        is read only for ``COMPLETED``. GET calls may be repeated, nothing is written."""
+        if Function.BILLING_UNIT_DATA not in self.implemented:
+            raise NotImplementedError(
+                "Billing Unit Data ist für diesen Anbieter nicht implementiert."
+            )
+        self.check_environment(config, environment)
+        family = self._family(Function.BILLING_UNIT_DATA)
+        base = self.base_url(config, environment, family)
+        auth = self.auth_for(family, config, secrets, environment)
+        with self._http(config, secrets, environment) as http:
+            entries = bved.list_billing_units(http, base, auth=auth, since=None)
+            entry = next(
+                (
+                    e
+                    for e in entries
+                    if str(e.get("billingunitMscnumber") or "") == external_billing_unit
+                ),
+                None,
+            )
+            if entry is None:
+                return SetupStatus(status=SETUP_OPEN, found=False)
+            status = str(entry.get("setupstatus") or SETUP_OPEN)
+            result = None
+            if status == SETUP_COMPLETED:
+                result = bved.setup_result(
+                    http, base, auth=auth, billing_unit=external_billing_unit
+                )
+            return SetupStatus(
+                status=status,
+                result=result,
+                raw={k: v for k, v in entry.items() if k != "address"},
             )
 
     def fetch_billing_template(

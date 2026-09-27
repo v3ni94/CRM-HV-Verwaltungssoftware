@@ -65,6 +65,15 @@ class PropertyStatus(StrEnum):
     TERMINATED = "terminated"
 
 
+class TerminatedBy(StrEnum):
+    """Who gave notice on the management relationship (operator 27.09.2026)."""
+
+    MANAGER = "manager"
+    OWNER = "owner"
+    HOA = "hoa"
+    OTHER = "other"
+
+
 class LegalEntityKind(StrEnum):
     HOA = "hoa"  # Gemeinschaft der Wohnungseigentümer (GdWE)
     RENTAL_OWNER = "rental_owner"
@@ -277,6 +286,43 @@ class Property(IdMixin, TimestampMixin, TenantMixin, Base):
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
     # Energieausweis: only on the building (operator decision 26.09.2026, migration 0149).
+
+
+class PropertyTermination(IdMixin, TimestampMixin, TenantMixin, Base):
+    """End of the management relationship (operator 27.09.2026): who gave notice, when, the
+    end of management, successors and the notice letter. One open termination per property
+    (partial unique index); a reactivation by the superadmin closes it (``reactivated_at``)
+    and restores ``previous_status``. Rows are never deleted."""
+
+    __tablename__ = "property_termination"
+    __table_args__ = (
+        Index(
+            "uq_property_termination_open",
+            "tenant_id",
+            "property_id",
+            unique=True,
+            postgresql_where=text("reactivated_at IS NULL"),
+        ),
+        CheckConstraint("effective_date >= notice_date", name="dates_ordered"),
+    )
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
+    terminated_by: Mapped[TerminatedBy] = mapped_column(
+        _enum(TerminatedBy, "property_terminated_by"), nullable=False
+    )
+    notice_date: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_date: Mapped[date] = mapped_column(Date, nullable=False)
+    previous_status: Mapped[PropertyStatus] = mapped_column(
+        _enum(PropertyStatus, "property_status"), nullable=False
+    )
+    successor_manager_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id", nullable=True)
+    successor_owner_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id", nullable=True)
+    notice_document_id: Mapped[uuid.UUID | None] = _fk(
+        "document.id", nullable=True, ondelete="SET NULL"
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    reactivated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    reactivated_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
 class LegalEntity(IdMixin, TimestampMixin, TenantMixin, Base):

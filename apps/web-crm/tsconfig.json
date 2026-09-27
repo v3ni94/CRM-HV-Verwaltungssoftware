@@ -1,10 +1,32 @@
 {
   "extends": "@mhvp/config/tsconfig.base.json",
   "compilerOptions": {
-    "plugins": [{ "name": "next" }],
-    "paths": { "@/*": ["./src/*"] },
-    "types": ["node", "vitest/globals", "@testing-library/jest-dom/vitest"]
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ]
+    },
+    "types": [
+      "node",
+      "vitest/globals",
+      "@testing-library/jest-dom/vitest"
+    ]
   },
-  "include": ["next-env.d.ts", "src", "e2e", "*.ts", "*.mts", ".next/types/**/*.ts"],
-  "exclude": ["node_modules"]
+  "include": [
+    "*.mts",
+    "*.ts",
+    ".next/types/**/*.ts",
+    "e2e",
+    "next-env.d.ts",
+    "src",
+    ".next-check/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules"
+  ]
 }

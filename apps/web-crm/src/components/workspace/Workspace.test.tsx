@@ -158,3 +158,35 @@ describe("ThemeToggle", () => {
     expect(document.documentElement.hasAttribute("data-theme")).toBe(false);
   });
 });
+
+describe("CalendarView recurrence", () => {
+  it("shows every occurrence of a recurring entry with the recurrence label", async () => {
+    const occurrence = (date: string) => ({
+      kind: "appointment",
+      title: "Jour fixe",
+      date,
+      ends_on: null,
+      entity_type: "calendar_entry",
+      entity_id: ID,
+      property_id: null,
+      editable: true,
+      source: "internal",
+      calendar_label: null,
+      google_event_id: null,
+      mailbox_id: null,
+      reminders: ["1d"],
+      recurrence: { frequency: "weekly", interval: 1, until: "2026-09-30" },
+    });
+    fetchMock.mockImplementation(() =>
+      Promise.resolve(jsonResponse({ items: [occurrence("2026-09-07"), occurrence("2026-09-14")], notices: [] })),
+    );
+    renderIntl(<CalendarView initialYear={2026} initialMonth={8} />);
+    expect(await screen.findAllByText("Jour fixe")).toHaveLength(2);
+    expect(screen.getByText("07.09.2026")).toBeInTheDocument();
+    expect(screen.getByText("14.09.2026")).toBeInTheDocument();
+    const badges = screen.getAllByTestId("calendar-recurring");
+    expect(badges).toHaveLength(2);
+    expect(badges[0]).toHaveTextContent("Wiederkehrend (Wöchentlich)");
+    expect(screen.getAllByText(/Erinnerung: 1 Tag vorher/)).toHaveLength(2);
+  });
+});

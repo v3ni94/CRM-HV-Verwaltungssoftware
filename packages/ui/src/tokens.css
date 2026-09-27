@@ -1,124 +1,183 @@
 /*
- * Design tokens for all MHVP web apps.
+ * Design tokens for all MHVP web apps (operator decision 27.09.2026, design proposal 4:
+ * calm typography and colour system).
  *
- * Default theme: corporate identity of the product owner Müller Holding AG ("Goldpunkt",
- * skill mhag-ci): mustard gold #E3AC48 as the only accent, anthracite #2E2D2E for text, grey
- * #9F9F9F for secondary information, warm beige #FBF6EC for surfaces. Gold is used for lines,
- * markers and focus, never for running text. Tenant branding (V14) overrides these variables
- * at runtime from GET /api/v1/tenant/branding; nothing here is hard coded in components.
- *
- * This file also carries a refined scale (spacing, radius, shadow, type) so the product reads
- * as a modern SaaS surface rather than a plain document theme. No new brand colours are
- * introduced; only tints and shadow levels derived from the existing CI palette.
+ * Principles
+ * - Neutral base palette until the corporate colours are released (OPEN_QUESTIONS M1-08).
+ *   Tenant branding (V14) overrides the variables at runtime from GET /api/v1/tenant/branding;
+ *   nothing here is hard coded in components.
+ * - Colour only as meaning: semantic tokens success, warning, danger, info, muted, accent.
+ *   The accent marks interactive state (focus, active, links, markers), never running text.
+ * - Cards without shadows: hairlines (1px border) separate surfaces; shadows remain only for
+ *   floating layers (menus, dialogs, toasts).
+ * - Dark mode is calibrated separately (not inverted) and reachable via prefers-color-scheme
+ *   and data-theme on <html>.
+ * - All foreground/background pairs meet WCAG AA (contrast table in docs/design/tokens.md).
+ * - The legacy names (gold, anthracite, rail) stay as aliases so existing class names keep
+ *   working; gold now resolves to the neutral accent until M1-08 is decided.
  */
 :root {
   color-scheme: light dark;
 
+  /* Surfaces and text */
   --mhvp-color-bg: #ffffff;
-  --mhvp-color-surface: #fbf6ec;
-  --mhvp-color-surface-2: #f4ede0;
-  --mhvp-color-fg: #2e2d2e;
-  --mhvp-color-muted: #6f6e70;
-  --mhvp-color-subtle: #9f9f9f;
-  --mhvp-color-border: #e6e1d6;
-  --mhvp-color-border-soft: #efe9dd;
-  --mhvp-color-gold: #e3ac48;
-  --mhvp-color-gold-soft: #f6e6c2;
-  --mhvp-color-gold-tint: #fbf2dd;
-  --mhvp-color-anthracite-soft: #eeecec;
-  --mhvp-color-accent: #2e2d2e;
+  --mhvp-color-surface: #f6f6f7;
+  --mhvp-color-surface-2: #ededf0;
+  --mhvp-color-fg: #1f1f23;
+  --mhvp-color-muted: #5c5c66;
+  --mhvp-color-subtle: #75757f;
+  --mhvp-color-border: #d9d9df;
+  --mhvp-color-border-soft: #e8e8ec;
+  --mhvp-color-hairline: var(--mhvp-color-border);
+
+  /* Primary action (neutral, calm) */
+  --mhvp-color-primary: #1f1f23;
+  --mhvp-color-primary-fg: #ffffff;
+  --mhvp-color-primary-hover: #33333a;
+
+  /* Accent: interactive meaning (focus, active, links, markers) */
+  --mhvp-color-accent: #2f5e95;
   --mhvp-color-accent-fg: #ffffff;
+  --mhvp-color-accent-soft: #dfe8f3;
+  --mhvp-color-accent-tint: #f0f4f9;
+
+  /* Semantic states: bg for fills, fg for text on the fill or on bg, line for borders */
+  --mhvp-color-success-bg: #e3f1e8;
+  --mhvp-color-success-fg: #1a5a33;
+  --mhvp-color-success-line: #9cc9ab;
+  --mhvp-color-warning-bg: #fbeed3;
+  --mhvp-color-warning-fg: #6f4a0a;
+  --mhvp-color-warning-line: #e2c27a;
+  --mhvp-color-danger-bg: #fbe7e7;
+  --mhvp-color-danger-fg: #8b1d1d;
+  --mhvp-color-danger-line: #e5a3a3;
+  --mhvp-color-info-bg: #e4edf7;
+  --mhvp-color-info-fg: #1f4a75;
+  --mhvp-color-info-line: #a4bfdc;
+  --mhvp-color-muted-bg: var(--mhvp-color-surface);
+  --mhvp-color-muted-fg: var(--mhvp-color-muted);
+
+  /* Focus ring (consistent across inputs, buttons, links, cards) */
+  --mhvp-focus-ring-color: var(--mhvp-color-accent);
+  --mhvp-focus-ring-width: 2px;
+  --mhvp-focus-ring-offset: 2px;
 
   /* Dark, calm sidebar rail; distinct from the page background in both themes. */
-  --mhvp-color-rail-bg: #23222a;
-  --mhvp-color-rail-fg: #efece6;
-  --mhvp-color-rail-muted: #a9a6a4;
-  --mhvp-color-rail-border: #34333b;
-  --mhvp-color-rail-hover: #2c2b33;
-  --mhvp-color-rail-active: #34333c;
+  --mhvp-color-rail-bg: #1d1d22;
+  --mhvp-color-rail-fg: #ececef;
+  --mhvp-color-rail-muted: #a3a3ab;
+  --mhvp-color-rail-border: #2d2d34;
+  --mhvp-color-rail-hover: #27272e;
+  --mhvp-color-rail-active: #313139;
 
-  --mhvp-color-success-bg: #e8f3ec;
-  --mhvp-color-success-fg: #1c5c34;
-  --mhvp-color-warning-bg: #fbf0d6;
-  --mhvp-color-warning-fg: #7a5410;
-  --mhvp-color-danger-bg: #fbeaea;
-  --mhvp-color-danger-fg: #8a1f1f;
+  /* Legacy aliases (kept for existing class names; see header). */
+  --mhvp-color-gold: var(--mhvp-color-accent);
+  --mhvp-color-gold-soft: var(--mhvp-color-accent-soft);
+  --mhvp-color-gold-tint: var(--mhvp-color-accent-tint);
+  --mhvp-color-anthracite-soft: var(--mhvp-color-surface-2);
 
-  /* Spacing scale (rem), for callers that want a token instead of a Tailwind class. */
-  --mhvp-space-1: 0.25rem;
-  --mhvp-space-2: 0.5rem;
-  --mhvp-space-3: 0.75rem;
-  --mhvp-space-4: 1rem;
-  --mhvp-space-6: 1.5rem;
-  --mhvp-space-8: 2rem;
+  /* 8 point spacing scale */
+  --mhvp-space-0-5: 0.25rem; /* 4px */
+  --mhvp-space-1: 0.5rem; /* 8px */
+  --mhvp-space-2: 1rem; /* 16px */
+  --mhvp-space-3: 1.5rem; /* 24px */
+  --mhvp-space-4: 2rem; /* 32px */
+  --mhvp-space-5: 2.5rem; /* 40px */
+  --mhvp-space-6: 3rem; /* 48px */
+  --mhvp-space-8: 4rem; /* 64px */
 
-  /* Radius scale. */
-  --mhvp-radius-sm: 0.5rem;
-  --mhvp-radius-md: 0.75rem;
-  --mhvp-radius-lg: 1rem;
-  --mhvp-radius-xl: 1.5rem;
+  /* Radius scale */
+  --mhvp-radius-sm: 0.375rem;
+  --mhvp-radius-md: 0.5rem;
+  --mhvp-radius-lg: 0.75rem;
+  --mhvp-radius-xl: 1rem;
   --mhvp-radius: var(--mhvp-radius-sm);
 
-  /* Soft, layered shadows (never a hard single drop shadow). */
-  --mhvp-shadow-xs: 0 1px 2px rgba(46, 45, 46, 0.05);
-  --mhvp-shadow-sm: 0 1px 2px rgba(46, 45, 46, 0.06), 0 4px 10px rgba(46, 45, 46, 0.05);
-  --mhvp-shadow-md: 0 2px 4px rgba(46, 45, 46, 0.05), 0 10px 24px rgba(46, 45, 46, 0.07);
-  --mhvp-shadow-lg: 0 8px 16px rgba(46, 45, 46, 0.06), 0 24px 48px rgba(46, 45, 46, 0.1);
+  /* Shadows: only for floating layers; cards use hairlines (shadow-card is none). */
+  --mhvp-shadow-none: 0 0 #0000;
+  --mhvp-shadow-xs: 0 1px 2px rgba(31, 31, 35, 0.06);
+  --mhvp-shadow-sm: 0 1px 2px rgba(31, 31, 35, 0.06), 0 4px 10px rgba(31, 31, 35, 0.05);
+  --mhvp-shadow-md: 0 2px 4px rgba(31, 31, 35, 0.05), 0 10px 24px rgba(31, 31, 35, 0.08);
+  --mhvp-shadow-lg: 0 8px 16px rgba(31, 31, 35, 0.06), 0 24px 48px rgba(31, 31, 35, 0.1);
+  --mhvp-shadow-card: var(--mhvp-shadow-none);
   --mhvp-shadow: var(--mhvp-shadow-sm);
 
-  /* Type scale: display, h1, h2, body, caption. */
-  --mhvp-font-display-size: 1.875rem;
-  --mhvp-font-display-line: 2.25rem;
+  /* Type scale: display, h1, h2, h3, body, small, mono. */
+  --mhvp-font-display-size: 2rem; /* 32px */
+  --mhvp-font-display-line: 2.5rem; /* 40px */
   --mhvp-font-display-tracking: -0.02em;
-  --mhvp-font-h1-size: 1.5rem;
-  --mhvp-font-h1-line: 1.9rem;
+  --mhvp-font-display-weight: 600;
+  --mhvp-font-h1-size: 1.5rem; /* 24px */
+  --mhvp-font-h1-line: 2rem; /* 32px */
   --mhvp-font-h1-tracking: -0.015em;
-  --mhvp-font-h2-size: 1.125rem;
-  --mhvp-font-h2-line: 1.5rem;
+  --mhvp-font-h1-weight: 600;
+  --mhvp-font-h2-size: 1.125rem; /* 18px */
+  --mhvp-font-h2-line: 1.5rem; /* 24px */
   --mhvp-font-h2-tracking: -0.01em;
-  --mhvp-font-body-size: 0.875rem;
-  --mhvp-font-body-line: 1.4rem;
-  --mhvp-font-caption-size: 0.75rem;
-  --mhvp-font-caption-line: 1rem;
+  --mhvp-font-h2-weight: 600;
+  --mhvp-font-h3-size: 1rem; /* 16px */
+  --mhvp-font-h3-line: 1.5rem; /* 24px */
+  --mhvp-font-h3-tracking: 0;
+  --mhvp-font-h3-weight: 600;
+  --mhvp-font-body-size: 0.875rem; /* 14px */
+  --mhvp-font-body-line: 1.375rem; /* 22px */
+  --mhvp-font-small-size: 0.75rem; /* 12px */
+  --mhvp-font-small-line: 1rem; /* 16px */
+  --mhvp-font-caption-size: var(--mhvp-font-small-size);
+  --mhvp-font-caption-line: var(--mhvp-font-small-line);
+  --mhvp-font-mono-size: 0.8125rem; /* 13px */
+  --mhvp-font-mono-line: 1.25rem; /* 20px */
 
   --mhvp-motion-fast: 150ms;
   --mhvp-motion: 200ms;
   --mhvp-motion-ease: cubic-bezier(0.2, 0, 0, 1);
 
-  --mhvp-font-sans: Carlito, Calibri, "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  /* Inter is loaded per app via next/font/google (variable --font-inter); no external CSS. */
+  --mhvp-font-sans: var(--font-inter, "Inter"), system-ui, "Segoe UI", Roboto, sans-serif;
+  --mhvp-font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
 }
 
 /* Dark mode follows the system unless the user picked a theme (data-theme on <html>, M9). */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --mhvp-color-bg: #17161a;
-    --mhvp-color-surface: #1e1d22;
-    --mhvp-color-surface-2: #26252b;
-    --mhvp-color-fg: #efece6;
-    --mhvp-color-muted: #b3b0aa;
-    --mhvp-color-subtle: #8a8886;
-    --mhvp-color-border: #34333a;
-    --mhvp-color-border-soft: #2a292f;
-    --mhvp-color-gold: #e6b458;
-    --mhvp-color-gold-soft: #4a3a1c;
-    --mhvp-color-gold-tint: #2c2515;
-    --mhvp-color-anthracite-soft: #26252b;
-    --mhvp-color-accent: #e3ac48;
-    --mhvp-color-accent-fg: #201c10;
+    --mhvp-color-bg: #141417;
+    --mhvp-color-surface: #1b1b20;
+    --mhvp-color-surface-2: #232329;
+    --mhvp-color-fg: #ececef;
+    --mhvp-color-muted: #b0b0b8;
+    --mhvp-color-subtle: #8f8f98;
+    --mhvp-color-border: #33333b;
+    --mhvp-color-border-soft: #26262d;
 
-    --mhvp-color-rail-bg: #131218;
-    --mhvp-color-rail-fg: #efece6;
-    --mhvp-color-rail-muted: #93908d;
-    --mhvp-color-rail-border: #262530;
-    --mhvp-color-rail-hover: #1c1b22;
-    --mhvp-color-rail-active: #22212a;
+    --mhvp-color-primary: #ececef;
+    --mhvp-color-primary-fg: #141417;
+    --mhvp-color-primary-hover: #d8d8dd;
+
+    --mhvp-color-accent: #8db4e6;
+    --mhvp-color-accent-fg: #0f1a28;
+    --mhvp-color-accent-soft: #24354a;
+    --mhvp-color-accent-tint: #1b2634;
 
     --mhvp-color-success-bg: #16301f;
     --mhvp-color-success-fg: #9fd8b2;
-    --mhvp-color-warning-bg: #3d2f12;
+    --mhvp-color-success-line: #2f5b3e;
+    --mhvp-color-warning-bg: #3a2d10;
     --mhvp-color-warning-fg: #f0cf84;
+    --mhvp-color-warning-line: #6b5420;
     --mhvp-color-danger-bg: #3a1717;
     --mhvp-color-danger-fg: #f2aaaa;
+    --mhvp-color-danger-line: #6e2c2c;
+    --mhvp-color-info-bg: #182a3f;
+    --mhvp-color-info-fg: #a9c8ec;
+    --mhvp-color-info-line: #2f4b6d;
+
+    --mhvp-color-rail-bg: #0f0f12;
+    --mhvp-color-rail-fg: #ececef;
+    --mhvp-color-rail-muted: #93939b;
+    --mhvp-color-rail-border: #222227;
+    --mhvp-color-rail-hover: #1a1a1f;
+    --mhvp-color-rail-active: #232329;
+
     --mhvp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
     --mhvp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
     --mhvp-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.35);
@@ -129,34 +188,44 @@
 
 :root[data-theme="dark"] {
   color-scheme: dark;
-  --mhvp-color-bg: #17161a;
-  --mhvp-color-surface: #1e1d22;
-  --mhvp-color-surface-2: #26252b;
-  --mhvp-color-fg: #efece6;
-  --mhvp-color-muted: #b3b0aa;
-  --mhvp-color-subtle: #8a8886;
-  --mhvp-color-border: #34333a;
-  --mhvp-color-border-soft: #2a292f;
-  --mhvp-color-gold: #e6b458;
-  --mhvp-color-gold-soft: #4a3a1c;
-  --mhvp-color-gold-tint: #2c2515;
-  --mhvp-color-anthracite-soft: #26252b;
-  --mhvp-color-accent: #e3ac48;
-  --mhvp-color-accent-fg: #201c10;
+  --mhvp-color-bg: #141417;
+  --mhvp-color-surface: #1b1b20;
+  --mhvp-color-surface-2: #232329;
+  --mhvp-color-fg: #ececef;
+  --mhvp-color-muted: #b0b0b8;
+  --mhvp-color-subtle: #8f8f98;
+  --mhvp-color-border: #33333b;
+  --mhvp-color-border-soft: #26262d;
 
-  --mhvp-color-rail-bg: #131218;
-  --mhvp-color-rail-fg: #efece6;
-  --mhvp-color-rail-muted: #93908d;
-  --mhvp-color-rail-border: #262530;
-  --mhvp-color-rail-hover: #1c1b22;
-  --mhvp-color-rail-active: #22212a;
+  --mhvp-color-primary: #ececef;
+  --mhvp-color-primary-fg: #141417;
+  --mhvp-color-primary-hover: #d8d8dd;
+
+  --mhvp-color-accent: #8db4e6;
+  --mhvp-color-accent-fg: #0f1a28;
+  --mhvp-color-accent-soft: #24354a;
+  --mhvp-color-accent-tint: #1b2634;
 
   --mhvp-color-success-bg: #16301f;
   --mhvp-color-success-fg: #9fd8b2;
-  --mhvp-color-warning-bg: #3d2f12;
+  --mhvp-color-success-line: #2f5b3e;
+  --mhvp-color-warning-bg: #3a2d10;
   --mhvp-color-warning-fg: #f0cf84;
+  --mhvp-color-warning-line: #6b5420;
   --mhvp-color-danger-bg: #3a1717;
   --mhvp-color-danger-fg: #f2aaaa;
+  --mhvp-color-danger-line: #6e2c2c;
+  --mhvp-color-info-bg: #182a3f;
+  --mhvp-color-info-fg: #a9c8ec;
+  --mhvp-color-info-line: #2f4b6d;
+
+  --mhvp-color-rail-bg: #0f0f12;
+  --mhvp-color-rail-fg: #ececef;
+  --mhvp-color-rail-muted: #93939b;
+  --mhvp-color-rail-border: #222227;
+  --mhvp-color-rail-hover: #1a1a1f;
+  --mhvp-color-rail-active: #232329;
+
   --mhvp-shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.35);
   --mhvp-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 12px rgba(0, 0, 0, 0.3);
   --mhvp-shadow-md: 0 2px 4px rgba(0, 0, 0, 0.35), 0 12px 28px rgba(0, 0, 0, 0.35);

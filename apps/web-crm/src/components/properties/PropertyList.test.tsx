@@ -29,6 +29,14 @@ const ROWS = [
     status: "active",
     owner_missing: false,
   },
+  {
+    id: "p4",
+    number: "401",
+    name: "Alte Straße 1",
+    management_type: "hoa",
+    status: "terminated",
+    owner_missing: false,
+  },
 ];
 
 describe("PropertyList", () => {
@@ -43,5 +51,19 @@ describe("PropertyList", () => {
     const cards = screen.getAllByTestId("property-card");
     expect(within(cards[0]!).getByText("Eigentümer fehlt")).toBeInTheDocument();
     expect(within(cards[1]!).queryByText("Eigentümer fehlt")).toBeNull();
+  });
+
+  it("greys out deactivated properties and labels them with the status chip", () => {
+    renderIntl(<PropertyList rows={ROWS} />);
+    const table = screen.getByTestId("properties");
+    const rows = within(table).getAllByRole("row").slice(1);
+    expect(rows[3]).toHaveAttribute("data-status", "terminated");
+    expect(rows[3]!.className).toContain("opacity-60");
+    expect(rows[0]!.className).not.toContain("opacity-60");
+    expect(within(rows[3]!).getByText("Deaktiviert")).toBeInTheDocument();
+    expect(within(rows[0]!).getByText("Aktiv")).toBeInTheDocument();
+    const cards = screen.getAllByTestId("property-card");
+    expect(cards[3]).toHaveAttribute("data-status", "terminated");
+    expect(within(cards[3]!).getByText("Deaktiviert")).toBeInTheDocument();
   });
 });

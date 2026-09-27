@@ -39,8 +39,10 @@ describe("inline master data sections (AP8)", () => {
     await userEvent.clear(city);
     await userEvent.type(city, "Langenfeld");
     await userEvent.tab();
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    // The property type select loads its catalogue (GET); the save is the one PATCH call.
+    const patches = () => fetchMock.mock.calls.filter(([, i]) => (i as RequestInit | undefined)?.method === "PATCH");
+    await waitFor(() => expect(patches()).toHaveLength(1));
+    const [url, init] = patches()[0] as [string, RequestInit];
     expect(url).toBe(`/api/bff/properties/${PROPERTY.id}`);
     expect(init.method).toBe("PATCH");
     expect(new Headers(init.headers).get("if-match")).toBe("2");

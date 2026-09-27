@@ -1,10 +1,13 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { THEME_SCRIPT } from "@/components/workspace/ThemeToggle";
 
 import "./globals.css";
+
+const inter = Inter({ subsets: ["latin"], variable: "--font-inter", display: "swap" });
 
 export async function generateMetadata(): Promise<Metadata> {
   const t = await getTranslations("Metadata");
@@ -27,7 +30,7 @@ export const viewport: Viewport = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   return (
-    <html lang={locale} suppressHydrationWarning>
+    <html lang={locale} className={inter.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>

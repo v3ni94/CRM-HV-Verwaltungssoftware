@@ -6,15 +6,17 @@ from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
-from sqlalchemy import and_, or_, select
+from sqlalchemy import and_, cast, or_, select
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact, Party, PartyMember, PartyRole
-from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 from mhvp.properties.models import (
     AllocationKey,
     AllocationKeyTemplate,
     BankAccountKind,
+    Building,
     CatalogEntry,
     CustomFieldDefinition,
     LegalEntity,
@@ -24,7 +26,9 @@ from mhvp.properties.models import (
     Property,
     PropertyOwner,
     PropertyStatus,
+    ServiceProviderRelation,
     SubCommunity,
+    Unit,
     UnitAllocationValue,
     UnitVacancyAllocationValue,
 )
@@ -141,9 +145,48 @@ async def check_catalog(session: AsyncSession, catalog: str, code: str | None) -
         raise invalid(f"Unbekannter Katalogeintrag {code!r} im Katalog {catalog}.")
 
 
+def _field_error(key: str, label: str, code: str, message: str) -> ProblemError:
+    """422 with a field error for ``custom_fields.<key>`` (ADR 0004)."""
+    return ProblemError(
+        ErrorCodes.VALIDATION,
+        detail=f"Zusatzfeld {label}: {message}",
+        errors=[
+            FieldError(
+                location=["body", "custom_fields", key],
+                field=f"custom_fields.{key}",
+                code=code,
+                message=message,
+            )
+        ],
+    )
+
+
+# Entities whose custom field values live in a JSONB column; uniqueness is checked there.
+_CUSTOM_FIELD_TABLES: dict[str, type[Any]] = {
+    "property": Property,
+    "building": Building,
+    "unit": Unit,
+    "service_provider_relation": ServiceProviderRelation,
+}
+
+
 async def check_custom_fields(
-    session: AsyncSession, entity_type: str, values: dict[str, Any]
-) -> None:
+    session: AsyncSession,
+    entity_type: str,
+    values: dict[str, Any],
+    *,
+    management_type: ManagementType | str | None = None,
+    contract_kind: str | None = None,
+    entity_id: uuid.UUID | None = None,
+    create: bool = False,
+) -> dict[str, Any]:
+    """Checks the values of the custom fields of one entity (4.11, B.28) and returns the
+    values to store. Rules: only defined keys; validity per management type and contract kind
+    (a value for a field that is not valid in this context is refused, a required field that
+    is not valid is not required); default value on create when the key is missing; required;
+    type; minimum and maximum (value bounds for numbers, length bounds for texts); choice
+    options; uniqueness within the tenant per entity type (``uniqueness`` other than
+    ``none``), ignoring the entity itself. Every refusal is a 422 with a field error."""
     definitions = {
         d.key: d
         for d in (
@@ -156,29 +199,85 @@ async def check_custom_fields(
     }
     unknown = sorted(set(values) - set(definitions))
     if unknown:
-        raise invalid(f"Unbekannte Zusatzfelder: {', '.join(unknown)}.")
+        raise _field_error(
+            unknown[0], unknown[0], "unknown", f"Unbekannte Zusatzfelder: {', '.join(unknown)}."
+        )
+    mt = management_type.value if isinstance(management_type, ManagementType) else management_type
+    result = dict(values)
     for key, definition in definitions.items():
-        value = values.get(key)
+        applies = _definition_applies(definition, mt, contract_kind)
+        present = key in result and result[key] is not None
+        if not applies:
+            if present:
+                raise _field_error(
+                    key, definition.label, "not_applicable", "gilt nicht für diesen Kontext."
+                )
+            continue
+        if create and key not in result and definition.default_value is not None:
+            result[key] = definition.default_value
+        value = result.get(key)
         if value is None:
             if definition.required:
-                raise invalid(f"Zusatzfeld {definition.label} ist Pflicht.")
+                raise _field_error(key, definition.label, "required", "ist Pflicht.")
             continue
         if not _custom_value_ok(definition, value):
-            raise invalid(f"Zusatzfeld {definition.label} hat den falschen Typ.")
+            raise _field_error(key, definition.label, "type", "hat den falschen Typ.")
         if definition.field_type in _NUMERIC_TYPES:
             number = Decimal(str(value))
             if definition.min_value is not None and number < definition.min_value:
-                raise invalid(f"Zusatzfeld {definition.label} unterschreitet das Minimum.")
+                raise _field_error(key, definition.label, "min", "unterschreitet das Minimum.")
             if definition.max_value is not None and number > definition.max_value:
-                raise invalid(f"Zusatzfeld {definition.label} überschreitet das Maximum.")
+                raise _field_error(key, definition.label, "max", "überschreitet das Maximum.")
         elif definition.field_type in _TEXT_TYPES and isinstance(value, str):
             length = Decimal(len(value))
             if definition.min_value is not None and length < definition.min_value:
-                raise invalid(f"Zusatzfeld {definition.label} ist zu kurz.")
+                raise _field_error(key, definition.label, "min", "ist zu kurz.")
             if definition.max_value is not None and length > definition.max_value:
-                raise invalid(f"Zusatzfeld {definition.label} ist zu lang.")
+                raise _field_error(key, definition.label, "max", "ist zu lang.")
         elif definition.field_type == "choice" and value not in definition.options:
-            raise invalid(f"Zusatzfeld {definition.label}: unbekannter Auswahlwert.")
+            raise _field_error(key, definition.label, "choice", "unbekannter Auswahlwert.")
+        if definition.uniqueness != "none" and not await _unique_value_free(
+            session, entity_type, key, value, entity_id
+        ):
+            raise _field_error(
+                key, definition.label, "unique", "ist bereits bei einem anderen Datensatz vergeben."
+            )
+    return result
+
+
+def _definition_applies(
+    definition: CustomFieldDefinition, management_type: str | None, contract_kind: str | None
+) -> bool:
+    """A definition without restriction applies everywhere; a restriction is only checked
+    when the context is known (management type of the property, kind of the contract)."""
+    if (
+        definition.valid_for_management_types
+        and management_type is not None
+        and management_type not in definition.valid_for_management_types
+    ):
+        return False
+    return not (
+        definition.valid_for_contract_kinds
+        and contract_kind is not None
+        and contract_kind not in definition.valid_for_contract_kinds
+    )
+
+
+async def _unique_value_free(
+    session: AsyncSession,
+    entity_type: str,
+    key: str,
+    value: Any,
+    entity_id: uuid.UUID | None,
+) -> bool:
+    """True when no other row of the entity type (tenant scoped by RLS) holds the value."""
+    model = _CUSTOM_FIELD_TABLES.get(entity_type)
+    if model is None:
+        return True
+    stmt = select(model.id).where(model.custom_fields[key] == cast(value, JSONB))
+    if entity_id is not None:
+        stmt = stmt.where(model.id != entity_id)
+    return (await session.scalar(stmt.limit(1))) is None
 
 
 # B.28 field types (catalogs.CUSTOM_FIELD_TYPES). Minimum and maximum apply to numeric

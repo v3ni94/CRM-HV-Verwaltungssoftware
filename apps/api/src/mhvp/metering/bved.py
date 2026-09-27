@@ -266,9 +266,11 @@ def submit_setup(
     customer_number: str,
     residential_units: Sequence[Mapping[str, Any]],
     pm_number: str | None,
-) -> str:
-    """``POST /billingunitdata/v1/billingunits/setup/{billingunit}`` (write). ``ProviderHttp``
-    sends it exactly once; a timeout surfaces as ``unclear``."""
+) -> WriteResult:
+    """``POST /billingunitdata/v1/billingunits/setup/{billingunit}`` (write, ``sendSetup``).
+    ``ProviderHttp`` sends it exactly once; a timeout surfaces as ``unclear``. 200 with
+    ``transactionid`` means accepted for processing (asynchronous, Q8), 400 carries the
+    ``ValidationResponse`` messages."""
     body: dict[str, Any] = {
         "billingunitMscnumber": billing_unit,
         "customerMscnumber": customer_number,
@@ -282,14 +284,7 @@ def submit_setup(
         auth=auth,
         json=body,
     )
-    if response.status_code != 200:
-        raise ProviderHttpError(
-            f"Übermittlung abgewiesen (HTTP {response.status_code}).", status=response.status_code
-        )
-    try:
-        return str(response.json()["transactionid"])
-    except (ValueError, KeyError, TypeError) as exc:
-        raise ProviderHttpError("Antwort ohne transactionid.") from exc
+    return _write_result(response)
 
 
 # Billing input 1.0.3 and on-site roles 2.0.2 (write, section 12) ---------------------------

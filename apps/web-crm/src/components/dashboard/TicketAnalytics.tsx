@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 
-import { ATTENTION_BORDER, AttentionBadge, asAttention } from "@/components/tickets/TicketAttention";
+import { ATTENTION_BORDER, asAttention } from "@/components/tickets/attention";
+import { AttentionBadge } from "@/components/tickets/TicketAttention";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";

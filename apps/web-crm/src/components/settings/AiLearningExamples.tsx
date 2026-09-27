@@ -9,11 +9,21 @@ import { ui } from "@/lib/ui";
 /** ADR 0010, M7-04: learning examples from ticket resolutions (`ai_example`, task
  *  `ticket_resolution`) are stored only while `tenant_settings.ai_learning_examples_enabled`
  *  is on (`PATCH /tenant/settings`, default off). Switching off stops new examples; existing
- *  rows stay until a retention rule is decided. Every change is written to the event log as
- *  `tenant_settings.updated`. */
-export function AiLearningExamples({ initial, canUpdate }: { initial: boolean; canUpdate: boolean }) {
+ *  rows are deleted by the daily retention job once older than
+ *  `ai_learning_examples_retention_months` (ADR 0010 addendum 27.09.2026, default 24). Every
+ *  change is written to the event log as `tenant_settings.updated`. */
+export function AiLearningExamples({
+  initial,
+  canUpdate,
+  initialRetentionMonths = 24,
+}: {
+  initial: boolean;
+  canUpdate: boolean;
+  initialRetentionMonths?: number;
+}) {
   const t = useTranslations("AiLearningExamples");
   const [enabled, setEnabled] = useState(initial);
+  const [retention, setRetention] = useState(String(initialRetentionMonths));
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -29,6 +39,26 @@ export function AiLearningExamples({ initial, canUpdate }: { initial: boolean; c
     setBusy(false);
     if (res.ok) {
       setEnabled(res.data.ai_learning_examples_enabled);
+      setMessage(t("saved"));
+    } else setError(res.message);
+  }
+
+  async function saveRetention() {
+    const months = Number(retention.trim());
+    if (!/^\d+$/.test(retention.trim()) || months < 1 || months > 120) {
+      setError(t("retentionInvalid"));
+      return;
+    }
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    const res = await bff<{ ai_learning_examples_retention_months: number }>("/api/bff/tenant/settings", {
+      method: "PATCH",
+      body: JSON.stringify({ ai_learning_examples_retention_months: months }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      setRetention(String(res.data.ai_learning_examples_retention_months));
       setMessage(t("saved"));
     } else setError(res.message);
   }
@@ -53,6 +83,25 @@ export function AiLearningExamples({ initial, canUpdate }: { initial: boolean; c
           <input type="checkbox" checked={enabled} disabled={!canUpdate || busy} onChange={(e) => void toggle(e.target.checked)} />
           <span>{t("label")}</span>
         </label>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="flex flex-col gap-1 text-sm">
+            <span className={ui.label}>{t("retentionLabel")}</span>
+            <input
+              type="number"
+              min={1}
+              max={120}
+              className={ui.input}
+              value={retention}
+              disabled={!canUpdate || busy}
+              onChange={(e) => setRetention(e.target.value)}
+              data-testid="ai-learning-examples-retention"
+            />
+          </label>
+          <button type="button" className={ui.secondary} disabled={!canUpdate || busy} onClick={() => void saveRetention()}>
+            {t("retentionSave")}
+          </button>
+        </div>
+        <p className={ui.help}>{t("retentionHint")}</p>
         {!canUpdate ? <p className={ui.help}>{t("readOnly")}</p> : null}
         {message ? <span className="text-xs text-success-fg">{message}</span> : null}
         {error ? (

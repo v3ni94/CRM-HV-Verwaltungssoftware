@@ -44,6 +44,14 @@ Einheit, Schweregrad (niedrig, mittel, hoch) und Gesamteinschätzung (unauffäll
 prüfen, kritisch). Sie nennt keine Beträge und keine Korrekturen; Prüfung und Entscheidung
 bleiben bei einer Person.
 
+### Bevollmächtigte
+
+Hat der Mieter im Kontakt einen Bevollmächtigten mit Zustellregel, folgen die
+Abrechnungsschreiben dieser Regel: bei "beide" entsteht je Empfänger ein Schreiben, das
+Schreiben an den Bevollmächtigten trägt die Zeile "für <Vollmachtgeber>" und ist mit beiden
+Kontakten verknüpft. Erhält nur der Bevollmächtigte, entsteht nur dieses Schreiben
+(Betreiberentscheidung 27.09.2026, M23-07; Zugangswirkung anwaltlich zu klären).
+
 ## Status und Freigabe
 
 | Status | Bedeutung |

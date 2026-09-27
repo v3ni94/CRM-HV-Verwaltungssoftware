@@ -161,6 +161,11 @@ export function MailDetail({
     const next = await act("", "PATCH", { status: "done" });
     if (next) onUpdated(next);
   };
+  // Manual catch up of the Gmail archive (operator 27.09.2026), idempotent on the server.
+  const archiveNow = async () => {
+    const next = await act("/archive", "POST");
+    if (next) onUpdated(next);
+  };
   const createTicket = async () => {
     setBusy(true);
     setError(null);
@@ -242,6 +247,25 @@ export function MailDetail({
           ) : null}
           {message.attachment_document_ids.length > 0 ? <span>{t("attachments", { count: message.attachment_document_ids.length })}</span> : null}
         </div>
+        {message.direction === "in" && message.archive_status ? (
+          <p
+            className={`text-xs ${["failed", "scope_missing"].includes(message.archive_status) ? "text-warning-fg" : "text-subtle"}`}
+            data-testid="mail-archive-status"
+          >
+            {t(`archiveStatus.${message.archive_status}`, {
+              at: message.archived_at ? formatDateTime(message.archived_at) : message.archive_attempted_at ? formatDateTime(message.archive_attempted_at) : "",
+            })}
+            {message.archive_error && message.archive_status !== "archived" ? ` (${message.archive_error})` : ""}
+            {["failed", "scope_missing", "pending"].includes(message.archive_status) ? (
+              <>
+                {" "}
+                <button type="button" className="underline" disabled={busy} onClick={() => void archiveNow()}>
+                  {t("archiveRetry")}
+                </button>
+              </>
+            ) : null}
+          </p>
+        ) : null}
         {rejected.length > 0 ? (
           <p className="text-xs text-warning-fg" data-testid="mail-attachments-rejected">
             {t("attachmentsRejected", { list: rejected.map((r) => `${r.filename} (${r.reason})`).join(", ") })}

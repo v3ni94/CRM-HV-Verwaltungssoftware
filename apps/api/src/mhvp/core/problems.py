@@ -175,6 +175,18 @@ class ErrorCodes:
         "Dokumentenspeicher nicht verfügbar",
         "Object storage (S3 API) is not configured or the request failed; nothing was stored.",
     )
+    MALWARE_FOUND = ErrorCode(
+        "MHVP-DOC-0008",
+        422,
+        "Datei wegen Schadsoftwarefund abgewiesen",
+        "The malware scan (ClamAV) reported a finding; the file was not stored (27.09.2026).",
+    )
+    SCAN_UNAVAILABLE = ErrorCode(
+        "MHVP-DOC-0009",
+        503,
+        "Schadsoftwareprüfung nicht möglich",
+        "MHVP_CLAMAV_MODE=enforce and clamd did not answer; nothing was stored.",
+    )
     ACC_UNBALANCED = ErrorCode(
         "MHVP-ACC-0001",
         422,
@@ -420,6 +432,31 @@ class ErrorCodes:
         422,
         "Warnungen wurden nicht bestätigt",
         "Provider or local warnings must be acknowledged explicitly before the release.",
+    )
+    # Objekte: Beendigung des Verwaltungsverhältnisses (operator 27.09.2026).
+    PROPERTY_NOT_TERMINABLE = ErrorCode(
+        "MHVP-PROP-0001",
+        409,
+        "Objekt ist bereits deaktiviert",
+        "Only properties in status onboarding or active can be terminated.",
+    )
+    PROPERTY_NOT_TERMINATED = ErrorCode(
+        "MHVP-PROP-0002",
+        409,
+        "Objekt ist nicht deaktiviert",
+        "Reactivation requires a property in status terminated with an open termination.",
+    )
+    PROPERTY_REACTIVATE_SUPERADMIN_ONLY = ErrorCode(
+        "MHVP-PROP-0003",
+        403,
+        "Wieder aktivieren nur durch den Superadmin",
+        "Reactivating a terminated property is reserved to the superadmin (ADR 0011).",
+    )
+    PROPERTY_TERMINATION_DATES = ErrorCode(
+        "MHVP-PROP-0004",
+        422,
+        "Verwaltungsende liegt vor dem Kündigungsdatum",
+        "effective_date must not be before notice_date.",
     )
 
 

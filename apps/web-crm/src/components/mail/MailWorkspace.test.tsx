@@ -27,4 +27,22 @@ describe("MailWorkspace Erledigte anzeigen", () => {
     await waitFor(() => expect(messageUrls().at(-1)).toContain("include_closed=true"));
     expect(window.location.search).toContain("erledigt=1");
   });
+
+  it("shows the archive permission banner with a link to the mailbox settings", async () => {
+    fetchMock.mockImplementation(async (input: unknown) => {
+      if (String(input).endsWith("/api/bff/mail/mailboxes")) {
+        return jsonResponse([
+          { id: "m1", address: "info@example.com", archive_scope_missing: true },
+          { id: "m2", address: "buchhaltung@example.com", archive_scope_missing: false },
+        ]);
+      }
+      return jsonResponse([]);
+    });
+    renderIntl(<MailWorkspace canApprove={false} canReadMembers={false} />);
+    await waitFor(() => expect(screen.getByTestId("archive-scope-banner")).toBeInTheDocument());
+    const banner = screen.getByTestId("archive-scope-banner");
+    expect(banner.textContent).toContain("info@example.com");
+    expect(banner.textContent).not.toContain("buchhaltung@example.com");
+    expect(screen.getByRole("link", { name: "Postfach neu verbinden" })).toHaveAttribute("href", "/einstellungen/postfaecher");
+  });
 });

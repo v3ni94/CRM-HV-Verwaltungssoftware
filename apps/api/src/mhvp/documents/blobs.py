@@ -38,6 +38,9 @@ class BlobStore:
             log.error("object storage not configured: %s", exc)
             raise ProblemError(ErrorCodes.STORAGE_UNAVAILABLE, detail=_NOT_CONFIGURED) from exc
         self._bucket = settings.s3_bucket
+        # Exposed so that ``store_document`` reaches the scan settings without a new argument
+        # at its thirty call sites.
+        self.settings = settings
 
     @staticmethod
     def key(tenant_id: uuid.UUID, document_id: uuid.UUID) -> str:

@@ -1,9 +1,9 @@
 import { expect, test } from "@playwright/test";
 
-test("home renders the German product name", async ({ page }) => {
+test("root redirects to the login page when signed out", async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("MH Verwaltungsplattform");
-  await expect(page.getByRole("status")).toBeVisible();
+  await expect(page).toHaveURL(/\/anmelden/);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Willkommen zurück");
 });
 
 test("/api/health returns ok", async ({ request }) => {

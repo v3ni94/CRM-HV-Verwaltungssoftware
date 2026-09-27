@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { jsonResponse, renderIntl } from "@/test/intl";
 
 import { EditableSection } from "./EditableSection";
-import { InlineField } from "./InlineField";
+import { InlineField, resetCatalogCache } from "./InlineField";
 import { useAutosave } from "./useAutosave";
 
 describe("InlineField", () => {
@@ -159,6 +159,28 @@ describe("InlineField", () => {
     await userEvent.type(screen.getByLabelText("Bezeichnung"), "EG{Enter}");
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Gespeichert"));
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    fetchMock.mockRestore();
+  });
+
+  it("feeds a select from a catalogue and keeps an inactive current value selectable", async () => {
+    resetCatalogCache();
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
+      expect(String(url)).toBe("/api/bff/catalogs/property_type?include_inactive=true");
+      return jsonResponse([
+        { code: "altbau", label: "Altbau", active: true },
+        { code: "neubau", label: "Neubau", active: true },
+        { code: "burg", label: "Burg", active: false },
+      ]);
+    });
+    const onSave = vi.fn();
+    renderIntl(<InlineField name="property_type_code" label="Objektart" type="select" catalog="property_type" value="burg" onSave={onSave} canEdit editing />);
+    const select = await screen.findByLabelText("Objektart");
+    await waitFor(() => expect(screen.getByRole("option", { name: "Burg (inaktiv)" })).toBeInTheDocument());
+    expect(screen.getByRole("option", { name: "Altbau" })).toBeInTheDocument();
+    expect(select).toHaveValue("burg");
+    await userEvent.selectOptions(select, "neubau");
+    expect(onSave).toHaveBeenCalledWith("property_type_code", "neubau");
+    expect(fetchMock).toHaveBeenCalledTimes(1);
     fetchMock.mockRestore();
   });
 });

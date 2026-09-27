@@ -1,30 +1,21 @@
 import { getTranslations } from "next-intl/server";
-import Link from "next/link";
-import { Suspense } from "react";
 
-import { DigestCard, type Digest } from "@/components/dashboard/DigestCard";
-import { TicketAnalytics } from "@/components/dashboard/TicketAnalytics";
-import { PageHeader } from "@/components/ui/PageHeader";
-import { TileSkeleton } from "@/components/ui/Skeleton";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import { ApprovalsColumn, type ApprovalCounts } from "@/components/dashboard/ApprovalsColumn";
+import { Greeting } from "@/components/dashboard/Greeting";
+import { KpiStrip } from "@/components/dashboard/KpiStrip";
+import { MyTicketsColumn, type MyTicket } from "@/components/dashboard/MyTicketsColumn";
+import { TodayColumn, type TodayItem } from "@/components/dashboard/TodayColumn";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
-import { formatDate } from "@/lib/format";
-import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-/** Every tile opens the area it counts; tiles without an own screen stay plain. */
-const TILE_LINKS: Record<string, string> = {
-  properties: "/objekte",
-  units: "/objekte",
-  maintenance_due_30d: "/kalender",
-  contacts: "/kontakte",
-  active_contracts: "/vermietung",
-  contracts_ending_90d: "/vermietung",
-  open_ai_proposals: "/assistent",
-  unread_notifications: "/kalender",
-};
+/** Days shown in the column "Heute" beyond today (operator 27.09.2026). */
+const HORIZON_DAYS = 7;
+const TICKET_LIMIT = 10;
+
+/** Routes of generated calendar entries without an own href (see KIND_LINKS of the old page). */
 const KIND_LINKS: Record<string, string> = {
   appointment: "/kalender",
   maintenance: "/objekte",
@@ -32,126 +23,140 @@ const KIND_LINKS: Record<string, string> = {
   contract_termination_date: "/vermietung",
 };
 
-async function DashboardData() {
-  const t = await getTranslations("Workspace");
-  const { data, error, response } = await serverApi().GET("/api/v1/workspace/dashboard");
-  redirectIfUnauthenticated(response);
-  if (!data) {
-    return (
-      <p role="alert" className={ui.alert}>
-        {problemMessage(error as Problem | undefined, response.status)}
-      </p>
-    );
+type CalendarItem = {
+  kind: string;
+  title: string;
+  date: string;
+  entity_type?: string | null;
+  entity_id?: string | null;
+  href?: string | null;
+  calendar_entry_id?: string | null;
+  google_event_id?: string | null;
+};
+type Deadline = { id: string; kind: string; reference: string; due_on: string; href: string | null };
+
+/** ISO date in the tenant time zone (Europe/Berlin), matching `services.local_today()`. */
+function localIsoDate(offsetDays = 0): string {
+  const now = new Date(Date.now() + offsetDays * 86_400_000);
+  return new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Berlin" }).format(now);
+}
+
+/** One fetch that never throws: a failed area shows its own notice, the others stay usable. */
+async function load<T>(path: string): Promise<{ data: T | null; status: number }> {
+  try {
+    const response = await serverFetch(path);
+    redirectIfUnauthenticated(response);
+    if (!response.ok) return { data: null, status: response.status };
+    return { data: (await response.json()) as T, status: response.status };
+  } catch (error) {
+    // redirect() throws on purpose (error.digest); everything else is a load error of this area.
+    if (typeof error === "object" && error !== null && "digest" in error) throw error;
+    return { data: null, status: 0 };
   }
-  const tiles = data.tiles as Record<string, number>;
-  const upcoming = data.upcoming as { kind: string; title: string; date: string }[];
+}
+
+/** Start page as personal workplace (operator 27.09.2026, design proposal 2): three columns
+ *  Heute, Meine Tickets and Freigaben, the tenant wide numbers in a compact strip. All areas
+ *  load server side in parallel; mobile stacks the columns. */
+export default async function StartPage() {
+  const t = await getTranslations("Workspace");
+  const s = await getTranslations("StartPage");
+  const { data: me, response: meResponse } = await getMe();
+  redirectIfUnauthenticated(meResponse);
+  const permissions = me?.permissions ?? [];
+  const canReadTickets = permissions.includes("tickets:read");
+  const userId = me?.user_id ?? null;
+  const today = localIsoDate();
+  const until = localIsoDate(HORIZON_DAYS);
+
+  const ticketQuery = new URLSearchParams({ sort: "urgency", include_closed: "false", limit: String(TICKET_LIMIT) });
+  if (userId) ticketQuery.set("assignee_user_id", userId);
+  const [dashboard, calendar, deadlines, tickets, approvals] = await Promise.all([
+    load<{ tiles: Record<string, number> }>("/api/v1/workspace/dashboard"),
+    load<{ items: CalendarItem[] }>(`/api/v1/workspace/calendar?start=${today}&end=${until}`),
+    load<Deadline[]>(`/api/v1/workspace/deadlines?status=open&from=${today}&to=${until}&limit=200`),
+    canReadTickets && userId ? loadTickets(`/api/v1/tickets?${ticketQuery.toString()}`) : Promise.resolve({ data: null, status: 0, total: null }),
+    load<ApprovalCounts>("/api/v1/workspace/approvals"),
+  ]);
+
+  const todayItems: TodayItem[] = [
+    ...(calendar.data?.items ?? []).map<TodayItem>((item, index) => ({
+      id: item.calendar_entry_id ?? item.google_event_id ?? `${item.kind}-${item.date}-${index}`,
+      date: item.date,
+      title: item.title,
+      kind: item.kind,
+      source: "calendar",
+      href: item.href ?? KIND_LINKS[item.kind] ?? null,
+    })),
+    ...(deadlines.data ?? []).map<TodayItem>((row) => ({
+      id: row.id,
+      date: row.due_on,
+      title: row.reference,
+      kind: row.kind,
+      source: "deadline",
+      href: row.href ?? "/fristen",
+    })),
+  ].filter((item) => item.date >= today && item.date <= until);
+
+  const failed = [calendar, deadlines].some((r) => r.data === null);
+  const listHref = userId ? `/tickets?assignee_user_id=${userId}&sort=urgency` : "/tickets";
   return (
-    <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
-      <div className="flex min-w-0 flex-1 flex-col gap-6">
-        <ul className="grid grid-cols-2 gap-3 md:grid-cols-3" aria-label={t("tiles")}>
-          {Object.entries(tiles).map(([key, value]) => {
-            const href = TILE_LINKS[key];
-            const body = (
-              <>
-                <span className="mhvp-label">{t(`tile.${key}`)}</span>
-                <span className="mhvp-display mt-2 block font-semibold tabular-nums">{value.toLocaleString("de-DE")}</span>
-                <span aria-hidden className="mt-3 block h-0.5 w-6 rounded-full bg-gold" />
-                {href ? <span className="mt-2 block text-xs text-gold">{t("open")} →</span> : null}
-              </>
-            );
-            return (
-              <li key={key} data-testid={`tile-${key}`}>
-                {href ? (
-                  <Link href={href} className={ui.cardLink}>
-                    {body}
-                  </Link>
-                ) : (
-                  <div className={ui.cardLift}>{body}</div>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-        <p className={ui.notice}>{t("accountingLocked")}</p>
+    <div className={ui.pageGap}>
+      <div className="flex flex-col gap-3 border-b border-border-soft pb-5">
+        <p className="mhvp-label">{s("eyebrow")}</p>
+        <Greeting displayName={me?.display_name ?? null} email={me?.email ?? null} />
       </div>
-      <aside className="flex w-full flex-col gap-3 lg:w-80 lg:shrink-0">
-        <div className="flex items-baseline justify-between">
-          <h2 className={ui.h2}>{t("upcoming")}</h2>
-          <Link href="/kalender" className="text-sm text-muted transition duration-150 hover:text-fg hover:underline">
-            {t("toCalendar")}
-          </Link>
+      {dashboard.data ? (
+        <KpiStrip tiles={dashboard.data.tiles} analyticsHref={canReadTickets ? "/auswertung/tickets" : null} />
+      ) : (
+        <p role="alert" className={ui.alert}>
+          {s("loadError")}
+        </p>
+      )}
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+        <div className="flex flex-col gap-2">
+          {failed ? (
+            <p role="alert" className={ui.alert}>
+              {s("loadError")}
+            </p>
+          ) : null}
+          <TodayColumn items={todayItems} today={today} />
         </div>
-        {upcoming.length === 0 ? (
-          <p className={`${ui.card} text-sm text-muted`}>{t("noEntries")}</p>
-        ) : (
-          <ul className={`${ui.card} divide-y divide-border-soft p-0`}>
-            {upcoming.map((u) => {
-              const href = KIND_LINKS[u.kind];
-              const row = (
-                <>
-                  <span className="w-16 shrink-0 tabular-nums text-xs text-muted">{formatDate(u.date)}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-sm">{u.title}</span>
-                    <span className={ui.badge}>{t(`kind.${u.kind}`)}</span>
-                  </span>
-                </>
-              );
-              return (
-                <li key={`${u.kind}-${u.title}-${u.date}`} className="text-sm">
-                  {href ? (
-                    <Link href={href} className="flex items-center gap-3 px-4 py-3 transition duration-150 hover:bg-surface">
-                      {row}
-                    </Link>
-                  ) : (
-                    <div className="flex items-center gap-3 px-4 py-3">{row}</div>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </aside>
-    </div>
-  );
-}
-
-/** Karte "Tagesübersicht" (A40): dieselben Daten wie die Benachrichtigung um 07:00 Uhr. */
-async function DigestData() {
-  const t = await getTranslations("Digest");
-  const response = await serverFetch("/api/v1/workspace/digest");
-  redirectIfUnauthenticated(response);
-  if (!response.ok) {
-    return (
-      <p role="alert" className={ui.alert}>
-        {t("loadError")}
-      </p>
-    );
-  }
-  return <DigestCard digest={(await response.json()) as Digest} />;
-}
-
-export default async function DashboardPage() {
-  const t = await getTranslations("Workspace");
-  const { data: me } = await getMe();
-  const canSeeAnalytics = me?.permissions.includes("tickets:read") ?? false;
-  return (
-    <div className="flex flex-col gap-8">
-      <PageHeader eyebrow={t("greetingLabel")} title={t("dashboard")} />
-      <Suspense
-        fallback={
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <TileSkeleton key={i} />
-            ))}
+        {canReadTickets ? (
+          <div className="flex flex-col gap-2">
+            {tickets.data === null ? (
+              <p role="alert" className={ui.alert}>
+                {s("loadError")}
+              </p>
+            ) : null}
+            <MyTicketsColumn tickets={tickets.data ?? []} listHref={listHref} total={tickets.total} />
           </div>
-        }
-      >
-        <DashboardData />
-      </Suspense>
-      <Suspense fallback={<TileSkeleton />}>
-        <DigestData />
-      </Suspense>
-      {canSeeAnalytics ? <TicketAnalytics /> : null}
+        ) : null}
+        <div className="flex flex-col gap-2">
+          {approvals.data === null ? (
+            <p role="alert" className={ui.alert}>
+              {s("loadError")}
+            </p>
+          ) : null}
+          <ApprovalsColumn counts={approvals.data ?? {}} />
+        </div>
+      </div>
+      <p className={ui.notice}>{t("accountingLocked")}</p>
     </div>
   );
+}
+
+/** Ticket list with the total from the X-Total-Count header (link "und n weitere"). */
+async function loadTickets(path: string): Promise<{ data: MyTicket[] | null; status: number; total: number | null }> {
+  try {
+    const response = await serverFetch(path);
+    redirectIfUnauthenticated(response);
+    if (!response.ok) return { data: null, status: response.status, total: null };
+    const totalHeader = response.headers.get("x-total-count");
+    const total = totalHeader ? Number.parseInt(totalHeader, 10) : null;
+    return { data: (await response.json()) as MyTicket[], status: response.status, total: Number.isNaN(total) ? null : total };
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "digest" in error) throw error;
+    return { data: null, status: 0, total: null };
+  }
 }

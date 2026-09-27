@@ -9,12 +9,17 @@ representative). The relation carries a delivery rule (``delivery_mode``):
 * ``owner_only``: only the represented contact receives, the representative is informed by
   nothing automatic.
 
-Mail dispatch (``mhvp.communication.dispatch``), serial letters
-(``mhvp.documents.routers``) and the WEG invitation recipients
-(``mhvp.hoa.meetings``) call :func:`resolve_recipients` and never read the relation table
-themselves. A relation counts only while valid (``valid_from`` / ``valid_to``) and while the
-representative is not deleted. Without an active representative the contact itself is the only
-recipient. Repeated contacts are returned once, in first occurrence order.
+Mail dispatch (``mhvp.communication.dispatch``, single and serial), letters
+(``mhvp.documents.routers``, single and serial), the WEG invitation recipients
+(``mhvp.hoa.meetings``), dunning letters (``mhvp.accounting.dunning_letters``) and rental
+statement letters (``mhvp.billing.letters``) call :func:`resolve_recipients` and never read
+the relation table themselves (operator decision 27.09.2026, M23-07). A letter that goes to
+the representative only carries the line "für <Vollmachtgeber>"; a dunning letter that goes
+to the representative only carries :data:`REPRESENTATIVE_ONLY_WARNING` until legal advice
+confirms the effect of Zugang. A relation counts only while valid (``valid_from`` /
+``valid_to``) and while the representative is not deleted. Without an active representative
+the contact itself is the only recipient. Repeated contacts are returned once, in first
+occurrence order.
 """
 
 from __future__ import annotations
@@ -28,6 +33,11 @@ from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact, ContactRelation, DeliveryMode, RelationKind
+
+REPRESENTATIVE_ONLY_WARNING = (
+    "Zustellung nur an den Bevollmächtigten: ob die Mahnung damit dem Vollmachtgeber zugeht, "
+    "ist anwaltlich zu klären (M23-07)"
+)
 
 
 @dataclass(frozen=True)
@@ -101,3 +111,22 @@ async def resolve_recipients(
             if DeliveryMode(relation.delivery_mode) is not DeliveryMode.OWNER_ONLY:
                 add(Recipient(relation.related_contact_id, represents=contact_id))
     return out
+
+
+def representative_only(recipients: Sequence[Recipient], contact_id: uuid.UUID) -> bool:
+    """True when ``contact_id`` does not receive for itself, only its representatives do."""
+    return not any(r.contact_id == contact_id and r.represents is None for r in recipients)
+
+
+async def debtor_contact_id(session: AsyncSession, party_id: uuid.UUID) -> uuid.UUID | None:
+    """Contact of the first party member (address holder of statements and dunning letters).
+    ``None`` when the party has no member."""
+    from mhvp.contacts.models import PartyMember
+
+    contact_id: uuid.UUID | None = await session.scalar(
+        select(PartyMember.contact_id)
+        .where(PartyMember.party_id == party_id)
+        .order_by(PartyMember.created_at, PartyMember.id)
+        .limit(1)
+    )
+    return contact_id

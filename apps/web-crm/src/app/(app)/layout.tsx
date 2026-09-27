@@ -5,7 +5,7 @@ import { Suspense } from "react";
 
 import { AiChatWidget } from "@/components/ai/AiChatWidget";
 import { MobileNav } from "@/components/shell/MobileNav";
-import { SearchDialog } from "@/components/shell/SearchDialog";
+import { CommandPalette } from "@/components/shell/CommandPalette";
 import { SideNav, type NavGroup } from "@/components/shell/SideNav";
 import { TenantSwitcher } from "@/components/shell/TenantSwitcher";
 import { UserMenu } from "@/components/shell/UserMenu";
@@ -116,7 +116,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             productName={tHome("productName")}
             area={tHome("area")}
           />
-          <SearchDialog />
+          <CommandPalette
+            nav={groups.map((g) => ({ label: g.label, items: g.items.map((i) => ({ href: i.href, label: i.label })) }))}
+            permissions={me?.permissions ?? []}
+            userKey={me?.user_id ?? me?.email ?? ""}
+          />
           <div className="ml-auto flex min-w-0 items-center gap-2">
             <div className="hidden sm:block">
               <ThemeToggle />

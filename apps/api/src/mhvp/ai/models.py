@@ -286,6 +286,13 @@ class AiEmbedding(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "source_kind", "source_id", "chunk_index"),
         Index("ix_ai_embedding_tenant_source", "tenant_id", "source_kind", "source_id"),
+        # ANN index for the cosine search (``<=>``), migration 0154 (created CONCURRENTLY).
+        Index(
+            "ix_ai_embedding_embedding_hnsw",
+            "embedding",
+            postgresql_using="hnsw",
+            postgresql_ops={"embedding": "vector_cosine_ops"},
+        ),
     )
 
     source_kind: Mapped[EmbeddingSourceKind] = mapped_column(

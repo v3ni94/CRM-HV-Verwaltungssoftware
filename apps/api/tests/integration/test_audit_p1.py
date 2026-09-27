@@ -2,9 +2,8 @@
 
 One change per entity of the P1 packages (Contact, Property, Building, Unit, Contract) shows
 up in ``GET /tenant/audit-log`` filtered by ``entity_type`` and ``entity_id``; the CSV export
-carries the same rows. Building and Contract depend on the AP2/AP3 endpoints (``PUT
-/buildings/{id}`` with an audit diff, contract version with an audit diff) and are marked
-xfail until those packages are merged.
+carries the same rows. Building (``PUT /buildings/{id}``) and contract versions write their
+audit diff as well.
 """
 
 import asyncio
@@ -131,10 +130,6 @@ def test_unit_change_is_logged(client: TestClient, world: World) -> None:
     _assert_change(_audit(client, h, "unit", unit_id), "unit", unit_id, "label")
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="AP2 liefert PUT /buildings/{id} mit Audit-Diff (Ergänzung 4.3)",
-)
 def test_building_change_is_logged(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "audadmin"))
     prop = _ok(client.post("/api/v1/properties", json=PROPERTY | {"number": "613"}, headers=h), 201)
@@ -156,15 +151,20 @@ def test_building_change_is_logged(client: TestClient, world: World) -> None:
     )
 
 
-@pytest.mark.xfail(
-    strict=False,
-    reason="AP3 schreibt bei Vertragsversionen ein Audit-Diff (Ergänzung 4.5)",
-)
 def test_contract_change_is_logged(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "audadmin"))
     prop = _ok(client.post("/api/v1/properties", json=PROPERTY | {"number": "614"}, headers=h), 201)
     unit_id = _unit(client, h, prop["id"], "01")
     party, _ = _party(client, h, "Mieter")
+    owner, _ = _party(client, h, "Eigentuemer", "company")
+    _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/owners",
+            json={"party_id": owner, "valid_from": "2020-01-01"},
+            headers=h,
+        ),
+        201,
+    )
     contract = _ok(
         client.post(
             "/api/v1/contracts",

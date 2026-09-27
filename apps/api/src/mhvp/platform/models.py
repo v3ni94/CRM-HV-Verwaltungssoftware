@@ -376,6 +376,12 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ai_learning_examples_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # Aufbewahrung der Lernbeispiele in Monaten (ADR 0010 Nachtrag 27.09.2026, Migration 0154):
+    # der tägliche Lauf ``mhvp.ai.examples_retention`` löscht Beispiele, die älter sind.
+    # Standard 24 Monate; Änderung wird als ``tenant_settings.updated`` protokolliert.
+    ai_learning_examples_retention_months: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=24, server_default=text("24")
+    )
     # Erledigungsarten der Erledigungsnotiz je Mandant (Regel M19-07, Entscheidung M19-04 vom
     # 26.09.2026, ``mhvp.tickets.resolution_kinds``). Shape:
     # {"disabled": ["<code eingebauter Art>", ...], "custom": [{"code": str, "label": str}, ...]}.

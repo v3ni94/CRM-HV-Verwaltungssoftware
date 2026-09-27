@@ -8,6 +8,7 @@ import {
   refreshTokens,
   writeTokens,
 } from "@/lib/session";
+import { safeNext, withNext } from "@/lib/next-path";
 
 // Node.js runtime: the API address (MHVP_API_INTERNAL_URL) is read at runtime.
 export const config = {
@@ -26,7 +27,7 @@ function unauthenticated(request: NextRequest): NextResponse {
     );
   }
   const target = new URL("/anmelden", request.url);
-  const next = request.nextUrl.pathname + request.nextUrl.search;
+  const next = safeNext(request.nextUrl.pathname + request.nextUrl.search);
   if (next !== "/") target.searchParams.set("next", next);
   return NextResponse.redirect(target);
 }
@@ -70,7 +71,8 @@ export async function middleware(request: NextRequest): Promise<NextResponse> {
   // need the user identity, and a detour via /mandant would drop their request.
   const needsTenant = !pathname.startsWith("/api/") && !pathname.startsWith("/oidc/");
   if (!ctx.tenantId && pathname !== "/mandant" && needsTenant) {
-    response = NextResponse.redirect(new URL("/mandant", request.url));
+    // Carry the requested page so the tenant selection can return to it.
+    response = NextResponse.redirect(new URL(withNext("/mandant", pathname + search), request.url));
   } else {
     response = NextResponse.next({ request: { headers: forward() } });
   }

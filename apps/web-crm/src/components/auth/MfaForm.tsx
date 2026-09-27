@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { safeNext, withNext } from "@/lib/next-path";
 import { ui } from "@/lib/ui";
 
 type Verified = { tenant_id: string | null; tenants: { id: string; name: string }[] };
@@ -36,12 +37,7 @@ export function MfaForm({ next }: { next?: string }) {
       setError(result.message);
       return;
     }
-    const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/kontakte";
-    if (!result.data.tenant_id) {
-      router.push(`/mandant?next=${encodeURIComponent(target)}`);
-    } else {
-      router.push(target);
-    }
+    router.push(result.data.tenant_id ? safeNext(next) : withNext("/mandant", next));
     router.refresh();
   }
 

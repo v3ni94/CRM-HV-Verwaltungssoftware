@@ -103,6 +103,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.platform.usage_all",
                 "schedule": crontab(day_of_month=1, hour=2, minute=0),
             },
+            # Learning examples older than the tenant's retention months are deleted daily
+            # (ADR 0010 addendum 27.09.2026, M7-04); one journal event per tenant.
+            "ai-examples-retention": {
+                "task": "mhvp.ai.examples_retention",
+                "schedule": crontab(hour=3, minute=45),
+            },
             "letting-purge-prospects": {
                 "task": "mhvp.letting.purge_prospects",
                 "schedule": crontab(hour=3, minute=30),
@@ -143,6 +149,14 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "communication-gmail-watch-renew": {
                 "task": "mhvp.communication.gmail_watch_renew_all",
                 "schedule": crontab(hour=4, minute=10),
+                "options": {"queue": "mail"},
+            },
+            # Catch up of Gmail archiving (operator 27.09.2026): every 15 minutes, all inbound
+            # mails of the last 30 days that are done or requested but not archived; mailboxes
+            # without gmail.modify wait until they are reconnected.
+            "communication-archive-retry": {
+                "task": "mhvp.communication.archive_retry_all",
+                "schedule": 900.0,
                 "options": {"queue": "mail"},
             },
             "workspace-reminders": {

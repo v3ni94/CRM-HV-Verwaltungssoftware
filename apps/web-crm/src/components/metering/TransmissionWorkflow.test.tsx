@@ -164,6 +164,71 @@ describe("TransmissionWorkflow", () => {
     expect(screen.getByText("2 Abrechnungsempfänger, 1 Kostenpositionen")).toBeInTheDocument();
   });
 
+  it("runs the billing unit setup asynchronously: waiting_provider until the fetched result confirms", async () => {
+    const calls: { url: string; method?: string }[] = [];
+    const setupSummary = (status: string, matched: boolean | null) => ({
+      internal: { property_id: assignment.property_id, property_number: "123", property_name: "Musterstraße 1", service_scope: "heating" },
+      external: { external_number: "000123456", external_name: null, setupstatus: null, matched: [], additional: [] },
+      customer_number: "0000123",
+      units: [
+        { unit_number: "01", unit_label: "WE 01", external_unit_number: "0001", occupancy_status: "occupied", known_at_provider: false, matched },
+        { unit_number: "02", unit_label: null, external_unit_number: "0002", occupancy_status: "vacant", known_at_provider: false, matched },
+      ],
+      setupstatus: status,
+      unmatched: [],
+      additional: matched ? ["0009"] : [],
+      remote_confirmed: matched === true,
+    });
+    let rows: Transmission[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, method: init?.method });
+      if (url.startsWith("/api/bff/metering/transmissions?")) return jsonResponse(rows);
+      if (url.endsWith("/transmissions/check")) {
+        rows = [transmission({ kind: "billing_unit_setup", status: "checked", diff: { first_transmission: true }, summary: setupSummary("", null) })];
+        return jsonResponse(rows[0], 201);
+      }
+      if (url.endsWith("/release")) {
+        rows = [transmission({ kind: "billing_unit_setup", status: "released", version: 2, summary: setupSummary("", null) })];
+        return jsonResponse(rows[0]);
+      }
+      if (url.endsWith("/order")) {
+        rows = [transmission({ kind: "billing_unit_setup", status: "waiting_provider", version: 3, provider_transaction_id: "TX-S1", summary: setupSummary("", null) })];
+        return jsonResponse(rows[0]);
+      }
+      if (url.endsWith("/poll")) {
+        rows = [transmission({ kind: "billing_unit_setup", status: "completed", version: 4, provider_transaction_id: "TX-S1", summary: setupSummary("COMPLETED", true) })];
+        return jsonResponse(rows[0]);
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const conn = connection(true);
+    conn.capabilities = [...conn.capabilities, { ...conn.capabilities[0]!, function: "billing_unit_data" }];
+    renderIntl(<TransmissionWorkflow assignment={assignment} connection={conn} canSubmitUsers={false} canOrderBilling={false} canSetupUnits />);
+    const user = userEvent.setup();
+    await user.click(await screen.findByTestId("check-billing_unit_setup"));
+    const setup = await screen.findByTestId("transmission-billing_unit_setup");
+    // preview: internal next to external identifiers
+    const table = within(setup).getByTestId("setup-units");
+    expect(within(table).getByText("01 (WE 01)")).toBeInTheDocument();
+    expect(within(table).getByText("0001")).toBeInTheDocument();
+    expect(within(table).getAllByText("offen")).toHaveLength(2);
+    expect(screen.queryByTestId("poll-billing_unit_setup")).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("release-billing_unit_setup"));
+    await user.click(await screen.findByTestId("order-billing_unit_setup"));
+    // accepted for processing only: no "completed", the poll button appears
+    await screen.findByText("beim Anbieter in Bearbeitung");
+    expect(screen.queryByText("Ergebnis abgerufen")).not.toBeInTheDocument();
+    await user.click(screen.getByTestId("poll-billing_unit_setup"));
+    await screen.findByText("Ergebnis abgerufen");
+    expect(screen.getByTestId("setup-result")).toHaveTextContent("alle 2 Nutzeinheiten zugeordnet");
+    expect(screen.getByTestId("setup-result")).toHaveTextContent("0009");
+    expect(screen.getAllByText("zugeordnet")).toHaveLength(2);
+    const writes = calls.filter((c) => c.method === "POST").map((c) => c.url.split("/").pop());
+    expect(writes).toEqual(["check", "release", "order", "poll"]);
+  });
+
   it("shows the permission hints and no buttons without the rights", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse([]));
     renderIntl(<TransmissionWorkflow assignment={assignment} connection={connection(true)} canSubmitUsers={false} canOrderBilling={false} />);
@@ -171,5 +236,7 @@ describe("TransmissionWorkflow", () => {
     expect(screen.getByText(/Recht Messdienstleister-Abrechnung beauftragen/)).toBeInTheDocument();
     expect(screen.queryByTestId("check-roles")).not.toBeInTheDocument();
     expect(screen.queryByTestId("check-billing_input")).not.toBeInTheDocument();
+    expect(screen.getByText(/Recht Messdienstleister-Zuordnungen bearbeiten/)).toBeInTheDocument();
+    expect(screen.queryByTestId("check-billing_unit_setup")).not.toBeInTheDocument();
   });
 });

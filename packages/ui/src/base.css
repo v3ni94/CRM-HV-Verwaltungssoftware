@@ -1,0 +1,174 @@
+/*
+ * Shared base styles and component classes on the MHVP tokens (both web apps import this after
+ * theme.css). Typography classes: mhvp-display, mhvp-title (h1), mhvp-h2, mhvp-h3, mhvp-small,
+ * mhvp-caption, mhvp-mono, mhvp-num, mhvp-label. Surfaces: mhvp-card (hairline, no shadow).
+ * Focus: mhvp-focus (consistent ring). Tables: mhvp-table with right aligned tabular numbers.
+ */
+body {
+  background: var(--mhvp-color-bg);
+  color: var(--mhvp-color-fg);
+  font-family: var(--mhvp-font-sans);
+  font-size: var(--mhvp-font-body-size);
+  line-height: var(--mhvp-font-body-line);
+  font-feature-settings: "cv11", "ss01";
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Consistent keyboard focus ring for every interactive element. */
+.mhvp-focus:focus-visible,
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: var(--mhvp-focus-ring-width) solid var(--mhvp-focus-ring-color);
+  outline-offset: var(--mhvp-focus-ring-offset);
+}
+:where(input, select, textarea):focus-visible {
+  outline-offset: 0;
+}
+
+/* Type scale */
+.mhvp-display {
+  font-size: var(--mhvp-font-display-size);
+  line-height: var(--mhvp-font-display-line);
+  letter-spacing: var(--mhvp-font-display-tracking);
+  font-weight: var(--mhvp-font-display-weight);
+}
+/* Page title (h1) with a short accent bar underneath instead of a full underline. */
+.mhvp-title {
+  position: relative;
+  padding-bottom: 0.5rem;
+  font-size: var(--mhvp-font-h1-size);
+  line-height: var(--mhvp-font-h1-line);
+  letter-spacing: var(--mhvp-font-h1-tracking);
+  font-weight: var(--mhvp-font-h1-weight);
+}
+.mhvp-title::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 2rem;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--mhvp-color-accent);
+}
+.mhvp-h2 {
+  font-size: var(--mhvp-font-h2-size);
+  line-height: var(--mhvp-font-h2-line);
+  letter-spacing: var(--mhvp-font-h2-tracking);
+  font-weight: var(--mhvp-font-h2-weight);
+}
+.mhvp-h3 {
+  font-size: var(--mhvp-font-h3-size);
+  line-height: var(--mhvp-font-h3-line);
+  font-weight: var(--mhvp-font-h3-weight);
+}
+.mhvp-small,
+.mhvp-caption {
+  font-size: var(--mhvp-font-small-size);
+  line-height: var(--mhvp-font-small-line);
+}
+/* Numbers: tabular figures in the UI font; mhvp-mono switches to the monospace stack. */
+.mhvp-num {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.mhvp-mono {
+  font-family: var(--mhvp-font-mono);
+  font-size: var(--mhvp-font-mono-size);
+  line-height: var(--mhvp-font-mono-line);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+/* Small caps style labels: uppercase, letter spaced, subtle. */
+.mhvp-label {
+  font-size: 0.6875rem;
+  line-height: 1rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mhvp-color-subtle);
+}
+
+/* Card: hairline, no shadow. */
+.mhvp-card {
+  background: var(--mhvp-color-bg);
+  border: 1px solid var(--mhvp-color-hairline);
+  border-radius: var(--mhvp-radius-lg);
+}
+
+/* Data tables: airy rows, quiet header, no vertical rules, sticky head. The head stays below
+ * the app header (z-30, opaque) and never above menus or dialogs. */
+.mhvp-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--mhvp-font-body-size);
+  line-height: 1.25rem;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.mhvp-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  text-align: left;
+  font-weight: 500;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mhvp-color-subtle);
+  background: var(--mhvp-color-bg);
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid var(--mhvp-color-border);
+}
+.mhvp-table tbody td {
+  padding: 0.625rem 0.75rem;
+  border-bottom: 1px solid var(--mhvp-color-border-soft);
+  vertical-align: top;
+}
+.mhvp-table tbody tr {
+  transition: background var(--mhvp-motion-fast) var(--mhvp-motion-ease);
+}
+.mhvp-table tbody tr:hover {
+  background: var(--mhvp-color-surface);
+}
+.mhvp-table .num,
+.mhvp-table th.num,
+.mhvp-table td.num {
+  text-align: right;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Opt-in sticky first column for wide, horizontally scrollable tables. */
+.mhvp-table--sticky-col thead th:first-child,
+.mhvp-table--sticky-col tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: var(--mhvp-color-bg);
+}
+.mhvp-table--sticky-col thead th:first-child {
+  z-index: 3;
+}
+
+/* Soft status pill with a leading dot; used by badge-* helpers in lib/ui.ts. */
+.mhvp-dot {
+  display: inline-block;
+  width: 0.375rem;
+  height: 0.375rem;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+/* Hover for clickable surfaces: border darkens, no lift or shadow (calm cards). */
+.mhvp-lift {
+  transition: border-color var(--mhvp-motion) var(--mhvp-motion-ease),
+    background var(--mhvp-motion) var(--mhvp-motion-ease);
+}
+.mhvp-lift:hover {
+  border-color: var(--mhvp-color-accent);
+}

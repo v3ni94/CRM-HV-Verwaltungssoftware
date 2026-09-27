@@ -6,6 +6,7 @@ covered, plus the platform admin restriction."""
 import asyncio
 import stat
 from collections.abc import Iterator
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any
 
@@ -15,7 +16,7 @@ from redis.asyncio import Redis
 
 from mhvp.main import create_app
 from mhvp.platform import services
-from mhvp.workspace import backup_verify
+from mhvp.workspace import backup_verify, ops
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
 
@@ -207,3 +208,126 @@ def test_metrics_require_platform_admin(client: TestClient, world: World) -> Non
     tenant_admin = bearer(login(client, world, "opstenant"))
     assert client.get(METRICS, headers=tenant_admin).status_code == 403
     assert client.get(METRICS).status_code == 401
+
+
+# Off-site copy (M9-02): the status line of scripts/backup-offsite.sh is read from a file and
+# reported under jobs.backup_offsite with age, stale flag and alerts.
+
+OFFSITE_LINE = (
+    "backup-offsite: status={status} stamp=20260926T020000Z at={at} uploaded=3 bytes=1024 "
+    "objects_new=2 objects_total=10 wal=4 pruned=1 seconds=12 dry_run=False{detail}\n"
+)
+
+
+def _offsite_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch, text: str | None) -> Path:
+    path = tmp_path / "offsite-status"
+    if text is not None:
+        path.write_text(text)
+    monkeypatch.setenv(ops.OFFSITE_STATUS_ENV, str(path))
+    return path
+
+
+def _stamp(now: datetime, *, hours_ago: float) -> str:
+    return (now - timedelta(hours=hours_ago)).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def test_offsite_status_ok_is_reported_with_age(
+    client: TestClient, world: World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    now = datetime.now(UTC)
+    path = _offsite_file(
+        tmp_path,
+        monkeypatch,
+        OFFSITE_LINE.format(status="ok", at=_stamp(now, hours_ago=2), detail=""),
+    )
+    body = _metrics(client, world)
+    job = body["jobs"]["backup_offsite"]
+    assert job["status"] == "ok"
+    assert job["stamp"] == "20260926T020000Z"
+    assert job["file"] == str(path)
+    assert job["wal"] == 4
+    assert job["uploaded"] == 3
+    assert job["dry_run"] is False
+    assert job["error"] is None
+    assert 7000 < job["age_seconds"] < 7400
+    assert job["stale"] is False
+    assert body["metrics"]["backup_offsite_ok"] == 1
+    assert body["metrics"]["backup_offsite_failed"] == 0
+    assert body["metrics"]["backup_offsite_stale"] == 0
+    assert body["metrics"]["backup_offsite_wal_segments"] == 4
+    assert "backup_offsite_failed" not in body["alerts"]
+    assert "backup_offsite_stale" not in body["alerts"]
+
+    prom = client.get(
+        METRICS, params={"format": "prometheus"}, headers=bearer(login(client, world, "opspadmin"))
+    )
+    assert prom.status_code == 200
+    assert "mhvp_backup_offsite_ok 1" in prom.text
+    assert "mhvp_backup_offsite_age_seconds" in prom.text
+
+
+def test_offsite_status_failed_and_stale_alert(
+    client: TestClient, world: World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    now = datetime.now(UTC)
+    _offsite_file(
+        tmp_path,
+        monkeypatch,
+        OFFSITE_LINE.format(
+            status="failed", at=_stamp(now, hours_ago=40), detail=" detail=upload_of_dump_failed"
+        ),
+    )
+    body = _metrics(client, world)
+    job = body["jobs"]["backup_offsite"]
+    assert job["status"] == "failed"
+    assert job["error"] == "upload of dump failed"
+    assert job["stale"] is True
+    assert body["metrics"]["backup_offsite_failed"] == 1
+    assert body["metrics"]["backup_offsite_stale"] == 1
+    assert "backup_offsite_failed" in body["alerts"]
+    assert "backup_offsite_stale" in body["alerts"]
+
+
+def test_offsite_status_missing_file_is_stale_alert(
+    client: TestClient, world: World, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _offsite_file(tmp_path, monkeypatch, None)
+    body = _metrics(client, world)
+    job = body["jobs"]["backup_offsite"]
+    assert job["status"] == "missing"
+    assert "not readable" in job["error"]
+    assert job["stale"] is True
+    assert body["metrics"]["backup_offsite_failed"] == 0
+    assert "backup_offsite_stale" in body["alerts"]
+
+
+def test_offsite_status_malformed_line_is_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _offsite_file(tmp_path, monkeypatch, "garbage without fields\n")
+    result = ops.offsite_result()
+    assert result["status"] == "missing"
+    assert result["stale"] is True
+    # Age falls back to the file mtime when "at" is unparsable.
+    _offsite_file(tmp_path, monkeypatch, "backup-offsite: status=ok stamp=x at=nonsense wal=0\n")
+    result = ops.offsite_result()
+    assert result["status"] == "ok"
+    assert result["age_seconds"] is not None
+    assert result["age_seconds"] < 60
+    assert result["stale"] is False
+
+
+def test_offsite_not_configured_without_backup_dir(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.delenv(ops.OFFSITE_STATUS_ENV, raising=False)
+    monkeypatch.delenv("BACKUP_DIR", raising=False)
+    result = ops.offsite_result()
+    assert result["status"] == "not_configured"
+    assert result["stale"] is False
+    gauges = ops.job_gauges(
+        {"backup_verify": backup_verify.summarize(None), "backup_offsite": result}
+    )
+    assert gauges["backup_offsite_not_configured"] == 1
+    assert gauges["backup_offsite_stale"] == 0
+
+    monkeypatch.setenv("BACKUP_DIR", "/srv/mhvp-backup")
+    assert ops.offsite_status_path() == Path("/srv/mhvp-backup/offsite-status")

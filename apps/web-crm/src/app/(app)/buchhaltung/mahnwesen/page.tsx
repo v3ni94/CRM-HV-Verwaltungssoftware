@@ -4,18 +4,13 @@ import Link from "next/link";
 import { DunningPreviewButton } from "@/components/accounting/DunningPreviewButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { StatusChip } from "@/components/ui/StatusChip";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
-
-const RUN_VARIANT: Record<string, StatusPillVariant> = {
-  preview: "warning",
-  approved: "success",
-};
 
 export default async function DunningPage() {
   const t = await getTranslations("Dunning");
@@ -48,7 +43,7 @@ export default async function DunningPage() {
               <Link href={`/buchhaltung/mahnwesen/${String(r.id)}`} className="hover:underline">
                 {formatDate(String(r.run_date))}
               </Link>
-              <StatusPill variant={RUN_VARIANT[String(r.status)] ?? "neutral"} label={t(`runStatus.${String(r.status)}`)} />
+              <StatusChip domain="dunningRun" status={String(r.status)} label={t(`runStatus.${String(r.status)}`)} />
             </li>
           ))}
         </ul>

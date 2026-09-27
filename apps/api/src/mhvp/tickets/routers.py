@@ -2,7 +2,7 @@
 invoice end to end. Payment stays in accounting (M14/M15); board status never pays."""
 
 import uuid
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -42,6 +42,7 @@ from mhvp.tickets.status import (
     ResolutionKind,
     assign_ticket,
     record_resolution_example,
+    request_mail_archive,
     transition_status,
 )
 
@@ -175,6 +176,8 @@ class TicketIn(_In):
     initiator_contact_id: uuid.UUID | None = None
     source: TicketSource = TicketSource.MANUAL
     visible_for: list[str] = Field(default_factory=list)
+    # Optional working due date (spec 4.9); the SLA due time stays separate.
+    due_on: date | None = None
 
 
 class TicketPatch(_In):
@@ -193,6 +196,8 @@ class TicketPatch(_In):
     unit_id: uuid.UUID | None = None
     # 6.6: internal description, never shown to portal users (review 26.09.2026, M6).
     internal_description: str | None = Field(default=None, max_length=20000)
+    # Due date; an explicit null clears it (``model_fields_set``).
+    due_on: date | None = None
 
 
 class AssigneeIn(_In):
@@ -282,6 +287,7 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "checklist",
             "extra_fields",
             "sla_due_at",
+            "due_on",
             "resolved_at",
             "time_spent_minutes",
             "merged_into_ticket_id",
@@ -1591,6 +1597,9 @@ async def merge_tickets(
             clock = await session.scalar(select(SlaClock).where(SlaClock.ticket_id == t.id))
             if clock is not None:
                 await mark_resolved(session, clock)
+            # A merged source is closed as well: its mails leave the Gmail inbox like on
+            # every other closing status (operator 27.09.2026).
+            await request_mail_archive(session, request.app.state.settings, t)
 
         await emit(
             session,
@@ -1642,6 +1651,13 @@ async def list_tickets(
     ),
     property_id: uuid.UUID | None = None,
     unit_id: uuid.UUID | None = None,
+    contract_id: uuid.UUID | None = Query(
+        default=None,
+        description=(
+            "Vertrag: Tickets der Einheit des Vertrags oder eines Kontakts der Vertragspartei"
+            " (contact_id ODER initiator_contact_id)"
+        ),
+    ),
     contact_id: uuid.UUID | None = Query(
         default=None, description="Kontakt oder Initiator (contact_id ODER initiator_contact_id)"
     ),
@@ -1779,6 +1795,22 @@ async def list_tickets(
             query = query.where(Ticket.property_id == property_id)
         if unit_id:
             query = query.where(Ticket.unit_id == unit_id)
+        if contract_id:
+            # Resolved via the contract's unit or the contacts of its party; the contract is
+            # read under RLS, so a foreign tenant's id matches nothing.
+            contract_unit = (
+                select(Contract.unit_id).where(Contract.id == contract_id).scalar_subquery()
+            )
+            contract_contacts = select(PartyMember.contact_id).where(
+                PartyMember.party_id.in_(
+                    select(Contract.party_id).where(Contract.id == contract_id)
+                )
+            )
+            query = query.where(
+                (Ticket.unit_id == contract_unit)
+                | Ticket.contact_id.in_(contract_contacts)
+                | Ticket.initiator_contact_id.in_(contract_contacts)
+            )
         for person in (contact_id, any_contact_id):
             if person:
                 query = query.where(
@@ -2016,6 +2048,8 @@ async def patch_ticket(
             ticket.property_id = body.property_id
         if body.unit_id is not None:
             ticket.unit_id = body.unit_id
+        if "due_on" in body.model_fields_set:
+            ticket.due_on = body.due_on
         await session.flush()
         return _ticket_out(ticket)
 

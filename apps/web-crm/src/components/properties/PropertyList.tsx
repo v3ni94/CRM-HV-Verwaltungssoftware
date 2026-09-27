@@ -1,14 +1,11 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 
-import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { StatusChip } from "@/components/ui/StatusChip";
 import { ui } from "@/lib/ui";
 
-const STATUS_VARIANT: Record<string, StatusPillVariant> = {
-  active: "success",
-  onboarding: "warning",
-  terminated: "neutral",
-};
+/** Deaktivierte Objekte (Status terminated) erscheinen nur für den Superadmin und grau. */
+const TERMINATED = "terminated";
 
 export type PropertyRow = {
   id: string;
@@ -23,7 +20,8 @@ export type PropertyRow = {
 };
 
 /** Objektliste als Karten (mobil) und Tabelle; Mietverwaltung ohne aktiven Eigentümer trägt
- *  das Kennzeichen "Eigentümer fehlt" (operator 26.09.2026). */
+ *  das Kennzeichen "Eigentümer fehlt" (operator 26.09.2026). Deaktivierte Objekte
+ *  (operator 27.09.2026) sind grau und tragen den StatusChip Deaktiviert. */
 export function PropertyList({ rows }: { rows: PropertyRow[] }) {
   const t = useTranslations("Properties");
   return (
@@ -33,16 +31,13 @@ export function PropertyList({ rows }: { rows: PropertyRow[] }) {
         data-testid="properties-cards"
       >
         {rows.map((p) => (
-          <li key={p.id} className={ui.cardLink} data-testid="property-card">
+          <li key={p.id} className={`${ui.cardLink} ${p.status === TERMINATED ? "opacity-60" : ""}`} data-testid="property-card" data-status={p.status}>
             <Link href={`/objekte/${p.id}`} className="flex flex-col gap-1.5">
               <span className="flex items-center justify-between gap-2">
                 <span className="font-medium">
                   {p.number} · {p.name}
                 </span>
-                <StatusPill
-                  variant={STATUS_VARIANT[p.status] ?? "neutral"}
-                  label={t(`status.${p.status}`)}
-                />
+                <StatusChip domain="property" status={p.status} />
               </span>
               <span className="text-sm text-muted">
                 {[p.street, p.house_number].filter(Boolean).join(" ")}
@@ -72,12 +67,12 @@ export function PropertyList({ rows }: { rows: PropertyRow[] }) {
               <th>{t("address")}</th>
               <th>{t("type")}</th>
               <th>{t("ownerColumn")}</th>
-              <th>{t("status")}</th>
+              <th>{t("statusColumn")}</th>
             </tr>
           </thead>
           <tbody>
             {rows.map((p) => (
-              <tr key={p.id}>
+              <tr key={p.id} className={p.status === TERMINATED ? "text-muted opacity-60" : undefined} data-status={p.status}>
                 <td className="tabular-nums">
                   <Link
                     href={`/objekte/${p.id}`}
@@ -106,10 +101,7 @@ export function PropertyList({ rows }: { rows: PropertyRow[] }) {
                   ) : null}
                 </td>
                 <td>
-                  <StatusPill
-                    variant={STATUS_VARIANT[p.status] ?? "neutral"}
-                    label={t(`status.${p.status}`)}
-                  />
+                  <StatusChip domain="property" status={p.status} />
                 </td>
               </tr>
             ))}

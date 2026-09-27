@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { safeNext } from "@/lib/next-path";
 import { ui } from "@/lib/ui";
 
 export async function switchTenant(tenantId: string) {
@@ -27,7 +28,7 @@ export function TenantPicker({ tenants, next }: { tenants: { id: string; name: s
       setError(result.message);
       return;
     }
-    router.push(next);
+    router.push(safeNext(next));
     router.refresh();
   }
 

@@ -4100,7 +4100,11 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Zustellung vorbereiten */
+        /**
+         * Zustellung vorbereiten
+         * @description The delivery rule of authorised representatives applies (M23-07): the first dispatch
+         *     is returned, dispatches for further recipients in ``further_dispatches``.
+         */
         post: operations["create_api_v1_dispatches_post"];
         delete?: never;
         options?: never;
@@ -7079,7 +7083,10 @@ export interface paths {
         put?: never;
         /**
          * Brief erzeugen und ablegen
-         * @description Generated letters are filed and linked automatically (11.3); nothing is sent.
+         * @description Generated letters are filed and linked automatically (11.3); nothing is sent. The
+         *     recipients follow the delivery rule of authorised representatives (M23-07): the first
+         *     document is returned, further copies (representative or represented contact) in
+         *     ``further_documents``.
          */
         post: operations["create_letter_api_v1_letters_post"];
         delete?: never;
@@ -7850,6 +7857,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/messages/{message_id}/archive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Gmail-Archivierung jetzt ausführen
+         * @description Runs the Gmail archive job for one inbound mail synchronously (operator 27.09.2026:
+         *     manual catch up when a queued job was lost or the mailbox was reconnected). Idempotent:
+         *     an archived mail returns its record unchanged. The result carries ``archive_status``,
+         *     ``archive_error`` and ``archived_at`` like the message itself.
+         */
+        post: operations["archive_now_api_v1_mail_messages__message_id__archive_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/{message_id}/attachments/{attachment_id}/invoice-extraction": {
         parameters: {
             query?: never;
@@ -8480,7 +8510,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Übermittlungen (Rollen, Abrechnungsdaten) */
+        /** Übermittlungen (Rollen, Abrechnungsdaten, Ordnungsbegriffsabgleich) */
         get: operations["list_transmissions_api_v1_metering_transmissions_get"];
         put?: never;
         post?: never;
@@ -8535,6 +8565,28 @@ export interface paths {
         put?: never;
         /** Verbindlich beauftragen (Abrechnung) beziehungsweise Rollen übermitteln */
         post: operations["order_transmission_api_v1_metering_transmissions__transmission_id__order_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/metering/transmissions/{transmission_id}/poll": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bearbeitungsstatus beim Anbieter abrufen (Ordnungsbegriffsabgleich, nur lesend)
+         * @description Fetches the asynchronous processing status (Q8). ``waiting_provider`` stays until the
+         *     provider reports ``COMPLETED``; the fetched result is stored on the external billing unit
+         *     and confirms the assignment technically when every sent unit was matched.
+         */
+        post: operations["poll_transmission_api_v1_metering_transmissions__transmission_id__poll_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11040,6 +11092,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/properties/{property_id}/reactivate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Objekt wieder aktivieren */
+        post: operations["reactivate_property_api_v1_properties__property_id__reactivate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/properties/{property_id}/service-providers": {
         parameters: {
             query?: never;
@@ -11106,6 +11175,40 @@ export interface paths {
         post?: never;
         /** Untergemeinschaft löschen (Einheiten werden gelöst) */
         delete: operations["delete_sub_community_api_v1_properties__property_id__sub_communities__sub_community_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/terminate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verwaltung beenden */
+        post: operations["terminate_property_api_v1_properties__property_id__terminate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/termination": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Beendigung lesen */
+        get: operations["get_termination_api_v1_properties__property_id__termination_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -13296,6 +13399,32 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspace/approvals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Offene Freigaben des angemeldeten Benutzers (Startseite)
+         * @description Counts per approval kind, only for kinds the caller may decide (operator 27.09.2026,
+         *     start page column "Freigaben"). Read only; every count follows the same rules as the
+         *     approving endpoint: mail replies (communication:approve, otherwise own submissions),
+         *     IBAN four eyes release (contacts:approve), release gate requests (release_gates:approve),
+         *     dunning runs in preview and direct debit runs in draft without an own approval
+         *     (accounting:approve) and checked metering transmissions (transmission write rights).
+         *     A kind the caller may not decide is left out of the response.
+         */
+        get: operations["approvals_api_v1_workspace_approvals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspace/bulk": {
         parameters: {
             query?: never;
@@ -13463,7 +13592,10 @@ export interface paths {
         };
         /**
          * Fristenliste des Mandanten (A41, Orientierung, zu prüfen)
-         * @description Only kinds the caller may read (contracts, properties, accounting, documents).
+         * @description Only kinds the caller may read (contracts, properties, accounting, documents). Own and
+         *     shared manual calendar entries with reminders appear as kind ``appointment`` (recurring
+         *     ones once per occurrence, computed on read); they are appointments, not deadlines of
+         *     the source data, and are never notified by the lead time of the list.
          */
         get: operations["deadlines_api_v1_workspace_deadlines_get"];
         put?: never;
@@ -15261,6 +15393,9 @@ export interface components {
             notes?: string | null;
             /** Property Id */
             property_id?: string | null;
+            recurrence?: components["schemas"]["RecurrenceIn"] | null;
+            /** Reminders */
+            reminders?: string[];
             /**
              * Shared
              * @default false
@@ -15368,6 +15503,10 @@ export interface components {
             mailbox_id?: string | null;
             /** Property Id */
             property_id?: string | null;
+            /** Recurrence */
+            recurrence?: {
+                [key: string]: unknown;
+            } | null;
             /** Reminders */
             reminders?: string[];
             /**
@@ -19856,6 +19995,54 @@ export interface components {
             /** Unit Id */
             unit_id?: string | null;
         };
+        /**
+         * LetterOut
+         * @description The document for the first recipient; further copies for representatives or the
+         *     represented contact (delivery rule, M23-07).
+         */
+        LetterOut: {
+            /** Category Id */
+            category_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Duplicate Of */
+            duplicate_of?: string[];
+            /** Filename */
+            filename: string;
+            /** Further Documents */
+            further_documents?: components["schemas"]["DocumentOut"][];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Links */
+            links?: components["schemas"]["LinkOut"][];
+            /** Mime Type */
+            mime_type: string;
+            /** Mirrors */
+            mirrors?: components["schemas"]["MirrorOut"][];
+            /** Retention Hold Reason */
+            retention_hold_reason: string | null;
+            /** Retention Profile Id */
+            retention_profile_id: string | null;
+            /** Retention Until */
+            retention_until: string | null;
+            /** Sha256 */
+            sha256: string;
+            /** Size */
+            size: number;
+            source: components["schemas"]["DocumentSource"];
+            storage: components["schemas"]["StorageKind"];
+            text_status: components["schemas"]["TextStatus"];
+            /** Title */
+            title: string;
+            /** Visibility */
+            visibility: string[];
+        };
         /** LettersIn */
         LettersIn: {
             /** Contract Id */
@@ -20753,6 +20940,11 @@ export interface components {
             email: string | null;
             /** Is Platform Admin */
             is_platform_admin: boolean;
+            /**
+             * Is Superadmin
+             * @default false
+             */
+            is_superadmin: boolean;
             /** Permissions */
             permissions: string[];
             /** Platform Access Reason */
@@ -22972,6 +23164,86 @@ export interface components {
             /** Street */
             street: string | null;
         };
+        /**
+         * PropertyTerminationIn
+         * @description Beendigung des Verwaltungsverhältnisses (operator 27.09.2026).
+         */
+        PropertyTerminationIn: {
+            /**
+             * Effective Date
+             * Format: date
+             * @description Ende der Verwaltung
+             */
+            effective_date: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Notice Date
+             * Format: date
+             * @description Datum der Kündigung
+             */
+            notice_date: string;
+            /**
+             * Notice Document Id
+             * @description Kündigungsschreiben (Dokument)
+             */
+            notice_document_id?: string | null;
+            /** Successor Manager Contact Id */
+            successor_manager_contact_id?: string | null;
+            /** Successor Owner Contact Id */
+            successor_owner_contact_id?: string | null;
+            terminated_by: components["schemas"]["TerminatedBy"];
+        };
+        /** PropertyTerminationOut */
+        PropertyTerminationOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /**
+             * Effective Date
+             * Format: date
+             */
+            effective_date: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Notice Date
+             * Format: date
+             */
+            notice_date: string;
+            /** Notice Document Id */
+            notice_document_id: string | null;
+            /** Notice Document Title */
+            notice_document_title?: string | null;
+            previous_status: components["schemas"]["PropertyStatus"];
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Reactivated At */
+            reactivated_at: string | null;
+            /** Reactivated By User Id */
+            reactivated_by_user_id: string | null;
+            /** Successor Manager Contact Id */
+            successor_manager_contact_id: string | null;
+            /** Successor Manager Name */
+            successor_manager_name?: string | null;
+            /** Successor Owner Contact Id */
+            successor_owner_contact_id: string | null;
+            /** Successor Owner Name */
+            successor_owner_name?: string | null;
+            terminated_by: components["schemas"]["TerminatedBy"];
+        };
         /** ProposalAcceptIn */
         ProposalAcceptIn: {
             /** @default normal */
@@ -23514,6 +23786,25 @@ export interface components {
             trigger: string | null;
             /** Warnings */
             warnings: string[];
+        };
+        /**
+         * RecurrenceIn
+         * @description Recurrence of a manual entry: weekly, monthly or yearly with an end date; the
+         *     occurrences are expanded on read (``jobs.expand_occurrences``), never stored.
+         */
+        RecurrenceIn: {
+            /** Frequency */
+            frequency: string;
+            /**
+             * Interval
+             * @default 1
+             */
+            interval: number;
+            /**
+             * Until
+             * Format: date
+             */
+            until: string;
         };
         /** ReferenceRateIn */
         ReferenceRateIn: {
@@ -25098,6 +25389,11 @@ export interface components {
              * @default false
              */
             ai_learning_examples_enabled: boolean;
+            /**
+             * Ai Learning Examples Retention Months
+             * @default 24
+             */
+            ai_learning_examples_retention_months: number;
             /** Auto Posting Enabled */
             auto_posting_enabled: boolean;
             branding: components["schemas"]["Branding"];
@@ -25129,6 +25425,8 @@ export interface components {
         TenantSettingsPatch: {
             /** Ai Learning Examples Enabled */
             ai_learning_examples_enabled?: boolean | null;
+            /** Ai Learning Examples Retention Months */
+            ai_learning_examples_retention_months?: number | null;
             branding?: components["schemas"]["Branding"] | null;
             company?: components["schemas"]["CompanyData"] | null;
             /** Metering Module Enabled */
@@ -25137,6 +25435,12 @@ export interface components {
             /** Ticket Reply Approval All */
             ticket_reply_approval_all?: boolean | null;
         };
+        /**
+         * TerminatedBy
+         * @description Who gave notice on the management relationship (operator 27.09.2026).
+         * @enum {string}
+         */
+        TerminatedBy: "manager" | "owner" | "hoa" | "other";
         /** TerminationIn */
         TerminationIn: {
             /**
@@ -25250,6 +25554,8 @@ export interface components {
             category?: string | null;
             /** Contact Id */
             contact_id?: string | null;
+            /** Due On */
+            due_on?: string | null;
             /** Initiator Contact Id */
             initiator_contact_id?: string | null;
             /** Internal Description */
@@ -25290,6 +25596,8 @@ export interface components {
             checklist_done?: number[] | null;
             /** Contact Id */
             contact_id?: string | null;
+            /** Due On */
+            due_on?: string | null;
             /** Extra Fields */
             extra_fields?: {
                 [key: string]: unknown;
@@ -25542,7 +25850,7 @@ export interface components {
             assignment_id: string;
             /**
              * Inputs
-             * @description Billing Input: ancillary_invoices, heating_system_invoices, energy_sources, allocations (je externer Nutzeinheit), currency und expectedvat als Ersatz, wenn keine Anbietervorlage geladen werden kann.
+             * @description Billing Input: ancillary_invoices, heating_system_invoices, energy_sources, allocations (je externer Nutzeinheit), currency und expectedvat als Ersatz, wenn keine Anbietervorlage geladen werden kann. Ordnungsbegriffsabgleich (billing_unit_setup): customer_number als Ersatz für die erste customer_reference der Verbindung.
              */
             inputs?: {
                 [key: string]: unknown;
@@ -25559,7 +25867,7 @@ export interface components {
          *     and billing input (bved billing-input, the binding send can trigger a billing).
          * @enum {string}
          */
-        TransmissionKind: "roles" | "billing_input";
+        TransmissionKind: "roles" | "billing_input" | "billing_unit_setup";
         /** TransmissionOut */
         TransmissionOut: {
             /** Assignment Version */
@@ -42236,7 +42544,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DocumentOut"];
+                    "application/json": components["schemas"]["LetterOut"];
                 };
             };
             /** @description Validation Error */
@@ -44002,6 +44310,39 @@ export interface operations {
             };
         };
     };
+    archive_now_api_v1_mail_messages__message_id__archive_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     invoice_extraction_from_attachment_api_v1_mail_messages__message_id__attachments__attachment_id__invoice_extraction_post: {
         parameters: {
             query?: never;
@@ -45607,6 +45948,37 @@ export interface operations {
                 "application/json": components["schemas"]["TransmissionStepIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransmissionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    poll_transmission_api_v1_metering_transmissions__transmission_id__poll_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transmission_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -49961,6 +50333,8 @@ export interface operations {
                 sev_only?: boolean;
                 /** @description Nur Mietverwaltungsobjekte ohne aktiven Objekteigentümer */
                 without_owner?: boolean;
+                /** @description Deaktivierte Objekte (Status terminated) mit ausgeben. Nur für den Superadmin wirksam, für alle anderen ohne Wirkung (operator 27.09.2026). */
+                include_terminated?: boolean;
                 page?: number;
                 page_size?: number;
             };
@@ -51055,6 +51429,37 @@ export interface operations {
             };
         };
     };
+    reactivate_property_api_v1_properties__property_id__reactivate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_providers_api_v1_properties__property_id__service_providers_get: {
         parameters: {
             query?: never;
@@ -51276,6 +51681,72 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    terminate_property_api_v1_properties__property_id__terminate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyTerminationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyTerminationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_termination_api_v1_properties__property_id__termination_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyTerminationOut"];
+                };
             };
             /** @description Validation Error */
             422: {
@@ -54483,6 +54954,8 @@ export interface operations {
                 status?: string | null;
                 property_id?: string | null;
                 unit_id?: string | null;
+                /** @description Vertrag: Tickets der Einheit des Vertrags oder eines Kontakts der Vertragspartei (contact_id ODER initiator_contact_id) */
+                contract_id?: string | null;
                 /** @description Kontakt oder Initiator (contact_id ODER initiator_contact_id) */
                 contact_id?: string | null;
                 /** @description Nur Initiator */
@@ -56227,6 +56700,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approvals_api_v1_workspace_approvals_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
                 };
             };
         };

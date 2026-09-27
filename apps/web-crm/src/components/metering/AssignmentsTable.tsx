@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
-import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { StatusChip } from "@/components/ui/StatusChip";
+import { StatusPill } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ASSIGNMENT_STATUSES, type Assignment, bffList, buildQuery, type MeteringConnection, SERVICE_SCOPES } from "@/lib/metering";
@@ -14,14 +15,6 @@ import { ui } from "@/lib/ui";
  *  (`propertyId` set). Search, filters and pagination run server side (X-Total-Count). The
  *  bulk release shows a preview of the selected assignments in status "proposed" and confirms
  *  them one by one with their version (409 is reported per row). */
-export const STATUS_VARIANT: Record<string, StatusPillVariant> = {
-  open: "neutral",
-  proposed: "warning",
-  confirmed: "success",
-  conflict: "danger",
-  archived: "neutral",
-};
-
 export function AssignmentsTable({
   connections,
   propertyId,
@@ -261,7 +254,7 @@ export function AssignmentsTable({
                   {a.assigned_unit_count}/{a.expected_unit_count ?? "?"}
                 </td>
                 <td>
-                  <StatusPill variant={STATUS_VARIANT[a.status] ?? "neutral"} label={t(`status.${a.status}`)} />
+                  <StatusChip domain="meteringAssignment" status={a.status} label={t(`status.${a.status}`)} />
                   {a.remote_confirmed ? <span className={`${ui.badgeSuccess} ml-1`}>{t("assignment.remoteConfirmed")}</span> : null}
                 </td>
                 <td className="tabular-nums">{a.last_success_at ? formatDateTime(a.last_success_at) : t("none")}</td>

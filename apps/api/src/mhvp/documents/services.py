@@ -15,7 +15,7 @@ from mhvp.contacts.models import Contact, ContactAddress
 from mhvp.contracts.models import Contract
 from mhvp.core.ids import uuid7
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents import letters
+from mhvp.documents import letters, scan
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.dms import DmsError, GoogleDriveStore
 from mhvp.documents.models import (
@@ -120,17 +120,34 @@ async def store_document(
     links: list[tuple[str, uuid.UUID, LinkRole]],
     created_by: uuid.UUID | None,
     visibility: list[str] | None = None,
+    scan_for_malware: bool = True,
 ) -> Document:
     """Index row, links and mirror jobs in this transaction; the original goes to S3 first.
+
+    Every file is scanned with ClamAV before the blob is written (``mhvp.documents.scan``,
+    operator decision 27.09.2026): uploads, portal files, mail attachments, metering and
+    import documents alike. PDFs rendered by the platform itself (``DocumentSource.GENERATED``)
+    are skipped; callers may also pass ``scan_for_malware=False`` for such content.
 
     If the transaction rolls back after the upload, an unreferenced object remains under a fresh
     key. It carries no index entry and is never served; cleaning such objects is open (M6-02).
     """
     for entity_type, entity_id, _ in links:
         await check_link_target(session, entity_type, entity_id)
+    sha256 = hashlib.sha256(data).hexdigest()
+    if scan_for_malware and source is not DocumentSource.GENERATED:
+        await scan.scan_before_store(
+            session,
+            blobs.settings,
+            tenant_id=tenant_id,
+            data=data,
+            filename=filename,
+            sha256=sha256,
+            source=str(source),
+            actor_user_id=created_by,
+        )
     text, status = extract(mime_type, data)
     document_id = uuid7()
-    sha256 = hashlib.sha256(data).hexdigest()
     key = BlobStore.key(tenant_id, document_id)
     blobs.put(key, data, mime_type, sha256)
     document = Document(

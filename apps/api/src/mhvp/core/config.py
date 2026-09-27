@@ -88,6 +88,14 @@ class Settings(BaseSettings):
     openimmo_xsd_path: str | None = None
 
     health_check_timeout_seconds: float = Field(default=2.0, gt=0, le=30)
+    # Malware scan with ClamAV before any document is stored (operator decision 27.09.2026,
+    # ``mhvp.documents.scan``). ``off`` skips the scan (dev and tests only), ``warn`` stores
+    # when clamd is unreachable and journals the gap, ``enforce`` refuses then (503). Staging
+    # and prod require ``enforce``; the runbook is docs/runbooks/virenscan.md.
+    clamav_mode: Literal["off", "warn", "enforce"] = "off"
+    clamav_host: str = "clamav"
+    clamav_port: int = Field(default=3310, ge=1, le=65535)
+    clamav_timeout_seconds: float = Field(default=30.0, gt=0, le=600)
 
     # Envelope encryption (3.5): base64 encoded 32 byte master key, never stored in the DB.
     master_key: SecretStr | None = None
@@ -160,6 +168,9 @@ class Settings(BaseSettings):
         for name, value in self.__dict__.items():
             if isinstance(value, SecretStr) and PLACEHOLDER_SECRET in value.get_secret_value():
                 raise ValueError(f"MHVP_{name.upper()} still contains the .env.example placeholder")
+        # Operator decision 27.09.2026: no productive document store without malware scan.
+        if self.clamav_mode != "enforce":
+            raise ValueError("MHVP_CLAMAV_MODE must be enforce in staging and prod")
         return self
 
     @property

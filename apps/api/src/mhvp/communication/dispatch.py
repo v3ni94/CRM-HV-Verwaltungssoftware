@@ -167,8 +167,14 @@ async def expand_items(session: Any, items: list[DispatchIn]) -> list[DispatchIn
 async def create(
     body: DispatchIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
+    """The delivery rule of authorised representatives applies (M23-07): the first dispatch
+    is returned, dispatches for further recipients in ``further_dispatches``."""
     async with tenant_tx(request, principal) as session:
-        return _out(await _create(session, principal, body, None))
+        rows = [
+            await _create(session, principal, item, None)
+            for item in await expand_items(session, [body])
+        ]
+        return {**_out(rows[0]), "further_dispatches": [_out(r) for r in rows[1:]]}
 
 
 @router.post("/dispatches/serial", status_code=201, summary="Serienversand je Zustellweg")

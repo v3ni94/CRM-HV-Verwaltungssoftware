@@ -294,6 +294,24 @@ def test_derived_dates_include_contract_end_and_termination(
 # Router: digest, deadlines, job settings ----------------------------------------------------
 
 
+def test_approvals_counts_follow_permissions(client: TestClient, world: World) -> None:
+    """Start page column "Freigaben": every count only for a kind the caller may decide,
+    an empty tenant gives zero, a role without any approval right gets an empty object."""
+    admin = bearer(login(client, world, "covwsadmin"))
+    caretaker = bearer(login(client, world, "covwscaretaker"))
+    other = bearer(login(client, world, "covwsother"))
+
+    counts = _ok(client.get(f"{W}/approvals", headers=admin))
+    assert isinstance(counts, dict)
+    assert all(isinstance(v, int) and v == 0 for v in counts.values())
+    assert {"mail", "bank_accounts", "dunning_runs", "direct_debits"} <= set(counts)
+    # release_gates:approve is not part of the tenant admin role (four eyes, ADR 0011).
+    assert "release_gates" not in counts
+    assert _ok(client.get(f"{W}/approvals", headers=caretaker)) == {}
+    # Tenant separation: the other tenant counts its own rows only.
+    assert isinstance(_ok(client.get(f"{W}/approvals", headers=other)), dict)
+
+
 def test_digest_deadlines_and_job_settings(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "covwsadmin"))
     standard = bearer(login(client, world, "covwsstandard"))

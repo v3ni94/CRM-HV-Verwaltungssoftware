@@ -5,7 +5,7 @@ import { TicketCreate } from "@/components/tickets/TicketForms";
 import { TicketFilters } from "@/components/tickets/TicketFilters";
 import { TicketsList } from "@/components/tickets/TicketsList";
 import { TicketsPagination } from "@/components/tickets/TicketsPagination";
-import { asAttention, type Attention } from "@/components/tickets/TicketAttention";
+import { asAttention, type Attention } from "@/components/tickets/attention";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
@@ -74,7 +74,11 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   query.set("page", String(page));
   query.set("page_size", String(PAGE_SIZE));
 
-  const response = await serverFetch(`/api/v1/tickets?${query.toString()}`);
+  // A network failure or timeout of the API must not crash the page (incident 27.09.2026): it
+  // is shown as a notice via problemMessage like any other unavailable backend.
+  const response = await serverFetch(`/api/v1/tickets?${query.toString()}`).catch(
+    () => new Response(null, { status: 503 }),
+  );
   redirectIfUnauthenticated(response);
   const data = response.ok ? ((await response.json()) as Record<string, unknown>[]) : null;
   const total = Number.parseInt(response.headers.get("x-total-count") ?? "", 10);

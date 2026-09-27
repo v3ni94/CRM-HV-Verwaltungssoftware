@@ -449,3 +449,19 @@ def test_budget_stop_and_provider_error(
     assert stopped["documents_pending"] == 2  # budget2 plus the new DPA file of the re-setup
     fake.fail_next = None
     assert _reindex(client, admin)["documents_pending"] == 0
+
+
+def test_hnsw_index_on_embedding(database: Database) -> None:
+    """Migration 0154: ANN index for the cosine search (``vector_cosine_ops``)."""
+    from sqlalchemy import create_engine, text
+
+    engine = create_engine(database.migrator_url)
+    with engine.connect() as conn:
+        definition = conn.execute(
+            text(
+                "SELECT indexdef FROM pg_indexes WHERE indexname = 'ix_ai_embedding_embedding_hnsw'"
+            )
+        ).scalar_one()
+    engine.dispose()
+    assert "USING hnsw" in definition
+    assert "vector_cosine_ops" in definition

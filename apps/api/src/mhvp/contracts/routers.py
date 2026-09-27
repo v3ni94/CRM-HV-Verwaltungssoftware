@@ -124,7 +124,13 @@ async def _outs(session: Any, contracts: Sequence[Contract]) -> list[s.ContractO
 
 
 async def _event(
-    session: Any, principal: TenantPrincipal, type_: str, entity_id: uuid.UUID, **payload: Any
+    session: Any,
+    principal: TenantPrincipal,
+    type_: str,
+    entity_id: uuid.UUID,
+    *,
+    changes: dict[str, Any] | None = None,
+    **payload: Any,
 ) -> None:
     await emit(
         session,
@@ -134,7 +140,16 @@ async def _event(
         entity_id=entity_id,
         actor_user_id=principal.user_id,
         payload={k: str(v) if v is not None else None for k, v in payload.items()},
+        changes=changes,
     )
+
+
+def _plain(values: dict[str, Any]) -> dict[str, Any]:
+    """JSON safe copy for the audit diff (dates, UUIDs and Decimals as text)."""
+    return {
+        k: (None if v is None else v if isinstance(v, bool | int | str) else str(v))
+        for k, v in values.items()
+    }
 
 
 async def _create(
@@ -547,6 +562,10 @@ async def new_version(
             principal,
             "contract.versioned",
             new.id,
+            changes=diff(
+                _plain({k: getattr(old, k) for k in changes}),
+                _plain({k: getattr(new, k) for k in changes}),
+            ),
             previous=old.id,
             effective_date=body.effective_date,
         )

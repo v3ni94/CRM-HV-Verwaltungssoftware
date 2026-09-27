@@ -48,6 +48,26 @@ describe("LoginForm", () => {
     await waitFor(() => expect(push).toHaveBeenCalledWith("/kontakte/neu"));
   });
 
+  it("keeps the target through the tenant selection when no tenant is selected yet", async () => {
+    fetchMock.mockImplementation(async () =>
+      jsonResponse({ status: "ok", tenant_id: null, tenants: [{ id: "t-1", name: "HVM" }] }),
+    );
+    renderIntl(<LoginForm next="/objekte?seite=2" />);
+    await userEvent.type(screen.getByLabelText("E-Mail"), "user@example.org");
+    await userEvent.type(screen.getByLabelText("Passwort"), "geheim");
+    await userEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/mandant?next=%2Fobjekte%3Fseite%3D2"));
+  });
+
+  it("falls back to /start for an absolute target", async () => {
+    fetchMock.mockImplementation(async () => jsonResponse({ status: "ok", tenant_id: "t-1", tenants: [] }));
+    renderIntl(<LoginForm next="https://evil.example" />);
+    await userEvent.type(screen.getByLabelText("E-Mail"), "user@example.org");
+    await userEvent.type(screen.getByLabelText("Passwort"), "geheim");
+    await userEvent.click(screen.getByRole("button", { name: "Weiter" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/start"));
+  });
+
   it("shows the German problem title of the API", async () => {
     fetchMock.mockImplementation(async () => jsonResponse({ title: "Anmeldung fehlgeschlagen", status: 401 }, 401));
     renderIntl(<LoginForm />);

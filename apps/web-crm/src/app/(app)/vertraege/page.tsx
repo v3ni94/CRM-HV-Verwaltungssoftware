@@ -12,10 +12,23 @@ export const dynamic = "force-dynamic";
 
 /** Verträge (Miete, WEG, SEV): Liste mit Link zum Formular (A88). Versionen erscheinen als
  *  eigene Zeilen, sortiert nach Nummer und Version wie in der API. */
-export default async function ContractsPage() {
+export default async function ContractsPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const t = await getTranslations("ContractForm");
   const ta = await getTranslations("ContractApproval");
-  const [me, response] = await Promise.all([getMe(), serverFetch("/api/v1/contracts?limit=500")]);
+  // Filters from the URL (the object page links to /vertraege?property_id=..., the unit page
+  // to unit_id=...); only well formed ids are passed on to GET /contracts.
+  const params = (await searchParams) ?? {};
+  const query = new URLSearchParams({ limit: "500" });
+  const filters: string[] = [];
+  for (const key of ["property_id", "unit_id"] as const) {
+    const raw = params[key];
+    const id = Array.isArray(raw) ? raw[0] : raw;
+    if (id && /^[0-9a-f-]{36}$/i.test(id)) {
+      query.set(key, id);
+      filters.push(key);
+    }
+  }
+  const [me, response] = await Promise.all([getMe(), serverFetch(`/api/v1/contracts?${query.toString()}`)]);
   redirectIfUnauthenticated(response);
   const rows = response.ok ? ((await response.json()) as ContractOut[]) : null;
   const pending = (rows ?? []).filter((c) => c.approval_status === "pending").length;
@@ -40,6 +53,14 @@ export default async function ContractsPage() {
           </div>
         }
       />
+      {filters.length ? (
+        <p className={ui.help} data-testid="contracts-filter">
+          {t("page.filtered", { filter: filters.map((f) => t(`page.filters.${f}`)).join(", ") })}{" "}
+          <Link href="/vertraege" className="underline">
+            {t("page.clearFilter")}
+          </Link>
+        </p>
+      ) : null}
       {rows === null ? (
         <p role="alert" className={ui.alert}>
           {t("page.listError")}

@@ -3,6 +3,10 @@
 Counts only, no personal data. JSON for the admin UI, Prometheus text format for scraping.
 Job results with a protocol (A67 ``ops.backup_verify``: status, duration, checked file,
 error) are read from Redis and returned under ``jobs``; they are gauges in Prometheus.
+The off-site copy (``scripts/backup-offsite.sh``, M9-02) is a shell job outside the worker;
+its one line status file ``$BACKUP_DIR/offsite-status`` is read directly (environment
+``BACKUP_DIR`` or ``MHVP_BACKUP_OFFSITE_STATUS_FILE``) and reported as ``jobs.backup_offsite``
+with age and stale flag, alerting on ``failed`` and ``stale``.
 
 Monitoring access (M9-04a, operator decision 26.09.2026): a platform administrator issues an
 API key that carries only ``platform:metrics:read`` (``/platform/ops/metrics-keys``). The key
@@ -11,9 +15,11 @@ key format and RLS need a tenant); that tenant is a storage location only, the k
 tenant permission and ``require_permission`` rejects it everywhere else.
 """
 
+import os
 import secrets
 import uuid
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -46,7 +52,125 @@ ALERTING = {
     "ai_runs_failed_24h",
     "backup_verify_failed",
     "backup_verify_stale",
+    "backup_offsite_failed",
+    "backup_offsite_stale",
 }
+
+# Off-site status line of scripts/backup-offsite.sh: "backup-offsite: status=ok|failed
+# stamp=<STAMP> at=<UTC ISO> uploaded=<n> bytes=<n> objects_new=<n> objects_total=<n> wal=<n>
+# pruned=<n> seconds=<n> dry_run=<bool> [detail=<text>]". Written once per daily run, so a
+# line older than the daily schedule plus slack means the copy did not run.
+OFFSITE_STATUS_ENV = "MHVP_BACKUP_OFFSITE_STATUS_FILE"
+OFFSITE_STATUS_NAME = "offsite-status"
+OFFSITE_STALE_AFTER_SECONDS = 36 * 3600
+OFFSITE_STATUS_OK = "ok"
+OFFSITE_STATUS_FAILED = "failed"
+OFFSITE_STATUS_MISSING = "missing"
+OFFSITE_STATUS_NOT_CONFIGURED = "not_configured"
+OFFSITE_MAX_LINE_CHARS = 4000
+_OFFSITE_INT_FIELDS = (
+    "uploaded",
+    "bytes",
+    "objects_new",
+    "objects_total",
+    "wal",
+    "pruned",
+    "seconds",
+)
+
+
+def offsite_status_path() -> Path | None:
+    """Location of the status file: explicit override, else ``$BACKUP_DIR/offsite-status``."""
+    explicit = os.environ.get(OFFSITE_STATUS_ENV, "").strip()
+    if explicit:
+        return Path(explicit)
+    backup_dir = os.environ.get("BACKUP_DIR", "").strip()
+    return Path(backup_dir) / OFFSITE_STATUS_NAME if backup_dir else None
+
+
+def parse_offsite_status(line: str) -> dict[str, str]:
+    """``key=value`` pairs of the status line; the ``backup-offsite:`` prefix is optional."""
+    text = line.strip()
+    if text.startswith("backup-offsite:"):
+        text = text[len("backup-offsite:") :]
+    fields: dict[str, str] = {}
+    for token in text.split():
+        key, sep, value = token.partition("=")
+        if sep and key:
+            fields[key] = value
+    return fields
+
+
+def _offsite_empty(status: str, error: str | None) -> dict[str, Any]:
+    return {
+        "status": status,
+        "stamp": None,
+        "at": None,
+        "uploaded": None,
+        "bytes": None,
+        "objects_new": None,
+        "objects_total": None,
+        "wal": None,
+        "pruned": None,
+        "seconds": None,
+        "dry_run": None,
+        "detail": None,
+        "error": error,
+        "file": None,
+        "age_seconds": None,
+        "stale": status not in (OFFSITE_STATUS_NOT_CONFIGURED,),
+    }
+
+
+def offsite_result(*, now: datetime | None = None) -> dict[str, Any]:
+    """Protocol of the last off-site copy from the status file. Never raises: an unreadable
+    or malformed file is reported as ``missing`` (stale, alerting); without ``BACKUP_DIR`` the
+    job is ``not_configured`` (informational, no alert)."""
+    current = now or datetime.now(UTC)
+    path = offsite_status_path()
+    if path is None:
+        return _offsite_empty(OFFSITE_STATUS_NOT_CONFIGURED, "BACKUP_DIR is not set")
+    try:
+        with path.open(encoding="utf-8", errors="replace") as handle:
+            line = handle.readline(OFFSITE_MAX_LINE_CHARS)
+        mtime = datetime.fromtimestamp(path.stat().st_mtime, UTC)
+    except OSError as exc:
+        reason = f"status file not readable: {exc.strerror}"
+        missing = _offsite_empty(OFFSITE_STATUS_MISSING, reason)
+        missing["file"] = str(path)
+        return missing
+    fields = parse_offsite_status(line)
+    raw_status = fields.get("status", "")
+    if raw_status not in (OFFSITE_STATUS_OK, OFFSITE_STATUS_FAILED):
+        missing = _offsite_empty(OFFSITE_STATUS_MISSING, "status line has no status=ok|failed")
+        missing["file"] = str(path)
+        return missing
+    written: datetime | None = None
+    try:
+        written = datetime.fromisoformat(fields["at"].replace("Z", "+00:00"))
+        if written.tzinfo is None:
+            written = written.replace(tzinfo=UTC)
+    except (KeyError, ValueError):
+        written = mtime
+    age = round((current - written).total_seconds(), 3)
+    out: dict[str, Any] = {
+        "status": raw_status,
+        "stamp": fields.get("stamp") or None,
+        "at": written.isoformat(),
+    }
+    for key in _OFFSITE_INT_FIELDS:
+        try:
+            out[key] = int(fields[key])
+        except (KeyError, ValueError):
+            out[key] = None
+    out["dry_run"] = fields.get("dry_run", "").lower() == "true"
+    detail = fields.get("detail")
+    out["detail"] = detail.replace("_", " ") if detail else None
+    out["error"] = out["detail"] if raw_status == OFFSITE_STATUS_FAILED else None
+    out["file"] = str(path)
+    out["age_seconds"] = age
+    out["stale"] = age > OFFSITE_STALE_AFTER_SECONDS
+    return out
 
 
 async def job_results(request: Request) -> dict[str, dict[str, Any]]:
@@ -58,13 +182,13 @@ async def job_results(request: Request) -> dict[str, dict[str, Any]]:
             record = await backup_verify.load_result(resources.redis)
         except Exception:  # metrics must not fail on a Redis error
             record = None
-    return {"backup_verify": backup_verify.summarize(record)}
+    return {"backup_verify": backup_verify.summarize(record), "backup_offsite": offsite_result()}
 
 
 def job_gauges(jobs: dict[str, dict[str, Any]]) -> dict[str, int]:
     """Numeric view of the job protocol for alerts and Prometheus."""
     result = jobs["backup_verify"]
-    return {
+    gauges = {
         "backup_verify_ok": int(result["status"] == backup_verify.STATUS_OK),
         "backup_verify_failed": int(result["status"] == backup_verify.STATUS_FAILED),
         "backup_verify_not_configured": int(
@@ -74,6 +198,21 @@ def job_gauges(jobs: dict[str, dict[str, Any]]) -> dict[str, int]:
         "backup_verify_duration_seconds": int(result["duration_seconds"] or 0),
         "backup_verify_age_seconds": int(result["age_seconds"] or 0),
     }
+    offsite = jobs.get("backup_offsite")
+    if offsite is not None:
+        gauges.update(
+            {
+                "backup_offsite_ok": int(offsite["status"] == OFFSITE_STATUS_OK),
+                "backup_offsite_failed": int(offsite["status"] == OFFSITE_STATUS_FAILED),
+                "backup_offsite_not_configured": int(
+                    offsite["status"] == OFFSITE_STATUS_NOT_CONFIGURED
+                ),
+                "backup_offsite_stale": int(bool(offsite["stale"])),
+                "backup_offsite_age_seconds": int(offsite["age_seconds"] or 0),
+                "backup_offsite_wal_segments": int(offsite["wal"] or 0),
+            }
+        )
+    return gauges
 
 
 async def collect(request: Request) -> dict[str, int]:

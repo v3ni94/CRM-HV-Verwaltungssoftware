@@ -44,6 +44,7 @@ export function TicketCreate() {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("normal");
+  const [dueOn, setDueOn] = useState("");
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [templateId, setTemplateId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -67,6 +68,8 @@ export function TicketCreate() {
         public_description: description.trim() || null,
         priority,
         template_id: templateId || null,
+        // Optional working due date (spec 4.9); omitted when empty, the SLA stays separate.
+        ...(dueOn ? { due_on: dueOn } : {}),
       }),
     });
     setBusy(false);
@@ -105,6 +108,10 @@ export function TicketCreate() {
             ))}
           </select>
         </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("dueOn")}</span>
+          <input type="date" className={ui.input} value={dueOn} onChange={(e) => setDueOn(e.target.value)} title={t("dueOnHint")} />
+        </label>
         <button
           type="button"
           className={`${ui.primary} ${ui.actionFull}`}
@@ -136,12 +143,15 @@ export function TicketEdit({
   id,
   status,
   priority,
+  dueOn = null,
   internalDescription = "",
   canChangeAnyStatus = false,
 }: {
   id: string;
   status: string;
   priority: string;
+  /** Working due date (JJJJ-MM-TT) of the ticket, editable inline; null when not set. */
+  dueOn?: string | null;
   /** 6.6 interne Beschreibung (Review 26.09.2026, M6): nur für Mitarbeiter, nie im Portal. */
   internalDescription?: string;
   canChangeAnyStatus?: boolean;
@@ -191,6 +201,26 @@ export function TicketEdit({
               </option>
             ))}
           </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("dueOn")}</span>
+          <span className="flex items-center gap-1">
+            <input
+              type="date"
+              className={ui.input}
+              value={dueOn ?? ""}
+              disabled={busy}
+              title={t("dueOnHint")}
+              onChange={(e) => {
+                if (e.target.value) void send("", "PATCH", { due_on: e.target.value });
+              }}
+            />
+            {dueOn ? (
+              <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void send("", "PATCH", { due_on: null })}>
+                {t("dueOnClear")}
+              </button>
+            ) : null}
+          </span>
         </label>
       </div>
       {closing ? (

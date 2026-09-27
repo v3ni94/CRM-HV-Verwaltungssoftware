@@ -14,7 +14,9 @@
     "footer": "Müller Holding AG · Rheinpromenade 13 · 40789 Monheim am Rhein · Sitz: Monheim am Rhein · Amtsgericht Düsseldorf · HRB 104291 · Vorstand: Timo Müller · Aufsichtsratsvorsitzender: Jan Walprecht"
   },
   "Auth": {
-    "loginTitle": "Sign in",
+    "loginTitle": "Welcome back",
+    "loginHelp": "If you have trouble signing in, contact your system administration.",
+    "claim": "Management, accounting and communication in one place.",
     "email": "E-mail",
     "password": "Password",
     "submit": "Continue",
@@ -33,6 +35,22 @@
     "rememberDevice": "Remember this device for 90 days"
   },
   "Shell": {
+    "palette": {
+      "title": "Command palette",
+      "open": "Open search and commands",
+      "action": "Actions",
+      "nav": "Navigation",
+      "recent": "Recently opened",
+      "hit": "Results",
+      "hint": "Type to find records, pages and actions.",
+      "keys": "Arrow keys select, Enter opens, Escape closes"
+    },
+    "action": {
+      "createTicket": "Create ticket",
+      "createContact": "Create contact",
+      "startDunning": "Start dunning run",
+      "ticketAnalytics": "Ticket analytics"
+    },
     "skip": "Skip to content",
     "nav": "Main navigation",
     "contacts": "Contacts",
@@ -798,6 +816,29 @@
         "correction": "Correction",
         "fact": "Fact"
       }
+    },
+    "embeddings": {
+      "title": "Embeddings (similarity search)",
+      "description": "Document texts and knowledge entries are stored as vectors so the assistant finds matching documents. The index is computed through OpenAI (embedding tier); the monthly budget applies here too.",
+      "model": "Model",
+      "disabled": "Not active",
+      "documents": "Documents",
+      "knowledge": "Knowledge entries",
+      "embedded": "{embedded} of {total} embedded, {pending} pending",
+      "chunks": "Vector rows",
+      "lastRun": "Last run",
+      "noRun": "No run yet",
+      "runStatus": {
+        "succeeded": "succeeded",
+        "failed": "stopped",
+        "running": "running"
+      },
+      "reindex": "Rebuild",
+      "reindexFull": "Rebuild completely",
+      "fullHint": "Complete removes all vectors of the tenant first (e.g. after a model change); Rebuild only adds missing and changed sources.",
+      "queued": "The rebuild has been started and runs in the background.",
+      "done": "The rebuild is complete.",
+      "refresh": "Refresh"
     }
   },
   "ImmowareLists": {
@@ -1249,7 +1290,8 @@
       "maintenance": "Maintenance",
       "note_follow_up": "Follow up",
       "meeting": "Owners' meeting",
-      "ticket_due": "Ticket deadline"
+      "ticket_due": "Ticket deadline",
+      "appointment": "Appointment"
     },
     "openSource": "Open source",
     "status": {
@@ -1743,6 +1785,7 @@
     "fee": "Dunning fee",
     "status": "Status",
     "reason": "Reason",
+    "representativeOnly": "Representative only, receipt to be verified by counsel",
     "settings": "Dunning levels and fees",
     "runStatus": {
       "preview": "Preview",
@@ -2401,6 +2444,9 @@
     "priority": "Priority",
     "status": "Status",
     "sla": "Due (SLA)",
+    "dueOn": "Due date",
+    "dueOnHint": "Working due date of the ticket, independent of the SLA due time.",
+    "dueOnClear": "Clear due date",
     "breached": "breached",
     "create": "Create ticket",
     "comment": "Comment",
@@ -3138,7 +3184,17 @@
     "bulkMarkDone": "Mark as done",
     "clearSelection": "Clear selection",
     "bulkFailed": "{count, plural, one {# message could not be changed.} other {# messages could not be changed.}}",
-    "selectMessageRow": "Select message: {subject}"
+    "selectMessageRow": "Select message: {subject}",
+    "archiveScopeMissing": "Permission to archive is missing for {addresses}. Completed mail stays in the Gmail inbox until the mailbox is reconnected.",
+    "archiveScopeLink": "Reconnect mailbox",
+    "archiveRetry": "Archive now",
+    "archiveStatus": {
+      "pending": "Archiving in Gmail requested",
+      "archived": "Archived in Gmail on {at}",
+      "skipped": "Not archived (mailbox without archiving or no Gmail message)",
+      "failed": "Archiving in Gmail failed on {at}, retried every 15 minutes",
+      "scope_missing": "Archiving not possible, permission missing, reconnect the mailbox under Settings, Mailboxes"
+    }
   },
   "Platform": {
     "title": "Platform",
@@ -3458,6 +3514,7 @@
     },
     "noOwnerHint": "Without a property owner the assignment finds no landlord and tenancies stay open. Set the owner on the property page.",
     "ownerColumn": "Owner",
+    "statusColumn": "Status",
     "ownerMissing": "Owner missing",
     "owner": {
       "title": "Owner",
@@ -3860,7 +3917,7 @@
     },
     "customFields": {
       "title": "Custom fields",
-      "description": "Define custom fields per entity with field type, group, required flag and validity.",
+      "description": "Description",
       "intro": "Custom fields for property, building, unit, contract, contact, service provider and provider contract. Entity, internal name and field type are immutable after creation.",
       "listTitle": "Defined fields",
       "empty": "No custom fields defined yet.",
@@ -3903,7 +3960,6 @@
       "maxLength": "Maximum length",
       "defaultValue": "Default value",
       "sortOrder": "Order",
-      "description": "Description",
       "required": "Required",
       "visibleInMain": "Visible in main view",
       "create": "Create field",
@@ -3928,7 +3984,6 @@
       }
     }
   },
-
   "Members": {
     "title": "Users and roles",
     "neverDeleted": "User accounts are never deleted, only disabled or re-enabled. This keeps traceability intact.",
@@ -4055,7 +4110,11 @@
     "risk": "Default off: the examples usually contain personal data. Retention period and deletion run are not yet decided (ADR 0010, open question M7-04). Switching off stops new examples; existing ones stay. Every change is logged.",
     "label": "Store learning examples from ticket resolutions",
     "saved": "Saved.",
-    "readOnly": "Changing this requires the permission to change tenant settings."
+    "readOnly": "Changing this requires the permission to change tenant settings.",
+    "retentionLabel": "Retention in months",
+    "retentionHint": "Examples older than this are deleted daily (default 24 months, 1 to 120). Every deletion run is recorded in the event log with its count.",
+    "retentionInvalid": "Please enter a whole number between 1 and 120.",
+    "retentionSave": "Save retention"
   },
   "DatevMappings": {
     "title": "DATEV account mapping",
@@ -4274,7 +4333,9 @@
       "running": "Full fetch running: {done} of {total} messages checked",
       "done": "Full fetch finished on {at}: {done} messages checked",
       "failed": "Full fetch aborted at {done} of {total} messages, start again to resume"
-    }
+    },
+    "archiveScopeMissing": "Reconnect the mailbox, permission to archive is missing. Completed mail and closed tickets are archived out of the inbox only after the Google connection is renewed; open jobs are caught up automatically afterwards.",
+    "reconnectGoogle": "Reconnect with Google"
   },
   "Dms": {
     "area": "Administration",
@@ -6613,6 +6674,12 @@
       "loadError": "The contract could not be loaded.",
       "listError": "The contracts could not be loaded.",
       "empty": "No contracts recorded yet.",
+      "filtered": "Filtered by {filter}.",
+      "clearFilter": "Clear filter",
+      "filters": {
+        "property_id": "property",
+        "unit_id": "unit"
+      },
       "number": "Number",
       "kind": "Type",
       "term": "Term",
@@ -7308,79 +7375,114 @@
       "assignHere": "Assign to this assignment",
       "dismiss": "Dismiss"
     },
-      "transmission": {
-        "title": "Controlled transmissions",
-        "intro": "Checking data and placing a binding order are separate steps. A check stores nothing at the provider. Any change of assignments or data after the check invalidates the release.",
-        "roles": "Users and roles (On-Site Roles 2.0)",
-        "rolesHint": "The complete data set is sent per residential unit: occupancy, vacancy and termination explicitly. Omitted roles could otherwise count as ended at the provider.",
-        "billing": "Billing input",
-        "billingHint": "Flow: choose the period, load the provider template, take the CRM data, check assignments and costs, validate at the provider, review the result, release, and only then place the binding order. The binding transmission may trigger a billing at the provider.",
-        "periodFrom": "Period from",
-        "periodTo": "Period to",
-        "costs": "Ancillary costs (cost key, allocation key, gross amount)",
-        "costKey": "Cost key",
-        "allocationKey": "Allocation key",
-        "grossAmount": "Gross amount",
-        "invoiceDate": "Invoice date",
-        "addCost": "Add cost item",
-        "check": "Check data",
-        "release": "Release",
-        "acknowledgeWarnings": "I have reviewed the warnings and release the data anyway.",
-        "orderBilling": "Place binding billing order",
-        "submitRoles": "Submit users and roles (binding)",
-        "orderConfirm": "The data will now be sent to the provider as a binding order. This step is not repeated. Continue?",
-        "noPermissionRoles": "Submitting users requires the permission metering users submit.",
-        "noPermissionBilling": "Ordering requires the permission metering billing order.",
-        "notAvailable": "Binding transmission not possible: {reason}",
-        "status": {
-          "checked": "checked",
-          "invalid": "invalid",
-          "released": "released",
-          "superseded": "superseded",
-          "ordered": "ordered",
-          "rejected": "rejected",
-          "unclear": "outcome unclear",
-          "failed": "failed"
-        },
-        "unclearHint": "Timeout at the provider: outcome unclear. Nothing is retried automatically; clarify with the provider before sending again.",
-        "errors": "Errors",
-        "warnings": "Warnings",
-        "providerValidation": "Provider validation",
-        "providerSkipped": "Provider validation not executed: {reason}",
-        "diff": "Differences to the last confirmed transmission",
-        "diffFirst": "First transmission, no confirmed previous transmission.",
-        "diffNone": "No differences to the last confirmed transmission.",
-        "diffAdded": "New",
-        "diffRemoved": "Removed",
-        "diffChanged": "Changed",
-        "summaryUnits": "{count} residential units in the data set",
-        "summaryRecipients": "{count} billing recipients",
-        "summaryCosts": "{count} cost items",
-        "terminate": "Termination",
-        "log": "Log",
-        "logEntry": "{action} at {at}",
-        "transaction": "Provider transaction id",
-        "fingerprint": "Data version",
-        "history": "Previous transmissions",
-        "none": "No check performed yet."
+    "transmission": {
+      "title": "Controlled transmissions",
+      "intro": "Checking data and placing a binding order are separate steps. A check stores nothing at the provider. Any change of assignments or data after the check invalidates the release.",
+      "roles": "Users and roles (On-Site Roles 2.0)",
+      "rolesHint": "The complete data set is sent per residential unit: occupancy, vacancy and termination explicitly. Omitted roles could otherwise count as ended at the provider.",
+      "billing": "Billing input",
+      "billingHint": "Flow: choose the period, load the provider template, take the CRM data, check assignments and costs, validate at the provider, review the result, release, and only then place the binding order. The binding transmission may trigger a billing at the provider.",
+      "periodFrom": "Period from",
+      "periodTo": "Period to",
+      "costs": "Ancillary costs (cost key, allocation key, gross amount)",
+      "costKey": "Cost key",
+      "allocationKey": "Allocation key",
+      "grossAmount": "Gross amount",
+      "invoiceDate": "Invoice date",
+      "addCost": "Add cost item",
+      "check": "Check data",
+      "release": "Release",
+      "acknowledgeWarnings": "I have reviewed the warnings and release the data anyway.",
+      "orderBilling": "Place binding billing order",
+      "submitRoles": "Submit users and roles (binding)",
+      "orderConfirm": "The data will now be sent to the provider as a binding order. This step is not repeated. Continue?",
+      "noPermissionRoles": "Submitting users requires the permission metering users submit.",
+      "noPermissionBilling": "Ordering requires the permission metering billing order.",
+      "notAvailable": "Binding transmission not possible: {reason}",
+      "status": {
+        "checked": "checked",
+        "invalid": "invalid",
+        "released": "released",
+        "superseded": "superseded",
+        "ordered": "ordered",
+        "rejected": "rejected",
+        "unclear": "outcome unclear",
+        "failed": "failed",
+        "waiting_provider": "processing at provider",
+        "completed": "result fetched"
       },
-      "providerChange": {
-        "title": "Provider change",
-        "hint": "The previous assignment ends the day before the change date and keeps its documents and results. The new assignment starts on the change date.",
-        "changeDate": "Change date",
-        "newConnection": "New connection",
-        "newExternalNumber": "New external number",
-        "submit": "Perform provider change",
-        "open": "Change provider",
-        "done": "Provider change saved. The new assignment is open."
-      },
-      "unitEdit": {
-        "edit": "Edit",
-        "save": "Save",
-        "validTo": "Valid to",
-        "hint": "Only occupancy, recipients and validity change. A different residential unit is a new assignment."
+      "unclearHint": "Timeout at the provider: outcome unclear. Nothing is retried automatically; clarify with the provider before sending again.",
+      "errors": "Errors",
+      "warnings": "Warnings",
+      "providerValidation": "Provider validation",
+      "providerSkipped": "Provider validation not executed: {reason}",
+      "diff": "Differences to the last confirmed transmission",
+      "diffFirst": "First transmission, no confirmed previous transmission.",
+      "diffNone": "No differences to the last confirmed transmission.",
+      "diffAdded": "New",
+      "diffRemoved": "Removed",
+      "diffChanged": "Changed",
+      "summaryUnits": "{count} residential units in the data set",
+      "summaryRecipients": "{count} billing recipients",
+      "summaryCosts": "{count} cost items",
+      "terminate": "Termination",
+      "log": "Log",
+      "logEntry": "{action} at {at}",
+      "transaction": "Provider transaction id",
+      "fingerprint": "Data version",
+      "history": "Previous transmissions",
+      "none": "No check performed yet.",
+      "setup": "Billing unit setup (billing unit data)",
+      "setupHint": "Preview of the internal and external identifiers per unit, deliberate submission, processing status at the provider and retrieval of the result. The matching is asynchronous: only the fetched provider result confirms the assignment, never the acceptance of the request.",
+      "setupCheck": "Create preview",
+      "submitSetup": "Submit setup (binding)",
+      "poll": "Fetch status from provider",
+      "waitingHint": "The provider is still processing the setup. The assignment counts as confirmed only after the fetched result.",
+      "noPermissionSetup": "The billing unit setup needs the right to update metering assignments.",
+      "setupInternal": "Internal (CRM)",
+      "setupExternal": "External (provider)",
+      "setupUnitInternal": "Unit (CRM)",
+      "setupUnitExternal": "Residential unit (provider)",
+      "setupOccupancy": "Occupancy",
+      "setupKnown": "Known at provider",
+      "setupKnownYes": "yes",
+      "setupKnownNo": "no",
+      "setupMatched": "Result",
+      "setupPending": "pending",
+      "setupMatchedYes": "matched",
+      "setupMatchedNo": "not matched",
+      "setupProviderStatus": "Provider status",
+      "setupConfirmed": "Provider result fetched: all {count} residential units matched, assignment technically confirmed.",
+      "setupUnmatched": "Provider result fetched: unmatched residential units {units}. The assignment stays unconfirmed.",
+      "setupAdditional": "Additionally kept at the provider: {units}.",
+      "overviewTitle": "Transmissions (central overview)",
+      "overviewIntro": "All checked, released and transmitted data sets of this tenant with their status. Fetching the processing status is read only.",
+      "overviewEmpty": "No transmissions.",
+      "overviewKind": "Kind",
+      "overviewAssignment": "Assignment",
+      "overviewCreated": "Checked on",
+      "kind": {
+        "roles": "Users and roles",
+        "billing_input": "Billing input",
+        "billing_unit_setup": "Billing unit setup"
       }
-    
+    },
+    "providerChange": {
+      "title": "Provider change",
+      "hint": "The previous assignment ends the day before the change date and keeps its documents and results. The new assignment starts on the change date.",
+      "changeDate": "Change date",
+      "newConnection": "New connection",
+      "newExternalNumber": "New external number",
+      "submit": "Perform provider change",
+      "open": "Change provider",
+      "done": "Provider change saved. The new assignment is open."
+    },
+    "unitEdit": {
+      "edit": "Edit",
+      "save": "Save",
+      "validTo": "Valid to",
+      "hint": "Only occupancy, recipients and validity change. A different residential unit is a new assignment."
+    }
   },
   "Common": {
     "links": {
@@ -7451,6 +7553,18 @@
       "1m": "1 month before",
       "3m": "3 months before",
       "6m": "6 months before"
+    },
+    "remindersField": "Reminders",
+    "recurring": "Recurring",
+    "recurrence": {
+      "label": "Recurrence",
+      "none": "None",
+      "weekly": "Weekly",
+      "monthly": "Monthly",
+      "yearly": "Yearly",
+      "interval": "Every (count)",
+      "until": "Until",
+      "hint": "The single occurrences are computed on display and not stored."
     }
   },
   "contracts": {
@@ -7521,6 +7635,7 @@
     "no": "No",
     "required": "Required field is missing.",
     "invalidNumber": "Please enter a number.",
+    "inactive": "inactive",
     "status": {
       "saving": "Saving",
       "saved": "Saved",
@@ -7576,5 +7691,107 @@
     "saved": "Saved.",
     "readOnly": "The change requires the permission tenant settings update.",
     "link": "Go to connections"
+  },
+  "StartPage": {
+    "eyebrow": "My workplace",
+    "toAnalytics": "Ticket analytics",
+    "kpiEmpty": "No key figures for your role.",
+    "loadError": "This area could not be loaded.",
+    "today": {
+      "title": "Today",
+      "description": "Appointments and deadlines of today and the next seven days. Deadlines are orientation and must be checked.",
+      "empty": "Nothing is due today or in the next seven days.",
+      "groupToday": "Today",
+      "groupWeek": "Next seven days"
+    },
+    "tickets": {
+      "title": "My tickets",
+      "description": "Tickets assigned to me in urgency order, at most ten.",
+      "empty": "No open ticket is assigned to you.",
+      "all": "All my tickets",
+      "untitled": "untitled",
+      "due": "due {date}",
+      "more": "and {count} more"
+    },
+    "approvals": {
+      "title": "Approvals",
+      "description": "Everything waiting for your approval. Every tile leads to the decision.",
+      "empty": "Nothing is waiting for your approval.",
+      "noRights": "Your role decides no approvals.",
+      "open": "Open",
+      "kind": {
+        "mail": "Mail replies",
+        "bank_accounts": "Bank accounts",
+        "release_gates": "Release gates",
+        "dunning_runs": "Dunning runs",
+        "direct_debits": "Direct debit runs",
+        "metering_transmissions": "Metering provider transmissions"
+      }
+    }
+  },
+  "Greeting": {
+    "fallback": "Hello {name}, here is your overview.",
+    "morning": {
+      "0": "Good morning {name}, here is your overview.",
+      "1": "Good morning {name}, glad you are here. Here is your overview.",
+      "2": "Good morning {name}, a new day, here is the current status."
+    },
+    "midday": {
+      "0": "Good afternoon {name}, here is your overview for today.",
+      "1": "Good afternoon {name}, here is today's current status.",
+      "2": "Good afternoon {name}, everything important at a glance."
+    },
+    "evening": {
+      "0": "Good evening {name}, here is the current status.",
+      "1": "Good evening {name}, here is your overview for the evening.",
+      "2": "Good evening {name}, a quick look at everything."
+    },
+    "late": {
+      "0": "Good evening {name}, still working this late? Here is your overview.",
+      "1": "Good evening {name}, working late, here is what matters anyway."
+    }
+  },
+  "PropertyTermination": {
+    "title": "End management",
+    "intro": "Ends the management relationship and deactivates the property. All data is kept; the property no longer appears in the property list.",
+    "open": "End management",
+    "terminatedBy": "Notice given by",
+    "by": {
+      "manager": "Manager",
+      "owner": "Owner",
+      "hoa": "Owners' association",
+      "other": "Other"
+    },
+    "noticeDate": "Notice date",
+    "effectiveDate": "End of management",
+    "successorManager": "Successor manager",
+    "successorOwner": "Successor owner",
+    "searchPlaceholder": "Search contact (at least 2 characters)",
+    "clear": "Remove selection",
+    "noticeDocument": "Notice letter",
+    "upload": "Upload file",
+    "uploading": "Uploading",
+    "uploaded": "Uploaded: {title}",
+    "removeDocument": "Remove document",
+    "note": "Note",
+    "next": "Next",
+    "confirmTitle": "Confirm termination",
+    "confirmText": "The property will be deactivated with end of management on {date} (notice given by {by} on {notice}). Only the superadmin can reactivate it.",
+    "confirm": "End management",
+    "back": "Back",
+    "cancel": "Cancel",
+    "datesRequired": "Notice date and end of management are required.",
+    "datesOrdered": "The end of management must not be before the notice date.",
+    "bannerTitle": "Property deactivated",
+    "bannerText": "Management ended on {date}, notice given by {by} on {notice}.",
+    "bannerNoSuccessor": "No successor recorded.",
+    "openDocument": "Open notice letter",
+    "recordedBy": "Recorded on {date}",
+    "reactivate": "Reactivate",
+    "reactivateConfirm": "The property gets its previous status back and appears in the property list again. The termination stays in the log.",
+    "reactivateConfirmButton": "Yes, reactivate",
+    "reactivateHint": "Only the superadmin can reactivate.",
+    "showTerminated": "Show deactivated",
+    "hideTerminated": "Hide deactivated"
   }
 }

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import type { Preparation } from "@/lib/ai";
@@ -54,15 +55,27 @@ export type Message = {
     preparation?: Preparation;
   };
   suggestion_status: "none" | "pending" | "ready" | "failed" | "skipped";
+  // Gmail archive tracking (operator 27.09.2026): pending, archived, skipped, failed,
+  // scope_missing; null before the first request.
+  archive_status?: string | null;
+  archive_error?: string | null;
+  archive_attempted_at?: string | null;
+  archived_at?: string | null;
 };
 
-export type Mailbox = { id: string; address: string };
+export type Mailbox = { id: string; address: string; archive_scope_missing?: boolean };
 
 type Tab = "inbox" | "drafts" | "pending" | "sent";
 
 const INBOX_STATUSES = ["new", "assigned", "done"] as const;
 
-function queryFor(tab: Tab, status: string, mailboxId: string, q: string, showClosed = false): string {
+function queryFor(
+  tab: Tab,
+  status: string,
+  mailboxId: string,
+  q: string,
+  showClosed = false,
+): string {
   const params = new URLSearchParams();
   if (tab === "inbox") {
     params.set("direction", "in");
@@ -84,7 +97,13 @@ function queryFor(tab: Tab, status: string, mailboxId: string, q: string, showCl
   return params.toString();
 }
 
-export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: boolean; canReadMembers: boolean }) {
+export function MailWorkspace({
+  canApprove,
+  canReadMembers,
+}: {
+  canApprove: boolean;
+  canReadMembers: boolean;
+}) {
   const t = useTranslations("Mail");
   const [tab, setTab] = useState<Tab>("inbox");
   const [status, setStatus] = useState("");
@@ -95,11 +114,15 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   const [messages, setMessages] = useState<Message[] | null>(null);
   // Deep link from the ticket mail thread (operator 26.09.2026): /mail?message=<id>.
   const [selectedId, setSelectedId] = useState<string | null>(() =>
-    typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("message"),
+    typeof window === "undefined"
+      ? null
+      : new URLSearchParams(window.location.search).get("message"),
   );
   // Operator 26.09.2026: "Erledigte anzeigen", mirrored in the URL as erledigt=1.
   const [showClosed, setShowClosed] = useState<boolean>(() =>
-    typeof window === "undefined" ? false : new URLSearchParams(window.location.search).get("erledigt") === "1",
+    typeof window === "undefined"
+      ? false
+      : new URLSearchParams(window.location.search).get("erledigt") === "1",
   );
   const [pendingCount, setPendingCount] = useState(0);
   const [detail, setDetail] = useState<Message | null>(null);
@@ -118,14 +141,26 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   }, [queryText]);
 
   const load = useCallback(
-    (activeTab: Tab, activeStatus: string, activeMailbox: string, activeQ: string, activeShowClosed: boolean) => {
+    (
+      activeTab: Tab,
+      activeStatus: string,
+      activeMailbox: string,
+      activeQ: string,
+      activeShowClosed: boolean,
+    ) => {
       setBusy(true);
       setError(null);
-      void bff<Message[]>(`/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ, activeShowClosed)}`).then((res) => {
+      void bff<Message[]>(
+        `/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ, activeShowClosed)}`,
+      ).then((res) => {
         setBusy(false);
         if (res.ok) {
           setMessages(res.data);
-          setSelectedId((prev) => (prev && res.data.some((m) => m.id === prev) ? prev : (res.data[0]?.id ?? null)));
+          setSelectedId((prev) =>
+            prev && res.data.some((m) => m.id === prev)
+              ? prev
+              : (res.data[0]?.id ?? null),
+          );
         } else {
           setMessages([]);
           setError(res.message);
@@ -142,7 +177,9 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   // Badge "Freigaben": count endpoint instead of loading the whole pending list (M3).
   const loadPendingCount = useCallback(() => {
     if (!canApprove) return;
-    void bff<{ count: number }>(`/api/bff/mail/messages/count?${queryFor("pending", "", "", "")}`).then((res) => {
+    void bff<{ count: number }>(
+      `/api/bff/mail/messages/count?${queryFor("pending", "", "", "")}`,
+    ).then((res) => {
       if (res.ok) setPendingCount(res.data.count);
     });
   }, [canApprove]);
@@ -182,7 +219,9 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   }, [messages, selectedId, detail]);
 
   const onUpdated = (next: Message) => {
-    setMessages((prev) => (prev ? prev.map((m) => (m.id === next.id ? next : m)) : prev));
+    setMessages((prev) =>
+      prev ? prev.map((m) => (m.id === next.id ? next : m)) : prev,
+    );
     if (next.id === selectedId) setDetail(next);
     // A status change can move the message out of the current tab's filter (e.g. submit,
     // approve, mark done); the list is reloaded so it reflects that.
@@ -200,19 +239,32 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
   const tabs: { key: Tab; label: string; badge?: number }[] = [
     { key: "inbox", label: t("tabs.inbox") },
     { key: "drafts", label: t("tabs.drafts") },
-    ...(canApprove ? [{ key: "pending" as Tab, label: t("tabs.pending"), badge: pendingCount }] : []),
+    ...(canApprove
+      ? [
+          {
+            key: "pending" as Tab,
+            label: t("tabs.pending"),
+            badge: pendingCount,
+          },
+        ]
+      : []),
     { key: "sent", label: t("tabs.sent") },
   ];
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2 border-b border-border-soft pb-2">
+      <div
+        className="flex flex-wrap items-center gap-2 border-b border-border-soft pb-2"
+        role="tablist"
+      >
         {tabs.map((tabItem) => (
           <button
             key={tabItem.key}
             type="button"
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
-              tab === tabItem.key ? "bg-accent text-accent-fg" : "text-muted hover:bg-surface"
+              tab === tabItem.key
+                ? "bg-accent text-accent-fg"
+                : "text-muted hover:bg-surface"
             }`}
             onClick={() => {
               setTab(tabItem.key);
@@ -220,60 +272,96 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
             }}
           >
             {tabItem.label}
-            {tabItem.badge ? <span className="ml-1.5 rounded-full bg-danger-bg px-1.5 text-xs text-danger-fg">{tabItem.badge}</span> : null}
+            {tabItem.badge ? (
+              <span className="ml-1.5 rounded-full bg-danger-bg px-1.5 text-xs text-danger-fg">
+                {tabItem.badge}
+              </span>
+            ) : null}
           </button>
         ))}
-        <div className="ml-auto flex flex-wrap items-center gap-2">
-          {tab === "inbox" ? (
-            <select className={ui.input} value={status} onChange={(e) => setStatus(e.target.value)}>
-              <option value="">{t("statusFilter.all")}</option>
-              {INBOX_STATUSES.map((s) => (
-                <option key={s} value={s}>
-                  {t(`status.${s}`)}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          {tab === "inbox" && !status ? (
-            <label className="inline-flex items-center gap-2 text-sm">
-              <input
-                type="checkbox"
-                checked={showClosed}
-                onChange={(e) => toggleClosed(e.target.checked)}
-                data-testid="toggle-closed"
-              />
-              {t("showClosed")}
-            </label>
-          ) : null}
-          {mailboxes.length > 0 ? (
-            <select className={ui.input} value={mailboxId} onChange={(e) => setMailboxId(e.target.value)}>
-              <option value="">{t("mailboxFilter.all")}</option>
-              {mailboxes.map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.address}
-                </option>
-              ))}
-            </select>
-          ) : null}
-          <input
-            className={ui.input}
-            placeholder={t("searchPlaceholder")}
-            value={queryText}
-            onChange={(e) => setQueryText(e.target.value)}
-          />
-          <button type="button" className={ui.button} disabled={busy} onClick={refresh}>
-            {t("refresh")}
-          </button>
-        </div>
+      </div>
+      <div
+        className="flex flex-wrap items-center gap-2"
+        data-testid="mail-filters"
+      >
+        {tab === "inbox" ? (
+          <select
+            className={`${ui.input} w-auto min-w-[10rem]`}
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+          >
+            <option value="">{t("statusFilter.all")}</option>
+            {INBOX_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {t(`status.${s}`)}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        {tab === "inbox" && !status ? (
+          <label className="inline-flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={showClosed}
+              onChange={(e) => toggleClosed(e.target.checked)}
+              data-testid="toggle-closed"
+            />
+            {t("showClosed")}
+          </label>
+        ) : null}
+        {mailboxes.length > 0 ? (
+          <select
+            className={`${ui.input} w-auto min-w-[12rem]`}
+            value={mailboxId}
+            onChange={(e) => setMailboxId(e.target.value)}
+          >
+            <option value="">{t("mailboxFilter.all")}</option>
+            {mailboxes.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.address}
+              </option>
+            ))}
+          </select>
+        ) : null}
+        <input
+          className={`${ui.input} w-full sm:w-auto sm:min-w-[14rem] sm:flex-1`}
+          placeholder={t("searchPlaceholder")}
+          value={queryText}
+          onChange={(e) => setQueryText(e.target.value)}
+        />
+        <button
+          type="button"
+          className={`${ui.button} sm:ml-auto`}
+          disabled={busy}
+          onClick={refresh}
+        >
+          {t("refresh")}
+        </button>
       </div>
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
         </p>
       ) : null}
+      {mailboxes.some((m) => m.archive_scope_missing) ? (
+        <p role="status" className={ui.warning} data-testid="archive-scope-banner">
+          {t("archiveScopeMissing", {
+            addresses: mailboxes.filter((m) => m.archive_scope_missing).map((m) => m.address).join(", "),
+          })}{" "}
+          <Link href="/einstellungen/postfaecher" className="font-medium underline">
+            {t("archiveScopeLink")}
+          </Link>
+        </p>
+      ) : null}
       <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">
         <div className={`min-w-0 ${selectedId ? "hidden md:block" : ""}`}>
-          <MailList messages={messages} selectedId={selectedId} onSelect={setSelectedId} loading={busy && messages === null} onBulkChanged={onBulkChanged} />
+          <MailList
+            messages={messages}
+            selectedId={selectedId}
+            onSelect={setSelectedId}
+            loading={busy && messages === null}
+            onBulkChanged={onBulkChanged}
+          />
         </div>
         <div className={`min-w-0 ${selectedId ? "" : "hidden md:block"}`}>
           {selectedId ? (
@@ -285,7 +373,13 @@ export function MailWorkspace({ canApprove, canReadMembers }: { canApprove: bool
               {t("backToList")}
             </button>
           ) : null}
-          <MailDetail message={selected} canApprove={canApprove} canReadMembers={canReadMembers} onUpdated={onUpdated} onCreated={onUpdated} />
+          <MailDetail
+            message={selected}
+            canApprove={canApprove}
+            canReadMembers={canReadMembers}
+            onUpdated={onUpdated}
+            onCreated={onUpdated}
+          />
         </div>
       </div>
     </div>

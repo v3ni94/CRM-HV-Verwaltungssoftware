@@ -119,6 +119,13 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         Index("ix_message_header_id", "tenant_id", "header_message_id"),
         Index("ix_message_gmail_thread", "tenant_id", "gmail_thread_id"),
+        # Open Gmail archive jobs for the retry beat (migration 0158).
+        Index(
+            "ix_message_archive_open",
+            "tenant_id",
+            "archive_status",
+            postgresql_where=text("archive_status IN ('pending', 'failed', 'scope_missing')"),
+        ),
     )
 
     channel: Mapped[str] = mapped_column(String(16), nullable=False, default="email")
@@ -179,6 +186,15 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     # Gmail-Thread der eingehenden Mail (Review 26.09.2026, M7): Rückfall für die Zuordnung,
     # wenn weder ``In-Reply-To`` noch ``References`` eine bekannte Nachricht treffen.
     gmail_thread_id: Mapped[str | None] = mapped_column(String(64))
+    # Gmail archive tracking (operator report 27.09.2026): ``archive_status`` is one of
+    # pending (requested, not yet done), archived, skipped (mailbox switch off or no Gmail
+    # id), failed (Gmail error, retried by the beat job) or scope_missing (consent lacks
+    # gmail.modify, retried after the mailbox is reconnected). ``archived_at`` set means the
+    # job is done and never repeated (idempotent); ``archive_error`` holds the last reason.
+    archive_status: Mapped[str | None] = mapped_column(String(16))
+    archive_error: Mapped[str | None] = mapped_column(Text)
+    archive_attempted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    archived_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Letzter Versandfehler bei der Freigabe (Status ``pending`` bleibt, Anzeige
     # "fehlgeschlagen" im Ticket); wird beim erfolgreichen Versand geleert.
     send_error: Mapped[str | None] = mapped_column(Text)

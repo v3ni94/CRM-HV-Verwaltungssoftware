@@ -891,3 +891,99 @@ def test_m6_04_permanent_profile_never_unlocks_deletion(client: TestClient, worl
         headers=h,
     )
     assert bad.status_code == 422
+
+
+# Malware scan before storing (operator decision 27.09.2026, mhvp.documents.scan) ----------
+
+
+def _events(c: TestClient, h: dict[str, str], kind: str) -> list[dict[str, Any]]:
+    rows = _ok(
+        c.get("/api/v1/tenant/events", params={"type": kind, "page_size": 200}, headers=h), 200
+    )
+    return [e for e in rows if e["type"] == kind]
+
+
+def _scan_client(database: Database, redis_url: str, mode: str, port: int) -> TestClient:
+    settings = base_settings(
+        database,
+        redis_url,
+        s3_endpoint_url="https://s3.us-east-1.amazonaws.com",
+        s3_access_key_id=SecretStr("testing"),
+        s3_secret_access_key=SecretStr("testing"),
+        s3_bucket=BUCKET,
+        document_max_bytes=200_000,
+        clamav_mode=mode,
+        clamav_host="127.0.0.1",
+        clamav_port=port,
+        clamav_timeout_seconds=2,
+    )
+    return TestClient(create_app(settings))
+
+
+def test_upload_with_finding_is_rejected_and_journaled(
+    world: World, database: Database, redis_url: str, s3: None
+) -> None:
+    """EICAR answers 422 MHVP-DOC-0008, no document row, no blob, and the audit event
+    ``document.malware_rejected`` with the signature survives the rolled back request."""
+    from tests.unit.test_documents_scan import EICAR, FakeClamd
+
+    clamd = FakeClamd()
+    try:
+        with _scan_client(database, redis_url, "enforce", clamd.port) as c:
+            h = bearer(login(c, world, "m6admin"))
+            before = _document_total(c, h)
+            name = f"eicar-{RUN}.txt"
+            response = _upload(c, h, name, b"Rechnung " + EICAR, "text/plain", title="Befund")
+            assert response.status_code == 422, response.text
+            body = response.json()
+            assert body["code"] == "MHVP-DOC-0008"
+            assert "Schadsoftware" in body["detail"]
+            assert _document_total(c, h) == before
+            assert (
+                not boto3.client("s3", region_name="us-east-1")
+                .list_objects_v2(Bucket=BUCKET, Prefix=f"tenants/{world.tenant_a}/")
+                .get("Contents")
+            )
+            events = [
+                e
+                for e in _events(c, h, "document.malware_rejected")
+                if e["payload"]["filename"] == name
+            ]
+            assert len(events) == 1
+            assert events[0]["payload"]["signature"] == "Eicar-Test-Signature"
+            assert events[0]["payload"]["source"] == "upload"
+            assert events[0]["actor_user_id"] == str(world.users["m6admin"])
+            # A clean file passes the same scanner and is stored.
+            _ok(_upload(c, h, "sauber.txt", b"Beleg", "text/plain", title="Sauber"))
+    finally:
+        clamd.close()
+
+
+def test_upload_with_unreachable_scanner_by_mode(
+    world: World, database: Database, redis_url: str, s3: None
+) -> None:
+    """enforce: 503 MHVP-DOC-0009 and nothing stored; warn: stored, gap journaled as
+    ``document.scan_skipped``."""
+    from tests.unit.test_documents_scan import _free_port
+
+    port = _free_port()
+    with _scan_client(database, redis_url, "enforce", port) as c:
+        h = bearer(login(c, world, "m6admin"))
+        before = _document_total(c, h)
+        response = _upload(c, h, "beleg.txt", b"Beleg", "text/plain", title="Scanner weg")
+        assert response.status_code == 503, response.text
+        assert response.json()["code"] == "MHVP-DOC-0009"
+        assert "nicht möglich" in response.json()["detail"]
+        assert _document_total(c, h) == before
+        assert not _events(c, h, "document.scan_skipped")
+    with _scan_client(database, redis_url, "warn", port) as c:
+        h = bearer(login(c, world, "m6admin"))
+        name = f"warn-{RUN}.txt"
+        doc = _ok(_upload(c, h, name, b"Beleg", "text/plain", title="Warnmodus"))
+        assert doc["sha256"]
+        skipped = [
+            e for e in _events(c, h, "document.scan_skipped") if e["payload"]["filename"] == name
+        ]
+        assert len(skipped) == 1
+        assert skipped[0]["payload"]["reason"] == "unreachable"
+        assert skipped[0]["payload"]["sha256"] == doc["sha256"]

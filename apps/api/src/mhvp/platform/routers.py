@@ -373,6 +373,7 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         auto_posting_enabled=row.auto_posting_enabled,
         ticket_reply_approval_all=row.ticket_reply_approval_all,
         ai_learning_examples_enabled=row.ai_learning_examples_enabled,
+        ai_learning_examples_retention_months=row.ai_learning_examples_retention_months,
         metering_module_enabled=row.metering_module_enabled,
         resolution_kinds=ResolutionKindsConfig.model_validate(row.resolution_kinds or {}),
         version=row.version,
@@ -412,6 +413,7 @@ async def patch_settings(
             "branding": row.branding,
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
+            "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "metering_module_enabled": row.metering_module_enabled,
             "resolution_kinds": row.resolution_kinds,
         }
@@ -425,6 +427,9 @@ async def patch_settings(
         if body.ai_learning_examples_enabled is not None:
             # ADR 0010, M7-04: Speicherung der Lernbeispiele je Mandant, Änderung protokolliert.
             row.ai_learning_examples_enabled = body.ai_learning_examples_enabled
+        if body.ai_learning_examples_retention_months is not None:
+            # ADR 0010 Nachtrag 27.09.2026: Aufbewahrung in Monaten, Löschlauf täglich.
+            row.ai_learning_examples_retention_months = body.ai_learning_examples_retention_months
         if body.metering_module_enabled is not None:
             # Messdienstleister module switch per tenant, change recorded in the event.
             row.metering_module_enabled = body.metering_module_enabled
@@ -436,6 +441,7 @@ async def patch_settings(
             "branding": row.branding,
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
+            "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "metering_module_enabled": row.metering_module_enabled,
             "resolution_kinds": row.resolution_kinds,
         }

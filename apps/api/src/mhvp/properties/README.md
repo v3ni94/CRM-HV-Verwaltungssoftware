@@ -74,3 +74,24 @@ changed fields, merge them into the current record, validate with the `PUT` sche
   `communication` (B.14). The matching catalogues exist for display and extension only;
   validation of those fields stays with the enum.
 * Handbook: `docs/handbuch/kataloge.md`.
+
+## Termination of the management relationship (operator 27.09.2026)
+
+* `routers_termination.py`: `POST /properties/{id}/terminate` (`properties:update`, status
+  onboarding or active) writes a `PropertyTermination` row (who gave notice, notice date, end
+  of management, successor manager and owner contacts, notice letter document, note,
+  `previous_status`), sets the property to `terminated` with `managed_to` = end of
+  management and emits `property.terminated` with an audit diff.
+  `POST /properties/{id}/reactivate` is reserved to the superadmin
+  (`principal.is_superadmin`, ADR 0011; 403 `MHVP-PROP-0003` otherwise), closes the open
+  termination (`reactivated_at`, `reactivated_by_user_id`), restores `previous_status` and
+  emits `property.reactivated`. `GET /properties/{id}/termination` returns the open
+  termination with resolved contact names and document title.
+* `GET /properties` hides `terminated` properties; `include_terminated=true` (or an explicit
+  `status=terminated`) is only effective for the superadmin and silently ignored for
+  everybody else.
+* Migration 0157 (`property_termination`, RLS, one open termination per property via the
+  partial unique index `uq_property_termination_open`). Error codes `MHVP-PROP-0001` to
+  `0004`. Rule `docs/rules/M4-05-objekt-deaktivieren.md`, handbook
+  `docs/handbuch/objekte-einheiten.md` (Verwaltung beenden).
+

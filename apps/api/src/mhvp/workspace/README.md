@@ -43,6 +43,21 @@ through the registry `jobs.calendar_sources()` (one reader per source) and write
   A second run on the same data changes nothing; a moved date updates the entry, a removed
   date or deleted source row deletes it. Manual entries are never touched.
 
+Reminders and recurrence (B.30, migration 0155): the same job runs `jobs.notify_reminders`
+after the sync: one notification `calendar_reminder` per reminder code and entry (per
+occurrence for recurring entries) when the code's offset in days is reached
+(`REMINDER_OFFSET_DAYS`); sent codes are recorded in `calendar_entry.reminders_sent` as
+`<code>@<date>`, so a rerun sends nothing twice. Generated entries notify the users with the
+update permission of their kind with the target of the source row (`links.target_href`,
+property hints from the entry), manual entries notify their owner with the calendar route.
+The lead time notification of the deadline list stays separate. Manual entries accept
+`reminders` and `recurrence` (`{frequency: weekly|monthly|yearly, interval, until}`);
+occurrences are expanded on read by `jobs.expand_occurrences` for `GET /workspace/calendar`
+(one item per occurrence, `recurrence` set) and `GET /workspace/deadlines` (kind
+`appointment`, own and shared manual entries with a reminder), never persisted. Owners'
+meetings resolve their legal entity to the property, so `href` is
+`/weg/{property_id}/versammlung/{meeting_id}`. Tickets carry `due_on` (source `ticket_due`).
+
 `GET /workspace/calendar` shows generated entries with the read permission of their kind
 (`DEADLINE_PERMISSIONS`), `editable=false`, `category`, `reminders` and `href` (route to the
 source, `links.target_href`); `GET /workspace/deadlines` carries the same `href`. The live

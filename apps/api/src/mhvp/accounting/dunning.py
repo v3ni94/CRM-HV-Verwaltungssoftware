@@ -46,6 +46,7 @@ from mhvp.accounting.models import (
     Ledger,
     LedgerAccount,
 )
+from mhvp.contacts import recipients
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 CENT = Decimal("0.01")
@@ -311,6 +312,16 @@ async def preview(
             )
             if guard_note:
                 case_reason = f"{case_reason}. {guard_note}"
+            if reason is None and contract is not None:
+                # M23-07: the letter would reach the representative only; the warning is
+                # visible in the preview and stays on the case until legal advice.
+                debtor_id = await recipients.debtor_contact_id(session, contract.party_id)
+                if debtor_id is not None and recipients.representative_only(
+                    await recipients.resolve_recipients(session, [debtor_id], on=run_date),
+                    debtor_id,
+                ):
+                    case_reason = f"{case_reason}. {recipients.REPRESENTATIVE_ONLY_WARNING}"
+                    counts["representative_only"] = counts.get("representative_only", 0) + 1
             session.add(
                 DunningCase(
                     tenant_id=tenant_id,
@@ -535,3 +546,9 @@ async def prepare_mahnbescheid(
     session.add(prep)
     await session.flush()
     return prep
+
+
+def case_warnings(case: DunningCase) -> list[str]:
+    """Warnings recorded in the case reason at preview time (M23-07)."""
+    reason = case.reason or ""
+    return [w for w in (recipients.REPRESENTATIVE_ONLY_WARNING,) if w in reason]

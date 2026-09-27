@@ -5397,6 +5397,24 @@
             ],
             "title": "Property Id"
           },
+          "recurrence": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RecurrenceIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reminders": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 8,
+            "title": "Reminders",
+            "type": "array"
+          },
           "shared": {
             "default": false,
             "title": "Shared",
@@ -5670,6 +5688,18 @@
               }
             ],
             "title": "Property Id"
+          },
+          "recurrence": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recurrence"
           },
           "reminders": {
             "items": {
@@ -19369,6 +19399,152 @@
         "title": "LetterIn",
         "type": "object"
       },
+      "LetterOut": {
+        "description": "The document for the first recipient; further copies for representatives or the\nrepresented contact (delivery rule, M23-07).",
+        "properties": {
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "duplicate_of": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Duplicate Of",
+            "type": "array"
+          },
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "further_documents": {
+            "items": {
+              "$ref": "#/components/schemas/DocumentOut"
+            },
+            "title": "Further Documents",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/LinkOut"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "mime_type": {
+            "title": "Mime Type",
+            "type": "string"
+          },
+          "mirrors": {
+            "items": {
+              "$ref": "#/components/schemas/MirrorOut"
+            },
+            "title": "Mirrors",
+            "type": "array"
+          },
+          "retention_hold_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Hold Reason"
+          },
+          "retention_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Profile Id"
+          },
+          "retention_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Until"
+          },
+          "sha256": {
+            "title": "Sha256",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "source": {
+            "$ref": "#/components/schemas/DocumentSource"
+          },
+          "storage": {
+            "$ref": "#/components/schemas/StorageKind"
+          },
+          "text_status": {
+            "$ref": "#/components/schemas/TextStatus"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "visibility": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Visibility",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "filename",
+          "mime_type",
+          "size",
+          "sha256",
+          "storage",
+          "category_id",
+          "text_status",
+          "source",
+          "retention_profile_id",
+          "retention_until",
+          "retention_hold_reason",
+          "visibility",
+          "created_at"
+        ],
+        "title": "LetterOut",
+        "type": "object"
+      },
       "LettersIn": {
         "additionalProperties": false,
         "properties": {
@@ -22384,6 +22560,11 @@
           },
           "is_platform_admin": {
             "title": "Is Platform Admin",
+            "type": "boolean"
+          },
+          "is_superadmin": {
+            "default": false,
+            "title": "Is Superadmin",
             "type": "boolean"
           },
           "permissions": {
@@ -29055,6 +29236,252 @@
         "title": "PropertySummary",
         "type": "object"
       },
+      "PropertyTerminationIn": {
+        "additionalProperties": false,
+        "description": "Beendigung des Verwaltungsverhältnisses (operator 27.09.2026).",
+        "properties": {
+          "effective_date": {
+            "description": "Ende der Verwaltung",
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "notice_date": {
+            "description": "Datum der Kündigung",
+            "format": "date",
+            "title": "Notice Date",
+            "type": "string"
+          },
+          "notice_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kündigungsschreiben (Dokument)",
+            "title": "Notice Document Id"
+          },
+          "successor_manager_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Manager Contact Id"
+          },
+          "successor_owner_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Owner Contact Id"
+          },
+          "terminated_by": {
+            "$ref": "#/components/schemas/TerminatedBy"
+          }
+        },
+        "required": [
+          "terminated_by",
+          "notice_date",
+          "effective_date"
+        ],
+        "title": "PropertyTerminationIn",
+        "type": "object"
+      },
+      "PropertyTerminationOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "effective_date": {
+            "format": "date",
+            "title": "Effective Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "notice_date": {
+            "format": "date",
+            "title": "Notice Date",
+            "type": "string"
+          },
+          "notice_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Document Id"
+          },
+          "notice_document_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Document Title"
+          },
+          "previous_status": {
+            "$ref": "#/components/schemas/PropertyStatus"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "reactivated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reactivated At"
+          },
+          "reactivated_by_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reactivated By User Id"
+          },
+          "successor_manager_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Manager Contact Id"
+          },
+          "successor_manager_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Manager Name"
+          },
+          "successor_owner_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Owner Contact Id"
+          },
+          "successor_owner_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Successor Owner Name"
+          },
+          "terminated_by": {
+            "$ref": "#/components/schemas/TerminatedBy"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "terminated_by",
+          "notice_date",
+          "effective_date",
+          "previous_status",
+          "successor_manager_contact_id",
+          "successor_owner_contact_id",
+          "notice_document_id",
+          "note",
+          "created_by",
+          "created_at",
+          "reactivated_at",
+          "reactivated_by_user_id"
+        ],
+        "title": "PropertyTerminationOut",
+        "type": "object"
+      },
       "ProposalAcceptIn": {
         "additionalProperties": false,
         "properties": {
@@ -30724,6 +31151,35 @@
           "lines"
         ],
         "title": "ReconciliationReportOut",
+        "type": "object"
+      },
+      "RecurrenceIn": {
+        "additionalProperties": false,
+        "description": "Recurrence of a manual entry: weekly, monthly or yearly with an end date; the\noccurrences are expanded on read (``jobs.expand_occurrences``), never stored.",
+        "properties": {
+          "frequency": {
+            "pattern": "^(weekly|monthly|yearly)$",
+            "title": "Frequency",
+            "type": "string"
+          },
+          "interval": {
+            "default": 1,
+            "maximum": 52.0,
+            "minimum": 1.0,
+            "title": "Interval",
+            "type": "integer"
+          },
+          "until": {
+            "format": "date",
+            "title": "Until",
+            "type": "string"
+          }
+        },
+        "required": [
+          "frequency",
+          "until"
+        ],
+        "title": "RecurrenceIn",
         "type": "object"
       },
       "ReferenceRateIn": {
@@ -35666,6 +36122,11 @@
             "title": "Ai Learning Examples Enabled",
             "type": "boolean"
           },
+          "ai_learning_examples_retention_months": {
+            "default": 24,
+            "title": "Ai Learning Examples Retention Months",
+            "type": "integer"
+          },
           "auto_posting_enabled": {
             "title": "Auto Posting Enabled",
             "type": "boolean"
@@ -35731,6 +36192,19 @@
             ],
             "title": "Ai Learning Examples Enabled"
           },
+          "ai_learning_examples_retention_months": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Learning Examples Retention Months"
+          },
           "branding": {
             "anyOf": [
               {
@@ -35786,6 +36260,17 @@
         },
         "title": "TenantSettingsPatch",
         "type": "object"
+      },
+      "TerminatedBy": {
+        "description": "Who gave notice on the management relationship (operator 27.09.2026).",
+        "enum": [
+          "manager",
+          "owner",
+          "hoa",
+          "other"
+        ],
+        "title": "TerminatedBy",
+        "type": "string"
       },
       "TerminationIn": {
         "additionalProperties": false,
@@ -36064,6 +36549,18 @@
             ],
             "title": "Contact Id"
           },
+          "due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due On"
+          },
           "initiator_contact_id": {
             "anyOf": [
               {
@@ -36278,6 +36775,18 @@
               }
             ],
             "title": "Contact Id"
+          },
+          "due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due On"
           },
           "extra_fields": {
             "anyOf": [
@@ -37193,7 +37702,7 @@
           },
           "inputs": {
             "additionalProperties": true,
-            "description": "Billing Input: ancillary_invoices, heating_system_invoices, energy_sources, allocations (je externer Nutzeinheit), currency und expectedvat als Ersatz, wenn keine Anbietervorlage geladen werden kann.",
+            "description": "Billing Input: ancillary_invoices, heating_system_invoices, energy_sources, allocations (je externer Nutzeinheit), currency und expectedvat als Ersatz, wenn keine Anbietervorlage geladen werden kann. Ordnungsbegriffsabgleich (billing_unit_setup): customer_number als Ersatz für die erste customer_reference der Verbindung.",
             "title": "Inputs",
             "type": "object"
           },
@@ -37236,7 +37745,8 @@
         "description": "Controlled write workflows (section 12): user and role submission (On-Site Roles 2.0)\nand billing input (bved billing-input, the binding send can trigger a billing).",
         "enum": [
           "roles",
-          "billing_input"
+          "billing_input",
+          "billing_unit_setup"
         ],
         "title": "TransmissionKind",
         "type": "string"
@@ -54920,6 +55430,7 @@
     },
     "/api/v1/dispatches": {
       "post": {
+        "description": "The delivery rule of authorised representatives applies (M23-07): the first dispatch\nis returned, dispatches for further recipients in ``further_dispatches``.",
         "operationId": "create_api_v1_dispatches_post",
         "requestBody": {
           "content": {
@@ -64638,7 +65149,7 @@
     },
     "/api/v1/letters": {
       "post": {
-        "description": "Generated letters are filed and linked automatically (11.3); nothing is sent.",
+        "description": "Generated letters are filed and linked automatically (11.3); nothing is sent. The\nrecipients follow the delivery rule of authorised representatives (M23-07): the first\ndocument is returned, further copies (representative or represented contact) in\n``further_documents``.",
         "operationId": "create_letter_api_v1_letters_post",
         "requestBody": {
           "content": {
@@ -64655,7 +65166,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/DocumentOut"
+                  "$ref": "#/components/schemas/LetterOut"
                 }
               }
             },
@@ -67313,6 +67824,52 @@
         ]
       }
     },
+    "/api/v1/mail/messages/{message_id}/archive": {
+      "post": {
+        "description": "Runs the Gmail archive job for one inbound mail synchronously (operator 27.09.2026:\nmanual catch up when a queued job was lost or the mailbox was reconnected). Idempotent:\nan archived mail returns its record unchanged. The result carries ``archive_status``,\n``archive_error`` and ``archived_at`` like the message itself.",
+        "operationId": "archive_now_api_v1_mail_messages__message_id__archive_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Archive Now Api V1 Mail Messages  Message Id  Archive Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gmail-Archivierung jetzt ausführen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/messages/{message_id}/attachments/{attachment_id}/invoice-extraction": {
       "post": {
         "description": "Starts extract_invoice on an existing mail attachment document (rule 0.1.6: proposal\nonly, the invoice itself is created only after a confirmed review, see mhvp.ai.imports).",
@@ -69867,7 +70424,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Übermittlungen (Rollen, Abrechnungsdaten)",
+        "summary": "Übermittlungen (Rollen, Abrechnungsdaten, Ordnungsbegriffsabgleich)",
         "tags": [
           "Messdienstleister"
         ]
@@ -70005,6 +70562,50 @@
           }
         },
         "summary": "Verbindlich beauftragen (Abrechnung) beziehungsweise Rollen übermitteln",
+        "tags": [
+          "Messdienstleister"
+        ]
+      }
+    },
+    "/api/v1/metering/transmissions/{transmission_id}/poll": {
+      "post": {
+        "description": "Fetches the asynchronous processing status (Q8). ``waiting_provider`` stays until the\nprovider reports ``COMPLETED``; the fetched result is stored on the external billing unit\nand confirms the assignment technically when every sent unit was matched.",
+        "operationId": "poll_transmission_api_v1_metering_transmissions__transmission_id__poll_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transmission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transmission Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransmissionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bearbeitungsstatus beim Anbieter abrufen (Ordnungsbegriffsabgleich, nur lesend)",
         "tags": [
           "Messdienstleister"
         ]
@@ -76413,6 +77014,18 @@
             }
           },
           {
+            "description": "Deaktivierte Objekte (Status terminated) mit ausgeben. Nur für den Superadmin wirksam, für alle anderen ohne Wirkung (operator 27.09.2026).",
+            "in": "query",
+            "name": "include_terminated",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Deaktivierte Objekte (Status terminated) mit ausgeben. Nur für den Superadmin wirksam, für alle anderen ohne Wirkung (operator 27.09.2026).",
+              "title": "Include Terminated",
+              "type": "boolean"
+            }
+          },
+          {
             "in": "query",
             "name": "page",
             "required": false,
@@ -78124,6 +78737,49 @@
         ]
       }
     },
+    "/api/v1/properties/{property_id}/reactivate": {
+      "post": {
+        "operationId": "reactivate_property_api_v1_properties__property_id__reactivate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekt wieder aktivieren",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}/service-providers": {
       "get": {
         "operationId": "list_providers_api_v1_properties__property_id__service_providers_get",
@@ -78475,6 +79131,102 @@
           }
         },
         "summary": "Untergemeinschaft ändern",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/terminate": {
+      "post": {
+        "operationId": "terminate_property_api_v1_properties__property_id__terminate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyTerminationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyTerminationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verwaltung beenden",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/termination": {
+      "get": {
+        "operationId": "get_termination_api_v1_properties__property_id__termination_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyTerminationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Beendigung lesen",
         "tags": [
           "Objekte"
         ]
@@ -83124,6 +83876,25 @@
             }
           },
           {
+            "description": "Vertrag: Tickets der Einheit des Vertrags oder eines Kontakts der Vertragspartei (contact_id ODER initiator_contact_id)",
+            "in": "query",
+            "name": "contract_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Vertrag: Tickets der Einheit des Vertrags oder eines Kontakts der Vertragspartei (contact_id ODER initiator_contact_id)",
+              "title": "Contract Id"
+            }
+          },
+          {
             "description": "Kontakt oder Initiator (contact_id ODER initiator_contact_id)",
             "in": "query",
             "name": "contact_id",
@@ -86097,6 +86868,32 @@
         ]
       }
     },
+    "/api/v1/workspace/approvals": {
+      "get": {
+        "description": "Counts per approval kind, only for kinds the caller may decide (operator 27.09.2026,\nstart page column \"Freigaben\"). Read only; every count follows the same rules as the\napproving endpoint: mail replies (communication:approve, otherwise own submissions),\nIBAN four eyes release (contacts:approve), release gate requests (release_gates:approve),\ndunning runs in preview and direct debit runs in draft without an own approval\n(accounting:approve) and checked metering transmissions (transmission write rights).\nA kind the caller may not decide is left out of the response.",
+        "operationId": "approvals_api_v1_workspace_approvals_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Approvals Api V1 Workspace Approvals Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Offene Freigaben des angemeldeten Benutzers (Startseite)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
     "/api/v1/workspace/bulk": {
       "post": {
         "description": "All or nothing: unknown ids abort the whole action (rule 0.1.4 for bulk actions).",
@@ -86565,7 +87362,7 @@
     },
     "/api/v1/workspace/deadlines": {
       "get": {
-        "description": "Only kinds the caller may read (contracts, properties, accounting, documents).",
+        "description": "Only kinds the caller may read (contracts, properties, accounting, documents). Own and\nshared manual calendar entries with reminders appear as kind ``appointment`` (recurring\nones once per occurrence, computed on read); they are appointments, not deadlines of\nthe source data, and are never notified by the lead time of the list.",
         "operationId": "deadlines_api_v1_workspace_deadlines_get",
         "parameters": [
           {
@@ -86575,7 +87372,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline|energy_certificate|move_in|move_out|maintenance|note_follow_up|meeting|ticket_due)$",
+                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline|energy_certificate|move_in|move_out|maintenance|note_follow_up|meeting|ticket_due|appointment)$",
                   "type": "string"
                 },
                 {

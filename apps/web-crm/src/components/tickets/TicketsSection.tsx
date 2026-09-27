@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
-import { ATTENTION_BORDER, AttentionBadge, AttentionLegend, asAttention } from "@/components/tickets/TicketAttention";
+import { ATTENTION_BORDER, asAttention } from "@/components/tickets/attention";
+import { AttentionBadge, AttentionLegend } from "@/components/tickets/TicketAttention";
 import { ui } from "@/lib/ui";
 
 export type TicketSummary = {

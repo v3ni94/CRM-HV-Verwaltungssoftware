@@ -26,6 +26,8 @@ const KINDS = [
   "note_follow_up",
   "meeting",
   "ticket_due",
+  // Manual calendar entries with reminders (recurring ones per occurrence), computed on read.
+  "appointment",
 ];
 const STATUSES = ["open", "done", "all"];
 

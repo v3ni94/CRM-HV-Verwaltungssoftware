@@ -25,10 +25,10 @@ from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from pypdf import PdfReader, PdfWriter
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing.models import Statement, StatementSnapshot
+from mhvp.contacts import recipients
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
 from mhvp.documents import services as docs
@@ -88,6 +88,7 @@ class TenantLetter:
     hints: list[str]
     links: list[tuple[str, uuid.UUID]]
     filename: str
+    represents: uuid.UUID | None = None
     document_id: uuid.UUID | None = None
     pdf: bytes = field(default=b"", repr=False)
 
@@ -175,7 +176,6 @@ async def build(
     contract_id: uuid.UUID | None = None,
 ) -> list[TenantLetter]:
     """Assemble one letter per tenant from the snapshot only (no recalculation)."""
-    from mhvp.contacts.models import Party, PartyMember
     from mhvp.contracts.models import Contract
     from mhvp.properties.models import Property, Unit
 
@@ -196,124 +196,145 @@ async def build(
         contract = await session.get(Contract, cid)
         if contract is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Vertrag nicht gefunden.")
-        party = await session.get(Party, contract.party_id)
-        member = (
-            await session.scalar(
-                select(PartyMember)
-                .where(PartyMember.party_id == party.id)
-                .order_by(PartyMember.created_at)
-                .limit(1)
-            )
-            if party is not None
-            else None
-        )
-        if member is None:
+        debtor_id = await recipients.debtor_contact_id(session, contract.party_id)
+        if debtor_id is None:
             raise ProblemError(
                 ErrorCodes.VALIDATION,
                 detail=(
                     f"Einheit {row['unit_number']}: der Mieter hat keinen Kontakt mit Anschrift."
                 ),
             )
-        contact, recipient_lines, recipient = await docs.recipient(session, member.contact_id)
         unit = await session.get(Unit, contract.unit_id)
-
-        costs = Decimal(row["costs"])
-        advances_due = Decimal(row["advances_due"])
-        advances_paid = Decimal(row["advances_paid"])
-        balance = Decimal(row["balance"])
-        tenant_from = date.fromisoformat(row["from"])
-        tenant_to = date.fromisoformat(row["to"])
-        ended = tenant_to < statement.period_to
-        proposal = None if ended else advance_proposal(costs)
-        proposal_note = (
-            "Ihr Nutzungszeitraum ist kürzer als der Abrechnungszeitraum; der Vorschlag ist "
-            "daher gesondert zu prüfen."
-            if proposal is not None and tenant_from > statement.period_from
-            else None
-        )
-        hints: list[str] = []
-        if row.get("late_claim_blocked"):
-            hints.append(
-                "Nachforderung gesperrt: Fristorientierung überschritten, geprüfte Ausnahme "
-                "erforderlich (A04, M17-04). Kein Versand."
+        # Delivery rule of authorised representatives (M23-07): one letter per recipient.
+        for target in await recipients.resolve_recipients(session, [debtor_id]):
+            out.append(
+                await _tenant_letter(
+                    session,
+                    statement,
+                    snapshot,
+                    head,
+                    letter_date,
+                    row=row,
+                    contract=contract,
+                    unit=unit,
+                    prop=prop,
+                    target=target,
+                )
             )
-        if proposal_note:
-            hints.append(proposal_note)
-
-        object_parts = []
-        if prop is not None:
-            object_parts.append(f"Objekt {prop.number} {prop.name}")
-        object_parts.append(
-            f"Einheit {unit.label or unit.number}" if unit else f"Einheit {row['unit_number']}"
-        )
-        object_line = ", ".join(object_parts)
-        kind = result_kind(balance)
-        subject = html.escape(
-            f"Betriebskostenabrechnung {fmt_date(statement.period_from)} bis "
-            f"{fmt_date(statement.period_to)}: "
-            + {"nachzahlung": "Nachzahlung", "guthaben": "Guthaben", "ausgeglichen": "Ergebnis"}[
-                kind
-            ]
-            + f", {object_line}"
-        )
-        body = _body(
-            greeting=str(recipient["anrede"]),
-            object_line=object_line,
-            period_from=statement.period_from,
-            period_to=statement.period_to,
-            tenant_from=tenant_from,
-            tenant_to=tenant_to,
-            costs=costs,
-            advances_due=advances_due,
-            advances_paid=advances_paid,
-            balance=balance,
-            proposal=proposal,
-            proposal_note=proposal_note,
-        )
-        info = [
-            ("Status", DRAFT_LABEL),
-            ("Unser Zeichen", f"BK-{str(statement.id)[:8]}-{row['unit_number']}"),
-            ("Abrechnung", f"Version {statement.version}, Stand {snapshot.hash[:12]}"),
-        ]
-        if prop is not None:
-            info.append(("Objekt", f"{prop.number} {prop.name}"))
-        letter = letters.Letter(
-            recipient_lines=recipient_lines,
-            subject=subject,
-            body=body,
-            letter_date=letter_date,
-            info=info,
-            signatory=[s for s in (str(head.company.get("name", "")),) if s],
-        )
-        links: list[tuple[str, uuid.UUID]] = [("contract", contract.id)]
-        if unit is not None:
-            links.append(("unit", unit.id))
-        if prop is not None:
-            links.append(("property", prop.id))
-        filename = (
-            f"{letter_date.isoformat()}_betriebskosten_{row['unit_number']}_"
-            f"{contact.display_name}.pdf"
-        )
-        out.append(
-            TenantLetter(
-                contract_id=contract.id,
-                unit_number=str(row["unit_number"]),
-                contact_id=contact.id,
-                contact_name=contact.display_name,
-                letter=letter,
-                costs=costs,
-                advances_due=advances_due,
-                advances_paid=advances_paid,
-                balance=balance,
-                result=kind,
-                proposal=proposal,
-                proposal_note=proposal_note,
-                hints=hints,
-                links=links,
-                filename=filename[:255],
-            )
-        )
     return out
+
+
+async def _tenant_letter(
+    session: AsyncSession,
+    statement: Statement,
+    snapshot: StatementSnapshot,
+    head: letters.Letterhead,
+    letter_date: date,
+    *,
+    row: dict[str, Any],
+    contract: Any,
+    unit: Any,
+    prop: Any,
+    target: recipients.Recipient,
+) -> TenantLetter:
+    contact, recipient_lines, recipient = await docs.recipient(session, target.contact_id)
+    if target.represents is not None:
+        recipient_lines.insert(1, f"für {await docs.recipient_name(session, target.represents)}")
+
+    costs = Decimal(row["costs"])
+    advances_due = Decimal(row["advances_due"])
+    advances_paid = Decimal(row["advances_paid"])
+    balance = Decimal(row["balance"])
+    tenant_from = date.fromisoformat(row["from"])
+    tenant_to = date.fromisoformat(row["to"])
+    ended = tenant_to < statement.period_to
+    proposal = None if ended else advance_proposal(costs)
+    proposal_note = (
+        "Ihr Nutzungszeitraum ist kürzer als der Abrechnungszeitraum; der Vorschlag ist "
+        "daher gesondert zu prüfen."
+        if proposal is not None and tenant_from > statement.period_from
+        else None
+    )
+    hints: list[str] = []
+    if row.get("late_claim_blocked"):
+        hints.append(
+            "Nachforderung gesperrt: Fristorientierung überschritten, geprüfte Ausnahme "
+            "erforderlich (A04, M17-04). Kein Versand."
+        )
+    if proposal_note:
+        hints.append(proposal_note)
+
+    object_parts = []
+    if prop is not None:
+        object_parts.append(f"Objekt {prop.number} {prop.name}")
+    object_parts.append(
+        f"Einheit {unit.label or unit.number}" if unit else f"Einheit {row['unit_number']}"
+    )
+    object_line = ", ".join(object_parts)
+    kind = result_kind(balance)
+    subject = html.escape(
+        f"Betriebskostenabrechnung {fmt_date(statement.period_from)} bis "
+        f"{fmt_date(statement.period_to)}: "
+        + {"nachzahlung": "Nachzahlung", "guthaben": "Guthaben", "ausgeglichen": "Ergebnis"}[kind]
+        + f", {object_line}"
+    )
+    body = _body(
+        greeting=str(recipient["anrede"]),
+        object_line=object_line,
+        period_from=statement.period_from,
+        period_to=statement.period_to,
+        tenant_from=tenant_from,
+        tenant_to=tenant_to,
+        costs=costs,
+        advances_due=advances_due,
+        advances_paid=advances_paid,
+        balance=balance,
+        proposal=proposal,
+        proposal_note=proposal_note,
+    )
+    info = [
+        ("Status", DRAFT_LABEL),
+        ("Unser Zeichen", f"BK-{str(statement.id)[:8]}-{row['unit_number']}"),
+        ("Abrechnung", f"Version {statement.version}, Stand {snapshot.hash[:12]}"),
+    ]
+    if prop is not None:
+        info.append(("Objekt", f"{prop.number} {prop.name}"))
+    letter = letters.Letter(
+        recipient_lines=recipient_lines,
+        subject=subject,
+        body=body,
+        letter_date=letter_date,
+        info=info,
+        signatory=[s for s in (str(head.company.get("name", "")),) if s],
+    )
+    links: list[tuple[str, uuid.UUID]] = [("contract", contract.id)]
+    if unit is not None:
+        links.append(("unit", unit.id))
+    if prop is not None:
+        links.append(("property", prop.id))
+    filename = (
+        f"{letter_date.isoformat()}_betriebskosten_{row['unit_number']}_{contact.display_name}.pdf"
+    )
+    if target.represents is not None:
+        links.append(("contact", target.represents))
+    return TenantLetter(
+        contract_id=contract.id,
+        unit_number=str(row["unit_number"]),
+        contact_id=contact.id,
+        contact_name=contact.display_name,
+        represents=target.represents,
+        letter=letter,
+        costs=costs,
+        advances_due=advances_due,
+        advances_paid=advances_paid,
+        balance=balance,
+        result=kind,
+        proposal=proposal,
+        proposal_note=proposal_note,
+        hints=hints,
+        links=links,
+        filename=filename[:255],
+    )
 
 
 def render(head: letters.Letterhead, drafts: list[TenantLetter]) -> None:
@@ -371,6 +392,7 @@ def summary(draft: TenantLetter) -> dict[str, Any]:
         "unit_number": draft.unit_number,
         "contact_id": draft.contact_id,
         "contact_name": draft.contact_name,
+        "represents": draft.represents,
         "costs": str(draft.costs),
         "advances_due": str(draft.advances_due),
         "advances_paid": str(draft.advances_paid),

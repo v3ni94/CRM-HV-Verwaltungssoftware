@@ -26,6 +26,8 @@ export type Mailbox = {
   backfill_done?: number;
   backfill_started_at?: string | null;
   backfill_finished_at?: string | null;
+  archive_on_ticket_done?: boolean;
+  archive_scope_missing?: boolean;
 };
 export type Member = { user_id: string; email: string; display_name: string; status: string };
 
@@ -94,7 +96,17 @@ function OAuthClientForm({ initial }: { initial: OAuthStatus }) {
   );
 }
 
-function MailboxRow({ box, members, onChange }: { box: Mailbox; members: Member[]; onChange: (next: Mailbox | null) => void }) {
+function MailboxRow({
+  box,
+  members,
+  onChange,
+  onReconnect,
+}: {
+  box: Mailbox;
+  members: Member[];
+  onChange: (next: Mailbox | null) => void;
+  onReconnect: () => void;
+}) {
   const t = useTranslations("MailSettings");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -150,6 +162,14 @@ function MailboxRow({ box, members, onChange }: { box: Mailbox; members: Member[
         {box.last_synced_at ? t("lastSynced", { at: fmt(box.last_synced_at) }) : t("neverSynced")}
         {box.last_error ? ` · ${box.last_error}` : ""}
       </p>
+      {box.kind === "gmail" && box.archive_scope_missing ? (
+        <div className={`${ui.warning} flex flex-wrap items-center justify-between gap-2`} role="status" data-testid="archive-scope-missing">
+          <span>{t("archiveScopeMissing")}</span>
+          <button type="button" className={ui.primary} disabled={busy} onClick={onReconnect}>
+            {t("reconnectGoogle")}
+          </button>
+        </div>
+      ) : null}
       {box.kind === "gmail" ? (
         <p className="text-xs text-muted" data-testid="push-status">
           {box.push_watch_expires_at ? t("pushActiveUntil", { at: fmt(box.push_watch_expires_at) }) : t("pushInactive")}
@@ -263,7 +283,13 @@ export function MailboxSettings({ oauth, mailboxes, members }: { oauth: OAuthSta
         ) : (
           <ul>
             {boxes.map((b) => (
-              <MailboxRow key={b.id} box={b} members={members.filter((m) => m.status === "active")} onChange={(next) => update(b.id, next)} />
+              <MailboxRow
+                key={b.id}
+                box={b}
+                members={members.filter((m) => m.status === "active")}
+                onChange={(next) => update(b.id, next)}
+                onReconnect={() => void connect()}
+              />
             ))}
           </ul>
         )}

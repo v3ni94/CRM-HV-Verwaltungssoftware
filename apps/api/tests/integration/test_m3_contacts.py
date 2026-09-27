@@ -199,6 +199,24 @@ def test_full_text_and_global_search(client: TestClient, world: World) -> None:
     assert tagged["total"] >= 1
 
 
+def test_role_filter_lists_only_matching_contacts(client: TestClient, world: World) -> None:
+    """Operator 27.09.2026: the role chips returned 500 (generic ARRAY.contains)."""
+    headers = bearer(login(client, world, "m3clerk"))
+    owner = client.post(
+        "/api/v1/contacts",
+        json=PERSON | {"last_name": f"Rolle{RUN}", "roles": ["eigentuemer"]},
+        headers=headers,
+    )
+    assert owner.status_code == 201, owner.text
+    page = client.get("/api/v1/contacts", params={"role": "eigentuemer"}, headers=headers)
+    assert page.status_code == 200, page.text
+    ids = {item["id"] for item in page.json()["items"]}
+    assert owner.json()["id"] in ids
+    other = client.get("/api/v1/contacts", params={"role": "bank"}, headers=headers)
+    assert other.status_code == 200
+    assert owner.json()["id"] not in {item["id"] for item in other.json()["items"]}
+
+
 def test_contacts_isolated_between_tenants(client: TestClient, world: World) -> None:
     created = client.post(
         "/api/v1/contacts",

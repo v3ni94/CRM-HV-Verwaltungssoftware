@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.accounting import invoices as acc_invoices
 from mhvp.accounting.models import Invoice, InvoiceKind, Ledger, PostingStatus
 from mhvp.ai import instructions as chat_instructions
+from mhvp.ai.examples import delete_examples_for_contact
 from mhvp.ai.models import AiTaskRun, ImportRun, ImportRunItem, ImportStatus
 from mhvp.contacts import schemas as cs
 from mhvp.contacts import services as contact_services
@@ -421,6 +422,8 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
             from datetime import UTC, datetime
 
             contact.deleted_at = datetime.now(UTC)  # soft delete, audit trail stays
+            # ADR 0010: no learning example outlives its contact (same transaction).
+            await delete_examples_for_contact(session, contact.id)
         return
     if entity_type == "party":
         await session.execute(delete(PartyMember).where(PartyMember.party_id == entity_id))

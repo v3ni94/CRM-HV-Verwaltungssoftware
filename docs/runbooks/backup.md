@@ -23,11 +23,18 @@ Source: MASTER-PROMPT 3.5, 6.9.5 (E05), 16. Backup protects operation; it is not
   copied by `backup-offsite.sh` from the primary bucket into the Hetzner bucket, encrypted per
   object, see `objektspeicher-ionos-s3.md` section 6. `BACKUP_OBJECTSTORE_VOLUME` is only for
   a local SeaweedFS container.
-* WAL archiving (point in time recovery): not set up on the server; recovery point is the daily
-  backup. Once an `archive_command` writes segments to `BACKUP_WAL_DIR`, `backup-offsite.sh`
-  encrypts and uploads every new segment with the daily run.
+* WAL archiving (point in time recovery): `infra/compose.prod.yaml` runs PostgreSQL with
+  `archive_mode=on` and an `archive_command` that copies every completed segment into the
+  bind mounted `BACKUP_WAL_DIR` (default `/srv/mhvp-backup/wal`); `backup-offsite.sh`
+  encrypts and uploads every new segment with the daily run. Section "WAL-Archivierung"
+  below: base backup, restore with WAL replay, verification. Dev compose does not archive.
 * Health: `healthcheck.sh` alarms when `BACKUP_DIR/offsite-status` is older than
-  `BACKUP_MAX_AGE_HOURS` or does not read `status=ok`.
+  `BACKUP_MAX_AGE_HOURS` or does not read `status=ok`. The same line is reported by
+  `GET /api/v1/platform/ops/metrics` as `jobs.backup_offsite` (status, stamp, age, WAL count)
+  with the gauges `backup_offsite_ok|failed|stale|age_seconds|wal_segments` and the alerts
+  `backup_offsite_failed` and `backup_offsite_stale` (older than 36 hours or file missing);
+  the API container mounts `BACKUP_DIR` read only for this. Without `BACKUP_DIR` the job reads
+  `not_configured` without alert.
 
 ## Off-site-Kopie (M9-02, Betreiberentscheidung 26.09.2026)
 
@@ -117,6 +124,98 @@ mit dem privaten Schlüssel, nicht auf dem Produktionsserver:
   das Skript den neuesten Dump), vorher `--dry-run` zur Diagnose.
 * After a real restore: re-apply the deletion journal before users get access (M9-03, D47);
   procedure below.
+
+## WAL-Archivierung und Point-in-Time-Recovery
+
+Der tägliche Dump (`pg_dump`) ist ein logisches Backup und reicht für die Wiederherstellung
+auf den Stand des Dumps. Für einen Stand zwischen zwei Dumps (Wiederherstellungspunkt bis
+auf wenige Minuten) braucht es ein physisches Basisbackup plus die seitdem archivierten
+WAL-Segmente. Beides ist ab dieser Version in der Produktion eingerichtet.
+
+### Einrichtung (compose.prod.yaml)
+
+* PostgreSQL läuft mit `archive_mode=on`, `archive_timeout=900` (spätestens alle 15 Minuten
+  ein Segment, auch bei wenig Last) und
+  `archive_command=test ! -f /var/lib/postgresql/wal-archive/%f && cp %p /var/lib/postgresql/wal-archive/%f`.
+  Ein Segment wird nie überschrieben; schlägt die Kopie fehl, behält PostgreSQL das Segment
+  in `pg_wal` und versucht es erneut (Plattenplatz im Blick behalten, siehe Prüfung).
+* Der Container bindet `BACKUP_WAL_DIR` (Vorgabe `/srv/mhvp-backup/wal`) auf
+  `/var/lib/postgresql/wal-archive`. Vor dem ersten Start: `mkdir -p /srv/mhvp-backup/wal &&
+  chown 999:999 /srv/mhvp-backup/wal && chmod 700 /srv/mhvp-backup/wal` (uid 999 ist der
+  Datenbanknutzer im Image). Denselben Pfad in `.env.prod` und `.env.backup` als
+  `BACKUP_WAL_DIR` eintragen, damit `backup-offsite.sh` die Segmente hochlädt.
+* `PG_ARCHIVE_MODE=off` in `.env.prod` schaltet die Archivierung ab (Neustart des
+  Postgres-Containers nötig, `archive_mode` ist kein Laufzeitparameter). Die Entwicklungs-
+  und CI-Stacks (`compose.dev.yaml`) archivieren nicht.
+* Lokale Aufbewahrung: Segmente, die älter sind als das älteste noch vorhandene Basisbackup,
+  können gelöscht werden. Bis ein eigener Aufräumschritt existiert, monatlich nach dem
+  Basisbackup von Hand: `find /srv/mhvp-backup/wal -type f -mtime +35 -delete`. Die
+  Off-site-Kopie hält die Segmente je Lauf unter `runs/<STAMP>/wal/` (Aufbewahrung wie oben).
+
+### Basisbackup (monatlich und nach jedem Postgres-Upgrade)
+
+Ohne Basisbackup sind die WAL-Segmente wertlos. Auf dem Server:
+
+```
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+docker compose -p mhvp --env-file .env.prod -f infra/compose.yaml -f infra/compose.prod.yaml \
+  exec -T postgres pg_basebackup -U postgres -D - -Ft -X none -c fast \
+  | age -r "$BACKUP_AGE_PUBLIC_KEY" -o /srv/mhvp-backup/base-$STAMP.tar.age
+sha256sum /srv/mhvp-backup/base-$STAMP.tar.age > /srv/mhvp-backup/base-$STAMP.tar.age.sha256
+```
+
+`-X none` lässt die WAL-Segmente weg, sie kommen aus dem Archiv. `pg_basebackup` schreibt
+`backup_manifest` und in `base.tar` die Datei `backup_label` mit der ersten benötigten
+WAL-Position; die Ausgabe des Kommandos (Start-LSN, Zeitpunkt) ins Sicherungsprotokoll
+übernehmen. Die Datei `base-<STAMP>.tar.age` wird vom nächsten Lauf von
+`backup-offsite.sh` nicht automatisch hochgeladen (nur `mhvp-*.dump.age`); bis dahin von
+Hand in den Hetzner-Bucket unter `<Präfix>/base/` kopieren und im Protokoll vermerken.
+
+### Wiederherstellung (Basisbackup plus WAL-Replay)
+
+Nur auf einem Wiederherstellungsrechner oder in einem leeren Zielverzeichnis, nie über die
+laufende Produktionsdatenbank. Freigabe durch die Geschäftsführung, Verfahren nach D47
+(Löschjournal) anschließend beachten.
+
+1. Zeitpunkt festlegen (`TARGET`, UTC, z. B. `2026-09-27 06:45:00+00`), letztes Basisbackup
+   vor diesem Zeitpunkt wählen, Prüfsumme prüfen und entschlüsseln:
+   `age -d -i mhvp-restore-key.txt base-<STAMP>.tar.age | tar -x -C /srv/mhvp-restore/data`.
+2. WAL-Segmente ab dem Start des Basisbackups (siehe `backup_label`) bis nach `TARGET` aus
+   `BACKUP_WAL_DIR` oder aus `runs/*/wal/` (mit `age -d` entschlüsselt) nach
+   `/srv/mhvp-restore/wal` legen. Dateinamen unverändert lassen.
+3. Im Datenverzeichnis `postgresql.auto.conf` ergänzen und die Signaldatei anlegen:
+   ```
+   restore_command = 'cp /var/lib/postgresql/wal-archive/%f %p'
+   recovery_target_time = '<TARGET>'
+   recovery_target_action = 'promote'
+   ```
+   `touch /srv/mhvp-restore/data/recovery.signal`; Rechte `chown -R 999:999`, `chmod 700`.
+4. Einen Postgres-Container mit demselben Image (`pgvector/pgvector:0.8.1-pg16`) starten,
+   `/srv/mhvp-restore/data` auf `/var/lib/postgresql/data` und `/srv/mhvp-restore/wal` auf
+   `/var/lib/postgresql/wal-archive` gebunden, ohne Netzfreigabe. Das Log zeigt
+   `starting point-in-time recovery to ...`, die eingespielten Segmente und
+   `recovery stopping before commit of transaction ...` sowie `database system is ready`.
+5. Prüfen wie in `scripts/backup-verify.sh`: Alembic-Revision (`alembic_version`),
+   Kerntabellen, Anzahl der Buchungen bis `TARGET`, Stichprobe eines Dokumenthashes.
+   Erst danach Entscheidung über die Übernahme in den Betrieb (neuer Datenbankcluster,
+   Anwendungen gestoppt, Passwörter der Rollen wie in `infra/postgres/bootstrap.sh`).
+6. Ergebnis (Datum, Basisbackup-STAMP, `TARGET`, letztes eingespieltes Segment, Prüfer,
+   Befund) im Wiederherstellungsprotokoll festhalten; Wiederherstellungsverzeichnis und
+   entschlüsselte Dateien löschen.
+
+### Prüfung im Betrieb
+
+* Wöchentlich: `docker compose ... exec postgres psql -U postgres -c "select last_archived_wal,
+  last_archived_time, failed_count, last_failed_wal from pg_stat_archiver"`. `failed_count`
+  muss 0 sein, `last_archived_time` jünger als 20 Minuten (`archive_timeout` 15 Minuten).
+* `ls -t /srv/mhvp-backup/wal | head` zeigt das neueste Segment; `du -sh` beider Verzeichnisse
+  und `du -sh` von `pg_wal` im Container (wächst `pg_wal`, schlägt die Kopie fehl).
+* `cat /srv/mhvp-backup/offsite-status`: Feld `wal=<n>` ist die Anzahl der im Lauf neu
+  hochgeladenen Segmente; dieselbe Zahl steht in `/platform/ops/metrics` als
+  `backup_offsite_wal_segments`. Bei laufendem Betrieb und `wal=0` über mehrere Tage die
+  Archivierung prüfen.
+* Vierteljährlich eine vollständige Wiederherstellung nach obigem Ablauf mit einem `TARGET`
+  zwischen zwei Dumps durchführen und protokollieren.
 
 ## Restore after a lawful deletion (D47, M9-03)
 

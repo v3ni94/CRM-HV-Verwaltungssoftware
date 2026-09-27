@@ -1,14 +1,18 @@
 import { getTranslations } from "next-intl/server";
+import { redirect } from "next/navigation";
 
 import { TenantPicker } from "@/components/auth/TenantPicker";
 import { AuthCard } from "@/components/layout/AuthCard";
 import { sessionContext } from "@/lib/api-server";
+import { safeNext } from "@/lib/next-path";
 
 export const dynamic = "force-dynamic";
 
 export default async function TenantPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
   const [t, ctx, { next }] = await Promise.all([getTranslations("Auth"), sessionContext(), searchParams]);
-  const target = next && next.startsWith("/") && !next.startsWith("//") ? next : "/kontakte";
+  const target = safeNext(next);
+  // A tenant is already selected (e.g. single tenant user): no detour via the picker.
+  if (ctx.tenantId && ctx.tenants.some((tenant) => tenant.id === ctx.tenantId)) redirect(target);
   return (
     <AuthCard title={t("tenantTitle")}>
       {ctx.tenants.length ? (

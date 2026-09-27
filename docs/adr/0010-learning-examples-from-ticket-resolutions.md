@@ -47,7 +47,19 @@ presented to the operator (section 0.3).
    `features.entitaeten.contact_id`) in the same transaction; `delete_examples_for_ticket`
    is available for a ticket deletion path (none exists today, tickets are merged, not
    deleted). Hard delete: the rows are derived data, the ticket event log keeps the
-   resolution.
+   resolution. Addendum 27.09.2026: the soft delete of a contact through an import undo
+   (`mhvp.ai.imports._remove`) calls the same deletion in its transaction.
+8. **Retention (addendum 27.09.2026, operator decision "Vollständig speichern mit
+   Mandantenschalter").** The examples are stored in full (no minimisation) while the tenant
+   switch is on, and `tenant_settings.ai_learning_examples_retention_months` (migration 0154,
+   default 24, 1 to 120, `PATCH /tenant/settings`, CRM page Einstellungen, Mandant) limits
+   how long they stay: the daily job `mhvp.ai.examples_retention` (beat 03:45) deletes every
+   example of the tenant created before now minus the retention months (calendar months) and
+   journals each tenant run as the event `ai_examples.retention` with the counts
+   (before, deleted, remaining, cut-off, months). Switching the storage off does not delete;
+   the retention run does. Rule 0.1.7 does not apply (derived data). The data protection
+   review of the stored content (personal data in subject, note and answer excerpt) remains
+   the operator's decision and is not replaced by the retention period (M7-04).
 
 ## Consequences
 
@@ -56,8 +68,9 @@ presented to the operator (section 0.3).
   pseudonymisation are needed. Owner: operator with data protection; gate: none, but M7-01 and
   M12-01 remain closed for provider use.
 - Required code changes before productive use: per tenant switch for example storage (done
-  26.09.2026, default off) and deletion of examples when a contact is deleted (done
-  26.09.2026); still open: masking of the note before it enters a prompt and a retention rule
-  in `docs/rules/` (M7-04, operator with data protection).
+  26.09.2026, default off), deletion of examples when a contact is deleted (done
+  26.09.2026) and the retention period with daily deletion run (done 27.09.2026, default
+  24 months); still open: masking of the note before it enters a prompt and the operator's
+  data protection review (M7-04, operator with data protection).
 - Rule M19-07 documents the behaviour; the plan note is in `docs/plans/M20.md` (Nachtrag
   26.09.2026, 1.25.0).

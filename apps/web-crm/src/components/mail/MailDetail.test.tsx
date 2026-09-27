@@ -1,4 +1,5 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
@@ -53,6 +54,46 @@ describe("MailDetail", () => {
     renderIntl(<MailDetail message={row} canApprove={false} canReadMembers={false} onUpdated={() => {}} onCreated={() => {}} />);
     expect(screen.getByText("Nachricht wird geladen...")).toBeInTheDocument();
     expect(screen.queryByTestId("mail-body")).not.toBeInTheDocument();
+  });
+
+  it("shows the Gmail archive outcome and offers a manual retry after a failure", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/api/bff/mail/messages/m1/archive") && init?.method === "POST") {
+        return jsonResponse(makeMessage({ status: "done", archive_status: "archived", archived_at: "2026-09-27T09:00:00Z" }), 200);
+      }
+      return jsonResponse([], 200);
+    });
+    const onUpdated = vi.fn();
+    renderIntl(
+      <MailDetail
+        message={makeMessage({ status: "done", archive_status: "failed", archive_error: "HTTP 500", archive_attempted_at: "2026-09-27T08:00:00Z" })}
+        canApprove={false}
+        canReadMembers={false}
+        onUpdated={onUpdated}
+        onCreated={() => {}}
+      />,
+    );
+    const line = screen.getByTestId("mail-archive-status");
+    expect(line.textContent).toContain("Archivierung in Gmail fehlgeschlagen");
+    expect(line.textContent).toContain("HTTP 500");
+    await userEvent.click(screen.getByRole("button", { name: "Archivierung jetzt nachholen" }));
+    await waitFor(() => expect(onUpdated).toHaveBeenCalled());
+    expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ archive_status: "archived" }));
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith("/messages/m1/archive") && init?.method === "POST")).toBe(true);
+  });
+
+  it("shows the archived date for an archived mail without a retry", () => {
+    renderIntl(
+      <MailDetail
+        message={makeMessage({ status: "done", archive_status: "archived", archived_at: "2026-09-27T09:00:00Z" })}
+        canApprove={false}
+        canReadMembers={false}
+        onUpdated={() => {}}
+        onCreated={() => {}}
+      />,
+    );
+    expect(screen.getByTestId("mail-archive-status").textContent).toContain("In Gmail archiviert am");
+    expect(screen.queryByRole("button", { name: "Archivierung jetzt nachholen" })).not.toBeInTheDocument();
   });
 
   it("lists attachments the intake refused (M8)", () => {

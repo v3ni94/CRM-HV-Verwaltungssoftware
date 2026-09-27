@@ -9,6 +9,7 @@ import { PropertyMeteringTab } from "@/components/metering/PropertyMeteringTab";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
 import { PropertyMasterData, type PropertyMaster } from "@/components/properties/PropertyMasterData";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
+import { PropertyTermination, type Termination } from "@/components/properties/PropertyTermination";
 import { PropertyNotices } from "@/components/properties/PropertyNotices";
 import {
   BillingPeriodsPanel,
@@ -25,19 +26,13 @@ import {
 import { UnitsTable } from "@/components/properties/UnitsTable";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { StatusChip } from "@/components/ui/StatusChip";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
-
-const STATUS_VARIANT: Record<string, StatusPillVariant> = {
-  active: "success",
-  onboarding: "warning",
-  terminated: "neutral",
-};
 
 type BankAccountRow = { id: string; kind: string; holder: string; iban_masked: string; bank_name: string | null; ledger_account_id: string | null };
 
@@ -90,7 +85,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
     getMe(),
   ]);
   const base = `/api/v1/properties/${propertyId}`;
-  const [owners, buildings, periods, subCommunities, portalDocuments, providers, bankAccounts, accounts] = await Promise.all([
+  const [owners, buildings, periods, subCommunities, portalDocuments, providers, bankAccounts, accounts, termination] = await Promise.all([
     load<CurrentOwner[]>(`${base}/owners`, []),
     load<BuildingRow[]>(`${base}/buildings`, []),
     load<BillingPeriodRow[]>(`${base}/billing-periods`, []),
@@ -99,6 +94,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
     load<ProviderRow[]>(`${base}/service-providers`, []),
     load<BankAccountRow[]>(`${base}/bank-accounts`, []),
     accountLabels(propertyId),
+    load<Termination | null>(`${base}/termination`, null),
   ]);
   const names = await contactNames([...providers.map((p) => p.contact_id), ...owners.map((o) => o.tax_advisor_contact_id)]);
   if (!data) {
@@ -115,6 +111,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
   const isHoa = data.management_type !== "rental";
   const openMaintenance = (maintenance.data ?? []).filter((m) => m.status === "open");
   const canEdit = me.data?.permissions.includes("properties:update") ?? false;
+  const isSuperadmin = me.data?.is_superadmin ?? false;
   const ownerRows = owners.map((o) => ({
     ...o,
     clearing_account_label: o.clearing_account_id ? (accounts.labels.get(o.clearing_account_id) ?? null) : null,
@@ -158,7 +155,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         <div className={ui.card}>
           <p className={ui.subtitle}>{t("statusLabel")}</p>
           <p className="mt-1">
-            <StatusPill variant={STATUS_VARIANT[data.status] ?? "neutral"} label={t(`status.${data.status}`)} />
+            <StatusChip domain="property" status={data.status} />
           </p>
         </div>
         <div className={ui.card}>
@@ -175,7 +172,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         </div>
       </div>
 
-      <PropertyMasterData property={data as unknown as PropertyMaster} canEdit={canEdit} />
+      <PropertyTermination propertyId={propertyId} status={data.status} termination={termination} canEdit={canEdit} isSuperadmin={isSuperadmin} />
+
+      <PropertyMasterData property={data as unknown as PropertyMaster} canEdit={canEdit && data.status !== "terminated"} />
 
       {(data.legal_entities ?? []).length ? (
         <section className={ui.card}>

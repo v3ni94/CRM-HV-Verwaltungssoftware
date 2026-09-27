@@ -3,7 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { DunningApproveButton } from "@/components/accounting/DunningApproveButton";
 import { DunningCaseActions } from "@/components/accounting/DunningCaseActions";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { StatusChip } from "@/components/ui/StatusChip";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -19,16 +19,12 @@ type Case = {
   fee_amount: string;
   status: string;
   reason: string | null;
+  // Warnungen aus der Vorschau (M23-07: Zustellung nur an den Bevollmächtigten).
+  warnings?: string[];
   letter_document_id?: string | null;
   // Höchste Stufe der Leiter, die für das Objekt dieses Falls gilt (Objektüberschreibung
   // oder Mandantenvorgabe, M16-10, docs/rules/M16-02.md).
   highest_level?: number | null;
-};
-
-const CASE_VARIANT: Record<string, StatusPillVariant> = {
-  proposed: "warning",
-  excluded: "neutral",
-  sent: "success",
 };
 
 export default async function DunningRunPage({ params }: { params: Promise<{ runId: string }> }) {
@@ -88,9 +84,19 @@ export default async function DunningRunPage({ params }: { params: Promise<{ run
                 {c.level === 1 ? <span className="text-muted">{t("noFee")}</span> : formatEur(c.fee_amount)}
               </td>
               <td>
-                <StatusPill variant={CASE_VARIANT[c.status] ?? "neutral"} label={t(`caseStatus.${c.status}`)} />
+                <StatusChip domain="dunningCase" status={c.status} label={t(`caseStatus.${c.status}`)} />
               </td>
-              <td className="text-muted">{c.reason}</td>
+              <td className="text-muted">
+                {c.reason}
+                {c.warnings && c.warnings.length > 0 ? (
+                  <span className="mt-1 block">
+                    <StatusChip
+                      descriptor={{ label: t("representativeOnly"), tone: "warning", icon: "warning" }}
+                      explanation={c.warnings[0]}
+                    />
+                  </span>
+                ) : null}
+              </td>
               <td>
                 {c.status !== "excluded" ? (
                   <DunningCaseActions

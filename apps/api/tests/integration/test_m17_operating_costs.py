@@ -1222,6 +1222,79 @@ def test_a07_tenant_letters_from_snapshot(
         linked = {(link["entity_type"], link["entity_id"]) for link in document["links"]}
         assert ("contract", x["contract_id"]) in linked
 
+    # M23-07: an authorised representative of the tenant of unit 01 (rule both) receives a
+    # copy "für" the tenant; representative only yields that copy alone.
+    tenant_contact = _ok(client.get(f"/api/v1/parties/{a['party_id']}", headers=h))["members"][0]
+    rep = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "salutation": "Herr",
+                "first_name": "Jan",
+                "last_name": f"Bevollmaechtigt{RUN}",
+                "addresses": [
+                    {
+                        "street": "Rheinpromenade",
+                        "house_number": "13",
+                        "postal_code": "40789",
+                        "city": "Monheim am Rhein",
+                    }
+                ],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    relation = _ok(
+        client.post(
+            f"/api/v1/contacts/{tenant_contact['contact_id']}/relations",
+            json={"related_contact_id": rep["id"], "kind": "representative"},
+            headers=h,
+        ),
+        201,
+    )
+    with_rep = _ok(client.post(f"{S}/{st['id']}/letters", headers=h), 201)["letters"]
+    assert [(x["unit_number"], x["represents"]) for x in with_rep] == [
+        ("01", None),
+        ("01", tenant_contact["contact_id"]),
+        ("02", None),
+    ]
+    rep_letter = next(x for x in with_rep if x["represents"])
+    assert rep_letter["contact_id"] == rep["id"]
+    rep_pdf = client.get(f"/api/v1/documents/{rep_letter['document_id']}/content", headers=h)
+    assert rep_pdf.status_code == 200
+    rep_text = "\n".join(p.extract_text() for p in PdfReader(io.BytesIO(rep_pdf.content)).pages)
+    assert f"für {tenant_contact['display_name']}" in rep_text
+    rep_document = _ok(client.get(f"/api/v1/documents/{rep_letter['document_id']}", headers=h))
+    assert {x["entity_id"] for x in rep_document["links"] if x["entity_type"] == "contact"} == {
+        rep["id"],
+        tenant_contact["contact_id"],
+    }
+    _ok(
+        client.patch(
+            f"/api/v1/contacts/{tenant_contact['contact_id']}/contact-relations/{relation['id']}",
+            json={"delivery_mode": "representative_only", "fields": ["delivery_mode"]},
+            headers=h,
+        )
+    )
+    only_rep = client.post(
+        f"{S}/{st['id']}/letters/preview",
+        json={"letter_date": "2026-03-02", "contract_id": a["id"]},
+        headers=h,
+    )
+    assert only_rep.status_code == 200, only_rep.text
+    only_text = "\n".join(p.extract_text() for p in PdfReader(io.BytesIO(only_rep.content)).pages)
+    assert f"Sehr geehrter Herr Bevollmaechtigt{RUN}" in only_text
+    assert f"Sehr geehrte Frau Guthaben{RUN}" not in only_text
+    _ok(
+        client.patch(
+            f"/api/v1/contacts/{tenant_contact['contact_id']}/contact-relations/{relation['id']}",
+            json={"valid_to": "2020-12-31", "fields": ["valid_to"]},
+            headers=h,
+        )
+    )
+
     # Dispatch stays locked: G3 closed -> gate (403); G3 open -> still refused (409).
     closed = client.post(f"{S}/{st['id']}/letters/send", headers=h)
     assert closed.status_code == 403

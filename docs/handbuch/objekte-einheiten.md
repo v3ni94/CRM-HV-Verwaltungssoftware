@@ -16,8 +16,11 @@ Nummer, Name, Straße und Ort. Die Reiter Alle, Mietverwaltung, WEG und SEV filt
 Verwaltungsart; der Reiter SEV zeigt nur WEG-Objekte mit aktivierter
 Sondereigentumsverwaltung, für die mindestens ein Mietvertrag hinterlegt ist.
 
-Status eines Objekts: in Aufnahme, aktiv, beendet. Der Status wird über die Schnittstelle
-oder die Datenübernahme gesetzt.
+Status eines Objekts: in Aufnahme, aktiv, deaktiviert. In Aufnahme und aktiv werden über die
+Schnittstelle oder die Datenübernahme gesetzt; deaktiviert entsteht durch Verwaltung beenden
+(Abschnitt Verwaltung beenden). Deaktivierte Objekte fehlen in der Objektliste. Der Superadmin
+sieht über den Schalter Deaktivierte anzeigen zusätzlich die deaktivierten Objekte, grau und
+mit der Statusmarke Deaktiviert.
 
 ## Objekt anlegen
 
@@ -84,6 +87,28 @@ Weitere Abschnitte der Detailseite:
 
 Der Energieausweis wird seit der Ergänzung der Objektdaten am Gebäude geführt und auf der
 Gebäudeseite gepflegt (siehe unten).
+
+## Verwaltung beenden
+
+Endet das Verwaltungsverhältnis, wird das Objekt auf der Detailseite über Verwaltung beenden
+deaktiviert. Das Formular fragt ab: gekündigt von (Verwaltung, Eigentümer,
+Eigentümergemeinschaft, Sonstige), Kündigungsdatum, Ende der Verwaltung, optional
+nachfolgender Verwalter und nachfolgender Eigentümer (Auswahl aus den bestehenden
+Kontakten), das Kündigungsschreiben (Datei hochladen, wird als Dokument am Objekt abgelegt)
+und eine Notiz. Nach Weiter fasst eine Bestätigung die Beendigung zusammen; erst Verwaltung
+beenden führt sie aus. Voraussetzung ist das Recht Objekte ändern und ein Objekt in Aufnahme
+oder aktiv.
+
+Danach zeigt die Detailseite oben das Banner Objekt deaktiviert mit Verwaltungsende,
+Kündigendem, Kündigungsdatum, den Nachfolgern (Verweis auf den Kontakt), dem
+Kündigungsschreiben (Verweis auf das Dokument) und der Notiz. Alle Daten des Objekts
+(Einheiten, Verträge, Buchhaltung, Dokumente) bleiben unverändert erhalten und einsehbar;
+die Stammdaten sind schreibgeschützt.
+
+Wieder aktivieren kann nur der Superadmin (Schaltfläche im Banner mit Bestätigung). Das
+Objekt erhält dann seinen vorherigen Status zurück und erscheint wieder in der Liste; die
+Beendigung bleibt im Änderungsprotokoll erhalten. Diese Einschränkung ist ein interner
+Standard, keine Rechtsvorschrift (Regel M4-05).
 
 ## Gebäudeseite
 

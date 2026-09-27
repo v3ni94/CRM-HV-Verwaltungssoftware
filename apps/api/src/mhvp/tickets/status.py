@@ -271,11 +271,21 @@ async def transition_status(
     if new_status in (TicketStatus.DONE, TicketStatus.CLOSED):
         await queue_learn_playbook(session, settings, ticket)
     if closing:
-        # Operator rule: every closing status (done, closed, rejected) archives the linked
-        # mails in the mailbox; the mailbox flag archive_on_ticket_done applies. Consumer of
-        # ticket.status_changed, executed after the commit.
-        after_commit(session, _archive_consumer(session, settings, ticket.tenant_id, ticket.id))
+        await request_mail_archive(session, settings, ticket)
     return True
+
+
+async def request_mail_archive(session: AsyncSession, settings: Any, ticket: Ticket) -> None:
+    """Operator rule: every closing status (done, closed, rejected, also by merge) archives
+    the linked mails in the mailbox; the mailbox flag archive_on_ticket_done applies. The
+    mails are marked ``pending`` inside this transaction (visible, picked up by the retry
+    beat job) and the consumer of ticket.status_changed runs after the commit."""
+    from mhvp.communication import services as communication_services
+
+    await communication_services.mark_archive_pending_for_ticket(
+        session, ticket.tenant_id, ticket.id
+    )
+    after_commit(session, _archive_consumer(session, settings, ticket.tenant_id, ticket.id))
 
 
 def _archive_consumer(

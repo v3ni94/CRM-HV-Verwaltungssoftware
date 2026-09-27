@@ -249,17 +249,20 @@ class GmailClient:
         return str(r.json()["id"])
 
     async def archive(self, message_id: str) -> None:
-        """Removes the ``INBOX`` label (M20-03, "Erledigt archiviert Mail"). ``gmail.readonly``
-        cannot modify labels, so this needs the ``gmail.modify`` scope added to ``SCOPES``
-        below; a mailbox connected before that change lacks it on its stored consent. On
-        HTTP 403 this raises ``GmailScopeMissingError`` so the caller can record a notice on
-        the mailbox instead of failing the whole job."""
+        """Removes the labels ``INBOX`` and ``UNREAD`` (M20-03, "Erledigt archiviert Mail").
+        ``gmail.readonly`` cannot modify labels, so this needs the ``gmail.modify`` scope in
+        ``SCOPES`` below; a mailbox connected before that change lacks it on its stored
+        consent. HTTP 403 with an insufficient permission reason raises
+        ``GmailScopeMissingError`` so the caller records a notice on the mailbox instead of
+        failing the whole job; a rate limit 403 stays a plain ``GmailError`` (retried). A 404
+        (mail deleted or moved) counts as done. ``message_id`` is the Gmail message id, never
+        the thread id."""
         token = await self._access_token()
 
         async def _post(bearer: str) -> httpx.Response:
             return await self._http.post(
                 f"{API}/messages/{message_id}/modify",
-                json={"removeLabelIds": ["INBOX"]},
+                json={"removeLabelIds": ["INBOX", "UNREAD"]},
                 headers={"Authorization": f"Bearer {bearer}"},
             )
 
@@ -271,12 +274,35 @@ class GmailClient:
         if r.status_code == 404:
             return  # already gone (deleted or previously archived)
         if r.status_code == 403:
+            reason = _error_reason(r)
+            if reason in RATE_LIMIT_REASONS:
+                raise GmailError(f"Archivieren vorübergehend abgelehnt (Gmail: {reason}).")
             raise GmailScopeMissingError(
                 "Berechtigung gmail.modify fehlt, Postfach unter Einstellungen, Postfächer "
                 "erneut mit Google verbinden."
             )
         if r.status_code != 200:
             raise GmailError(f"Archivieren fehlgeschlagen (HTTP {r.status_code}).")
+
+
+# Gmail reports quota and rate limits with HTTP 403 as well; these are no scope problems.
+RATE_LIMIT_REASONS = frozenset(
+    {"rateLimitExceeded", "userRateLimitExceeded", "dailyLimitExceeded", "quotaExceeded"}
+)
+
+
+def _error_reason(response: httpx.Response) -> str:
+    """``errors[0].reason`` or ``error.status`` of a Google API error body, "" otherwise."""
+    try:
+        error = response.json().get("error") or {}
+    except ValueError:
+        return ""
+    if not isinstance(error, dict):
+        return ""
+    errors = error.get("errors") or []
+    if errors and isinstance(errors[0], dict) and errors[0].get("reason"):
+        return str(errors[0]["reason"])
+    return str(error.get("status") or "")
 
 
 class GmailScopeMissingError(GmailError):
@@ -319,7 +345,10 @@ def authorization_url(client_id: str, settings: Settings, state: str, purpose: s
         "response_type": "code",
         "scope": DRIVE_SCOPES if purpose == "drive" else SCOPES,
         "access_type": "offline",
+        # A mailbox connected before gmail.modify was added must be granted the new scope on
+        # reconnect: forced consent screen plus incremental authorization (operator 27.09.2026).
         "prompt": "consent",
+        "include_granted_scopes": "true",
         "state": state,
     }
     return str(httpx.URL(OAUTH_AUTH_ENDPOINT, params=params))

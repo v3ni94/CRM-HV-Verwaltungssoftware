@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
+import { TicketAnalytics } from "@/components/dashboard/TicketAnalytics";
 import { TicketThroughput } from "@/components/workspace/TicketThroughput";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
@@ -20,6 +21,8 @@ export default async function TicketAnalyticsPage() {
     <div className={ui.pageGap}>
       <PageHeader eyebrow={t("eyebrow")} title={t("title")} description={t("description")} />
       <TicketThroughput />
+      {/* Ticket statistics and open tickets, moved here from the start page (operator 27.09.2026). */}
+      <TicketAnalytics />
     </div>
   );
 }

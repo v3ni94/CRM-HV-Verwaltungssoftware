@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { StatusChip } from "@/components/ui/StatusChip";
 import { StatusPill } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime, formatDecimal } from "@/lib/format";
@@ -25,7 +26,7 @@ import {
 import { ui } from "@/lib/ui";
 
 import { AssignmentWizard } from "./AssignmentWizard";
-import { AssignmentsTable, STATUS_VARIANT } from "./AssignmentsTable";
+import { AssignmentsTable } from "./AssignmentsTable";
 import { MeteringDisabledNotice } from "./MeteringDisabledNotice";
 import { TransmissionWorkflow } from "./TransmissionWorkflow";
 
@@ -344,7 +345,7 @@ function AssignmentDetail({
           </dd>
           <dt className="text-muted">{t("table.status")}</dt>
           <dd>
-            <StatusPill variant={STATUS_VARIANT[assignment.status] ?? "neutral"} label={t(`status.${assignment.status}`)} />
+            <StatusChip domain="meteringAssignment" status={assignment.status} label={t(`status.${assignment.status}`)} />
             {assignment.remote_confirmed ? <span className={`${ui.badgeSuccess} ml-1`}>{t("assignment.remoteConfirmed")}</span> : null}
           </dd>
           <dt className="text-muted">{t("table.lastFetch")}</dt>
@@ -424,7 +425,7 @@ function AssignmentDetail({
         ) : null}
       </section>
 
-      <TransmissionWorkflow assignment={assignment} connection={connection} canSubmitUsers={canSubmitUsers} canOrderBilling={canOrderBilling} onOrdered={() => onChanged(assignment)} />
+      <TransmissionWorkflow assignment={assignment} connection={connection} canSubmitUsers={canSubmitUsers} canOrderBilling={canOrderBilling} canSetupUnits={canUpdate} onOrdered={() => onChanged(assignment)} />
 
       <section className={ui.card} data-testid="fetch-actions">
         <h3 className={ui.subtitle}>{t("fetch.title")}</h3>
@@ -510,7 +511,7 @@ function AssignmentDetail({
                       )}
                     </td>
                     <td>
-                      <StatusPill variant={STATUS_VARIANT[r.status] ?? "neutral"} label={t(`status.${r.status}`)} />
+                      <StatusChip domain="meteringAssignment" status={r.status} label={t(`status.${r.status}`)} />
                     </td>
                     {canUpdate ? (
                       <td>

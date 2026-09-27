@@ -5,15 +5,16 @@ import uuid
 from typing import Any
 
 from celery import shared_task
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from mhvp.ai import embeddings, gateway, imports
+from mhvp.ai import embeddings, examples, gateway, imports
 from mhvp.ai.models import AiMessage, AiProposal, AiTask, AiTaskRun, RunStatus
 from mhvp.core import crypto
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
-from mhvp.core.db.tenancy import tenant_transaction
+from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.logging import get_logger
 from mhvp.documents.blobs import BlobStore
 
@@ -255,3 +256,39 @@ def embed_index(tenant_id: str, actor_user_id: str | None) -> dict[str, Any]:
             uuid.UUID(actor_user_id) if actor_user_id else None,
         )
     )
+
+
+async def examples_retention_once(settings: Settings) -> dict[str, Any]:
+    """Daily retention run over all active tenants (ADR 0010 addendum 27.09.2026): deletes
+    learning examples older than the tenant's retention months, one transaction and one
+    journal event per tenant. A failing tenant is recorded and the others still run."""
+    from mhvp.platform.models import Tenant, TenantStatus
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    report: dict[str, Any] = {"tenants": 0, "deleted": 0, "errors": []}
+    try:
+        async with platform_transaction(factory) as session:
+            ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    summary = await examples.purge_expired_examples(session, tenant_id)
+            except Exception as exc:  # the other tenants must still run
+                log.exception("ai examples retention failed", tenant_id=str(tenant_id))
+                report["errors"].append(f"{tenant_id}: {failure_text(exc)}")
+                continue
+            report["tenants"] += 1
+            report["deleted"] += int(summary["deleted"])
+    finally:
+        await engine.dispose()
+    return report
+
+
+@shared_task(name="mhvp.ai.examples_retention", acks_late=True)
+def examples_retention() -> dict[str, Any]:
+    return asyncio.run(examples_retention_once(get_settings()))

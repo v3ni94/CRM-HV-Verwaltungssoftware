@@ -19,7 +19,7 @@ from mhvp.ai import schemas as ai_s
 from mhvp.communication import attachments, mail, services, transport
 from mhvp.communication.models import Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
-from mhvp.core.db.tenancy import tenant_transaction
+from mhvp.core.db.tenancy import after_commit, tenant_transaction
 from mhvp.core.escaping import LIKE_ESCAPE, escape_like
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -176,6 +176,10 @@ _LIST_FIELDS = (
     "author_approval_reason",
     "rejection_note",
     "gmail_message_id",
+    "archive_status",
+    "archive_error",
+    "archive_attempted_at",
+    "archived_at",
     "suggestion",
     "suggestion_status",
 )
@@ -529,6 +533,18 @@ async def oauth_callback(
                 box.kind, box.secret, box.enabled, box.last_error = "gmail", refresh, True, None
                 box.gmail_history_id = None
                 box.deleted_at = None  # reconnecting a removed address revives it (M12)
+                # The new consent carries gmail.modify (prompt=consent, include_granted_scopes):
+                # clear the notice and catch up the open archive jobs after the commit.
+                if box.archive_scope_missing:
+                    box.archive_scope_missing = False
+                    box_tenant_id = box.tenant_id
+
+                    async def _retry_archive() -> None:
+                        from mhvp.communication.services import enqueue_archive_retry
+
+                        await enqueue_archive_retry(settings, box_tenant_id)
+
+                    after_commit(session, _retry_archive)
                 await session.flush()
                 await _after_connect(session, settings, box)
             await session.flush()
@@ -897,6 +913,27 @@ async def assign(
             # Erledigt archiviert die Mail und schließt ggf. das Ticket (Betreiber 26.09.2026).
             await complete_message(session, request.app.state.settings, row, principal.user_id)
         return _out(row)
+
+
+@router.post("/messages/{message_id}/archive", summary="Gmail-Archivierung jetzt ausführen")
+async def archive_now(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Runs the Gmail archive job for one inbound mail synchronously (operator 27.09.2026:
+    manual catch up when a queued job was lost or the mailbox was reconnected). Idempotent:
+    an archived mail returns its record unchanged. The result carries ``archive_status``,
+    ``archive_error`` and ``archived_at`` like the message itself."""
+    from mhvp.communication.tasks import _archive_messages
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id, principal)
+        if row.direction != "in" or not row.gmail_message_id or row.mailbox_id is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Nur Gmail-Eingangsnachrichten werden archiviert."
+            )
+        counts = await _archive_messages(request.app.state.settings, session, [row])
+        await session.flush()
+        return {**_out(row), "result": counts}
 
 
 @router.post("/messages/bulk", summary="Sammelaktion: mehrere Nachrichten erledigen")

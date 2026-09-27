@@ -15,7 +15,7 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import or_, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.config import Settings
@@ -302,16 +302,19 @@ async def _read_meetings(session: AsyncSession, since: date, today: date) -> lis
     """Meeting date of every owners' meeting (spec 4.8) and the entered resolution
     deadline of virtual meetings (M9-07), never a computed one."""
     from mhvp.hoa.models import Meeting
+    from mhvp.properties.models import LegalEntity
 
     out: list[Candidate] = []
+    # The meeting belongs to a legal entity (the HOA); its property is the route of the
+    # entry (/weg/{property_id}/versammlung/{meeting_id}, ``links.target_href``).
     rows = (
-        await session.scalars(
-            select(Meeting).where(
-                or_(Meeting.scheduled_at >= since, Meeting.resolution_deadline_at >= since)
-            )
+        await session.execute(
+            select(Meeting, LegalEntity.property_id)
+            .join(LegalEntity, LegalEntity.id == Meeting.legal_entity_id)
+            .where(or_(Meeting.scheduled_at >= since, Meeting.resolution_deadline_at >= since))
         )
     ).all()
-    for m in rows:
+    for m, property_id in rows:
         held_on = local_date(m.scheduled_at)
         if held_on >= since:
             cand = _candidate(
@@ -320,6 +323,7 @@ async def _read_meetings(session: AsyncSession, since: date, today: date) -> lis
                 m.id,
                 f"Eigentümerversammlung am {held_on:%d.%m.%Y}",
                 held_on,
+                property_id,
             )
             if cand is not None:
                 out.append(cand)
@@ -330,6 +334,7 @@ async def _read_meetings(session: AsyncSession, since: date, today: date) -> lis
                 m.id,
                 meeting_deadline_reference(held_on, m.resolution_deadline_source),
                 m.resolution_deadline_at,
+                property_id,
             )
             if cand is not None and m.resolution_deadline_at >= since:
                 out.append(cand)
@@ -636,6 +641,7 @@ async def deadlines_tenant(
     calendar = await calendar_sync(session, tenant_id, today)
     for key, value in calendar.items():
         counts[f"calendar_{key}"] = value
+    counts["reminders"] = await notify_reminders(session, tenant_id, today)
     return counts
 
 
@@ -645,6 +651,156 @@ async def deadlines_tenant(
 def reminders_for(kind: str, own: list[str] | None) -> list[str]:
     """Reminder codes (B.30) of a generated entry: the source's own setting wins."""
     return own or CALENDAR_REMINDERS.get(kind, DEFAULT_REMINDERS)
+
+
+# Reminders and recurrence (spec B.30) --------------------------------------------------
+
+# Days before the (all day) start at which a reminder code fires; codes within the day of
+# the appointment ("0", minutes, hours) fire on the day itself, the job runs once a day.
+REMINDER_OFFSET_DAYS: dict[str, int] = {
+    "0": 0,
+    "5min": 0,
+    "10min": 0,
+    "15min": 0,
+    "30min": 0,
+    "1h": 0,
+    "2h": 0,
+    "4h": 0,
+    "1d": 1,
+    "7d": 7,
+    "14d": 14,
+    "1m": 30,
+    "3m": 91,
+    "6m": 182,
+}
+REMINDER_CODES: tuple[str, ...] = tuple(REMINDER_OFFSET_DAYS)
+REMINDER_NOTIFICATION_KIND = "calendar_reminder"
+RECURRENCE_FREQUENCIES: tuple[str, ...] = ("weekly", "monthly", "yearly")
+# Safety bound of the expansion of one entry (weekly for ten years).
+MAX_OCCURRENCES = 520
+
+
+def _add_months(day: date, months: int) -> date:
+    """Same day of month ``months`` later; a missing day (31st) clips to the month end."""
+    month_index = day.month - 1 + months
+    year = day.year + month_index // 12
+    month = month_index % 12 + 1
+    last = (date(year + month // 12, month % 12 + 1, 1) - timedelta(days=1)).day
+    return date(year, month, min(day.day, last))
+
+
+def expand_occurrences(
+    starts_on: date, recurrence: dict[str, Any] | None, start: date, end: date
+) -> list[date]:
+    """Occurrence dates of an entry inside [start, end] (inclusive). Without a recurrence
+    the single start date is returned when it lies in the window. The recurrence is
+    ``{"frequency": weekly|monthly|yearly, "interval": n, "until": "JJJJ-MM-TT"}``;
+    occurrences are computed on read and never persisted."""
+    if not recurrence:
+        return [starts_on] if start <= starts_on <= end else []
+    frequency = recurrence.get("frequency")
+    if frequency not in RECURRENCE_FREQUENCIES:
+        return [starts_on] if start <= starts_on <= end else []
+    interval = max(int(recurrence.get("interval") or 1), 1)
+    until_raw = recurrence.get("until")
+    until = date.fromisoformat(str(until_raw)) if until_raw else None
+    last = min(end, until) if until is not None else end
+    out: list[date] = []
+    step = 0
+    while step < MAX_OCCURRENCES:
+        if frequency == "weekly":
+            occurrence = starts_on + timedelta(weeks=step * interval)
+        elif frequency == "monthly":
+            occurrence = _add_months(starts_on, step * interval)
+        else:
+            occurrence = _add_months(starts_on, 12 * step * interval)
+        if occurrence > last:
+            break
+        if occurrence >= start:
+            out.append(occurrence)
+        step += 1
+    return out
+
+
+def reminder_key(code: str, occurrence: date) -> str:
+    return f"{code}@{occurrence.isoformat()}"
+
+
+async def notify_reminders(session: AsyncSession, tenant_id: uuid.UUID, today: date) -> int:
+    """One notification per reminder code and occurrence of a calendar entry when the
+    offset of the code is reached (``REMINDER_OFFSET_DAYS``); ``reminders_sent`` on the
+    entry keeps the job idempotent across reruns. Generated entries notify the users with
+    the update permission of their kind and link to the source row; manual entries notify
+    their owner and link to the calendar. The lead time notification of the deadline list
+    (``notify_deadlines``) is a separate, list based notification and stays as it is. An
+    unread reminder of the same entry and user is not duplicated by a later code or
+    occurrence (``notify`` idempotency); the code is still recorded as sent."""
+    from mhvp.banking.tasks import users_with_permission
+
+    rows = (
+        await session.scalars(
+            select(CalendarEntry).where(func.jsonb_array_length(CalendarEntry.reminders) > 0)
+        )
+    ).all()
+    horizon = today + timedelta(days=max(REMINDER_OFFSET_DAYS.values()))
+    recipients: dict[str, list[uuid.UUID]] = {}
+    created = 0
+    for entry in rows:
+        codes = [str(c) for c in entry.reminders if str(c) in REMINDER_OFFSET_DAYS]
+        if not codes:
+            continue
+        occurrences = expand_occurrences(entry.starts_on, entry.recurrence, today, horizon)
+        if not occurrences:
+            continue
+        # Keys of past occurrences can never fire again and are dropped.
+        sent = [
+            str(k)
+            for k in entry.reminders_sent
+            if "@" in str(k) and str(k).split("@", 1)[1] >= today.isoformat()
+        ]
+        due_keys: list[tuple[str, date]] = [
+            (code, occurrence)
+            for occurrence in occurrences
+            for code in codes
+            if occurrence - timedelta(days=REMINDER_OFFSET_DAYS[code]) <= today
+            and reminder_key(code, occurrence) not in sent
+        ]
+        if not due_keys and sent == list(entry.reminders_sent):
+            continue
+        target_type: str
+        target_id: uuid.UUID | None
+        if entry.owner_user_id is not None:
+            users = [entry.owner_user_id]
+            target_type, target_id = "calendar_entry", entry.id
+        else:
+            permission = DEADLINE_PERMISSIONS.get(entry.category, ("", "tenant_settings:update"))[1]
+            if permission not in recipients:
+                recipients[permission] = await users_with_permission(session, tenant_id, permission)
+            users = recipients[permission]
+            target_type, target_id = entry.source_type, entry.source_id
+        for code, occurrence in due_keys:
+            days = (occurrence - today).days
+            when = "heute" if days == 0 else f"in {days} Tagen"
+            for user_id in users:
+                note = await notify(
+                    session,
+                    tenant_id=tenant_id,
+                    user_id=user_id,
+                    kind=REMINDER_NOTIFICATION_KIND,
+                    title=f"Erinnerung: {entry.title} ({occurrence:%d.%m.%Y}, {when})",
+                    body=(
+                        f"Erinnerung {code} zum Termin am {occurrence:%d.%m.%Y}. "
+                        "Termine aus den Stammdaten sind zu prüfen; rechtliche Fristen "
+                        "werden nicht berechnet (M1-09)."
+                    ),
+                    target_type=target_type,
+                    target_id=target_id,
+                )
+                created += int(note is not None)
+            sent.append(reminder_key(code, occurrence))
+        entry.reminders_sent = sent
+    await session.flush()
+    return created
 
 
 async def calendar_sync(session: AsyncSession, tenant_id: uuid.UUID, today: date) -> dict[str, int]:

@@ -23,16 +23,22 @@ const SCOPE_QUERY: Record<Scope, Record<string, unknown>> = {
   noOwner: { without_owner: true },
 };
 
-export default async function PropertiesPage({ searchParams }: { searchParams: Promise<{ q?: string; art?: string }> }) {
-  const { q, art } = await searchParams;
+export default async function PropertiesPage({ searchParams }: { searchParams: Promise<{ q?: string; art?: string; deaktivierte?: string }> }) {
+  const { q, art, deaktivierte } = await searchParams;
   const scope: Scope = (SCOPES as readonly string[]).includes(art ?? "") ? (art as Scope) : "all";
   const t = await getTranslations("Properties");
+  const tt = await getTranslations("PropertyTermination");
   const api = serverApi();
-  const [{ data, error, response }, me] = await Promise.all([
-    api.GET("/api/v1/properties", { params: { query: { page_size: 200, ...SCOPE_QUERY[scope], ...(q ? { q } : {}) } } }),
-    getMe(),
-  ]);
+  // Deaktivierte Objekte (operator 27.09.2026): nur der Superadmin kann sie einblenden; die
+  // API ignoriert include_terminated für alle anderen.
+  const me = await getMe();
+  const isSuperadmin = me.data?.is_superadmin ?? false;
+  const showTerminated = isSuperadmin && deaktivierte === "1";
+  const { data, error, response } = await api.GET("/api/v1/properties", {
+    params: { query: { page_size: 200, ...SCOPE_QUERY[scope], ...(q ? { q } : {}), ...(showTerminated ? { include_terminated: true } : {}) } },
+  });
   redirectIfUnauthenticated(response);
+  const toggleHref = `/objekte?${new URLSearchParams({ ...(scope !== "all" ? { art: scope } : {}), ...(q ? { q } : {}), ...(showTerminated ? {} : { deaktivierte: "1" }) }).toString()}`;
   // "WEG" covers both HOA and HOA with SEV; the API filter takes one type, so filter here.
   const rows = (data?.items ?? []).filter((p) => scope !== "hoa" || p.management_type !== "rental");
   const canCreate = me.data?.permissions.includes("properties:create") ?? false;
@@ -42,6 +48,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
         <PageHeader eyebrow={t("area")} title={t(`scopeTitle.${scope}`)} />
         <form className="flex gap-2" role="search">
           {scope !== "all" ? <input type="hidden" name="art" value={scope} /> : null}
+          {showTerminated ? <input type="hidden" name="deaktivierte" value="1" /> : null}
           <input className={ui.input} name="q" defaultValue={q ?? ""} placeholder={t("searchPlaceholder")} aria-label={t("search")} />
           <button type="submit" className={ui.button}>
             {t("search")}
@@ -60,6 +67,13 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
           </Link>
         ))}
       </nav>
+      {isSuperadmin ? (
+        <p className="text-sm">
+          <Link href={toggleHref} className="underline" data-testid="toggle-terminated" aria-pressed={showTerminated}>
+            {showTerminated ? tt("hideTerminated") : tt("showTerminated")}
+          </Link>
+        </p>
+      ) : null}
       {scope === "sev" ? <p className={ui.notice}>{t("sevHint")}</p> : null}
       {scope === "noOwner" ? <p className={ui.notice}>{t("noOwnerHint")}</p> : null}
       {!data ? (

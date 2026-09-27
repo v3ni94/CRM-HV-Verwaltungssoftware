@@ -8,6 +8,22 @@ ein Objekt geöffnet werden muss. Angezeigt werden nur Trefferarten, für die de
 Leserecht hat; Buchungen zusätzlich nur aus Buchhaltungen, deren Rechtsträger dem Benutzer
 zugeordnet sind.
 
+## Befehlspalette
+
+Seit dem 27.09.2026 (Betreiberentscheidung, Gestaltungsvorschlag 1) ist die Suche eine
+Befehlspalette. Neben den Trefferarten oben bietet sie:
+
+* Aktionen: Ticket anlegen, Kontakt anlegen, Mahnlauf starten, Zur Auswertung Tickets. Eine
+  Aktion erscheint nur mit der passenden Berechtigung (zum Beispiel Tickets anlegen,
+  Kontakte anlegen, Buchhaltung anlegen). Mahnlauf starten führt zur Mahnwesen-Seite, dort
+  wird die Vorschau mit Stichtag erzeugt; die Freigabe bleibt ein eigener Schritt.
+* Navigation: jeder Eintrag der Hauptnavigation, gefiltert nach dem eingegebenen Text.
+* Zuletzt geöffnet: bis zu acht zuletzt über die Palette geöffnete Datensätze, je Benutzer
+  im Browser gespeichert (nicht auf dem Server), sichtbar solange das Eingabefeld leer ist.
+
+Die Palette ist ein Dialog mit Fokusfalle: Tab bleibt innerhalb des Dialogs, Escape schließt
+ihn und setzt den Fokus auf die aufrufende Schaltfläche zurück.
+
 ## Bedienung
 
 * Mindestens zwei Zeichen eingeben. Tickets sind auch über ihre Nummer, Buchungen über

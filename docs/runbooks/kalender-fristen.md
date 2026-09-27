@@ -12,7 +12,15 @@ daraus zwei Ergebnisse:
    Zeile bei Erreichen der Vorfrist aus den Einstellungen der Tagesjobs),
 2. die erzeugten Kalendertermine in `calendar_entry` (ohne Eigentümer, geteilt, mit Quelle
    `source_type`, `source_id` und Kategorie, Erinnerungscodes nach Anhang B.30, Daten ab
-   365 Tagen rückwirkend).
+   365 Tagen rückwirkend),
+3. die Erinnerungen (`jobs.notify_reminders`): je Erinnerungscode und Termin (bei
+   wiederkehrenden Terminen je Vorkommen) genau eine Benachrichtigung `calendar_reminder`,
+   sobald der Abstand des Codes erreicht ist (Tagesraster, Codes innerhalb des Tages lösen
+   am Termintag aus). Gesendete Codes stehen in `calendar_entry.reminders_sent`
+   (`<code>@<Datum>`), ein zweiter Lauf sendet nichts erneut. Erzeugte Termine
+   benachrichtigen die Nutzer mit dem Änderungsrecht der Kategorie und verlinken die Quelle,
+   manuelle Termine den Eigentümer mit Link in den Kalender. Die Vorfrist der Fristenliste
+   (Punkt 1) bleibt eine eigene Benachrichtigung `compliance_deadline`.
 
 Quellen: Eichdatum Zähler, Energieausweis Gebäude, Vertragsende und Kündigung, Einzug und
 Auszug, Sanierung und Wartung, Wiedervorlage einer Kontaktnotiz, Eigentümerversammlung und
@@ -48,8 +56,14 @@ Die Ausgabe enthält je Lauf `created`, `updated`, `closed`, `notified` (Fristen
 
 ## Bekannte Grenzen
 
-* Erinnerungen werden am Termin gespeichert; benachrichtigt wird über die Vorfrist der
-  Fristenliste, nicht je Erinnerungscode.
-* Ticketfristen und Wiedervorlagen werden erst gelesen, wenn das jeweilige Datenmodell das
-  Feld trägt (Ticket `due_on`, Kontaktnotiz `follow_up_on`); die Leser sind in
+* Eine ungelesene Erinnerung zu demselben Termin und Nutzer wird durch einen weiteren Code
+  oder ein weiteres Vorkommen nicht verdoppelt (Idempotenz von `notify`); der Code gilt
+  trotzdem als gesendet.
+* Wiederholungen (wöchentlich, monatlich, jährlich, mit Enddatum) gibt es nur an manuellen
+  Terminen; die Vorkommen werden beim Lesen berechnet (`jobs.expand_occurrences`) und nie
+  gespeichert. Der Kalender und die Fristenliste (Art `appointment`, eigene und geteilte
+  manuelle Termine mit Erinnerung) zeigen je Vorkommen eine Zeile.
+* Die Ticketfrist ist das Feld `due_on` (Migration 0155, Ticketformular und Detail);
+  die SLA-Frist `sla_due_at` bleibt getrennt mit eigener Eskalation. Wiedervorlagen werden
+  erst gelesen, wenn die Kontaktnotiz `follow_up_on` trägt; die Leser sind in
   `calendar_sources()` hinter einer Prüfung des Modells registriert.

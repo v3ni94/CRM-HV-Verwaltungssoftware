@@ -22,15 +22,19 @@ test.describe("CRM against the API @backend", () => {
     await page.getByLabel("Passwort").fill(password);
     await page.getByRole("button", { name: "Weiter" }).click();
 
-    // First login: TOTP setup with QR code and secret.
-    await expect(page).toHaveURL(/\/anmelden\/zweiter-faktor\?einrichten=1/);
-    await expect(page.getByRole("img", { name: "QR-Code für die Authenticator-App" })).toBeVisible();
-    const secret = (await page.getByTestId("totp-secret").textContent())?.trim() ?? "";
-    expect(secret).toMatch(/^[A-Z2-7]+=*$/);
-    rememberSecret(secret);
-    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
-    await page.getByLabel("Code").fill(totp.generate());
-    await page.getByRole("button", { name: "Bestätigen" }).click();
+    // TOTP is optional (operator 26.09.2026, M2-01): the seeded admin lands on the tenant
+    // choice directly. The setup page only appears when the second factor is enforced.
+    await page.waitForURL(/\/(mandant|anmelden\/zweiter-faktor)/);
+    if (page.url().includes("/anmelden/zweiter-faktor")) {
+      await expect(page).toHaveURL(/\/anmelden\/zweiter-faktor\?einrichten=1/);
+      await expect(page.getByRole("img", { name: "QR-Code für die Authenticator-App" })).toBeVisible();
+      const secret = (await page.getByTestId("totp-secret").textContent())?.trim() ?? "";
+      expect(secret).toMatch(/^[A-Z2-7]+=*$/);
+      rememberSecret(secret);
+      const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
+      await page.getByLabel("Code").fill(totp.generate());
+      await page.getByRole("button", { name: "Bestätigen" }).click();
+    }
 
     // The seed admin belongs to both tenants: tenant selection appears.
     await expect(page).toHaveURL(/\/mandant/);

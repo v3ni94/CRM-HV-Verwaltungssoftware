@@ -71,6 +71,16 @@ nachgetragen, damit die Archivierung auch für ältere Mails greift. Die Archivi
 nach dem gespeicherten Statuswechsel; schlägt sie fehl, bleibt die Mail im Posteingang und der
 Abschluss des Tickets bleibt bestehen.
 
+Seit 1.31.1 zeigt die Maildetailansicht den Stand der Archivierung (angefordert, archiviert am,
+fehlgeschlagen mit Grund, Berechtigung fehlt) mit dem Knopf Archivierung jetzt nachholen.
+Fehlgeschlagene und liegen gebliebene Archivierungen der letzten 30 Tage holt die Plattform
+alle 15 Minuten selbst nach. Fehlt dem Postfach die Berechtigung zum Archivieren (Verbindung
+vor Einführung der Berechtigung `gmail.modify`), erscheint im Postfach und unter
+Einstellungen, Postfächer der Hinweis Postfach neu verbinden mit dem Knopf Erneut mit Google
+verbinden; nach der erneuten Zustimmung werden die offenen Archivierungen automatisch
+nachgeholt. Beim Zusammenführen von Tickets wandern die Mails zum Zielticket und werden mit
+dessen Abschluss archiviert.
+
 ## Telefonassistenz (Hallo Heidi)
 
 Gesprächsprotokolle der KI-Telefonassistenz kommen als Mail ins Postfach und werden als

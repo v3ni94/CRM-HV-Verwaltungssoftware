@@ -206,6 +206,42 @@ def test_representative_delivery_modes(client: TestClient, world: World) -> None
         {owner["id"], rep["id"]}
     ]
 
+    # Single letter (POST /letters) and single dispatch (POST /dispatches) follow the rule
+    # as well (M23-07): both gives a further document and dispatch for the representative.
+    single = {**letter, "contact_id": owner["id"]}
+    del single["contact_ids"]
+    _set_mode(client, h, owner["id"], relation["id"], "both")
+    created = _ok(client.post("/api/v1/letters", json=single, headers=h), 201)
+    assert {x["entity_id"] for x in created["links"]} == {owner["id"]}
+    assert [{x["entity_id"] for x in d["links"]} for d in created["further_documents"]] == [
+        {owner["id"], rep["id"]}
+    ]
+    dispatch = _ok(
+        client.post(
+            "/api/v1/dispatches", json={"document_id": doc, "contact_id": owner["id"]}, headers=h
+        ),
+        201,
+    )
+    assert dispatch["contact_id"] == owner["id"]
+    assert [d["contact_id"] for d in dispatch["further_dispatches"]] == [rep["id"]]
+    _set_mode(client, h, owner["id"], relation["id"], "representative_only")
+    created = _ok(client.post("/api/v1/letters", json=single, headers=h), 201)
+    assert {x["entity_id"] for x in created["links"]} == {owner["id"], rep["id"]}
+    assert created["further_documents"] == []
+    preview = client.post("/api/v1/letters/preview", json=single, headers=h)
+    assert preview.status_code == 200
+    assert (
+        f"für {owner['display_name']}"
+        in PdfReader(io.BytesIO(preview.content)).pages[0].extract_text()
+    )
+    dispatch = _ok(
+        client.post(
+            "/api/v1/dispatches", json={"document_id": doc, "contact_id": owner["id"]}, headers=h
+        ),
+        201,
+    )
+    assert (dispatch["contact_id"], dispatch["further_dispatches"]) == (rep["id"], [])
+
     # WEG invitation recipients per ownership contract.
     prop = _ok(
         client.post(

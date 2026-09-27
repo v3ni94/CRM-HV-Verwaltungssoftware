@@ -68,7 +68,13 @@ async def patch_property(
             raise svc.invalid(
                 "Die Verwaltungsart kann nach Anlage nicht geändert werden (Rechtsträger, 6.9.1)."
             )
-        await svc.check_custom_fields(session, "property", merged.custom_fields)
+        await svc.check_custom_fields(
+            session,
+            "property",
+            merged.custom_fields,
+            management_type=prop.management_type,
+            entity_id=prop.id,
+        )
         before = s.PropertyIn.model_validate(prop, from_attributes=True).model_dump(mode="json")
         for key, value in merged.model_dump().items():
             setattr(prop, key, value)
@@ -103,7 +109,14 @@ async def patch_building(
         building = await _get(session, Building, building_id)
         _check_version(if_match, building.version)
         merged: s.BuildingIn = _merge(s.BuildingIn, building, body)
-        await svc.check_custom_fields(session, "building", merged.custom_fields)
+        prop = await _get(session, Property, building.property_id)
+        await svc.check_custom_fields(
+            session,
+            "building",
+            merged.custom_fields,
+            management_type=prop.management_type,
+            entity_id=building.id,
+        )
         before = s.BuildingIn.model_validate(building, from_attributes=True).model_dump(mode="json")
         for key, value in merged.model_dump().items():
             setattr(building, key, value)
@@ -142,7 +155,14 @@ async def patch_unit(
         if building.property_id != unit.property_id:
             raise svc.invalid("Das Gebäude gehört nicht zu diesem Objekt.")
         await svc.check_sub_community(session, merged.sub_community_id, unit.property_id)
-        await svc.check_custom_fields(session, "unit", merged.custom_fields)
+        prop = await _get(session, Property, unit.property_id)
+        await svc.check_custom_fields(
+            session,
+            "unit",
+            merged.custom_fields,
+            management_type=prop.management_type,
+            entity_id=unit.id,
+        )
         before = s.UnitIn.model_validate(unit, from_attributes=True).model_dump(mode="json")
         for key, value in merged.model_dump().items():
             setattr(unit, key, value)

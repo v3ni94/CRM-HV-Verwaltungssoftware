@@ -73,7 +73,13 @@ Anmeldung mit E-Mail und Passwort. Das Passwort ist 6 bis 128 Zeichen lang und b
 
 ## Start
 
-Die Startseite zeigt Kennzahlen, soweit die eigene Rolle sie sehen darf: Objekte, Einheiten, Kontakte, laufende Verträge, Vertragsenden der nächsten 90 Tage, fällige Wartungen und offene KI-Vorschläge. Darunter stehen Termine und Fristen der letzten und nächsten 30 Tage sowie die Tagesübersicht.
+Die Startseite ist der persönliche Arbeitsplatz (Betreiberentscheidung vom 27.09.2026) und besteht aus drei Spalten, die auf dem Mobilgerät untereinander stehen:
+
+- Heute: Termine aus dem Kalender und Fristen von heute und der nächsten sieben Tage, getrennt nach Heute und Nächste sieben Tage. Jeder Eintrag führt zur Quelle (Kalender, Fristenliste, Objekt oder Vertrag). Fristen sind Orientierung und zu prüfen.
+- Meine Tickets: die mir zugewiesenen offenen Tickets nach Dringlichkeit mit der Ampelfarbe der Ticketliste, höchstens zehn; der Link Alle meine Tickets öffnet die Ticketliste mit diesem Filter.
+- Freigaben: alles, was auf meine Freigabe wartet, je Art als Kachel mit Anzahl und Link zur Entscheidung: Mail-Antworten, Bankverbindungen (IBAN im Vier-Augen-Prinzip), Freigabestufen, Mahnläufe, Lastschriftläufe und Übermittlungen an Messdienstleister. Es erscheinen nur Arten, die die eigene Rolle entscheiden darf.
+
+Darüber steht die kompakte Leiste Kennzahlen mit den mandantenweiten Zahlen (Objekte, Einheiten, Kontakte, laufende Verträge, Vertragsenden der nächsten 90 Tage, fällige Wartungen, offene KI-Vorschläge), jede Zahl öffnet ihren Bereich; der Link Auswertung Tickets führt zur Ticketauswertung, dort stehen auch die Ticketstatistik und die Liste der offenen Tickets. Alle Bereiche werden gleichzeitig geladen; fällt ein Bereich aus, zeigt nur dieser einen Hinweis.
 
 ## Fristen
 
@@ -81,7 +87,7 @@ Das Menü Fristen listet Termine aus den Stammdaten mit Vorfrist aus den Einstel
 
 ## Suche
 
-`Strg+K` öffnet die Suche über Kontakte, Objekte, Einheiten, Verträge und Dokumente. Pfeiltasten wählen, Eingabe öffnet den Treffer. Ergebnisse erscheinen nur für Bereiche, für die eine Leseberechtigung besteht.
+`Strg+K` (auf macOS `Cmd+K`) oder die Schaltfläche Suchen in der Kopfzeile öffnet die Befehlspalette. Ein Eingabefeld findet Kontakte, Objekte, Gebäude, Einheiten, Verträge, Tickets, Buchungen und Dokumente, dazu Aktionen (Ticket anlegen, Kontakt anlegen, Mahnlauf starten, Zur Auswertung Tickets) und jeden Eintrag der Navigation. Angezeigt wird nur, wofür eine Berechtigung besteht. Ohne Eingabe stehen die zuletzt geöffneten Datensätze bereit (je Benutzer im Browser gemerkt). Pfeiltasten wählen, Eingabe öffnet, Escape schließt. Einzelheiten in [suche.md](suche.md).
 
 ## Kontakte
 

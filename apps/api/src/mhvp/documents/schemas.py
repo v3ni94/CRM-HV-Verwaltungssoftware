@@ -261,5 +261,12 @@ class SerialLetterIn(_In):
     signatory: list[str] = Field(default_factory=list, max_length=4)
 
 
+class LetterOut(DocumentOut):
+    """The document for the first recipient; further copies for representatives or the
+    represented contact (delivery rule, M23-07)."""
+
+    further_documents: list[DocumentOut] = Field(default_factory=list)
+
+
 class SerialLetterOut(BaseModel):
     documents: list[DocumentOut]

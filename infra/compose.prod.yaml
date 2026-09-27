@@ -28,6 +28,10 @@ x-api-image: &api-image
 # External S3 endpoint (IONOS S3 Object Storage). The base file defaults to the dev container
 # http://objectstore:8333, which does not exist in prod/staging, so all four values are
 # required here. Names as read by mhvp.core.config.Settings (prefix MHVP_).
+# Malware scan is mandatory in prod and staging (Settings refuses any other mode).
+x-scan-env: &scan-env
+  MHVP_CLAMAV_MODE: ${MHVP_CLAMAV_MODE:-enforce}
+
 x-s3-env: &s3-env
   MHVP_S3_ENDPOINT_URL: ${MHVP_S3_ENDPOINT_URL:?MHVP_S3_ENDPOINT_URL must be set (IONOS S3 endpoint, see docs/runbooks/objektspeicher-ionos-s3.md)}
   MHVP_S3_REGION: ${MHVP_S3_REGION:?MHVP_S3_REGION must be set (IONOS region, see docs/runbooks/objektspeicher-ionos-s3.md)}
@@ -70,6 +74,22 @@ services:
       - checkpoint_completion_target=0.9
       - -c
       - max_wal_size=${PG_MAX_WAL_SIZE:-4GB}
+      # WAL archiving for point in time recovery (docs/runbooks/backup.md, "WAL-Archivierung").
+      # Every completed segment is copied once into the bind mounted BACKUP_WAL_DIR; an
+      # existing file is never overwritten (PostgreSQL retries the segment on failure and
+      # keeps it in pg_wal until the copy succeeds). backup-offsite.sh encrypts and uploads
+      # new segments with the daily run. PG_ARCHIVE_MODE=off disables archiving (dev never
+      # archives: compose.dev.yaml carries no archive settings).
+      - -c
+      - archive_mode=${PG_ARCHIVE_MODE:-on}
+      - -c
+      - archive_command=test ! -f /var/lib/postgresql/wal-archive/%f && cp %p /var/lib/postgresql/wal-archive/%f
+      - -c
+      - archive_timeout=${PG_ARCHIVE_TIMEOUT:-900}
+    volumes:
+      # Host directory of the WAL archive (BACKUP_WAL_DIR in .env.prod and infra/env.backup);
+      # must be writable by the postgres user of the container (uid 999).
+      - ${BACKUP_WAL_DIR:-/srv/mhvp-backup/wal}:/var/lib/postgresql/wal-archive
     shm_size: ${PG_SHM_SIZE:-2g}
 
   redis:
@@ -85,10 +105,17 @@ services:
     profiles:
       - local-objectstore
 
+  clamav:
+    # Always on in prod/staging (docs/runbooks/virenscan.md): the profile of the base file is
+    # removed, signatures update via freshclam inside the container (outbound HTTPS to
+    # database.clamav.net). First start downloads about 300 MB before clamd answers.
+    <<: *prod
+    profiles: !override []
+
   migrate:
     <<: *api-image
     environment:
-      <<: *s3-env
+      <<: [*s3-env, *scan-env]
       MHVP_ENV: ${MHVP_ENV:-prod}
     # Replaces the base dependency list: no objectstore container in prod/staging. The bucket
     # bootstrap (mhvp.core.storage_bootstrap) runs against the external endpoint.
@@ -98,6 +125,15 @@ services:
 
   api:
     <<: [*prod, *api-image]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clamav:
+        condition: service_healthy
     # One process per worker; each holds its own connection pool (5 + 10 overflow).
     command:
       - uvicorn
@@ -110,8 +146,13 @@ services:
       - --workers
       - ${MHVP_API_WORKERS:-8}
     environment:
-      <<: *s3-env
+      <<: [*s3-env, *scan-env]
       MHVP_ENV: ${MHVP_ENV:-prod}
+      # Operating metrics read the off-site status line of scripts/backup-offsite.sh
+      # (jobs.backup_offsite in /platform/ops/metrics); the host BACKUP_DIR is mounted read only.
+      BACKUP_DIR: /srv/mhvp-backup
+    volumes:
+      - ${BACKUP_DIR:-/srv/mhvp-backup}:/srv/mhvp-backup:ro
     networks:
       - default
       - traefik
@@ -153,13 +194,13 @@ services:
       - --max-tasks-per-child
       - "200"
     environment:
-      <<: *s3-env
+      <<: [*s3-env, *scan-env]
       MHVP_ENV: ${MHVP_ENV:-prod}
 
   beat:
     <<: [*prod, *api-image]
     environment:
-      <<: *s3-env
+      <<: [*s3-env, *scan-env]
       MHVP_ENV: ${MHVP_ENV:-prod}
 
   web-crm:
@@ -210,12 +251,32 @@ services:
     # to create: docs/runbooks/monitoring.md. No password in files: the administrator account
     # is created in the browser at the first call, so open the host right after the first
     # start. Data (monitors, notifications, history) live in the named volume.
+    #
+    # Database (operator decision in the setup dialog, 27.09.2026): embedded MariaDB instead of
+    # the SQLite default (docs/runbooks/monitoring.md section "Datenbank: Embedded MariaDB").
+    # UPTIME_KUMA_ENABLE_EMBEDDED_MARIADB starts a MariaDB process inside the same container and
+    # writes it under /app/data alongside the monitor history; whether it needs its own resource
+    # headroom beyond the limits below is not confirmed from the official docs and is tracked as
+    # open in the runbook.
     <<: *prod
     image: louislam/uptime-kuma:2
     security_opt:
       - no-new-privileges:true
+    environment:
+      UPTIME_KUMA_ENABLE_EMBEDDED_MARIADB: "1"
     volumes:
       - uptime-kuma-data:/app/data
+    healthcheck:
+      test: ["CMD", "node", "extra/healthcheck.js"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: "2"
+          memory: 1g
     networks:
       - default
       - traefik
@@ -229,8 +290,73 @@ services:
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring"
       - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-monitoring.loadbalancer.server.port=3001"
 
+  beszel:
+    # Host and container metrics (server: CPU, RAM, disk, network; per container: CPU, RAM,
+    # network), operator decision 27.09.2026, hub half of Beszel (github.com/henrygd/beszel).
+    # Public UI on its own subdomain behind Traefik; first admin account is created in the
+    # browser at the first call, no password in files. Alarms (CPU > 90 % over 10 minutes,
+    # RAM > 90 %, disk > 85 %) are configured in the hub, see docs/runbooks/monitoring.md
+    # section "Statusseite".
+    <<: *prod
+    image: henrygd/beszel:latest
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      APP_URL: https://${MHVP_HOST_METRICS:?MHVP_HOST_METRICS must be set (subdomain of Beszel, see docs/runbooks/monitoring.md)}
+    # Bound to loopback only (not exposed further by Traefik's own network): lets the
+    # beszel-agent service below, which runs with network_mode: host for correct host network
+    # metrics, reach the hub via localhost without a second public port.
+    ports:
+      - "127.0.0.1:8090:8090"
+    volumes:
+      - beszel-data:/beszel_data
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 512m
+    networks:
+      - default
+      - traefik
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=${TRAEFIK_NETWORK:?TRAEFIK_NETWORK must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-metrics.rule=Host(`${MHVP_HOST_METRICS}`)"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-metrics.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-metrics.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-metrics.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-metrics.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-metrics"
+      - "traefik.http.services.${MHVP_TRAEFIK_PREFIX:-mhvp}-metrics.loadbalancer.server.port=8090"
+
+  beszel-agent:
+    # Reads host and container metrics for the beszel hub above. Per the upstream compose
+    # examples (github.com/henrygd/beszel, supplemental/docker/agent), the agent needs
+    # network_mode: host to report host network throughput correctly, and a read only mount of
+    # the Docker socket to report per container metrics; it does not join the Traefik network
+    # and is not reachable from outside. HUB_URL addresses the hub via the host loopback
+    # interface, which the hub's 127.0.0.1:8090 port mapping above provides.
+    <<: *prod
+    image: henrygd/beszel-agent:latest
+    security_opt:
+      - no-new-privileges:true
+    network_mode: host
+    volumes:
+      - beszel-agent-data:/var/lib/beszel-agent
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    environment:
+      HUB_URL: http://localhost:8090
+      KEY: ${BESZEL_AGENT_KEY:?BESZEL_AGENT_KEY must be set (public key from the Beszel hub, see docs/runbooks/monitoring.md)}
+      TOKEN: ${BESZEL_AGENT_TOKEN:?BESZEL_AGENT_TOKEN must be set (registration token from the Beszel hub, see docs/runbooks/monitoring.md)}
+    deploy:
+      resources:
+        limits:
+          cpus: "1"
+          memory: 256m
+
 volumes:
   uptime-kuma-data:
+  beszel-data:
+  beszel-agent-data:
 
 networks:
   traefik:

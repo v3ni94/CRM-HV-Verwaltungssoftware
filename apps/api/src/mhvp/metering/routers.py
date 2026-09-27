@@ -1193,7 +1193,8 @@ class TransmissionCheckIn(_In):
         default_factory=dict,
         description="Billing Input: ancillary_invoices, heating_system_invoices, energy_sources, "
         "allocations (je externer Nutzeinheit), currency und expectedvat als Ersatz, wenn keine "
-        "Anbietervorlage geladen werden kann.",
+        "Anbietervorlage geladen werden kann. Ordnungsbegriffsabgleich (billing_unit_setup): "
+        "customer_number als Ersatz für die erste customer_reference der Verbindung.",
     )
 
 
@@ -1257,7 +1258,10 @@ def _transmission_out(row: MeteringTransmission) -> TransmissionOut:
     )
 
 
-@router.get("/transmissions", summary="Übermittlungen (Rollen, Abrechnungsdaten)")
+@router.get(
+    "/transmissions",
+    summary="Übermittlungen (Rollen, Abrechnungsdaten, Ordnungsbegriffsabgleich)",
+)
 async def list_transmissions(
     request: Request,
     principal: TenantPrincipal = Depends(READ),
@@ -1353,4 +1357,24 @@ async def order_transmission(
             version=body.version,
             given_fingerprint=body.fingerprint,
         )
+        return _transmission_out(row)
+
+
+@router.post(
+    "/transmissions/{transmission_id}/poll",
+    summary="Bearbeitungsstatus beim Anbieter abrufen (Ordnungsbegriffsabgleich, nur lesend)",
+)
+async def poll_transmission(
+    transmission_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(_transmission_writer),
+) -> TransmissionOut:
+    """Fetches the asynchronous processing status (Q8). ``waiting_provider`` stays until the
+    provider reports ``COMPLETED``; the fetched result is stored on the external billing unit
+    and confirms the assignment technically when every sent unit was matched."""
+    async with tenant_tx(request, principal) as session:
+        await services.ensure_module_enabled(session, principal.tenant_id)
+        row = await transmissions.get(session, transmission_id)
+        _require_kind_permission(principal, row.kind)
+        row = await transmissions.poll(session, row, actor=principal.user_id)
         return _transmission_out(row)

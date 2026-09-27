@@ -344,3 +344,116 @@ def test_custom_field_attributes_patch_delete_and_validation(
         ).status_code
         == 422
     )
+
+
+def test_custom_field_rules_enforced_on_save(client: TestClient, world: World) -> None:
+    """Expected: validity per management type (a value for a field of another management
+    type is refused, its required flag does not apply), default value on create, required,
+    uniqueness within the tenant per entity type (the entity itself excepted), field errors
+    under ``errors`` with ``custom_fields.<key>``; another tenant is not affected."""
+    h = bearer(login(client, world, "katadmin"))
+    other = bearer(login(client, world, "katother"))
+    tag = f"tag_{RUN}"
+    hoa_only = f"weg_{RUN}"
+    stufe = f"stufe_{RUN}"
+    for body in (
+        {
+            "entity_type": "property",
+            "key": tag,
+            "label": "Kennung",
+            "field_type": "string",
+            "uniqueness": "all_contracts",
+            "required": True,
+            "default_value": "STANDARD",
+        },
+        {
+            "entity_type": "property",
+            "key": hoa_only,
+            "label": "WEG-Nummer",
+            "field_type": "string",
+            "required": True,
+            "valid_for_management_types": ["hoa"],
+        },
+        {
+            "entity_type": "unit",
+            "key": stufe,
+            "label": "Stufe",
+            "field_type": "integer",
+            "min_value": "1",
+            "max_value": "5",
+        },
+    ):
+        _ok(client.post("/api/v1/custom-fields", json=body, headers=h), 201)
+
+    # Default on create and required field of another management type not required.
+    created = _ok(client.post("/api/v1/properties", json=_prop("394", "rental"), headers=h), 201)
+    assert created["custom_fields"][tag] == "STANDARD"
+    assert hoa_only not in created["custom_fields"]
+    # A value for a field that is not valid for the management type is refused.
+    refused = client.post(
+        "/api/v1/properties",
+        json=_prop("395", "rental") | {"custom_fields": {tag: "A", hoa_only: "x"}},
+        headers=h,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["errors"][0]["field"] == f"custom_fields.{hoa_only}"
+    assert refused.json()["errors"][0]["code"] == "not_applicable"
+    # Required within its management type.
+    missing = client.post(
+        "/api/v1/properties", json=_prop("395", "hoa") | {"custom_fields": {tag: "B"}}, headers=h
+    )
+    assert missing.status_code == 422
+    assert missing.json()["errors"][0] == {
+        "location": ["body", "custom_fields", hoa_only],
+        "field": f"custom_fields.{hoa_only}",
+        "code": "required",
+        "message": "ist Pflicht.",
+    }
+    # Uniqueness within the tenant per entity type.
+    duplicate = client.post(
+        "/api/v1/properties",
+        json=_prop("395", "rental") | {"custom_fields": {tag: "STANDARD"}},
+        headers=h,
+    )
+    assert duplicate.status_code == 422
+    assert duplicate.json()["errors"][0]["code"] == "unique"
+    # Saving the same value on the entity itself stays possible (PATCH, If-Match).
+    same = client.patch(
+        f"/api/v1/properties/{created['id']}",
+        json={"custom_fields": {tag: "STANDARD"}},
+        headers=h | {"If-Match": f'"{created["version"]}"'},
+    )
+    assert same.status_code == 200, same.text
+    # Another tenant has no such definitions: the key is unknown there, its values free.
+    foreign = client.post(
+        "/api/v1/properties",
+        json=_prop("394") | {"custom_fields": {tag: "STANDARD"}},
+        headers=other,
+    )
+    assert foreign.status_code == 422
+    assert foreign.json()["errors"][0]["code"] == "unknown"
+    assert _ok(client.post("/api/v1/properties", json=_prop("394"), headers=other), 201)
+    # Bounds on the unit with a field error.
+    building = _ok(
+        client.post(
+            f"/api/v1/properties/{created['id']}/buildings", json={"name": "Haus"}, headers=h
+        ),
+        201,
+    )
+    unit_body = {"building_id": building["id"], "number": "1", "unit_type": "apartment"}
+    too_high = client.post(
+        f"/api/v1/properties/{created['id']}/units",
+        json=unit_body | {"custom_fields": {stufe: 6}},
+        headers=h,
+    )
+    assert too_high.status_code == 422
+    assert too_high.json()["errors"][0]["code"] == "max"
+    unit = _ok(
+        client.post(
+            f"/api/v1/properties/{created['id']}/units",
+            json=unit_body | {"custom_fields": {stufe: 3}},
+            headers=h,
+        ),
+        201,
+    )
+    assert unit["custom_fields"][stufe] == 3

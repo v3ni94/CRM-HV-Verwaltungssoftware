@@ -798,3 +798,96 @@ def test_provider_http_pins_target_and_refuses_redirects_and_plain_http() -> Non
         ProviderHttp(transport=httpx.MockTransport(handler), sleep=lambda _: None).request(
             "GET", "http://api.example.test/x", auth=None
         )
+
+
+# Ordnungsbegriffsabgleich submission and status (Q8, sendSetup and getSetupResult) --------
+
+
+def test_setup_submission_returns_write_result_and_status_fetch_is_read_only() -> None:
+    rec = Recorder(
+        {
+            "POST /oauth/token": _token,
+            "POST /billingunitdata/v1/billingunits/setup/000123456": [
+                httpx.Response(200, json={"transactionid": "T-SETUP-1"}),
+                httpx.Response(
+                    400,
+                    json={"messages": [{"type": "ERROR", "message": "residentialunit unknown"}]},
+                ),
+            ],
+            "GET /billingunitdata/v1/billingunits": [
+                httpx.Response(
+                    200,
+                    json={
+                        "totalentries": 1,
+                        "billingunits": [
+                            {
+                                "billingunitMscnumber": "000123456",
+                                "customerMscnumber": "C1",
+                                "setupstatus": "IN_PROGRESS",
+                                "lastupdate": "2026-09-27T00:00:00Z",
+                            }
+                        ],
+                    },
+                ),
+                httpx.Response(
+                    200,
+                    json={
+                        "totalentries": 1,
+                        "billingunits": [
+                            {
+                                "billingunitMscnumber": "000123456",
+                                "customerMscnumber": "C1",
+                                "setupstatus": "COMPLETED",
+                                "lastupdate": "2026-09-28T00:00:00Z",
+                            }
+                        ],
+                    },
+                ),
+            ],
+            "GET /billingunitdata/v1/billingunits/setup/000123456": _bearer(
+                {
+                    "billingunitMscnumber": "000123456",
+                    "matched": [{"residentialunitMscnumber": "0001"}],
+                    "additional": [],
+                }
+            ),
+        }
+    )
+    adapter = rec.attach(IstaAdapter())
+    assert adapter.setup_submission is not None
+    call: dict[str, Any] = {
+        "config": ISTA_CONFIG,
+        "secrets": ISTA_SECRETS,
+        "environment": "test",
+        "external_billing_unit": "000123456",
+        "residential_units": [
+            {"residentialunitMscnumber": "0001", "residentialunitPmnumber": "01"}
+        ],
+        "customer_number": "C1",
+    }
+    accepted = adapter.submit_billing_unit_setup(pm_number="123", **call)
+    assert accepted.outcome == "accepted" and accepted.transaction_id == "T-SETUP-1"  # noqa: PT018
+    sent = json.loads(rec.requests[-1].content)
+    assert sent["billingunitPmnumber"] == "123" and sent["customerMscnumber"] == "C1"  # noqa: PT018
+    assert sent["residentialunits"][0]["residentialunitMscnumber"] == "0001"
+    rejected = adapter.submit_billing_unit_setup(**call)
+    assert rejected.outcome == "rejected"
+    assert rejected.errors[0]["message"] == "residentialunit unknown"
+    waiting = adapter.fetch_billing_unit_setup(
+        config=ISTA_CONFIG,
+        secrets=ISTA_SECRETS,
+        environment="test",
+        external_billing_unit="000123456",
+    )
+    assert waiting.status == "IN_PROGRESS" and waiting.result is None  # noqa: PT018
+    done = adapter.fetch_billing_unit_setup(
+        config=ISTA_CONFIG,
+        secrets=ISTA_SECRETS,
+        environment="test",
+        external_billing_unit="000123456",
+    )
+    assert done.status == "COMPLETED"
+    assert done.result is not None
+    assert done.result["matched"][0]["residentialunitMscnumber"] == "0001"
+    # the status fetch only reads; exactly two writes happened (one accepted, one rejected)
+    assert sum(1 for r in rec.requests if r.method == "POST" and "setup" in r.url.path) == 2

@@ -14,7 +14,9 @@
     "footer": "Müller Holding AG · Rheinpromenade 13 · 40789 Monheim am Rhein · Sitz: Monheim am Rhein · Amtsgericht Düsseldorf · HRB 104291 · Vorstand: Timo Müller · Aufsichtsratsvorsitzender: Jan Walprecht"
   },
   "Auth": {
-    "loginTitle": "Anmelden",
+    "loginTitle": "Willkommen zurück",
+    "loginHelp": "Bei Anmeldeproblemen wenden Sie sich an Ihre Systemadministration.",
+    "claim": "Verwaltung, Buchhaltung und Kommunikation an einem Ort.",
     "email": "E-Mail",
     "password": "Passwort",
     "submit": "Weiter",
@@ -33,6 +35,22 @@
     "rememberDevice": "Dieses Gerät 90 Tage merken"
   },
   "Shell": {
+    "palette": {
+      "title": "Befehlspalette",
+      "open": "Suche und Befehle öffnen",
+      "action": "Aktionen",
+      "nav": "Navigation",
+      "recent": "Zuletzt geöffnet",
+      "hit": "Treffer",
+      "hint": "Tippen, um Datensätze, Seiten und Aktionen zu finden.",
+      "keys": "Pfeiltasten wählen, Eingabe öffnet, Escape schließt"
+    },
+    "action": {
+      "createTicket": "Ticket anlegen",
+      "createContact": "Kontakt anlegen",
+      "startDunning": "Mahnlauf starten",
+      "ticketAnalytics": "Zur Auswertung Tickets"
+    },
     "skip": "Zum Inhalt springen",
     "nav": "Hauptnavigation",
     "contacts": "Kontakte",
@@ -798,6 +816,29 @@
         "correction": "Korrektur",
         "fact": "Fakt"
       }
+    },
+    "embeddings": {
+      "title": "Einbettungen (Ähnlichkeitssuche)",
+      "description": "Dokumenttexte und Wissenseinträge werden als Vektoren abgelegt, damit der Assistent passende Unterlagen findet. Der Index wird über OpenAI (Stufe Embedding) berechnet, das Monatsbudget gilt auch hier.",
+      "model": "Modell",
+      "disabled": "Nicht aktiv",
+      "documents": "Dokumente",
+      "knowledge": "Wissenseinträge",
+      "embedded": "{embedded} von {total} eingebettet, {pending} ausstehend",
+      "chunks": "Vektorzeilen",
+      "lastRun": "Letzter Lauf",
+      "noRun": "Noch kein Lauf",
+      "runStatus": {
+        "succeeded": "erfolgreich",
+        "failed": "abgebrochen",
+        "running": "läuft"
+      },
+      "reindex": "Neu aufbauen",
+      "reindexFull": "Vollständig neu aufbauen",
+      "fullHint": "Vollständig entfernt zuerst alle Vektoren des Mandanten (z. B. nach Modellwechsel); Neu aufbauen ergänzt nur fehlende und geänderte Quellen.",
+      "queued": "Der Aufbau wurde gestartet und läuft im Hintergrund.",
+      "done": "Der Aufbau ist abgeschlossen.",
+      "refresh": "Aktualisieren"
     }
   },
   "ImmowareLists": {
@@ -1249,7 +1290,8 @@
       "maintenance": "Sanierung und Wartung",
       "note_follow_up": "Wiedervorlage",
       "meeting": "Eigentümerversammlung",
-      "ticket_due": "Ticketfrist"
+      "ticket_due": "Ticketfrist",
+      "appointment": "Termin"
     },
     "openSource": "Zur Quelle",
     "status": {
@@ -1743,6 +1785,7 @@
     "fee": "Mahngebühr",
     "status": "Status",
     "reason": "Begründung",
+    "representativeOnly": "Nur Bevollmächtigter, Zugang rechtlich zu klären",
     "settings": "Mahnstufen und Gebühren",
     "runStatus": {
       "preview": "Vorschau",
@@ -2401,6 +2444,9 @@
     "priority": "Priorität",
     "status": "Status",
     "sla": "Frist (SLA)",
+    "dueOn": "Fälligkeit",
+    "dueOnHint": "Arbeitsfrist des Tickets, unabhängig von der SLA-Frist.",
+    "dueOnClear": "Fälligkeit entfernen",
     "breached": "überschritten",
     "create": "Ticket anlegen",
     "comment": "Kommentar",
@@ -3138,7 +3184,17 @@
     "bulkMarkDone": "Als erledigt markieren",
     "clearSelection": "Auswahl aufheben",
     "bulkFailed": "{count, plural, one {# Nachricht konnte nicht geändert werden.} other {# Nachrichten konnten nicht geändert werden.}}",
-    "selectMessageRow": "Nachricht auswählen: {subject}"
+    "selectMessageRow": "Nachricht auswählen: {subject}",
+    "archiveScopeMissing": "Berechtigung zum Archivieren fehlt für {addresses}. Erledigte Mails bleiben im Gmail-Posteingang, bis das Postfach neu verbunden ist.",
+    "archiveScopeLink": "Postfach neu verbinden",
+    "archiveRetry": "Archivierung jetzt nachholen",
+    "archiveStatus": {
+      "pending": "Archivierung in Gmail angefordert",
+      "archived": "In Gmail archiviert am {at}",
+      "skipped": "Nicht archiviert (Postfach ohne Archivierung oder keine Gmail-Nachricht)",
+      "failed": "Archivierung in Gmail fehlgeschlagen am {at}, wird alle 15 Minuten erneut versucht",
+      "scope_missing": "Archivierung nicht möglich, Berechtigung fehlt, Postfach unter Einstellungen, Postfächer neu verbinden"
+    }
   },
   "Platform": {
     "title": "Plattform",
@@ -3458,6 +3514,7 @@
     },
     "noOwnerHint": "Ohne Objekteigentümer findet die Zuordnung keinen Vermieter, die Mietverträge bleiben offen. Eigentümer auf der Objektseite festlegen.",
     "ownerColumn": "Eigentümer",
+    "statusColumn": "Status",
     "ownerMissing": "Eigentümer fehlt",
     "owner": {
       "title": "Eigentümer",
@@ -3860,7 +3917,7 @@
     },
     "customFields": {
       "title": "Benutzerdefinierte Felder",
-      "description": "Zusatzfelder je Entität mit Feldtyp, Gruppe, Pflicht und Gültigkeit definieren.",
+      "description": "Beschreibung",
       "intro": "Zusatzfelder für Objekt, Gebäude, Einheit, Vertrag, Kontakt, Dienstleister und Dienstleistervertrag. Entität, interner Name und Feldtyp sind nach dem Anlegen unveränderlich.",
       "listTitle": "Definierte Felder",
       "empty": "Noch keine Zusatzfelder definiert.",
@@ -3903,7 +3960,6 @@
       "maxLength": "Höchstlänge",
       "defaultValue": "Standardwert",
       "sortOrder": "Reihenfolge",
-      "description": "Beschreibung",
       "required": "Pflichtfeld",
       "visibleInMain": "Sichtbar in Hauptansicht",
       "create": "Feld anlegen",
@@ -3928,7 +3984,6 @@
       }
     }
   },
-
   "Members": {
     "title": "Benutzer und Rollen",
     "neverDeleted": "Benutzerkonten werden nie gelöscht, sondern gesperrt oder wieder aktiviert. So bleibt die Nachvollziehbarkeit gewahrt.",
@@ -4055,7 +4110,11 @@
     "risk": "Standard aus: Die Beispiele enthalten in der Regel personenbezogene Daten. Aufbewahrungsfrist und Löschlauf sind noch nicht festgelegt (ADR 0010, offene Frage M7-04). Das Ausschalten stoppt neue Beispiele, vorhandene bleiben erhalten. Jede Änderung wird protokolliert.",
     "label": "Lernbeispiele aus Ticketabschlüssen speichern",
     "saved": "Gespeichert.",
-    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern.",
+    "retentionLabel": "Aufbewahrung in Monaten",
+    "retentionHint": "Beispiele, die älter sind, werden täglich gelöscht (Standard 24 Monate, 1 bis 120). Jeder Löschlauf wird im Ereignisprotokoll mit Anzahl vermerkt.",
+    "retentionInvalid": "Bitte eine ganze Zahl zwischen 1 und 120 eingeben.",
+    "retentionSave": "Aufbewahrung speichern"
   },
   "DatevMappings": {
     "title": "DATEV-Kontenzuordnung",
@@ -4274,7 +4333,9 @@
       "running": "Vollabruf läuft: {done} von {total} Nachrichten geprüft",
       "done": "Vollabruf abgeschlossen am {at}: {done} Nachrichten geprüft",
       "failed": "Vollabruf abgebrochen bei {done} von {total} Nachrichten, erneut starten setzt fort"
-    }
+    },
+    "archiveScopeMissing": "Postfach neu verbinden, Berechtigung zum Archivieren fehlt. Erledigte Mails und geschlossene Tickets werden erst nach der erneuten Google-Verbindung aus dem Posteingang archiviert; offene Aufträge werden danach automatisch nachgeholt.",
+    "reconnectGoogle": "Erneut mit Google verbinden"
   },
   "Dms": {
     "area": "Verwaltung",
@@ -6613,6 +6674,12 @@
       "loadError": "Der Vertrag konnte nicht geladen werden.",
       "listError": "Die Verträge konnten nicht geladen werden.",
       "empty": "Noch keine Verträge erfasst.",
+      "filtered": "Gefiltert nach {filter}.",
+      "clearFilter": "Filter aufheben",
+      "filters": {
+        "property_id": "Objekt",
+        "unit_id": "Einheit"
+      },
       "number": "Nummer",
       "kind": "Art",
       "term": "Laufzeit",
@@ -7308,79 +7375,114 @@
       "assignHere": "Dieser Zuordnung zuweisen",
       "dismiss": "Verwerfen"
     },
-      "transmission": {
-        "title": "Kontrollierte Übermittlungen",
-        "intro": "Daten prüfen und verbindlich beauftragen sind getrennte Schritte. Eine Prüfung speichert beim Anbieter nichts. Eine Änderung an Zuordnungen oder Daten nach der Prüfung entwertet die Freigabe.",
-        "roles": "Nutzer und Rollen (On-Site Roles 2.0)",
-        "rolesHint": "Es wird je Nutzeinheit der vollständige Datensatz gesendet: Belegung, Leerstand und Beendigung ausdrücklich. Ausgelassene Rollen könnten beim Anbieter sonst als beendet gelten.",
-        "billing": "Abrechnungsdaten (Billing Input)",
-        "billingHint": "Ablauf: Zeitraum wählen, Anbietervorlage laden, CRM-Daten übernehmen, Zuordnungen und Kosten prüfen, beim Anbieter validieren, Ergebnis prüfen, freigeben, erst dann verbindlich beauftragen. Die verbindliche Übertragung kann beim Anbieter eine Abrechnung auslösen.",
-        "periodFrom": "Zeitraum von",
-        "periodTo": "Zeitraum bis",
-        "costs": "Hausnebenkosten (Kostenschlüssel, Verteilschlüssel, Bruttobetrag)",
-        "costKey": "Kostenschlüssel",
-        "allocationKey": "Verteilschlüssel",
-        "grossAmount": "Bruttobetrag",
-        "invoiceDate": "Rechnungsdatum",
-        "addCost": "Weitere Kostenposition",
-        "check": "Daten prüfen",
-        "release": "Freigeben",
-        "acknowledgeWarnings": "Ich habe die Warnungen geprüft und gebe die Daten trotzdem frei.",
-        "orderBilling": "Abrechnung verbindlich beauftragen",
-        "submitRoles": "Nutzer und Rollen verbindlich übermitteln",
-        "orderConfirm": "Die Daten werden jetzt verbindlich an den Anbieter gesendet. Dieser Schritt wird nicht wiederholt. Fortfahren?",
-        "noPermissionRoles": "Zum Übermitteln von Nutzern fehlt das Recht Messdienstleister-Nutzer übermitteln.",
-        "noPermissionBilling": "Zum Beauftragen fehlt das Recht Messdienstleister-Abrechnung beauftragen.",
-        "notAvailable": "Verbindliche Übermittlung nicht möglich: {reason}",
-        "status": {
-          "checked": "geprüft",
-          "invalid": "fehlerhaft",
-          "released": "freigegeben",
-          "superseded": "entwertet",
-          "ordered": "beauftragt",
-          "rejected": "abgewiesen",
-          "unclear": "Ergebnis unklar",
-          "failed": "fehlgeschlagen"
-        },
-        "unclearHint": "Zeitüberschreitung beim Anbieter: Ergebnis unklar. Es erfolgt keine automatische Wiederholung; bitte beim Anbieter klären, bevor erneut gesendet wird.",
-        "errors": "Fehler",
-        "warnings": "Warnungen",
-        "providerValidation": "Anbieterprüfung",
-        "providerSkipped": "Anbieterprüfung nicht ausgeführt: {reason}",
-        "diff": "Unterschiede zur letzten bestätigten Übertragung",
-        "diffFirst": "Erste Übermittlung, keine bestätigte Vorübertragung vorhanden.",
-        "diffNone": "Keine Unterschiede zur letzten bestätigten Übertragung.",
-        "diffAdded": "Neu",
-        "diffRemoved": "Entfallen",
-        "diffChanged": "Geändert",
-        "summaryUnits": "{count} Nutzeinheiten im Datensatz",
-        "summaryRecipients": "{count} Abrechnungsempfänger",
-        "summaryCosts": "{count} Kostenpositionen",
-        "terminate": "Beendigung",
-        "log": "Protokoll",
-        "logEntry": "{action} am {at}",
-        "transaction": "Vorgangsnummer des Anbieters",
-        "fingerprint": "Datenversion",
-        "history": "Bisherige Übermittlungen",
-        "none": "Noch keine Prüfung durchgeführt."
+    "transmission": {
+      "title": "Kontrollierte Übermittlungen",
+      "intro": "Daten prüfen und verbindlich beauftragen sind getrennte Schritte. Eine Prüfung speichert beim Anbieter nichts. Eine Änderung an Zuordnungen oder Daten nach der Prüfung entwertet die Freigabe.",
+      "roles": "Nutzer und Rollen (On-Site Roles 2.0)",
+      "rolesHint": "Es wird je Nutzeinheit der vollständige Datensatz gesendet: Belegung, Leerstand und Beendigung ausdrücklich. Ausgelassene Rollen könnten beim Anbieter sonst als beendet gelten.",
+      "billing": "Abrechnungsdaten (Billing Input)",
+      "billingHint": "Ablauf: Zeitraum wählen, Anbietervorlage laden, CRM-Daten übernehmen, Zuordnungen und Kosten prüfen, beim Anbieter validieren, Ergebnis prüfen, freigeben, erst dann verbindlich beauftragen. Die verbindliche Übertragung kann beim Anbieter eine Abrechnung auslösen.",
+      "periodFrom": "Zeitraum von",
+      "periodTo": "Zeitraum bis",
+      "costs": "Hausnebenkosten (Kostenschlüssel, Verteilschlüssel, Bruttobetrag)",
+      "costKey": "Kostenschlüssel",
+      "allocationKey": "Verteilschlüssel",
+      "grossAmount": "Bruttobetrag",
+      "invoiceDate": "Rechnungsdatum",
+      "addCost": "Weitere Kostenposition",
+      "check": "Daten prüfen",
+      "release": "Freigeben",
+      "acknowledgeWarnings": "Ich habe die Warnungen geprüft und gebe die Daten trotzdem frei.",
+      "orderBilling": "Abrechnung verbindlich beauftragen",
+      "submitRoles": "Nutzer und Rollen verbindlich übermitteln",
+      "orderConfirm": "Die Daten werden jetzt verbindlich an den Anbieter gesendet. Dieser Schritt wird nicht wiederholt. Fortfahren?",
+      "noPermissionRoles": "Zum Übermitteln von Nutzern fehlt das Recht Messdienstleister-Nutzer übermitteln.",
+      "noPermissionBilling": "Zum Beauftragen fehlt das Recht Messdienstleister-Abrechnung beauftragen.",
+      "notAvailable": "Verbindliche Übermittlung nicht möglich: {reason}",
+      "status": {
+        "checked": "geprüft",
+        "invalid": "fehlerhaft",
+        "released": "freigegeben",
+        "superseded": "entwertet",
+        "ordered": "beauftragt",
+        "rejected": "abgewiesen",
+        "unclear": "Ergebnis unklar",
+        "failed": "fehlgeschlagen",
+        "waiting_provider": "beim Anbieter in Bearbeitung",
+        "completed": "Ergebnis abgerufen"
       },
-      "providerChange": {
-        "title": "Anbieterwechsel",
-        "hint": "Die bisherige Zuordnung endet am Tag vor dem Wechseldatum und bleibt für ihre Dokumente und Ergebnisse erhalten. Die neue Zuordnung beginnt am Wechseldatum.",
-        "changeDate": "Wechseldatum",
-        "newConnection": "Neue Verbindung",
-        "newExternalNumber": "Neue externe Nummer",
-        "submit": "Anbieterwechsel durchführen",
-        "open": "Anbieter wechseln",
-        "done": "Anbieterwechsel gespeichert. Die neue Zuordnung ist geöffnet."
-      },
-      "unitEdit": {
-        "edit": "Bearbeiten",
-        "save": "Speichern",
-        "validTo": "Gültig bis",
-        "hint": "Nur Belegung, Empfänger und Gültigkeit werden geändert. Eine andere Nutzeinheit ist eine neue Zuordnung."
+      "unclearHint": "Zeitüberschreitung beim Anbieter: Ergebnis unklar. Es erfolgt keine automatische Wiederholung; bitte beim Anbieter klären, bevor erneut gesendet wird.",
+      "errors": "Fehler",
+      "warnings": "Warnungen",
+      "providerValidation": "Anbieterprüfung",
+      "providerSkipped": "Anbieterprüfung nicht ausgeführt: {reason}",
+      "diff": "Unterschiede zur letzten bestätigten Übertragung",
+      "diffFirst": "Erste Übermittlung, keine bestätigte Vorübertragung vorhanden.",
+      "diffNone": "Keine Unterschiede zur letzten bestätigten Übertragung.",
+      "diffAdded": "Neu",
+      "diffRemoved": "Entfallen",
+      "diffChanged": "Geändert",
+      "summaryUnits": "{count} Nutzeinheiten im Datensatz",
+      "summaryRecipients": "{count} Abrechnungsempfänger",
+      "summaryCosts": "{count} Kostenpositionen",
+      "terminate": "Beendigung",
+      "log": "Protokoll",
+      "logEntry": "{action} am {at}",
+      "transaction": "Vorgangsnummer des Anbieters",
+      "fingerprint": "Datenversion",
+      "history": "Bisherige Übermittlungen",
+      "none": "Noch keine Prüfung durchgeführt.",
+      "setup": "Ordnungsbegriffsabgleich (Billing Unit Data)",
+      "setupHint": "Vorschau der internen und externen Kennungen je Einheit, bewusst ausgelöste Übermittlung, Bearbeitungsstatus beim Anbieter und Abruf des Ergebnisses. Der Abgleich ist asynchron: erst das abgerufene Anbieterergebnis bestätigt die Zuordnung, nie die Annahme der Anfrage.",
+      "setupCheck": "Vorschau erstellen",
+      "submitSetup": "Abgleich verbindlich übermitteln",
+      "poll": "Status beim Anbieter abrufen",
+      "waitingHint": "Der Anbieter verarbeitet den Abgleich noch. Die Zuordnung gilt erst nach dem abgerufenen Ergebnis als bestätigt.",
+      "noPermissionSetup": "Für den Ordnungsbegriffsabgleich fehlt das Recht Messdienstleister-Zuordnungen bearbeiten.",
+      "setupInternal": "Intern (CRM)",
+      "setupExternal": "Extern (Anbieter)",
+      "setupUnitInternal": "Einheit (CRM)",
+      "setupUnitExternal": "Nutzeinheit (Anbieter)",
+      "setupOccupancy": "Belegung",
+      "setupKnown": "Beim Anbieter bekannt",
+      "setupKnownYes": "ja",
+      "setupKnownNo": "nein",
+      "setupMatched": "Ergebnis",
+      "setupPending": "offen",
+      "setupMatchedYes": "zugeordnet",
+      "setupMatchedNo": "nicht zugeordnet",
+      "setupProviderStatus": "Anbieterstatus",
+      "setupConfirmed": "Anbieterergebnis abgerufen: alle {count} Nutzeinheiten zugeordnet, Zuordnung technisch bestätigt.",
+      "setupUnmatched": "Anbieterergebnis abgerufen: nicht zugeordnete Nutzeinheiten {units}. Die Zuordnung bleibt unbestätigt.",
+      "setupAdditional": "Zusätzlich beim Anbieter geführt: {units}.",
+      "overviewTitle": "Übermittlungen (zentrale Übersicht)",
+      "overviewIntro": "Alle geprüften, freigegebenen und übermittelten Datensätze dieses Mandanten mit Status. Der Abruf des Bearbeitungsstatus ist nur lesend.",
+      "overviewEmpty": "Keine Übermittlungen vorhanden.",
+      "overviewKind": "Art",
+      "overviewAssignment": "Zuordnung",
+      "overviewCreated": "Geprüft am",
+      "kind": {
+        "roles": "Nutzer und Rollen",
+        "billing_input": "Abrechnungsdaten",
+        "billing_unit_setup": "Ordnungsbegriffsabgleich"
       }
-    
+    },
+    "providerChange": {
+      "title": "Anbieterwechsel",
+      "hint": "Die bisherige Zuordnung endet am Tag vor dem Wechseldatum und bleibt für ihre Dokumente und Ergebnisse erhalten. Die neue Zuordnung beginnt am Wechseldatum.",
+      "changeDate": "Wechseldatum",
+      "newConnection": "Neue Verbindung",
+      "newExternalNumber": "Neue externe Nummer",
+      "submit": "Anbieterwechsel durchführen",
+      "open": "Anbieter wechseln",
+      "done": "Anbieterwechsel gespeichert. Die neue Zuordnung ist geöffnet."
+    },
+    "unitEdit": {
+      "edit": "Bearbeiten",
+      "save": "Speichern",
+      "validTo": "Gültig bis",
+      "hint": "Nur Belegung, Empfänger und Gültigkeit werden geändert. Eine andere Nutzeinheit ist eine neue Zuordnung."
+    }
   },
   "Common": {
     "links": {
@@ -7451,6 +7553,18 @@
       "1m": "1 Monat vorher",
       "3m": "3 Monate vorher",
       "6m": "6 Monate vorher"
+    },
+    "remindersField": "Erinnerungen",
+    "recurring": "Wiederkehrend",
+    "recurrence": {
+      "label": "Wiederholung",
+      "none": "Keine",
+      "weekly": "Wöchentlich",
+      "monthly": "Monatlich",
+      "yearly": "Jährlich",
+      "interval": "Alle (Anzahl)",
+      "until": "Bis",
+      "hint": "Die einzelnen Termine werden beim Anzeigen berechnet und nicht gespeichert."
     }
   },
   "contracts": {
@@ -7521,6 +7635,7 @@
     "no": "Nein",
     "required": "Pflichtangabe fehlt.",
     "invalidNumber": "Bitte eine Zahl eingeben.",
+    "inactive": "inaktiv",
     "status": {
       "saving": "Speichert",
       "saved": "Gespeichert",
@@ -7576,5 +7691,107 @@
     "saved": "Gespeichert.",
     "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern.",
     "link": "Zu den Verbindungen"
+  },
+  "StartPage": {
+    "eyebrow": "Mein Arbeitsplatz",
+    "toAnalytics": "Auswertung Tickets",
+    "kpiEmpty": "Keine Kennzahlen für Ihre Rolle.",
+    "loadError": "Dieser Bereich konnte nicht geladen werden.",
+    "today": {
+      "title": "Heute",
+      "description": "Termine und Fristen von heute und der nächsten sieben Tage. Fristen sind Orientierung und zu prüfen.",
+      "empty": "Für heute und die nächsten sieben Tage liegt nichts an.",
+      "groupToday": "Heute",
+      "groupWeek": "Nächste sieben Tage"
+    },
+    "tickets": {
+      "title": "Meine Tickets",
+      "description": "Mir zugewiesene Tickets nach Dringlichkeit, höchstens zehn.",
+      "empty": "Ihnen ist kein offenes Ticket zugewiesen.",
+      "all": "Alle meine Tickets",
+      "untitled": "ohne Titel",
+      "due": "fällig {date}",
+      "more": "und {count} weitere"
+    },
+    "approvals": {
+      "title": "Freigaben",
+      "description": "Alles, was auf Ihre Freigabe wartet. Jede Kachel führt zur Entscheidung.",
+      "empty": "Nichts wartet auf Ihre Freigabe.",
+      "noRights": "Ihre Rolle entscheidet keine Freigaben.",
+      "open": "Öffnen",
+      "kind": {
+        "mail": "Mail-Antworten",
+        "bank_accounts": "Bankverbindungen",
+        "release_gates": "Freigabestufen",
+        "dunning_runs": "Mahnläufe",
+        "direct_debits": "Lastschriftläufe",
+        "metering_transmissions": "Übermittlungen Messdienstleister"
+      }
+    }
+  },
+  "Greeting": {
+    "fallback": "Hallo {name}, hier ist dein Überblick.",
+    "morning": {
+      "0": "Guten Morgen {name}, hier ist alles für dich im Überblick.",
+      "1": "Guten Morgen {name}, schön, dass du da bist. Hier dein Überblick.",
+      "2": "Guten Morgen {name}, ein neuer Tag, hier der aktuelle Stand."
+    },
+    "midday": {
+      "0": "Guten Mittag {name}, hier ist dein Überblick für heute.",
+      "1": "Guten Mittag {name}, hier der aktuelle Stand für heute.",
+      "2": "Guten Mittag {name}, alles Wichtige für dich im Blick."
+    },
+    "evening": {
+      "0": "Guten Abend {name}, hier der aktuelle Stand.",
+      "1": "Guten Abend {name}, hier dein Überblick für den Feierabend.",
+      "2": "Guten Abend {name}, noch kurz alles im Blick."
+    },
+    "late": {
+      "0": "Guten Abend {name}, noch so spät am Arbeiten? Hier dein Überblick.",
+      "1": "Guten Abend {name}, spät dran, hier trotzdem alles Wichtige."
+    }
+  },
+  "PropertyTermination": {
+    "title": "Verwaltung beenden",
+    "intro": "Beendet das Verwaltungsverhältnis und deaktiviert das Objekt. Alle Daten bleiben erhalten; das Objekt erscheint nicht mehr in der Objektliste.",
+    "open": "Verwaltung beenden",
+    "terminatedBy": "Gekündigt von",
+    "by": {
+      "manager": "Verwaltung",
+      "owner": "Eigentümer",
+      "hoa": "Eigentümergemeinschaft",
+      "other": "Sonstige"
+    },
+    "noticeDate": "Kündigungsdatum",
+    "effectiveDate": "Ende der Verwaltung",
+    "successorManager": "Nachfolgender Verwalter",
+    "successorOwner": "Nachfolgender Eigentümer",
+    "searchPlaceholder": "Kontakt suchen (mindestens 2 Zeichen)",
+    "clear": "Auswahl entfernen",
+    "noticeDocument": "Kündigungsschreiben",
+    "upload": "Datei hochladen",
+    "uploading": "Wird hochgeladen",
+    "uploaded": "Hochgeladen: {title}",
+    "removeDocument": "Dokument entfernen",
+    "note": "Notiz",
+    "next": "Weiter",
+    "confirmTitle": "Beendigung bestätigen",
+    "confirmText": "Das Objekt wird mit Ende der Verwaltung zum {date} deaktiviert (gekündigt von {by} am {notice}). Wieder aktivieren kann nur der Superadmin.",
+    "confirm": "Verwaltung beenden",
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "datesRequired": "Kündigungsdatum und Ende der Verwaltung sind erforderlich.",
+    "datesOrdered": "Das Ende der Verwaltung darf nicht vor dem Kündigungsdatum liegen.",
+    "bannerTitle": "Objekt deaktiviert",
+    "bannerText": "Verwaltung beendet zum {date}, gekündigt von {by} am {notice}.",
+    "bannerNoSuccessor": "Kein Nachfolger hinterlegt.",
+    "openDocument": "Kündigungsschreiben öffnen",
+    "recordedBy": "Erfasst am {date}",
+    "reactivate": "Wieder aktivieren",
+    "reactivateConfirm": "Das Objekt erhält seinen vorherigen Status zurück und erscheint wieder in der Objektliste. Die Beendigung bleibt im Protokoll erhalten.",
+    "reactivateConfirmButton": "Ja, wieder aktivieren",
+    "reactivateHint": "Wieder aktivieren kann nur der Superadmin.",
+    "showTerminated": "Deaktivierte anzeigen",
+    "hideTerminated": "Deaktivierte ausblenden"
   }
 }

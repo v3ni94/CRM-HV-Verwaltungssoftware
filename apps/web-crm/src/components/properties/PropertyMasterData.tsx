@@ -68,7 +68,7 @@ export function PropertyMasterData({ property, canEdit }: { property: PropertyMa
     >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <InlineField {...field("name")} label={t("fields.name")} required maxLength={200} />
-        <InlineField {...field("property_type_code")} label={tm("propertyTypeCode")} />
+        <InlineField {...field("property_type_code")} label={tm("propertyTypeCode")} type="select" catalog="property_type" />
         <InlineField {...field("street")} label={t("fields.street")} maxLength={200} />
         <InlineField {...field("house_number")} label={t("fields.house_number")} maxLength={20} />
         <InlineField {...field("postal_code")} label={t("fields.postal_code")} maxLength={20} />

@@ -5,30 +5,14 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 
-import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { StatusChip } from "@/components/ui/StatusChip";
 import { ResolutionDialog, isClosingStatus, type Resolution } from "@/components/tickets/ResolutionDialog";
-import { ATTENTION_BORDER, AttentionBadge, AttentionLegend, type Attention } from "@/components/tickets/TicketAttention";
+import { ATTENTION_BORDER, type Attention } from "@/components/tickets/attention";
+import { AttentionBadge, AttentionLegend } from "@/components/tickets/TicketAttention";
 import { STATUSES } from "@/components/tickets/TicketForms";
 import { bff } from "@/lib/bff";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
-
-const STATUS_VARIANT: Record<string, StatusPillVariant> = {
-  new: "gold",
-  in_progress: "warning",
-  waiting: "neutral",
-  done: "success",
-  closed: "neutral",
-  rejected: "danger",
-};
-
-const PRIORITY_VARIANT: Record<string, StatusPillVariant> = {
-  low: "neutral",
-  normal: "neutral",
-  high: "warning",
-  urgent: "danger",
-  immediate: "danger",
-};
 
 type Ticket = {
   id: string;
@@ -38,6 +22,8 @@ type Ticket = {
   status: string;
   sla_due_at: string | null;
   sla_breached: boolean;
+  /** Working due date (spec 4.9), shown next to the attention badge; separate from the SLA. */
+  due_on?: string | null;
   // Traffic light (M19-09), derived on the server; the list only maps it to colours.
   attention: Attention;
   last_activity_at: string | null;
@@ -117,10 +103,17 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
                   </span>
                 </span>
                 <span className="flex flex-wrap gap-1.5">
-                  <StatusPill variant={PRIORITY_VARIANT[tk.priority] ?? "neutral"} label={t(`priorities.${tk.priority}`)} />
-                  <StatusPill variant={STATUS_VARIANT[tk.status] ?? "neutral"} label={t(`statuses.${tk.status}`)} />
+                  <StatusChip domain="ticketPriority" status={tk.priority} label={t(`priorities.${tk.priority}`)} />
+                  <StatusChip domain="ticket" status={tk.status} label={t(`statuses.${tk.status}`)} />
                 </span>
-                <AttentionBadge attention={tk.attention} lastActivityAt={tk.last_activity_at} />
+                <span className="flex flex-wrap items-center gap-2">
+                  <AttentionBadge attention={tk.attention} lastActivityAt={tk.last_activity_at} />
+                  {tk.due_on ? (
+                    <span className="text-xs text-muted" data-testid="ticket-due-on">
+                      {t("dueOn")}: {formatDate(tk.due_on)}
+                    </span>
+                  ) : null}
+                </span>
                 {tk.sla_due_at ? (
                   <span className="text-sm text-muted">
                     {formatDateTime(tk.sla_due_at)}
@@ -164,13 +157,18 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
                   </Link>
                 </td>
                 <td>
-                  <StatusPill variant={PRIORITY_VARIANT[tk.priority] ?? "neutral"} label={t(`priorities.${tk.priority}`)} />
+                  <StatusChip domain="ticketPriority" status={tk.priority} label={t(`priorities.${tk.priority}`)} />
                 </td>
                 <td>
-                  <StatusPill variant={STATUS_VARIANT[tk.status] ?? "neutral"} label={t(`statuses.${tk.status}`)} />
+                  <StatusChip domain="ticket" status={tk.status} label={t(`statuses.${tk.status}`)} />
                 </td>
                 <td>
                   <AttentionBadge attention={tk.attention} lastActivityAt={tk.last_activity_at} />
+                  {tk.due_on ? (
+                    <span className="ml-2 text-xs text-muted" data-testid="ticket-due-on">
+                      {t("dueOn")}: {formatDate(tk.due_on)}
+                    </span>
+                  ) : null}
                 </td>
                 <td>
                   {tk.sla_due_at ? formatDateTime(tk.sla_due_at) : ""}

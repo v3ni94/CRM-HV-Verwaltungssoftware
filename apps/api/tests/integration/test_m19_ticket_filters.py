@@ -15,6 +15,7 @@ from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
 
 pytestmark = pytest.mark.integration
+T = "/api/v1/tickets"
 
 
 async def _world(settings: Any) -> World:
@@ -307,3 +308,59 @@ def test_mine_includes_additional_assignees(client: TestClient, world: World) ->
     }
     assert {primary["id"], secondary["id"]} <= ids
     assert foreign["id"] not in ids
+
+
+def test_filter_by_contract_and_contract_list_by_property_and_unit(
+    client: TestClient, world: World
+) -> None:
+    """Expected: ``contract_id`` matches tickets of the contract's unit and tickets of a
+    contact of the contract party; other tickets stay out. ``GET /contracts`` filters by
+    ``property_id`` and ``unit_id``. Another tenant sees nothing for the same ids."""
+    h = bearer(login(client, world, "m19fadmin"))
+    h_b = bearer(login(client, world, "m19fadminb"))
+    prop = _property(client, h, "604", "Vertragsweg", "Monheim am Rhein")
+    unit = _unit(client, h, prop["id"], "1")
+    other_unit = _unit(client, h, prop["id"], "2")
+    contact, party = _contact_and_party(client, h, "Vera", "Vertrag")
+    stranger, _ = _contact_and_party(client, h, "Fremd", "Kontakt")
+    _, owner_party = _contact_and_party(client, h, "Otto", "Eigentum")
+    _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/owners",
+            json={"party_id": owner_party, "valid_from": "2020-01-01"},
+            headers=h,
+        ),
+        201,
+    )
+    contract = _ok(
+        client.post(
+            "/api/v1/contracts",
+            json={
+                "kind": "tenancy",
+                "unit_id": unit,
+                "party_id": party,
+                "start_date": "2024-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    by_unit = _ticket(client, h, title="Einheit des Vertrags", unit_id=unit)
+    by_contact = _ticket(client, h, title="Kontakt der Partei", contact_id=contact)
+    unrelated = _ticket(client, h, title="Andere Einheit", unit_id=other_unit, contact_id=stranger)
+
+    ids = {t["id"] for t in _ok(client.get(T, params={"contract_id": contract["id"]}, headers=h))}
+    assert {by_unit["id"], by_contact["id"]} <= ids
+    assert unrelated["id"] not in ids
+    assert _ok(client.get(T, params={"contract_id": contract["id"]}, headers=h_b)) == []
+
+    contracts_by_property = _ok(
+        client.get("/api/v1/contracts", params={"property_id": prop["id"]}, headers=h)
+    )
+    assert {c["id"] for c in contracts_by_property} == {contract["id"]}
+    contracts_by_unit = _ok(client.get("/api/v1/contracts", params={"unit_id": unit}, headers=h))
+    assert {c["id"] for c in contracts_by_unit} == {contract["id"]}
+    assert _ok(client.get("/api/v1/contracts", params={"unit_id": other_unit}, headers=h)) == []
+    assert (
+        _ok(client.get("/api/v1/contracts", params={"property_id": prop["id"]}, headers=h_b)) == []
+    )

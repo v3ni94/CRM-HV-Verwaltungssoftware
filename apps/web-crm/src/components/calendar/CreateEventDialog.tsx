@@ -21,7 +21,13 @@ export type CreateEventInput = {
   attendees: Attendee[];
   source_type: "manual" | "ticket" | "handover";
   source_id: string | null;
+  /** Internal entries only (B.30): reminder codes and an optional recurrence rule. */
+  reminders?: string[];
+  recurrence?: Recurrence | null;
 };
+
+export type Recurrence = { frequency: "weekly" | "monthly" | "yearly"; interval: number; until: string };
+export const REMINDER_CODES = ["0", "1d", "7d", "14d", "1m", "3m", "6m"] as const;
 
 type ContactHit = { id: string; display_name: string; primary_email?: string | null };
 
@@ -55,7 +61,12 @@ export function CreateEventDialog({
   };
 }) {
   const t = useTranslations("Workspace");
+  const tc = useTranslations("Calendar");
   const [title, setTitle] = useState(prefill?.title ?? "");
+  const [reminders, setReminders] = useState<string[]>([]);
+  const [frequency, setFrequency] = useState<"" | Recurrence["frequency"]>("");
+  const [interval, setInterval] = useState(1);
+  const [until, setUntil] = useState("");
   const [day, setDay] = useState(prefill?.starts_on ?? "");
   const [allDay, setAllDay] = useState(true);
   const [shared, setShared] = useState(false);
@@ -101,6 +112,8 @@ export function CreateEventDialog({
       attendees,
       source_type: prefill?.source_type ?? "manual",
       source_id: prefill?.source_id ?? null,
+      reminders: target === "internal" ? reminders : [],
+      recurrence: target === "internal" && frequency && until ? { frequency, interval, until } : null,
     });
     setBusy(false);
     if (message) setError(message);
@@ -138,10 +151,57 @@ export function CreateEventDialog({
           {t("allDay")}
         </label>
         {target === "internal" ? (
-          <label className="flex items-center gap-1.5 text-sm">
-            <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
-            {t("shared")}
-          </label>
+          <>
+            <label className="flex items-center gap-1.5 text-sm">
+              <input type="checkbox" checked={shared} onChange={(e) => setShared(e.target.checked)} />
+              {t("shared")}
+            </label>
+            <fieldset className="flex flex-col gap-1">
+              <legend className={ui.label}>{tc("remindersField")}</legend>
+              <div className="flex flex-wrap gap-2 text-sm">
+                {REMINDER_CODES.map((code) => (
+                  <label key={code} className="flex items-center gap-1">
+                    <input
+                      type="checkbox"
+                      checked={reminders.includes(code)}
+                      onChange={(e) =>
+                        setReminders((prev) => (e.target.checked ? [...prev, code] : prev.filter((c) => c !== code)))
+                      }
+                    />
+                    {tc(`reminder.${code}`)}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+            <div className="grid grid-cols-3 gap-2">
+              <label className="flex flex-col gap-1">
+                <span className={ui.label}>{tc("recurrence.label")}</span>
+                <select value={frequency} onChange={(e) => setFrequency(e.target.value as "" | Recurrence["frequency"])} className={ui.input}>
+                  <option value="">{tc("recurrence.none")}</option>
+                  <option value="weekly">{tc("recurrence.weekly")}</option>
+                  <option value="monthly">{tc("recurrence.monthly")}</option>
+                  <option value="yearly">{tc("recurrence.yearly")}</option>
+                </select>
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className={ui.label}>{tc("recurrence.interval")}</span>
+                <input
+                  type="number"
+                  min={1}
+                  max={52}
+                  disabled={!frequency}
+                  value={interval}
+                  onChange={(e) => setInterval(Math.max(1, Number(e.target.value) || 1))}
+                  className={ui.input}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className={ui.label}>{tc("recurrence.until")}</span>
+                <input type="date" required={Boolean(frequency)} disabled={!frequency} min={day || undefined} value={until} onChange={(e) => setUntil(e.target.value)} className={ui.input} />
+              </label>
+            </div>
+            {frequency ? <p className="text-xs text-muted">{tc("recurrence.hint")}</p> : null}
+          </>
         ) : null}
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("location")}</span>

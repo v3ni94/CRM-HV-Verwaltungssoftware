@@ -33,11 +33,21 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact
-from mhvp.core.auth.permissions import METERING_BILLING_ORDER, METERING_USERS_SUBMIT
+from mhvp.core.auth.permissions import (
+    METERING_ASSIGNMENTS_UPDATE,
+    METERING_BILLING_ORDER,
+    METERING_USERS_SUBMIT,
+)
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.metering import services
-from mhvp.metering.adapters import WriteOutcome, WriteResult
+from mhvp.metering.adapters import (
+    SETUP_COMPLETED,
+    SETUP_IN_PROGRESS,
+    SETUP_OPEN,
+    WriteOutcome,
+    WriteResult,
+)
 from mhvp.metering.http import ProviderHttpError, sanitize
 from mhvp.metering.models import (
     AssignmentStatus,
@@ -51,17 +61,29 @@ from mhvp.metering.models import (
     TransmissionStatus,
 )
 from mhvp.metering.providers import Function
-from mhvp.properties.models import Unit
+from mhvp.properties.models import Property, Unit
 
 KIND_FUNCTION: dict[str, Function] = {
     TransmissionKind.ROLES: Function.ROLES,
     TransmissionKind.BILLING_INPUT: Function.BILLING_INPUT,
+    TransmissionKind.BILLING_UNIT_SETUP: Function.BILLING_UNIT_DATA,
 }
 KIND_PERMISSION: dict[str, str] = {
     TransmissionKind.ROLES: METERING_USERS_SUBMIT,
     TransmissionKind.BILLING_INPUT: METERING_BILLING_ORDER,
+    TransmissionKind.BILLING_UNIT_SETUP: METERING_ASSIGNMENTS_UPDATE,
 }
+SETUP_DOCUMENTATION_REQUIRED = (
+    "Dokumentation erforderlich: die Übermittlung des Ordnungsbegriffsabgleichs ist für "
+    "diesen Anbieter nicht dokumentiert; der Abgleich bleibt bei der lokalen Vorschau."
+)
 OPEN_STATUSES: tuple[str, ...] = (TransmissionStatus.CHECKED, TransmissionStatus.RELEASED)
+# Statuses after an accepted send (the diff of the next check is computed against these).
+SENT_STATUSES: tuple[str, ...] = (
+    TransmissionStatus.ORDERED,
+    TransmissionStatus.WAITING_PROVIDER,
+    TransmissionStatus.COMPLETED,
+)
 ACTION_VALIDATE = "VALIDATE"
 ACTION_SEND = "SEND"
 ACTION_SEND_IGNORE_WARNINGS = "SEND_AND_IGNORE_WARNINGS"
@@ -409,6 +431,150 @@ async def build_billing_input_payload(
     return payload, errors, warnings
 
 
+def _customer_number(connection: Any, inputs: Mapping[str, Any]) -> str:
+    given = str(inputs.get("customer_number") or "").strip()
+    if given:
+        return given
+    refs = [str(r).strip() for r in (connection.customer_references or []) if str(r).strip()]
+    return refs[0] if refs else ""
+
+
+async def build_setup_payload(
+    session: AsyncSession,
+    assignment: MeteringPropertyAssignment,
+    *,
+    connection: Any,
+    inputs: Mapping[str, Any],
+) -> tuple[dict[str, Any], list[str], list[str]]:
+    """Ordnungsbegriffsabgleich (Q8, bved billing-unit-data ``SetupRequest``): the internal
+    identifiers (CRM property number, unit numbers) next to the external ones (Abrechnungs-
+    einheit, Nutzeinheit) per unit assignment, plus the known provider result of an earlier
+    fetch (``remote_payload.matched``) so the preview shows what the provider already knows.
+    Missing data is an error; nothing here changes an assignment."""
+    errors: list[str] = []
+    warnings: list[str] = []
+    external = await session.get(MeteringExternalBillingUnit, assignment.external_billing_unit_id)
+    billing_unit = external.external_number if external else ""
+    prop = await session.get(Property, assignment.property_id)
+    customer = _customer_number(connection, inputs)
+    if not customer:
+        errors.append(
+            "Kundennummer beim Anbieter fehlt (customer_references der Verbindung oder "
+            "Eingabe customer_number)."
+        )
+    if len(billing_unit) != 9:
+        warnings.append(
+            f"Externe Abrechnungseinheit {billing_unit!r} hat nicht neun Stellen "
+            "(bved BillingUnitNumberMSC)."
+        )
+    unit_rows = await _unit_rows(session, assignment)
+    units = await _property_units(session, assignment)
+    assigned = {r.unit_id for r in unit_rows}
+    for unit_id, unit_row in sorted(units.items(), key=lambda item: item[1].number):
+        if unit_id not in assigned:
+            errors.append(f"Einheit {unit_row.number}: keine Nutzeinheit zugeordnet.")
+    contact_ids = {
+        r.billing_recipient_contact_id for r in unit_rows if r.billing_recipient_contact_id
+    }
+    partners = await _partners(session, contact_ids)
+    remote = dict(external.remote_payload or {}) if external else {}
+    known = {
+        str(m.get("residentialunitMscnumber"))
+        for m in remote.get("matched") or []
+        if isinstance(m, Mapping) and m.get("residentialunitMscnumber")
+    }
+    entries: list[dict[str, Any]] = []
+    seen: set[str] = set()
+    for row in unit_rows:
+        unit = units.get(row.unit_id)
+        label = unit.number if unit else str(row.unit_id)
+        number = str(row.external_unit_number)
+        if number in seen:
+            errors.append(f"Nutzeinheit {number} ist mehrfach zugeordnet.")
+        seen.add(number)
+        if len(number) != 4:
+            warnings.append(
+                f"Einheit {label}: Nutzeinheit {number!r} hat nicht vier Stellen "
+                "(bved SetupRequestResidentialUnit)."
+            )
+        if len(label) > 20:
+            errors.append(f"Einheit {label}: interne Nummer länger als 20 Zeichen.")
+        body: dict[str, Any] = {
+            "residentialunitMscnumber": number,
+            "residentialunitPmnumber": label[:20],
+            "validfrom": _iso(row.valid_from),
+        }
+        if unit and unit.label:
+            body["description"] = unit.label
+        recipient = (
+            partners.get(row.billing_recipient_contact_id)
+            if row.billing_recipient_contact_id
+            else None
+        )
+        if recipient is not None:
+            body["currentbillingrecipient"] = {
+                "partnerPmnumber": recipient["partnerPmnumber"],
+                "name": recipient["name"],
+                **({"firstname": recipient["firstname"]} if recipient.get("firstname") else {}),
+            }
+        elif row.occupancy_status != OccupancyStatus.VACANT:
+            warnings.append(f"Einheit {label}: kein Abrechnungsempfänger hinterlegt.")
+        entries.append(
+            {
+                "unit_assignment_id": str(row.id),
+                "unit_id": str(row.unit_id),
+                "unit_number": label,
+                "unit_label": unit.label if unit else None,
+                "external_unit_number": number,
+                "occupancy_status": row.occupancy_status,
+                "known_at_provider": number in known,
+                "body": body,
+            }
+        )
+    if not entries:
+        errors.append("Keine Einheitenzuordnung vorhanden; es gibt nichts abzugleichen.")
+    additional = [
+        str(a.get("residentialunitMscnumber"))
+        for a in remote.get("additional") or []
+        if isinstance(a, Mapping) and a.get("residentialunitMscnumber")
+    ]
+    unknown_remote = sorted((known | set(additional)) - seen)
+    if unknown_remote:
+        warnings.append(
+            "Beim Anbieter bekannte Nutzeinheiten ohne Zuordnung im CRM: "
+            + ", ".join(unknown_remote)
+        )
+    pm_number = (prop.number if prop else "")[:15] or None
+    payload = {
+        "kind": TransmissionKind.BILLING_UNIT_SETUP.value,
+        "billingunit": billing_unit,
+        "internal": {
+            "property_id": str(assignment.property_id),
+            "property_number": prop.number if prop else None,
+            "property_name": prop.name if prop else None,
+            "service_scope": assignment.service_scope,
+        },
+        "external": {
+            "external_number": billing_unit,
+            "external_name": external.external_name if external else None,
+            "external_address": external.external_address if external else None,
+            "setupstatus": remote.get("setupstatus"),
+            "lastupdate": remote.get("lastupdate"),
+            "matched": sorted(known),
+            "additional": sorted(set(additional)),
+        },
+        "customer_number": customer,
+        "units": entries,
+        "body": {
+            "billingunitMscnumber": billing_unit,
+            "customerMscnumber": customer,
+            **({"billingunitPmnumber": pm_number} if pm_number else {}),
+            "residentialunits": [e["body"] for e in entries],
+        },
+    }
+    return payload, errors, warnings
+
+
 # Diff against the last ordered transmission ------------------------------------------------
 
 
@@ -420,7 +586,7 @@ async def last_ordered(
         .where(
             MeteringTransmission.property_assignment_id == assignment_id,
             MeteringTransmission.kind == kind,
-            MeteringTransmission.status == TransmissionStatus.ORDERED,
+            MeteringTransmission.status.in_(SENT_STATUSES),
         )
         .order_by(MeteringTransmission.ordered_at.desc())
         .limit(1)
@@ -433,7 +599,7 @@ def diff_payloads(previous: Mapping[str, Any] | None, current: Mapping[str, Any]
     and changed; billing input: changed top level parts of the body."""
     if previous is None:
         return {"first_transmission": True, "added": [], "removed": [], "changed": []}
-    if current.get("kind") == TransmissionKind.ROLES:
+    if current.get("kind") in (TransmissionKind.ROLES, TransmissionKind.BILLING_UNIT_SETUP):
         before = {u["external_unit_number"]: u["body"] for u in previous.get("units", [])}
         after = {u["external_unit_number"]: u["body"] for u in current.get("units", [])}
         return {
@@ -499,6 +665,15 @@ async def _current(
         checked_on = date.fromisoformat(str(row.payload.get("checked_on")))
         payload, errors, warnings = await build_roles_payload(session, assignment, checked_on)
         payload["checked_on"] = row.payload.get("checked_on")
+    elif row.kind == TransmissionKind.BILLING_UNIT_SETUP:
+        connection = await services.get_connection(session, row.connection_id)
+        payload, errors, warnings = await build_setup_payload(
+            session,
+            assignment,
+            connection=connection,
+            inputs=row.payload.get("inputs", {}),
+        )
+        payload["inputs"] = row.payload.get("inputs", {})
     else:
         payload, errors, warnings = await build_billing_input_payload(
             session,
@@ -509,6 +684,23 @@ async def _current(
             inputs=row.payload.get("inputs", {}),
         )
     return payload, errors, warnings, version
+
+
+def _setup_available(
+    connection: Any, adapter: Any, available: bool, reason: str
+) -> tuple[bool, str]:
+    """Billing unit data is a read function in the capability matrix; the setup submission
+    additionally needs the documented operation in the adapter and the per connection
+    write release (``write_sync_enabled``)."""
+    if not available:
+        return False, reason
+    if getattr(adapter, "setup_submission", None) is None:
+        return False, SETUP_DOCUMENTATION_REQUIRED
+    if not connection.write_sync_enabled:
+        return False, (
+            "Schreibende Vorgänge sind für diese Verbindung nicht freigegeben (write_sync_enabled)."
+        )
+    return True, ""
 
 
 async def _ensure_unchanged(
@@ -611,6 +803,16 @@ async def check(
             warnings.extend(str(m.get("message")) for m in result.warnings)
             if result.outcome in (WriteOutcome.FAILED, WriteOutcome.UNCLEAR):
                 errors.append(f"Anbieterprüfung nicht möglich: {sanitize(result.detail)}")
+    elif kind == TransmissionKind.BILLING_UNIT_SETUP:
+        payload, errors, warnings = await build_setup_payload(
+            session, assignment, connection=connection, inputs=inputs
+        )
+        payload["inputs"] = {"customer_number": str(inputs.get("customer_number") or "")}
+        # The setup request has no validate only action: the preview is local. Without a
+        # documented submission the workflow stays here ("Dokumentation erforderlich").
+        available, reason = _setup_available(connection, adapter, available, reason)
+        if not available:
+            provider["skipped"] = reason
     else:
         payload, errors, warnings = await build_roles_payload(session, assignment, today)
         payload["checked_on"] = today.isoformat()
@@ -731,16 +933,36 @@ async def order(
         )
     function = KIND_FUNCTION[row.kind]
     available, reason = services.function_available(connection, function)
+    adapter = services._adapter(connection)
+    if row.kind == TransmissionKind.BILLING_UNIT_SETUP:
+        available, reason = _setup_available(connection, adapter, available, reason)
     if not available:
         raise ProblemError(ErrorCodes.METERING_CAPABILITY_MISSING, detail=reason)
-    adapter = services._adapter(connection)
     secrets = services.connection_secrets(connection)
     billing_unit = await external_number(session, assignment)
     results: list[dict[str, Any]] = []
     final: str = TransmissionStatus.ORDERED
     transaction: str | None = None
     try:
-        if row.kind == TransmissionKind.BILLING_INPUT:
+        if row.kind == TransmissionKind.BILLING_UNIT_SETUP:
+            body = row.payload["body"]
+            result = adapter.submit_billing_unit_setup(
+                config=connection.config,
+                secrets=secrets,
+                environment=connection.environment,
+                external_billing_unit=billing_unit,
+                residential_units=body.get("residentialunits", []),
+                customer_number=str(body.get("customerMscnumber") or ""),
+                pm_number=body.get("billingunitPmnumber"),
+            )
+            results.append({"action": "sendSetup", **_write_result_dict(result)})
+            transaction = result.transaction_id
+            final = _status_for(result.outcome)
+            if final == TransmissionStatus.ORDERED:
+                # Accepted for processing only (Q8): the assignment is confirmed by the
+                # fetched provider result, never by the acceptance.
+                final = TransmissionStatus.WAITING_PROVIDER
+        elif row.kind == TransmissionKind.BILLING_INPUT:
             action = ACTION_SEND_IGNORE_WARNINGS if row.warnings_acknowledged else ACTION_SEND
             result = adapter.send_billing_input(
                 config=connection.config,
@@ -780,8 +1002,9 @@ async def order(
     except NotImplementedError as exc:
         raise ProblemError(ErrorCodes.METERING_CAPABILITY_MISSING, detail=str(exc)) from exc
     except ProviderHttpError as exc:
-        results.append({"outcome": WriteOutcome.FAILED, "detail": sanitize(exc.message)})
-        final = TransmissionStatus.FAILED
+        outcome = WriteOutcome.UNCLEAR if exc.unclear else WriteOutcome.FAILED
+        results.append({"outcome": outcome, "detail": sanitize(exc.message)})
+        final = TransmissionStatus.UNCLEAR if exc.unclear else TransmissionStatus.FAILED
     row.status = final
     row.ordered_by = actor
     row.ordered_at = _now()
@@ -802,6 +1025,169 @@ async def order(
             "fingerprint": row.fingerprint,
             "data_version": row.assignment_version,
             "transaction_id": transaction,
+        },
+    )
+    await session.flush()
+    await session.refresh(row)
+    return row
+
+
+async def poll(
+    session: AsyncSession,
+    row: MeteringTransmission,
+    *,
+    actor: uuid.UUID | None,
+) -> MeteringTransmission:
+    """Fetch the processing status of an accepted Ordnungsbegriffsabgleich (read only, may be
+    repeated). ``IN_PROGRESS`` keeps ``waiting_provider``; ``COMPLETED`` stores the provider
+    result, records it as remote payload of the external billing unit and confirms the
+    assignment technically with the provider answer as verification basis, but only when
+    every transmitted unit is in ``matched``. Nothing is assigned automatically."""
+    if row.kind != TransmissionKind.BILLING_UNIT_SETUP:
+        raise ProblemError(
+            ErrorCodes.METERING_TRANSMISSION_STATE,
+            detail="Nur der Ordnungsbegriffsabgleich hat einen Bearbeitungsstatus.",
+        )
+    if row.status != TransmissionStatus.WAITING_PROVIDER:
+        raise ProblemError(
+            ErrorCodes.METERING_TRANSMISSION_STATE,
+            detail=f"Status {row.status}, erwartet waiting_provider.",
+        )
+    connection = await services.get_connection(session, row.connection_id)
+    assignment = await services.get_assignment(session, row.property_assignment_id)
+    adapter = services._adapter(connection)
+    billing_unit = await external_number(session, assignment)
+    try:
+        state = adapter.fetch_billing_unit_setup(
+            config=connection.config,
+            secrets=services.connection_secrets(connection),
+            environment=connection.environment,
+            external_billing_unit=billing_unit,
+        )
+    except NotImplementedError as exc:
+        raise ProblemError(ErrorCodes.METERING_CAPABILITY_MISSING, detail=str(exc)) from exc
+    except ProviderHttpError as exc:
+        _log(row, "polled", actor, outcome="failed", detail=sanitize(exc.message))
+        row.provider_response = {
+            **row.provider_response,
+            "poll": {
+                "outcome": "failed",
+                "detail": sanitize(exc.message),
+                "at": _now().isoformat(),
+            },
+        }
+        row.version += 1
+        row.updated_by = actor
+        await session.flush()
+        await session.refresh(row)
+        return row
+    poll_info: dict[str, Any] = {
+        "outcome": "fetched",
+        "setupstatus": state.status,
+        "found": state.found,
+        "at": _now().isoformat(),
+    }
+    if state.status != SETUP_COMPLETED or state.result is None:
+        if state.status == SETUP_OPEN and state.found:
+            poll_info["hint"] = (
+                "Anbieter meldet OPEN: die angenommene Übermittlung ist dort noch nicht "
+                "sichtbar. Bitte später erneut abrufen oder beim Anbieter klären."
+            )
+        elif state.status == SETUP_IN_PROGRESS:
+            poll_info["hint"] = "Anbieter verarbeitet den Abgleich noch."
+        row.provider_response = {**row.provider_response, "poll": poll_info}
+        _log(row, "polled", actor, outcome=state.status, found=state.found)
+        row.version += 1
+        row.updated_by = actor
+        await session.flush()
+        await session.refresh(row)
+        return row
+    result = json.loads(json.dumps(state.result, default=str))
+    matched = {
+        str(m.get("residentialunitMscnumber")): m
+        for m in result.get("matched") or []
+        if isinstance(m, Mapping) and m.get("residentialunitMscnumber")
+    }
+    additional = [
+        str(a.get("residentialunitMscnumber"))
+        for a in result.get("additional") or []
+        if isinstance(a, Mapping) and a.get("residentialunitMscnumber")
+    ]
+    sent = [str(u["external_unit_number"]) for u in row.payload.get("units", [])]
+    unmatched = [n for n in sent if n not in matched]
+    fetched_at = _now()
+    external = await session.get(MeteringExternalBillingUnit, assignment.external_billing_unit_id)
+    if external is not None:
+        external.remote_payload = json.loads(
+            json.dumps(
+                {
+                    **(external.remote_payload or {}),
+                    "setupstatus": state.status,
+                    "lastupdate": state.raw.get("lastupdate"),
+                    "matched": list(result.get("matched") or []),
+                    "additional": list(result.get("additional") or []),
+                    "matched_units": [
+                        {
+                            "external_unit_number": n,
+                            "label": m.get("residentialunitPmnumber"),
+                        }
+                        for n, m in matched.items()
+                    ],
+                    "fetched_at": fetched_at.isoformat(),
+                    "transmission_id": str(row.id),
+                },
+                default=str,
+            )
+        )
+        if matched:
+            external.expected_unit_count = len(matched)
+    confirmed = False
+    if sent and not unmatched:
+        basis = (
+            f"Ordnungsbegriffsabgleich {connection.provider_code}: Anbieterergebnis "
+            f"(Transaktion {row.provider_transaction_id or '?'}, abgerufen am "
+            f"{fetched_at.strftime('%d.%m.%Y %H:%M')} UTC), {len(matched)} von {len(sent)} "
+            "Nutzeinheiten zugeordnet"
+            + (f", {len(additional)} zusätzliche beim Anbieter." if additional else ".")
+        )
+        assignment.remote_confirmed = True
+        assignment.remote_confirmed_at = fetched_at
+        assignment.verification_basis = basis
+        assignment.version += 1
+        assignment.updated_by = actor
+        confirmed = True
+    poll_info.update(
+        matched=sorted(matched),
+        unmatched=unmatched,
+        additional=sorted(set(additional)),
+        remote_confirmed=confirmed,
+    )
+    row.status = TransmissionStatus.COMPLETED
+    row.provider_response = {**row.provider_response, "poll": poll_info, "result": result}
+    row.version += 1
+    row.updated_by = actor
+    _log(
+        row,
+        "completed",
+        actor,
+        matched=len(matched),
+        unmatched=unmatched,
+        additional=len(additional),
+        remote_confirmed=confirmed,
+    )
+    await emit(
+        session,
+        tenant_id=row.tenant_id,
+        type="metering.transmission.completed",
+        entity_type="metering_transmission",
+        entity_id=row.id,
+        actor_user_id=actor,
+        payload={
+            "kind": row.kind,
+            "assignment_id": str(assignment.id),
+            "matched": len(matched),
+            "unmatched": unmatched,
+            "remote_confirmed": confirmed,
         },
     )
     await session.flush()
@@ -858,6 +1244,32 @@ def summarize(row: MeteringTransmission) -> dict[str, Any]:
                 }
                 for u in row.payload.get("units", [])
             ]
+        }
+    if row.kind == TransmissionKind.BILLING_UNIT_SETUP:
+        poll_info = row.provider_response.get("poll", {}) if row.provider_response else {}
+        return {
+            "internal": row.payload.get("internal", {}),
+            "external": row.payload.get("external", {}),
+            "customer_number": row.payload.get("customer_number"),
+            "units": [
+                {
+                    "unit_number": u["unit_number"],
+                    "unit_label": u.get("unit_label"),
+                    "external_unit_number": u["external_unit_number"],
+                    "occupancy_status": u["occupancy_status"],
+                    "known_at_provider": bool(u.get("known_at_provider")),
+                    "matched": (
+                        u["external_unit_number"] in (poll_info.get("matched") or [])
+                        if row.status == TransmissionStatus.COMPLETED
+                        else None
+                    ),
+                }
+                for u in row.payload.get("units", [])
+            ],
+            "setupstatus": poll_info.get("setupstatus"),
+            "unmatched": list(poll_info.get("unmatched") or []),
+            "additional": list(poll_info.get("additional") or []),
+            "remote_confirmed": poll_info.get("remote_confirmed"),
         }
     body = row.payload.get("body", {})
     return {

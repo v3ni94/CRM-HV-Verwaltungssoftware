@@ -134,8 +134,21 @@ These scorers take the case input as well (`INPUT_SCORERS`). `propose_posting` (
 (migration 0134, default false); `mhvp.tickets.status.record_resolution_example` stores no
 `ticket_resolution` example while it is off. `delete_examples_for_ticket` and
 `delete_examples_for_contact` remove the examples of a deleted ticket or contact in the caller's
-transaction (`DELETE /contacts/{id}` calls the latter); the rows are derived data, so this is a
-hard delete. Open: retention rule and masking of the note (M7-04, docs/rules/M19-07).
+transaction (`DELETE /contacts/{id}` and the soft delete of an import undo,
+`imports._remove("contact", ...)`, call the latter); the rows are derived data, so this is a
+hard delete. Open: masking of the note before it enters a prompt (M7-04, docs/rules/M19-07).
+
+Retention (operator decision 27.09.2026, "Vollständig speichern mit Mandantenschalter",
+migration 0154): examples are stored in full while the switch is on and deleted by the daily
+Celery task `mhvp.ai.examples_retention` (`jobs.examples_retention_once`, beat
+`ai-examples-retention` 03:45) once older than
+`tenant_settings.ai_learning_examples_retention_months` (default 24, `PATCH /tenant/settings`,
+1 to 120; CRM page Einstellungen, Mandant). Calendar months, day clamped
+(`examples.retention_cutoff`). Every tenant run is journaled as the event
+`ai_examples.retention` (payload: retention_months, cutoff, before, deleted, remaining); a
+failing tenant is reported in the task result and the others still run. Tests:
+`tests/unit/test_ai_examples_retention.py`, `tests/integration/test_m7_ai_examples_retention.py`.
+The data protection review of the stored content stays with the operator (OPEN_QUESTIONS M7-04).
 
 ## Endpunktregion und Anbieterwechsel (M7-07, M7-02, 26.09.2026)
 
@@ -203,8 +216,17 @@ every other call (four eyes release, DPA evidence, opt-out, key), otherwise noth
   Playbook matching (`communication.suggest.best_playbook`) is still keyword based.
 * No new dependency: `mhvp.ai.vector.Vector` is a small SQLAlchemy `UserDefinedType` for the
   text form `[..]` of pgvector, so the `pgvector` Python package is not needed (ADR 0001
-  unchanged). No ANN index yet (exact scan; an HNSW index is a follow-up when a tenant exceeds
-  some ten thousand chunks).
+  unchanged).
+* ANN index (27.09.2026, migration 0154): `ix_ai_embedding_embedding_hnsw` on
+  `ai_embedding.embedding` with `vector_cosine_ops`, so the `<=>` ordering of
+  `similar_sources` uses the HNSW index (pgvector defaults `m` 16, `ef_construction` 64). The
+  migration creates and drops it `CONCURRENTLY` inside an Alembic `autocommit_block` (no lock
+  on a running system); the column change of the same migration runs in the transaction
+  before it. The index is declared on the model (`postgresql_using="hnsw"`,
+  `postgresql_ops`) so `alembic check` sees no drift. Test:
+  `test_m7_ai_embeddings.py::test_hnsw_index_on_embedding`. CRM: the AI settings page shows
+  the status counters and offers "Neu aufbauen" (incremental) and "Vollständig neu aufbauen"
+  (`components/ai/EmbeddingsStatus.tsx`, permission `tenant_settings:update`).
 * Tests: `tests/unit/test_ai_embeddings.py` (chunking, text form, adapter with injected SDK
   client, cost), `tests/integration/test_m7_ai_embeddings.py` (fake embedding client without
   network, index job and counters, masking, budget accounting, permission, ranking with hand made

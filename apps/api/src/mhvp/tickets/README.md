@@ -167,3 +167,10 @@ unbekannte Art mit ihrem Code.
 * Tests: `tests/integration/test_ticket_resolution.py`,
   `tests/unit/test_ticket_resolution_learning.py`, Vitest `ResolutionDialog.test.tsx` und
   `KnowledgeBase.test.tsx`.
+
+## Fälligkeit `due_on` (Migration 0155)
+
+Optionales Arbeitsdatum des Tickets (`due_on`, Datum), gesetzt im Formular oder per
+`PATCH /tickets/{id}` (`null` löscht es). Der Kalenderleser `ticket_due`
+(`mhvp.workspace.jobs`) erzeugt daraus den Termin mit Erinnerung und die Zeile der
+Fristenliste; die SLA-Frist `sla_due_at` bleibt getrennt mit eigener Eskalation.

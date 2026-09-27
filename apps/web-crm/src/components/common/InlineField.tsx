@@ -7,6 +7,7 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
 
+import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
@@ -25,6 +26,9 @@ export type InlineFieldProps = {
   value: InlineValue;
   /** Choices of a select; the view mode shows the matching label. */
   options?: InlineOption[];
+  /** Name of a catalogue (GET /catalogs/{catalog}, tenant scoped): the select offers its
+   *  active entries; a current value that is inactive or unknown stays selectable as is. */
+  catalog?: string;
   /** Receives the converted value (string, number, boolean or null); usually `autosave.save`. */
   onSave: (name: string, value: unknown) => void;
   /** Save state of this field, usually `autosave.fieldState(name)`. */
@@ -58,12 +62,62 @@ function toDraft(value: InlineValue): string {
   return String(value);
 }
 
+type CatalogEntry = { code: string; label: string; active: boolean };
+const catalogCache = new Map<string, Promise<CatalogEntry[]>>();
+
+/** Entries of a catalogue, loaded once per page (including inactive ones, so that a stored
+ *  value keeps its label). Returns null while loading; a failed load yields an empty list. */
+function loadCatalog(catalog: string): Promise<CatalogEntry[]> {
+  let pending = catalogCache.get(catalog);
+  if (!pending) {
+    pending = bff<CatalogEntry[]>(`/api/bff/catalogs/${encodeURIComponent(catalog)}?include_inactive=true`).then((result) => {
+      if (!result.ok) {
+        catalogCache.delete(catalog);
+        return [];
+      }
+      return Array.isArray(result.data) ? result.data : [];
+    });
+    catalogCache.set(catalog, pending);
+  }
+  return pending;
+}
+
+/** Test hook: forgets loaded catalogues. */
+export function resetCatalogCache() {
+  catalogCache.clear();
+}
+
+/** Options of a catalogue select: active entries plus the current value, which is shown
+ *  with its label and the inactive mark when it is inactive, or as its code when unknown. */
+export function useCatalogOptions(catalog: string | undefined, value: InlineValue, inactiveLabel: string): InlineOption[] | null {
+  const [entries, setEntries] = useState<CatalogEntry[] | null>(null);
+  useEffect(() => {
+    if (!catalog) return;
+    let alive = true;
+    void loadCatalog(catalog).then((rows) => {
+      if (alive) setEntries(rows);
+    });
+    return () => {
+      alive = false;
+    };
+  }, [catalog]);
+  if (!catalog) return null;
+  const current = value == null || value === "" ? null : String(value);
+  const options: InlineOption[] = (entries ?? []).filter((e) => e.active).map((e) => ({ value: e.code, label: e.label }));
+  if (current !== null && !options.some((o) => o.value === current)) {
+    const inactive = (entries ?? []).find((e) => e.code === current);
+    options.push({ value: current, label: inactive ? `${inactive.label} (${inactiveLabel})` : current });
+  }
+  return options;
+}
+
 export function InlineField({
   name,
   label,
   type = "text",
   value,
-  options = [],
+  options: optionsProp = [],
+  catalog,
   onSave,
   state,
   editing: editingProp,
@@ -84,6 +138,8 @@ export function InlineField({
   testId,
 }: InlineFieldProps) {
   const t = useTranslations("Inline");
+  const catalogOptions = useCatalogOptions(catalog, value, t("inactive"));
+  const options = catalogOptions ?? optionsProp;
   const section = useEditableSection();
   const id = useId();
   const canEdit = canEditProp ?? section.canEdit;

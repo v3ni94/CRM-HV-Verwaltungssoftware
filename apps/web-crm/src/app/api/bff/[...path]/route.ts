@@ -556,6 +556,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
   // Schwarzes Brett je Objekt (M21-01, A54): maintenance of notices at the property.
+  // Verwaltung beenden und wieder aktivieren (operator 27.09.2026).
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/termination$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/(terminate|reactivate)$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/notices$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/notices$`) },
   { method: "PATCH", pattern: new RegExp(`^notices/${ID}$`) },

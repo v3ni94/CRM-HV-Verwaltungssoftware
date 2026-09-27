@@ -7,7 +7,7 @@ from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from pydantic import BaseModel, ValidationError
-from sqlalchemy import case, func, or_, select
+from sqlalchemy import case, func, literal, or_, select
 
 from mhvp.ai.examples import delete_examples_for_contact
 from mhvp.contacts import schemas, services
@@ -73,7 +73,7 @@ async def list_contacts(
         if kind:
             query = query.where(Contact.kind == kind)
         if role:
-            query = query.where(Contact.roles.contains([role]))
+            query = query.where(literal(role).op("=")(func.any(Contact.roles)))
         if blocked is not None:
             query = query.where(Contact.blocked.is_(blocked))
         if tag:

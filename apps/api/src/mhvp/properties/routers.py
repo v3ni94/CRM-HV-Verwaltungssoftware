@@ -111,6 +111,13 @@ async def list_properties(
         default=False,
         description="Nur Mietverwaltungsobjekte ohne aktiven Objekteigentümer",
     ),
+    include_terminated: bool = Query(
+        default=False,
+        description=(
+            "Deaktivierte Objekte (Status terminated) mit ausgeben. Nur für den Superadmin "
+            "wirksam, für alle anderen ohne Wirkung (operator 27.09.2026)."
+        ),
+    ),
     page: Page = 1,
     page_size: PageSize = 50,
     principal: TenantPrincipal = Depends(READ),
@@ -119,6 +126,11 @@ async def list_properties(
 
     today = datetime.now(ZoneInfo("Europe/Berlin")).date()
     owned = select(PropertyOwner.property_id).where(svc.active_owner_filter(today))
+    # Terminated properties are hidden by default; only the superadmin sees them, either via
+    # include_terminated or an explicit status filter.
+    show_terminated = principal.is_superadmin and (
+        include_terminated or status is PropertyStatus.TERMINATED
+    )
     async with tenant_tx(request, principal) as session:
         query = select(Property)
         if without_owner:
@@ -127,6 +139,8 @@ async def list_properties(
             )
         if status:
             query = query.where(Property.status == status)
+        if not show_terminated:
+            query = query.where(Property.status != PropertyStatus.TERMINATED)
         if management_type:
             query = query.where(Property.management_type == management_type)
         if sev_only:
@@ -188,10 +202,15 @@ async def create_property(
 ) -> s.PropertyOut:
     async with tenant_tx(request, principal) as session:
         await svc.check_catalog(session, "property_type", body.property_type_code)
-        await svc.check_custom_fields(session, "property", body.custom_fields)
-        prop = Property(
-            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+        data = body.model_dump()
+        data["custom_fields"] = await svc.check_custom_fields(
+            session,
+            "property",
+            body.custom_fields,
+            management_type=body.management_type,
+            create=True,
         )
+        prop = Property(tenant_id=principal.tenant_id, created_by=principal.user_id, **data)
         session.add(prop)
         await _unique(session, f"Objektnummer {body.number} ist bereits vergeben.")
         await svc.ensure_hoa_entity(session, prop)
@@ -236,7 +255,13 @@ async def update_property(
             raise svc.invalid(
                 "Die Verwaltungsart kann nach Anlage nicht geändert werden (Rechtsträger, 6.9.1)."
             )
-        await svc.check_custom_fields(session, "property", body.custom_fields)
+        await svc.check_custom_fields(
+            session,
+            "property",
+            body.custom_fields,
+            management_type=prop.management_type,
+            entity_id=prop.id,
+        )
         before = s.PropertyIn.model_validate(prop, from_attributes=True).model_dump(mode="json")
         for key, value in body.model_dump().items():
             setattr(prop, key, value)
@@ -324,13 +349,20 @@ async def create_building(
     principal: TenantPrincipal = Depends(CREATE),
 ) -> s.BuildingOut:
     async with tenant_tx(request, principal) as session:
-        await _get(session, Property, property_id)
-        await svc.check_custom_fields(session, "building", body.custom_fields)
+        prop = await _get(session, Property, property_id)
+        data = body.model_dump()
+        data["custom_fields"] = await svc.check_custom_fields(
+            session,
+            "building",
+            body.custom_fields,
+            management_type=prop.management_type,
+            create=True,
+        )
         building = Building(
             tenant_id=principal.tenant_id,
             property_id=property_id,
             created_by=principal.user_id,
-            **body.model_dump(),
+            **data,
         )
         session.add(building)
         await session.flush()
@@ -372,7 +404,14 @@ async def update_building(
     async with tenant_tx(request, principal) as session:
         building = await _get(session, Building, building_id)
         _check_version(if_match, building.version)
-        await svc.check_custom_fields(session, "building", body.custom_fields)
+        prop = await _get(session, Property, building.property_id)
+        await svc.check_custom_fields(
+            session,
+            "building",
+            body.custom_fields,
+            management_type=prop.management_type,
+            entity_id=building.id,
+        )
         before = s.BuildingIn.model_validate(building, from_attributes=True).model_dump(mode="json")
         for key, value in body.model_dump().items():
             setattr(building, key, value)
@@ -564,17 +603,24 @@ async def create_unit(
     principal: TenantPrincipal = Depends(CREATE),
 ) -> s.UnitOut:
     async with tenant_tx(request, principal) as session:
-        await _get(session, Property, property_id)
+        prop = await _get(session, Property, property_id)
         building = await _get(session, Building, body.building_id)
         if building.property_id != property_id:
             raise svc.invalid("Das Gebäude gehört nicht zu diesem Objekt.")
         await svc.check_sub_community(session, body.sub_community_id, property_id)
-        await svc.check_custom_fields(session, "unit", body.custom_fields)
+        data = body.model_dump()
+        data["custom_fields"] = await svc.check_custom_fields(
+            session,
+            "unit",
+            body.custom_fields,
+            management_type=prop.management_type,
+            create=True,
+        )
         unit = Unit(
             tenant_id=principal.tenant_id,
             property_id=property_id,
             created_by=principal.user_id,
-            **body.model_dump(),
+            **data,
         )
         session.add(unit)
         await _unique(
@@ -622,7 +668,14 @@ async def update_unit(
         if building.property_id != unit.property_id:
             raise svc.invalid("Das Gebäude gehört nicht zu diesem Objekt.")
         await svc.check_sub_community(session, body.sub_community_id, unit.property_id)
-        await svc.check_custom_fields(session, "unit", body.custom_fields)
+        prop = await _get(session, Property, unit.property_id)
+        await svc.check_custom_fields(
+            session,
+            "unit",
+            body.custom_fields,
+            management_type=prop.management_type,
+            entity_id=unit.id,
+        )
         before = s.UnitIn.model_validate(unit, from_attributes=True).model_dump(mode="json")
         for key, value in body.model_dump().items():
             setattr(unit, key, value)
@@ -1239,10 +1292,16 @@ async def add_provider(
     principal: TenantPrincipal = Depends(CREATE),
 ) -> s.ProviderOut:
     async with tenant_tx(request, principal) as session:
-        await _get(session, Property, property_id)
+        prop = await _get(session, Property, property_id)
         await _get(session, Contact, body.contact_id)
         await svc.check_catalog(session, "provider_contract_type", body.contract_type_code)
-        await svc.check_custom_fields(session, "service_provider_relation", body.custom_fields)
+        provider_fields = await svc.check_custom_fields(
+            session,
+            "service_provider_relation",
+            body.custom_fields,
+            management_type=prop.management_type,
+            create=True,
+        )
         if body.contact_bank_account_id:
             account = await _get(session, ContactBankAccount, body.contact_bank_account_id)
             if account.contact_id != body.contact_id:
@@ -1251,7 +1310,9 @@ async def add_provider(
             session, body.creditor_account_id, property_id, "Das Kreditorenkonto"
         )
         row = ServiceProviderRelation(
-            tenant_id=principal.tenant_id, property_id=property_id, **body.model_dump()
+            tenant_id=principal.tenant_id,
+            property_id=property_id,
+            **(body.model_dump() | {"custom_fields": provider_fields}),
         )
         session.add(row)
         await session.flush()

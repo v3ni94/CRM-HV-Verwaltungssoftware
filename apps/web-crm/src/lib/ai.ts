@@ -247,3 +247,4 @@ export function reasoningOf(output: Record<string, unknown> | null | undefined):
     : [];
   return { sources, notes: list(o.notes), questions: [...list(o.questions), ...list(o.open_points)] };
 }
+export type EmbeddingStatus = S["EmbeddingStatusOut"];

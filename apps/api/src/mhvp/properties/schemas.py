@@ -1,7 +1,7 @@
 """API schemas for properties, buildings, units and related master data (6.2, 6.9.1)."""
 
 import uuid
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal, Self
 
@@ -26,6 +26,7 @@ from mhvp.properties.models import (
     Occupant,
     PropertyStatus,
     ReadingSource,
+    TerminatedBy,
     UnitType,
     ValueSource,
     VatOption,
@@ -124,6 +125,40 @@ class PropertyPage(BaseModel):
 
 class StatusChange(_In):
     status: PropertyStatus
+
+
+class PropertyTerminationIn(_In):
+    """Beendigung des Verwaltungsverhältnisses (operator 27.09.2026)."""
+
+    terminated_by: TerminatedBy
+    notice_date: date = Field(description="Datum der Kündigung")
+    effective_date: date = Field(description="Ende der Verwaltung")
+    successor_manager_contact_id: uuid.UUID | None = None
+    successor_owner_contact_id: uuid.UUID | None = None
+    notice_document_id: uuid.UUID | None = Field(
+        default=None, description="Kündigungsschreiben (Dokument)"
+    )
+    note: str | None = Field(default=None, max_length=4000)
+
+
+class PropertyTerminationOut(_Out):
+    id: uuid.UUID
+    property_id: uuid.UUID
+    terminated_by: TerminatedBy
+    notice_date: date
+    effective_date: date
+    previous_status: PropertyStatus
+    successor_manager_contact_id: uuid.UUID | None
+    successor_manager_name: str | None = None
+    successor_owner_contact_id: uuid.UUID | None
+    successor_owner_name: str | None = None
+    notice_document_id: uuid.UUID | None
+    notice_document_title: str | None = None
+    note: str | None
+    created_by: uuid.UUID | None
+    created_at: datetime
+    reactivated_at: datetime | None
+    reactivated_by_user_id: uuid.UUID | None
 
 
 class BuildingIn(_In):

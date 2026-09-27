@@ -7,7 +7,7 @@ from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy import (
     ColumnElement,
     cast,
@@ -110,6 +110,15 @@ async def notification_out(
     return out
 
 
+class RecurrenceIn(_In):
+    """Recurrence of a manual entry: weekly, monthly or yearly with an end date; the
+    occurrences are expanded on read (``jobs.expand_occurrences``), never stored."""
+
+    frequency: str = Field(pattern="^(weekly|monthly|yearly)$")
+    interval: int = Field(default=1, ge=1, le=52)
+    until: date
+
+
 class CalendarEntryIn(_In):
     title: str = Field(min_length=1, max_length=300)
     starts_on: date
@@ -129,6 +138,17 @@ class CalendarEntryIn(_In):
     attendees: list[dict[str, str]] = Field(default_factory=list)
     source_type: str = Field(default="manual", pattern="^(manual|ticket|handover)$")
     source_id: uuid.UUID | None = None
+    # Internal entries only (B.30): reminder codes and an optional recurrence rule.
+    reminders: list[str] = Field(default_factory=list, max_length=8)
+    recurrence: RecurrenceIn | None = None
+
+    @field_validator("reminders")
+    @classmethod
+    def _known_reminders(cls, value: list[str]) -> list[str]:
+        unknown = [code for code in value if code not in jobs.REMINDER_OFFSET_DAYS]
+        if unknown:
+            raise ValueError(f"Unbekannte Erinnerung: {', '.join(unknown)}")
+        return list(dict.fromkeys(value))
 
 
 class GoogleCalendarPatchIn(_In):
@@ -169,6 +189,8 @@ class CalendarItem(BaseModel):
     reminders: list[str] = Field(default_factory=list)
     href: str | None = None
     calendar_entry_id: uuid.UUID | None = None
+    # Recurrence rule of a manual entry (B.30); each occurrence in the range is one item.
+    recurrence: dict[str, Any] | None = None
 
 
 class CalendarNotice(BaseModel):
@@ -585,6 +607,9 @@ async def search(
 
 # Digest and deadlines (A40, A41) ------------------------------------------------------
 
+APPOINTMENT_KIND = "appointment"
+APPOINTMENT_HORIZON_DAYS = 365
+
 
 class JobSettingsOut(BaseModel):
     digest_mail_enabled: bool
@@ -640,24 +665,110 @@ async def digest(
         )
 
 
+@router.get("/approvals", summary="Offene Freigaben des angemeldeten Benutzers (Startseite)")
+async def approvals(
+    request: Request, principal: TenantPrincipal = Depends(member)
+) -> dict[str, int]:
+    """Counts per approval kind, only for kinds the caller may decide (operator 27.09.2026,
+    start page column "Freigaben"). Read only; every count follows the same rules as the
+    approving endpoint: mail replies (communication:approve, otherwise own submissions),
+    IBAN four eyes release (contacts:approve), release gate requests (release_gates:approve),
+    dunning runs in preview and direct debit runs in draft without an own approval
+    (accounting:approve) and checked metering transmissions (transmission write rights).
+    A kind the caller may not decide is left out of the response."""
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Tenant user required.")
+    from mhvp.accounting.direct_debit_models import (
+        DirectDebitApproval,
+        DirectDebitRun,
+        DirectDebitRunStatus,
+    )
+    from mhvp.accounting.models import DunningRun
+    from mhvp.communication.models import Message
+    from mhvp.contacts.models import BankAccountApproval, ContactBankAccount
+    from mhvp.metering import transmissions as metering_transmissions
+    from mhvp.metering.models import MeteringTransmission, TransmissionStatus
+    from mhvp.platform.models import GateRequestStatus, ReleaseGateRequest
+
+    def count(model: Any, *where: Any) -> Any:
+        return select(func.count()).select_from(model).where(*where).scalar_subquery()
+
+    user_id = principal.user_id
+    wanted: dict[str, Any] = {}
+    if principal.has("communication:approve") or principal.has("communication:create"):
+        where = [
+            Message.direction == "out",
+            Message.submitted_at.is_not(None),
+            Message.approved_at.is_(None),
+            Message.sent_at.is_(None),
+            Message.rejection_note.is_(None),
+        ]
+        if not principal.has("communication:approve"):
+            where.append(Message.submitted_by == user_id)
+        wanted["mail"] = count(Message, *where)
+    if principal.has("contacts:approve"):
+        wanted["bank_accounts"] = count(
+            ContactBankAccount, ContactBankAccount.approval_status == BankAccountApproval.PENDING
+        )
+    if principal.has("release_gates:approve"):
+        wanted["release_gates"] = count(
+            ReleaseGateRequest, ReleaseGateRequest.status == GateRequestStatus.REQUESTED
+        )
+    if principal.has("accounting:approve"):
+        wanted["dunning_runs"] = count(DunningRun, DunningRun.status == "preview")
+        mine = select(DirectDebitApproval.run_id).where(DirectDebitApproval.user_id == user_id)
+        wanted["direct_debits"] = count(
+            DirectDebitRun,
+            DirectDebitRun.status == DirectDebitRunStatus.DRAFT,
+            DirectDebitRun.id.not_in(mine),
+        )
+    kinds = [
+        kind
+        for kind, permission in metering_transmissions.KIND_PERMISSION.items()
+        if principal.has(permission)
+    ]
+    if kinds:
+        wanted["metering_transmissions"] = count(
+            MeteringTransmission,
+            MeteringTransmission.status == TransmissionStatus.CHECKED,
+            MeteringTransmission.kind.in_([str(k) for k in kinds]),
+        )
+    if not wanted:
+        return {}
+    async with tenant_tx(request, principal) as session:
+        row = (await session.execute(select(*(q.label(k) for k, q in wanted.items())))).one()
+        return {k: int(v or 0) for k, v in zip(wanted, row, strict=True)}
+
+
 @router.get("/deadlines", summary="Fristenliste des Mandanten (A41, Orientierung, zu prüfen)")
 async def deadlines(
     request: Request,
-    kind: str | None = Query(default=None, pattern="^(" + "|".join(jobs.DEADLINE_KINDS) + ")$"),
+    kind: str | None = Query(
+        default=None, pattern="^(" + "|".join((*jobs.DEADLINE_KINDS, APPOINTMENT_KIND)) + ")$"
+    ),
     status: str = Query(default="open", pattern="^(open|done|all)$"),
     from_date: date | None = Query(default=None, alias="from"),
     to_date: date | None = Query(default=None, alias="to"),
     limit: int = Query(default=200, ge=1, le=1000),
     principal: TenantPrincipal = Depends(member),
 ) -> list[DeadlineOut]:
-    """Only kinds the caller may read (contracts, properties, accounting, documents)."""
+    """Only kinds the caller may read (contracts, properties, accounting, documents). Own and
+    shared manual calendar entries with reminders appear as kind ``appointment`` (recurring
+    ones once per occurrence, computed on read); they are appointments, not deadlines of
+    the source data, and are never notified by the lead time of the list."""
     from mhvp.workspace.models import ComplianceDeadline
 
+    appointments: list[DeadlineOut] = []
+    if kind in (None, APPOINTMENT_KIND) and status != "done":
+        async with tenant_tx(request, principal) as session:
+            appointments = await _appointment_deadlines(
+                session, principal.user_id, from_date, to_date, limit
+            )
     allowed = [k for k, (read, _u) in jobs.DEADLINE_PERMISSIONS.items() if principal.has(read)]
     if kind is not None:
         allowed = [k for k in allowed if k == kind]
     if not allowed:
-        return []
+        return appointments
     query = select(ComplianceDeadline).where(ComplianceDeadline.kind.in_(allowed))
     if status != "all":
         query = query.where(ComplianceDeadline.status == status)
@@ -668,7 +779,57 @@ async def deadlines(
     query = query.order_by(ComplianceDeadline.due_on, ComplianceDeadline.reference).limit(limit)
     async with tenant_tx(request, principal) as session:
         rows = (await session.scalars(query)).all()
-        return [_deadline_out(r) for r in rows]
+    out = [_deadline_out(r) for r in rows] + appointments
+    out.sort(key=lambda d: (d.due_on, d.reference))
+    return out[:limit]
+
+
+async def _appointment_deadlines(
+    session: Any,
+    user_id: uuid.UUID | None,
+    from_date: date | None,
+    to_date: date | None,
+    limit: int,
+) -> list[DeadlineOut]:
+    """Virtual deadline rows of manual calendar entries (own or shared) with at least one
+    reminder, expanded per occurrence for recurring entries; nothing is persisted."""
+    lower = from_date or services.local_today()
+    upper = to_date or (lower + timedelta(days=APPOINTMENT_HORIZON_DAYS))
+    rows = (
+        await session.scalars(
+            select(CalendarEntry).where(
+                CalendarEntry.owner_user_id.is_not(None),
+                or_(CalendarEntry.owner_user_id == user_id, CalendarEntry.shared),
+                func.jsonb_array_length(CalendarEntry.reminders) > 0,
+                CalendarEntry.starts_on <= upper,
+            )
+        )
+    ).all()
+    out: list[DeadlineOut] = []
+    for e in rows:
+        codes = [str(c) for c in e.reminders]
+        lead = max((jobs.REMINDER_OFFSET_DAYS.get(c, 0) for c in codes), default=0)
+        for occurrence in jobs.expand_occurrences(e.starts_on, e.recurrence, lower, upper):
+            out.append(
+                DeadlineOut(
+                    id=e.id,
+                    kind=APPOINTMENT_KIND,
+                    source_type="calendar_entry",
+                    source_id=e.id,
+                    reference=e.title,
+                    due_on=occurrence,
+                    lead_days=lead,
+                    status="open",
+                    property_id=e.property_id,
+                    notified_at=None,
+                    done_at=None,
+                    updated_at=e.updated_at,
+                    href=links.target_href("calendar_entry", e.id, appointment_date=occurrence),
+                )
+            )
+            if len(out) >= limit:
+                return out
+    return out
 
 
 @router.get("/job-settings", summary="Schalter der Tagesjobs (Digest-Mail, Vorfrist)")
@@ -907,12 +1068,37 @@ async def calendar(
             select(CalendarEntry).where(
                 or_(CalendarEntry.owner_user_id == principal.user_id, CalendarEntry.shared),
                 CalendarEntry.starts_on <= end,
-                func.coalesce(CalendarEntry.ends_on, CalendarEntry.starts_on) >= start,
+                or_(
+                    func.coalesce(CalendarEntry.ends_on, CalendarEntry.starts_on) >= start,
+                    CalendarEntry.recurrence.is_not(None),
+                ),
             )
         )
         items = []
         generated: set[tuple[str | None, uuid.UUID | None, date]] = set()
         for e in entries.all():
+            if e.owner_user_id is not None and e.recurrence:
+                # Recurring manual entry (B.30): one item per occurrence in the range,
+                # computed on read, nothing persisted.
+                length = (e.ends_on - e.starts_on) if e.ends_on else None
+                for occurrence in jobs.expand_occurrences(e.starts_on, e.recurrence, start, end):
+                    items.append(
+                        CalendarItem(
+                            kind="appointment",
+                            title=e.title,
+                            date=occurrence,
+                            ends_on=occurrence + length if length is not None else None,
+                            entity_type="calendar_entry",
+                            entity_id=e.id,
+                            property_id=e.property_id,
+                            editable=e.owner_user_id == principal.user_id,
+                            source="internal",
+                            reminders=[str(r) for r in e.reminders],
+                            calendar_entry_id=e.id,
+                            recurrence=e.recurrence,
+                        )
+                    )
+                continue
             if e.owner_user_id is None:
                 # Generated from a date field (P1 AP7): visible with the read permission of
                 # its kind, jumps to the source row, never editable here.
@@ -1044,7 +1230,15 @@ async def create_entry(
                     "attendees",
                     "source_type",
                     "source_id",
+                    "recurrence",
                 }
+            )
+            if body.recurrence is not None and body.recurrence.until < body.starts_on:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Ende der Wiederholung liegt vor dem Beginn."
+                )
+            fields["recurrence"] = (
+                body.recurrence.model_dump(mode="json") if body.recurrence else None
             )
             entry = CalendarEntry(
                 tenant_id=principal.tenant_id,
@@ -1064,6 +1258,9 @@ async def create_entry(
                 property_id=entry.property_id,
                 editable=True,
                 source="internal",
+                reminders=[str(r) for r in entry.reminders],
+                calendar_entry_id=entry.id,
+                recurrence=entry.recurrence,
             )
 
     settings = request.app.state.settings

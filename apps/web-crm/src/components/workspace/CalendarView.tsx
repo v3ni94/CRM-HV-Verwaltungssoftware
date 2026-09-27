@@ -36,6 +36,8 @@ export type CalendarItem = {
   reminders?: string[];
   href?: string | null;
   calendar_entry_id?: string | null;
+  /** Recurrence rule of a manual entry (B.30); the API returns one item per occurrence. */
+  recurrence?: { frequency: string; interval: number; until: string | null } | null;
 };
 
 export type CalendarNotice = { source: "default" | "own"; address: string; connected: boolean };
@@ -122,8 +124,11 @@ export function CalendarView({
       target: input.target,
       notes: input.notes || null,
     };
-    if (input.target === "internal") body.shared = input.shared;
-    else {
+    if (input.target === "internal") {
+      body.shared = input.shared;
+      body.reminders = input.reminders ?? [];
+      body.recurrence = input.recurrence ?? null;
+    } else {
       body.location = input.location || null;
       body.attendees = input.attendees;
       body.source_type = input.source_type;
@@ -252,6 +257,12 @@ export function CalendarView({
               <span className="flex-1">
                 {item.title}
                 {item.is_stale ? <span className={`${ui.badgeWarning} ml-2`}>{t("staleBadge")}</span> : null}
+                {item.recurrence ? (
+                  <span className="ml-2 text-xs text-muted" data-testid="calendar-recurring" title={tc("recurrence.hint")}>
+                    {tc("recurring")}
+                    {tc.has(`recurrence.${item.recurrence.frequency}`) ? ` (${tc(`recurrence.${item.recurrence.frequency}`)})` : ""}
+                  </span>
+                ) : null}
                 {item.reminders && item.reminders.length > 0 ? (
                   <span className="ml-2 text-xs text-muted" title={tc("generatedHint")}>
                     {tc("reminders")}: {item.reminders.map((r) => (tc.has(`reminder.${r}`) ? tc(`reminder.${r}`) : r)).join(", ")}

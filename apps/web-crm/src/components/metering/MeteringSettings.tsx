@@ -11,6 +11,7 @@ import { AssignmentsTable } from "./AssignmentsTable";
 import { AssignmentWizard } from "./AssignmentWizard";
 import { ConnectionsAdmin } from "./ConnectionsAdmin";
 import { MeteringDisabledNotice } from "./MeteringDisabledNotice";
+import { TransmissionsOverview } from "./TransmissionsOverview";
 
 /** Client shell of the settings page: connections, central assignment overview (same wizard
  *  and table as the object tab), CSV import and export, disabled state of the module. */
@@ -73,6 +74,7 @@ export function MeteringSettings({
         <AssignmentsTable connections={connections} canUpdate={canUpdate} reloadKey={reloadKey} />
       </section>
       <AssignmentsCsv canUpdate={canUpdate} onApplied={() => setReloadKey((k) => k + 1)} />
+      <TransmissionsOverview canPoll={canUpdate} reloadKey={reloadKey} />
     </div>
   );
 }

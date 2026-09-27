@@ -165,6 +165,19 @@ disabled resolution kind or a failed completion check leaves the ticket open wit
 `auto_close_skipped` event. Rule `docs/rules/M20-07`, operator docs `docs/integrations/gmail.md`.
 Tests: `tests/unit/test_gmail_push.py`, `tests/integration/test_m20_gmail_push.py`.
 
+Archive tracking (operator report 27.09.2026, migration 0158): every close path (mail done,
+bulk done, ticket done/closed/rejected by any route, merge via
+`tickets.status.request_mail_archive`) marks the affected inbound Gmail mails
+`archive_status = pending` in the closing transaction and queues the job after the commit.
+`tasks._archive_messages` sets the master key (`_ensure_crypto`), removes INBOX and UNREAD by
+`gmail_message_id`, records archived / skipped / failed / scope_missing with `archive_error`,
+`archive_attempted_at` and `archived_at` (idempotent) and flags `mailbox.archive_scope_missing`
+on a 403 without `gmail.modify` (rate limit 403s stay plain failures). Beat
+`communication-archive-retry` (`archive_retry_all`, 900 s, queue `mail`) catches up open jobs of
+the last 30 days; `POST /mail/messages/{id}/archive` does it for one mail; the OAuth callback
+clears the scope flag and queues `archive_retry` for the tenant. Tests:
+`tests/integration/test_m20_archive_done.py`.
+
 ## Further files (addendum 26.09.2026)
 
 Checked against the folder contents on 26.09.2026, the following files were not listed above:

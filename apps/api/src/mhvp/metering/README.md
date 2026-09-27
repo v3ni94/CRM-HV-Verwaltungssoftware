@@ -8,12 +8,12 @@ stage 1; rule `docs/rules/M40-01.md`; operator document `docs/integrations/messd
 | Module | Content |
 | --- | --- |
 | `providers.py` | Provider catalogue as code constants (ista, Techem, KALO, Brunata Minol, BRUNATA-METRONA, other) with the documented API state per function and the source references Q1 to Q11. Research state 26.09.2026, re-check before implementing an adapter. |
-| `adapters.py` | Adapter interface (`MeteringAdapter`: `test_connection`, `fetch`, `download_document`, `acknowledge_document`, `submit_billing_unit_setup`, `fetch_billing_template`, `send_billing_input`, `send_roles`), record types (`WriteResult` with outcomes accepted, validated, rejected, unclear, failed), `ManualAdapter` (no remote call) and `FakeAdapter` (tests only, honoured only in the `test` environment; records every write in `writes`). Registers the real adapters at import. |
+| `adapters.py` | Adapter interface (`MeteringAdapter`: `test_connection`, `fetch`, `download_document`, `acknowledge_document`, `submit_billing_unit_setup`, `fetch_billing_unit_setup`, `fetch_billing_template`, `send_billing_input`, `send_roles`; `setup_submission` names the documented setup operation or is `None`), record types (`WriteResult` with outcomes accepted, validated, rejected, unclear, failed), `ManualAdapter` (no remote call) and `FakeAdapter` (tests only, honoured only in the `test` environment; records every write in `writes`). Registers the real adapters at import. |
 | `http.py` | `ProviderHttp`: pinned HTTPS client (`pin_target`, TLS on, no redirects), OAuth 2 client credentials with token cache, Basic, optional mTLS client certificate, GET retries with exponential backoff, writes sent exactly once (timeout = `unclear`), body size limit, `sanitize` for error texts (no secrets). |
 | `bved.py` | Parsers and call sequences of the bved / ARGE OpenAPI families (billing-unit-data 1.0.2, billing-result 1.0.3, consumption-data 1.2.1, documents 1.3, billing-input 1.0.3 with `VALIDATE` / `SEND` / `SEND_AND_IGNORE_WARNINGS`, on-site-roles 2.0.2): offset/limit pagination (max 100), `_links.next` only on the configured host, exact `Decimal` amounts, `missing` never coerced, bounded parallelism (`run_bounded`). |
 | `adapters_base.py` | `BvedAdapterBase`: family table per provider, `config_environment` guard (test and production never share a configuration), authentication per family, read only connection test, fetch per function, document download and receipt, setup submission (write, unexposed). |
 | `adapters_ista.py`, `adapters_kalo.py` | Provider specific families, hosts and authentication schemes with their sources (see docs/integrations/messdienstleister.md, capability matrix). |
-| `models.py` | Tenant tables with RLS (migration 0145): `metering_connection`, `metering_external_billing_unit`, `metering_property_assignment`, `metering_unit_assignment`, `metering_sync_job`, `metering_clearing_item`, `metering_consumption_value`, `metering_billing_result`; migration 0153: `metering_transmission` (controlled write workflows). |
+| `models.py` | Tenant tables with RLS (migration 0145): `metering_connection`, `metering_external_billing_unit`, `metering_property_assignment`, `metering_unit_assignment`, `metering_sync_job`, `metering_clearing_item`, `metering_consumption_value`, `metering_billing_result`; migration 0153: `metering_transmission` (controlled write workflows); migration 0156: kind `billing_unit_setup`, statuses `waiting_provider` and `completed`. |
 | `services.py` | Shared business service used identically by the object tab and the central overview: capability matrix, connection test, conflict check, optimistic locking, provider change, sync job creation and execution, clearing. |
 | `transmissions.py` | Controlled write workflows (section 12): payload construction for roles (complete set per unit, explicit vacancy and end markers) and billing input (period, provider template, CRM recipients, cost input), local validation, provider validation (`VALIDATE`), diff against the last ordered transmission, fingerprint, release, binding order, invalidation. |
 | `csv_io.py` | CSV template, preview, apply and export of property assignments (numbers as text, no formula export, duplicate protection, nothing stored by the preview). |
@@ -112,10 +112,30 @@ answer). Steps and permissions:
    one request per unit and stop at the first rejected or unclear unit. Every write is sent
    exactly once: `unclear` (timeout) is final until clarified manually, nothing is retried.
 
+4. Ordnungsbegriffsabgleich (`billing_unit_setup`, section 6, Q8) uses the same steps with
+   the permission `metering_assignments:update`: the check builds the bved `SetupRequest`
+   from the unit assignments (internal property and unit numbers next to the external
+   billing unit and Nutzeinheit numbers, billing recipient names, `customerMscnumber` from
+   the first `customer_reference` of the connection or the input `customer_number`) and
+   shows what the provider already reported (`remote_payload.matched`, `additional`). The
+   check is local (no validate action in the API). The order sends `sendSetup` exactly once;
+   an accepted answer ends in status `waiting_provider`, never in a confirmed assignment.
+   `POST /transmissions/{id}/poll` (read only, repeatable) fetches the provider status:
+   `IN_PROGRESS` keeps `waiting_provider`; `COMPLETED` stores the `SetupResult` on the
+   transmission and as `remote_payload` of the external billing unit, sets status
+   `completed` and confirms the assignment technically (`remote_confirmed`,
+   `verification_basis` with transaction id and fetch time) only when every sent unit is in
+   `matched`; unmatched units keep the assignment unconfirmed. Adapters without the
+   documented operation (`setup_submission is None`) stop at the local preview with
+   "Dokumentation erforderlich" and the order is refused (409 `MHVP-METR-0004`); the
+   submission additionally needs `write_sync_enabled`. Migration 0156 extends the kind and
+   status constraints.
+
 Any change of the property assignment or a unit assignment (create, update, provider change)
 supersedes the open transmissions of that assignment (`services.invalidate_transmissions`).
 Permissions: `metering_users:submit` for roles, `metering_billing:order` for billing input,
-checked per kind on every step; `metering_data:read` lists and reads transmissions.
+`metering_assignments:update` for the billing unit setup, checked per kind on every step;
+`metering_data:read` lists and reads transmissions.
 
 ## Endpoints (`/api/v1/metering`)
 
@@ -134,7 +154,8 @@ checked per kind on every step; `metering_data:read` lists and reads transmissio
 | GET /assignments/{id}/consumption, /billing-results | metering_data:read | Data views, period filter |
 | GET, POST /sync-jobs; GET /sync-jobs/{id} | read / metering_sync:run | Jobs |
 | GET /transmissions, GET /transmissions/{id} | metering_data:read | Controlled write workflows |
-| POST /transmissions/check, POST /transmissions/{id}/release, POST /transmissions/{id}/order | metering_users:submit (roles) or metering_billing:order (billing_input) | "Daten prüfen", release, binding order (separate endpoints) |
+| POST /transmissions/check, POST /transmissions/{id}/release, POST /transmissions/{id}/order | metering_users:submit (roles), metering_billing:order (billing_input) or metering_assignments:update (billing_unit_setup) | "Daten prüfen", release, binding order (separate endpoints) |
+| POST /transmissions/{id}/poll | permission of the kind | Ordnungsbegriffsabgleich: fetch the provider processing status and result (read only) |
 | GET /clearing-items; POST /clearing-items/{id}/resolve | read / metering_assignments:update | Clearing area |
 | GET /assignments-import/template; POST /assignments-import/preview, /apply; GET /assignments-export | read / update / update / read | CSV |
 
@@ -156,8 +177,9 @@ All write endpoints require `tenant_settings.metering_module_enabled` (403 `MHVP
   1.0.3) are implemented for ista from the bved zip files (Q6, checked 27.09.2026; Q10 and Q11
   name the modes but no endpoint paths) and reachable only through the transmission workflow;
   the ista base URLs (`base_urls.roles`, `base_urls.billing_input`) come from the onboarding
-  (Q9). The setup submission of the Ordnungsbegriffsabgleich (`submit_billing_unit_setup`) is
-  still not offered by any endpoint (M40-03). KALO: roles documented (Q3) but not implemented
+  (Q9). The setup submission of the Ordnungsbegriffsabgleich (`submit_billing_unit_setup`,
+  bved billing-unit-data 1.0.2 `sendSetup`) is offered through the transmission kind
+  `billing_unit_setup` for ista; the fake adapter mimics it. KALO: roles documented (Q3) but not implemented
   (no endpoint documentation on Q3), billing input unclear; Techem, Brunata Minol and
   BRUNATA-METRONA: manual adapter, "Dokumentation erforderlich". For these providers the
   workflow stops at the local check (provider validation skipped with the reason shown) and

@@ -135,6 +135,14 @@ führend ist. Solange G1 geschlossen ist, ist deshalb kein Fall vorgeschlagen un
 Schaltfläche Mahnlauf freigeben erscheint nicht; die Freigabe müsste ohnehin eine zweite
 Person erteilen (nicht der Ersteller des Laufs).
 
+Hat der Schuldner im Kontakt einen Bevollmächtigten mit Zustellregel (Kontakte,
+Bevollmächtigte), folgt das Mahnschreiben dieser Regel: bei "beide" enthält das PDF je
+Empfänger eine Kopie, die Kopie an den Bevollmächtigten trägt die Zeile "für
+<Vollmachtgeber>". Erhält nur der Bevollmächtigte, zeigt die Vorschau am Fall das Kennzeichen
+"Nur Bevollmächtigter, Zugang rechtlich zu klären"; die Warnung steht auch in der
+Begründung des Falls. Ob die Mahnung damit dem Schuldner zugeht, ist vor dem Versand mit dem
+Rechtsanwalt zu klären (Betreiberentscheidung 27.09.2026, M23-07).
+
 Je vorgeschlagenem Fall stehen bereit: Mahnschreiben als PDF-Entwurf (Vorschau) und Entwurf
 ablegen, Als versendet markieren mit Versandweg (Post, E-Mail, Portal), auf der höchsten
 Stufe Mahnbescheid vorbereiten (Export als JSON oder PDF für Rechtsanwalt oder

@@ -58,6 +58,42 @@
 - Mandantentrennung: `PATCH /mail/messages/{id}` findet nur Mails des eigenen Mandanten
   (404 sonst); alle Zählungen und der Statuswechsel laufen im RLS-Kontext des Mandanten.
 
+### Nachtrag 27.09.2026: Rückschreiben nach Gmail nachvollziehbar und nachholbar
+
+Betreibermeldung 27.09.2026 (Produktion): Erledigt wurde nicht nach Gmail zurückgeschrieben.
+Ursachen: die Jobs für Ticketabschluss und Sammelaktion setzten im Worker den Schlüssel für
+die verschlüsselten Postfach-Token nicht (`_ensure_crypto`), der Lauf brach vor dem Gmail-Aufruf
+ab und blieb unsichtbar; ein 403 (Consent ohne `gmail.modify`) war nur am Postfach vermerkt,
+ohne Hinweis in der Oberfläche und ohne Nachholen; das Zusammenführen schloss Quelltickets
+ohne Archivierung. Regeln seit Migration `0158_message_archive_status`:
+
+- Jeder Schließpfad archiviert: Mail erledigt (einzeln, Sammelaktion), Ticket auf done,
+  closed oder rejected (Ticketdetail, Ticketliste, Sammelstatus, Lösungsarten, automatischer
+  Abschluss per Mail) und Zusammenführen (`tickets.status.request_mail_archive`). Betroffen
+  sind alle Gmail-Eingangsmails des Tickets sowie Eingangsmails derselben CRM-Threads ohne
+  Ticketbindung; durch Zusammenführen verschobene Mails gehören dem Zielticket und werden
+  mit dessen Abschluss archiviert.
+- Der Gmail-Aufruf entfernt die Labels INBOX und UNREAD über die Gmail-Nachrichtenkennung
+  (`gmail_message_id`, nie die Thread-Kennung). 404 gilt als erledigt.
+- Nachvollziehbar: `message.archive_status` (pending, archived, skipped, failed,
+  scope_missing), `archive_error`, `archive_attempted_at`, `archived_at`; die Kennzeichnung
+  pending wird noch in der schließenden Transaktion gesetzt. Idempotent: `archived_at`
+  gesetzt heißt nie wieder anfassen.
+- Berechtigung fehlt (HTTP 403 `insufficientPermissions`): `mailbox.archive_scope_missing`,
+  Mail `scope_missing`, Hinweis im Postfach und unter Einstellungen, Postfächer mit Knopf
+  Erneut mit Google verbinden. Die Consent-URL setzt `prompt=consent` und
+  `include_granted_scopes=true`. Der Rückruf setzt den Vermerk zurück und holt die offenen
+  Aufträge des Mandanten nach. 403 wegen Kontingent (`userRateLimitExceeded` und
+  verwandte) ist ein normaler Fehler, kein Berechtigungsproblem.
+- Nachholen: Beat `communication-archive-retry` (alle 15 Minuten, Warteschlange `mail`,
+  Task `mhvp.communication.archive_retry_all`) archiviert je Mandant bis zu 200 erledigte
+  oder angeforderte, nicht archivierte Eingangsmails der letzten 30 Tage, ausgenommen
+  Postfächer ohne Berechtigung. Manuell: `POST /mail/messages/{id}/archive` (Berechtigung
+  wie Erledigen, nur Gmail-Eingangsmails, idempotent). Celery-Tasks wiederholen technische
+  Fehler dreimal im Minutenabstand; Gmail-Fehler stehen an der Mail.
+- Tests: `apps/api/tests/integration/test_m20_archive_done.py`, Vitest
+  `MailboxSettings.test.tsx`, `MailWorkspace.test.tsx`, `MailDetail.test.tsx`.
+
 ## Offene Punkte
 
 - Pub/Sub-Thema und Push-Subscription im Google Cloud Projekt des OAuth-Clients anlegen

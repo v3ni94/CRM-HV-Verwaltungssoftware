@@ -82,6 +82,8 @@ class TenantSettingsOut(BaseModel):
     ticket_reply_approval_all: bool = False
     # ADR 0010, M7-04: Lernbeispiele aus Ticketabschlüssen speichern (Standard aus).
     ai_learning_examples_enabled: bool = False
+    # ADR 0010 Nachtrag 27.09.2026: Aufbewahrung der Lernbeispiele in Monaten (Standard 24).
+    ai_learning_examples_retention_months: int = 24
     # Messdienstleister module switch (default off).
     metering_module_enabled: bool = False
     # Regel M19-07, M19-04: deaktivierte eingebaute und eigene Erledigungsarten.
@@ -96,6 +98,7 @@ class TenantSettingsPatch(BaseModel):
     branding: Branding | None = None
     ticket_reply_approval_all: bool | None = None
     ai_learning_examples_enabled: bool | None = None
+    ai_learning_examples_retention_months: int | None = Field(default=None, ge=1, le=120)
     metering_module_enabled: bool | None = None
     resolution_kinds: ResolutionKindsConfig | None = None
 

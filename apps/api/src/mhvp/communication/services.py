@@ -435,6 +435,60 @@ async def ingest_raw(
     )
 
 
+ARCHIVE_PENDING = "pending"
+
+
+async def mark_archive_pending_for_ticket(
+    session: AsyncSession, tenant_id: uuid.UUID, ticket_id: uuid.UUID
+) -> int:
+    """Marks every not yet archived inbound Gmail mail of the ticket (and of its CRM
+    threads) as ``archive_status = pending`` inside the closing transaction (operator
+    27.09.2026). The mark is what the beat job ``communication-archive-retry`` picks up when
+    the queued job is lost, so no closed ticket leaves its mails in the Gmail inbox for good."""
+    from mhvp.communication.tasks import _archive_candidates
+
+    rows = list(
+        await session.scalars(_archive_candidates(ticket_id).where(Message.tenant_id == tenant_id))
+    )
+    for row in rows:
+        row.archive_status = ARCHIVE_PENDING
+    return len(rows)
+
+
+def mark_archive_pending(message: Message) -> bool:
+    """Marks an inbound Gmail mail as ``pending`` unless it is already archived."""
+    if (
+        message.direction != "in"
+        or not message.gmail_message_id
+        or message.mailbox_id is None
+        or message.archived_at is not None
+    ):
+        return False
+    message.archive_status = ARCHIVE_PENDING
+    return True
+
+
+async def enqueue_archive_retry(settings: Settings, tenant_id: uuid.UUID) -> None:
+    """Catches up the open archive jobs of a tenant (after a mailbox reconnect restored the
+    ``gmail.modify`` scope); inline without a worker, otherwise queue ``mail``."""
+    if settings.ai_inline:
+        from mhvp.communication.tasks import archive_retry_once
+
+        try:
+            await archive_retry_once(settings, tenant_id)
+        except Exception:
+            log.warning("archive retry failed inline", extra={"tenant_id": str(tenant_id)})
+    else:
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.communication.archive_retry", args=[str(tenant_id)], queue="mail"
+            )
+        except Exception:
+            log.warning("could not queue archive retry", extra={"tenant_id": str(tenant_id)})
+
+
 async def enqueue_archive_for_ticket(
     session: AsyncSession, settings: Settings, tenant_id: uuid.UUID, ticket_id: uuid.UUID
 ) -> None:
@@ -448,7 +502,7 @@ async def enqueue_archive_for_ticket(
         try:
             await archive_ticket_messages_once(settings, tenant_id, ticket_id)
         except Exception:
-            log.warning("archive job failed inline", extra={"ticket_id": str(ticket_id)})
+            log.exception("archive job failed inline", extra={"ticket_id": str(ticket_id)})
     else:
         try:
             from mhvp.worker import get_celery
@@ -459,7 +513,7 @@ async def enqueue_archive_for_ticket(
                 queue="mail",
             )
         except Exception:
-            log.warning("could not queue archive job", extra={"ticket_id": str(ticket_id)})
+            log.exception("could not queue archive job", extra={"ticket_id": str(ticket_id)})
 
 
 async def enqueue_archive_for_message(
@@ -474,7 +528,7 @@ async def enqueue_archive_for_message(
         try:
             await archive_message_once(settings, tenant_id, message_id)
         except Exception:
-            log.warning("archive job failed inline", extra={"message_id": str(message_id)})
+            log.exception("archive job failed inline", extra={"message_id": str(message_id)})
     else:
         try:
             from mhvp.worker import get_celery
@@ -485,7 +539,7 @@ async def enqueue_archive_for_message(
                 queue="mail",
             )
         except Exception:
-            log.warning("could not queue archive job", extra={"message_id": str(message_id)})
+            log.exception("could not queue archive job", extra={"message_id": str(message_id)})
 
 
 # Statuses of a work order that still need attention; anything else counts as closed.
@@ -516,7 +570,7 @@ async def complete_message(
 
     result: dict[str, Any] = {"archive": False, "ticket_closed": False, "reason": None}
     tenant_id = message.tenant_id
-    if message.direction == "in" and message.gmail_message_id and message.mailbox_id:
+    if mark_archive_pending(message):
         message_id = message.id
 
         async def _archive() -> None:
@@ -626,7 +680,7 @@ async def enqueue_archive_for_messages(
         try:
             await archive_messages_once(settings, tenant_id, list(message_ids))
         except Exception:
-            log.warning("archive job failed inline", extra={"messages": len(message_ids)})
+            log.exception("archive job failed inline", extra={"messages": len(message_ids)})
     else:
         try:
             from mhvp.worker import get_celery
@@ -637,7 +691,7 @@ async def enqueue_archive_for_messages(
                 queue="mail",
             )
         except Exception:
-            log.warning("could not queue archive job", extra={"messages": len(message_ids)})
+            log.exception("could not queue archive job", extra={"messages": len(message_ids)})
 
 
 async def ticket_by_tnr(session: AsyncSession, tenant_id: uuid.UUID, subject: str | None) -> Any:

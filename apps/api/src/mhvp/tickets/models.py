@@ -1,13 +1,14 @@
 """Tickets and work orders (6.6, M19)."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    Date,
     DateTime,
     Enum,
     ForeignKey,
@@ -164,6 +165,9 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
     sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Optional working due date (spec 4.9, migration 0154): read by the calendar source
+    # ``ticket_due``; separate from the SLA due time and its escalation.
+    due_on: Mapped[date | None] = mapped_column(Date)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     time_spent_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     merged_into_ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
