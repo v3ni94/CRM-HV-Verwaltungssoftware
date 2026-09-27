@@ -10,7 +10,8 @@ fixed number of aggregated statements per request (no N+1) inside the tenant sco
 - ``messages``: inbound and sent outbound mails grouped by bucket, mailbox and author;
 - ``backlog``: three counts before the window start (created, closed, reopened);
 - ``open assigned``: open tickets per assignee;
-- ``mailboxes``: all mailboxes of the tenant with their kind (personal, default, other).
+- ``mailboxes``: all mailboxes of the tenant with their kind (personal, default, other);
+  mails without mailbox or of a deleted mailbox count as ``other`` in ``by_kind``.
 
 Definitions (documented in the handbook chapter ``auswertung-tickets``):
 
@@ -595,10 +596,15 @@ async def compute(
                 "share_inbound_pct": _ratio(counts["inbound"] * 100, total_inbound, 1),
             }
         )
-    unassigned = by_mailbox.get(None)
-    if unassigned is not None and filters.mailbox_ids is None:
-        for k, v in unassigned.items():
-            by_kind["other"][k] += v
+    # Mails without mailbox and mails of mailboxes no longer listed (deleted) count as
+    # "other" when no mailbox filter is set, so that the kinds add up to the totals.
+    listed = {m["mailbox_id"] for m in mailboxes}
+    if filters.mailbox_ids is None:
+        for mailbox_id, counts in by_mailbox.items():
+            if mailbox_id in listed:
+                continue
+            for k, v in counts.items():
+                by_kind["other"][k] += v
     for kind_row in by_kind.values():
         kind_row["share_inbound_pct"] = _ratio(kind_row["inbound"] * 100, total_inbound, 1)
 

@@ -1199,7 +1199,8 @@
       "ticketPriority": "Priorität",
       "ticketAssignee": "Bearbeiter",
       "allTickets": "Alle Tickets",
-      "ticketLimitHint": "Die neuesten {count} offenen Tickets. Jede Zeile öffnet das Ticket."
+      "ticketLimitHint": "Die neuesten {count} offenen Tickets. Jede Zeile öffnet das Ticket.",
+      "loadErrorDetail": "Antwort der Schnittstelle: {detail}"
     },
     "prevWeek": "Vorherige Woche",
     "nextWeek": "Nächste Woche",
@@ -7145,7 +7146,8 @@
     "none": "keine Angabe",
     "minutes": "{value} Min.",
     "hours": "{value} Std.",
-    "days": "{value} Tage"
+    "days": "{value} Tage",
+    "loadErrorDetail": "Antwort der Schnittstelle: {detail}"
   },
   "ContractApproval": {
     "title": "Freigabe Importverträge",

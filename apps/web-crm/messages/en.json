@@ -1199,7 +1199,8 @@
       "ticketPriority": "Priority",
       "ticketAssignee": "Assignee",
       "allTickets": "All tickets",
-      "ticketLimitHint": "The latest {count} open tickets. Each row opens the ticket."
+      "ticketLimitHint": "The latest {count} open tickets. Each row opens the ticket.",
+      "loadErrorDetail": "API response: {detail}"
     },
     "prevWeek": "Previous week",
     "nextWeek": "Next week",
@@ -7145,7 +7146,8 @@
     "none": "n/a",
     "minutes": "{value} min",
     "hours": "{value} h",
-    "days": "{value} days"
+    "days": "{value} days",
+    "loadErrorDetail": "API response: {detail}"
   },
   "ContractApproval": {
     "title": "Imported contract approval",

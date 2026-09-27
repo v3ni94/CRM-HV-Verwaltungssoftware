@@ -83,6 +83,18 @@ describe("TicketAnalytics", () => {
     expect(screen.getByRole("button", { name: "Monat" })).toHaveAttribute("aria-pressed", "true");
   });
 
+  it("shows the API problem detail with the load error", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/bff/tenant/members")) return jsonResponse(members);
+      return jsonResponse({ title: "Nicht gefunden", status: 404 }, 404);
+    });
+    renderIntl(<TicketAnalytics />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Die Auswertung ist derzeit nicht verfügbar.");
+    expect(screen.getByTestId("load-error-detail")).toHaveTextContent("Antwort der Schnittstelle: Nicht gefunden (HTTP 404)");
+  });
+
   it("compares two assignees side by side", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);

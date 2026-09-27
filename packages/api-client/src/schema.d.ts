@@ -14056,8 +14056,9 @@ export interface paths {
          * Auswertung Tickets und Mails: Durchsatz, Rückstand, Reaktionszeiten
          * @description Orientierungswerte je Zeitscheibe (Europe/Berlin) und in Summe; Definitionen im
          *     Modul ``mhvp.workspace.ticket_analytics`` und im Handbuchkapitel Auswertung Tickets.
-         *     ``from``/``to`` nur bei ``range=custom`` (höchstens 400 Tage). Der Bearbeiterfilter
-         *     braucht dasselbe Recht wie die Startseitenauswertung (``tickets:read``).
+         *     ``from``/``to`` nur bei ``range=custom`` (höchstens 400 Tage). Nur für
+         *     Mandantenadministratoren (``tickets:delete`` nach Regel M2-07) und Plattformadministratoren
+         *     (Betreiber 27.09.2026).
          */
         get: operations["ticket_analytics_api_v1_workspace_ticket_analytics_get"];
         put?: never;

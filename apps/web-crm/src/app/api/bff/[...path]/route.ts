@@ -40,7 +40,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^mail\/playbooks$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
-  { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters|dashboard\/stats)$/ },
+  { method: "GET", pattern: /^workspace\/(search|notifications|calendar|filters|dashboard\/stats|ticket-analytics)$/ },
   { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|calendar\/refresh|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },
   // Tagesübersicht, Fristenliste und Schalter der Tagesjobs (A40, A41).

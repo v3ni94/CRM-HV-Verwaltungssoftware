@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.34.1 (27.09.2026) Auswertung Tickets nur für Administratoren, Ladefehler behoben
+
+- Auswertung Tickets (Betreibermeldung 27.09.2026): Seite zeigte "Die Auswertung ist derzeit nicht verfügbar.", weil der Pfad workspace/ticket-analytics in der BFF-Allowlist fehlte; behoben. Menüpunkt, Startseitenlink, Befehlspalette, Seite und API nur noch für Mandantenadministratoren und Plattformadministratoren; Fehlerhinweise der Auswertung zeigen Titel, Detail, Fehlercode und HTTP-Status; Mails gelöschter Postfächer zählen in der Postfachart Sonstige.
+
 ## 1.34.0 (27.09.2026) Betreiberentscheidungen vom 27.09.2026: Gmail-Archivierung repariert, Objektdeaktivierung, Kalender, Messdienstleister Abgleich, Design, Statusseite, Virenscan
 
 - Tickets und Objekte: Serverfehler auf /tickets behoben (Helfer asAttention lag in einem Client-Modul und wurde auf dem Server aufgerufen), API-Ausfälle erscheinen auf der Ticketliste als Hinweis statt als Absturz, Übersetzungskonflikt in der Objektliste bereinigt, neue Prüfung gegen Aufrufe von Client-Exporten aus Server-Komponenten in make lint (Betreibermeldung 27.09.2026).

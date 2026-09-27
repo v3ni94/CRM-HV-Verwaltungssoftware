@@ -15,7 +15,8 @@ const nav = [
   { label: "Finanzen", items: [{ href: "/buchhaltung", label: "Buchhaltung" }] },
 ];
 
-function setup(permissions: string[] = ["tickets:read", "tickets:create", "contacts:create"]) {
+// tickets:delete is the tenant administrator marker (rule M2-07) that unlocks Auswertung Tickets.
+function setup(permissions: string[] = ["tickets:read", "tickets:create", "tickets:delete", "contacts:create"]) {
   return renderIntl(<CommandPalette nav={nav} permissions={permissions} userKey="u1" />);
 }
 
@@ -39,6 +40,14 @@ describe("CommandPalette", () => {
     expect(within(dialog).queryByRole("option", { name: /Mahnlauf starten/ })).not.toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("hides Auswertung Tickets for users who read tickets but are no administrators", async () => {
+    setup(["tickets:read", "tickets:create"]);
+    await userEvent.keyboard("{Control>}k{/Control}");
+    const dialog = screen.getByRole("dialog", { name: "Befehlspalette" });
+    expect(within(dialog).getByRole("option", { name: /Ticket anlegen/ })).toBeInTheDocument();
+    expect(within(dialog).queryByRole("option", { name: /Zur Auswertung Tickets/ })).not.toBeInTheDocument();
   });
 
   it("hides actions without permission and opens via the header button", async () => {

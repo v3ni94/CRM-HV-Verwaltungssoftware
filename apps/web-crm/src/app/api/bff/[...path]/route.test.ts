@@ -174,6 +174,14 @@ describe("BFF proxy", () => {
     expect(serverFetch).not.toHaveBeenCalled();
   });
 
+  it("forwards the ticket analytics query (operator 27.09.2026: path was missing in the allowlist)", async () => {
+    serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+    const path = "workspace/ticket-analytics";
+    const res = await GET(new Request(`http://crm.localhost/api/bff/${path}?range=week&mailbox_kind=personal`), ctx(path));
+    expect(res.status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}?range=week&mailbox_kind=personal`);
+  });
+
   it("forwards the status filter of the Immoware24 rows query", async () => {
     serverFetch.mockResolvedValue(new Response("[]", { status: 200, headers: { "content-type": "application/json" } }));
     const path = `imports/immoware24/files/${ID}/rows`;

@@ -1620,6 +1620,23 @@ async def bulk(
 
 # Ticket analytics (operator 26.09.2026) -----------------------------------------------------
 
+
+async def _analytics_admin(principal: TenantPrincipal = Depends(STATS_READ)) -> TenantPrincipal:
+    """Operator 27.09.2026: the ticket analytics are visible to tenant administrators only.
+    Administrator marker is the existing rule M2-07 (``tickets:delete`` is held by
+    ``tenant_admin``, ``administrator`` and the platform administrator after a tenant switch,
+    see ``mhvp.tickets.routers._may_skip_flow``); a platform administrator is always included."""
+    if not (principal.has("tickets:delete") or principal.is_platform_admin):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN,
+            detail="Die Auswertung Tickets ist Mandantenadministratoren vorbehalten.",
+            developer_message="Missing permission tickets:delete (tenant administrator).",
+        )
+    return principal
+
+
+ANALYTICS_READ = _analytics_admin
+
 _TA_RANGE_PATTERN = "^(" + "|".join(ticket_analytics_module.RANGES) + ")$"
 _TA_BUCKET_PATTERN = "^(" + "|".join(ticket_analytics_module.BUCKETS) + ")$"
 _TA_KIND_PATTERN = "^(" + "|".join(ticket_analytics_module.MAILBOX_KINDS) + ")$"
@@ -1638,12 +1655,13 @@ async def ticket_analytics(
     user_id: uuid.UUID | None = None,
     mailbox_id: uuid.UUID | None = None,
     mailbox_kind: str = Query(default="all", pattern=_TA_KIND_PATTERN),
-    principal: TenantPrincipal = Depends(STATS_READ),
+    principal: TenantPrincipal = Depends(ANALYTICS_READ),
 ) -> dict[str, Any]:
     """Orientierungswerte je Zeitscheibe (Europe/Berlin) und in Summe; Definitionen im
     Modul ``mhvp.workspace.ticket_analytics`` und im Handbuchkapitel Auswertung Tickets.
-    ``from``/``to`` nur bei ``range=custom`` (höchstens 400 Tage). Der Bearbeiterfilter
-    braucht dasselbe Recht wie die Startseitenauswertung (``tickets:read``)."""
+    ``from``/``to`` nur bei ``range=custom`` (höchstens 400 Tage). Nur für
+    Mandantenadministratoren (``tickets:delete`` nach Regel M2-07) und Plattformadministratoren
+    (Betreiber 27.09.2026)."""
     try:
         window = ticket_analytics_module.build_window(
             range, services.local_today(), unit=bucket, date_from=date_from, date_to=date_to

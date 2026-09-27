@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { ATTENTION_BORDER, asAttention } from "@/components/tickets/attention";
 import { AttentionBadge } from "@/components/tickets/TicketAttention";
 import { bff } from "@/lib/bff";
+import { problemDetailLine } from "@/lib/problem";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
@@ -200,7 +201,7 @@ export function TicketAnalytics() {
       if (res.ok) setStats(res.data);
       else {
         setStats(null);
-        setError(res.message);
+        setError(problemDetailLine(res));
       }
     });
     return () => {
@@ -265,6 +266,10 @@ export function TicketAnalytics() {
       {error ? (
         <p role="alert" className={ui.alert}>
           {t("loadError")}
+          {/* Problem detail of the API (ADR 0004) so that the cause is visible (operator 27.09.2026). */}
+          <span className="mt-1 block text-xs text-muted" data-testid="load-error-detail">
+            {t("loadErrorDetail", { detail: error })}
+          </span>
         </p>
       ) : !stats ? (
         <div className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-hidden>

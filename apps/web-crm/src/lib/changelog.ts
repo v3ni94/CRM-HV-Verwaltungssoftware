@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.34.1",
+    date: "27.09.2026",
+    title: "Auswertung Tickets nur für Administratoren, Ladefehler behoben",
+    changes: [
+      'Auswertung Tickets (Betreibermeldung 27.09.2026): Seite zeigte "Die Auswertung ist derzeit nicht verfügbar.", weil der Pfad workspace/ticket-analytics in der BFF-Allowlist fehlte; behoben. Menüpunkt, Startseitenlink, Befehlspalette, Seite und API nur noch für Mandantenadministratoren und Plattformadministratoren; Fehlerhinweise der Auswertung zeigen Titel, Detail, Fehlercode und HTTP-Status; Mails gelöschter Postfächer zählen in der Postfachart Sonstige.',
+    ],
+  },
+  {
     version: "1.34.0",
     date: "27.09.2026",
     title:

@@ -65,6 +65,9 @@ export default async function StartPage() {
   redirectIfUnauthenticated(meResponse);
   const permissions = me?.permissions ?? [];
   const canReadTickets = permissions.includes("tickets:read");
+  // Link to Auswertung Tickets only for tenant administrators (operator 27.09.2026): admin
+  // marker is tickets:delete (rule M2-07), platform administrators always included.
+  const canSeeAnalytics = permissions.includes("tickets:delete") || Boolean(me?.is_platform_admin);
   const userId = me?.user_id ?? null;
   const today = localIsoDate();
   const until = localIsoDate(HORIZON_DAYS);
@@ -107,7 +110,7 @@ export default async function StartPage() {
         <Greeting displayName={me?.display_name ?? null} email={me?.email ?? null} />
       </div>
       {dashboard.data ? (
-        <KpiStrip tiles={dashboard.data.tiles} analyticsHref={canReadTickets ? "/auswertung/tickets" : null} />
+        <KpiStrip tiles={dashboard.data.tiles} analyticsHref={canSeeAnalytics ? "/auswertung/tickets" : null} />
       ) : (
         <p role="alert" className={ui.alert}>
           {s("loadError")}

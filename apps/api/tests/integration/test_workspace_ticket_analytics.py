@@ -1,7 +1,9 @@
 """Ticket and mail analytics (/api/v1/workspace/ticket-analytics, operator 26.09.2026):
 hand computed counts per bucket, response time percentiles, backlog, throughput, user and
 mailbox filters, personal versus default mailbox classification, tenant separation and
-permission."""
+permission (tenant administrators and platform administrators only, operator 27.09.2026),
+plus a real data matrix (all statuses, mails with and without mailbox, deleted mailbox,
+import tickets without history) over every range, bucket and mailbox kind."""
 
 import asyncio
 import uuid
@@ -43,13 +45,15 @@ async def _world(settings: Any) -> World:
             ("taagent2", a, "standard"),
             ("tasupport", a, "support"),
             ("taother", b, "tenant_admin"),
+            # Platform administrator holding only the standard role in tenant A: always allowed.
+            ("taplatform", a, "standard"),
         ]:
             uid = await services.create_user(
                 factory,
                 email=world.email(name),
                 display_name=name,
                 password=PASSWORD,
-                is_platform_admin=False,
+                is_platform_admin=name == "taplatform",
             )
             world.users[name] = uid
             await services.add_member(
@@ -497,6 +501,209 @@ def test_ticket_analytics(
     assert other_data["totals"]["inbound"] == 0
     assert other_data["all_mailboxes"] == []
 
-    # Permission: the support role has no tickets:read.
+    # Permission (operator 27.09.2026): tenant administrators only. The support role has no
+    # tickets:read, the standard role reads tickets but is no administrator (no tickets:delete,
+    # rule M2-07); a platform administrator is always allowed, whatever its tenant role.
     support = bearer(login(client, world, "tasupport"))
     assert client.get(W, params={"range": "week"}, headers=support).status_code == 403
+    agent = bearer(login(client, world, "taagent1"))
+    denied = client.get(W, params={"range": "week"}, headers=agent)
+    assert denied.status_code == 403, denied.text
+    assert "Mandantenadministratoren" in denied.json()["detail"]
+    platform = bearer(login(client, world, "taplatform"))
+    assert client.get(W, params={"range": "week"}, headers=platform).status_code == 200
+
+
+def _raw_ticket(
+    settings: Any,
+    tenant: uuid.UUID,
+    *,
+    title: str,
+    status: str,
+    created_at: datetime,
+    source: str = "manual",
+    created_by: uuid.UUID | None = None,
+    assignee: uuid.UUID | None = None,
+    merged_into: str | None = None,
+) -> str:
+    """Ticket written directly (like an Immoware24 import): no status events, no comments,
+    any status, optionally without creator or with a merge target."""
+    from mhvp.core.numbering import next_number
+    from mhvp.tickets.models import Ticket
+
+    async def work(session: Any) -> str:
+        ticket = Ticket(
+            tenant_id=tenant,
+            number=await next_number(session, tenant, "ticket"),
+            title=title,
+            status=status,
+            source=source,
+            created_at=created_at,
+            created_by=created_by,
+            assignee_user_id=assignee,
+            merged_into_ticket_id=uuid.UUID(merged_into) if merged_into else None,
+            resolved_at=created_at if status in {"done", "closed", "rejected"} else None,
+        )
+        session.add(ticket)
+        await session.flush()
+        return str(ticket.id)
+
+    return cast(str, _run(settings, tenant, work))
+
+
+def _delete_mailbox(settings: Any, tenant: uuid.UUID, mailbox_id: uuid.UUID) -> None:
+    from mhvp.communication.models import Mailbox
+
+    async def work(session: Any) -> None:
+        result = await session.execute(
+            update(Mailbox).where(Mailbox.id == mailbox_id).values(deleted_at=datetime.now(LOCAL))
+        )
+        assert result.rowcount == 1
+
+    _run(settings, tenant, work)
+
+
+def test_ticket_analytics_real_data_matrix(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """Operator report 27.09.2026 ("Die Auswertung ist derzeit nicht verfügbar."): the endpoint
+    must answer 200 with JSON serialisable content for every range, bucket and mailbox kind on
+    data as it occurs in production: tickets in every status (also without any status event,
+    like imports), a merged ticket, a ticket without creator, mails without mailbox, mails in
+    a deleted mailbox, a user without MailboxUser, hour buckets across a DST change and the
+    long year window."""
+    import json
+
+    settings = _settings(database, redis_url)
+    tenant = world.tenant_a
+    h = bearer(login(client, world, "taadmin"))
+    a1 = world.users["taagent1"]
+    a2 = world.users["taagent2"]
+    today = local_today()
+    now = datetime.now(LOCAL).replace(microsecond=0)
+    yesterday = now - timedelta(days=1)
+
+    deleted_box = _mailbox(settings, tenant, f"alt-{RUN}@example.com", default=False, users=[a2])
+    ticket_ids: list[str] = []
+    for index, status in enumerate(["new", "in_progress", "waiting", "done", "closed", "rejected"]):
+        ticket_ids.append(
+            _raw_ticket(
+                settings,
+                tenant,
+                title=f"Import {status} {RUN}",
+                status=status,
+                created_at=yesterday + timedelta(minutes=index),
+                source="email",
+                created_by=None if index % 2 else a2,
+                assignee=a1 if index % 2 else None,
+            )
+        )
+    # Merged duplicate (closed, points to the first ticket) and a ticket closed by the API on
+    # the same day it was created (regular history), plus one regular open ticket without mails.
+    merged = _raw_ticket(
+        settings,
+        tenant,
+        title=f"Duplikat {RUN}",
+        status="closed",
+        created_at=yesterday,
+        merged_into=ticket_ids[0],
+    )
+    regular = _ticket(client, h, f"Regulär {RUN}", a2)
+    _close(client, h, regular)
+    _ticket(client, h, f"Ohne Mails {RUN}", None)
+    # Mails: without mailbox (in and out), in the mailbox that is deleted afterwards, inbound
+    # without ticket, outbound without creator, and one far outside every window.
+    _mail(settings, tenant, direction="in", at=yesterday, mailbox_id=None, ticket_id=ticket_ids[0])
+    _mail(
+        settings,
+        tenant,
+        direction="out",
+        at=yesterday + timedelta(hours=1),
+        mailbox_id=None,
+        ticket_id=ticket_ids[0],
+        created_by=None,
+    )
+    _mail(settings, tenant, direction="in", at=yesterday, mailbox_id=deleted_box, ticket_id=merged)
+    _mail(settings, tenant, direction="in", at=yesterday, mailbox_id=deleted_box, ticket_id=None)
+    _mail(
+        settings,
+        tenant,
+        direction="out",
+        at=yesterday + timedelta(hours=2),
+        mailbox_id=deleted_box,
+        ticket_id=ticket_ids[3],
+        created_by=a2,
+    )
+    _mail(
+        settings,
+        tenant,
+        direction="in",
+        at=now - timedelta(days=800),
+        mailbox_id=None,
+        ticket_id=None,
+    )
+    _delete_mailbox(settings, tenant, deleted_box)
+
+    from mhvp.workspace.ticket_analytics import BUCKETS, MAILBOX_KINDS, RANGES
+
+    combos = [
+        (r, b, k)
+        for r in RANGES
+        if r != "custom"
+        for b in BUCKETS
+        for k in MAILBOX_KINDS
+        # Hour buckets over a year (8760 rows) are not a real use; keep the run short.
+        if not (b == "hour" and r in {"quarter", "year"})
+    ]
+    for range_key, bucket, kind in combos:
+        params = {"range": range_key, "bucket": bucket, "mailbox_kind": kind}
+        response = client.get(W, params=params, headers=h)
+        assert response.status_code == 200, (params, response.text)
+        data = response.json()
+        json.dumps(data)
+        assert data["range"] == range_key
+        assert len(data["buckets"]) >= 1
+        assert data["totals"]["backlog_end"] >= 0
+        # The deleted mailbox is not listed, its mails still count in "other" when unfiltered.
+        assert str(deleted_box) not in {m["mailbox_id"] for m in data["all_mailboxes"]}
+        for row in data["buckets"]:
+            assert row["minutes"] > 0
+    week = _ok(client.get(W, params={"range": "week"}, headers=h))
+    assert week["totals"]["inbound"] >= 3
+    assert week["totals"]["outbound"] >= 2
+    assert week["by_kind"]["other"]["inbound"] >= 3
+    assert {s["user_id"] for s in week["staff"]} >= {str(a1), str(a2)}
+
+    # Filters that select nothing and users without MailboxUser answer with zeros, not errors.
+    for extra in (
+        {"user_id": str(uuid.uuid4())},
+        {"mailbox_id": str(uuid.uuid4())},
+        {"mailbox_id": str(deleted_box)},
+        {"user_id": str(a2), "mailbox_kind": "personal"},
+    ):
+        empty = _ok(client.get(W, params={"range": "month", **extra}, headers=h))
+        json.dumps(empty)
+        assert empty["totals"]["tickets_created"] >= 0
+
+    # Custom windows with hour buckets across both DST changes and the 400 day maximum.
+    for date_from, date_to, bucket in (
+        ("2026-03-28", "2026-03-30", "hour"),
+        ("2026-10-24", "2026-10-26", "hour"),
+        ((today - timedelta(days=399)).isoformat(), today.isoformat(), "auto"),
+        ((today - timedelta(days=399)).isoformat(), today.isoformat(), "day"),
+    ):
+        params = {"range": "custom", "from": date_from, "to": date_to, "bucket": bucket}
+        response = client.get(W, params=params, headers=h)
+        assert response.status_code == 200, (params, response.text)
+        data = response.json()
+        json.dumps(data)
+        assert len({b["key"] for b in data["buckets"]}) == len(data["buckets"])
+    dst = _ok(
+        client.get(
+            W,
+            params={"range": "custom", "from": "2026-03-29", "to": "2026-03-29", "bucket": "hour"},
+            headers=h,
+        )
+    )
+    assert len(dst["buckets"]) == 23
+    assert sum(b["minutes"] for b in dst["buckets"]) == 23 * 60

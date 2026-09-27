@@ -88861,7 +88861,7 @@
     },
     "/api/v1/workspace/ticket-analytics": {
       "get": {
-        "description": "Orientierungswerte je Zeitscheibe (Europe/Berlin) und in Summe; Definitionen im\nModul ``mhvp.workspace.ticket_analytics`` und im Handbuchkapitel Auswertung Tickets.\n``from``/``to`` nur bei ``range=custom`` (höchstens 400 Tage). Der Bearbeiterfilter\nbraucht dasselbe Recht wie die Startseitenauswertung (``tickets:read``).",
+        "description": "Orientierungswerte je Zeitscheibe (Europe/Berlin) und in Summe; Definitionen im\nModul ``mhvp.workspace.ticket_analytics`` und im Handbuchkapitel Auswertung Tickets.\n``from``/``to`` nur bei ``range=custom`` (höchstens 400 Tage). Nur für\nMandantenadministratoren (``tickets:delete`` nach Regel M2-07) und Plattformadministratoren\n(Betreiber 27.09.2026).",
         "operationId": "ticket_analytics_api_v1_workspace_ticket_analytics_get",
         "parameters": [
           {

@@ -64,3 +64,13 @@ export function problemJson(status: number, title: string, detail?: string): Res
     headers: { "content-type": "application/problem+json" },
   });
 }
+
+/** One line with the API problem (ADR 0004) for error notices: "<message> (Code MHVP-…, HTTP 403)".
+ *  Uses the German detail or title of the problem, else the fallback per status; code and
+ *  status are appended when known so the operator can find the cause in the API log. */
+export function problemDetailLine(result: { status: number; problem: Problem | null; message: string }): string {
+  const parts: string[] = [];
+  if (result.problem?.code) parts.push(`Code ${result.problem.code}`);
+  if (result.status > 0) parts.push(`HTTP ${result.status}`);
+  return parts.length ? `${result.message} (${parts.join(", ")})` : result.message;
+}

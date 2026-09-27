@@ -13,7 +13,10 @@ Abrechnungen, Fristen oder Rechtsfolgen.
 
 ## Voraussetzungen
 
-Recht Tickets lesen (`tickets:read`). Der Bearbeiterfilter braucht kein weiteres Recht. Die
+Nur Mandantenadministratoren (Rollen `tenant_admin` und `administrator`, technisch das
+Administratorkennzeichen `tickets:delete` nach Regel M2-07) sowie Plattformadministratoren
+(Betreiberentscheidung 27.09.2026). Andere Benutzer sehen weder den Menüpunkt noch die Seite,
+die Schnittstelle antwortet mit 403. Der Bearbeiterfilter braucht kein weiteres Recht. Die
 Postfachliste im Filter stammt aus der Auswertung selbst, das Postfachverwaltungsrecht ist nicht
 erforderlich.
 
@@ -67,3 +70,21 @@ erforderlich.
 - Tickets ohne eingehende Mail (Telefon, Portal, manuell) fallen unter Sonstige und sind mit
   Postfachfiltern nicht sichtbar.
 - Keine Geldkennzahlen; die Freigabestufen G1 bis G5 bleiben unberührt.
+
+## Fehlersuche
+
+Zeigt die Seite "Die Auswertung ist derzeit nicht verfügbar.", steht darunter die Antwort der
+Schnittstelle (Titel oder Detail, Fehlercode und HTTP-Status nach ADR 0004). Auf dem Server
+(`/opt/mhvp`) liefert der API-Log die Ursache:
+
+```sh
+./mhvp.sh logs --tail 300 api | grep -B 3 -A 25 "ticket-analytics"
+```
+
+Direkter Aufruf der Schnittstelle mit einem Zugriffstoken (Anmeldung über
+`POST /api/v1/auth/login`, Mandant über `POST /api/v1/auth/switch-tenant`):
+
+```sh
+curl -sS -H "Authorization: Bearer $TOKEN" \
+  "https://<api-host>/api/v1/workspace/ticket-analytics?range=week"
+```

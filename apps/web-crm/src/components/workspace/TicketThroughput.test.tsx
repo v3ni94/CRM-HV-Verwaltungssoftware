@@ -127,6 +127,20 @@ describe("TicketThroughput", () => {
     );
   });
 
+  it("shows the API problem detail with the load error", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/api/bff/tenant/members")) return jsonResponse(members);
+      return jsonResponse({ title: "Verboten", detail: "Die Auswertung Tickets ist Mandantenadministratoren vorbehalten.", code: "MHVP-AUTH-0003", status: 403 }, 403);
+    });
+    renderIntl(<TicketThroughput />);
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Die Auswertung ist derzeit nicht verfügbar.");
+    expect(screen.getByTestId("load-error-detail")).toHaveTextContent(
+      "Antwort der Schnittstelle: Die Auswertung Tickets ist Mandantenadministratoren vorbehalten. (Code MHVP-AUTH-0003, HTTP 403)",
+    );
+  });
+
   it("builds the CSV of the current view", () => {
     const csv = buildCsv(analyticsFor("week"), (id) => (id === AGENT1 ? "Anna Beispiel" : "Ben Beispiel"));
     const lines = csv.split("\n");

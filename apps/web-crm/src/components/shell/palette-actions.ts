@@ -19,7 +19,9 @@ export const PALETTE_ACTIONS: PaletteAction[] = [
   { id: "create-ticket", labelKey: "createTicket", href: "/tickets#anlegen", permission: "tickets:create", keywords: ["neu", "vorgang"] },
   { id: "create-contact", labelKey: "createContact", href: "/kontakte/neu", permission: "contacts:create", keywords: ["neu", "person"] },
   { id: "start-dunning", labelKey: "startDunning", href: "/buchhaltung/mahnwesen", permission: "accounting:create", keywords: ["mahnung", "mahnwesen"] },
-  { id: "ticket-analytics", labelKey: "ticketAnalytics", href: "/auswertung/tickets", permission: "tickets:read", keywords: ["statistik", "bericht"] },
+  // Auswertung Tickets: tenant administrators only (operator 27.09.2026, admin marker
+  // tickets:delete per rule M2-07); the platform administrator after a tenant switch holds it too.
+  { id: "ticket-analytics", labelKey: "ticketAnalytics", href: "/auswertung/tickets", permission: "tickets:delete", keywords: ["statistik", "bericht"] },
 ];
 
 export function allowedActions(permissions: readonly string[]): PaletteAction[] {

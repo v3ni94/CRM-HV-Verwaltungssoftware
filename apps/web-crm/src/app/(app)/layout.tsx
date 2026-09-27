@@ -25,6 +25,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const { data: me, response } = await getMe();
   redirectIfUnauthenticated(response);
   const can = (p: string) => me?.permissions.includes(p) ?? false;
+  const isAdmin = can("tickets:delete") || Boolean(me?.is_platform_admin);
   const groups: NavGroup[] = [
     {
       label: t("group.overview"),
@@ -36,7 +37,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         { href: "/fristen", label: t("deadlines"), icon: "calendar" },
         ...(can("communication:read") ? [{ href: "/mail", label: t("mail"), icon: "mail" }] : []),
         ...(can("tickets:read") ? [{ href: "/tickets", label: t("tickets"), icon: "tickets" }] : []),
-        ...(can("tickets:read")
+        // Auswertung Tickets only for tenant administrators (operator 27.09.2026): admin marker
+        // is tickets:delete (rule M2-07), platform administrators always included.
+        ...(isAdmin
           ? [{ href: "/auswertung/tickets", label: t("ticketAnalytics"), icon: "tickets" }]
           : []),
       ],
