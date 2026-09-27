@@ -5,6 +5,11 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.30.1 (27.09.2026) Betrieb: Migrationssperre, Objektspeicher lokal als Standard
+
+- CI-Prüfung und Skript `scripts/check-migrations.sh`: bereits gemergte Alembic-Migrationen dürfen nicht mehr umbenannt, gelöscht oder in Revision und down_revision geändert werden. Neue Migrationen fortlaufend ab dem bisherigen Head. Runbook `docs/runbooks/migrationen.md`.
+- Objektspeicher: SeaweedFS-Container ohne Profil dauerhaft aktiv, Migrationsjob wartet auf den Dienst, S3-Variablen standardmäßig lokal. Backup des Volumes `mhvp_objectstore-data` als Vorgabe in `env.backup.example`. Runbooks und ADR 0005 ergänzt (Entscheidung 27.09.2026).
+
 ## 1.30.0 (27.09.2026) Masterprompt-Ergänzung Welle B: Inline-Bearbeitung, Objekt- und Gebäudeseiten, Kataloge, Messdienstleister Stufe 3
 
 - Stammdaten direkt bearbeiten (ADR 0012): Objekt, Gebäude, Einheit und Kontakt werden an Ort und Stelle mit Stift oder Bearbeiten je Abschnitt geändert, Speichern je Feld beim Verlassen mit sichtbarem Speicherstatus, Feldfehlern, Versionsprüfung und Konflikthinweis; beim Vertrag Bemerkungen und Mahnsperre mit Begründungspflicht, alles Übrige bleibt versioniert über das Vertragsformular; PATCH-Endpunkte für Objekt, Gebäude, Einheit, Kontakt und Vertragsbemerkungen mit Ereignisprotokoll und Änderungsdiff

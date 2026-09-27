@@ -17,6 +17,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.30.1",
+    date: "27.09.2026",
+    title: "Betrieb: Migrationssperre, Objektspeicher lokal als Standard",
+    changes: [
+      "Migrationssperre: bereits gemergte Datenbankmigrationen dürfen nicht mehr umbenannt oder gelöscht werden, Prüfung per Skript und in der CI (Runbook Migrationen)",
+      "Objektspeicher: lokaler Dienst dauerhaft aktiv, Migrationsjob wartet auf den Speicher, Volume im Backup enthalten, Runbooks und ADR 0005 ergänzt",
+    ],
+  },
+  {
     version: "1.30.0",
     date: "27.09.2026",
     title:
