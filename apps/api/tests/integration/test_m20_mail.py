@@ -535,20 +535,24 @@ def test_messages_pagination(client: TestClient, world: World) -> None:
 
 
 def test_reply_draft_replies_to_all_minus_own_mailboxes(client: TestClient, world: World) -> None:
-    """"Antworten" (operator 27.09.2026, Antworten mit An/Cc): To ist die Reply-To-Adresse
+    """ "Antworten" (operator 27.09.2026, Antworten mit An/Cc): To ist die Reply-To-Adresse
     der Ursprungsmail, Cc alle ursprünglichen To-/Cc-Empfänger ohne die eigenen
     Postfachadressen des Mandanten und ohne Duplikate von To. ``cc_addresses`` erscheint in
     der API-Ausgabe."""
     h = bearer(login(client, world, "m20admin"))
     box_a = _ok(
         client.post(
-            f"{M}/mailboxes", json={"address": f"info-ra{RUN}@example.com", "secret": "geheim"}, headers=h
+            f"{M}/mailboxes",
+            json={"address": f"info-ra{RUN}@example.com", "secret": "geheim"},
+            headers=h,
         ),
         201,
     )
     box_b = _ok(
         client.post(
-            f"{M}/mailboxes", json={"address": f"post-ra{RUN}@example.com", "secret": "geheim"}, headers=h
+            f"{M}/mailboxes",
+            json={"address": f"post-ra{RUN}@example.com", "secret": "geheim"},
+            headers=h,
         ),
         201,
     )

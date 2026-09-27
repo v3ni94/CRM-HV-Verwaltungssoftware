@@ -75,7 +75,13 @@ def _ingest(client: TestClient, h: dict[str, str], sender: str, subject: str, bo
     doc = _ok(
         client.post(
             "/api/v1/documents",
-            files={"file": (f"m-{tag}.eml", _eml(sender, subject, body, f"<{tag}@x>"), "message/rfc822")},
+            files={
+                "file": (
+                    f"m-{tag}.eml",
+                    _eml(sender, subject, body, f"<{tag}@x>"),
+                    "message/rfc822",
+                )
+            },
             headers=h,
         ),
         201,
@@ -94,7 +100,7 @@ def _ticket_from_mail(
     return ticket, msg
 
 
-def _contact_with_email(client: TestClient, h: dict[str, str], name: str, email: str) -> dict[str, Any]:
+def _contact_with_email(client: TestClient, h: dict[str, str], name: str, email: str) -> Any:
     return _ok(
         client.post(
             "/api/v1/contacts",
@@ -161,7 +167,9 @@ def _auto_events(database: Database, tenant_id: Any, ticket_id: str) -> list[dic
     engine = create_engine(database.migrator_url)
     try:
         with engine.begin() as conn:
-            conn.execute(text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant_id)})
+            conn.execute(
+                text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant_id)}
+            )
             rows = conn.execute(
                 text(
                     "SELECT payload FROM domain_event WHERE entity_id = :id "
@@ -211,7 +219,9 @@ def test_single_tenancy_contract_assigns_unit_and_property(
     assert reviews["unit"]["reason"] == "eindeutiger Vertrag"
 
     events = _auto_events(database, world.tenant_a, ticket["id"])
-    assert any(e["dimension"] == "property" and e["reason"] == "eindeutiger Vertrag" for e in events)
+    assert any(
+        e["dimension"] == "property" and e["reason"] == "eindeutiger Vertrag" for e in events
+    )
     assert any(e["dimension"] == "unit" and e["reason"] == "eindeutiger Vertrag" for e in events)
 
 
@@ -298,10 +308,11 @@ def test_unsure_contact_derives_no_unit_or_property(client: TestClient, world: W
     _tenancy(client, h, unit, contract_party["id"])
 
     body = (
-        "Sehr geehrte Damen und Herren,\n\nbitte um Rückruf.\n\n"
-        f"Mit freundlichen Grüßen\n{surname}"
+        f"Sehr geehrte Damen und Herren,\n\nbitte um Rückruf.\n\nMit freundlichen Grüßen\n{surname}"
     )
-    ticket = _ok(client.post(T, json={"title": "Frage", "public_description": body}, headers=h), 201)
+    ticket = _ok(
+        client.post(T, json={"title": "Frage", "public_description": body}, headers=h), 201
+    )
     assert ticket["contact_id"] is None
     assert ticket["property_id"] is None
     assert ticket["unit_id"] is None
@@ -333,9 +344,7 @@ def test_already_set_field_stays_untouched(client: TestClient, world: World) -> 
     assert msg["contact_id"] == contact["id"]
     # Objekt manuell setzen, bevor das Ticket aus der Mail entsteht (die Zuordnungsprüfung des
     # Tickets sieht dann ein bereits gefülltes Feld).
-    _ok(
-        client.patch(f"{M}/messages/{msg['id']}", json={"property_id": other["id"]}, headers=h)
-    )
+    _ok(client.patch(f"{M}/messages/{msg['id']}", json={"property_id": other["id"]}, headers=h))
     created = _ok(client.post(f"{M}/messages/{msg['id']}/ticket", headers=h), 201)
     ticket = _ok(client.get(f"{T}/{created['ticket_id']}", headers=h))
     assert ticket["contact_id"] == contact["id"]
@@ -371,9 +380,7 @@ def test_ja_on_contact_reevaluates_the_chain(client: TestClient, world: World) -
         201,
     )
     contract_party = _ok(
-        client.post(
-            "/api/v1/parties", json={"members": [{"contact_id": frieda["id"]}]}, headers=h
-        ),
+        client.post("/api/v1/parties", json={"members": [{"contact_id": frieda["id"]}]}, headers=h),
         201,
     )
     _tenancy(client, h, unit, contract_party["id"])
@@ -382,7 +389,9 @@ def test_ja_on_contact_reevaluates_the_chain(client: TestClient, world: World) -
         "Sehr geehrte Damen und Herren,\n\nbitte um Rückruf.\n\n"
         f"Mit freundlichen Grüßen\nFrieda {surname}"
     )
-    ticket = _ok(client.post(T, json={"title": "Frage", "public_description": body}, headers=h), 201)
+    ticket = _ok(
+        client.post(T, json={"title": "Frage", "public_description": body}, headers=h), 201
+    )
     assert ticket["contact_id"] is None
     assert ticket["property_id"] is None
 

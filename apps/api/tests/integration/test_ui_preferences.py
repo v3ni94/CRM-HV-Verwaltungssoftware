@@ -157,11 +157,11 @@ def test_theme_preference_is_stored_validated_and_reset(
     assert me["ui_preferences"] == {"theme": "auto", "nav_expanded_groups": ["System"]}
 
     for bad in ("dark", "", 1, ["day"]):
-        rejected = client.patch(
-            "/api/v1/auth/me/preferences", json={"theme": bad}, headers=headers
-        )
+        rejected = client.patch("/api/v1/auth/me/preferences", json={"theme": bad}, headers=headers)
         assert rejected.status_code == 422, rejected.text
-    assert client.get("/api/v1/auth/me", headers=headers).json()["ui_preferences"]["theme"] == "auto"
+    assert (
+        client.get("/api/v1/auth/me", headers=headers).json()["ui_preferences"]["theme"] == "auto"
+    )
 
     reset = client.patch("/api/v1/auth/me/preferences", json={"theme": None}, headers=headers)
     assert reset.status_code == 200, reset.text
