@@ -32,9 +32,15 @@ describe("UnitsTable", () => {
     expect(within(rows[0]!).getByRole("link", { name: "001" })).toHaveAttribute("href", "/vermietung/einheit/u1");
     expect(within(rows[0]!).getByRole("link", { name: "EG links" })).toHaveAttribute("href", "/vermietung/einheit/u1");
     expect(rows[0]).toHaveTextContent("Anna Eigen");
-    expect(rows[0]).toHaveTextContent("Mia Miete");
+    expect(within(rows[0]!).getByRole("link", { name: "Anna Eigen" })).toHaveAttribute("href", "/kontakte/k-Anna Eigen");
+    expect(within(rows[0]!).getByRole("link", { name: "Mia Miete" })).toHaveAttribute("href", "/kontakte/k-Mia Miete");
     expect(rows[1]).toHaveTextContent("kein Mieter");
     expect(rows[2]).toHaveTextContent("65,5 m²");
+  });
+
+  it("links the contract when the occupant has no members", () => {
+    renderIntl(<UnitsTable units={[{ ...base, id: "u1", number: "1", owner: { ...occupant("WEG X"), members: [] } }] as never} />);
+    expect(screen.getByRole("link", { name: "WEG X" })).toHaveAttribute("href", "/vertraege/c-WEG X");
   });
 
   it("keeps numbers as stored when they are not all numeric", () => {

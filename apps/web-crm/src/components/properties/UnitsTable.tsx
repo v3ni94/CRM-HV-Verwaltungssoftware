@@ -3,9 +3,35 @@ import { useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { ui } from "@/lib/ui";
-import { formatQty, occupantName, sortUnits, unitNumberFormatter } from "@/lib/units";
+import { formatQty, sortUnits, unitNumberFormatter } from "@/lib/units";
 
 type Unit = components["schemas"]["UnitOut"];
+type Occupant = NonNullable<Unit["owner"]>;
+
+/** Owner or tenant names, each linked to its contact (operator 28.09.2026); without members the
+ *  party name links to the contract. */
+function OccupantLinks({ occupant }: { occupant: Occupant }) {
+  const members = occupant.members ?? [];
+  if (!members.length) {
+    return (
+      <Link href={`/vertraege/${occupant.contract_id}`} className="hover:underline">
+        {occupant.party_name}
+      </Link>
+    );
+  }
+  return (
+    <>
+      {members.map((m, i) => (
+        <span key={m.contact_id}>
+          {i > 0 ? ", " : null}
+          <Link href={`/kontakte/${m.contact_id}`} className="hover:underline">
+            {m.display_name}
+          </Link>
+        </span>
+      ))}
+    </>
+  );
+}
 
 /** Unit list of a property: natural order, number and label link to the unit page (26.09.2026). */
 export function UnitsTable({ units }: { units: Unit[] }) {
@@ -44,10 +70,10 @@ export function UnitsTable({ units }: { units: Unit[] }) {
                 </td>
                 <td className="text-muted">{tp(`unitTypes.${u.unit_type}`)}</td>
                 <td>
-                  {u.owner ? occupantName(u.owner) : <span className="text-muted">{t("noOwner")}</span>}
+                  {u.owner ? <OccupantLinks occupant={u.owner} /> : <span className="text-muted">{t("noOwner")}</span>}
                 </td>
                 <td>
-                  {u.tenant ? occupantName(u.tenant) : <span className="text-muted">{t("noTenant")}</span>}
+                  {u.tenant ? <OccupantLinks occupant={u.tenant} /> : <span className="text-muted">{t("noTenant")}</span>}
                 </td>
                 <td className="num">
                   {u.living_area_sqm ?? u.total_area_sqm ? `${formatQty(u.living_area_sqm ?? u.total_area_sqm)} m²` : ""}
