@@ -17,6 +17,7 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa import meeting_rules
@@ -1015,12 +1016,23 @@ async def create_audit(
     from mhvp.accounting.models import EntryStatus, JournalEntry, Ledger
 
     async with tenant_tx(request, principal) as session:
+        # Legal entity scope of the membership (A37): a foreign community answers 404.
+        ensure_session_legal_entity_allowed(session, body.legal_entity_id)
         await _hoa_property(session, body.legal_entity_id)
         if body.period_to < body.period_from:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Zeitraum ungültig.")
         snapshot_hash = None
         if body.statement_id:
             st = await _get(session, HoaStatement, body.statement_id)
+            # The board portal releases the cost items of this statement (PÜ07): only a
+            # statement of the engagement's own community.
+            st_ledger = await _get(session, Ledger, st.ledger_id)
+            ensure_session_legal_entity_allowed(session, st_ledger.legal_entity_id)
+            if st_ledger.legal_entity_id != body.legal_entity_id:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Die Abrechnung gehört nicht zur Gemeinschaft des Prüfauftrags.",
+                )
             if st.snapshot_hash is None:
                 raise ProblemError(ErrorCodes.CONFLICT, detail="Abrechnung nicht berechnet.")
             snapshot_hash = st.snapshot_hash
@@ -1076,13 +1088,163 @@ async def add_audit_item(
     principal: TenantPrincipal = Depends(CREATE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        eng = await _get(session, AuditEngagement, audit_id)
-        if not body.journal_entry_id and not body.document_id:
+        eng = await _audit_engagement(session, audit_id)
+        # Everything referenced here is released to the external board (portal.board): the
+        # booking and the receipt must be records of the engagement's community, and the value
+        # in the report is the booked figure, never a client supplied one.
+        amount: Decimal | None
+        if body.journal_entry_id is not None:
+            amount = await _audit_entry_amount(session, eng, body.journal_entry_id)
+            if body.document_id is not None:
+                await _ensure_entry_document(session, body.journal_entry_id, body.document_id)
+        elif body.document_id is not None:
+            amount = await _audit_document_amount(session, eng, body.document_id, body.amount)
+        else:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Buchung oder Beleg angeben.")
-        row = AuditItem(tenant_id=principal.tenant_id, engagement_id=eng.id, **body.model_dump())
+        if body.amount is not None and amount is not None and body.amount != amount:
+            from mhvp.billing.letters import fmt_eur
+
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=f"Der Betrag weicht vom gebuchten Betrag {fmt_eur(amount)} ab.",
+            )
+        row = AuditItem(
+            tenant_id=principal.tenant_id,
+            engagement_id=eng.id,
+            journal_entry_id=body.journal_entry_id,
+            document_id=body.document_id,
+            amount=amount,
+        )
         session.add(row)
         await session.flush()
         return _item_out(row)
+
+
+async def _audit_engagement(session: AsyncSession, audit_id: uuid.UUID) -> AuditEngagement:
+    """Engagement with the legal entity scope of the membership (A37): a foreign community
+    answers 404 like ``mhvp.hoa.board._engagement``."""
+    eng: AuditEngagement = await _get(session, AuditEngagement, audit_id)
+    ensure_session_legal_entity_allowed(session, eng.legal_entity_id)
+    return eng
+
+
+async def _entry_debit_total(session: AsyncSession, entry_id: uuid.UUID) -> Decimal:
+    """Sum of the debit lines: the figure of the candidate list (``mhvp.hoa.board``) that the
+    CRM picker submits and the report adds up as checked or unchecked value."""
+    from sqlalchemy import func
+
+    from mhvp.accounting.models import JournalLine
+
+    total = await session.scalar(
+        select(func.coalesce(func.sum(JournalLine.debit), 0)).where(
+            JournalLine.journal_entry_id == entry_id
+        )
+    )
+    return Decimal(total or 0)
+
+
+async def _audit_entry_amount(
+    session: AsyncSession, eng: AuditEngagement, entry_id: uuid.UUID
+) -> Decimal:
+    """A posted booking of the engagement's community inside the engagement period; a posting
+    of the engagement's own statement (result per unit, booked on the resolution day) counts
+    as inside. Returns the booked amount."""
+    from mhvp.accounting.models import EntryStatus, JournalEntry, Ledger
+
+    entry = await _get(session, JournalEntry, entry_id)
+    ledger = await _get(session, Ledger, entry.ledger_id)
+    ensure_session_legal_entity_allowed(session, ledger.legal_entity_id)
+    if ledger.legal_entity_id != eng.legal_entity_id:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Die Buchung gehört nicht zur Gemeinschaft des Prüfauftrags.",
+        )
+    if entry.status is not EntryStatus.POSTED:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Nur gebuchte Buchungen sind prüfbar, keine Entwürfe."
+        )
+    if not eng.period_from <= entry.booking_date <= eng.period_to:
+        statement = await session.get(HoaStatement, eng.statement_id) if eng.statement_id else None
+        if statement is None or str(entry.id) not in (statement.posted_entry_ids or []):
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Das Buchungsdatum liegt außerhalb des Prüfzeitraums.",
+            )
+    return await _entry_debit_total(session, entry.id)
+
+
+async def _ensure_entry_document(
+    session: AsyncSession, entry_id: uuid.UUID, document_id: uuid.UUID
+) -> None:
+    """With a booking only its own receipt or the receipt of the invoice it booked."""
+    from mhvp.accounting.models import Invoice, JournalEntry
+    from mhvp.documents.models import Document
+
+    await _get(session, Document, document_id)
+    linked = await session.scalar(
+        select(JournalEntry.id).where(
+            JournalEntry.id == entry_id, JournalEntry.document_id == document_id
+        )
+    ) or await session.scalar(
+        select(Invoice.id)
+        .where(Invoice.journal_entry_id == entry_id, Invoice.document_id == document_id)
+        .limit(1)
+    )
+    if linked is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Der Beleg gehört nicht zu dieser Buchung."
+        )
+
+
+async def _audit_document_amount(
+    session: AsyncSession,
+    eng: AuditEngagement,
+    document_id: uuid.UUID,
+    requested: Decimal | None,
+) -> Decimal | None:
+    """A receipt without booking: the receipt of an invoice or of a posted booking in a ledger
+    of the engagement's community, nothing else of the tenant. Returns the booked figure
+    (invoice gross, booking debit total); with several different figures the requested one
+    must be among them."""
+    from mhvp.accounting.models import EntryStatus, Invoice, JournalEntry, Ledger
+    from mhvp.documents.models import Document
+
+    await _get(session, Document, document_id)
+    ledgers = select(Ledger.id).where(Ledger.legal_entity_id == eng.legal_entity_id)
+    figures: set[Decimal] = set(
+        (
+            await session.scalars(
+                select(Invoice.gross).where(
+                    Invoice.document_id == document_id, Invoice.ledger_id.in_(ledgers)
+                )
+            )
+        ).all()
+    )
+    for entry_id in (
+        await session.scalars(
+            select(JournalEntry.id).where(
+                JournalEntry.document_id == document_id,
+                JournalEntry.ledger_id.in_(ledgers),
+                JournalEntry.status == EntryStatus.POSTED,
+            )
+        )
+    ).all():
+        figures.add(await _entry_debit_total(session, entry_id))
+    if not figures:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Der Beleg gehört zu keiner Rechnung oder Buchung der Gemeinschaft des "
+            "Prüfauftrags.",
+        )
+    if len(figures) == 1:
+        return next(iter(figures))
+    if requested is not None and requested in figures:
+        return requested
+    raise ProblemError(
+        ErrorCodes.VALIDATION,
+        detail="Der Beleg ist mehrfach mit unterschiedlichen Beträgen gebucht; bitte die "
+        "Buchung auswählen.",
+    )
 
 
 @router.patch("/audit-items/{item_id}", summary="Vermerk, Rückfrage, Antwort (PÜ08)")
@@ -1094,6 +1256,7 @@ async def patch_audit_item(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await _get(session, AuditItem, item_id)
+        await _audit_engagement(session, row.engagement_id)  # A37 scope of the community
         if row.status == "outdated":
             raise ProblemError(ErrorCodes.CONFLICT, detail="Position zu alter Version.")
         for key, value in body.model_dump(exclude_none=True).items():
@@ -1113,7 +1276,7 @@ async def create_report(
     from sqlalchemy import func
 
     async with tenant_tx(request, principal) as session:
-        eng = await _get(session, AuditEngagement, audit_id)
+        eng = await _audit_engagement(session, audit_id)
         outdated_reasons = await refresh_audit_items(session, eng)
         items = (
             await session.scalars(select(AuditItem).where(AuditItem.engagement_id == eng.id))
@@ -1227,7 +1390,7 @@ async def get_audit(
     audit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        eng = await _get(session, AuditEngagement, audit_id)
+        eng = await _audit_engagement(session, audit_id)
         outdated_reasons = await refresh_audit_items(session, eng)
         items = (
             await session.scalars(

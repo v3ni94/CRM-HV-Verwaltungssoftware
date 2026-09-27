@@ -33,7 +33,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
-from mhvp.documents.models import DocumentSource, LinkRole
+from mhvp.documents.models import Document, DocumentSource, LinkRole
 from mhvp.properties.models import Property, Unit
 from mhvp.workspace.services import local_today
 
@@ -354,6 +354,16 @@ async def put_supplier_profile(
             and body.exemption_valid_to < body.exemption_valid_from
         ):
             raise ProblemError(ErrorCodes.VALIDATION, detail="Gültig bis liegt vor Gültig ab.")
+        # M14-04: an exemption only counts with a stored document of this tenant. The foreign
+        # key alone bypasses row level security, so the id is resolved through the RLS bound
+        # session (review 27.09.2026: a foreign or invented id lifted the withholding block).
+        if (
+            body.exemption_document_id is not None
+            and await session.get(Document, body.exemption_document_id) is None
+        ):
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Freistellungsbescheinigung nicht gefunden."
+            )
         row = await session.scalar(
             select(SupplierTaxProfile).where(SupplierTaxProfile.contact_id == contact_id)
         )

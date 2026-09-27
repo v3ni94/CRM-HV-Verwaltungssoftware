@@ -1350,15 +1350,33 @@ async def mail_approval_reauth(
     Nachweis selbst wird mandantenbezogen in ``mail_approval_reauth`` gespeichert."""
     if principal.user_id is None:
         raise ProblemError(ErrorCodes.NOT_AUTHENTICATED)
+    from mhvp.core.auth.service import register_failed_attempt
     from mhvp.platform.models import User
 
+    # M20-04: a wrong password or TOTP code counts towards the account lockout like a login,
+    # and a locked account cannot re-authenticate. The failure is committed before the error
+    # is raised, otherwise the rollback would discard the counter.
+    now = datetime.now(UTC)
+    failure: ProblemError | None = None
     async with platform_transaction(sessions(request)) as session:
         user = await session.get(User, principal.user_id)
         if user is None or not user.active:
             raise ProblemError(ErrorCodes.INVALID_CREDENTIALS)
-        method = mail_approval.verify_identity(
-            user, password=body.password, totp_code=body.totp_code
-        )
+        if user.locked_until is not None and user.locked_until > now:
+            raise ProblemError(ErrorCodes.ACCOUNT_LOCKED)
+        try:
+            method = mail_approval.verify_identity(
+                user, password=body.password, totp_code=body.totp_code
+            )
+        except ProblemError as exc:
+            if exc.error is not ErrorCodes.INVALID_CREDENTIALS:
+                raise
+            await register_failed_attempt(session, user, now)
+            failure = exc
+        else:
+            user.failed_logins = 0
+    if failure is not None:
+        raise failure
     async with tenant_tx(request, principal) as session:
         result = await mail_approval.record_reauth(
             session, tenant_id=principal.tenant_id, user_id=principal.user_id, method=method

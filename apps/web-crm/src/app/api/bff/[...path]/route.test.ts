@@ -131,6 +131,25 @@ describe("BFF proxy", () => {
     ["POST", `accounting/dunning-cases/${ID}/mark-sent`],
     ["POST", `accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung`],
     ["GET", `accounting/dunning-cases/${ID}/mahnbescheid-vorbereitung`],
+    // Hotfix 1.35.2 (operator report 27.09.2026): calls of existing screens that were missing.
+    ["GET", "tickets/resolution-kinds"],
+    ["GET", "accounting/templates"],
+    ["POST", `accounting/templates/${ID}/submit-review`],
+    ["GET", `accounting/templates/${ID}/export`],
+    ["GET", "accounting/datev/exports"],
+    ["POST", `accounting/datev/exports/${ID}/check`],
+    ["GET", `accounting/datev/exports/${ID}/download`],
+    ["GET", "accounting/datev/sample-batch"],
+    ["POST", "accounting/datev/check-file"],
+    ["PUT", "accounting/tax/settings"],
+    ["PUT", `accounting/tax/suppliers/${ID}/profile`],
+    ["POST", `ai/knowledge/${ID}/reject`],
+    ["POST", "mail/mail-approval/reauth"],
+    ["POST", "mail/mail-approval/deputies"],
+    ["DELETE", `mail/mail-approval/deputies/${ID}`],
+    ["POST", `hoa/audits/${ID}/items`],
+    ["PUT", `platform/tenants/${ID}/g5-evidence/restore_drill`],
+    ["POST", `platform/tenants/${ID}/export-requests/${ID}/approve`],
   ])("forwards the operation %s %s", async (method, path) => {
     serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
@@ -167,6 +186,9 @@ describe("BFF proxy", () => {
     ["POST", `accounting/receivable-runs/${ID}/reverse`],
     ["PATCH", `hoa/resolutions/${ID}`],
     ["DELETE", `platform/rent-law/cap-areas/${ID}`],
+    ["PUT", `platform/tenants/${ID}/g5-evidence/Not-A-Code`],
+    ["DELETE", `platform/tenants/${ID}/export-requests/${ID}`],
+    ["GET", `mail/mail-approval/deputies/${ID}`],
   ])("keeps %s %s outside the allowlist", async (method, path) => {
     const req = new Request(`http://crm.localhost/api/bff/${path}`, {
       method,
