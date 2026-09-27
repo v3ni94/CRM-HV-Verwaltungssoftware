@@ -1,15 +1,89 @@
-# Runbook: Objektspeicher IONOS S3 Object Storage
+# Runbook: Objektspeicher (lokal als Standard, IONOS S3 optional)
 
-Grundlage: ADR 0005 mit Nachtrag 26.09.2026 (Betreiberentscheidung M1-01), MASTER-PROMPT
-Abschnitte 3.1, 3.5, 6.9.5 und 16. Produktion und Staging speichern Originaldokumente,
-erzeugte PDFs, Exporte und Bankdateien in IONOS S3 Object Storage in einer EU-Region. Im
-produktiven Compose-Stack läuft kein eigener Objektspeicher-Container mehr; SeaweedFS
-beziehungsweise moto gibt es nur noch für Entwicklung, CI und e2e.
+## 0. Objektspeicher lokal (Standard)
 
-Grundsatz: Dieses Repository enthält keine IONOS-Hostnamen. Endpunkt und Region kopiert der
+Betreiberentscheidung 27.09.2026: Der Objektspeicher läuft dauerhaft lokal im Compose-Stack.
+IONOS S3 wird nicht eingerichtet; die Abschnitte 1 bis 8 bleiben als optionaler Weg für einen
+späteren Wechsel auf einen externen S3-Endpunkt erhalten. ADR 0005, Nachtrag 27.09.2026.
+
+Aufbau: Dienst `objectstore` (SeaweedFS, nur S3-API, `infra/compose.yaml`) ist in Produktion
+und Staging ohne Profil immer aktiv; `infra/compose.prod.yaml` parkt ihn seit 27.09.2026 nicht
+mehr hinter dem Profil `local-objectstore`, und der Migrationsjob wartet wieder auf den
+gesunden Container. Er veröffentlicht keine Ports; API und Worker erreichen ihn im Stacknetz.
+Die Anwendung spricht ausschließlich die S3-API (Signatur v4, Pfadstil), ein späterer Wechsel
+ändert nur die Variablen.
+
+Hinweis `mhvp.sh`: Ein `--profile local-objectstore` im Wrapper ist seit dem Stand 27.09.2026
+nicht mehr nötig und unschädlich (Compose ignoriert ein Profil ohne zugeordnete Dienste); es
+kann bei Gelegenheit entfernt werden. Bis der Server diesen Stand hat, ist es zwingend, sonst
+startet der Container nicht.
+
+Variablen in `.env.prod` (Namen wie `mhvp.core.config.Settings`, Präfix `MHVP_`):
+
+| Variable | Wert lokal (Standard) |
+| --- | --- |
+| `MHVP_S3_ENDPOINT_URL` | `http://objectstore:8333` (auch der Standardwert des Compose-Stacks) |
+| `MHVP_S3_REGION` | `us-east-1` (Standardwert, SeaweedFS prüft die Region nicht) |
+| `MHVP_S3_ACCESS_KEY_ID` | vom Betreiber erzeugter Zugriffsschlüssel, z. B. `openssl rand -hex 16` |
+| `MHVP_S3_SECRET_ACCESS_KEY` | vom Betreiber erzeugter geheimer Schlüssel, z. B. `openssl rand -hex 32` |
+| `MHVP_S3_BUCKET` | `mhvp` (Staging `mhvp-staging`) |
+
+Das Schlüsselpaar liest der Container beim Start aus denselben Variablen und akzeptiert genau
+dieses Paar; eine Änderung erfordert `./mhvp.sh up -d objectstore`. Der Migrationsjob legt
+den Bucket an (`object_storage_bucket_ready`). Prüfung wie in Abschnitt 5, jedoch aus einem
+Container heraus, weil der Endpunkt nur im Stacknetz erreichbar ist:
+`./mhvp.sh exec -T api python -m mhvp.core.storage_bootstrap` meldet den Bucket, ein
+Dokumentupload im CRM ist die fachliche Endprüfung.
+
+Speicherort: Docker-Volume `objectstore-data`, auf dem Server durch den Projektnamen
+`mhvp_objectstore-data` (Staging `mhvp-staging_objectstore-data`), Pfad
+`/var/lib/docker/volumes/mhvp_objectstore-data/_data` (`docker volume inspect
+mhvp_objectstore-data`). Das Volume wird nie von Hand beschrieben oder gelöscht; `./mhvp.sh
+down -v` würde alle Dokumente vernichten und ist untersagt.
+
+Sicherung: `scripts/backup.sh` (systemd `mhvp-backup.timer`, täglich 02:15) archiviert das
+Volume zusätzlich zum Datenbankdump, wenn in `/opt/mhvp/.env.backup` steht:
+
+    BACKUP_OBJECTSTORE_VOLUME=mhvp_objectstore-data
+
+Ergebnis je Lauf: `BACKUP_DIR/mhvp-objects-<STAMP>.tar.age` mit `.sha256`, age-verschlüsselt,
+gleiche Aufbewahrung wie der Dump (`BACKUP_RETENTION_DAYS`). `scripts/backup-offsite.sh`
+kopiert alle Dateien des Laufs, also auch das Volume-Archiv, nach
+`<Präfix>/runs/<STAMP>/db/` im Hetzner-Bucket (`backup.md`, Off-site-Kopie).
+`BACKUP_SOURCE_S3_BUCKET` bleibt leer, der Objektabgleich aus Abschnitt 6 gilt nur für einen
+externen Bucket. Die Archivierung liest das laufende Volume ohne Anhalten des Containers; der
+Stand ist damit wenige Sekunden vom Dump entfernt, was für den täglichen Wiederherstellungspunkt
+ausreicht. Prüfen nach dem Eintrag: `systemctl start mhvp-backup.service && ls -l
+/srv/mhvp-backup | grep objects`.
+
+Wiederherstellung (Reihenfolge einhalten):
+
+1. `./mhvp.sh stop api worker objectstore` (Datenbank wie in `backup.md` wiederherstellen,
+   Dump und Volume-Archiv desselben `<STAMP>` verwenden).
+2. Archiv entschlüsseln und in das leere Volume entpacken (privater age-Schlüssel nur für den
+   Vorgang auf dem Server, danach entfernen):
+
+       age -d -i /root/mhvp-restore-key.txt /srv/mhvp-backup/mhvp-objects-<STAMP>.tar.age > /tmp/objects.tar
+       docker run --rm -v mhvp_objectstore-data:/data -v /tmp/objects.tar:/objects.tar:ro alpine:3.22 \
+         sh -c 'rm -rf /data/* && tar -C /data -xf /objects.tar && chown -R 1000:1000 /data'
+       rm -f /tmp/objects.tar
+
+3. `./mhvp.sh up -d objectstore`, dann `./mhvp.sh run --rm migrate` (Bucket vorhanden),
+   dann `./mhvp.sh up -d`.
+4. Löschjournal wieder anwenden, bevor Nutzer Zugang erhalten (`backup.md`, D47), Dokumentabruf
+   im CRM prüfen, Ergebnis im Wiederherstellungsprotokoll festhalten.
+
+Wechsel auf IONOS S3 (optional, nicht geplant): Abschnitte 1 bis 5 ausführen, Variablen in
+`.env.prod` ersetzen, Bestand aus dem lokalen Bucket in den externen kopieren, Stack neu
+starten, `BACKUP_OBJECTSTORE_VOLUME` leeren und `BACKUP_SOURCE_S3_*` setzen (Abschnitt 6).
+Der lokale Container bleibt dann gestartet, aber ungenutzt; ein Stoppen ist nicht nötig.
+
+## 1. Überblick (nur bei optionalem Wechsel auf IONOS S3)
+
+Die folgenden Abschnitte beschreiben den optionalen externen Weg. Grundlage: ADR 0005 mit
+Nachtrag 26.09.2026 (Betreiberentscheidung M1-01), MASTER-PROMPT Abschnitte 3.1, 3.5, 6.9.5
+und 16. Dieses Repository enthält keine IONOS-Hostnamen; Endpunkt und Region kopiert der
 Betreiber aus der IONOS-Konsole, alle Angaben in eckigen Klammern sind Platzhalter.
-
-## 1. Überblick
 
 | Umgebung | Primärbucket | Sicherungsbucket | Schlüsselpaar |
 | --- | --- | --- | --- |
@@ -65,10 +139,9 @@ Andere Namen liest die Anwendung nicht.
 | `MHVP_S3_SECRET_ACCESS_KEY` | geheimer Schlüssel des Plattformpaars | Schlüsselverwaltung |
 | `MHVP_S3_BUCKET` | `mhvp` (Staging `mhvp-staging`) | Abschnitt 2 |
 
-In `infra/compose.prod.yaml` sind Endpunkt, Region und Bucket Pflichtwerte; fehlt einer,
-bricht `docker compose` mit einer Meldung ab. Der Basisstack setzt sonst stillschweigend den
-Entwicklungsendpunkt `http://objectstore:8333`, der in Produktion nicht existiert. Die
-Anwendung selbst verweigert in `prod` und `staging` den Start ohne `MHVP_S3_*`
+Seit 27.09.2026 setzt `infra/compose.prod.yaml` Endpunkt, Region und Bucket standardmäßig
+auf den lokalen Container (Abschnitt 0); für IONOS werden die Werte in `.env.prod`
+überschrieben. Die Anwendung verweigert in `prod` und `staging` den Start ohne `MHVP_S3_*`
 (`Settings._guard_shared_environments`).
 
 Staging (`.env.staging`) erhält dieselben fünf Variablen mit den Staging-Werten.
@@ -109,7 +182,9 @@ Bucket an, falls er fehlt, und meldet `object_storage_bucket_ready`. Ein Dokumen
 CRM ist die fachliche Endprüfung; bei fehlendem Speicher antwortet die API mit 503
 `MHVP-DOC-0007`.
 
-## 6. Sicherung der Dokumente (Stand 26.09.2026: Ziel Hetzner, nicht `mhvp-backup`)
+## 6. Sicherung der Dokumente bei externem Bucket (Stand 26.09.2026: Ziel Hetzner, nicht `mhvp-backup`)
+
+Gilt nur bei einem externen IONOS-Bucket. Für den lokalen Standard siehe Abschnitt 0.
 
 Betreiberentscheidung 26.09.2026 (M9-02): Sicherungsziel ist der vorhandene S3-kompatible
 Object Storage des Betreibers bei Hetzner. Der in Abschnitt 1 und 2 genannte zweite
@@ -141,7 +216,9 @@ leer.
 Die Sicherung ersetzt nicht das Archiv: Aufbewahrungsprofile und Nachweise führt die
 Anwendung, siehe `backup.md`.
 
-## 7. Wiederherstellung
+## 7. Wiederherstellung bei externem Bucket
+
+Für den lokalen Standard siehe Abschnitt 0.
 
 1. Stack anhalten, Datenbank wie in `backup.md` wiederherstellen (Prüfsumme, Revision,
    Kerntabellen über `scripts/backup-verify.sh`).
