@@ -127,8 +127,10 @@ def test_set_owner_then_tenancy_is_assigned(client: TestClient, world: World) ->
     rental, weg = _prop(client, h, "084"), _prop(client, h, "083")
     assert rental["owner_missing"] is True
     assert weg["owner_missing"] is False
+    # Only this test's properties: the shared tenant may hold properties of other tests.
+    mine = {"083", "084"}
     missing = _ok(client.get("/api/v1/properties", params={"without_owner": True}, headers=h))
-    assert [p["number"] for p in missing["items"]] == ["084"]
+    assert [p["number"] for p in missing["items"] if p["number"] in mine] == ["084"]
 
     max_id = _contact(client, h, "Muster")
     url = f"/api/v1/properties/{rental['id']}/owner"
@@ -150,7 +152,7 @@ def test_set_owner_then_tenancy_is_assigned(client: TestClient, world: World) ->
     owners = _ok(client.get(f"/api/v1/properties/{rental['id']}/owners", headers=h))
     assert [o["contact_id"] for o in owners] == [max_id]
     missing = _ok(client.get("/api/v1/properties", params={"without_owner": True}, headers=h))
-    assert missing["items"] == []
+    assert [p for p in missing["items"] if p["number"] in mine] == []
     roles = _ok(client.get(f"/api/v1/contacts/{max_id}", headers=h))["roles"]
     assert "eigentuemer" in roles
 
