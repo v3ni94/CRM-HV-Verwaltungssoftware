@@ -61,11 +61,19 @@ class ContractIn(_In):
     acquisition_kind: AcquisitionKind | None = None
     special_succession_liability: bool = False
     notes: str | None = None
+    move_in_on: date | None = Field(default=None, description="Kalendertermin Einzug")
+    move_out_on: date | None = Field(default=None, description="Kalendertermin Auszug")
 
     @model_validator(mode="after")
     def _rules(self) -> Self:
         if self.end_date is not None and self.end_date < self.start_date:
             raise ValueError("end_date liegt vor start_date")
+        if (
+            self.move_in_on is not None
+            and self.move_out_on is not None
+            and self.move_out_on < self.move_in_on
+        ):
+            raise ValueError("Auszug liegt vor dem Einzug")
         if self.kind is ContractKind.OWNERSHIP:
             if self.title_transfer_date is None:
                 raise ValueError(
@@ -84,6 +92,15 @@ class ContractIn(_In):
         return self
 
 
+class ContractNotesPatch(_In):
+    """Inline editing of a contract (AP8, operator decision (c) 4): only remarks and the
+    dunning block change in place; payments and terms stay versioned (7.4)."""
+
+    notes: str | None = None
+    dunning_block: bool | None = None
+    dunning_block_reason: str | None = None
+
+
 class ContractVersionIn(_In):
     effective_date: date
     direct_debit: bool | None = None
@@ -95,12 +112,67 @@ class ContractVersionIn(_In):
     allocation_loss_risk: bool | None = None
     vat_option: ContractVatOption | None = None
     notes: str | None = None
+    move_in_on: date | None = None
+    move_out_on: date | None = None
+
+
+class TerminationReadingIn(_In):
+    """Meter reading recorded with the termination (4.5 Aktionen)."""
+
+    meter_id: uuid.UUID
+    value: Decimal = Field(ge=0, max_digits=20, decimal_places=8)
+    read_at: date | None = Field(default=None, description="Standard: Vertragsende")
+
+
+class TerminationReadingOut(_Out):
+    id: uuid.UUID
+    contract_id: uuid.UUID
+    meter_id: uuid.UUID
+    meter_reading_id: uuid.UUID | None
+    value: Decimal
+    read_at: date
 
 
 class TerminationIn(_In):
     end_date: date
     termination_date: date | None = Field(default=None, description="Datum der Kündigungserklärung")
     termination_reason: str | None = None
+    move_out_on: date | None = Field(default=None, description="Kalendertermin Auszug")
+    meter_readings: list[TerminationReadingIn] = Field(default_factory=list, max_length=200)
+
+    @model_validator(mode="after")
+    def _unique_meters(self) -> Self:
+        meters = [r.meter_id for r in self.meter_readings]
+        if len(meters) != len(set(meters)):
+            raise ValueError("Je Zähler nur ein Zählerstand")
+        return self
+
+
+class ContractAllocationValueIn(_In):
+    """Contract related allocation key value with period (4.5 Eigenschaften)."""
+
+    allocation_key_id: uuid.UUID
+    value: Decimal = Field(ge=0, max_digits=20, decimal_places=8)
+    valid_from: date
+    valid_to: date | None = None
+
+    @model_validator(mode="after")
+    def _period(self) -> Self:
+        if self.valid_to is not None and self.valid_to < self.valid_from:
+            raise ValueError("valid_to liegt vor valid_from")
+        return self
+
+
+class ContractAllocationValueOut(_Out):
+    id: uuid.UUID
+    contract_id: uuid.UUID
+    allocation_key_id: uuid.UUID
+    allocation_key_code: str | None = None
+    allocation_key_name: str | None = None
+    unit_of_measure: str | None = None
+    value: Decimal
+    valid_from: date
+    valid_to: date | None
 
 
 class OwnershipTransferIn(_In):
@@ -185,6 +257,8 @@ class ContractOut(_Out):
     acquisition_kind: AcquisitionKind | None
     special_succession_liability: bool
     notes: str | None
+    move_in_on: date | None = None
+    move_out_on: date | None = None
     supersedes_contract_id: uuid.UUID | None
     source: str | None = None
     approval_status: str = "approved"
@@ -205,6 +279,22 @@ class MandateIn(_In):
     sequence: MandateSequence = MandateSequence.RECURRING
     valid_until: date | None = None
     document_id: uuid.UUID = Field(description="Nachweis des unterschriebenen Mandats (Pflicht)")
+    payment_type_codes: list[str] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Ertragsarten (Katalog payment_type), die das Mandat abdeckt; leer = alle",
+    )
+    exclude_special_levy: bool = Field(
+        default=False, description="Sonderumlagen vom Einzug über dieses Mandat ausschließen"
+    )
+
+    @field_validator("payment_type_codes")
+    @classmethod
+    def _codes(cls, value: list[str]) -> list[str]:
+        cleaned = [v.strip() for v in value if v.strip()]
+        if len(cleaned) != len(set(cleaned)):
+            raise ValueError("Ertragsarten doppelt angegeben")
+        return cleaned
 
     @field_validator("creditor_id")
     @classmethod
@@ -237,6 +327,8 @@ class MandateOut(_Out):
     valid_until: date | None
     status: MandateStatus
     document_id: uuid.UUID
+    payment_type_codes: list[str] = Field(default_factory=list)
+    exclude_special_levy: bool = False
 
 
 class DepositIn(_In):
@@ -286,6 +378,44 @@ class DepositOut(_Out):
     balance: Money = Money("0.00")
     outstanding: Money = Money("0.00")
     movements: list[DepositMovementOut] = Field(default_factory=list)
+
+
+class DepositListRow(BaseModel):
+    """Row of the deposit list ``GET /deposits`` (4.5 Kaution)."""
+
+    id: uuid.UUID
+    contract_id: uuid.UUID
+    contract_number: str
+    property_id: uuid.UUID
+    property_number: str
+    unit_id: uuid.UUID
+    unit_number: str
+    party_id: uuid.UUID
+    party_name: str
+    kind: DepositKind
+    status: str
+    amount_due: Money
+    received: Money
+    balance: Money
+    outstanding: Money
+    valid_from: date
+    valid_to: date | None
+    contract_end_date: date | None
+
+
+class VacancyRow(BaseModel):
+    """Vacant let unit as of a date (``GET /properties/{id}/vacancies``)."""
+
+    unit_id: uuid.UUID
+    unit_number: str
+    unit_label: str | None
+    unit_type: str
+    vacant_since: date | None = Field(
+        description="Tag nach dem letzten Mietende, leer = nie vermietet"
+    )
+    previous_contract_id: uuid.UUID | None
+    ownership_contract_id: uuid.UUID | None
+    owner_party: str | None
 
 
 class OccupancyRow(BaseModel):

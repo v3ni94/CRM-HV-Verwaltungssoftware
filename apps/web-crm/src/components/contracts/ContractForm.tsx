@@ -43,6 +43,8 @@ export type ContractOut = {
   unit_id: string;
   party_id: string;
   legal_entity_id: string;
+  /** Debitorenkonto beim Gläubiger (6.9.2), von der API mitgeliefert. */
+  debtor_account?: { id: string; legal_entity_id: string; number: string; name: string };
   start_date: string;
   end_date: string | null;
   termination_date: string | null;
@@ -62,6 +64,9 @@ export type ContractOut = {
   acquisition_kind: AcquisitionKind | null;
   special_succession_liability: boolean;
   notes: string | null;
+  /** Kalendertermine Einzug und Auszug (4.5, Migration 0150). */
+  move_in_on?: string | null;
+  move_out_on?: string | null;
   source?: string | null;
   approval_status?: "pending" | "approved" | "rejected";
   approved_by?: string | null;
@@ -745,14 +750,18 @@ const VERSION_FIELDS = [
   "notes",
 ] as const;
 
-const TERMINATION_FIELDS = ["end_date", "termination_date", "termination_reason"] as const;
+const TERMINATION_FIELDS = ["end_date", "termination_date", "termination_reason", "move_out_on"] as const;
+
+/** Zähler der Einheit für die Zählerstände bei Beendigung (GET /properties/{id}/meters). */
+export type MeterOption = { id: string; number: string; meter_type_code: string; unit_id: string | null; location?: string | null };
 const SCHEDULE_FIELDS = ["interval", "due_day_rule", "due_day", "valid_from", "valid_to"] as const;
 
 /** Vertrag bearbeiten: the API keeps posted versions; a change after the start creates a
  *  new version from an effective date (ContractVersionIn). Tenancies can be ended with a
  *  termination; ownership ends only by an ownership transfer. */
-export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel }: { contract: ContractOut; partyName: string; unitLabel: string; propertyLabel: string }) {
+export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel, meters = [] }: { contract: ContractOut; partyName: string; unitLabel: string; propertyLabel: string; meters?: MeterOption[] }) {
   const t = useTranslations("ContractForm");
+  const tc = useTranslations("contracts");
   const router = useRouter();
   const today = new Date().toISOString().slice(0, 10);
 
@@ -774,6 +783,8 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
   const [termEnd, setTermEnd] = useState("");
   const [termDate, setTermDate] = useState(today);
   const [termReason, setTermReason] = useState("");
+  const [termMoveOut, setTermMoveOut] = useState(contract.move_out_on ?? "");
+  const [termReadings, setTermReadings] = useState<Record<string, string>>({});
   const [termErrors, setTermErrors] = useState<FieldErrors>({});
   const [termError, setTermError] = useState<string | null>(null);
 
@@ -841,9 +852,18 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
     setTermErrors(e);
     if (Object.keys(e).length > 0) return;
     setBusy(true);
+    const meter_readings = Object.entries(termReadings)
+      .filter(([, value]) => value.trim() !== "")
+      .map(([meter_id, value]) => ({ meter_id, value: value.trim().replace(",", ".") }));
     const res = await bff<ContractOut>(`/api/bff/contracts/${contract.id}/termination`, {
       method: "POST",
-      body: JSON.stringify({ end_date: termEnd, termination_date: termDate || null, termination_reason: termReason.trim() || null }),
+      body: JSON.stringify({
+        end_date: termEnd,
+        termination_date: termDate || null,
+        termination_reason: termReason.trim() || null,
+        move_out_on: termMoveOut || null,
+        meter_readings,
+      }),
     });
     setBusy(false);
     if (!res.ok) {
@@ -1021,7 +1041,23 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
             <Field label={t("termination.reason")} error={termErrors["termination_reason"]}>
               <input className={ui.input} value={termReason} onChange={(e) => setTermReason(e.target.value)} />
             </Field>
+            <Field label={tc("termination.moveOutOn")} error={termErrors["move_out_on"]}>
+              <input className={ui.input} type="date" value={termMoveOut} onChange={(e) => setTermMoveOut(e.target.value)} />
+            </Field>
           </div>
+          {meters.length > 0 ? (
+            <fieldset className={ui.sectionGap} data-testid="termination-meter-readings">
+              <legend className={ui.h2}>{tc("termination.meterReadings")}</legend>
+              <p className={ui.help}>{tc("termination.meterReadingsHelp")}</p>
+              <div className="grid gap-3 sm:grid-cols-3">
+                {meters.map((m) => (
+                  <Field key={m.id} label={`${m.number} (${m.meter_type_code})`}>
+                    <input className={ui.input} inputMode="decimal" value={termReadings[m.id] ?? ""} onChange={(e) => setTermReadings((prev) => ({ ...prev, [m.id]: e.target.value }))} />
+                  </Field>
+                ))}
+              </div>
+            </fieldset>
+          ) : null}
           {termError ? (
             <p role="alert" className={ui.alert}>
               {termError}

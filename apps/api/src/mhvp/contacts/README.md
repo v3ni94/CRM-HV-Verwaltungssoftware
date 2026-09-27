@@ -40,3 +40,30 @@ single place that applies the rule; `mhvp.communication.dispatch` (serial dispat
 Endpoints `GET/PATCH/DELETE /contacts/{id}/contact-relations` (`contacts:read` /
 `contacts:update`, audited with old and new values). Rule entry
 `docs/rules/M8-04-mehrpersonen-bevollmaechtigte.md`.
+
+## Fields of section 4.1 (Masterprompt Ergänzung 27.09.2026, AP1, migration 0147)
+
+`Contact.letter_salutation`, `blocked_at`, `retention_profile_id` (FK `retention_profile`) and
+`delete_after`; `ContactAddress.state`; `ContactPhone.country_code`, `area_code`, `note`;
+`ContactDate` (table `contact_date`, kinds `birthday`, `death`, `wedding`, `foundation`,
+`other`, rewritten with the other children on PUT); `ContactBankAccount.kind`
+(`ContactBankAccountKind`, catalogue B.4, DB enum `contact_bank_account_kind`, distinct from
+the property enum `bank_account_kind`), `is_default`, `bank_contact_id`; `ContactNote.title`,
+`follow_up_on`. Partial unique indexes `ux_contact_email_portal_login` and
+`ux_contact_bank_account_default` enforce exactly one portal login address and one default
+account per contact; `ContactIn._single_flags` rejects the input earlier with 422.
+`services.apply_fields` sets `blocked_at` when a block starts and clears it when it is lifted.
+`services.apply_retention` accepts only a released retention profile of the tenant and computes
+`delete_after` with `services.delete_after` (start: block date, else the day of assignment;
+`end_of_year_*` rules round to 31.12.; permanent profiles yield no date). Operator decision
+26.09.2026: the date is a reservation shown as due, the deletion itself stays the manual four
+eyes `DELETE /contacts/{id}`; there is no automatic deletion job. `GET /contacts?blocked=true`
+is the block list. The approval logic of bank accounts is unchanged. Rule entry
+`docs/rules/P1-01-kontakt-sperre-loeschdatum.md`, tests
+`tests/integration/test_contacts_p1.py`.
+
+## Inline editing (Ergänzung CRM AP8, ADR 0012, 27.09.2026)
+
+`PATCH /contacts/{id}` (`ContactPatch`) changes master data fields only; the merged record is
+validated as `ContactIn`, `If-Match` against `version`, audit diff as on `PUT`. Addresses,
+phones, e-mails, identifiers, dates, bank accounts, types, roles and tags stay on `PUT`.

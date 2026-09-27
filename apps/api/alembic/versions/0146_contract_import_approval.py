@@ -47,7 +47,8 @@ def _repair_skipped_0133() -> None:
         return
     path = Path(__file__).with_name("0133_automation_webhook_retry.py")
     spec = importlib.util.spec_from_file_location("mhvp_migration_0133", path)
-    assert spec and spec.loader
+    if spec is None or spec.loader is None:
+        raise RuntimeError("migration 0133 not found next to 0146")
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     module.upgrade()

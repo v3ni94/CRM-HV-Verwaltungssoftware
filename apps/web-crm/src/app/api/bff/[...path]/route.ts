@@ -60,6 +60,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/reject-import$`) },
   { method: "GET", pattern: new RegExp(`^contracts/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/(versions|termination|schedules|deposits)$`) },
+  // Vertragsbezogene Umlagewerte (P1, 4.5 Eigenschaften).
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/allocation-values$`) },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/allocation-values$`) },
   // Kautionen und Kautionsabrechnung (M5-02): Liste, Entwurf berechnen und speichern,
   // Referenzzinssatz je Jahr (Einstellungen). Freigabe bleibt hinter G3 und ist hier nicht erreichbar.
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/deposits$`) },
@@ -81,6 +84,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^contacts/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^contacts/${ID}/name$`) },
   { method: "PUT", pattern: new RegExp(`^contacts/${ID}$`) },
+  // Inline-Bearbeitung der Stammdaten (AP8, ADR 0012): Teilupdate je Feld mit If-Match.
+  { method: "PATCH", pattern: new RegExp(`^contacts/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^properties/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^buildings/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^units/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^contracts/${ID}/notes$`) },
   { method: "DELETE", pattern: new RegExp(`^contacts/${ID}$`) },
   {
     method: "GET",
@@ -104,6 +113,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Tenant members, roles and settings (settings area).
   { method: "GET", pattern: /^tenant\/members$/ },
   { method: "POST", pattern: /^tenant\/members$/ },
+  // Ereignisprotokoll je Datensatz mit CSV-Export (P1 AP6).
+  { method: "GET", pattern: /^tenant\/audit-log(\/export)?$/ },
   { method: "PATCH", pattern: new RegExp(`^tenant/members/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^tenant/members/${ID}/reset-password$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/roles$`) },
@@ -420,6 +431,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|accept-and-reply|correct|reject|reply-draft))$`) },
   { method: "POST", pattern: /^tickets\/merge$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
+  // Kataloge und Zusatzfelder (P1 AP4, 4.11 und Anhang B): Pflege in den Einstellungen.
+  { method: "GET", pattern: /^catalogs$/ },
+  { method: "GET", pattern: /^catalogs\/[a-z][a-z0-9_]{0,62}$/ },
+  { method: "POST", pattern: /^catalogs\/[a-z][a-z0-9_]{0,62}$/ },
+  { method: "PATCH", pattern: new RegExp(`^catalogs/[a-z][a-z0-9_]{0,62}/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^catalogs/[a-z][a-z0-9_]{0,62}/${ID}$`) },
+  { method: "GET", pattern: /^custom-fields$/ },
+  { method: "POST", pattern: /^custom-fields$/ },
+  { method: "PATCH", pattern: new RegExp(`^custom-fields/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^custom-fields/${ID}$`) },
   // Energieausweis am Objekt (A63): Objektstammdaten vollständig speichern.
   { method: "PUT", pattern: new RegExp(`^properties/${ID}$`) },
   // Zuweiser mit Grund (operator 25.09.2026, mail-optimierung M20).
@@ -554,11 +575,22 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^properties/${ID}/notices$`) },
   { method: "PATCH", pattern: new RegExp(`^notices/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^notices/${ID}/end$`) },
+  // Messdienstleister (mhvp.metering Stufe 1): Verbindungen, Zuordnungen, Abruf, Klärung, CSV.
+  { method: "GET", pattern: /^metering\/(providers|connections|assignments|sync-jobs|clearing-items|assignments-export|assignments-import\/template)$/ },
+  { method: "POST", pattern: /^metering\/(connections|assignments|sync-jobs)$/ },
+  { method: "GET", pattern: new RegExp(`^metering/(connections|assignments|sync-jobs)/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^metering/(connections|assignments|unit-assignments)/${ID}$`) },
+  { method: "PUT", pattern: new RegExp(`^metering/connections/${ID}/secrets$`) },
+  { method: "POST", pattern: new RegExp(`^metering/connections/${ID}/test$`) },
+  { method: "POST", pattern: new RegExp(`^metering/assignments/${ID}/(remote-confirm|change-provider|units)$`) },
+  { method: "GET", pattern: new RegExp(`^metering/assignments/${ID}/(units|consumption|billing-results)$`) },
+  { method: "POST", pattern: new RegExp(`^metering/clearing-items/${ID}/resolve$`) },
+  { method: "POST", pattern: /^metering\/assignments-import\/(preview|apply)$/ },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
 const MULTIPART = new RegExp(
-  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|letting/listings/${ID}/images)$`,
+  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|letting/listings/${ID}/images|metering/assignments-import/(preview|apply))$`,
 );
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
@@ -606,7 +638,7 @@ async function proxy(request: Request, context: Context): Promise<Response> {
     );
   }
   const out = new Headers({ "cache-control": "no-store" });
-  for (const name of ["content-type", "etag", "content-disposition"]) {
+  for (const name of ["content-type", "etag", "content-disposition", "x-total-count"]) {
     const value = upstream.headers.get(name);
     if (value) out.set(name, value);
   }

@@ -128,6 +128,20 @@ class MaintenanceKind(StrEnum):
     WARRANTY = "warranty"
 
 
+class BillingPeriodKind(StrEnum):
+    HOA = "hoa"  # Hausgeldabrechnung
+    OPERATING_COSTS = "operating_costs"  # Betriebskostenabrechnung
+    HEATING_COSTS = "heating_costs"  # Heizkostenabrechnung
+    ECONOMIC_PLAN = "economic_plan"  # Wirtschaftsplan
+    OWNER_STATEMENT = "owner_statement"  # Eigentümerabrechnung (Mietverwaltung)
+
+
+class ExemptionCertStatus(StrEnum):
+    VALID = "valid"
+    NONE = "none"
+    INVALID = "invalid"
+
+
 class BankAccountKind(StrEnum):
     RENT = "rent"
     HOA = "hoa"
@@ -148,17 +162,46 @@ class CatalogEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     label: Mapped[str] = mapped_column(String(200), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Annex B system entry (AP4): seeded per tenant, may be deactivated, never deleted.
+    is_system: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class CustomFieldDefinition(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Custom field per entity (4.11 Benutzerdefiniertes Feld, field types B.28)."""
+
     __tablename__ = "custom_field_definition"
     __table_args__ = (UniqueConstraint("tenant_id", "entity_type", "key"),)
 
     entity_type: Mapped[str] = mapped_column(String(63), nullable=False)
     key: Mapped[str] = mapped_column(String(63), nullable=False)
     label: Mapped[str] = mapped_column(String(200), nullable=False)
-    field_type: Mapped[str] = mapped_column(String(16), nullable=False)  # text, number, date, bool
+    field_type: Mapped[str] = mapped_column(String(16), nullable=False)  # B.28 codes
     required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    group: Mapped[str | None] = mapped_column(String(100))
+    valid_for_management_types: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    valid_for_contract_kinds: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    uniqueness: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="none", server_default=text("'none'")
+    )  # none, contract, all_contracts
+    visible_in_main: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    min_value: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
+    max_value: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
+    default_value: Mapped[Any | None] = mapped_column(JSONB)
+    options: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )  # choice values (B.28 Einzelauswahl)
+    description: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
 
 
 class AllocationKeyTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -233,16 +276,7 @@ class Property(IdMixin, TimestampMixin, TenantMixin, Base):
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
-    # Energieausweis des Objekts (A63, M26-03): values are entered from the certificate
-    # document, never derived. Listings copy them on creation (mhvp.letting) and the exposé
-    # draft and OpenImmo completeness check read them; no legal claim about Pflichtangaben.
-    energy_certificate_type: Mapped[str | None] = mapped_column(String(16))  # verbrauch, bedarf
-    energy_certificate_value: Mapped[Decimal | None] = mapped_column(Numeric(8, 2))  # kWh/(m²a)
-    energy_certificate_source: Mapped[str | None] = mapped_column(String(32))  # Energieträger
-    energy_certificate_construction_year: Mapped[int | None] = mapped_column(Integer)
-    energy_certificate_issued_on: Mapped[date | None] = mapped_column(Date)
-    energy_certificate_valid_until: Mapped[date | None] = mapped_column(Date)
-    energy_certificate_class: Mapped[str | None] = mapped_column(String(4))
+    # Energieausweis: only on the building (operator decision 26.09.2026, migration 0149).
 
 
 class LegalEntity(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -281,6 +315,69 @@ class PropertyOwner(IdMixin, TimestampMixin, TenantMixin, Base):
     share_percent: Mapped[Decimal | None] = mapped_column(AREA)
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_to: Mapped[date | None] = mapped_column(Date)
+    # 4.2 Objekteigentümer: clearing account in the owner's ledger, management power of
+    # attorney (document), tax advisor (contact). References only, no postings.
+    clearing_account_id: Mapped[uuid.UUID | None] = _fk(
+        "ledger_account.id", nullable=True, ondelete="SET NULL"
+    )
+    power_of_attorney_document_id: Mapped[uuid.UUID | None] = _fk(
+        "document.id", nullable=True, ondelete="SET NULL"
+    )
+    tax_advisor_contact_id: Mapped[uuid.UUID | None] = _fk(
+        "contact.id", nullable=True, ondelete="SET NULL"
+    )
+
+
+class PropertyBillingPeriod(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Statement period per statement kind (4.2 Abrechnungszeiträume); periods of one kind
+    never overlap. ``board_online_audit`` marks the online receipt check by the board."""
+
+    __tablename__ = "property_billing_period"
+    __table_args__ = (
+        ExcludeConstraint(
+            ("property_id", "="),
+            ("kind", "="),
+            (text("daterange(valid_from, valid_to, '[]')"), "&&"),
+            name="ex_property_billing_period",
+            using="gist",
+        ),
+        CheckConstraint("valid_to >= valid_from", name="period_order"),
+    )
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
+    kind: Mapped[BillingPeriodKind] = mapped_column(
+        _enum(BillingPeriodKind, "billing_period_kind"), nullable=False
+    )
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_to: Mapped[date] = mapped_column(Date, nullable=False)
+    board_online_audit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class SubCommunity(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Untergemeinschaft of a Mehrhausanlage (4.2) with its own allocations; units reference
+    it via ``unit.sub_community_id``. Allocation logic itself follows with the WEG phase."""
+
+    __tablename__ = "sub_community"
+    __table_args__ = (UniqueConstraint("tenant_id", "property_id", "code"),)
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
+    code: Mapped[str] = mapped_column(String(32), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
+class PropertyPortalDocument(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Objektmappe (4.2): standard documents shown in the portal per audience."""
+
+    __tablename__ = "property_portal_document"
+    __table_args__ = (UniqueConstraint("tenant_id", "property_id", "document_id"),)
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
+    document_id: Mapped[uuid.UUID] = _fk("document.id", ondelete="CASCADE")
+    title: Mapped[str | None] = mapped_column(String(200))
+    visible_for: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
+    sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
 
 class PropertyContact(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -303,6 +400,7 @@ class Building(IdMixin, TimestampMixin, TenantMixin, Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     street: Mapped[str | None] = mapped_column(String(200))
     house_number: Mapped[str | None] = mapped_column(String(20))
+    address_addition: Mapped[str | None] = mapped_column(String(200))
     built_area_sqm: Mapped[Decimal | None] = mapped_column(AREA)
     sealed_area_sqm: Mapped[Decimal | None] = mapped_column(AREA)
     roof_area_sqm: Mapped[Decimal | None] = mapped_column(AREA)
@@ -322,11 +420,23 @@ class Building(IdMixin, TimestampMixin, TenantMixin, Base):
     cellar_rooms: Mapped[int | None] = mapped_column(Integer)
     heritage_protection: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     heritage_notes: Mapped[str | None] = mapped_column(Text)
-    energy_certificate_type: Mapped[str | None] = mapped_column(String(32))
-    energy_certificate_value: Mapped[Decimal | None] = mapped_column(AREA)
+    # Energieausweis (4.3, A63): lives only on the building (operator decision 26.09.2026).
+    # Values are entered from the certificate document, never derived. Listings copy them on
+    # creation (mhvp.letting), the exposé draft and the OpenImmo check read them.
+    energy_certificate_law: Mapped[str | None] = mapped_column(String(16))  # geg, enev_2014
+    energy_certificate_type: Mapped[str | None] = mapped_column(String(32))  # bedarf, verbrauch
+    energy_final_heat_kwh: Mapped[Decimal | None] = mapped_column(AREA)  # kWh/(m²a)
+    energy_hot_water_included: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    energy_final_electricity_kwh: Mapped[Decimal | None] = mapped_column(AREA)
+    heating_type_code: Mapped[str | None] = mapped_column(String(32))  # etage, ofen, zentral
+    energy_sources: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
+    energy_certificate_class: Mapped[str | None] = mapped_column(String(4))
+    energy_certificate_construction_year: Mapped[int | None] = mapped_column(Integer)
+    energy_certificate_issued_on: Mapped[date | None] = mapped_column(Date)
     energy_certificate_valid_until: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(Text)
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 
 class Unit(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -345,6 +455,9 @@ class Unit(IdMixin, TimestampMixin, TenantMixin, Base):
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
     building_id: Mapped[uuid.UUID] = _fk("building.id")
+    sub_community_id: Mapped[uuid.UUID | None] = _fk(
+        "sub_community.id", nullable=True, ondelete="SET NULL"
+    )
     number: Mapped[str] = mapped_column(String(20), nullable=False)
     label: Mapped[str | None] = mapped_column(String(50))
     location: Mapped[str | None] = mapped_column(String(100))
@@ -367,6 +480,14 @@ class Unit(IdMixin, TimestampMixin, TenantMixin, Base):
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
+    # 4.4 Sonstiges and Leerstand: informational amounts, no postings derive from them.
+    commission: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    commission_note: Mapped[str | None] = mapped_column(Text)
+    deposit_amount: Mapped[Decimal | None] = mapped_column(Numeric(14, 2))
+    vacancy_vat_option: Mapped[VatOption | None] = mapped_column(
+        _enum(VatOption, "vat_option"), nullable=True
+    )
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 
 
 class AllocationKey(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -409,6 +530,29 @@ class UnitAllocationValue(IdMixin, TimestampMixin, TenantMixin, Base):
     source: Mapped[ValueSource] = mapped_column(
         _enum(ValueSource, "value_source"), nullable=False, default=ValueSource.MANUAL
     )
+
+
+class UnitVacancyAllocationValue(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Key value of a unit that applies during vacancy only (4.4 Leerstand), with history.
+    Statements do not read it yet (phase 3 and 4)."""
+
+    __tablename__ = "unit_vacancy_allocation_value"
+    __table_args__ = (
+        ExcludeConstraint(
+            ("unit_id", "="),
+            ("allocation_key_id", "="),
+            (text("daterange(valid_from, valid_to, '[]')"), "&&"),
+            name="ex_unit_vacancy_allocation_value_period",
+            using="gist",
+        ),
+        CheckConstraint("valid_to IS NULL OR valid_to >= valid_from", name="period_order"),
+    )
+
+    unit_id: Mapped[uuid.UUID] = _fk("unit.id", ondelete="CASCADE")
+    allocation_key_id: Mapped[uuid.UUID] = _fk("allocation_key.id", ondelete="CASCADE")
+    value: Mapped[Decimal] = mapped_column(AREA, nullable=False)
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_to: Mapped[date | None] = mapped_column(Date)
 
 
 class UnitVatOption(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -464,6 +608,22 @@ class MeterReading(IdMixin, TimestampMixin, TenantMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
 
 
+class MeterChange(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Zählerwechsel (4.4): final reading of the old device and initial reading of the new
+    one on the change date. The meter row keeps its history; ``old_number`` records the
+    replaced device when the number changes."""
+
+    __tablename__ = "meter_change"
+
+    meter_id: Mapped[uuid.UUID] = _fk("meter.id", ondelete="CASCADE")
+    changed_on: Mapped[date] = mapped_column(Date, nullable=False)
+    old_number: Mapped[str] = mapped_column(String(100), nullable=False)
+    new_number: Mapped[str | None] = mapped_column(String(100))
+    old_final_value: Mapped[Decimal] = mapped_column(AREA, nullable=False)
+    new_initial_value: Mapped[Decimal] = mapped_column(AREA, nullable=False)
+    notes: Mapped[str | None] = mapped_column(Text)
+
+
 class ServiceProviderRelation(IdMixin, TimestampMixin, TenantMixin, Base):
     """Provider contract of a property. The creditor account follows with the ledger (M10)."""
 
@@ -482,6 +642,16 @@ class ServiceProviderRelation(IdMixin, TimestampMixin, TenantMixin, Base):
     categories: Mapped[list[str]] = mapped_column(ARRAY(Text), nullable=False, default=list)
     notes: Mapped[str | None] = mapped_column(Text)
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # 4.2 Dienstleisterverhältnis: customer number at the provider, Freistellungsbescheinigung
+    # (§ 48b EStG, status entered from the certificate, not verified), creditor account.
+    customer_number: Mapped[str | None] = mapped_column(String(50))
+    exemption_cert_status: Mapped[ExemptionCertStatus | None] = mapped_column(
+        _enum(ExemptionCertStatus, "exemption_cert_status"), nullable=True
+    )
+    exemption_cert_valid_until: Mapped[date | None] = mapped_column(Date)
+    creditor_account_id: Mapped[uuid.UUID | None] = _fk(
+        "ledger_account.id", nullable=True, ondelete="SET NULL"
+    )
 
 
 class PropertyBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -508,6 +678,10 @@ class PropertyBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     notes: Mapped[str | None] = mapped_column(Text)
     valid_from: Mapped[date] = mapped_column(Date, nullable=False)
     valid_to: Mapped[date | None] = mapped_column(Date)
+    # 4.2 Bankkonten: assigned bank ledger account (Sachkonto), reference only.
+    ledger_account_id: Mapped[uuid.UUID | None] = _fk(
+        "ledger_account.id", nullable=True, ondelete="SET NULL"
+    )
 
 
 class MaintenanceItem(IdMixin, TimestampMixin, TenantMixin, Base):

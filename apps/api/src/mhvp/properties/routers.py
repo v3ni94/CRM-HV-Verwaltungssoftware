@@ -1,4 +1,5 @@
-"""Property endpoints (/api/v1/properties, units, buildings, meters, catalogues)."""
+"""Property endpoints (/api/v1/properties, units, buildings, meters; catalogues and custom
+fields live in routers_catalogs.py)."""
 
 import uuid
 from collections.abc import Sequence
@@ -20,6 +21,7 @@ from mhvp.core import crypto
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import diff, emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.documents.models import Document
 from mhvp.properties import schemas as s
 from mhvp.properties import services as svc
 from mhvp.properties.models import (
@@ -27,21 +29,24 @@ from mhvp.properties.models import (
     AllocationKeyTemplate,
     BankAccountKind,
     Building,
-    CatalogEntry,
-    CustomFieldDefinition,
     LegalEntity,
     MaintenanceItem,
     ManagementType,
     Meter,
+    MeterChange,
     MeterReading,
     Property,
     PropertyBankAccount,
+    PropertyBillingPeriod,
     PropertyContact,
     PropertyOwner,
+    PropertyPortalDocument,
     PropertyStatus,
     ServiceProviderRelation,
+    SubCommunity,
     Unit,
     UnitAllocationValue,
+    UnitVacancyAllocationValue,
     UnitVatOption,
 )
 
@@ -62,6 +67,11 @@ async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
     if row is None:
         raise _nf()
     return row
+
+
+def _check_version(if_match: str | None, version: int) -> None:
+    if if_match is not None and if_match.strip('"') != str(version):
+        raise ProblemError(ErrorCodes.VERSION_CONFLICT)
 
 
 async def _unique(session: Any, message: str) -> None:
@@ -221,8 +231,7 @@ async def update_property(
 ) -> s.PropertyOut:
     async with tenant_tx(request, principal) as session:
         prop = await _get(session, Property, property_id)
-        if if_match is not None and if_match.strip('"') != str(prop.version):
-            raise ProblemError(ErrorCodes.VERSION_CONFLICT)
+        _check_version(if_match, prop.version)
         if body.management_type != prop.management_type:
             raise svc.invalid(
                 "Die Verwaltungsart kann nach Anlage nicht geändert werden (Rechtsträger, 6.9.1)."
@@ -335,6 +344,52 @@ async def create_building(
             payload={"property_id": str(property_id)},
         )
         await session.refresh(building)
+        return s.BuildingOut.model_validate(building)
+
+
+@router.get("/buildings/{building_id}", summary="Gebäude lesen")
+async def get_building(
+    building_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.BuildingOut:
+    async with tenant_tx(request, principal) as session:
+        building = await _get(session, Building, building_id)
+        response.headers["ETag"] = f'"{building.version}"'
+        return s.BuildingOut.model_validate(building)
+
+
+@router.put("/buildings/{building_id}", summary="Gebäude ändern (If-Match)")
+async def update_building(
+    building_id: uuid.UUID,
+    body: s.BuildingIn,
+    request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.BuildingOut:
+    async with tenant_tx(request, principal) as session:
+        building = await _get(session, Building, building_id)
+        _check_version(if_match, building.version)
+        await svc.check_custom_fields(session, "building", body.custom_fields)
+        before = s.BuildingIn.model_validate(building, from_attributes=True).model_dump(mode="json")
+        for key, value in body.model_dump().items():
+            setattr(building, key, value)
+        building.version += 1
+        building.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="building.updated",
+            entity_type="building",
+            entity_id=building.id,
+            actor_user_id=principal.user_id,
+            changes=diff(before, body.model_dump(mode="json")),
+        )
+        await session.refresh(building)
+        response.headers["ETag"] = f'"{building.version}"'
         return s.BuildingOut.model_validate(building)
 
 
@@ -513,6 +568,7 @@ async def create_unit(
         building = await _get(session, Building, body.building_id)
         if building.property_id != property_id:
             raise svc.invalid("Das Gebäude gehört nicht zu diesem Objekt.")
+        await svc.check_sub_community(session, body.sub_community_id, property_id)
         await svc.check_custom_fields(session, "unit", body.custom_fields)
         unit = Unit(
             tenant_id=principal.tenant_id,
@@ -540,29 +596,39 @@ async def create_unit(
 async def get_unit(
     unit_id: uuid.UUID,
     request: Request,
+    response: Response,
     as_of: date | None = None,
     principal: TenantPrincipal = Depends(READ),
 ) -> s.UnitOut:
     async with tenant_tx(request, principal) as session:
-        return await _unit_out(session, await _get(session, Unit, unit_id), as_of)
+        unit = await _get(session, Unit, unit_id)
+        response.headers["ETag"] = f'"{unit.version}"'
+        return await _unit_out(session, unit, as_of)
 
 
-@router.put("/units/{unit_id}", summary="Einheit ändern")
+@router.put("/units/{unit_id}", summary="Einheit ändern (If-Match)")
 async def update_unit(
     unit_id: uuid.UUID,
     body: s.UnitIn,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> s.UnitOut:
     async with tenant_tx(request, principal) as session:
         unit = await _get(session, Unit, unit_id)
+        _check_version(if_match, unit.version)
         building = await _get(session, Building, body.building_id)
         if building.property_id != unit.property_id:
             raise svc.invalid("Das Gebäude gehört nicht zu diesem Objekt.")
+        await svc.check_sub_community(session, body.sub_community_id, unit.property_id)
         await svc.check_custom_fields(session, "unit", body.custom_fields)
         before = s.UnitIn.model_validate(unit, from_attributes=True).model_dump(mode="json")
         for key, value in body.model_dump().items():
             setattr(unit, key, value)
+        unit.version += 1
+        unit.updated_by = principal.user_id
+        response.headers["ETag"] = f'"{unit.version}"'
         await _unique(
             session, f"Einheitennummer {body.number} ist in diesem Objekt bereits vergeben."
         )
@@ -747,6 +813,7 @@ async def add_owner(
                 "WEG-Eigentum folgt über Eigentumsverträge (M5)."
             )
         await _get(session, Party, body.party_id)
+        await _check_owner_details(session, property_id, body)
         owner = PropertyOwner(
             tenant_id=principal.tenant_id, property_id=property_id, **body.model_dump()
         )
@@ -764,6 +831,56 @@ async def add_owner(
             payload={"party_id": str(body.party_id), "legal_entity_id": str(entity_id)},
         )
         return s.OwnerOut(id=owner.id, legal_entity_id=entity_id, **body.model_dump())
+
+
+async def _check_owner_details(session: Any, property_id: uuid.UUID, body: Any) -> None:
+    await svc.check_ledger_account(
+        session, body.clearing_account_id, property_id, "Das Verrechnungskonto"
+    )
+    if body.power_of_attorney_document_id is not None:
+        await _get(session, Document, body.power_of_attorney_document_id)
+    if body.tax_advisor_contact_id is not None:
+        await _get(session, Contact, body.tax_advisor_contact_id)
+
+
+@router.put(
+    "/properties/{property_id}/owners/{owner_id}/details",
+    summary="Verrechnungskonto, Vollmacht und Steuerberater eines Objekteigentümers",
+)
+async def set_owner_details(
+    property_id: uuid.UUID,
+    owner_id: uuid.UUID,
+    body: s.OwnerDetailsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.OwnerOut:
+    async with tenant_tx(request, principal) as session:
+        owner = await _get(session, PropertyOwner, owner_id)
+        if owner.property_id != property_id:
+            raise _nf()
+        await _check_owner_details(session, property_id, body)
+        before = s.OwnerDetailsIn.model_validate(owner, from_attributes=True).model_dump(
+            mode="json"
+        )
+        for key, value in body.model_dump().items():
+            setattr(owner, key, value)
+        owner.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="property.owner_updated",
+            entity_type="property",
+            entity_id=property_id,
+            actor_user_id=principal.user_id,
+            changes=diff(before, body.model_dump(mode="json")),
+        )
+        entity = await svc.owner_entity(
+            session, await _get(session, Property, property_id), owner.party_id
+        )
+        out = s.OwnerOut.model_validate(owner)
+        out.legal_entity_id = entity
+        return out
 
 
 def _berlin_today() -> date:
@@ -895,6 +1012,8 @@ def _account_out(a: PropertyBankAccount) -> s.BankAccountOut:
         segregated=a.segregated,
         valid_from=a.valid_from,
         valid_to=a.valid_to,
+        notes=a.notes,
+        ledger_account_id=a.ledger_account_id,
     )
 
 
@@ -932,6 +1051,9 @@ async def add_account(
                 f"Ein Konto der Art {body.kind.value} kann nicht dem Rechtsträger "
                 f"{entity.kind.value} gehören (6.9.1)."
             )
+        await svc.check_ledger_account(
+            session, body.ledger_account_id, property_id, "Das Sachkonto"
+        )
         account = PropertyBankAccount(
             tenant_id=principal.tenant_id,
             property_id=property_id,
@@ -1125,6 +1247,9 @@ async def add_provider(
             account = await _get(session, ContactBankAccount, body.contact_bank_account_id)
             if account.contact_id != body.contact_id:
                 raise svc.invalid("Die Bankverbindung gehört nicht zum Dienstleister.")
+        await svc.check_ledger_account(
+            session, body.creditor_account_id, property_id, "Das Kreditorenkonto"
+        )
         row = ServiceProviderRelation(
             tenant_id=principal.tenant_id, property_id=property_id, **body.model_dump()
         )
@@ -1175,37 +1300,436 @@ async def add_maintenance(
         return s.MaintenanceOut.model_validate(row)
 
 
-# Catalogues, templates, custom fields ---------------------------------------------------
+# P1 additions (Ergänzung CRM 4.2 to 4.4): billing periods, sub communities, Objektmappe,
+# vacancy key values, meter changes ---------------------------------------------------------
 
 
-@router.get("/catalogs/{catalog}", summary="Katalog")
-async def list_catalog(
-    catalog: str, request: Request, principal: TenantPrincipal = Depends(READ)
-) -> list[s.CatalogEntryOut]:
+async def _emit_simple(
+    session: Any,
+    principal: TenantPrincipal,
+    type_: str,
+    entity_type: str,
+    entity_id: uuid.UUID,
+    payload: dict[str, Any],
+) -> None:
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type=type_,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        actor_user_id=principal.user_id,
+        payload=payload,
+    )
+
+
+@router.get("/properties/{property_id}/billing-periods", summary="Abrechnungszeiträume")
+async def list_billing_periods(
+    property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.BillingPeriodOut]:
     async with tenant_tx(request, principal) as session:
         rows = (
             await session.scalars(
-                select(CatalogEntry)
-                .where(CatalogEntry.catalog == catalog)
-                .order_by(CatalogEntry.sort_order)
+                select(PropertyBillingPeriod)
+                .where(PropertyBillingPeriod.property_id == property_id)
+                .order_by(PropertyBillingPeriod.kind, PropertyBillingPeriod.valid_from)
             )
         ).all()
-        return [s.CatalogEntryOut.model_validate(c) for c in rows]
+        return [s.BillingPeriodOut.model_validate(r) for r in rows]
 
 
-@router.post("/catalogs/{catalog}", status_code=201, summary="Katalogeintrag anlegen")
-async def add_catalog_entry(
-    catalog: str,
-    body: s.CatalogEntryIn,
+@router.post(
+    "/properties/{property_id}/billing-periods",
+    status_code=201,
+    summary="Abrechnungszeitraum je Abrechnungsart anlegen",
+)
+async def add_billing_period(
+    property_id: uuid.UUID,
+    body: s.BillingPeriodIn,
     request: Request,
-    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
-) -> s.CatalogEntryOut:
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.BillingPeriodOut:
     async with tenant_tx(request, principal) as session:
-        row = CatalogEntry(tenant_id=principal.tenant_id, catalog=catalog, **body.model_dump())
+        await _get(session, Property, property_id)
+        row = PropertyBillingPeriod(
+            tenant_id=principal.tenant_id,
+            property_id=property_id,
+            created_by=principal.user_id,
+            **body.model_dump(),
+        )
         session.add(row)
-        await _unique(session, f"Eintrag {body.code} existiert bereits.")
-        await session.refresh(row)
-        return s.CatalogEntryOut.model_validate(row)
+        await _unique(
+            session,
+            f"Der Abrechnungszeitraum {body.kind.value} überschneidet sich mit einem bestehenden.",
+        )
+        await _emit_simple(
+            session,
+            principal,
+            "property.billing_period_added",
+            "property",
+            property_id,
+            {"kind": body.kind.value, "valid_from": body.valid_from.isoformat()},
+        )
+        return s.BillingPeriodOut.model_validate(row)
+
+
+@router.delete(
+    "/properties/{property_id}/billing-periods/{period_id}",
+    status_code=204,
+    summary="Abrechnungszeitraum löschen",
+)
+async def delete_billing_period(
+    property_id: uuid.UUID,
+    period_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, PropertyBillingPeriod, period_id)
+        if row.property_id != property_id:
+            raise _nf()
+        await session.delete(row)
+        await _emit_simple(
+            session,
+            principal,
+            "property.billing_period_removed",
+            "property",
+            property_id,
+            {"kind": row.kind.value, "valid_from": row.valid_from.isoformat()},
+        )
+        return Response(status_code=204)
+
+
+@router.get("/properties/{property_id}/sub-communities", summary="Untergemeinschaften")
+async def list_sub_communities(
+    property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.SubCommunityOut]:
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(
+                select(SubCommunity)
+                .where(SubCommunity.property_id == property_id)
+                .order_by(SubCommunity.code)
+            )
+        ).all()
+        return [s.SubCommunityOut.model_validate(r) for r in rows]
+
+
+@router.post(
+    "/properties/{property_id}/sub-communities",
+    status_code=201,
+    summary="Untergemeinschaft anlegen (Mehrhausanlage)",
+)
+async def add_sub_community(
+    property_id: uuid.UUID,
+    body: s.SubCommunityIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.SubCommunityOut:
+    async with tenant_tx(request, principal) as session:
+        prop = await _get(session, Property, property_id)
+        if prop.management_type is ManagementType.RENTAL:
+            raise svc.invalid("Untergemeinschaften gibt es nur bei WEG-Verwaltung.")
+        row = SubCommunity(
+            tenant_id=principal.tenant_id,
+            property_id=property_id,
+            created_by=principal.user_id,
+            **body.model_dump(),
+        )
+        session.add(row)
+        await _unique(session, f"Untergemeinschaft {body.code} ist bereits vergeben.")
+        await _emit_simple(
+            session,
+            principal,
+            "sub_community.created",
+            "sub_community",
+            row.id,
+            {"property_id": str(property_id), "code": body.code},
+        )
+        return s.SubCommunityOut.model_validate(row)
+
+
+@router.put(
+    "/properties/{property_id}/sub-communities/{sub_community_id}",
+    summary="Untergemeinschaft ändern",
+)
+async def update_sub_community(
+    property_id: uuid.UUID,
+    sub_community_id: uuid.UUID,
+    body: s.SubCommunityIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.SubCommunityOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, SubCommunity, sub_community_id)
+        if row.property_id != property_id:
+            raise _nf()
+        before = s.SubCommunityIn.model_validate(row, from_attributes=True).model_dump(mode="json")
+        for key, value in body.model_dump().items():
+            setattr(row, key, value)
+        row.updated_by = principal.user_id
+        await _unique(session, f"Untergemeinschaft {body.code} ist bereits vergeben.")
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="sub_community.updated",
+            entity_type="sub_community",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            changes=diff(before, body.model_dump(mode="json")),
+        )
+        return s.SubCommunityOut.model_validate(row)
+
+
+@router.delete(
+    "/properties/{property_id}/sub-communities/{sub_community_id}",
+    status_code=204,
+    summary="Untergemeinschaft löschen (Einheiten werden gelöst)",
+)
+async def delete_sub_community(
+    property_id: uuid.UUID,
+    sub_community_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, SubCommunity, sub_community_id)
+        if row.property_id != property_id:
+            raise _nf()
+        units = (await session.scalars(select(Unit).where(Unit.sub_community_id == row.id))).all()
+        for unit in units:
+            unit.sub_community_id = None
+        await session.delete(row)
+        await _emit_simple(
+            session,
+            principal,
+            "sub_community.deleted",
+            "sub_community",
+            row.id,
+            {"property_id": str(property_id), "code": row.code, "units_detached": len(units)},
+        )
+        return Response(status_code=204)
+
+
+@router.get("/properties/{property_id}/portal-documents", summary="Objektmappe")
+async def list_portal_documents(
+    property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.PortalDocumentOut]:
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(
+                select(PropertyPortalDocument)
+                .where(PropertyPortalDocument.property_id == property_id)
+                .order_by(PropertyPortalDocument.sort_order, PropertyPortalDocument.created_at)
+            )
+        ).all()
+        return [s.PortalDocumentOut.model_validate(r) for r in rows]
+
+
+@router.post(
+    "/properties/{property_id}/portal-documents",
+    status_code=201,
+    summary="Dokument in die Objektmappe aufnehmen",
+)
+async def add_portal_document(
+    property_id: uuid.UUID,
+    body: s.PortalDocumentIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.PortalDocumentOut:
+    async with tenant_tx(request, principal) as session:
+        await _get(session, Property, property_id)
+        await _get(session, Document, body.document_id)
+        row = PropertyPortalDocument(
+            tenant_id=principal.tenant_id,
+            property_id=property_id,
+            created_by=principal.user_id,
+            **body.model_dump(),
+        )
+        session.add(row)
+        await _unique(session, "Das Dokument ist bereits in der Objektmappe.")
+        await _emit_simple(
+            session,
+            principal,
+            "property.portal_document_added",
+            "property",
+            property_id,
+            {"document_id": str(body.document_id), "visible_for": body.visible_for},
+        )
+        return s.PortalDocumentOut.model_validate(row)
+
+
+@router.delete(
+    "/properties/{property_id}/portal-documents/{entry_id}",
+    status_code=204,
+    summary="Dokument aus der Objektmappe entfernen (Dokument bleibt erhalten)",
+)
+async def delete_portal_document(
+    property_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, PropertyPortalDocument, entry_id)
+        if row.property_id != property_id:
+            raise _nf()
+        await session.delete(row)
+        await _emit_simple(
+            session,
+            principal,
+            "property.portal_document_removed",
+            "property",
+            property_id,
+            {"document_id": str(row.document_id)},
+        )
+        return Response(status_code=204)
+
+
+def _vacancy_value_out(
+    v: UnitVacancyAllocationValue, key: AllocationKey | None
+) -> s.VacancyAllocationValueOut:
+    return s.VacancyAllocationValueOut(
+        id=v.id,
+        unit_id=v.unit_id,
+        allocation_key_id=v.allocation_key_id,
+        key_code=key.code if key else None,
+        key_name=key.name if key else None,
+        value=v.value,
+        valid_from=v.valid_from,
+        valid_to=v.valid_to,
+    )
+
+
+@router.get(
+    "/units/{unit_id}/vacancy-allocation-values",
+    summary="Umlagewerte für Leerstandszeiten, Historie oder Stichtag",
+)
+async def list_vacancy_values(
+    unit_id: uuid.UUID,
+    request: Request,
+    as_of: date | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[s.VacancyAllocationValueOut]:
+    async with tenant_tx(request, principal) as session:
+        await _get(session, Unit, unit_id)
+        query = (
+            select(UnitVacancyAllocationValue, AllocationKey)
+            .join(AllocationKey, AllocationKey.id == UnitVacancyAllocationValue.allocation_key_id)
+            .where(UnitVacancyAllocationValue.unit_id == unit_id)
+            .order_by(AllocationKey.sort_order, UnitVacancyAllocationValue.valid_from)
+        )
+        if as_of is not None:
+            query = query.where(svc.valid_at(UnitVacancyAllocationValue, as_of))
+        rows = (await session.execute(query)).all()
+        return [_vacancy_value_out(v, k) for v, k in rows]
+
+
+@router.post(
+    "/units/{unit_id}/vacancy-allocation-values",
+    status_code=201,
+    summary="Umlagewert für Leerstandszeiten erfassen (Vorwert wird beendet)",
+)
+async def add_vacancy_value(
+    unit_id: uuid.UUID,
+    body: s.VacancyAllocationValueIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.VacancyAllocationValueOut:
+    async with tenant_tx(request, principal) as session:
+        unit = await _get(session, Unit, unit_id)
+        key = await _get(session, AllocationKey, body.allocation_key_id)
+        if key.property_id != unit.property_id:
+            raise svc.invalid("Der Umlageschlüssel gehört nicht zum Objekt der Einheit.")
+        try:
+            row = await svc.add_vacancy_allocation_value(
+                session,
+                principal.tenant_id,
+                unit_id,
+                key.id,
+                body.value,
+                body.valid_from,
+                body.valid_to,
+            )
+        except IntegrityError:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Der Zeitraum überschneidet sich mit einem Vorwert."
+            ) from None
+        await _emit_simple(
+            session,
+            principal,
+            "unit.vacancy_allocation_value_added",
+            "unit",
+            unit_id,
+            {"key": key.code, "value": str(body.value), "valid_from": body.valid_from.isoformat()},
+        )
+        return _vacancy_value_out(row, key)
+
+
+@router.get("/meters/{meter_id}/changes", summary="Zählerwechsel")
+async def list_meter_changes(
+    meter_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.MeterChangeOut]:
+    async with tenant_tx(request, principal) as session:
+        await _get(session, Meter, meter_id)
+        rows = (
+            await session.scalars(
+                select(MeterChange)
+                .where(MeterChange.meter_id == meter_id)
+                .order_by(MeterChange.changed_on, MeterChange.created_at)
+            )
+        ).all()
+        return [s.MeterChangeOut.model_validate(r) for r in rows]
+
+
+@router.post(
+    "/meters/{meter_id}/changes",
+    status_code=201,
+    summary="Zählerwechsel erfassen (Endstand alt, Anfangsstand neu)",
+)
+async def add_meter_change(
+    meter_id: uuid.UUID,
+    body: s.MeterChangeIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.MeterChangeOut:
+    """Records the change; the meter row keeps its id (readings before the change belong to
+    the old device, identified by ``old_number``). No reading rows are written: consumption
+    across a change is computed from the change record by the statement modules."""
+    async with tenant_tx(request, principal) as session:
+        meter = await _get(session, Meter, meter_id)
+        if body.changed_on < meter.valid_from:
+            raise svc.invalid("Der Wechsel liegt vor dem Beginn des Zählers.")
+        row = MeterChange(
+            tenant_id=principal.tenant_id,
+            meter_id=meter_id,
+            old_number=meter.number,
+            created_by=principal.user_id,
+            **body.model_dump(),
+        )
+        session.add(row)
+        if body.new_number and body.new_number != meter.number:
+            meter.number = body.new_number
+            meter.updated_by = principal.user_id
+        await session.flush()
+        await _emit_simple(
+            session,
+            principal,
+            "meter.changed",
+            "meter",
+            meter_id,
+            {
+                "changed_on": body.changed_on.isoformat(),
+                "old_number": row.old_number,
+                "new_number": body.new_number,
+                "old_final_value": str(body.old_final_value),
+                "new_initial_value": str(body.new_initial_value),
+            },
+        )
+        return s.MeterChangeOut.model_validate(row)
+
+
+# Templates (catalogues and custom fields: routers_catalogs.py) ----------------------------
 
 
 @router.get("/allocation-key-templates", summary="Muster Umlageschlüssel")
@@ -1229,32 +1753,3 @@ async def list_templates(
             )
             for t in rows
         ]
-
-
-@router.get("/custom-fields", summary="Zusatzfelder")
-async def list_custom_fields(
-    request: Request, principal: TenantPrincipal = Depends(READ)
-) -> list[s.CustomFieldOut]:
-    async with tenant_tx(request, principal) as session:
-        rows = (
-            await session.scalars(
-                select(CustomFieldDefinition).order_by(
-                    CustomFieldDefinition.entity_type, CustomFieldDefinition.key
-                )
-            )
-        ).all()
-        return [s.CustomFieldOut.model_validate(c) for c in rows]
-
-
-@router.post("/custom-fields", status_code=201, summary="Zusatzfeld definieren")
-async def add_custom_field(
-    body: s.CustomFieldIn,
-    request: Request,
-    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
-) -> s.CustomFieldOut:
-    async with tenant_tx(request, principal) as session:
-        row = CustomFieldDefinition(tenant_id=principal.tenant_id, **body.model_dump())
-        session.add(row)
-        await _unique(session, f"Zusatzfeld {body.key} existiert bereits.")
-        await session.refresh(row)
-        return s.CustomFieldOut.model_validate(row)

@@ -3,8 +3,8 @@ tenant files) and Paperless. One row per document with the upload state; while a
 CRM's own Paperless and Drive mirrors are not queued for that document. Tenant table with RLS
 (ADR 0002).
 
-Revision ID: 0148
-Revises: 0147
+Revision ID: 0155
+Revises: 0154
 """
 
 from collections.abc import Sequence
@@ -15,8 +15,8 @@ from sqlalchemy.dialects import postgresql
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0148"
-down_revision: str | None = "0147"
+revision: str = "0155"
+down_revision: str | None = "0154"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -24,6 +24,10 @@ _TABLE = "objektakte_upload"
 
 
 def upgrade() -> None:
+    # Renumbered while parallel sessions released (0126, 0132, 0147/0148); a database that
+    # already ran it under an older number keeps its tables, so the migration only records the step.
+    if sa.inspect(op.get_bind()).has_table(_TABLE):
+        return
     op.create_table(
         _TABLE,
         sa.Column("id", postgresql.UUID(as_uuid=True), nullable=False),

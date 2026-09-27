@@ -77,7 +77,7 @@ objektakte-Repository umgesetzt). Stufe 4 im CRM:
   Dokumenttabelle).
 - Eigentümer- und Mieterlisten als Importvorschlag mit Testlauf, Abgleich und Freigabe
   (`objektakte_person_proposal`), ohne Schreiben in Stammdaten.
-- Migration `0147_objektakte_dms` (Tabellen `objektakte_webhook_receipt`,
+- Migration `0154_objektakte_dms` (Tabellen `objektakte_webhook_receipt`,
   `objektakte_person_proposal`, beide mit RLS).
 - CRM-Seite `/dms` mit Kacheln je Objekt (Status, offene Fälle, Vollständigkeit, fehlende
   Unterlagen) und `/dms/{nummer}` mit fehlenden Unterlagen, Dokumentliste mit Absprung in Drive,

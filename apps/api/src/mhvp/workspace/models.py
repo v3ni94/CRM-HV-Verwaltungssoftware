@@ -43,11 +43,34 @@ class Notification(IdMixin, TimestampMixin, TenantMixin, Base):
 
 
 class CalendarEntry(IdMixin, TimestampMixin, TenantMixin, Base):
-    """Manual appointments; derived dates (maintenance, contract ends) are computed on read."""
+    """Manual appointments and, since migration 0151 (P1 AP7, spec 4.10), the appointments
+    generated from date fields of the master data (calibration date, energy certificate,
+    contract end, move in and out, maintenance, follow up, meeting, ticket deadline).
+
+    Generated entries have no owner (``owner_user_id`` NULL), are shared and carry their
+    source (``source_type``, ``source_id``) and ``category`` (a ``DEADLINE_KINDS`` value).
+    The deadline job (``jobs.calendar_sync``) upserts them idempotently per (source_type,
+    source_id, category) and deletes them when the source row or its date disappears. Manual
+    entries keep ``source_type`` "manual" and ``category`` "appointment".
+    """
 
     __tablename__ = "calendar_entry"
+    __table_args__ = (
+        Index("ix_calendar_entry_source", "tenant_id", "source_type", "source_id"),
+        Index(
+            "uq_calendar_entry_generated",
+            "tenant_id",
+            "source_type",
+            "source_id",
+            "category",
+            unique=True,
+            postgresql_where=text("owner_user_id IS NULL"),
+        ),
+    )
 
-    owner_user_id: Mapped[uuid.UUID] = _user_fk()
+    owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("app_user.id", ondelete="CASCADE")
+    )
     title: Mapped[str] = mapped_column(String(300), nullable=False)
     starts_on: Mapped[date] = mapped_column(Date, nullable=False)
     ends_on: Mapped[date | None] = mapped_column(Date)
@@ -57,6 +80,23 @@ class CalendarEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     property_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("property.id", ondelete="SET NULL")
     )
+    # manual | contract | meter | building | maintenance_item | contact_note | owners_meeting |
+    # ticket | ... (entity types of ``workspace.links``); the source row is the truth.
+    source_type: Mapped[str] = mapped_column(
+        String(64), nullable=False, default="manual", server_default=text("'manual'")
+    )
+    source_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # appointment (manual) or a deadline kind of ``jobs.DEADLINE_KINDS``.
+    category: Mapped[str] = mapped_column(
+        String(48), nullable=False, default="appointment", server_default=text("'appointment'")
+    )
+    # Reminder codes before the start (spec B.30): "0", "5min", "1h", "1d", "14d", "1m",
+    # "3m", "6m"; evaluated by the notification of the deadline list, not by a separate job.
+    reminders: Mapped[list[Any]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    # None or {"frequency": daily|weekly|monthly|yearly, "interval": n, "until": date}.
+    recurrence: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class CalendarEvent(IdMixin, TimestampMixin, TenantMixin, Base):

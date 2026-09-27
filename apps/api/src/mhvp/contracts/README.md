@@ -68,3 +68,41 @@ Geschäftsführung freigegeben werden.
 * Tests: `tests/integration/test_contract_import_approval.py`,
   `tests/integration/test_zuordnung_import.py`,
   `apps/web-crm/src/components/contracts/ContractApprovalPanel.test.tsx`.
+
+## P1 Ergänzungen zum Vertrag (Ergänzung CRM 4.5, AP3, Migration 0150)
+
+Datensätze und Anzeige, keine Buchungen; G1 bis G3 bleiben geschlossen.
+
+* Felder (Migration 0150): `contract.move_in_on`, `contract.move_out_on` (Kalendertermine Einzug
+  und Auszug, unabhängig von Beginn und Ende; Auszug nie vor Einzug),
+  `sepa_mandate.payment_type_codes` (Liste aus Katalog `payment_type`, leer = alle Ertragsarten,
+  unbekannte Codes werden abgewiesen) und `sepa_mandate.exclude_special_levy`. Tabellen
+  `contract_allocation_value` (Umlageschlüssel des Objekts, Wert, Zeitraum; Zeiträume je Vertrag
+  und Schlüssel überschneiden sich nie, Beginn innerhalb der Laufzeit) und
+  `contract_termination_reading` (Zähler, Wert, Datum, Verweis auf den erzeugten
+  `meter_reading`), beide mit RLS.
+* API: `GET`/`POST /contracts/{id}/allocation-values` (die Liste umfasst alle Versionen der
+  Vertragsnummer; ein neuer Wert schließt den offenen Vorwert desselben Schlüssels am Vortag,
+  Überschneidung mit geschlossenen Zeiträumen ist 409). `POST /contracts/{id}/termination`
+  nimmt zusätzlich `move_out_on` und `meter_readings` (Zähler der Einheit oder Gemeinschaftszähler
+  des Objekts; je Zähler ein Stand, Datum Standard Vertragsende) und schreibt je Eintrag einen
+  `meter_reading` (Quelle `manual`) plus Verknüpfung; `GET /contracts/{id}/termination-readings`
+  liest sie. `GET /contracts?status=active|ended|upcoming&as_of=` (Standard heute).
+  `GET /deposits` (Kautionsliste über alle Verträge mit Objekt, Einheit, Partei, Sollbetrag,
+  erhalten, Guthaben, offen; Filter `property_id`, `status`, `outstanding_only`).
+  `GET /properties/{id}/vacancies?as_of=` (vermietbare Einheiten ohne Mietverhältnis mit
+  Leerstandsbeginn und letztem Mietvertrag). Rechte wie bisher: Lesen `contracts:read`,
+  Erfassen `contracts:update`, Mandate `contracts:create`.
+* CRM: Vertragsseite mit Abschnitten Eigenschaften (Umlagewerte mit Erfassung), SEPA-Mandate
+  (Standard- und Zusatzmandate mit Ertragsarten und Sonderumlage-Ausschluss), Debitorenkonto
+  (Nummer, Name, Sprung in den Buchungskreis des Gläubigers unter `/buchhaltung/[id]` für Saldo
+  und offene Posten, Einzug und Auszug, Zählerstände der Beendigung). Beenden im
+  Bearbeitungsformular mit Auszugsdatum und Zählerständen je Zähler der Einheit.
+* Tests: `tests/integration/test_contracts_p1.py` (Happy Path, Validierung, Rechte,
+  Mandantentrennung), `apps/web-crm/src/components/contracts/ContractAllocationValues.test.tsx`.
+
+## Inline editing (Ergänzung CRM AP8, ADR 0012, 27.09.2026)
+
+`PATCH /contracts/{id}/notes` (`ContractNotesPatch`) changes `notes`, `dunning_block` and
+`dunning_block_reason` in place without a new contract version (operator decision (c) 4,
+option a); a block needs a reason (422). Payments, terms and parties keep the version path.

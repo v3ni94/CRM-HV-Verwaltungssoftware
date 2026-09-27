@@ -70,7 +70,16 @@ function Party({ occupant, withRent }: { occupant: Occupant; withRent?: boolean 
 }
 
 /** Unit page body: all parameters, current owner and tenant, ended contracts (26.09.2026). */
-export function UnitDetails({ unit, occupants }: { unit: Unit; occupants: Occupants | null }) {
+export function UnitDetails({
+  unit,
+  occupants,
+  showParameters = true,
+}: {
+  unit: Unit;
+  occupants: Occupants | null;
+  /** False when the page renders the editable `UnitMasterData` section instead (AP8). */
+  showParameters?: boolean;
+}) {
   const t = useTranslations("Units");
   const tp = useTranslations("Properties");
   const custom = { ...(unit.custom_fields ?? {}) } as Record<string, unknown>;
@@ -100,6 +109,7 @@ export function UnitDetails({ unit, occupants }: { unit: Unit; occupants: Occupa
         </section>
       </div>
 
+      {showParameters ? (
       <section className={ui.card} data-testid="unit-parameters">
         <h2 className={ui.h2}>{t("parameters")}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -122,6 +132,7 @@ export function UnitDetails({ unit, occupants }: { unit: Unit; occupants: Occupa
           <Field label={t("vatOption")} value={unit.vat_option ?? ""} />
         </dl>
       </section>
+      ) : null}
 
       <section className={ui.card} data-testid="unit-allocation">
         <h2 className={ui.h2}>{t("allocationKeys")}</h2>

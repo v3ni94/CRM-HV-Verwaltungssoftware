@@ -2,8 +2,8 @@
 ``document.filed`` / ``object.taken_over``) and owner/tenant list import proposals. Tenant
 tables with RLS (ADR 0002). Filed documents themselves use the existing ``document`` table (M6).
 
-Revision ID: 0147
-Revises: 0146
+Revision ID: 0154
+Revises: 0153
 """
 
 from collections.abc import Sequence
@@ -14,8 +14,8 @@ from sqlalchemy.dialects import postgresql
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0147"
-down_revision: str | None = "0146"
+revision: str = "0154"
+down_revision: str | None = "0153"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
@@ -38,6 +38,10 @@ def _base_columns() -> list[sa.Column]:  # type: ignore[type-arg]
 
 
 def upgrade() -> None:
+    # Renumbered while parallel sessions released (0126, 0132, 0147/0148); a database that
+    # already ran it under an older number keeps its tables, so the migration only records the step.
+    if sa.inspect(op.get_bind()).has_table("objektakte_webhook_receipt"):
+        return
     op.create_table(
         "objektakte_webhook_receipt",
         *_base_columns(),

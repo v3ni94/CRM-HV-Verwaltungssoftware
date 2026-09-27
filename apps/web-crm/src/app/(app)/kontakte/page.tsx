@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 25;
 
-type Search = { q?: string; kind?: string; tag?: string; role?: string; page?: string };
+type Search = { q?: string; kind?: string; tag?: string; role?: string; blocked?: string; page?: string };
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Search> }) {
   const [t, tl, params] = await Promise.all([
@@ -27,6 +27,8 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
   const kind = params.kind === "person" || params.kind === "company" ? params.kind : undefined;
   const tag = params.tag?.trim() ?? "";
   const role = parseRoleFilter(params.role);
+  // Block list (4.1): only blocked contacts.
+  const blocked = params.blocked === "1";
   const page = Math.max(1, Number.parseInt(params.page ?? "1", 10) || 1);
 
   const { data, error, response } = await serverApi().GET("/api/v1/contacts", {
@@ -36,6 +38,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         ...(kind ? { kind } : {}),
         ...(tag ? { tag } : {}),
         ...(role ? { role } : {}),
+        ...(blocked ? { blocked: true } : {}),
         page,
         page_size: PAGE_SIZE,
       },
@@ -49,6 +52,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     if (kind) sp.set("kind", kind);
     if (tag) sp.set("tag", tag);
     if (role) sp.set("role", role);
+    if (blocked) sp.set("blocked", "1");
     sp.set("page", String(target));
     return `/kontakte?${sp}`;
   };
@@ -57,6 +61,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
     if (q) sp.set("q", q);
     if (kind) sp.set("kind", kind);
     if (tag) sp.set("tag", tag);
+    if (blocked) sp.set("blocked", "1");
     if (target) sp.set("role", target);
     return `/kontakte?${sp}`;
   };
@@ -94,6 +99,10 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </label>
           <input id="tag" name="tag" defaultValue={tag} className={ui.input} />
         </div>
+        <label className="flex items-center gap-2 self-end pb-2 text-sm">
+          <input type="checkbox" name="blocked" value="1" defaultChecked={blocked} />
+          {t("blockList")}
+        </label>
         <button type="submit" className={ui.button}>
           {t("filter")}
         </button>
@@ -125,7 +134,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <SavedFilters
         resource="contacts"
         basePath="/kontakte"
-        current={Object.fromEntries(Object.entries({ q, kind: kind ?? "", tag, role: role ?? "" }).filter(([, v]) => v))}
+        current={Object.fromEntries(Object.entries({ q, kind: kind ?? "", tag, role: role ?? "", blocked: blocked ? "1" : "" }).filter(([, v]) => v))}
       />
 
       {!data ? (

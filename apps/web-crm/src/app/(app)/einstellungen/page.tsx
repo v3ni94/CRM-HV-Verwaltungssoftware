@@ -13,6 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function SettingsPage() {
   const t = await getTranslations("Settings");
   const tw = await getTranslations("Webhooks");
+  const tm = await getTranslations("Metering");
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
@@ -27,8 +28,11 @@ export default async function SettingsPage() {
     { href: "/einstellungen/dms", title: t("dms.title"), description: t("dms.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/bank", title: t("bank.title"), description: t("bank.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/telefonie", title: t("telephony.title"), description: t("telephony.description"), show: can("tenant_settings:read") },
+    { href: "/einstellungen/schnittstellen/messdienstleister", title: tm("card.title"), description: tm("card.description"), show: can("metering_data:read") },
     { href: "/einstellungen/webhooks", title: tw("card.title"), description: tw("card.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/weg", title: t("weg.title"), description: t("weg.description"), show: can("accounting:read") },
+    { href: "/einstellungen/kataloge", title: t("catalogs.title"), description: t("catalogs.description"), show: can("properties:read") },
+    { href: "/einstellungen/felder", title: t("customFields.title"), description: t("customFields.description"), show: can("properties:read") },
     { href: "/einstellungen/kautionszinsen", title: t("depositRates.title"), description: t("depositRates.description"), show: can("contracts:read") },
     { href: "/einstellungen/sla", title: t("sla.title"), description: t("sla.description"), show: can("sla:read") },
     {

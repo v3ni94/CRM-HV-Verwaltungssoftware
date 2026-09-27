@@ -21,3 +21,56 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 queries (`_units_out`). Indexes `property(tenant_id, status, management_type)` and
 `maintenance_item(tenant_id, status, due_date)` (migration 0127). Measurements in
 `docs/reviews/2026-09-26-performance.md`.
+
+## P1 additions (Ergänzung CRM 4.2 to 4.4, AP2, 26.09.2026)
+
+Migrations 0148 (property level) and 0149 (building and unit); rule `docs/rules/P1-02`.
+
+* Property level: `PropertyOwner.clearing_account_id`, `power_of_attorney_document_id`,
+  `tax_advisor_contact_id` (`POST /properties/{id}/owners`, `PUT .../owners/{oid}/details`);
+  `PropertyBankAccount.ledger_account_id`; `PropertyBillingPeriod` (`/billing-periods`, one
+  period per kind without overlap, `board_online_audit`); `SubCommunity` (`/sub-communities`,
+  WEG only, `Unit.sub_community_id`); `PropertyPortalDocument` (`/portal-documents`, the
+  Objektmappe with `visible_for` tenant or owner); `ServiceProviderRelation.customer_number`,
+  `exemption_cert_status`, `exemption_cert_valid_until`, `creditor_account_id`.
+* Account references (`services.check_ledger_account`) must belong to a ledger of a legal
+  entity of the property; they are informational, no posting reads them.
+* Building: `address_addition`, full energy certificate (only here, see A-053), `version`
+  with `GET`/`PUT /buildings/{id}` (ETag, If-Match, 412 on mismatch).
+* Unit: `version` (`PUT /units/{id}` with If-Match), `commission`, `commission_note`,
+  `deposit_amount`, `vacancy_vat_option`; `UnitVacancyAllocationValue`
+  (`/units/{id}/vacancy-allocation-values`, history, previous open value is closed).
+* `MeterChange` (`/meters/{id}/changes`): final reading of the old device, initial reading
+  of the new one, optional new number (the meter row keeps its id and readings).
+* Tests: `tests/integration/test_properties_p1.py`.
+
+
+## Inline editing (Ergänzung CRM AP8, ADR 0012, 27.09.2026)
+
+`routers_patch.py`: `PATCH /properties/{id}`, `/buildings/{id}`, `/units/{id}` take only the
+changed fields, merge them into the current record, validate with the `PUT` schema, check
+`If-Match` against `version` (412) and write the same audit diff as `PUT`. Tests:
+`tests/integration/test_patch_p1.py`.
+
+## Catalogues and custom fields (Ergänzung CRM 4.11 and annex B, AP4, 27.09.2026)
+
+* `catalogs.py`: frozen annex B lists (59 catalogues, 416 system entries); `defaults.py`
+  seeds them per tenant with `is_system = true` (idempotent on tenant, catalogue, code),
+  migration 0152 seeds existing tenants.
+* `routers_catalogs.py`: `GET /catalogs` (summary), `GET|POST /catalogs/{catalog}`,
+  `PATCH|DELETE /catalogs/{catalog}/{id}`, `GET|POST /custom-fields`,
+  `PATCH|DELETE /custom-fields/{id}`. Read `properties:read`, write `tenant_settings:update`.
+  System entries: relabel, reorder, deactivate; never delete (409). Code, entity, key and
+  field type are immutable. Every change emits `catalog_entry.*` or `custom_field.*` events.
+* `CustomFieldDefinition` carries the 4.11 attributes (group, validity per management type
+  and contract kind, uniqueness, visible in main view, min, max, default, options,
+  description, sort order); `services.check_custom_fields` validates the B.28 types with
+  bounds (numbers: value, texts: length) and choice options.
+* Operator decision 27.09.2026: catalogues serve new fields. Code enums that mirror an
+  annex B list stay unchanged and are only documented: `ManagementType` (B.7),
+  `heating_type_code` pattern (B.8), `UnitType` (B.10), `VatOption` (B.12), payment
+  intervals and due rules in `contracts` (B.9), ticket status and priority in `tickets`
+  (B.24), meeting and resolution enums in `hoa` (B.20 to B.22), delivery channels in
+  `communication` (B.14). The matching catalogues exist for display and extension only;
+  validation of those fields stays with the enum.
+* Handbook: `docs/handbuch/kataloge.md`.

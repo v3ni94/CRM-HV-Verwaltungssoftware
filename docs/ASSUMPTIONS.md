@@ -599,3 +599,15 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `POST /mail/mailboxes/{id}/backfill`, CLI `python -m mhvp.communication.backfill`, `services.complete_message`, Regel M20-07 |
 | Überprüfung spätestens bei Meilenstein | Abnahme M20 (info@ läuft über die Plattform) |
 | Datum | 26.09.2026 |
+
+## A-053
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der Energieausweis wird nur am Gebäude geführt (Betreiberentscheidung 26.09.2026). Migration 0149 kopiert vorhandene Werte der Objektebene in jedes Gebäude des Objekts, dessen Ausweisfelder leer sind, und entfernt die Objektspalten. Bei Objekten mit mehreren Gebäuden erhalten damit alle Gebäude denselben Ausweis, weil die Quelle nicht sagt, zu welchem Gebäude er gehört; der Betreiber korrigiert das je Gebäude. Der bisherige einzelne Energieträger wird zur Liste `energy_sources` mit einem Eintrag, `energy_certificate_value` heißt am Gebäude jetzt `energy_final_heat_kwh`. Inserate übernehmen bei Anlage die Werte des Gebäudes der Einheit; ein Ausweis mit mehreren Energieträgern wird im Inserat als ein Text (höchstens 32 Zeichen) geführt. |
+| Begründung | Ergänzung 27.09.2026 Abschnitt 4.3 ordnet den Ausweis dem Gebäude zu; die Doppelführung (A63 am Objekt, M26) wäre widersprüchlich. Ein Ausweis ohne Gebäudezuordnung ist im Altbestand nicht rekonstruierbar. |
+| Kennzeichnung | unkritisch, kein Geldfluss; Werte bleiben erhalten und sind je Gebäude änderbar (`PUT /buildings/{id}`) |
+| Betroffene Bereiche | `mhvp.properties` (Gebäude), `mhvp.letting` (Exposé, Inserat-Vorbelegung, OpenImmo-Prüfung), Oberfläche `EnergyCertificateForm` (Anpassung an Gebäude offen, AP8) |
+| Überprüfung spätestens bei Meilenstein | Abnahme P1 AP2, spätestens vor M26-03 |
+| Datum | 26.09.2026 |
+

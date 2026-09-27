@@ -444,10 +444,11 @@ async def expose(
     unit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> dict[str, Any]:
     """Draft only from master data; no personal data of former tenants, no invented text.
-    Energy certificate data come from the property (A63), the asking rent from the newest
-    rental listing of the unit; both are reported as missing when not recorded. Whether the
-    listed values satisfy the Pflichtangaben of an advertisement stays open (M26-03)."""
-    from mhvp.properties.models import Property, Unit
+    Energy certificate data come from the unit's building (A63, 4.3), the asking rent from
+    the newest rental listing of the unit; both are reported as missing when not recorded.
+    Whether the listed values satisfy the Pflichtangaben of an advertisement stays open
+    (M26-03)."""
+    from mhvp.properties.models import Building, Property, Unit
 
     async with tenant_tx(request, principal) as session:
         unit = await session.get(Unit, unit_id)
@@ -462,7 +463,7 @@ async def expose(
             .order_by(Listing.created_at.desc())
             .limit(1)
         )
-        energy = openimmo.expose_energy_fields(prop)
+        energy = openimmo.expose_energy_fields(await session.get(Building, unit.building_id))
         rent = openimmo.expose_rent_fields(listing)
         fields = {
             "title": unit.label or f"{unit.unit_type} {unit.number}",
@@ -694,7 +695,7 @@ def _compute_warm_rent(listing: Listing) -> None:
 
 
 async def _listing_prefill(session: Any, unit_id: uuid.UUID) -> dict[str, Any]:
-    from mhvp.properties.models import Property, Unit
+    from mhvp.properties.models import Building, Property, Unit
 
     unit = await session.get(Unit, unit_id)
     if unit is None:
@@ -716,7 +717,7 @@ async def _listing_prefill(session: Any, unit_id: uuid.UUID) -> dict[str, Any]:
         "living_area_sqm": unit.living_area_sqm,
         "rooms": unit.rooms,
         "floor": unit.floor,
-        "energy": openimmo.property_energy_prefill(prop),
+        "energy": openimmo.building_energy_prefill(await session.get(Building, unit.building_id)),
     }
 
 
@@ -818,10 +819,11 @@ async def create_listing(
             floor=data.pop("floor") if body.floor is not None else prefill["floor"],
             **{k: v for k, v in data.items() if k not in ("living_area_sqm", "rooms", "floor")},
         )
-        # A63: energy certificate of the property is copied unless the caller set a status.
+        # A63: energy certificate of the building is copied unless the caller set a status;
+        # explicitly given fields win.
         if "energy_status" not in body.model_fields_set:
             for key, value in prefill["energy"].items():
-                if getattr(body, key, None) is None or key == "energy_status":
+                if key == "energy_status" or key not in body.model_fields_set:
                     setattr(listing, key, value)
         _compute_warm_rent(listing)
         session.add(listing)

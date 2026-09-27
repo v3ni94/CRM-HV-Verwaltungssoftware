@@ -1,4 +1,5 @@
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -17,6 +18,8 @@ export type Deadline = {
   notified_at: string | null;
   done_at: string | null;
   updated_at: string;
+  /** Route to the source row (P1 AP7), null when the source has no page. */
+  href?: string | null;
 };
 
 export function DeadlinesTable({ rows }: { rows: Deadline[] }) {
@@ -33,6 +36,7 @@ export function DeadlinesTable({ rows }: { rows: Deadline[] }) {
             <th scope="col">{t("column.lead_days")}</th>
             <th scope="col">{t("column.status")}</th>
             <th scope="col">{t("column.notified_at")}</th>
+            <th scope="col">{t("column.source")}</th>
           </tr>
         </thead>
         <tbody>
@@ -50,6 +54,13 @@ export function DeadlinesTable({ rows }: { rows: Deadline[] }) {
                 </span>
               </td>
               <td className="tabular-nums">{formatDate(row.notified_at)}</td>
+              <td>
+                {row.href ? (
+                  <Link href={row.href} className="underline">
+                    {t("openSource")}
+                  </Link>
+                ) : null}
+              </td>
             </tr>
           ))}
         </tbody>

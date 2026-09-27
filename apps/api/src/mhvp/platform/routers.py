@@ -1,7 +1,11 @@
 """Platform administration (/api/v1/platform) and tenant administration (/api/v1/tenant)."""
 
+import csv
+import io
+import json
 import secrets
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, datetime
 from typing import Annotated, Any
 
@@ -1832,25 +1836,85 @@ async def list_audit(
     page: Page = 1,
     page_size: PageSize = 50,
     entity_id: uuid.UUID | None = None,
+    entity_type: str | None = Query(default=None, max_length=64),
     principal: TenantPrincipal = Depends(require_permission("audit:read")),
 ) -> list[AuditOut]:
+    """Change log per entity (Ergänzung 7.2): filter by ``entity_type`` and ``entity_id``."""
     async with tenant_tx(request, principal) as session:
-        query = select(AuditLog).order_by(AuditLog.occurred_at.desc(), AuditLog.id.desc())
-        if entity_id:
-            query = query.where(AuditLog.entity_id == entity_id)
-        rows = (await session.scalars(query.offset((page - 1) * page_size).limit(page_size))).all()
-        return [
-            AuditOut(
-                id=a.id,
-                event_id=a.event_id,
-                entity_type=a.entity_type,
-                entity_id=a.entity_id,
-                changes=a.changes,
-                actor_user_id=a.actor_user_id,
-                occurred_at=a.occurred_at,
+        rows = await _audit_rows(session, entity_type, entity_id, page, page_size)
+        return [_audit_out(a) for a in rows]
+
+
+AUDIT_EXPORT_MAX_ROWS = 10_000
+
+
+@tenant_router.get("/audit-log/export", summary="Änderungsprotokoll als CSV")
+async def export_audit(
+    request: Request,
+    entity_id: uuid.UUID | None = None,
+    entity_type: str | None = Query(default=None, max_length=64),
+    principal: TenantPrincipal = Depends(require_permission("audit:read")),
+) -> Response:
+    """CSV (UTF-8 with BOM, semicolon separated) of the filtered change log, one row per
+    changed field; capped at ``AUDIT_EXPORT_MAX_ROWS`` log entries."""
+    async with tenant_tx(request, principal) as session:
+        rows = await _audit_rows(session, entity_type, entity_id, 1, AUDIT_EXPORT_MAX_ROWS)
+    buffer = io.StringIO()
+    writer = csv.writer(buffer, delimiter=";", lineterminator="\r\n")
+    writer.writerow(
+        ["occurred_at", "entity_type", "entity_id", "field", "old", "new", "actor_user_id"]
+    )
+    for a in rows:
+        base = [a.occurred_at.isoformat(), a.entity_type, str(a.entity_id or "")]
+        actor = str(a.actor_user_id or "")
+        for field, change in sorted(a.changes.items()):
+            old_value, new_value = (
+                (change.get("old"), change.get("new"))
+                if isinstance(change, dict)
+                else (None, change)
             )
-            for a in rows
-        ]
+            writer.writerow([*base, field, _csv_cell(old_value), _csv_cell(new_value), actor])
+    suffix = f"-{entity_type}" if entity_type else ""
+    return Response(
+        content="\ufeff" + buffer.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": f'attachment; filename="aenderungsprotokoll{suffix}.csv"'},
+    )
+
+
+def _csv_cell(value: object) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, str):
+        return value
+    return json.dumps(value, ensure_ascii=False, sort_keys=True)
+
+
+async def _audit_rows(
+    session: AsyncSession,
+    entity_type: str | None,
+    entity_id: uuid.UUID | None,
+    page: int,
+    page_size: int,
+) -> Sequence[AuditLog]:
+    query = select(AuditLog).order_by(AuditLog.occurred_at.desc(), AuditLog.id.desc())
+    if entity_type:
+        query = query.where(AuditLog.entity_type == entity_type)
+    if entity_id:
+        query = query.where(AuditLog.entity_id == entity_id)
+    return (await session.scalars(query.offset((page - 1) * page_size).limit(page_size))).all()
+
+
+def _audit_out(a: AuditLog) -> AuditOut:
+    return AuditOut(
+        id=a.id,
+        event_id=a.event_id,
+        entity_type=a.entity_type,
+        entity_id=a.entity_id,
+        changes=a.changes,
+        actor_user_id=a.actor_user_id,
+        occurred_at=a.occurred_at,
+    )
 
 
 # Release gates -------------------------------------------------------------------------

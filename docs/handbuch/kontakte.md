@@ -15,10 +15,22 @@ Hinzufügen oder Entfernen; die Aktion wird ganz oder gar nicht ausgeführt.
 
 ## Stammdaten und Reiter
 
-Ein Kontakt gliedert sich in Stammdaten, Kommunikation (Telefonnummern, E-Mail-Adressen,
-Adressen), Bankverbindungen, Notizen und Einwilligungen. Bei einer Person sind Vor- oder
-Nachname Pflicht, bei einer Firma der Firmenname. Der Reiter Tickets zeigt alle Tickets, die
-diesem Kontakt zugeordnet sind, einschließlich der erledigten (seit 1.23.0).
+Ein Kontakt gliedert sich in die Reiter Stammdaten, Beziehungen (Objekte, Einheiten,
+Bevollmächtigte), Kommunikation (Telefonnummern, E-Mail-Adressen, Adressen, Anrufliste),
+Tickets, Bankverbindungen, Dokumente, Portal-Freigaben, Notizen, Einwilligungen und
+Ereignisprotokoll. Bei einer Person sind Vor- oder Nachname Pflicht, bei einer Firma der
+Firmenname. Der Reiter Tickets zeigt alle Tickets, die diesem Kontakt zugeordnet sind,
+einschließlich der erledigten (seit 1.23.0).
+
+Weitere Felder (Ergänzung 27.09.2026, Abschnitt 4.1): Briefanrede als Freitext, Bundesland je
+Adresse, Landesvorwahl, Vorwahl und Notiz je Telefonnummer, beliebig viele Datumsfelder mit
+Art (Geburtstag, Sterbedatum, Hochzeit, Gründung, Sonstiges), je Bankkonto der Kontotyp
+(Mietkonto, Bankkonto 1, Bankkonto 2, WEG-Konto, Rücklagenkonto, Kautionskonto,
+Hausgeldkonto, Altkonto), das Kennzeichen Standardkonto und der Bankkontakt. Genau eine
+E-Mail-Adresse darf Portal-Login-Adresse sein, genau ein Bankkonto Standardkonto; das Formular
+und die API weisen weitere Markierungen ab. Notizen tragen Titel, Kategorie und eine
+Wiedervorlage mit Datum. Der Reiter Ereignisprotokoll zeigt das Änderungsprotokoll des
+Kontakts und erfordert das Recht audit:read.
 
 ## Beziehungen zu Objekten und Einheiten
 
@@ -91,6 +103,17 @@ Vorschläge aus dem Portal (Datenänderung) oder aus Ticket-Mails enthalten nie 
 automatische Übernahme von Bankdaten; die IBAN ist von Hand mit Nachweis zu erfassen und
 anschließend freizugeben.
 
+## Sperre und Löschdatum
+
+Kontakt sperren setzt das Sperrdatum automatisch; beim Aufheben der Sperre wird es gelöscht.
+Die Kontaktliste zeigt mit dem Filter Nur gesperrte Kontakte die Sperrliste. Über das
+Löschprofil (ein freigegebenes Aufbewahrungsprofil, Einstellungen) wird ein Löschdatum
+vorgemerkt: Beginn ist das Sperrdatum, sonst der Tag der Zuordnung, bei Profilen mit Beginn
+Jahresende der 31.12. dieses Jahres, darauf die Frist des Profils. Das Datum ist eine
+Vormerkung und wird als fällig angezeigt (Betreiberentscheidung 26.09.2026). Die Löschung
+selbst erfolgt manuell über Löschen im Vier-Augen-Prinzip; es gibt keinen automatischen
+Löschlauf. Entwürfe von Aufbewahrungsprofilen werden abgewiesen.
+
 ## Löschen und DSGVO-Auskunft
 
 Löschen markiert den Kontakt als gelöscht (Endgültig löschen zur Bestätigung); die
@@ -103,6 +126,17 @@ inhaltlich zu prüfen, insbesondere auf Daten Dritter, die nicht in die Auskunft
 Von der KI vorgeschlagene Kontaktdaten aus einem Import sind stets zu prüfen, bevor sie
 übernommen werden. Eine SEPA-Freigabe ist erst mit vollständigem Nachweis verbindlich;
 ohne Mandat darf keine Lastschrift eingezogen werden.
+
+## Stammdaten direkt bearbeiten
+
+Im Reiter Stammdaten lassen sich Anrede, Briefanrede, Titel, Vor- und Nachname beziehungsweise
+Firma und Rechtsform, Position, Geburtsdatum, Sprache, bevorzugter Kanal und Notizen an Ort und
+Stelle ändern (Stift am Feld oder "Bearbeiten" im Abschnittskopf, Recht Kontakte ändern).
+Jede Änderung wird einzeln gespeichert und im Ereignisprotokoll festgehalten; Bedienung und
+Konflikthinweis siehe Kapitel Stammdaten direkt bearbeiten. Adressen, Telefonnummern,
+E-Mail-Adressen, Bankverbindungen, Typen, Rollen und Schlagworte werden weiterhin über
+Bearbeiten im Formular gepflegt. Die Verknüpfungsleiste unter dem Kopf führt zu den Objekten,
+Einheiten und Verträgen des Kontakts sowie zu seinen Tickets.
 
 ## Häufige Fehler
 

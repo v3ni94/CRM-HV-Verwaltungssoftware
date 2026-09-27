@@ -6,11 +6,12 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { entityHref } from "@/lib/entity-links";
 
 type Hit = components["schemas"]["Hit"];
 
 function hrefOf(hit: Hit): string | null {
-  return hit.entity_type === "contact" ? `/kontakte/${hit.id}` : null;
+  return entityHref(hit.entity_type, hit.id, (hit as { parent_id?: string | null }).parent_id);
 }
 
 /** Global search over all areas (M9), opened with Strg+K (Cmd+K on macOS), via the BFF. */

@@ -17,8 +17,8 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.30.0",
-    date: "26.09.2026",
+    version: "1.32.0",
+    date: "27.09.2026",
     title: "Upload im CRM mit Ablage über objektakte in Drive und Paperless",
     changes: [
       "Dokumente: hochgeladene Dokumente mit genau einem Objekt werden über objektakte in Drive (mit Eigentümer- und Mieterakten) und in Paperless abgelegt, ohne doppelte Spiegelung",
@@ -28,8 +28,8 @@ export const CHANGELOG: ChangelogEntry[] = [
     ],
   },
   {
-    version: "1.29.0",
-    date: "26.09.2026",
+    version: "1.31.0",
+    date: "27.09.2026",
     title: "DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter",
     changes: [
       "DMS: Kachel je Objekt mit Übernahmestatus, Prüffällen, Vollständigkeit und fehlenden Dokumenten, Detailseite mit Dokumentliste, Sprung nach Google Drive und Nachholen der Verknüpfung",
@@ -37,6 +37,33 @@ export const CHANGELOG: ChangelogEntry[] = [
       "DMS: Eigentümer- und Mieterlisten aus der Objektübernahme als Importvorschlag mit Testlauf und Freigabe",
       "Dokumente: Paperless-Suche nach Objektnummer ohne Teiltreffer und Filter nach Gesellschaft, Gesellschaftsoptionen in den DMS-Einstellungen",
       "Dokumente: vertauschte Fehlertexte bei nicht erreichbarem oder nicht eingerichtetem Paperless korrigiert",
+    ],
+  },
+  {
+    version: "1.30.0",
+    date: "27.09.2026",
+    title:
+      "Masterprompt-Ergänzung Welle B: Inline-Bearbeitung, Objekt- und Gebäudeseiten, Kataloge, Messdienstleister Stufe 3",
+    changes: [
+      "Stammdaten direkt bearbeiten (ADR 0012): Objekt, Gebäude, Einheit und Kontakt werden an Ort und Stelle mit Stift oder Bearbeiten je Abschnitt geändert, Speichern je Feld beim Verlassen mit sichtbarem Speicherstatus, Feldfehlern, Versionsprüfung und Konflikthinweis; beim Vertrag Bemerkungen und Mahnsperre mit Begründungspflicht, alles Übrige bleibt versioniert über das Vertragsformular; PATCH-Endpunkte für Objekt, Gebäude, Einheit, Kontakt und Vertragsbemerkungen mit Ereignisprotokoll und Änderungsdiff",
+      "Objekt-, Gebäude- und Einheitenseiten: neue Gebäudeseite mit Energieausweis, Anzeige von Eigentümerdetails (Verrechnungskonto, Vollmacht, Steuerberater), Abrechnungszeiträumen, Untergemeinschaften, Objektmappe, Dienstleistern mit Freistellungsbescheinigung, Leerstandswerten und Zählerwechseln; Verknüpfungsleiste und Ereignisprotokoll auf Objekt, Gebäude, Einheit, Kontakt und Vertrag",
+      "Kataloge und benutzerdefinierte Felder (4.11, Anhang B): alle Auswahllisten je Mandant als Systemeinträge mit Erweiterung und Deaktivierung, Zusatzfelder mit Gruppe, Gültigkeit, Eindeutigkeit, Min und Max, Standardwert und Feldtypen, neue Einstellungsseiten Kataloge und Felder (Migration 0152)",
+      "Messdienstleister Stufe 3: kontrollierte schreibende Vorgänge mit getrennten Schritten Daten prüfen, Freigeben und Abrechnung verbindlich beauftragen beziehungsweise Nutzer und Rollen verbindlich übermitteln (On-Site Roles 2.0 mit vollständigem Datensatz je Nutzeinheit, Billing Input mit Anbietervorlage und Anbieterprüfung), Datenversion entwertet Freigaben bei jeder Änderung, Protokoll je Schritt, Zeitüberschreitung ohne Wiederholung; Freigabe je Verbindung, Modulschalter in den Mandanteneinstellungen, Anbieterwechsel und Einheitenbearbeitung im Objektreiter (Migration 0153)",
+    ],
+  },
+  {
+    version: "1.29.0",
+    date: "27.09.2026",
+    title:
+      "Masterprompt-Ergänzung Welle A: Kontakt, Objekt und Einheit, Vertrag, Suche und Verknüpfungen, Kalender aus Datumsfeldern, Messdienstleister Stufe 2",
+    changes: [
+      "Kontakt nach Abschnitt 4.1 erweitert: Briefanrede, Bundesland, Landesvorwahl, Vorwahl und Notiz je Telefon, Datumsfelder, Kontotyp und Standardkonto je Bankverbindung, Sperrdatum, Löschprofil mit vorgemerktem Löschdatum (Löschung weiterhin manuell im Vier-Augen-Prinzip), Sperrliste, Notizen mit Titel und Wiedervorlage sowie die Reiter Beziehungen, Dokumente, Portal-Freigaben und Ereignisprotokoll (Migration 0147)",
+      "Objekte, Gebäude und Einheiten nach Abschnitt 4.2 bis 4.4 erweitert: Energieausweis vollständig und ausschließlich am Gebäude (Migration übernimmt Objektwerte), Gebäude und Einheit mit Versionsprüfung (ETag), Abrechnungszeiträume je Art, Untergemeinschaften, Objektmappe, Eigentümer mit Verrechnungskonto, Vollmacht und Steuerberater, Bankkonto mit Sachkonto, Dienstleister mit Kundennummer, Freistellungsbescheinigung und Kreditorenkonto, Einheit mit Provision, Kautionsbetrag und Leerstands-Umlagewerten, Zählerwechsel (Migrationen 0148, 0149)",
+      "Verträge: vertragsbezogene Umlagewerte mit Zeitraum, SEPA-Mandate mit Ertragsarten und Sonderumlage-Ausschluss, Einzugs- und Auszugsdatum, Vertragsbeendigung mit Zählerständen, Listen beendeter Verträge, Kautionen und Leerstand zum Stichtag; Vertragsseite mit Abschnitten Eigenschaften, Mandate und Debitorenkonto (Migration 0150)",
+      "Globale Suche findet jetzt auch Gebäude, Tickets (auch als #Nummer) und Buchungen mit Berechtigung je Trefferart; Verknüpfungsleiste und Ereignisprotokoll mit CSV-Export je Datensatz, zunächst im Ticketdetail; Änderungsprotokoll filtert nach Entitätstyp",
+      "Kalender und Fristen vereinheitlicht: Termine entstehen deterministisch aus Datumsfeldern (Eichdatum, Energieausweis, Vertragsende, Ein- und Auszug, Sanierung, Wiedervorlage, Versammlung), tragen Quelle, Kategorie und Erinnerungen und verlinken zur Quelle (Migration 0151)",
+      "Messdienstleister Stufe 2: Oberfläche unter Einstellungen, Schnittstellen (Verbindungen, Einrichtungsassistent mit ehrlichem Funktionsstand, zentrale Zuordnungsübersicht mit Sammelfreigabe, CSV) und Reiter am Objekt (Zuordnungen, Einheiten, Abruf je Datenart, Verbrauch, Abrechnungsergebnisse, Klärung); lesende Adapter für ista und KALO nach bved-Spezifikationen, Dokumentenübernahme ohne Dubletten und mit Versionierung, Auftragsausführung mit Sperre, Cursor und Wiederholungen; Fähigkeitsmatrix im Betreiberdokument",
+      "Betrieb: Migration 0146 idempotent, damit der Produktionsstand mit vorab eingespielter Vertragsfreigabe durchläuft",
     ],
   },
   {

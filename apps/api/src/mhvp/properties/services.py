@@ -2,7 +2,7 @@
 
 import re
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -24,7 +24,9 @@ from mhvp.properties.models import (
     Property,
     PropertyOwner,
     PropertyStatus,
+    SubCommunity,
     UnitAllocationValue,
+    UnitVacancyAllocationValue,
 )
 
 ALLOWED_TRANSITIONS: dict[PropertyStatus, set[PropertyStatus]] = {
@@ -161,14 +163,82 @@ async def check_custom_fields(
             if definition.required:
                 raise invalid(f"Zusatzfeld {definition.label} ist Pflicht.")
             continue
-        ok = {
-            "text": isinstance(value, str),
-            "number": isinstance(value, int | float) and not isinstance(value, bool),
-            "bool": isinstance(value, bool),
-            "date": isinstance(value, str) and _is_date(value),
-        }[definition.field_type]
-        if not ok:
+        if not _custom_value_ok(definition, value):
             raise invalid(f"Zusatzfeld {definition.label} hat den falschen Typ.")
+        if definition.field_type in _NUMERIC_TYPES:
+            number = Decimal(str(value))
+            if definition.min_value is not None and number < definition.min_value:
+                raise invalid(f"Zusatzfeld {definition.label} unterschreitet das Minimum.")
+            if definition.max_value is not None and number > definition.max_value:
+                raise invalid(f"Zusatzfeld {definition.label} überschreitet das Maximum.")
+        elif definition.field_type in _TEXT_TYPES and isinstance(value, str):
+            length = Decimal(len(value))
+            if definition.min_value is not None and length < definition.min_value:
+                raise invalid(f"Zusatzfeld {definition.label} ist zu kurz.")
+            if definition.max_value is not None and length > definition.max_value:
+                raise invalid(f"Zusatzfeld {definition.label} ist zu lang.")
+        elif definition.field_type == "choice" and value not in definition.options:
+            raise invalid(f"Zusatzfeld {definition.label}: unbekannter Auswahlwert.")
+
+
+# B.28 field types (catalogs.CUSTOM_FIELD_TYPES). Minimum and maximum apply to numeric
+# types as value bounds and to text types as length bounds.
+_NUMERIC_TYPES = frozenset({"integer", "number", "amount"})
+_TEXT_TYPES = frozenset({"string", "text", "rich_text", "url"})
+_REF_TYPES = frozenset({"contact_ref", "document_ref", "property_ref"})
+
+
+def _is_number(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int | float):
+        return True
+    if isinstance(value, str):
+        try:
+            Decimal(value)
+        except ArithmeticError:
+            return False
+        return True
+    return False
+
+
+def _is_uuid(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        uuid.UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_datetime(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _custom_value_ok(definition: CustomFieldDefinition, value: Any) -> bool:
+    kind = definition.field_type
+    if kind == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if kind in _NUMERIC_TYPES:
+        return _is_number(value)
+    if kind == "bool":
+        return isinstance(value, bool)
+    if kind == "date":
+        return isinstance(value, str) and _is_date(value)
+    if kind == "datetime":
+        return _is_datetime(value)
+    if kind in _TEXT_TYPES or kind == "choice":
+        return isinstance(value, str)
+    if kind in _REF_TYPES:
+        return _is_uuid(value)
+    return False
 
 
 def _is_date(value: str) -> bool:
@@ -226,6 +296,77 @@ async def add_allocation_value(
     session.add(row)
     await session.flush()
     return row, previous
+
+
+async def add_vacancy_allocation_value(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    unit_id: uuid.UUID,
+    key_id: uuid.UUID,
+    value: Decimal,
+    valid_from: date,
+    valid_to: date | None,
+) -> UnitVacancyAllocationValue:
+    """Vacancy key value (4.4); an open ended earlier value is closed the day before."""
+    previous = await session.scalar(
+        select(UnitVacancyAllocationValue).where(
+            UnitVacancyAllocationValue.unit_id == unit_id,
+            UnitVacancyAllocationValue.allocation_key_id == key_id,
+            UnitVacancyAllocationValue.valid_to.is_(None),
+            UnitVacancyAllocationValue.valid_from < valid_from,
+        )
+    )
+    if previous is not None:
+        previous.valid_to = valid_from - timedelta(days=1)
+        await session.flush()
+    row = UnitVacancyAllocationValue(
+        tenant_id=tenant_id,
+        unit_id=unit_id,
+        allocation_key_id=key_id,
+        value=value,
+        valid_from=valid_from,
+        valid_to=valid_to,
+    )
+    session.add(row)
+    await session.flush()
+    return row
+
+
+async def check_ledger_account(
+    session: AsyncSession, account_id: uuid.UUID | None, property_id: uuid.UUID, label: str
+) -> None:
+    """An assigned ledger account must exist in the tenant and belong to a ledger of a legal
+    entity of this property (6.9.1: accounts never cross legal entities). Reference only."""
+    if account_id is None:
+        return
+    from mhvp.accounting.models import Ledger, LedgerAccount
+
+    row = (
+        await session.execute(
+            select(Ledger.property_id, LegalEntity.property_id)
+            .join(LedgerAccount, LedgerAccount.ledger_id == Ledger.id)
+            .join(LegalEntity, LegalEntity.id == Ledger.legal_entity_id)
+            .where(LedgerAccount.id == account_id)
+        )
+    ).first()
+    if row is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail=f"{label} nicht gefunden.")
+    if property_id not in row:
+        raise invalid(f"{label} gehört nicht zu einem Rechtsträger dieses Objekts.")
+
+
+async def check_sub_community(
+    session: AsyncSession, sub_community_id: uuid.UUID | None, property_id: uuid.UUID
+) -> None:
+    if sub_community_id is None:
+        return
+    row = await session.get(SubCommunity, sub_community_id)
+    if row is None:
+        raise ProblemError(
+            ErrorCodes.RESOURCE_NOT_FOUND, detail="Untergemeinschaft nicht gefunden."
+        )
+    if row.property_id != property_id:
+        raise invalid("Die Untergemeinschaft gehört nicht zu diesem Objekt.")
 
 
 async def reading_is_implausible(
@@ -304,4 +445,7 @@ async def owner_view(
         "valid_from": owner.valid_from,
         "valid_to": owner.valid_to,
         "legal_entity_id": entity,
+        "clearing_account_id": owner.clearing_account_id,
+        "power_of_attorney_document_id": owner.power_of_attorney_document_id,
+        "tax_advisor_contact_id": owner.tax_advisor_contact_id,
     }

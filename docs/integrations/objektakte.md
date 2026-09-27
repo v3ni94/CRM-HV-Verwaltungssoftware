@@ -92,7 +92,7 @@ angelegt und im Ergebnis als `invalid` gezählt.
 Signatur über den rohen Inhalt mit `OBJEKTAKTE_WEBHOOK_SECRET`; ohne Geheimnis wird jede
 Zustellung abgewiesen (401). `X-Objektakte-Event` muss zum Inhalt passen (sonst 422).
 Idempotenz über (event, object_number, document.id) in `objektakte_webhook_receipt`
-(Migration 0147): die erste Zustellung wird verarbeitet, jede Wiederholung erhält 200 mit
+(Migration 0154): die erste Zustellung wird verarbeitet, jede Wiederholung erhält 200 mit
 `"status": "duplicate"` und ändert nichts. `object.taken_over` wird als Ereignis
 `objektakte.object_taken_over` protokolliert, weitere Folgen hat es in dieser Stufe nicht.
 Unbekannte Ereignisse werden als `ignored` vermerkt.
@@ -131,7 +131,7 @@ Hinweise oder Dateityp ungültig), 404 (Objekt unbekannt), 409 (Kennung einem an
 zugeordnet oder Objekt archiviert), 413 (zu groß), 503 mit `Retry-After`, solange der Schalter
 `sync.crm_uploads_enabled` in objektakte aus ist.
 
-Weiche im CRM (`mhvp.objektakte.upload`, Tabelle `objektakte_upload`, Migration 0148): Ein
+Weiche im CRM (`mhvp.objektakte.upload`, Tabelle `objektakte_upload`, Migration 0155): Ein
 Dokument geht an objektakte, wenn
 
 1. `OBJEKTAKTE_UPLOAD_ENABLED=true` gesetzt und die Lese-API eingerichtet ist,

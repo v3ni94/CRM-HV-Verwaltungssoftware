@@ -1,6 +1,12 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { AuditLogPanel } from "@/components/common/AuditLogPanel";
+import { EntityLinksBar } from "@/components/common/EntityLinksBar";
+import { ContractAllocationValues } from "@/components/contracts/ContractAllocationValues";
+import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAccount";
+import { ContractNotesSection } from "@/components/contracts/ContractNotesSection";
+import { ContractMandates } from "@/components/contracts/ContractMandates";
 import { DepositPanel } from "@/components/contracts/DepositPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getMe } from "@/lib/me";
@@ -30,7 +36,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       </div>
     );
   }
-  const { contract, deposits, settlements, rates, partyName, propertyLabel, unitLabel } = ctx;
+  const { contract, deposits, settlements, rates, partyName, propertyLabel, unitLabel, allocationValues, allocationKeys, mandates, ledger, meterLabels, terminationReadings } = ctx;
   const bool = (v: boolean) => (v ? t("yes") : t("no"));
 
   return (
@@ -47,6 +53,15 @@ export default async function ContractDetailPage({ params, searchParams }: { par
             </Link>
           ) : null
         }
+      />
+      <EntityLinksBar
+        links={[
+          { type: "property", id: contract.property_id, label: propertyLabel },
+          { type: "unit", id: contract.unit_id, label: unitLabel },
+          { type: "contact", id: contract.party_id, label: partyName },
+          { type: "ledger", id: ledger?.id ?? null, label: ledger?.name ?? null },
+          { type: "ticket", href: `/tickets?unit_id=${contract.unit_id}`, label: t("links.tickets") },
+        ]}
       />
       {contract.approval_status === "pending" ? (
         <p role="status" className={ui.notice} data-testid="approval-pending">
@@ -94,11 +109,6 @@ export default async function ContractDetailPage({ params, searchParams }: { par
           <dd>{t(`vatOptions.${contract.vat_option}`)}</dd>
           <dt className={ui.label}>{t("fields.directDebit")}</dt>
           <dd>{bool(contract.direct_debit)}</dd>
-          <dt className={ui.label}>{t("fields.dunningBlock")}</dt>
-          <dd>
-            {bool(contract.dunning_block)}
-            {contract.dunning_block_reason ? `, ${contract.dunning_block_reason}` : ""}
-          </dd>
           {contract.kind === "tenancy" ? (
             <>
               <dt className={ui.label}>{t("fields.rentIncreaseBlockUntil")}</dt>
@@ -122,14 +132,9 @@ export default async function ContractDetailPage({ params, searchParams }: { par
               <dd>{bool(contract.special_succession_liability)}</dd>
             </>
           )}
-          {contract.notes ? (
-            <>
-              <dt className={ui.label}>{t("fields.notes")}</dt>
-              <dd className="whitespace-pre-line">{contract.notes}</dd>
-            </>
-          ) : null}
         </dl>
       </section>
+      <ContractNotesSection contract={contract} canEdit={canUpdate} />
       <section className={ui.card}>
         <h2 className={ui.h2}>{t("page.schedules")}</h2>
         {contract.schedules.length === 0 ? (
@@ -145,7 +150,21 @@ export default async function ContractDetailPage({ params, searchParams }: { par
           </ul>
         )}
       </section>
+      <ContractAllocationValues contractId={contract.id} values={allocationValues} keys={allocationKeys} canUpdate={canUpdate} startDate={contract.start_date} />
+      <ContractMandates mandates={mandates} defaultMandateId={contract.sepa_mandate_id} directDebit={contract.direct_debit} />
+      {contract.debtor_account ? (
+        <ContractDebtorAccount
+          account={contract.debtor_account}
+          ledgerId={ledger?.id ?? null}
+          ledgerName={ledger?.name ?? null}
+          moveInOn={contract.move_in_on}
+          moveOutOn={contract.move_out_on}
+          readings={terminationReadings}
+          meterLabels={meterLabels}
+        />
+      ) : null}
       {contract.kind === "tenancy" ? <DepositPanel deposits={deposits} settlements={settlements} rates={rates} contractEndDate={contract.end_date} canUpdate={canUpdate} /> : null}
+      <AuditLogPanel entityType="contract" entityId={contract.id} />
     </div>
   );
 }

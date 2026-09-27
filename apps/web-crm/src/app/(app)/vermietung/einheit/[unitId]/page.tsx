@@ -1,16 +1,29 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { AuditLogPanel } from "@/components/common/AuditLogPanel";
+import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
 import { Prospects } from "@/components/letting/Prospects";
+import { EnergyCertificateForm, type EnergyBuilding } from "@/components/properties/EnergyCertificateForm";
 import { UnitDetails } from "@/components/properties/UnitDetails";
+import { UnitMasterData, type UnitMaster } from "@/components/properties/UnitMasterData";
+import { MeterChangesPanel, VacancyValuesPanel, type MeterChangeRow, type VacancyValueRow } from "@/components/properties/UnitPanels";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { formatDate, formatDecimal, formatEur } from "@/lib/format";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
+
+async function load<T>(path: string, fallback: T): Promise<T> {
+  const response = await serverFetch(path);
+  return response.ok ? ((await response.json()) as T) : fallback;
+}
+
+type MeterRow = { id: string; unit_id: string | null; number: string; meter_type_code: string };
 
 export default async function LettingUnitPage({ params }: { params: Promise<{ unitId: string }> }) {
   const { unitId } = await params;
@@ -31,7 +44,34 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
   redirectIfUnauthenticated(unit.response);
   if (!unit.data) return <p role="alert" className={ui.alert}>{problemMessage(unit.error as Problem | undefined, unit.response.status)}</p>;
   if (!expose.data) return <p role="alert" className={ui.alert}>{problemMessage(expose.error as Problem | undefined, expose.response.status)}</p>;
-  const property = await api.GET("/api/v1/properties/{property_id}", { params: { path: { property_id: unit.data.property_id } } });
+  const propertyId = unit.data.property_id;
+  const [property, building, me, subCommunities, vacancyValues, meters, ledgers] = await Promise.all([
+    api.GET("/api/v1/properties/{property_id}", { params: { path: { property_id: propertyId } } }),
+    api.GET("/api/v1/buildings/{building_id}", { params: { path: { building_id: unit.data.building_id } } }),
+    getMe(),
+    load<{ id: string; code: string; name: string }[]>(`/api/v1/properties/${propertyId}/sub-communities`, []),
+    load<VacancyValueRow[]>(`/api/v1/units/${unitId}/vacancy-allocation-values`, []),
+    load<MeterRow[]>(`/api/v1/properties/${propertyId}/meters`, []),
+    load<{ id: string }[]>(`/api/v1/ledgers?property_id=${propertyId}`, []),
+  ]);
+  const unitMeters = meters.filter((m) => m.unit_id === unitId);
+  const meterChanges = (
+    await Promise.all(
+      unitMeters.map(async (m) =>
+        (await load<MeterChangeRow[]>(`/api/v1/meters/${m.id}/changes`, [])).map((c) => ({ ...c, meter_label: `${m.meter_type_code} ${m.number}` })),
+      ),
+    )
+  ).flat();
+  const canEdit = me.data?.permissions.includes("properties:update") ?? false;
+  const links: EntityLink[] = [
+    { type: "property", id: propertyId, label: property.data?.number ?? null },
+    { type: "building", id: unit.data.building_id, parentId: propertyId, label: building.data?.name ?? null },
+    ...(occupants.data?.tenant ? [{ type: "contract" as const, id: occupants.data.tenant.contract_id, label: occupants.data.tenant.contract_number }] : []),
+    ...(occupants.data?.owner ? [{ type: "contract" as const, id: occupants.data.owner.contract_id, label: occupants.data.owner.contract_number }] : []),
+    ...(occupants.data?.tenant?.members ?? []).map((m) => ({ type: "contact" as const, id: m.contact_id, label: m.display_name })),
+    { type: "ticket", href: `/tickets?unit_id=${unitId}`, count: (tickets.data ?? []).length },
+    { type: "ledger", id: ledgers[0]?.id ?? null },
+  ];
   const unitTitle = [unit.data.number, unit.data.label].filter(Boolean).join(" ");
   const rows = (prospects.data ?? []) as { id: string; contact_id: string; status: string; delete_after: string; notes: string | null }[];
   const names: Record<string, string> = {};
@@ -73,7 +113,12 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
         ]}
         title={String(fields.title ?? "") || unitTitle}
       />
-      <UnitDetails unit={unit.data} occupants={occupants.data ?? null} />
+      <EntityLinksBar links={links} />
+      <UnitMasterData unit={unit.data as unknown as UnitMaster} canEdit={canEdit} subCommunities={subCommunities} />
+      <UnitDetails unit={unit.data} occupants={occupants.data ?? null} showParameters={false} />
+      <VacancyValuesPanel rows={vacancyValues} />
+      <MeterChangesPanel rows={meterChanges} />
+      {building.data ? <EnergyCertificateForm building={building.data as unknown as EnergyBuilding} canEdit={canEdit} /> : null}
       <section className={ui.card}>
         <h2 className={ui.h2}>{t("expose")}</h2>
         <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
@@ -114,6 +159,7 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
       <h2 className={ui.h2}>{t("title")}</h2>
       <Prospects unitId={unitId} rows={rows} names={names} />
       <TicketsSection tickets={(tickets.data ?? []) as TicketSummary[]} />
+      <AuditLogPanel entityType="unit" entityId={unitId} />
     </div>
   );
 }

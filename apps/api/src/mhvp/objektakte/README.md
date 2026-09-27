@@ -189,7 +189,7 @@ Independent of the dump based takeover above; both meet on `Document.source_syst
 | `dms_service.py` | `link_filed_document` (M6 document plus property link, matching over objektakte id, `drive_file_id`, `sha256`), `reconcile_persons` (test run of an owner/tenant list against `lists.persons_list`, read only) |
 | `dms_routers.py` | `/api/v1/integrations/objektakte/...` for the DMS page and the import proposals; only for the tenant in `OBJEKTAKTE_TENANT` |
 | `webhook.py` | `POST /api/v1/integrations/objektakte/webhook`, HMAC (`OBJEKTAKTE_WEBHOOK_SECRET`), idempotent via `objektakte_webhook_receipt` |
-| `dms_models.py` | `ObjektakteWebhookReceipt`, `ObjektaktePersonProposal` (migration `0147_objektakte_dms`), `ObjektakteUpload` (migration `0148_objektakte_upload`) |
+| `dms_models.py` | `ObjektakteWebhookReceipt`, `ObjektaktePersonProposal` (migration `0154_objektakte_dms`), `ObjektakteUpload` (migration `0155_objektakte_upload`) |
 | `upload.py` | Upload of CRM documents to objektakte (26.09.2026): routing in `store_document` (upload or scan, one property, switch `OBJEKTAKTE_UPLOAD_ENABLED`), job `mhvp.objektakte.upload` (pending, submitted, done, failed), CRM mirrors skipped for routed documents |
 
 Tests: `tests/unit/test_m29_objektakte_remote.py`, `tests/integration/test_m29_dms_objektakte.py`.
