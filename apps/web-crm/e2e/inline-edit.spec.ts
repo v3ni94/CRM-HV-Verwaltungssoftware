@@ -36,7 +36,7 @@ test.describe("Inline editing against the API @backend", () => {
     // Property: the links bar and the master data section are visible; a field saves on blur.
     await expect(page.getByTestId("entity-links")).toBeVisible();
     const propertySection = page.getByTestId("property-master-data");
-    await propertySection.getByRole("button", { name: "Bearbeiten" }).click();
+    await propertySection.getByRole("button", { name: "Bearbeiten", exact: true }).click();
     await propertySection.getByLabel("Ort").fill("Monheim am Rhein");
     await propertySection.getByLabel("Ort").press("Tab");
     await expect(propertySection.getByText("Gespeichert").first()).toBeVisible();
@@ -53,7 +53,7 @@ test.describe("Inline editing against the API @backend", () => {
     await page.getByRole("link", { name: "Gebäude öffnen: Haus A" }).click();
     await expect(page).toHaveURL(new RegExp(`/objekte/${prop.id}/gebaeude/${building.id}$`));
     const buildingSection = page.getByTestId("building-master-data");
-    await buildingSection.getByRole("button", { name: "Bearbeiten" }).click();
+    await buildingSection.getByRole("button", { name: "Bearbeiten", exact: true }).click();
     await buildingSection.getByLabel("Adresszusatz").fill("Hinterhaus");
     await buildingSection.getByLabel("Adresszusatz").press("Enter");
     await expect(buildingSection.getByText("Gespeichert").first()).toBeVisible();
@@ -75,7 +75,7 @@ test.describe("Inline editing against the API @backend", () => {
     // Unit: commission and deposit are master data, saved per field; the audit log lists it.
     await page.goto(`/vermietung/einheit/${unit.id}`);
     const unitSection = page.getByTestId("unit-master-data");
-    await unitSection.getByRole("button", { name: "Bearbeiten" }).click();
+    await unitSection.getByRole("button", { name: "Bearbeiten", exact: true }).click();
     await unitSection.getByLabel("Kaution in EUR").fill("1500");
     await unitSection.getByLabel("Kaution in EUR").press("Tab");
     await expect(unitSection.getByText("Gespeichert").first()).toBeVisible();

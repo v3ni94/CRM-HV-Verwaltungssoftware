@@ -68,7 +68,7 @@ test.describe("CRM against the API @backend", () => {
 
     // Find it via Strg+K.
     await page.keyboard.press("Control+k");
-    const dialog = page.getByRole("dialog", { name: "Globale Suche" });
+    const dialog = page.getByRole("dialog", { name: "Befehlspalette" });
     await expect(dialog).toBeVisible();
     await dialog.getByRole("combobox").fill(unique);
     await expect(dialog.getByRole("option", { name: new RegExp(unique) })).toBeVisible();
