@@ -2,7 +2,7 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -21,10 +21,18 @@ export function NewTicket() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  const doneRef = useRef<HTMLParagraphElement>(null);
+
+  // Keyboard/Screenreader: after a successful submit the focus moves to the confirmation
+  // (same pattern as the heading focus in PortalForms).
+  useEffect(() => {
+    if (done) doneRef.current?.focus();
+  }, [done]);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
+    setDone(false);
     if (title.trim().length < 3) {
       setError(t("titleRequired"));
       return;
@@ -73,8 +81,13 @@ export function NewTicket() {
         </p>
       ) : null}
       {done ? (
-        <p role="status" className={ui.success}>
+        <p ref={doneRef} tabIndex={-1} role="status" className={`${ui.success} focus:outline-none`}>
           {t("submitted")}
+        </p>
+      ) : null}
+      {busy ? (
+        <p role="status" className={ui.notice}>
+          {t("submitting")}
         </p>
       ) : null}
       <div>
@@ -104,7 +117,7 @@ export function NewTicket() {
           id="ticket-photo"
           type="file"
           aria-describedby="ticket-photo-hint"
-          accept="image/jpeg,image/png,image/heic,image/heif"
+          accept="image/jpeg,image/png"
           multiple
           className={ui.input}
           onChange={(e) => setPhotos(Array.from(e.target.files ?? []).slice(0, MAX_PHOTOS))}

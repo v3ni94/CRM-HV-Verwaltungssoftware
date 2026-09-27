@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function TicketPage({ params }: { params: Promise<{ id: string }> }) {
   const [t, { id }] = await Promise.all([getTranslations("Tickets"), params]);
   const { data, error, response } = await serverApi().GET("/api/v1/portal/tickets");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (!data) throw new Error(String(error));
   const rows = data as unknown as Ticket[];
   const row = rows.find((r) => r.id === id);

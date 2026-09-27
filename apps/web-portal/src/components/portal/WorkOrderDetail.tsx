@@ -2,18 +2,27 @@
 
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { formatEur } from "@/components/portal/HoaAccountTable";
 import { ORDER_STATUS, formatDateTime, type WorkOrder } from "@/components/portal/types";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-const CLOSED = new Set(["rejected", "cancelled", "accepted", "invoiced"]);
-
 const STATUS = new Set<string>(ORDER_STATUS);
 
+/** Statusabhängige Sichtbarkeit der Aktionen. Ein unbekannter Status (neuer Wert der API)
+ *  blendet defensiv alles ein, damit keine Aktion fälschlich verloren geht. */
+const DECLINE_STATES = new Set(["draft", "requested", "quoted", "approved", "scheduled"]);
+const QUOTE_STATES = new Set(["draft", "requested", "quoted"]);
 const PROPOSAL_STATES = new Set(["approved", "scheduled"]);
+const APPOINTMENT_STATES = new Set(["approved", "scheduled", "in_progress"]);
+const REPORT_STATES = new Set(["approved", "scheduled", "in_progress"]);
+const INVOICE_STATES = new Set(["done"]);
+
+function shows(states: Set<string>, status: string): boolean {
+  return !STATUS.has(status) || states.has(status);
+}
 
 /** Auftrag eines Dienstleisters (M22): ablehnen, Angebot mit Dateianhang, Terminvorschläge an
  *  den Bewohner (A58) oder Termin direkt, Ausführungsbericht mit Fotos als Dokumentverknüpfung,
@@ -26,6 +35,22 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Inline-Bestätigung statt window.confirm: erster Klick fragt nach, zweiter Klick lehnt ab.
+  const [confirmingDecline, setConfirmingDecline] = useState(false);
+  const declineRef = useRef<HTMLButtonElement>(null);
+  const confirmDeclineRef = useRef<HTMLButtonElement>(null);
+  const returnFocusToDecline = useRef(false);
+
+  // Keyboard/Screenreader: focus follows the open confirmation question and, after cancelling,
+  // returns to the decline button.
+  useEffect(() => {
+    if (confirmingDecline) {
+      confirmDeclineRef.current?.focus();
+    } else if (returnFocusToDecline.current) {
+      returnFocusToDecline.current = false;
+      declineRef.current?.focus();
+    }
+  }, [confirmingDecline]);
 
   const [quoteAmount, setQuoteAmount] = useState("");
   const [quoteFile, setQuoteFile] = useState<File | null>(null);
@@ -63,12 +88,17 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
   }
 
   async function decline() {
-    if (!window.confirm(t("declineConfirm"))) return;
     await run(async () => {
       const result = await bff(`/api/bff/portal/work-orders/${order.id}/decline`, { method: "POST", body: "{}" });
       if (!result.ok) setError(result.message);
       else setNotice(t("declined"));
     });
+    setConfirmingDecline(false);
+  }
+
+  function cancelDecline() {
+    returnFocusToDecline.current = true;
+    setConfirmingDecline(false);
   }
 
   async function submitQuote(event: React.FormEvent) {
@@ -219,38 +249,59 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           {notice}
         </p>
       ) : null}
-      {!CLOSED.has(order.status) ? (
-        <button type="button" className={ui.danger} disabled={busy} onClick={() => void decline()}>
-          {t("declineAction")}
-        </button>
+      {busy ? (
+        <p role="status" className={ui.notice}>
+          {t("submitting")}
+        </p>
       ) : null}
-      <form onSubmit={submitQuote} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
-        <h2 className={ui.h2}>{t("quoteSubmit")}</h2>
-        <p className={ui.help}>{tPortal("proposalNotice")}</p>
-        <div>
-          <label htmlFor="quote-amount" className={ui.label}>
-            {t("quoteAmount")}
-          </label>
-          <input
-            id="quote-amount"
-            inputMode="decimal"
-            aria-required="true"
-            className={ui.input}
-            value={quoteAmount}
-            onChange={(e) => setQuoteAmount(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="quote-file" className={ui.label}>
-            {t("quoteDocument")}
-          </label>
-          <input id="quote-file" type="file" className={ui.input} onChange={(e) => setQuoteFile(e.target.files?.[0] ?? null)} />
-        </div>
-        <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
-          {t("quoteSubmit")}
-        </button>
-      </form>
-      {PROPOSAL_STATES.has(order.status) ? (
+      {shows(DECLINE_STATES, order.status) ? (
+        confirmingDecline ? (
+          <div className={`${ui.card} flex flex-col gap-3`} role="group" aria-label={t("declineAction")}>
+            <p className="text-sm">{t("declineConfirm")}</p>
+            <div className="flex flex-wrap gap-2">
+              <button ref={confirmDeclineRef} type="button" className={ui.danger} disabled={busy} onClick={() => void decline()}>
+                {t("declineConfirmAction")}
+              </button>
+              <button type="button" className={ui.button} disabled={busy} onClick={cancelDecline}>
+                {t("declineCancel")}
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button ref={declineRef} type="button" className={ui.danger} disabled={busy} onClick={() => setConfirmingDecline(true)}>
+            {t("declineAction")}
+          </button>
+        )
+      ) : null}
+      {shows(QUOTE_STATES, order.status) ? (
+        <form onSubmit={submitQuote} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+          <h2 className={ui.h2}>{t("quoteSubmit")}</h2>
+          <p className={ui.help}>{tPortal("proposalNotice")}</p>
+          <div>
+            <label htmlFor="quote-amount" className={ui.label}>
+              {t("quoteAmount")}
+            </label>
+            <input
+              id="quote-amount"
+              inputMode="decimal"
+              aria-required="true"
+              className={ui.input}
+              value={quoteAmount}
+              onChange={(e) => setQuoteAmount(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="quote-file" className={ui.label}>
+              {t("quoteDocument")}
+            </label>
+            <input id="quote-file" type="file" className={ui.input} onChange={(e) => setQuoteFile(e.target.files?.[0] ?? null)} />
+          </div>
+          <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
+            {t("quoteSubmit")}
+          </button>
+        </form>
+      ) : null}
+      {shows(PROPOSAL_STATES, order.status) ? (
         <form onSubmit={submitProposals} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
           <h2 className={ui.h2}>{t("proposalsTitle")}</h2>
           <p className={ui.help}>{t("proposalsHint")}</p>
@@ -295,81 +346,87 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           </ul>
         </div>
       ) : null}
-      <form onSubmit={submitAppointment} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
-        <h2 className={ui.h2}>{t("appointmentDirect")}</h2>
-        <div>
-          <label htmlFor="appointment-date" className={ui.label}>
-            {t("appointmentDate")}
-          </label>
-          <input
-            id="appointment-date"
-            type="datetime-local"
-            aria-required="true"
-            className={ui.input}
-            value={appointment}
-            onChange={(e) => setAppointment(e.target.value)}
-          />
-        </div>
-        <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
-          {t("appointmentSubmit")}
-        </button>
-      </form>
-      <form onSubmit={submitComplete} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
-        <h2 className={ui.h2}>{t("completeSubmit")}</h2>
-        <div>
-          <label htmlFor="report" className={ui.label}>
-            {t("report")}
-          </label>
-          <textarea id="report" rows={4} className={ui.input} aria-required="true" value={report} onChange={(e) => setReport(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="photos" className={ui.label}>
-            {t("photos")}
-          </label>
-          <input id="photos" type="file" multiple accept="image/*" className={ui.input} onChange={(e) => setPhotos(e.target.files)} />
-        </div>
-        <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
-          {t("completeSubmit")}
-        </button>
-      </form>
-      <form onSubmit={submitInvoice} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
-        <h2 className={ui.h2}>{t("invoiceSubmit")}</h2>
-        <p className={ui.help}>{tPortal("proposalNotice")}</p>
-        <div>
-          <label htmlFor="invoice-number" className={ui.label}>
-            {t("invoiceNumber")}
-          </label>
-          <input id="invoice-number" className={ui.input} aria-required="true" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="invoice-date" className={ui.label}>
-            {t("invoiceDate")}
-          </label>
-          <input id="invoice-date" type="date" className={ui.input} aria-required="true" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
-        </div>
-        <div>
-          <label htmlFor="invoice-gross" className={ui.label}>
-            {t("invoiceGross")}
-          </label>
-          <input
-            id="invoice-gross"
-            inputMode="decimal"
-            aria-required="true"
-            className={ui.input}
-            value={invoiceGross}
-            onChange={(e) => setInvoiceGross(e.target.value)}
-          />
-        </div>
-        <div>
-          <label htmlFor="invoice-file" className={ui.label}>
-            {t("invoiceDocument")}
-          </label>
-          <input id="invoice-file" type="file" className={ui.input} aria-required="true" onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)} />
-        </div>
-        <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
-          {t("invoiceSubmit")}
-        </button>
-      </form>
+      {shows(APPOINTMENT_STATES, order.status) ? (
+        <form onSubmit={submitAppointment} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+          <h2 className={ui.h2}>{t("appointmentDirect")}</h2>
+          <div>
+            <label htmlFor="appointment-date" className={ui.label}>
+              {t("appointmentDate")}
+            </label>
+            <input
+              id="appointment-date"
+              type="datetime-local"
+              aria-required="true"
+              className={ui.input}
+              value={appointment}
+              onChange={(e) => setAppointment(e.target.value)}
+            />
+          </div>
+          <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
+            {t("appointmentSubmit")}
+          </button>
+        </form>
+      ) : null}
+      {shows(REPORT_STATES, order.status) ? (
+        <form onSubmit={submitComplete} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+          <h2 className={ui.h2}>{t("completeSubmit")}</h2>
+          <div>
+            <label htmlFor="report" className={ui.label}>
+              {t("report")}
+            </label>
+            <textarea id="report" rows={4} className={ui.input} aria-required="true" value={report} onChange={(e) => setReport(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="photos" className={ui.label}>
+              {t("photos")}
+            </label>
+            <input id="photos" type="file" multiple accept="image/*" className={ui.input} onChange={(e) => setPhotos(e.target.files)} />
+          </div>
+          <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
+            {t("completeSubmit")}
+          </button>
+        </form>
+      ) : null}
+      {shows(INVOICE_STATES, order.status) ? (
+        <form onSubmit={submitInvoice} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+          <h2 className={ui.h2}>{t("invoiceSubmit")}</h2>
+          <p className={ui.help}>{tPortal("proposalNotice")}</p>
+          <div>
+            <label htmlFor="invoice-number" className={ui.label}>
+              {t("invoiceNumber")}
+            </label>
+            <input id="invoice-number" className={ui.input} aria-required="true" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="invoice-date" className={ui.label}>
+              {t("invoiceDate")}
+            </label>
+            <input id="invoice-date" type="date" className={ui.input} aria-required="true" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="invoice-gross" className={ui.label}>
+              {t("invoiceGross")}
+            </label>
+            <input
+              id="invoice-gross"
+              inputMode="decimal"
+              aria-required="true"
+              className={ui.input}
+              value={invoiceGross}
+              onChange={(e) => setInvoiceGross(e.target.value)}
+            />
+          </div>
+          <div>
+            <label htmlFor="invoice-file" className={ui.label}>
+              {t("invoiceDocument")}
+            </label>
+            <input id="invoice-file" type="file" className={ui.input} aria-required="true" onChange={(e) => setInvoiceFile(e.target.files?.[0] ?? null)} />
+          </div>
+          <button type="submit" className={`${ui.button} ${ui.actionFull}`} disabled={busy}>
+            {t("invoiceSubmit")}
+          </button>
+        </form>
+      ) : null}
     </div>
   );
 }

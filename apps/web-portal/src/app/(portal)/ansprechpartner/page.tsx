@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function PropertyContactsPage() {
   const t = await getTranslations("Contacts");
   const response = await serverFetch("/api/v1/portal/property-contacts");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (response.status === 403) {
     return (
       <div className={ui.pageGap}>

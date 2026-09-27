@@ -15,16 +15,14 @@ export async function POST(request: Request): Promise<Response> {
     return problemJson(401, "Anmeldung erforderlich", "Bitte zuerst E-Mail und Passwort eingeben.");
   }
   const tenantId = str(parsed.body.tenant_id) || null;
-  const rememberDevice = parsed.body.remember_device === true;
   try {
     const { data, error, response } = await publicApi().POST("/api/v1/auth/mfa/verify", {
       body: {
         mfa_token: mfaToken,
         code: str(parsed.body.code).trim(),
         tenant_id: tenantId,
-        // "Dieses Gerät 90 Tage merken" (operator 26.09.2026, M2-01): the raw device token
-        // is returned once and lands in the httpOnly device cookie via writeTokens.
-        remember_device: rememberDevice,
+        // Portal accounts never keep a trusted device (Produktschutz: no 2FA bypass for third parties).
+        remember_device: false,
       },
       headers: { "user-agent": request.headers.get("user-agent") ?? "" },
     });

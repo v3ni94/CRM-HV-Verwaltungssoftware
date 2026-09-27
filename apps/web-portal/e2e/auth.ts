@@ -9,9 +9,9 @@ import * as OTPAuth from "otpauth";
  * resulting portal user through the browser, all against a real API (E2E_BACKEND=1, see
  * scripts/e2e-backend.sh and apps/web-crm/e2e/auth.ts for the CRM counterpart).
  *
- * TOTP is optional for every user (operator 26.09.2026, M2-01); the admin normally logs in
- * with the password alone. If the second factor was enabled manually, the secret is taken
- * from the state file (own or the CRM suite's), mirroring apps/web-crm/e2e/auth.ts.
+ * The admin always needs TOTP (M2 rule: mandatory for administrators), so this mirrors the
+ * setup-once, reuse-after pattern of apps/web-crm/e2e/auth.ts, keeping its own state file so
+ * the two apps' specs do not race the same TOTP step.
  */
 const STATE = path.resolve(process.cwd(), ".e2e-portal-auth.json");
 // The CRM suite (scripts/e2e-backend.sh runs it first) may already have set up TOTP for the
@@ -58,22 +58,30 @@ export async function adminToken(): Promise<string> {
     headers: { "content-type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  type Issued = { access_token: string; tenants: { id: string; name: string }[] };
-  const first = (await login.json()) as Issued & { status: string; mfa_token: string | null };
-  let verified: Issued = first;
-  if (first.status !== "ok") {
-    // TOTP is optional (operator 26.09.2026, M2-01): only an admin who enabled it manually
-    // sees the second step; the secret then comes from the shared state file.
-    const known = readState();
-    if (!known) throw new Error("TOTP secret unknown for an admin with the second factor enabled");
-    const code = await nextCode(known.secret, known.lastStep);
-    const verify = await fetch(`${apiBase}/api/v1/auth/mfa/verify`, {
+  const first = (await login.json()) as { status: string; mfa_token: string };
+  let code: string;
+  const known = readState();
+  if (first.status === "mfa_setup_required") {
+    const setup = await fetch(`${apiBase}/api/v1/auth/mfa/setup`, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ mfa_token: first.mfa_token, code }),
+      body: JSON.stringify({ mfa_token: first.mfa_token }),
     });
-    verified = (await verify.json()) as Issued;
+    const { secret } = (await setup.json()) as { secret: string };
+    const totp = new OTPAuth.TOTP({ secret: OTPAuth.Secret.fromBase32(secret), digits: 6, period: 30 });
+    code = totp.generate();
+    writeState({ email, secret, lastStep: Math.floor(Date.now() / 30_000) });
+  } else if (known) {
+    code = await nextCode(known.secret, known.lastStep);
+  } else {
+    throw new Error("TOTP secret unknown and no setup was offered");
   }
+  const verify = await fetch(`${apiBase}/api/v1/auth/mfa/verify`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ mfa_token: first.mfa_token, code }),
+  });
+  const verified = (await verify.json()) as { access_token: string; tenants: { id: string; name: string }[] };
   const tenant = verified.tenants.find((t) => t.name === TENANT);
   if (!tenant) throw new Error("seed tenant missing");
   const sw = await fetch(`${apiBase}/api/v1/auth/switch-tenant`, {

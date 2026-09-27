@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
 import { COOKIE, MFA_MAX_AGE, cookieOptions, writeTokens } from "@/lib/session";
@@ -6,22 +5,15 @@ import { COOKIE, MFA_MAX_AGE, cookieOptions, writeTokens } from "@/lib/session";
 import { guardedJson, publicApi, relayProblem, secureOf, str, unreachable } from "../_shared";
 
 /**
- * Login step 1: e-mail and password. A portal user without a self enabled second factor
- * already gets a full session here ("ok"); a remembered device ("Dieses Gerät 90 Tage
- * merken", operator 26.09.2026, M2-01) does the same for users with TOTP. Otherwise the MFA
- * token is kept in an httpOnly cookie for step 2.
+ * Login step 1: e-mail and password. A portal user without mandatory TOTP already gets a full
+ * session here ("ok"); otherwise the MFA token is kept in an httpOnly cookie for step 2.
  */
 export async function POST(request: Request): Promise<Response> {
   const parsed = await guardedJson(request);
   if ("error" in parsed) return parsed.error;
-  const deviceToken = (await cookies()).get(COOKIE.device)?.value;
   try {
     const { data, error, response } = await publicApi().POST("/api/v1/auth/login", {
-      body: {
-        email: str(parsed.body.email),
-        password: str(parsed.body.password),
-        ...(deviceToken ? { device_token: deviceToken } : {}),
-      },
+      body: { email: str(parsed.body.email), password: str(parsed.body.password) },
       headers: { "user-agent": request.headers.get("user-agent") ?? "" },
     });
     if (!data) return relayProblem(response.status, error);

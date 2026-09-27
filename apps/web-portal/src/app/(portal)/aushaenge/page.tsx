@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function NoticesPage() {
   const t = await getTranslations("Notices");
   const response = await serverFetch("/api/v1/portal/notices");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (!response.ok) throw new Error(String(response.status));
   const notices = (await response.json()) as PortalNotice[];
   return (

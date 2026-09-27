@@ -90,7 +90,12 @@ export async function sessionContext(): Promise<SessionContext> {
   return parseContext((await cookies()).get(COOKIE.ctx)?.value);
 }
 
-/** For pages: a 401 after the refresh attempt ends the session. */
-export function redirectIfUnauthenticated(response: Response): void {
-  if (response.status === 401) redirect("/anmelden");
+/** For pages: a 401 after the refresh attempt ends the session. The current path is passed as
+ *  next parameter so the sign-in (including the second factor) returns to the page. Only a
+ *  relative path starting with "/" but not "//" is accepted (no open redirect). */
+export async function redirectIfUnauthenticated(response: Response): Promise<void> {
+  if (response.status !== 401) return;
+  const path = (await headers()).get(PATH_HEADER);
+  const next = path && path.startsWith("/") && !path.startsWith("//") && path !== "/" ? path : null;
+  redirect(next ? `/anmelden?next=${encodeURIComponent(next)}` : "/anmelden");
 }

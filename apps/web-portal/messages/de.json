@@ -22,12 +22,16 @@
     "emailInvalid": "Bitte eine gültige E-Mail-Adresse eingeben.",
     "passwordRequired": "Bitte das Passwort eingeben.",
     "mfaTitle": "Zweiter Faktor",
+    "mfaSetupTitle": "Zweiten Faktor einrichten",
+    "mfaSetupHint": "Den QR-Code mit einer Authenticator-App scannen oder den Schlüssel manuell eingeben. Danach den angezeigten sechsstelligen Code eingeben.",
     "mfaHint": "Bitte den sechsstelligen Code aus der Authenticator-App eingeben.",
+    "secretLabel": "Schlüssel für die manuelle Eingabe",
+    "qrAlt": "QR-Code für die Authenticator-App",
     "code": "Code",
     "codeInvalid": "Der Code besteht aus 6 bis 8 Ziffern.",
     "verify": "Bestätigen",
+    "setupLoading": "Einrichtung wird vorbereitet",
     "backToLogin": "Zurück zur Anmeldung",
-    "rememberDevice": "Dieses Gerät 90 Tage merken",
     "noTenant": "Für Ihren Zugang ist kein Mandant freigeschaltet. Bitte wenden Sie sich an Ihre Verwaltung."
   },
   "Portal": {
@@ -51,12 +55,7 @@
       "forms": "Formulare",
       "open": "Menü öffnen",
       "close": "Menü schließen",
-      "label": "Hauptnavigation",
-      "security": "Sicherheit"
-    },
-    "notifications": {
-      "title": "Benachrichtigungen",
-      "markRead": "Als gelesen markieren"
+      "label": "Hauptnavigation"
     },
     "start": {
       "title": "Übersicht",
@@ -79,6 +78,7 @@
       "forms": "Formulare der Verwaltung ausfüllen"
     },
     "proposalNotice": "Vorschlag, wird von der Verwaltung geprüft.",
+    "skipToContent": "Zum Inhalt springen",
     "errorTitle": "Die Seite konnte nicht geladen werden.",
     "errorHint": "Bitte versuchen Sie es erneut. Bleibt der Fehler bestehen, wenden Sie sich an Ihre Verwaltung.",
     "retry": "Erneut versuchen",
@@ -102,14 +102,16 @@
     "new": "Neue Schadensmeldung",
     "titleField": "Titel",
     "description": "Beschreibung",
-    "photo": "Fotos anhängen (optional, JPEG, PNG oder HEIC vom iPhone)",
+    "photo": "Fotos anhängen (optional, JPEG oder PNG)",
     "submit": "Melden",
     "submitted": "Meldung wurde übermittelt.",
+    "submitting": "Wird gesendet",
     "back": "Zurück zur Übersicht",
     "history": "Verlauf",
     "commentField": "Nachricht",
     "commentSubmit": "Senden",
     "commentSent": "Nachricht wurde gesendet.",
+    "noComments": "Noch keine Nachrichten.",
     "number": "Nummer",
     "titleRequired": "Bitte einen Titel eingeben.",
     "descriptionRequired": "Bitte eine Beschreibung eingeben.",
@@ -121,7 +123,7 @@
       "closed": "Geschlossen",
       "rejected": "Abgelehnt"
     },
-    "photoHint": "Fotos werden ohne Aufnahmedaten (Ort, Kamera) gespeichert. HEIC-Fotos werden in JPEG umgewandelt.",
+    "photoHint": "Fotos werden ohne Aufnahmedaten (Ort, Kamera) gespeichert.",
     "attachments": "Anhänge",
     "appointments": "Terminvorschläge des Handwerkers",
     "appointmentsHint": "Bitte wählen Sie einen Termin. Die Auswahl gilt als Bestätigung gegenüber Handwerker und Verwaltung.",
@@ -147,6 +149,7 @@
     "date": "Ablesedatum",
     "submit": "Melden",
     "submitted": "Der Zählerstand wurde als Vorschlag übermittelt.",
+    "meterIdRequired": "Bitte die Zähler-ID eingeben.",
     "valueRequired": "Bitte einen Zählerstand eingeben.",
     "dateRequired": "Bitte ein Ablesedatum eingeben."
   },
@@ -169,7 +172,8 @@
       "iban": "IBAN"
     },
     "submit": "Änderung vorschlagen",
-    "submitted": "Die Änderung wurde als Vorschlag übermittelt."
+    "submitted": "Die Änderung wurde als Vorschlag übermittelt.",
+    "required": "Bitte mindestens eine Änderung angeben."
   },
   "Orders": {
     "title": "Aufträge",
@@ -231,7 +235,10 @@
     "appointmentRequired": "Bitte einen Termin auswählen.",
     "reportRequired": "Bitte den Ausführungsbericht eingeben.",
     "invoiceFieldsRequired": "Bitte Rechnungsnummer, Rechnungsdatum und Rechnungsbetrag angeben.",
-    "orderTitle": "Auftrag"
+    "orderTitle": "Auftrag",
+    "submitting": "Wird gesendet",
+    "declineConfirmAction": "Ablehnen bestätigen",
+    "declineCancel": "Abbrechen"
   },
   "Handover": {
     "title": "Übergabeprotokolle",
@@ -448,7 +455,8 @@
       "empty": "Bitte zuerst unterschreiben.",
       "none": "Noch keine Unterschrift erfasst.",
       "noName": "Ohne Namen",
-      "confirmDelete": "Unterschrift wirklich löschen?"
+      "confirmDelete": "Unterschrift wirklich löschen?",
+      "pointerHint": "Bitte unterschreiben Sie im Feld mit Finger, Stift oder Maus. Die Unterschrift ist nur per Zeigereingabe möglich, eine Eingabe über die Tastatur wird nicht unterstützt."
     },
     "hints": {
       "title": "Hinweise (kein Abschlusshindernis):"
@@ -457,6 +465,7 @@
       "preview": "PDF-Vorschau (Entwurf)",
       "stored": "PDF anzeigen"
     },
+    "tabsLabel": "Protokollbereiche",
     "tabs": {
       "object": "Objekt",
       "participants": "Beteiligte",
@@ -658,7 +667,8 @@
       "cancel": "Abbrechen",
       "statementSaved": "Die Stellungnahme wurde gespeichert."
     },
-    "costTableCaption": "Abrechnungspositionen des Prüfauftrags"
+    "costTableCaption": "Abrechnungspositionen des Prüfauftrags",
+    "loadFailed": "Der Prüfauftrag konnte nicht geladen werden (Status {status})."
   },
   "Forms": {
     "title": "Formulare",
@@ -674,43 +684,17 @@
   },
   "Invitation": {
     "title": "Einladung annehmen",
-    "hint": "Bitte den Einladungscode aus dem Schreiben oder dem Link eingeben und ein Passwort mit mindestens 6 Zeichen wählen.",
+    "hint": "Bitte den Einladungscode aus dem Schreiben oder dem Link eingeben und ein Passwort mit mindestens 12 Zeichen wählen.",
     "code": "Einladungscode",
     "password": "Neues Passwort",
     "passwordRepeat": "Passwort wiederholen",
     "submit": "Zugang aktivieren",
     "submitting": "Bitte warten",
     "codeRequired": "Bitte den Einladungscode eingeben.",
-    "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen haben.",
+    "passwordTooShort": "Das Passwort muss mindestens 12 Zeichen haben.",
     "passwordMismatch": "Die Passwörter stimmen nicht überein.",
     "done": "Ihr Zugang ist aktiviert. Bitte melden Sie sich jetzt mit E-Mail und Passwort an.",
     "toLogin": "Zur Anmeldung"
-  },
-  "Security": {
-    "title": "Sicherheit",
-    "intro": "Zweiter Faktor und gemerkte Geräte für Ihren Zugang.",
-    "totpTitle": "Zweiter Faktor (Authenticator-App)",
-    "totpStatusOn": "Der zweite Faktor ist eingeschaltet. Bei der Anmeldung wird ein Code aus der Authenticator-App abgefragt, sofern das Gerät nicht gemerkt wurde.",
-    "totpStatusOff": "Der zweite Faktor ist ausgeschaltet. Die Anmeldung erfolgt mit E-Mail und Passwort.",
-    "totpEnableHint": "Mit einer Authenticator-App (zum Beispiel auf dem Smartphone) wird bei der Anmeldung zusätzlich ein sechsstelliger Code abgefragt.",
-    "totpEnable": "Zweiten Faktor einrichten",
-    "totpSetupHint": "Den QR-Code mit der Authenticator-App scannen oder den Schlüssel manuell eingeben. Danach den angezeigten sechsstelligen Code eingeben, erst dann ist der zweite Faktor aktiv.",
-    "totpQrAlt": "QR-Code für die Authenticator-App",
-    "totpSecretLabel": "Schlüssel für die manuelle Eingabe",
-    "totpCode": "Code aus der App",
-    "totpCodeInvalid": "Der Code besteht aus 6 bis 8 Ziffern.",
-    "totpConfirm": "Bestätigen und einschalten",
-    "totpEnabled": "Der zweite Faktor ist jetzt eingeschaltet.",
-    "currentPassword": "Aktuelles Passwort",
-    "totpDisableHint": "Zum Ausschalten das aktuelle Passwort eingeben. Gemerkte Geräte werden dabei entfernt.",
-    "totpDisable": "Zweiten Faktor ausschalten",
-    "totpDisabled": "Der zweite Faktor ist ausgeschaltet.",
-    "devicesTitle": "Gemerkte Geräte",
-    "devicesHint": "Auf gemerkten Geräten wird 90 Tage lang kein zweiter Faktor abgefragt. Abmelden entfernt das Gerät sofort.",
-    "noDevices": "Keine gemerkten Geräte.",
-    "unknownDevice": "Unbekanntes Gerät",
-    "deviceExpires": "Läuft ab am",
-    "revoke": "Abmelden"
   },
   "Pwa": {
     "title": "MH Portal installieren",
@@ -718,5 +702,31 @@
     "iosHint": "In Safari über Teilen und Zum Home-Bildschirm hinzufügen. Es werden keine Daten auf dem Gerät gespeichert.",
     "install": "Installieren",
     "dismiss": "Später"
+  },
+  "ListFilter": {
+    "searchLabel": "Suche",
+    "searchPlaceholder": "Suchbegriff eingeben",
+    "statusFilterLabel": "Nach Status filtern",
+    "statusAll": "Alle",
+    "noResults": "Keine Treffer für die aktuelle Auswahl."
+  },
+  "DocumentDetail": {
+    "show": "Details anzeigen",
+    "hide": "Details ausblenden",
+    "loading": "Details werden geladen …",
+    "loadedTitle": "Details",
+    "category": "Kategorie",
+    "filename": "Dateiname",
+    "created": "Bereitgestellt am"
+  },
+  "Dashboard": {
+    "heading": "Aktuelle Kennzahlen",
+    "openTickets": "Offene Meldungen",
+    "openProposals": "Offene Terminvorschläge",
+    "openBalance": "Offene Posten",
+    "documents": "Dokumente",
+    "ordersOpen": "Offene Aufträge",
+    "ordersInProgress": "Aufträge in Ausführung",
+    "boardEngagements": "Prüfaufträge"
   }
 }

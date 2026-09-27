@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
  *  users) keep the grant based list below unchanged. */
 export default async function HandoverListPage() {
   const staffResponse = await serverFetch("/api/v1/portal/handover/protocols");
-  redirectIfUnauthenticated(staffResponse);
+  await redirectIfUnauthenticated(staffResponse);
   if (staffResponse.status === 200) {
     const rows = (await staffResponse.json()) as StaffListed[];
     return <StaffListRows rows={rows} />;
@@ -20,7 +20,7 @@ export default async function HandoverListPage() {
 
   const [t, format] = await Promise.all([getTranslations("Handover"), getFormatter()]);
   const { data, error, response } = await serverApi().GET("/api/v1/portal/handover");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (!data) throw new Error(String(error));
   const rows = data as unknown as Listed[];
   return (

@@ -22,12 +22,16 @@
     "emailInvalid": "Please enter a valid e-mail address.",
     "passwordRequired": "Please enter the password.",
     "mfaTitle": "Second factor",
+    "mfaSetupTitle": "Set up the second factor",
+    "mfaSetupHint": "Scan the QR code with an authenticator app or enter the key manually, then enter the six digit code.",
     "mfaHint": "Please enter the six digit code from the authenticator app.",
+    "secretLabel": "Key for manual entry",
+    "qrAlt": "QR code for the authenticator app",
     "code": "Code",
     "codeInvalid": "The code has 6 to 8 digits.",
     "verify": "Confirm",
+    "setupLoading": "Preparing the setup",
     "backToLogin": "Back to sign in",
-    "rememberDevice": "Remember this device for 90 days",
     "noTenant": "Your access is not assigned to a tenant. Please contact your management."
   },
   "Portal": {
@@ -51,12 +55,7 @@
       "forms": "Forms",
       "open": "Open menu",
       "close": "Close menu",
-      "label": "Main navigation",
-      "security": "Security"
-    },
-    "notifications": {
-      "title": "Notifications",
-      "markRead": "Mark as read"
+      "label": "Main navigation"
     },
     "start": {
       "title": "Overview",
@@ -79,6 +78,7 @@
       "forms": "Fill in forms of the management"
     },
     "proposalNotice": "Proposal, will be reviewed by the management.",
+    "skipToContent": "Skip to content",
     "errorTitle": "The page could not be loaded.",
     "errorHint": "Please try again. If the error persists, contact your property management.",
     "retry": "Try again",
@@ -102,14 +102,16 @@
     "new": "New damage report",
     "titleField": "Title",
     "description": "Description",
-    "photo": "Attach photos (optional, JPEG, PNG or HEIC from iPhone)",
+    "photo": "Attach photos (optional, JPEG or PNG)",
     "submit": "Report",
     "submitted": "The report was submitted.",
+    "submitting": "Sending",
     "back": "Back to overview",
     "history": "History",
     "commentField": "Message",
     "commentSubmit": "Send",
     "commentSent": "Message was sent.",
+    "noComments": "No messages yet.",
     "number": "Number",
     "titleRequired": "Please enter a title.",
     "descriptionRequired": "Please enter a description.",
@@ -121,7 +123,7 @@
       "closed": "Closed",
       "rejected": "Rejected"
     },
-    "photoHint": "Photos are stored without capture data (location, camera). HEIC photos are converted to JPEG.",
+    "photoHint": "Photos are stored without capture data (location, camera).",
     "attachments": "Attachments",
     "appointments": "Appointment proposals of the contractor",
     "appointmentsHint": "Please choose an appointment. Your choice counts as confirmation towards contractor and management.",
@@ -147,6 +149,7 @@
     "date": "Reading date",
     "submit": "Report",
     "submitted": "The meter reading was submitted as a proposal.",
+    "meterIdRequired": "Please enter the meter ID.",
     "valueRequired": "Please enter a meter reading.",
     "dateRequired": "Please enter a reading date."
   },
@@ -169,7 +172,8 @@
       "iban": "IBAN"
     },
     "submit": "Propose change",
-    "submitted": "The change was submitted as a proposal."
+    "submitted": "The change was submitted as a proposal.",
+    "required": "Please enter at least one change."
   },
   "Orders": {
     "title": "Orders",
@@ -231,7 +235,10 @@
     "appointmentRequired": "Please select an appointment.",
     "reportRequired": "Please enter the completion report.",
     "invoiceFieldsRequired": "Please enter invoice number, invoice date and invoice amount.",
-    "orderTitle": "Work order"
+    "orderTitle": "Work order",
+    "submitting": "Sending",
+    "declineConfirmAction": "Confirm decline",
+    "declineCancel": "Cancel"
   },
   "Handover": {
     "title": "Handover protocols",
@@ -448,7 +455,8 @@
       "empty": "Please sign first.",
       "none": "No signature recorded yet.",
       "noName": "Without name",
-      "confirmDelete": "Really delete the signature?"
+      "confirmDelete": "Really delete the signature?",
+      "pointerHint": "Please sign in the field with your finger, a pen or the mouse. The signature is only possible via pointer input, keyboard input is not supported."
     },
     "hints": {
       "title": "Notes (no obstacle to completion):"
@@ -457,6 +465,7 @@
       "preview": "PDF preview (draft)",
       "stored": "Show PDF"
     },
+    "tabsLabel": "Protocol sections",
     "tabs": {
       "object": "Property",
       "participants": "Participants",
@@ -658,7 +667,8 @@
       "cancel": "Cancel",
       "statementSaved": "The statement has been saved."
     },
-    "costTableCaption": "Cost items of the audit engagement"
+    "costTableCaption": "Cost items of the audit engagement",
+    "loadFailed": "The audit engagement could not be loaded (status {status})."
   },
   "Forms": {
     "title": "Forms",
@@ -674,43 +684,17 @@
   },
   "Invitation": {
     "title": "Accept invitation",
-    "hint": "Please enter the invitation code from the letter or the link and choose a password of at least 6 characters.",
+    "hint": "Please enter the invitation code from the letter or the link and choose a password of at least 12 characters.",
     "code": "Invitation code",
     "password": "New password",
     "passwordRepeat": "Repeat password",
     "submit": "Activate access",
     "submitting": "Please wait",
     "codeRequired": "Please enter the invitation code.",
-    "passwordTooShort": "The password needs at least 6 characters.",
+    "passwordTooShort": "The password needs at least 12 characters.",
     "passwordMismatch": "The passwords do not match.",
     "done": "Your access is active. Please sign in with e-mail and password now.",
     "toLogin": "To sign in"
-  },
-  "Security": {
-    "title": "Security",
-    "intro": "Second factor and remembered devices of your access.",
-    "totpTitle": "Second factor (authenticator app)",
-    "totpStatusOn": "The second factor is on. A code from the authenticator app is requested at login unless the device was remembered.",
-    "totpStatusOff": "The second factor is off. You sign in with e-mail and password.",
-    "totpEnableHint": "With an authenticator app (for example on your smartphone) a six digit code is requested at login in addition to the password.",
-    "totpEnable": "Set up second factor",
-    "totpSetupHint": "Scan the QR code with the authenticator app or enter the key manually. Then enter the six digit code shown; only then is the second factor active.",
-    "totpQrAlt": "QR code for the authenticator app",
-    "totpSecretLabel": "Key for manual entry",
-    "totpCode": "Code from the app",
-    "totpCodeInvalid": "The code consists of 6 to 8 digits.",
-    "totpConfirm": "Confirm and switch on",
-    "totpEnabled": "The second factor is now on.",
-    "currentPassword": "Current password",
-    "totpDisableHint": "Enter your current password to switch it off. Remembered devices are removed as well.",
-    "totpDisable": "Switch off second factor",
-    "totpDisabled": "The second factor is off.",
-    "devicesTitle": "Remembered devices",
-    "devicesHint": "On remembered devices no second factor is requested for 90 days. Sign out removes the device immediately.",
-    "noDevices": "No remembered devices.",
-    "unknownDevice": "Unknown device",
-    "deviceExpires": "Expires on",
-    "revoke": "Sign out"
   },
   "Pwa": {
     "title": "Install MH Portal",
@@ -718,5 +702,31 @@
     "iosHint": "In Safari via Share and Add to Home Screen. No data is stored on the device.",
     "install": "Install",
     "dismiss": "Later"
+  },
+  "ListFilter": {
+    "searchLabel": "Search",
+    "searchPlaceholder": "Enter search term",
+    "statusFilterLabel": "Filter by status",
+    "statusAll": "All",
+    "noResults": "No results for the current selection."
+  },
+  "DocumentDetail": {
+    "show": "Show details",
+    "hide": "Hide details",
+    "loading": "Loading details …",
+    "loadedTitle": "Details",
+    "category": "Category",
+    "filename": "File name",
+    "created": "Provided on"
+  },
+  "Dashboard": {
+    "heading": "Current key figures",
+    "openTickets": "Open reports",
+    "openProposals": "Open appointment proposals",
+    "openBalance": "Outstanding balance",
+    "documents": "Documents",
+    "ordersOpen": "Open orders",
+    "ordersInProgress": "Orders in progress",
+    "boardEngagements": "Audit engagements"
   }
 }

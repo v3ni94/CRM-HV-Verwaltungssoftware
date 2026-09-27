@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const [t, { id }] = await Promise.all([getTranslations("Orders"), params]);
   const { data, error, response } = await serverApi().GET("/api/v1/portal/work-orders");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (!data) throw new Error(String(error));
   const rows = data as unknown as WorkOrder[];
   const row = rows.find((r) => r.id === id);
