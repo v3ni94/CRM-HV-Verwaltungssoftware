@@ -23,6 +23,9 @@ export const CHANGELOG: ChangelogEntry[] = [
     changes: [
       "Dokumente: Jeder Upload läuft durch die Bildpipeline (Metadaten wie EXIF und GPS entfernt, höchstens 2.000 Pixel Kantenlänge), bisher nur Übergabe- und Portal-Uploads",
       "Übergabeprotokolle: offene Fragen M30-02 bis M30-05 entschieden, zweiter Faktor freiwillig nach M2-01",
+    ],
+  },
+  {
     version: "1.33.0",
     date: "27.09.2026",
     title: "Eigentümer und Mieter an die Objektübernahme übergeben",
