@@ -10,6 +10,7 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { AssignmentPrompt } from "@/components/assignment/AssignmentPrompt";
 import { AttachmentReceiptAction } from "@/components/receipts/AttachmentReceiptAction";
+import { ContactRoleBadges } from "@/components/common/ContactRoleBadges";
 import { SafeText } from "@/components/ui/SafeText";
 import { ui } from "@/lib/ui";
 
@@ -355,9 +356,12 @@ export function MailDetail({
             </Link>
           ) : null}
           {message.contact_id ? (
-            <Link href={`/kontakte/${message.contact_id}`} className="hover:underline">
-              {t("openContact")}
-            </Link>
+            <span className="inline-flex flex-wrap items-center gap-1.5">
+              <Link href={`/kontakte/${message.contact_id}`} className="hover:underline">
+                {t("openContact")}
+              </Link>
+              <ContactRoleBadges contactId={message.contact_id} />
+            </span>
           ) : null}
           {message.property_id ? (
             <Link href={`/objekte/${message.property_id}`} className="hover:underline">

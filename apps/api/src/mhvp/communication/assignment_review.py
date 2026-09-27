@@ -166,7 +166,14 @@ async def evaluate(
 
     contact_id = getattr(entity, "contact_id", None)
     property_id = getattr(entity, "property_id", None)
+    unit_id = getattr(entity, "unit_id", None) if "unit" in fields else None
     results: dict[str, assignment.DimensionResult] = {}
+
+    # Sure chain (operator 27.09.2026, A-068 Nachtrag 1.37.0): the existing, previously stored
+    # decision on the contact dimension is looked up before the loop below rewrites it, so a
+    # contact confirmed by an earlier Ja (or a stored auto match) also feeds the chain, not only
+    # a contact just found sure in this call.
+    existing_contact_review = await _get_review(session, entity_type, entity.id, "contact")
 
     results["contact"] = await assignment.evaluate_contact(
         session,
@@ -178,6 +185,18 @@ async def evaluate(
     )
     if contact_id is None and results["contact"].status == "sure":
         contact_id = results["contact"].best.id if results["contact"].best else None
+    contact_confirmed = contact_id is not None and (
+        results["contact"].status == "sure"
+        or (
+            existing_contact_review is not None
+            and existing_contact_review.status in ("accepted", "auto")
+            and existing_contact_review.chosen_id == contact_id
+        )
+    )
+    chain: tuple[assignment.Candidate, assignment.Candidate] | None = None
+    if contact_confirmed:
+        chain = await assignment.contact_sure_chain(session, entity.tenant_id, contact_id)  # type: ignore[arg-type]
+
     results["property"] = await assignment.evaluate_property(
         session,
         entity.tenant_id,
@@ -185,7 +204,14 @@ async def evaluate(
         contact_id=contact_id,
         ai_property_number=ai_number,
     )
-    if property_id is None and results["property"].status == "sure":
+    if chain is not None and (property_id is None or property_id == chain[0].id):
+        # Rule 1: exactly one active tenancy contract or exactly one active ownership unit of a
+        # sure contact assigns its unit and property automatically, only into an empty field; a
+        # field already holding exactly that value (e.g. inherited by a ticket from the mail it
+        # was created from) is reconfirmed as sure so it reads "auto", not a weaker "preset".
+        results["property"] = assignment.DimensionResult("sure", [chain[0]])
+        property_id = chain[0].id
+    elif property_id is None and results["property"].status == "sure":
         property_id = results["property"].best.id if results["property"].best else None
     if "unit" in fields:
         results["unit"] = await assignment.evaluate_unit(
@@ -195,6 +221,9 @@ async def evaluate(
             contact_id=contact_id,
             property_id=property_id,
         )
+        unit_matches_chain = chain is not None and unit_id in (None, chain[1].id)
+        if chain is not None and chain[0].id == property_id and unit_matches_chain:
+            results["unit"] = assignment.DimensionResult("sure", [chain[1]])
 
     applied: list[tuple[AssignmentReview, bool]] = []  # (row, value was pre-filled)
     for dimension, result in results.items():

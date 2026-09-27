@@ -9396,6 +9396,14 @@
       "credit_note": "Gutschrift"
     }
   },
+  "ContactRoleBadges": {
+    "title": "Rollen des Kontakts",
+    "mieter": "Mieter",
+    "eigentuemer": "Eigentümer",
+    "beirat": "Beirat",
+    "dienstleister": "Dienstleister",
+    "unit": "Einheit"
+  },
   "AssignmentPrompt": {
     "title": "Zuordnung prüfen",
     "question": {

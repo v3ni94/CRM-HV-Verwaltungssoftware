@@ -13,6 +13,8 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 - Kontrast in beiden Modi nach WCAG AA geprüft, Fokusringe in beiden Modi sichtbar.
 - Mailansicht und Ticket-Mailverlauf zeigen Von, An und Kopie je auf einer eigenen Zeile und kennzeichnen das eigene Postfach dezent.
 - Antworten aus Mail und Ticket geht jetzt standardmäßig an alle: an den Absender oder die Reply-To-Adresse, alle übrigen ursprünglichen Empfänger in Kopie, ohne eigene Postfachadressen und ohne Dubletten (Migration 0217).
+- Zuordnungsprüfung: ist der Kontakt einer Mail oder eines Tickets sicher (automatisch oder durch ein Ja bestätigt) und hat er genau einen aktiven Mietvertrag oder genau eine aktive Eigentümerschaft einer Einheit, werden Einheit und Objekt jetzt automatisch mit übernommen, begründet mit "eindeutiger Vertrag" beziehungsweise "eindeutiges Eigentum", nur in ein noch leeres Feld; mehrere Verträge oder Einheiten bleiben wie gewohnt eine Rückfrage mit diesen Kandidaten, Hinweise im Text ordnen sie dort nur um; ein unsicherer Kontakt leitet weiterhin nichts ab (Betreiberauftrag 27.09.2026, Regel A80-01, Annahme A-068).
+- Mail- und Ticketansicht zeigen jetzt die Rolle des zugeordneten Kontakts (Mieter, Eigentümer, Beirat, Dienstleister, auch mehrere zugleich) mit Verweis auf Kontakt, Einheit und Objekt.
 
 ## 1.36.0 (27.09.2026) Postfach: Antworten mit Anhängen, Bearbeitungsmarkierung, Duplikate, Signatur je Nutzer, Zuordnungsrückfrage
 

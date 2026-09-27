@@ -682,6 +682,60 @@ async def evaluate_property(
     return _finish(scores)
 
 
+async def contact_sure_chain(
+    session: AsyncSession, tenant_id: uuid.UUID, contact_id: uuid.UUID
+) -> tuple[Candidate, Candidate] | None:
+    """Sure chain (operator 27.09.2026, A-068 Nachtrag 1.37.0): once the contact is sure, exactly
+    one active tenancy contract or exactly one active ownership unit of the contact assigns its
+    unit and property automatically. Several contracts, several units, or a tenancy and an
+    ownership on different units stay a question (rule 2); a bare property relation without a
+    unit (Objektbeziehung) never feeds this chain."""
+    from mhvp.contacts.models import PartyMember
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import Property, Unit
+    from mhvp.workspace.services import local_today
+
+    today = local_today()
+    rows = await session.execute(
+        select(Contract.kind, Contract.property_id, Contract.unit_id)
+        .join(PartyMember, PartyMember.party_id == Contract.party_id)
+        .where(
+            Contract.tenant_id == tenant_id,
+            PartyMember.contact_id == contact_id,
+            or_(Contract.end_date.is_(None), Contract.end_date >= today),
+        )
+    )
+    tenancies: list[tuple[uuid.UUID, uuid.UUID]] = []
+    ownerships: list[tuple[uuid.UUID, uuid.UUID]] = []
+    for row in rows.all():
+        kind = row.kind.value if hasattr(row.kind, "value") else str(row.kind)
+        (tenancies if kind == "tenancy" else ownerships).append((row.property_id, row.unit_id))
+
+    chosen: tuple[uuid.UUID, uuid.UUID, str] | None = None
+    units: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    if len(tenancies) == 1:
+        units.add(tenancies[0])
+        chosen = (*tenancies[0], "eindeutiger Vertrag")
+    if len(ownerships) == 1:
+        units.add(ownerships[0])
+        if chosen is None:
+            chosen = (*ownerships[0], "eindeutiges Eigentum")
+    if chosen is None or len(units) != 1:
+        return None
+
+    property_id, unit_id, reason = chosen
+    prop = await session.get(Property, property_id)
+    unit = await session.get(Unit, unit_id)
+    if prop is None or unit is None:
+        return None
+    property_label, property_detail = _property_label(prop)
+    unit_label, unit_detail = _unit_label(unit)
+    return (
+        Candidate(prop.id, property_label, property_detail, 1.0, [reason]),
+        Candidate(unit.id, unit_label, unit_detail, 1.0, [reason]),
+    )
+
+
 def _unit_label(unit: Any) -> tuple[str, str | None]:
     parts = [p for p in (unit.label, unit.location, unit.floor) if p]
     return f"Einheit {unit.number}", ", ".join(parts) or None

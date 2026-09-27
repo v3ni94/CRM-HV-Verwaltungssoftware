@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { AssignmentPrompt } from "@/components/assignment/AssignmentPrompt";
 import { AuditLogPanel } from "@/components/common/AuditLogPanel";
+import { ContactRoleBadges } from "@/components/common/ContactRoleBadges";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
@@ -84,6 +85,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           { type: "ticket", id: data.parent_ticket_id ? String(data.parent_ticket_id) : null, label: t("links.parent") },
         ]}
       />
+      {data.contact_id ? <ContactRoleBadges contactId={String(data.contact_id)} /> : null}
       {mergedInto ? null : (
         <AssignmentPrompt entityType="ticket" entityId={ticketId} canDecide={me.data?.permissions.includes("tickets:update") ?? false} />
       )}

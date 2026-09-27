@@ -171,4 +171,6 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M19-01](M19-01-sla-freigabe.md) | SLA-Regeln je Priorität und Kategorie als Entwurf; nur von der Geschäftsführung (`tenant_settings:update`) freigegebene Werte steuern Uhren und Eskalation, sonst "keine SLA" mit Hinweis | M19, M21, 6.6 | implemented, not accepted (Migration 0203; M19-01 Wertetabelle offen) |
 | [M19-02](M19-02-beiratsbeteiligung.md) | Beiratsbeteiligung: Vorlage an den Verwaltungsbeirat (Kategorie Beirat der Objektkontakte) zur Kenntnis oder um Votum mit Frist, Rückmeldung im Portal und CRM, Protokoll am Ticket, Empfehlungsregel je Mandant, kein Geldbezug | M19, M21, M25, 6.2, 6.6 | implemented, not accepted (Migration 0203; M19-02 Wertgrenzen offen) |
 
-Index checked against the files in this folder on 27.09.2026: every rule file has one row above (`M11-02` added).
+| [A80-01](A80-01-zuordnungskette.md) | Zuordnungsprüfung: sichere Kette vom Kontakt (eindeutiger Mietvertrag oder eindeutiges Eigentum einer Einheit) zu Einheit und Objekt, nur in ein leeres Feld, erneute Prüfung nach einem Ja auf die Kontakt-Rückfrage | A-068, Betreiberauftrag 27.09.2026 | implemented, not accepted |
+
+Index checked against the files in this folder on 27.09.2026: every rule file has one row above (`A80-01` added).

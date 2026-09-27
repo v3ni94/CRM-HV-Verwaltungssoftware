@@ -9397,6 +9397,14 @@
       "credit_note": "Credit note"
     }
   },
+  "ContactRoleBadges": {
+    "title": "Contact roles",
+    "mieter": "Tenant",
+    "eigentuemer": "Owner",
+    "beirat": "Board member",
+    "dienstleister": "Service provider",
+    "unit": "Unit"
+  },
   "AssignmentPrompt": {
     "title": "Check assignment",
     "question": {
