@@ -1282,6 +1282,7 @@
     "calendarTarget": "Calendar",
     "calendarNotConnected": "not connected",
     "calendarNotConnectedHint": "Google Calendar access has not been granted yet for mailbox {address}.",
+    "calendarSyncError": "The Google calendar of mailbox {address} could not be read ({error}). Please reconnect the mailbox; internal entries and deadlines are still shown.",
     "toMailboxSettings": "Go to mailboxes",
     "allDay": "All day",
     "notes": "Note",

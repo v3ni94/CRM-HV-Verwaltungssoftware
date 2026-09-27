@@ -676,6 +676,78 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^document-categories/${ID}$`) },
   { method: "POST", pattern: /^deletion-proposals$/ },
   { method: "POST", pattern: new RegExp(`^deletion-proposals/${ID}/(approve|reject|execute)$`) },
+  // Operations the CRM screens already called but the allowlist missed (operator report
+  // 27.09.2026, "Erledigungsarten konnten nicht geladen werden"; found by
+  // allowlist-coverage.test.ts). Authorization stays with the API (permission per route).
+  { method: "GET", pattern: /^tickets\/resolution-kinds$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/open-items/settlement-proposal(/confirm)?$`) },
+  { method: "GET", pattern: /^ai\/embeddings\/status$/ },
+  { method: "POST", pattern: /^ai\/embeddings\/reindex$/ },
+  { method: "POST", pattern: new RegExp(`^ai/knowledge/${ID}/reject$`) },
+  { method: "GET", pattern: new RegExp(`^banking/transactions/${ID}/posting-proposals$`) },
+  { method: "POST", pattern: new RegExp(`^contacts/${ID}/relations$`) },
+  { method: "PATCH", pattern: new RegExp(`^contacts/${ID}/contact-relations/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^contacts/${ID}/contact-relations/${ID}$`) },
+  // WEG: Vermögensbericht und Darlehen (M24-02, M24-03), Belegprüfung, Einwahl, Einladungsfrist.
+  { method: "POST", pattern: /^hoa\/asset-reports$/ },
+  { method: "PATCH", pattern: new RegExp(`^hoa/asset-reports/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/asset-reports/${ID}/(calculate|transition)$`) },
+  { method: "GET", pattern: new RegExp(`^hoa/asset-reports/${ID}/pdf$`) },
+  { method: "PUT", pattern: new RegExp(`^hoa/statements/${ID}/loan-allocation$`) },
+  { method: "POST", pattern: /^hoa\/audits$/ },
+  { method: "GET", pattern: new RegExp(`^hoa/audits/${ID}/candidates$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/audits/${ID}/(items|reports)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/audit-reports/${ID}/board-statement$`) },
+  { method: "PUT", pattern: new RegExp(`^hoa/meetings/${ID}/dial-in$`) },
+  { method: "PUT", pattern: /^hoa\/meeting-settings$/ },
+  // Vermietung: Absage mit Vorlage und Selbstauskunft-Link (M26-02).
+  { method: "GET", pattern: /^letting\/prospects\/rejection-templates$/ },
+  { method: "POST", pattern: new RegExp(`^letting/prospects/${ID}/(reject|self-disclosure-link)$`) },
+  // Postfach: Re-Authentifizierung, Vertretungen (M20-04), Archiv, Nachladen.
+  { method: "POST", pattern: /^mail\/mail-approval\/reauth$/ },
+  { method: "POST", pattern: /^mail\/mail-approval\/deputies$/ },
+  { method: "DELETE", pattern: new RegExp(`^mail/mail-approval/deputies/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/archive$`) },
+  { method: "POST", pattern: new RegExp(`^mail/mailboxes/${ID}/backfill$`) },
+  // Messwesen: Übermittlungen an den Messdienstleister (Prüfung, Freigabe, Auftrag, Abruf).
+  { method: "GET", pattern: /^metering\/transmissions$/ },
+  { method: "POST", pattern: /^metering\/transmissions\/check$/ },
+  { method: "POST", pattern: new RegExp(`^metering/transmissions/${ID}/(release|order|poll)$`) },
+  { method: "POST", pattern: new RegExp(`^automation/webhook-deliveries/${ID}/redeliver$`) },
+  // Kontenrahmen-Freigabe (M10-01/M10-02), DATEV-Selbstprüfung (M18-06), Steuern (M14).
+  { method: "GET", pattern: /^accounting\/templates$/ },
+  { method: "POST", pattern: /^accounting\/templates\/default$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/templates/${ID}/(release|submit-review|back-to-draft|versions)$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/templates/${ID}/export$`) },
+  { method: "GET", pattern: /^accounting\/datev\/exports$/ },
+  { method: "POST", pattern: new RegExp(`^accounting/datev/exports/${ID}/check$`) },
+  { method: "GET", pattern: new RegExp(`^accounting/datev/exports/${ID}/check$`) },
+  { method: "POST", pattern: /^accounting\/datev\/check-file$/ },
+  { method: "PUT", pattern: /^accounting\/tax\/settings$/ },
+  { method: "GET", pattern: new RegExp(`^accounting/tax/(properties|suppliers)/${ID}/profile$`) },
+  { method: "PUT", pattern: new RegExp(`^accounting/tax/(properties|suppliers)/${ID}/profile$`) },
+  { method: "POST", pattern: /^tenant\/manager-entity$/ },
+  { method: "GET", pattern: new RegExp(`^portal-admin/forms/${ID}/submissions$`) },
+  // SLA-Freigabe je Kategorie (M19-01) und Beiratsbeteiligung an Tickets (M19-02).
+  { method: "POST", pattern: new RegExp(`^sla/rules/${ID}/(approve|revoke-approval)$`) },
+  { method: "GET", pattern: /^tickets\/board\/policy$/ },
+  { method: "PUT", pattern: /^tickets\/board\/policy$/ },
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/board-submissions$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/board-submissions$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/board/submissions/${ID}/(votes|close)$`) },
+  // Plattform (M27-01 bis M27-03): Preisliste, G5-Nachweise, Onboarding, Mandantenexport. Only
+  // platform administrators pass the API (require_platform_admin); the evidence list never opens
+  // G5 itself, the export keeps its four eyes approval in the API.
+  { method: "GET", pattern: /^platform\/pricing$/ },
+  { method: "PATCH", pattern: new RegExp(`^platform/pricing/items/${ID}$`) },
+  { method: "GET", pattern: /^platform\/pricing\/offer\.pdf$/ },
+  { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/g5-evidence$`) },
+  { method: "PUT", pattern: new RegExp(`^platform/tenants/${ID}/g5-evidence/[a-z0-9_]{1,48}$`) },
+  { method: "POST", pattern: /^platform\/onboarding$/ },
+  { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/export-requests$`) },
+  { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/export-requests$`) },
+  { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/export-requests/${ID}/(approve|reject)$`) },
+  { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/export-requests/${ID}/download$`) },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */

@@ -19075,6 +19075,8 @@ export interface components {
             address: string;
             /** Connected */
             connected: boolean;
+            /** Error */
+            error?: string | null;
             /** Source */
             source: string;
         };

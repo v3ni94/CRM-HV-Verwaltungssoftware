@@ -61,6 +61,7 @@ class FakeGCal:
         self._seq = 0
         self._etag_seq = 0
         self.send_updates_seen: list[str] = []
+        self.token_status = 200
 
     def _next_etag(self) -> str:
         self._etag_seq += 1
@@ -82,6 +83,8 @@ class FakeGCal:
     def handler(self, request: httpx.Request) -> httpx.Response:
         path = request.url.path
         if path.endswith("/token"):
+            if self.token_status != 200:
+                return httpx.Response(self.token_status, json={"error": "invalid_grant"})
             return httpx.Response(200, json={"access_token": "t", "expires_in": 3600})
         assert request.headers.get("Authorization") == "Bearer t"
         self.send_updates_seen.append(request.url.params.get("sendUpdates", ""))
@@ -382,3 +385,48 @@ def test_stale_google_event_is_flagged_and_not_overwritten(
         headers=admin,
     )
     assert resp.status_code == 409
+
+
+def test_google_failure_keeps_the_rest_of_the_calendar(
+    client: TestClient, world: World, fake: FakeGCal
+) -> None:
+    """Operator report 27.09.2026: a revoked or expired Google refresh token raised GCalError
+    and turned GET /workspace/calendar into an unhandled 500, so internal entries and
+    deadlines disappeared too. Now the mailbox gets a notice with the reason, the rest stays,
+    and a Google write answers 409 with the reason instead of 500."""
+    admin = bearer(login(client, world, "gcaladmin"))
+    _solo_default_mailbox(client, admin)
+    today = datetime.now(UTC).date().isoformat()
+    _ok(
+        client.post(
+            f"{W}/calendar",
+            json={"title": f"Intern {RUN}", "starts_on": today, "target": "internal"},
+            headers=admin,
+        ),
+        201,
+    )
+    fake.token_status = 400
+    _ok(client.post(f"{W}/calendar/refresh", headers=admin))
+
+    out = _ok(client.get(f"{W}/calendar", params={"start": today, "end": today}, headers=admin))
+    assert any(i["title"] == f"Intern {RUN}" and i["source"] == "internal" for i in out["items"])
+    assert not any(i["source"] == "default" for i in out["items"])
+    notice = next(n for n in out["notices"] if n["source"] == "default")
+    assert notice["connected"] is True
+    assert notice["error"] == "Token-Abruf fehlgeschlagen (HTTP 400)."
+
+    resp = client.post(
+        f"{W}/calendar",
+        json={"title": "Ortstermin", "starts_on": today, "target": "default"},
+        headers=admin,
+    )
+    assert resp.status_code == 409, resp.text
+    assert resp.json()["detail"] == "Token-Abruf fehlgeschlagen (HTTP 400)."
+
+    # A healthy connection again: no error, Google items come back.
+    fake.token_status = 200
+    fake.add("primary", f"back-{RUN}", f"Wieder da {RUN}", today)
+    _ok(client.post(f"{W}/calendar/refresh", headers=admin))
+    out2 = _ok(client.get(f"{W}/calendar", params={"start": today, "end": today}, headers=admin))
+    assert any(i["title"] == f"Wieder da {RUN}" for i in out2["items"])
+    assert all(n["error"] is None for n in out2["notices"])

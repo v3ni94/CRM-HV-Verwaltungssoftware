@@ -42,7 +42,7 @@ describe("MailApprovalSettings", () => {
   it("lists deputies and creates a new one", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.endsWith("/api/bff/mail-approval/deputies") && init?.method === "POST") {
+      if (url.endsWith("/api/bff/mail/mail-approval/deputies") && init?.method === "POST") {
         const body = JSON.parse(String(init.body));
         return jsonResponse({ id: "d-1", ...body }, 201);
       }
@@ -65,7 +65,7 @@ describe("MailApprovalSettings", () => {
   it("revokes a deputy", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.endsWith("/api/bff/mail-approval/deputies/d-1") && init?.method === "DELETE") {
+      if (url.endsWith("/api/bff/mail/mail-approval/deputies/d-1") && init?.method === "DELETE") {
         return jsonResponse(null, 204);
       }
       return jsonResponse({ title: "unerwartet" }, 500);
@@ -89,6 +89,6 @@ describe("MailApprovalSettings", () => {
       />,
     );
     await userEvent.setup().click(screen.getByRole("button", { name: "Widerrufen" }));
-    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/bff/mail-approval/deputies/d-1", expect.objectContaining({ method: "DELETE" })));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith("/api/bff/mail/mail-approval/deputies/d-1", expect.objectContaining({ method: "DELETE" })));
   });
 });
