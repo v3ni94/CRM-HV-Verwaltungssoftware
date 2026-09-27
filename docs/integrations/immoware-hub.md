@@ -203,6 +203,31 @@ keine Auskunft von Immoware24 selbst; siehe den offenen Punkt unten.
   gesperrten Unterordner (401/403) ab, sondern protokolliert ihn in
   `immoware_sync_run.folder_errors` und geht mit den restlichen Ordnern weiter.
 
+## Abholung ohne offene Transaktion (Produktionsbefund 27.09.2026)
+
+Am 27.09.2026 zeigte `pg_stat_activity` zwei Sessions von `mhvp_app` mit `idle in transaction`
+über 22 bzw. 17 Minuten, letzte Anweisung `INSERT INTO immoware_sync_run`. Ursache war, dass die
+Abholung den gesamten DAV-Abruf (viele HTTP-Aufrufe, minutenlang) innerhalb der Transaktion
+ausführte, die die Laufzeile angelegt hatte. Dadurch blieben Zeilensperren und Snapshot offen,
+`CREATE INDEX CONCURRENTLY` in Migration 0156 wartete darauf, und weil die Redis-Sperre des
+Celery-Tasks (TTL 900 Sekunden) vor Laufende ablief, liefen zwei Läufe parallel.
+
+Seitdem gilt für alle drei Arten (WebDAV, CardDAV, CalDAV):
+
+- Während der HTTP-Aufrufe ist keine Transaktion offen. Die Laufzeile wird mit Status `running`
+  angelegt und sofort committet, der Abruf läuft ohne Session, die Ergebnisse werden in Batches
+  zu 50 Einträgen mit Commit je Batch angewendet, am Ende wird die Laufzeile abgeschlossen und
+  committet. Ein Fehler setzt die Laufzeile in eigener Transaktion auf `failed`. Die
+  Mandantenvariable für RLS wird in jeder dieser Transaktionen neu gesetzt.
+- Doppelläufe je Mandant und Art sind ausgeschlossen: Prüfung und Anlage der Laufzeile sind über
+  einen Advisory Lock in PostgreSQL serialisiert. Ein zweiter Start bei laufendem Lauf erhält im
+  CRM den Fehler 409 `MHVP-IMW-0005` (Abholung läuft bereits), der Celery-Task überspringt den
+  Mandanten und meldet ihn als übersprungen. Eine `running`-Zeile, die älter als zwei Stunden
+  ist, gilt als verwaist (Prozess beendet) und wird beim nächsten Start als `failed`
+  abgeschlossen.
+- Der manuelle Start über `POST /api/v1/immoware/sync/{kind}` läuft weiterhin synchron im
+  Request; bei großen Beständen ist der Start über den Celery-Task vorzuziehen.
+
 ## Paperless-Objektsuche und Gesellschaftsfilter im CRM (7.2)
 
 Vermerk: 7.2 umgesetzt am 26.09.2026. Übernommen wurde die Fachlogik aus Abschnitt 5, nicht der

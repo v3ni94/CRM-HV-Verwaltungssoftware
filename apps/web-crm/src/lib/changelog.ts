@@ -17,6 +17,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.34.3",
+    date: "27.09.2026",
+    title: "Gmail-Abruf NUL-Bytes, Immoware-Abholung ohne offene Transaktion, Ticketfilter eingeklappt",
+    changes: [
+      'Tickets: Filter sind standardmäßig eingeklappt, sichtbar bleibt nur die Suchleiste; "Weitere Filter" (mit Anzahl aktiver Filter) klappt alle Filter aus (Betreiberwunsch 27.09.2026).',
+      "Immoware24: Abholung (WebDAV, CardDAV, CalDAV) hält während der HTTP-Aufrufe keine Datenbanktransaktion mehr offen, Laufzeile wird sofort gespeichert, Ergebnisse in Batches zu 50 übernommen, Fehler setzen den Lauf auf fehlgeschlagen; Doppelläufe je Mandant und Art sind gesperrt (409 MHVP-IMW-0005), verwaiste Läufe werden nach 2 Stunden geschlossen (Produktionsbefund 27.09.2026, blockierte Migration 0156).",
+      'Gmail-Abruf (Betreibermeldung 27.09.2026, mailbox.last_error "PostgreSQL text fields cannot contain NUL (0x00) bytes"): eine Nachricht mit einem 0x00-Byte in Betreff, Text, Anhangname oder MIME-Typ blieb dauerhaft unimportiert und der Fehler stand am Postfach; Betreff, Text, HTML-Text, Kopfzeilen, Adressen, Anhangnamen und -typen sowie die JSONB-Felder Klassifikation und KI-Vorschlag werden jetzt über die neue zentrale Hilfsfunktion mhvp.core.text.strip_nul/clean_json bereinigt (ebenso der aus dem Rohtext gewonnene Volltext des .eml-Dokuments); der Postfachabruf lief schon vorher fehlertolerant je Nachricht weiter.',
+    ],
+  },
+  {
     version: "1.34.2",
     date: "27.09.2026",
     title: "Betrieb: Beszel-Variablen optional",

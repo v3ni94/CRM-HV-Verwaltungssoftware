@@ -64119,6 +64119,9 @@
             },
             "description": "Successful Response"
           },
+          "409": {
+            "description": "Abholung dieser Art läuft bereits (MHVP-IMW-0005)"
+          },
           "422": {
             "content": {
               "application/json": {

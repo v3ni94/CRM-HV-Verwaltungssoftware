@@ -19,6 +19,7 @@ from mhvp.communication.models import Message
 from mhvp.core.config import Settings
 from mhvp.core.events import emit
 from mhvp.core.problems import ProblemError
+from mhvp.core.text import clean_json
 from mhvp.documents.blobs import BlobStore
 from mhvp.workspace.services import local_today
 
@@ -136,17 +137,22 @@ async def ingest_parsed(
         gmail_message_id=gmail_message_id,
         gmail_thread_id=gmail_thread_id,
         status="assigned" if contact_id else "new",
-        classification={
-            "method": "rules",
-            "urgency": mail.urgency(parsed["subject"], parsed["body"]),
-            "category": mail.category(parsed["subject"], parsed["body"], categories),
-            "property_number": number,
-            "contact_matched": contact_id is not None,
-            "attachments_total": len(parsed["attachments"]),
-            "attachments_rejected": rejected,
-            "inline_skipped": int(parsed.get("inline_skipped") or 0),
-        },
-        appointment_suggestions=mail.appointments(parsed["body"], local_today()),
+        # JSONB fields carry text taken from the mail (attachment names, matched dates);
+        # psycopg refuses \u0000 there just like PostgreSQL does in a text column, so both
+        # go through clean_json (Betreibermeldung 27.09.2026).
+        classification=clean_json(
+            {
+                "method": "rules",
+                "urgency": mail.urgency(parsed["subject"], parsed["body"]),
+                "category": mail.category(parsed["subject"], parsed["body"], categories),
+                "property_number": number,
+                "contact_matched": contact_id is not None,
+                "attachments_total": len(parsed["attachments"]),
+                "attachments_rejected": rejected,
+                "inline_skipped": int(parsed.get("inline_skipped") or 0),
+            }
+        ),
+        appointment_suggestions=clean_json(mail.appointments(parsed["body"], local_today())),
     )
     session.add(row)
     await session.flush()
@@ -367,7 +373,9 @@ async def _queue_suggestion(
             row.suggestion, row.suggestion_status = {"reason": str(exc)[:500]}, "failed"
             return
         status = result.pop("status")
-        row.suggestion, row.suggestion_status = result, status
+        # The suggestion is built from the mail text (M20); clean_json keeps a stray NUL byte
+        # in a model answer or reply draft out of the JSONB column (Betreibermeldung 27.09.2026).
+        row.suggestion, row.suggestion_status = clean_json(result), status
     else:
         try:
             from mhvp.worker import get_celery

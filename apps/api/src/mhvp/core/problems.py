@@ -286,6 +286,12 @@ class ErrorCodes:
         "Schreibversuch blockiert",
         "Write path to Immoware24 is hard-blocked; only PROPFIND/REPORT/GET are allowed.",
     )
+    IMW_SYNC_RUNNING = ErrorCode(
+        "MHVP-IMW-0005",
+        409,
+        "Abholung läuft bereits",
+        "A sync run of this kind is still running for the tenant; a second start is refused.",
+    )
     FINAPI_NOT_CONFIGURED = ErrorCode(
         "MHVP-BANK-0001",
         502,

@@ -135,38 +135,52 @@ async def _calendar_query(
     return remote
 
 
-async def pull_events(
+RemoteEvents = dict[str, tuple[str | None, str]]
+
+
+async def fetch_events(
     client: ReadOnlyDavClient,
-    session: AsyncSession,
-    *,
-    tenant_id: uuid.UUID,
     caldav_url: str,
+    *,
     past_days: int = DEFAULT_PAST_DAYS,
     future_days: int = DEFAULT_FUTURE_DAYS,
-) -> CalDavPullResult:
-    result = CalDavPullResult()
+) -> RemoteEvents:
+    """Abrufphase ohne Datenbankzugriff: Kalender ermitteln und je Kalender den
+    calendar-query REPORT fuer den Zeitraum stellen. Ergebnis href -> (etag, ical_raw)."""
     now = datetime.now(UTC)
     start, end = now - timedelta(days=past_days), now + timedelta(days=future_days)
     body = QUERY_BODY.format(start=_fmt(start), end=_fmt(end))
     calendars = await discover_calendars(client, caldav_url) or [caldav_url]
-    remote: dict[str, tuple[str | None, str]] = {}
+    remote: RemoteEvents = {}
     for url in calendars:
         remote.update(await _calendar_query(client, url, body))
-    result.seen = len(remote)
-    existing_rows = list(
-        await session.scalars(
-            select(ImmowareDavEvent).where(ImmowareDavEvent.tenant_id == tenant_id)
+    return remote
+
+
+async def apply_events(
+    session: AsyncSession, *, tenant_id: uuid.UUID, remote: RemoteEvents, now: datetime
+) -> tuple[int, int]:
+    """Anwendungsphase fuer einen Batch: Upsert je href in ``immoware_dav_event``. Eine frueher
+    als entfallen markierte Zeile mit gleichem href wird wiederbelebt (Unique
+    ``(tenant_id, external_id)``). Rueckgabe ``(added, changed)``."""
+    if not remote:
+        return 0, 0
+    existing_rows = await session.scalars(
+        select(ImmowareDavEvent).where(
+            ImmowareDavEvent.tenant_id == tenant_id,
+            ImmowareDavEvent.external_id.in_(list(remote)),
         )
     )
-    by_href = {row.external_id: row for row in existing_rows if row.deleted_at is None}
+    by_href = {row.external_id: row for row in existing_rows}
+    added = 0
+    changed = 0
     for href, (etag, ical_raw) in remote.items():
-        events = parse_ical(ical_raw)
-        parsed = events[0] if events else None
         existing = by_href.get(href)
-        if existing is not None and existing.checksum == etag:
-            existing.deleted_at = None
+        if existing is not None and existing.checksum == etag and existing.deleted_at is None:
             existing.last_synced_at = now
             continue
+        events = parse_ical(ical_raw)
+        parsed = events[0] if events else None
         if existing is None:
             session.add(
                 ImmowareDavEvent(
@@ -187,7 +201,7 @@ async def pull_events(
                     ical_raw=ical_raw,
                 )
             )
-            result.added += 1
+            added += 1
         else:
             existing.deleted_at = None
             existing.last_synced_at = now
@@ -201,9 +215,49 @@ async def pull_events(
             existing.location = parsed.location if parsed else None
             existing.description = parsed.description if parsed else None
             existing.ical_raw = ical_raw
-            result.changed += 1
-    removed_hrefs = set(by_href) - set(remote)
-    for href in removed_hrefs:
-        by_href[href].deleted_at = now
-        result.removed += 1
+            changed += 1
+    await session.flush()
+    return added, changed
+
+
+async def mark_removed(
+    session: AsyncSession, *, tenant_id: uuid.UUID, remote_hrefs: set[str], now: datetime
+) -> int:
+    """Markiert aktive Zeilen, die im Abrufzeitraum nicht mehr vorkommen, mit ``deleted_at``."""
+    stale = await session.scalars(
+        select(ImmowareDavEvent).where(
+            ImmowareDavEvent.tenant_id == tenant_id,
+            ImmowareDavEvent.deleted_at.is_(None),
+            ImmowareDavEvent.external_id.not_in(remote_hrefs or {""}),
+        )
+    )
+    removed = 0
+    for row in stale:
+        row.deleted_at = now
+        removed += 1
+    await session.flush()
+    return removed
+
+
+async def pull_events(
+    client: ReadOnlyDavClient,
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    caldav_url: str,
+    past_days: int = DEFAULT_PAST_DAYS,
+    future_days: int = DEFAULT_FUTURE_DAYS,
+) -> CalDavPullResult:
+    """Abruf und Anwendung in einer Session (Einzelaufrufe, Tests). Der Lauf ueber
+    ``service.run_sync`` nutzt die Einzelphasen mit kurzen Transaktionen je Batch."""
+    result = CalDavPullResult()
+    remote = await fetch_events(client, caldav_url, past_days=past_days, future_days=future_days)
+    result.seen = len(remote)
+    now = datetime.now(UTC)
+    result.added, result.changed = await apply_events(
+        session, tenant_id=tenant_id, remote=remote, now=now
+    )
+    result.removed = await mark_removed(
+        session, tenant_id=tenant_id, remote_hrefs=set(remote), now=now
+    )
     return result

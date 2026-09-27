@@ -1,6 +1,9 @@
 """Celery-Tasks fuer die drei DAV-Abholungen (M32). Beat feuert alle 15 Minuten fest; jede
-Aufgabe prueft selbst, ob ``poll_minutes`` seit dem letzten Lauf vergangen sind, und haelt
-ausserdem eine Sperre je Tenant und Art, damit kein Doppellauf entsteht (Redis, Fallback: DB)."""
+Aufgabe prueft selbst, ob ``poll_minutes`` seit dem letzten Lauf vergangen sind. Doppellaeufe
+verhindert ``service.start_run`` in der Datenbank (Laufzeile ``running`` je Tenant und Art,
+serialisiert ueber Advisory Lock); die Redis-Sperre hier ist nur ein Vorfilter, ihr Ablauf
+(TTL) begrenzt den Lauf nicht. Der Abruf selbst haelt keine Transaktion offen
+(``service.run_sync``, Produktionsbefund 27.09.2026)."""
 
 import asyncio
 import logging
@@ -16,6 +19,7 @@ from sqlalchemy.pool import NullPool
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
+from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.immoware import learning
 from mhvp.immoware.client import sanitize_error
 from mhvp.immoware.models import (
@@ -78,19 +82,33 @@ async def _sync_all(settings: Settings, kind: SyncKind) -> dict[str, int]:
                 totals["skipped"] += 1
                 continue
             try:
+                # Kurze Transaktion nur fuer die Faelligkeitspruefung; der Lauf selbst oeffnet
+                # je Schritt eigene Transaktionen (keine offene Transaktion waehrend HTTP).
                 async with tenant_transaction(factory, tenant_id) as session:
                     connection = await session.scalar(select(ImmowareConnection))
-                    if connection is None or not connection.enabled:
+                    due = (
+                        connection is not None
+                        and connection.enabled
+                        and await _due(session, connection, kind)
+                    )
+                if not due:
+                    totals["skipped"] += 1
+                    continue
+                try:
+                    run = await run_sync(factory, tenant_id, kind)
+                except ProblemError as exc:
+                    if exc.error is ErrorCodes.IMW_SYNC_RUNNING:
+                        log.info(
+                            "immoware sync already running, skipped",
+                            extra={"tenant_id": str(tenant_id), "kind": kind.value},
+                        )
                         totals["skipped"] += 1
                         continue
-                    if not await _due(session, connection, kind):
-                        totals["skipped"] += 1
-                        continue
-                    run = await run_sync(session, connection, kind)
-                    if run.status.value == "failed":
-                        totals["failed"] += 1
-                    else:
-                        totals["ran"] += 1
+                    raise
+                if run.status.value == "failed":
+                    totals["failed"] += 1
+                else:
+                    totals["ran"] += 1
             except Exception:
                 log.exception(
                     "immoware sync failed",

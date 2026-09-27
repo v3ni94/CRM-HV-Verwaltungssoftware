@@ -18,9 +18,13 @@ describe("TicketFilters", () => {
     currentParams = new URLSearchParams();
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
       const url = String(input);
-      if (url.includes("/tenant/members")) return jsonResponse([{ user_id: "u1", display_name: "Anna Beispiel" }]);
+      if (url.includes("/tenant/members"))
+        return jsonResponse([{ user_id: "u1", display_name: "Anna Beispiel" }]);
       if (url.includes("/units")) return jsonResponse([]);
-      if (url.includes("/properties")) return jsonResponse({ items: [{ id: "p1", number: "001", name: "Objekt Eins" }] });
+      if (url.includes("/properties"))
+        return jsonResponse({
+          items: [{ id: "p1", number: "001", name: "Objekt Eins" }],
+        });
       return jsonResponse([]);
     });
   });
@@ -30,7 +34,10 @@ describe("TicketFilters", () => {
     currentParams = new URLSearchParams({ status: "new", mine: "1" });
     renderIntl(<TicketFilters meUserId="u1" />);
     expect(await screen.findByTestId("filter-status")).toHaveValue("new");
-    expect(screen.getByTestId("filter-mine")).toHaveAttribute("aria-checked", "true");
+    expect(screen.getByTestId("filter-mine")).toHaveAttribute(
+      "aria-checked",
+      "true",
+    );
   });
 
   it("pushes q to the URL after debouncing", async () => {
@@ -45,7 +52,9 @@ describe("TicketFilters", () => {
     renderIntl(<TicketFilters meUserId="u42" />);
     await userEvent.click(screen.getByTestId("filter-mine"));
     expect(push).toHaveBeenCalledWith(expect.stringContaining("mine=1"));
-    expect(push).toHaveBeenCalledWith(expect.stringContaining("assignee_user_id=u42"));
+    expect(push).toHaveBeenCalledWith(
+      expect.stringContaining("assignee_user_id=u42"),
+    );
   });
 
   it("resets all filters", async () => {
@@ -81,7 +90,9 @@ describe("TicketFilters", () => {
     expect(toggle).toHaveAttribute("aria-checked", "false");
     expect(toggle).toHaveTextContent("Nach Eingang");
     await userEvent.click(toggle);
-    expect(push).toHaveBeenLastCalledWith("/tickets?status=new&sort=created_desc");
+    expect(push).toHaveBeenLastCalledWith(
+      "/tickets?status=new&sort=created_desc",
+    );
   });
 
   it("keeps the sort when another filter changes", async () => {
@@ -89,9 +100,24 @@ describe("TicketFilters", () => {
     renderIntl(<TicketFilters meUserId="u1" />);
     const toggle = await screen.findByTestId("filter-sort-created");
     expect(toggle).toHaveAttribute("aria-checked", "true");
-    await userEvent.selectOptions(await screen.findByTestId("filter-status"), "new");
-    expect(push).toHaveBeenLastCalledWith("/tickets?status=new&sort=created_desc");
+    await userEvent.selectOptions(
+      await screen.findByTestId("filter-status"),
+      "new",
+    );
+    expect(push).toHaveBeenLastCalledWith(
+      "/tickets?status=new&sort=created_desc",
+    );
     await userEvent.click(toggle);
     expect(push).toHaveBeenLastCalledWith("/tickets");
+  });
+  it("keeps the filters collapsed until the toggle is used (operator 27.09.2026)", async () => {
+    renderIntl(<TicketFilters meUserId="u1" />);
+    expect(screen.getByTestId("filters-panel").className).toContain("hidden");
+    await userEvent.click(screen.getByTestId("filters-toggle"));
+    await waitFor(() =>
+      expect(screen.getByTestId("filters-panel").className).not.toContain(
+        "hidden",
+      ),
+    );
   });
 });

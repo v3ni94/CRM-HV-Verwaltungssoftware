@@ -36,7 +36,10 @@ const KEYS = [
 
 export type TicketFilterValues = Record<(typeof KEYS)[number], string>;
 
-const EMPTY: TicketFilterValues = KEYS.reduce((acc, key) => ({ ...acc, [key]: "" }), {} as TicketFilterValues);
+const EMPTY: TicketFilterValues = KEYS.reduce(
+  (acc, key) => ({ ...acc, [key]: "" }),
+  {} as TicketFilterValues,
+);
 
 function readFromParams(params: URLSearchParams): TicketFilterValues {
   const out = { ...EMPTY };
@@ -48,7 +51,9 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
   const t = useTranslations("Tickets");
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [values, setValues] = useState<TicketFilterValues>(() => readFromParams(searchParams));
+  const [values, setValues] = useState<TicketFilterValues>(() =>
+    readFromParams(searchParams),
+  );
   const [qInput, setQInput] = useState(values.q);
   const [members, setMembers] = useState<Member[]>([]);
   const [properties, setProperties] = useState<PropertyOption[]>([]);
@@ -56,6 +61,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
   const [contactQuery, setContactQuery] = useState("");
   const [contactResults, setContactResults] = useState<ContactOption[]>([]);
   const [contactLabel, setContactLabel] = useState("");
+  // Operator 27.09.2026: only the search field is visible, everything else folds out on demand.
   const [expanded, setExpanded] = useState(false);
   // Operator 26.09.2026: done, closed and rejected tickets are hidden unless erledigt=1.
   const showClosed = searchParams.get("erledigt") === "1";
@@ -71,7 +77,9 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
     void bff<Member[]>("/api/bff/tenant/members").then((res) => {
       if (res.ok) setMembers(res.data);
     });
-    void bff<{ items: PropertyOption[] }>("/api/bff/properties?page_size=200").then((res) => {
+    void bff<{ items: PropertyOption[] }>(
+      "/api/bff/properties?page_size=200",
+    ).then((res) => {
       if (res.ok) setProperties(res.data.items ?? []);
     });
   }, []);
@@ -81,7 +89,9 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
       setUnits([]);
       return;
     }
-    void bff<UnitOption[]>(`/api/bff/properties/${values.property_id}/units`).then((res) => {
+    void bff<UnitOption[]>(
+      `/api/bff/properties/${values.property_id}/units`,
+    ).then((res) => {
       if (res.ok) setUnits(res.data);
     });
   }, [values.property_id]);
@@ -93,7 +103,9 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
       return;
     }
     const handle = setTimeout(() => {
-      void bff<{ items: ContactOption[] }>(`/api/bff/contacts?q=${encodeURIComponent(term)}&page_size=10`).then((res) => {
+      void bff<{ items: ContactOption[] }>(
+        `/api/bff/contacts?q=${encodeURIComponent(term)}&page_size=10`,
+      ).then((res) => {
         if (res.ok) setContactResults(res.data.items ?? []);
       });
     }, 300);
@@ -158,10 +170,16 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
     }
   }
 
-  const activeCount = useMemo(() => KEYS.filter((key) => values[key]).length, [values]);
+  const activeCount = useMemo(
+    () => KEYS.filter((key) => values[key]).length,
+    [values],
+  );
 
   return (
-    <div className={`${ui.card} flex flex-col gap-3`} data-testid="ticket-filters">
+    <div
+      className={`${ui.card} flex flex-col gap-3`}
+      data-testid="ticket-filters"
+    >
       <div className="flex items-center justify-between gap-2">
         <label className="flex-1">
           <span className="sr-only">{t("filters.search")}</span>
@@ -175,7 +193,7 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
         </label>
         <button
           type="button"
-          className={`${ui.buttonSm} sm:hidden`}
+          className={ui.buttonSm}
           onClick={() => setExpanded((v) => !v)}
           aria-expanded={expanded}
           data-testid="filters-toggle"
@@ -183,7 +201,10 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
           {t("filters.more")} {activeCount > 0 ? `(${activeCount})` : ""}
         </button>
       </div>
-      <div className={`${expanded ? "flex" : "hidden"} flex-col gap-3 sm:flex`}>
+      <div
+        className={`${expanded ? "flex" : "hidden"} flex-col gap-3`}
+        data-testid="filters-panel"
+      >
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
@@ -216,7 +237,12 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
           >
             {t("filters.sortCreated")}
           </button>
-          <select className={ui.input} value={values.assignee_user_id} onChange={(e) => set("assignee_user_id", e.target.value)} data-testid="filter-assignee">
+          <select
+            className={ui.input}
+            value={values.assignee_user_id}
+            onChange={(e) => set("assignee_user_id", e.target.value)}
+            data-testid="filter-assignee"
+          >
             <option value="">{t("filters.assigneeAll")}</option>
             {members.map((m) => (
               <option key={m.user_id} value={m.user_id}>
@@ -224,7 +250,14 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
               </option>
             ))}
           </select>
-          <select className={ui.input} value={values.property_id} onChange={(e) => apply({ ...values, property_id: e.target.value, unit_id: "" })} data-testid="filter-property">
+          <select
+            className={ui.input}
+            value={values.property_id}
+            onChange={(e) =>
+              apply({ ...values, property_id: e.target.value, unit_id: "" })
+            }
+            data-testid="filter-property"
+          >
             <option value="">{t("filters.propertyAll")}</option>
             {properties.map((p) => (
               <option key={p.id} value={p.id}>
@@ -232,7 +265,13 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
               </option>
             ))}
           </select>
-          <select className={ui.input} value={values.unit_id} onChange={(e) => set("unit_id", e.target.value)} disabled={!values.property_id} data-testid="filter-unit">
+          <select
+            className={ui.input}
+            value={values.unit_id}
+            onChange={(e) => set("unit_id", e.target.value)}
+            disabled={!values.property_id}
+            data-testid="filter-unit"
+          >
             <option value="">{t("filters.unitAll")}</option>
             {units.map((u) => (
               <option key={u.id} value={u.id}>
@@ -256,7 +295,10 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
               data-testid="filter-contact"
             />
             {contactResults.length > 0 && !contactLabel ? (
-              <ul className="max-h-48 overflow-auto rounded-md border border-border bg-bg text-sm shadow-card" role="listbox">
+              <ul
+                className="max-h-48 overflow-auto rounded-md border border-border bg-bg text-sm shadow-card"
+                role="listbox"
+              >
                 {contactResults.map((c) => (
                   <li key={c.id}>
                     <button
@@ -276,7 +318,12 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
               </ul>
             ) : null}
           </label>
-          <select className={ui.input} value={values.contact_role} onChange={(e) => set("contact_role", e.target.value)} data-testid="filter-role">
+          <select
+            className={ui.input}
+            value={values.contact_role}
+            onChange={(e) => set("contact_role", e.target.value)}
+            data-testid="filter-role"
+          >
             <option value="">{t("filters.roleAll")}</option>
             {ROLES.map((r) => (
               <option key={r} value={r}>
@@ -284,7 +331,12 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
               </option>
             ))}
           </select>
-          <select className={ui.input} value={values.status} onChange={(e) => set("status", e.target.value)} data-testid="filter-status">
+          <select
+            className={ui.input}
+            value={values.status}
+            onChange={(e) => set("status", e.target.value)}
+            data-testid="filter-status"
+          >
             <option value="">{t("filters.statusAll")}</option>
             {STATUSES.map((s) => (
               <option key={s} value={s}>
@@ -292,7 +344,12 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
               </option>
             ))}
           </select>
-          <select className={ui.input} value={values.priority} onChange={(e) => set("priority", e.target.value)} data-testid="filter-priority">
+          <select
+            className={ui.input}
+            value={values.priority}
+            onChange={(e) => set("priority", e.target.value)}
+            data-testid="filter-priority"
+          >
             <option value="">{t("filters.priorityAll")}</option>
             {PRIORITIES.map((p) => (
               <option key={p} value={p}>
@@ -304,17 +361,49 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
         <div className="flex flex-wrap items-end gap-2">
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("filters.category")}</span>
-            <input className={ui.input} value={values.category} onChange={(e) => set("category", e.target.value)} data-testid="filter-category" />
+            <input
+              className={ui.input}
+              value={values.category}
+              onChange={(e) => set("category", e.target.value)}
+              data-testid="filter-category"
+            />
           </label>
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("filters.createdFrom")}</span>
-            <input type="date" className={ui.input} value={values.created_from.slice(0, 10)} onChange={(e) => set("created_from", e.target.value ? `${e.target.value}T00:00:00Z` : "")} data-testid="filter-created-from" />
+            <input
+              type="date"
+              className={ui.input}
+              value={values.created_from.slice(0, 10)}
+              onChange={(e) =>
+                set(
+                  "created_from",
+                  e.target.value ? `${e.target.value}T00:00:00Z` : "",
+                )
+              }
+              data-testid="filter-created-from"
+            />
           </label>
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("filters.createdTo")}</span>
-            <input type="date" className={ui.input} value={values.created_to.slice(0, 10)} onChange={(e) => set("created_to", e.target.value ? `${e.target.value}T23:59:59Z` : "")} data-testid="filter-created-to" />
+            <input
+              type="date"
+              className={ui.input}
+              value={values.created_to.slice(0, 10)}
+              onChange={(e) =>
+                set(
+                  "created_to",
+                  e.target.value ? `${e.target.value}T23:59:59Z` : "",
+                )
+              }
+              data-testid="filter-created-to"
+            />
           </label>
-          <button type="button" className={ui.button} onClick={reset} data-testid="filter-reset">
+          <button
+            type="button"
+            className={ui.button}
+            onClick={reset}
+            data-testid="filter-reset"
+          >
             {t("filters.reset")}
           </button>
         </div>

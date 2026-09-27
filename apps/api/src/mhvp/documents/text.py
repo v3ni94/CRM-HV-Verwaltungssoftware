@@ -10,6 +10,7 @@ import logging
 from pypdf import PdfReader
 from pypdf.errors import PdfReadError
 
+from mhvp.core.text import strip_nul
 from mhvp.documents.models import TextStatus
 
 log = logging.getLogger(__name__)
@@ -66,8 +67,12 @@ def _decode(data: bytes) -> str:
 
 
 def extract(mime_type: str, data: bytes) -> tuple[str | None, TextStatus]:
+    # A NUL byte surviving in the decoded text (a raw .eml with a literal \x00 in its body,
+    # rarely a PDF text stream) must never reach ``document.ocr_text``: PostgreSQL rejects it
+    # like any other text column (Betreibermeldung 27.09.2026, Gmail-Abruf).
     if mime_type in ("text/plain", "text/csv", "application/xml", "text/xml", "message/rfc822"):
-        return _decode(data)[:MAX_TEXT_CHARS], TextStatus.EXTRACTED
+        cleaned = strip_nul(_decode(data)) or ""
+        return cleaned[:MAX_TEXT_CHARS], TextStatus.EXTRACTED
     if mime_type == "application/pdf":
         try:
             reader = PdfReader(io.BytesIO(data))
@@ -75,6 +80,7 @@ def extract(mime_type: str, data: bytes) -> tuple[str | None, TextStatus]:
         except (PdfReadError, ValueError, KeyError) as exc:
             log.warning("pdf_text_extraction_failed", extra={"error": type(exc).__name__})
             return None, TextStatus.PENDING
+        text = strip_nul(text) or ""
         if text:
             return text[:MAX_TEXT_CHARS], TextStatus.EXTRACTED
         return None, TextStatus.PENDING

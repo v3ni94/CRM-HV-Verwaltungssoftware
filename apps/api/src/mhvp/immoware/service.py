@@ -1,17 +1,19 @@
 """Verbindungsaufbau und Lauf-Buchhaltung fuer die drei DAV-Arten (M32)."""
 
+import logging
 import uuid
-from dataclasses import asdict
-from datetime import UTC, datetime
+from collections.abc import Iterator
+from dataclasses import asdict, dataclass, field
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, text
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document
-from mhvp.immoware.caldav import CalDavPullResult, pull_events
-from mhvp.immoware.carddav import CardDavPullResult, pull_contacts
+from mhvp.immoware import caldav, carddav, webdav
 from mhvp.immoware.client import (
     ReadOnlyDavClient,
     build_httpx_client,
@@ -21,7 +23,17 @@ from mhvp.immoware.client import (
 )
 from mhvp.immoware.discovery import run_full_discovery
 from mhvp.immoware.models import ImmowareConnection, ImmowareSyncRun, SyncKind, SyncStatus
-from mhvp.immoware.webdav import WebdavPullResult, pull_tree
+
+log = logging.getLogger(__name__)
+
+# Batchgroesse der Anwendungsphase: je Batch eine kurze Transaktion mit Commit, damit waehrend
+# des DAV-Abrufs nie eine Transaktion offen bleibt (Produktionsbefund 27.09.2026: zwei Sessions
+# "idle in transaction" ueber 17 bzw. 22 Minuten, CREATE INDEX CONCURRENTLY blockiert).
+SYNC_BATCH_SIZE = 50
+# Ein Lauf mit Status ``running``, der aelter ist, gilt als verwaist (Prozess beendet, ohne den
+# Status zu setzen) und wird beim naechsten Start als ``failed`` abgeschlossen. Produktschutz,
+# keine Rechtsgrundlage; Wert bewusst deutlich ueber der beobachteten Laufzeit (ca. 20 Minuten).
+STALE_RUNNING_AFTER = timedelta(hours=2)
 
 
 async def get_connection(session: AsyncSession) -> ImmowareConnection | None:
@@ -127,48 +139,205 @@ async def diagnose_connection(
     return connection
 
 
-async def run_sync(
-    session: AsyncSession, connection: ImmowareConnection, kind: SyncKind
+@dataclass
+class SyncOutcome:
+    seen: int = 0
+    added: int = 0
+    changed: int = 0
+    removed: int = 0
+    folder_errors: list[dict[str, object]] = field(default_factory=list)
+
+
+def _chunks[T](items: list[T], size: int) -> Iterator[list[T]]:
+    for start in range(0, len(items), size):
+        yield items[start : start + size]
+
+
+def _lock_key(tenant_id: uuid.UUID, kind: SyncKind) -> str:
+    return f"immoware_sync:{tenant_id}:{kind.value}"
+
+
+async def start_run(
+    session: AsyncSession, *, tenant_id: uuid.UUID, kind: SyncKind
 ) -> ImmowareSyncRun:
-    run = ImmowareSyncRun(
-        tenant_id=connection.tenant_id,
-        kind=kind,
-        started_at=datetime.now(UTC),
-        status=SyncStatus.RUNNING,
+    """Legt die Laufzeile an und verhindert Doppellaeufe je Tenant und Art: Pruefung und Anlage
+    sind ueber ``pg_advisory_xact_lock`` serialisiert (Muster wie ``accounting.receivables``).
+    Laeuft bereits ein Lauf gleicher Art (Status ``running``, juenger als
+    ``STALE_RUNNING_AFTER``), wird ``IMW_SYNC_RUNNING`` (409) ausgeloest. Aeltere ``running``-Zeilen
+    gelten als verwaist und werden als ``failed`` abgeschlossen. Der Aufrufer committet die
+    Transaktion, bevor der DAV-Abruf beginnt."""
+    now = datetime.now(UTC)
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:key))"), {"key": _lock_key(tenant_id, kind)}
     )
+    running = await session.scalars(
+        select(ImmowareSyncRun).where(
+            ImmowareSyncRun.kind == kind, ImmowareSyncRun.status == SyncStatus.RUNNING
+        )
+    )
+    for row in running:
+        if now - row.started_at < STALE_RUNNING_AFTER:
+            raise ProblemError(
+                ErrorCodes.IMW_SYNC_RUNNING,
+                detail=(
+                    f"Die Abholung {kind.value} läuft seit "
+                    f"{row.started_at.astimezone(UTC).strftime('%d.%m.%Y %H:%M')} UTC "
+                    "und ist noch nicht abgeschlossen."
+                ),
+                extensions={"run_id": str(row.id)},
+            )
+        row.status = SyncStatus.FAILED
+        row.error = (
+            "Lauf ohne Abschluss (Prozess beendet); beim nächsten Start als abgebrochen markiert."
+        )
+        row.finished_at = now
+    run = ImmowareSyncRun(tenant_id=tenant_id, kind=kind, started_at=now, status=SyncStatus.RUNNING)
     session.add(run)
     await session.flush()
-    client = dav_client(connection)
-    outcome: WebdavPullResult | CardDavPullResult | CalDavPullResult
+    return run
+
+
+async def _sync_webdav(
+    client: ReadOnlyDavClient,
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    base_url: str,
+) -> SyncOutcome:
+    fetched = await webdav.fetch_tree(client, base_url)  # HTTP, keine Transaktion offen
+    outcome = SyncOutcome(seen=fetched.seen, folder_errors=fetched.folder_errors)
+    now = datetime.now(UTC)
+    for batch in _chunks(fetched.entries, SYNC_BATCH_SIZE):
+        async with tenant_transaction(factory, tenant_id) as session:
+            added, changed = await webdav.apply_entries(
+                session, tenant_id=tenant_id, entries=batch, now=now
+            )
+        outcome.added += added
+        outcome.changed += changed
+    async with tenant_transaction(factory, tenant_id) as session:
+        outcome.removed = await webdav.mark_stale(
+            session, tenant_id=tenant_id, seen_hrefs={e.href for e in fetched.entries}, now=now
+        )
+    return outcome
+
+
+async def _sync_carddav(
+    client: ReadOnlyDavClient,
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    carddav_url: str,
+    *,
+    auto_take_over: bool,
+) -> SyncOutcome:
+    remote = await carddav.fetch_hrefs(client, carddav_url)  # HTTP, keine Transaktion offen
+    outcome = SyncOutcome(seen=len(remote))
+    async with tenant_transaction(factory, tenant_id) as session:
+        checksums = await carddav.load_checksums(session, tenant_id=tenant_id)
+    now = datetime.now(UTC)
+    for hrefs in _chunks(carddav.hrefs_to_fetch(remote, checksums), SYNC_BATCH_SIZE):
+        cards = await carddav.fetch_cards(client, carddav_url, hrefs)  # HTTP je Batch
+        async with tenant_transaction(factory, tenant_id) as session:
+            added, changed = await carddav.apply_cards(
+                session, tenant_id=tenant_id, cards=cards, etags=remote, now=now
+            )
+        outcome.added += added
+        outcome.changed += changed
+    async with tenant_transaction(factory, tenant_id) as session:
+        outcome.removed = await carddav.mark_removed(
+            session, tenant_id=tenant_id, remote_hrefs=set(remote), now=now
+        )
+    if auto_take_over:
+        async with tenant_transaction(factory, tenant_id) as session:
+            await take_over_contacts(session, tenant_id)
+    return outcome
+
+
+async def _sync_caldav(
+    client: ReadOnlyDavClient,
+    factory: async_sessionmaker[AsyncSession],
+    tenant_id: uuid.UUID,
+    caldav_url: str,
+) -> SyncOutcome:
+    remote = await caldav.fetch_events(client, caldav_url)  # HTTP, keine Transaktion offen
+    outcome = SyncOutcome(seen=len(remote))
+    now = datetime.now(UTC)
+    for batch in _chunks(list(remote.items()), SYNC_BATCH_SIZE):
+        async with tenant_transaction(factory, tenant_id) as session:
+            added, changed = await caldav.apply_events(
+                session, tenant_id=tenant_id, remote=dict(batch), now=now
+            )
+        outcome.added += added
+        outcome.changed += changed
+    async with tenant_transaction(factory, tenant_id) as session:
+        outcome.removed = await caldav.mark_removed(
+            session, tenant_id=tenant_id, remote_hrefs=set(remote), now=now
+        )
+    return outcome
+
+
+async def _load_run(session: AsyncSession, run_id: uuid.UUID) -> ImmowareSyncRun:
+    run = await session.get(ImmowareSyncRun, run_id)
+    if run is None:
+        raise RuntimeError(f"immoware_sync_run {run_id} not found")
+    return run
+
+
+async def run_sync(
+    factory: async_sessionmaker[AsyncSession], tenant_id: uuid.UUID, kind: SyncKind
+) -> ImmowareSyncRun:
+    """Fuehrt eine Abholung aus, ohne waehrend der HTTP-Aufrufe eine Transaktion offen zu halten
+    (Produktionsbefund 27.09.2026). Ablauf mit je eigener, kurzer Transaktion (RLS: die
+    Mandantenvariable wird ueber ``tenant_transaction`` in jeder Transaktion neu gesetzt):
+
+    1. Verbindung laden, Doppellauf pruefen, Laufzeile ``running`` anlegen, Commit (sichtbar).
+    2. DAV-Abruf ohne Session; Anwendung der Ergebnisse in Batches zu ``SYNC_BATCH_SIZE`` mit
+       Commit je Batch.
+    3. Laufzeile mit Zaehlern und Status ``ok`` abschliessen, Commit. Im Fehlerfall wird die
+       Laufzeile in eigener Transaktion auf ``failed`` gesetzt und committet.
+
+    Ein zweiter Start bei laufendem Lauf gleicher Art loest ``IMW_SYNC_RUNNING`` (409) aus."""
+    async with tenant_transaction(factory, tenant_id) as session:
+        connection = await require_connection(session)
+        run = await start_run(session, tenant_id=tenant_id, kind=kind)
+        run_id = run.id
+        client = dav_client(connection)
+        base_url = connection.base_url or ""
+        card_url = carddav_url(connection)
+        cal_url = caldav_url(connection)
+        auto_take_over = bool(connection.auto_take_over_contacts)
     try:
         if kind is SyncKind.WEBDAV:
-            outcome = await pull_tree(
-                client, session, tenant_id=connection.tenant_id, base_url=connection.base_url or ""
-            )
+            outcome = await _sync_webdav(client, factory, tenant_id, base_url)
         elif kind is SyncKind.CARDDAV:
-            outcome = await pull_contacts(
-                client, session, tenant_id=connection.tenant_id, carddav_url=carddav_url(connection)
+            outcome = await _sync_carddav(
+                client, factory, tenant_id, card_url, auto_take_over=auto_take_over
             )
-            if connection.auto_take_over_contacts:
-                await take_over_contacts(session, connection.tenant_id)
         else:
-            outcome = await pull_events(
-                client, session, tenant_id=connection.tenant_id, caldav_url=caldav_url(connection)
-            )
+            outcome = await _sync_caldav(client, factory, tenant_id, cal_url)
+    except Exception as exc:
+        error = sanitize_error(str(exc))
+        log.warning(
+            "immoware sync failed",
+            extra={"tenant_id": str(tenant_id), "kind": kind.value, "run_id": str(run_id)},
+        )
+        async with tenant_transaction(factory, tenant_id) as session:
+            run = await _load_run(session, run_id)
+            run.status = SyncStatus.FAILED
+            run.error = error
+            run.finished_at = datetime.now(UTC)
+        return run
+    finally:
+        await client.aclose()
+    async with tenant_transaction(factory, tenant_id) as session:
+        run = await _load_run(session, run_id)
         run.seen, run.added, run.changed, run.removed = (
             outcome.seen,
             outcome.added,
             outcome.changed,
             outcome.removed,
         )
-        if isinstance(outcome, WebdavPullResult) and outcome.folder_errors:
+        if outcome.folder_errors:
             run.folder_errors = outcome.folder_errors
         run.status = SyncStatus.OK
-    except Exception as exc:
-        run.status = SyncStatus.FAILED
-        run.error = sanitize_error(str(exc))
-    finally:
-        await client.aclose()
         run.finished_at = datetime.now(UTC)
     return run
 

@@ -10,6 +10,8 @@ from email.message import EmailMessage
 from email.utils import getaddresses, parsedate_to_datetime
 from typing import Any
 
+from mhvp.core.text import strip_nul
+
 URGENT_WORDS = (
     "dringend",
     "notfall",
@@ -27,7 +29,7 @@ PROPERTY_RE = re.compile(r"\bObjekt\s*(?:Nr\.?\s*)?(\d{3})\b", re.IGNORECASE)
 
 
 def _clean(value: str, limit: int) -> str:
-    return value.replace("\x00", "")[:limit]
+    return (strip_nul(value) or "")[:limit]
 
 
 def parse(raw: bytes) -> dict[str, Any]:
@@ -50,8 +52,11 @@ def parse(raw: bytes) -> dict[str, Any]:
             continue
         attachments.append(
             {
-                "filename": part.get_filename() or "anhang",
-                "mime": part.get_content_type(),
+                # Anhangname und MIME-Typ kommen aus der Kopfzeile des Mailteils und können
+                # ebenso ein NUL-Byte tragen wie Betreff oder Absender (Betreibermeldung
+                # 27.09.2026); beide landen unverändert in Dokument und Klassifikation.
+                "filename": _clean(part.get_filename() or "anhang", 255),
+                "mime": _clean(part.get_content_type(), 255),
                 "data": part.get_payload(decode=True) or b"",
             }
         )

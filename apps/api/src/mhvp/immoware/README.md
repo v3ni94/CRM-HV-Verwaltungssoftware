@@ -21,10 +21,35 @@ sind ausschliesslich WebDAV, CardDAV und CalDAV; es gibt keine Immoware24-REST-A
 - `client.py`: HTTP-Basis (Basic Auth, Timeout 30 s, Methodensperre).
 - `webdav.py`, `carddav.py`, `caldav.py`: die drei Adapter (PROPFIND/REPORT, Upsert je href).
 - `vcard.py`, `ical.py`: minimale, selbst implementierte Parser (kein neues Paket, Regel 8).
-- `service.py`: Verbindungsaufbau, Verbindungstest, Lauf-Buchhaltung (`ImmowareSyncRun`).
-- `tasks.py`: Celery-Tasks je Art, Beat alle 15 Minuten, Task prueft `poll_minutes` selbst,
-  Redis-Sperre je Tenant und Art gegen Doppellauf.
+- `service.py`: Verbindungsaufbau, Verbindungstest, Lauf-Buchhaltung (`ImmowareSyncRun`),
+  Ablauf eines Laufs (`run_sync`) mit kurzen Transaktionen je Schritt.
+- `tasks.py`: Celery-Tasks je Art, Beat alle 15 Minuten, Task prueft `poll_minutes` selbst;
+  die Redis-Sperre ist nur ein Vorfilter, Doppellaeufe verhindert `service.start_run`.
 - `routers.py` / `schemas.py`: `/api/v1/immoware` (Permission-Ressource `immoware`, read/update).
+
+## Transaktionen und Doppellaeufe (Produktionsbefund 27.09.2026)
+
+`pg_stat_activity` zeigte zwei Sessions von `mhvp_app` mit `idle in transaction` ueber 17 bzw.
+22 Minuten, letzte Anweisung `INSERT INTO immoware_sync_run`: der DAV-Abruf lief innerhalb der
+Transaktion, die die Laufzeile angelegt hatte. Folgen: Zeilensperren und Snapshot ueber Minuten,
+`CREATE INDEX CONCURRENTLY` (Migration 0156) blockierte, zwei Laeufe liefen parallel, weil die
+Redis-Sperre (TTL 900 s) vor Ende des Laufs ablief. Seitdem gilt:
+
+- Waehrend der HTTP-Aufrufe (PROPFIND, REPORT, GET) ist nie eine Transaktion offen. Die Adapter
+  sind in Abrufphase (`fetch_*`, ohne Session) und Anwendungsphase (`apply_*`, `mark_*`)
+  getrennt; `pull_tree`, `pull_contacts`, `pull_events` bleiben als Einzelaufruf in einer
+  Session fuer Tests erhalten.
+- `service.run_sync(factory, tenant_id, kind)` oeffnet je Schritt eine eigene
+  `tenant_transaction` (RLS: `app.tenant_id` wird in jeder Transaktion neu gesetzt):
+  Laufzeile `running` anlegen und committen (sofort sichtbar), Abruf, Anwendung in Batches zu
+  `SYNC_BATCH_SIZE` (50) mit Commit je Batch, Abschluss der Laufzeile mit Zaehlern. Ein Fehler
+  setzt die Laufzeile in eigener Transaktion auf `failed`.
+- `service.start_run` serialisiert Pruefung und Anlage je Tenant und Art ueber
+  `pg_advisory_xact_lock`. Laeuft bereits ein Lauf gleicher Art (Status `running`, juenger als
+  `STALE_RUNNING_AFTER`, 2 h), antwortet der Router mit 409 `MHVP-IMW-0005` und der Task
+  ueberspringt den Tenant. Eine aeltere `running`-Zeile gilt als verwaist und wird beim naechsten
+  Start als `failed` abgeschlossen.
+- Der Router `POST /sync/{kind}` haelt keine Request-Transaktion um den Abruf.
 
 ## Endpunkte
 

@@ -282,6 +282,46 @@ def test_gmail_sync_creates_tickets_and_threads(
     assert client.post(f"{M}/mailboxes/{box['id']}/sync", headers=r).status_code == 403
 
 
+def test_gmail_sync_strips_nul_bytes_from_subject_and_body(
+    client: TestClient, world: World, fake: FakeGmail
+) -> None:
+    """Betreibermeldung 27.09.2026: a NUL byte in the subject or body used to make PostgreSQL
+    reject the insert (``DataError: PostgreSQL text fields cannot contain NUL (0x00) bytes``),
+    so the mail was never imported and the error stuck on the mailbox. It is now stripped before
+    storing: the mail is ingested, ``last_error`` stays empty and no NUL survives in the columns."""
+    h = bearer(login(client, world, "gmadmin"))
+    box = _mailbox(client, h, f"nul{RUN}@example.com")
+
+    msg = EmailMessage()
+    msg["From"], msg["To"], msg["Message-ID"] = (
+        f"nul{RUN}@example.com",
+        "info@example.com",
+        f"<nul-{RUN}@x>",
+    )
+    msg["Subject"] = f"Betreff mit Fehler {RUN}\x00"
+    msg["Date"] = "Thu, 24 Sep 2026 09:00:00 +0200"
+    msg.set_content("Text mit\x00 eingebettetem NUL-Byte.")
+    fake.add("n1", bytes(msg))
+
+    result = _ok(client.post(f"{M}/mailboxes/{box['id']}/sync", headers=h))
+    assert _counts(result) == {"fetched": 1, "created": 1, "duplicates": 0, "failed": 0}
+    assert result["errors"] == []
+
+    listed = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=h))}
+    assert listed[box["id"]]["last_error"] is None
+
+    stored = next(
+        m
+        for m in _ok(client.get(f"{M}/messages", headers=h))
+        if m["subject"].startswith(f"Betreff mit Fehler {RUN}")
+    )
+    assert "\x00" not in stored["subject"]
+    assert stored["subject"] == f"Betreff mit Fehler {RUN}"
+    detail = _ok(client.get(f"{M}/messages/{stored['id']}", headers=h))
+    assert "\x00" not in (detail["body"] or "")
+    assert detail["body"] == "Text mit eingebettetem NUL-Byte."
+
+
 def test_oauth_client_consent_and_mailbox_access(
     client: TestClient, world: World, fake: FakeGmail, monkeypatch: pytest.MonkeyPatch
 ) -> None:

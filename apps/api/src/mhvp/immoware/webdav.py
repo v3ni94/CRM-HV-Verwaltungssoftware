@@ -143,20 +143,16 @@ async def _propfind_folder(
         return [], {"url": sanitize_error(url), "status": response.status_code, "note": str(exc)}
 
 
-async def pull_tree(
-    client: ReadOnlyDavClient,
-    session: AsyncSession,
-    *,
-    tenant_id: uuid.UUID,
-    base_url: str,
-    max_depth: int = 4,
+async def fetch_tree(
+    client: ReadOnlyDavClient, base_url: str, *, max_depth: int = 4
 ) -> WebdavPullResult:
-    """PROPFIND Depth 1 rekursiv bis ``max_depth``. Immoware24 unterstuetzt kein Depth: infinity
-    zuverlaessig, daher wird Ordner fuer Ordner abgestiegen (Hub-Vorbild: DavPullRunner). Ein
-    401/403 auf einem einzelnen Unterordner bricht den Lauf nicht ab, sondern wird in
-    ``result.folder_errors`` protokolliert (Betreiberbericht 25.09.2026)."""
+    """Abrufphase ohne Datenbankzugriff: PROPFIND Depth 1 rekursiv bis ``max_depth``.
+    Immoware24 unterstuetzt kein Depth: infinity zuverlaessig, daher wird Ordner fuer Ordner
+    abgestiegen (Hub-Vorbild: DavPullRunner). Ein 401/403 auf einem einzelnen Unterordner bricht
+    den Lauf nicht ab, sondern wird in ``result.folder_errors`` protokolliert (Betreiberbericht
+    25.09.2026). Der Aufrufer haelt waehrend dieser Phase keine Transaktion offen
+    (Produktionsbefund 27.09.2026: ``idle in transaction`` ueber Minuten)."""
     result = WebdavPullResult()
-    seen_ids: set[str] = set()
     queue: list[tuple[str, int]] = [(base_url, 0)]
     visited: set[str] = set()
     while queue:
@@ -171,14 +167,22 @@ async def pull_tree(
         for entry in entries:
             result.entries.append(entry)
             result.seen += 1
-            seen_ids.add(entry.href)
             if entry.is_collection and depth + 1 < max_depth:
                 next_url = url.rstrip("/") + "/" + entry.href.rstrip("/").rsplit("/", 1)[-1] + "/"
                 if entry.href.startswith("http"):
                     next_url = entry.href
                 queue.append((next_url, depth + 1))
-    now = datetime.now(UTC)
-    for entry in result.entries:
+    return result
+
+
+async def apply_entries(
+    session: AsyncSession, *, tenant_id: uuid.UUID, entries: list[DavEntry], now: datetime
+) -> tuple[int, int]:
+    """Anwendungsphase fuer einen Batch: Upsert je href in ``immoware_dav_document``.
+    Rueckgabe ``(added, changed)``. Laeuft in einer kurzen Transaktion des Aufrufers."""
+    added = 0
+    changed = 0
+    for entry in entries:
         existing = await session.scalar(
             select(ImmowareDavDocument).where(
                 ImmowareDavDocument.tenant_id == tenant_id,
@@ -204,30 +208,63 @@ async def pull_tree(
                     object_number_guess=guess_object_number(entry.href),
                 )
             )
-            result.added += 1
+            added += 1
         else:
             existing.deleted_at = None
             existing.last_synced_at = now
             if existing.checksum != entry.etag:
                 existing.checksum = entry.etag
                 existing.sync_version += 1
-                result.changed += 1
+                changed += 1
             existing.display_name = entry.display_name
             existing.content_type = entry.content_type
             existing.size = entry.size
             existing.etag = entry.etag
             existing.last_modified = entry.last_modified
             existing.is_collection = entry.is_collection
+    await session.flush()
+    return added, changed
+
+
+async def mark_stale(
+    session: AsyncSession, *, tenant_id: uuid.UUID, seen_hrefs: set[str], now: datetime
+) -> int:
+    """Markiert alle aktiven Zeilen, deren href im aktuellen Lauf nicht gesehen wurde, mit
+    ``deleted_at`` (kein Hard Delete). Rueckgabe: Anzahl der entfallenen Zeilen."""
     stale = await session.scalars(
         select(ImmowareDavDocument).where(
             ImmowareDavDocument.tenant_id == tenant_id,
             ImmowareDavDocument.deleted_at.is_(None),
-            ImmowareDavDocument.external_id.not_in(seen_ids or {""}),
+            ImmowareDavDocument.external_id.not_in(seen_hrefs or {""}),
         )
     )
+    removed = 0
     for row in stale:
         row.deleted_at = now
-        result.removed += 1
+        removed += 1
+    await session.flush()
+    return removed
+
+
+async def pull_tree(
+    client: ReadOnlyDavClient,
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    base_url: str,
+    max_depth: int = 4,
+) -> WebdavPullResult:
+    """Abruf und Anwendung in einer Session (Einzelaufrufe, Tests). Der Lauf ueber
+    ``service.run_sync`` nutzt stattdessen ``fetch_tree`` / ``apply_entries`` / ``mark_stale``
+    mit kurzen Transaktionen je Batch."""
+    result = await fetch_tree(client, base_url, max_depth=max_depth)
+    now = datetime.now(UTC)
+    result.added, result.changed = await apply_entries(
+        session, tenant_id=tenant_id, entries=result.entries, now=now
+    )
+    result.removed = await mark_stale(
+        session, tenant_id=tenant_id, seen_hrefs={e.href for e in result.entries}, now=now
+    )
     return result
 
 

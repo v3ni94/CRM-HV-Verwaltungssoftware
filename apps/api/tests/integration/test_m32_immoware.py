@@ -15,8 +15,10 @@
   Netz verlässt (Regel 2 des Hubs).
 """
 
+import asyncio
 import uuid
-from collections.abc import Iterator
+from collections.abc import Awaitable, Callable, Iterator
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 import boto3
@@ -24,9 +26,17 @@ import httpx
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
+from sqlalchemy import func, select, text
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import NullPool
 
+from mhvp.core.db.engine import create_session_factory
+from mhvp.core.db.tenancy import tenant_transaction
+from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.immoware import service as immoware_service
+from mhvp.immoware import tasks as immoware_tasks
 from mhvp.immoware.client import ReadOnlyDavClient, WriteBlockedError
+from mhvp.immoware.models import ImmowareSyncRun, SyncKind, SyncStatus
 from mhvp.main import create_app
 from mhvp.platform import services
 from tests.integration.conftest import Database
@@ -68,6 +78,14 @@ class FakeDav:
         self.methods_seen: list[str] = []
         self.write_attempted = False
         self._locked_paths: set[str] = set()
+        # Optionaler asynchroner Haken, der vor jeder Antwort laeuft (Tests zur Transaktions-
+        # und Sperrlogik: Beobachtung aus einer zweiten Verbindung, Blockieren des Abrufs).
+        self.hook: Callable[[httpx.Request], Awaitable[None]] | None = None
+
+    async def handle(self, request: httpx.Request) -> httpx.Response:
+        if self.hook is not None:
+            await self.hook(request)
+        return self.handler(request)
 
     def lock_subfolder(self, path: str) -> None:
         """Ab jetzt liefert PROPFIND auf ``path`` 403 und die Wurzel listet ``path`` zusaetzlich
@@ -226,7 +244,7 @@ def client(
     ) -> httpx.AsyncClient:
         auth = httpx.BasicAuth(username, password or "") if username else None
         return httpx.AsyncClient(
-            auth=auth, transport=httpx.MockTransport(fake.handler), timeout=timeout
+            auth=auth, transport=httpx.MockTransport(fake.handle), timeout=timeout
         )
 
     monkeypatch.setattr(immoware_service, "build_httpx_client", patched)
@@ -542,3 +560,186 @@ def test_webdav_sync_continues_past_locked_subfolder(
     assert row["folder_errors"][0]["status"] == 403
     for entry in row["folder_errors"]:
         assert fake.password not in entry["url"]
+
+
+def _is_tree_propfind(request: httpx.Request) -> bool:
+    return (
+        request.method == "PROPFIND"
+        and request.url.path == "/"
+        and request.headers.get("Depth") == "1"
+    )
+
+
+def _running_count_sql() -> Any:
+    return (
+        select(func.count())
+        .select_from(ImmowareSyncRun)
+        .where(
+            ImmowareSyncRun.kind == SyncKind.WEBDAV, ImmowareSyncRun.status == SyncStatus.RUNNING
+        )
+    )
+
+
+def test_sync_holds_no_open_transaction_during_dav_fetch(
+    client: TestClient, world: World, fake: FakeDav, database: Database
+) -> None:
+    """Produktionsbefund 27.09.2026: der DAV-Abruf lief innerhalb der Transaktion, die die
+    Laufzeile angelegt hatte (``idle in transaction`` ueber Minuten). Jetzt ist die Laufzeile
+    mit Status ``running`` waehrend des Abrufs aus einer zweiten Verbindung sichtbar, was nur nach
+    Commit moeglich ist, und keine Session der App-Rolle steht ``idle in transaction``."""
+    h = bearer(login(client, world, "m32admin"))
+    _connect(client, h, fake)
+    observed: list[tuple[int, int]] = []
+
+    async def probe(request: httpx.Request) -> None:
+        if not _is_tree_propfind(request) or observed:
+            return
+        engine = create_async_engine(database.app_url, poolclass=NullPool)
+        try:
+            factory = create_session_factory(engine)
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                running = int(await session.scalar(_running_count_sql()) or 0)
+                idle_in_tx = int(
+                    await session.scalar(
+                        text(
+                            "SELECT count(*) FROM pg_stat_activity "
+                            "WHERE usename = current_user AND state = 'idle in transaction'"
+                        )
+                    )
+                    or 0
+                )
+            observed.append((running, idle_in_tx))
+        finally:
+            await engine.dispose()
+
+    fake.hook = probe
+    run = _ok(client.post(f"{IM}/sync/webdav", headers=h))
+    assert observed == [(1, 0)], observed
+    row = next(r for r in _ok(client.get(f"{IM}/sync/runs", headers=h)) if r["id"] == run["run_id"])
+    assert (row["status"], row["seen"]) == ("ok", 2)  # added haengt von Vorlaeufen im Modul ab
+
+
+def test_parallel_start_is_refused_while_first_run_fetches(
+    client: TestClient, world: World, fake: FakeDav, database: Database, redis_url: str
+) -> None:
+    """Zwei gleichzeitige Starts derselben Art: der zweite trifft auf die committete
+    ``running``-Zeile und wird mit ``IMW_SYNC_RUNNING`` abgewiesen, der erste laeuft normal zu Ende.
+    Ein Fehler im Abruf setzt den Lauf in eigener Transaktion auf ``failed``."""
+    h = bearer(login(client, world, "m32admin"))
+    _connect(client, h, fake)
+    settings = _settings(database, redis_url)
+
+    async def scenario() -> None:
+        engine = create_async_engine(settings.database_url.get_secret_value(), poolclass=NullPool)
+        try:
+            factory = create_session_factory(engine)
+            started = asyncio.Event()
+            release = asyncio.Event()
+
+            async def block_first_fetch(request: httpx.Request) -> None:
+                if _is_tree_propfind(request):
+                    started.set()
+                    await release.wait()
+
+            fake.hook = block_first_fetch
+            first = asyncio.create_task(
+                immoware_service.run_sync(factory, world.tenant_a, SyncKind.WEBDAV)
+            )
+            await started.wait()
+            with pytest.raises(ProblemError) as excinfo:
+                await immoware_service.run_sync(factory, world.tenant_a, SyncKind.WEBDAV)
+            assert excinfo.value.error is ErrorCodes.IMW_SYNC_RUNNING
+            release.set()
+            run = await first
+            assert run.status is SyncStatus.OK
+            assert run.seen == 2
+
+            # Fehlerfall: ein Verbindungsabbruch im CardDAV-Abruf (WebDAV toleriert Fehler je
+            # Ordner) setzt die Laufzeile in eigener Transaktion auf ``failed``; keine Zeile
+            # bleibt auf ``running`` stehen.
+            async def explode(request: httpx.Request) -> None:
+                if request.url.path == "/addressbooks/default/":
+                    raise httpx.ConnectError("verbindung abgebrochen")
+
+            fake.hook = explode
+            failed = await immoware_service.run_sync(factory, world.tenant_a, SyncKind.CARDDAV)
+            assert failed.status is SyncStatus.FAILED
+            # ``ReadOnlyDavClient`` bildet Transportfehler auf IMW_UNAVAILABLE ab; der
+            # gespeicherte Text ist die bereinigte Meldung ohne Zugangsdaten.
+            assert failed.error is not None
+            assert "Immoware24" in failed.error
+            assert fake.password not in failed.error
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                still_running = await session.scalar(
+                    select(func.count())
+                    .select_from(ImmowareSyncRun)
+                    .where(ImmowareSyncRun.status == SyncStatus.RUNNING)
+                )
+                assert int(still_running or 0) == 0
+        finally:
+            await engine.dispose()
+
+    asyncio.run(scenario())
+
+
+def test_router_409_and_task_skip_while_running_and_stale_run_is_closed(
+    client: TestClient, world: World, fake: FakeDav, database: Database, redis_url: str
+) -> None:
+    """Bei vorhandener ``running``-Zeile antwortet der Router 409 mit Problemcode MHVP-IMW-0005
+    und der Celery-Task ueberspringt den Tenant. Eine ``running``-Zeile aelter als
+    ``STALE_RUNNING_AFTER`` gilt als verwaist: der naechste Start schliesst sie als ``failed`` ab
+    und laeuft selbst durch."""
+    h = bearer(login(client, world, "m32admin"))
+    _connect(client, h, fake)
+    settings = _settings(database, redis_url)
+    stale_id = uuid.uuid4()
+
+    async def insert_running(started_at: datetime) -> None:
+        engine = create_async_engine(database.app_url, poolclass=NullPool)
+        try:
+            factory = create_session_factory(engine)
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                session.add(
+                    ImmowareSyncRun(
+                        id=stale_id,
+                        tenant_id=world.tenant_a,
+                        kind=SyncKind.WEBDAV,
+                        started_at=started_at,
+                        status=SyncStatus.RUNNING,
+                    )
+                )
+        finally:
+            await engine.dispose()
+
+    # 45 Minuten alt: aelter als poll_minutes (30), juenger als STALE_RUNNING_AFTER -> laeuft noch.
+    asyncio.run(insert_running(datetime.now(UTC) - timedelta(minutes=45)))
+    response = client.post(f"{IM}/sync/webdav", headers=h)
+    assert response.status_code == 409, response.text
+    body = response.json()
+    assert body["code"] == "MHVP-IMW-0005"
+    assert body["run_id"] == str(stale_id)
+
+    totals = asyncio.run(immoware_tasks._sync_all(settings, SyncKind.WEBDAV))
+    assert (totals["ran"], totals["failed"]) == (0, 0)
+    assert totals["skipped"] >= 1
+    runs = _ok(client.get(f"{IM}/sync/runs", headers=h))
+    assert [r["id"] for r in runs if r["status"] == "running"] == [str(stale_id)]
+
+    # Verwaist: Startzeit vor 3 Stunden -> neuer Lauf schliesst die alte Zeile ab.
+    async def age_running() -> None:
+        engine = create_async_engine(database.app_url, poolclass=NullPool)
+        try:
+            factory = create_session_factory(engine)
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                row = await session.get(ImmowareSyncRun, stale_id)
+                assert row is not None
+                row.started_at = datetime.now(UTC) - timedelta(hours=3)
+        finally:
+            await engine.dispose()
+
+    asyncio.run(age_running())
+    new_run = _ok(client.post(f"{IM}/sync/webdav", headers=h))
+    by_id = {r["id"]: r for r in _ok(client.get(f"{IM}/sync/runs", headers=h))}
+    assert by_id[new_run["run_id"]]["status"] == "ok"
+    assert by_id[str(stale_id)]["status"] == "failed"
+    assert "abgebrochen" in (by_id[str(stale_id)]["error"] or "")

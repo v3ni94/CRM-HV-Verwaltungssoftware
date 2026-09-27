@@ -91,32 +91,61 @@ async def _multiget(
     return out
 
 
-async def pull_contacts(
-    client: ReadOnlyDavClient,
+async def fetch_hrefs(client: ReadOnlyDavClient, carddav_url: str) -> dict[str, str | None]:
+    """Abrufphase 1 ohne Datenbankzugriff: alle hrefs des Adressbuchs mit etag."""
+    return await _list_hrefs(client, carddav_url)
+
+
+async def fetch_cards(
+    client: ReadOnlyDavClient, carddav_url: str, hrefs: list[str]
+) -> dict[str, str]:
+    """Abrufphase 2 ohne Datenbankzugriff: Multiget-REPORT fuer die uebergebenen hrefs."""
+    return await _multiget(client, carddav_url, hrefs)
+
+
+async def load_checksums(session: AsyncSession, *, tenant_id: uuid.UUID) -> dict[str, str | None]:
+    """Etag-Stand der aktiven Spiegelzeilen (href -> checksum) fuer die Aenderungserkennung."""
+    rows = await session.execute(
+        select(ImmowareDavContact.external_id, ImmowareDavContact.checksum).where(
+            ImmowareDavContact.tenant_id == tenant_id,
+            ImmowareDavContact.deleted_at.is_(None),
+        )
+    )
+    return {str(href): checksum for href, checksum in rows.tuples()}
+
+
+def hrefs_to_fetch(remote: dict[str, str | None], checksums: dict[str, str | None]) -> list[str]:
+    """hrefs, die neu sind oder deren etag vom gespiegelten Stand abweicht."""
+    return [
+        href for href, etag in remote.items() if href not in checksums or checksums[href] != etag
+    ]
+
+
+async def apply_cards(
     session: AsyncSession,
     *,
     tenant_id: uuid.UUID,
-    carddav_url: str,
-) -> CardDavPullResult:
-    result = CardDavPullResult()
-    remote = await _list_hrefs(client, carddav_url)
-    result.seen = len(remote)
-    existing_rows = list(
-        await session.scalars(
-            select(ImmowareDavContact).where(ImmowareDavContact.tenant_id == tenant_id)
+    cards: dict[str, str],
+    etags: dict[str, str | None],
+    now: datetime,
+) -> tuple[int, int]:
+    """Anwendungsphase fuer einen Batch: Upsert je href in ``immoware_dav_contact``. Eine frueher
+    als entfallen markierte Zeile mit gleichem href wird wiederbelebt statt neu angelegt
+    (Unique ``(tenant_id, external_id)``). Rueckgabe ``(added, changed)``."""
+    if not cards:
+        return 0, 0
+    existing_rows = await session.scalars(
+        select(ImmowareDavContact).where(
+            ImmowareDavContact.tenant_id == tenant_id,
+            ImmowareDavContact.external_id.in_(list(cards)),
         )
     )
-    by_href = {row.external_id: row for row in existing_rows if row.deleted_at is None}
-    to_fetch = [
-        href
-        for href, etag in remote.items()
-        if by_href.get(href) is None or by_href[href].checksum != etag
-    ]
-    cards = await _multiget(client, carddav_url, to_fetch)
-    now = datetime.now(UTC)
+    by_href = {row.external_id: row for row in existing_rows}
+    added = 0
+    changed = 0
     for href, vcard_raw in cards.items():
         parsed = parse_vcard(vcard_raw)
-        etag = remote.get(href)
+        etag = etags.get(href)
         existing = by_href.get(href)
         if existing is None:
             session.add(
@@ -138,7 +167,7 @@ async def pull_contacts(
                     addresses=parsed.addresses,
                 )
             )
-            result.added += 1
+            added += 1
         else:
             existing.deleted_at = None
             existing.last_synced_at = now
@@ -152,9 +181,49 @@ async def pull_contacts(
             existing.emails = parsed.emails
             existing.phones = parsed.phones
             existing.addresses = parsed.addresses
-            result.changed += 1
-    removed_hrefs = set(by_href) - set(remote)
-    for href in removed_hrefs:
-        by_href[href].deleted_at = now
-        result.removed += 1
+            changed += 1
+    await session.flush()
+    return added, changed
+
+
+async def mark_removed(
+    session: AsyncSession, *, tenant_id: uuid.UUID, remote_hrefs: set[str], now: datetime
+) -> int:
+    """Markiert aktive Zeilen, die im Adressbuch nicht mehr vorkommen, mit ``deleted_at``."""
+    stale = await session.scalars(
+        select(ImmowareDavContact).where(
+            ImmowareDavContact.tenant_id == tenant_id,
+            ImmowareDavContact.deleted_at.is_(None),
+            ImmowareDavContact.external_id.not_in(remote_hrefs or {""}),
+        )
+    )
+    removed = 0
+    for row in stale:
+        row.deleted_at = now
+        removed += 1
+    await session.flush()
+    return removed
+
+
+async def pull_contacts(
+    client: ReadOnlyDavClient,
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    carddav_url: str,
+) -> CardDavPullResult:
+    """Abruf und Anwendung in einer Session (Einzelaufrufe, Tests). Der Lauf ueber
+    ``service.run_sync`` nutzt die Einzelphasen mit kurzen Transaktionen je Batch."""
+    result = CardDavPullResult()
+    remote = await fetch_hrefs(client, carddav_url)
+    result.seen = len(remote)
+    checksums = await load_checksums(session, tenant_id=tenant_id)
+    cards = await fetch_cards(client, carddav_url, hrefs_to_fetch(remote, checksums))
+    now = datetime.now(UTC)
+    result.added, result.changed = await apply_cards(
+        session, tenant_id=tenant_id, cards=cards, etags=remote, now=now
+    )
+    result.removed = await mark_removed(
+        session, tenant_id=tenant_id, remote_hrefs=set(remote), now=now
+    )
     return result

@@ -42038,6 +42038,13 @@ export interface operations {
                     };
                 };
             };
+            /** @description Abholung dieser Art läuft bereits (MHVP-IMW-0005) */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Validation Error */
             422: {
                 headers: {

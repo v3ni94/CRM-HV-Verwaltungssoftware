@@ -9,7 +9,7 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy import func, select
 
 from mhvp.contacts.models import Contact, ContactEmail, ContactKind, ContactPhone
-from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.immoware import schemas as s
@@ -166,17 +166,24 @@ async def diagnose_connection(
         )
 
 
-@router.post("/sync/{kind}", summary="Abholung manuell anstossen")
+@router.post(
+    "/sync/{kind}",
+    summary="Abholung manuell anstossen",
+    responses={409: {"description": "Abholung dieser Art läuft bereits (MHVP-IMW-0005)"}},
+)
 async def trigger_sync(
     kind: SyncKind, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> dict[str, str]:
+    # Bewusst keine Request-Transaktion um den Abruf: ``run_sync`` oeffnet je Schritt eine
+    # eigene kurze Transaktion, damit waehrend der DAV-Aufrufe keine Sperren und kein Snapshot
+    # offen bleiben (Produktionsbefund 27.09.2026). Laeuft bereits ein Lauf gleicher Art,
+    # antwortet ``start_run`` mit 409 ``IMW_SYNC_RUNNING``.
+    run = await svc.run_sync(sessions(request), principal.tenant_id, kind)
     async with tenant_tx(request, principal) as session:
-        connection = await svc.require_connection(session)
-        run = await svc.run_sync(session, connection, kind)
         await _event(
             session, principal, f"immoware.sync_{kind.value}", run.id, status=run.status.value
         )
-        return {"run_id": str(run.id)}
+    return {"run_id": str(run.id)}
 
 
 @router.get("/sync/runs", summary="Letzte Synchronisationslaeufe")

@@ -5,6 +5,12 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.34.3 (27.09.2026) Gmail-Abruf NUL-Bytes, Immoware-Abholung ohne offene Transaktion, Ticketfilter eingeklappt
+
+- Gmail-Abruf (Betreibermeldung 27.09.2026, mailbox.last_error "PostgreSQL text fields cannot contain NUL (0x00) bytes"): eine Nachricht mit einem 0x00-Byte in Betreff, Text, Anhangname oder MIME-Typ blieb dauerhaft unimportiert und der Fehler stand am Postfach; Betreff, Text, HTML-Text, Kopfzeilen, Adressen, Anhangnamen und -typen sowie die JSONB-Felder Klassifikation und KI-Vorschlag werden jetzt über die neue zentrale Hilfsfunktion mhvp.core.text.strip_nul/clean_json bereinigt (ebenso der aus dem Rohtext gewonnene Volltext des .eml-Dokuments); der Postfachabruf lief schon vorher fehlertolerant je Nachricht weiter.
+- Tickets: Filter sind standardmäßig eingeklappt, sichtbar bleibt nur die Suchleiste; "Weitere Filter" (mit Anzahl aktiver Filter) klappt alle Filter aus (Betreiberwunsch 27.09.2026).
+- Immoware24: Abholung (WebDAV, CardDAV, CalDAV) hält während der HTTP-Aufrufe keine Datenbanktransaktion mehr offen, Laufzeile wird sofort gespeichert, Ergebnisse in Batches zu 50 übernommen, Fehler setzen den Lauf auf fehlgeschlagen; Doppelläufe je Mandant und Art sind gesperrt (409 MHVP-IMW-0005), verwaiste Läufe werden nach 2 Stunden geschlossen (Produktionsbefund 27.09.2026, blockierte Migration 0156).
+
 ## 1.34.2 (27.09.2026) Betrieb: Beszel-Variablen optional
 
 - Betrieb: Beszel-Agent-Variablen (BESZEL_AGENT_KEY, BESZEL_AGENT_TOKEN) sind optional, ein leerer Wert blockiert den Stack nicht mehr (Deploy 1.34.1 scheiterte daran).
