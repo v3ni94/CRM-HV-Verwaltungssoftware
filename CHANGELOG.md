@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.35.1 (27.09.2026) Startfehler nach dem Update behoben
+
+- Startfehler behoben (Betreibermeldung 27.09.2026): Nach dem Update auf 1.35.0 zeigte jeder Browser, der das CRM vorher genutzt hatte, nur "Application error", weil der Menüzustand aus 1.34.x in einem anderen Format im Browser gespeichert war; das Hauptmenü liest den alten Wert jetzt fehlertolerant und startet dann eingeklappt.
+
 ## 1.35.0 (27.09.2026) Bankanbindung FinTS, Heizkosten, Steuern, Aufbewahrung, WEG-Einladung, Vollimport Verträge und 40 weitere Module
 
 - Betrieb: Restore-Übung (infra/scripts/restore-drill.sh) mit Protokoll unter docs/reviews, SSH-Härtungsvorschlag (infra/hardening), GoBD-Verfahrensdokumentation als Entwurf und Parallelbetriebsplan Immoware24 (Migration 0179 No-op).

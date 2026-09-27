@@ -24,6 +24,17 @@ function readJSON<T>(key: string, fallback: T): T {
   }
 }
 
+/** Open menu groups as a list of labels. Versions up to 1.34.x stored an object under the same
+ *  key (label -> collapsed); any value that is not an array of strings is ignored instead of
+ *  crashing the whole layout (production incident 27.09.2026, 1.35.1). */
+function asGroupList(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : [];
+}
+
+function readGroupList(key: string): string[] {
+  return asGroupList(readJSON<unknown>(key, []));
+}
+
 function writeJSON(key: string, value: unknown) {
   try {
     window.localStorage.setItem(key, JSON.stringify(value));
@@ -75,7 +86,8 @@ export function SideNav({
   const hasActive = (g: NavGroup) => g.items.some((item) => active(item.href));
 
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
-    const initial = initialExpandedGroups ?? readJSON<string[]>(STORAGE_KEY, []);
+    const initial =
+      initialExpandedGroups !== undefined ? asGroupList(initialExpandedGroups) : readGroupList(STORAGE_KEY);
     return Object.fromEntries(initial.map((l) => [l, true]));
   });
   const [railCollapsed, setRailCollapsed] = useState(false);
@@ -84,9 +96,9 @@ export function SideNav({
   }))[0];
   useEffect(() => {
     if (initialExpandedGroups === undefined) {
-      setExpanded(Object.fromEntries(readJSON<string[]>(STORAGE_KEY, []).map((l) => [l, true])));
+      setExpanded(Object.fromEntries(readGroupList(STORAGE_KEY).map((l) => [l, true])));
     }
-    setRailCollapsed(readJSON(RAIL_KEY, false));
+    setRailCollapsed(readJSON<unknown>(RAIL_KEY, false) === true);
     // Only on mount: initialExpandedGroups is the server value for this render and must not be
     // re-applied after the user has toggled a group.
     // eslint-disable-next-line react-hooks/exhaustive-deps

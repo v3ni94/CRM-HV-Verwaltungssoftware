@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.35.1",
+    date: "27.09.2026",
+    title: "Startfehler nach dem Update behoben",
+    changes: [
+      "Startfehler behoben (Betreibermeldung 27.09.2026): Nach dem Update auf 1.35.0 zeigte jeder Browser, der das CRM vorher genutzt hatte, nur \"Application error\", weil der Menüzustand aus 1.34.x in einem anderen Format im Browser gespeichert war; das Hauptmenü liest den alten Wert jetzt fehlertolerant und startet dann eingeklappt.",
+    ],
+  },
+  {
     version: "1.35.0",
     date: "27.09.2026",
     title: "Bankanbindung FinTS, Heizkosten, Steuern, Aufbewahrung, WEG-Einladung, Vollimport Verträge und 40 weitere Module",
