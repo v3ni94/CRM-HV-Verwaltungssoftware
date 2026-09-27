@@ -165,6 +165,17 @@ Verträge ändern erhalten einmalig eine Benachrichtigung. Die Berechnung ersetz
 rechtliche Fristprüfung am Vertragsdokument; Kündigungen sind vor Abgabe mit der
 Geschäftsführung abzustimmen und werden nicht über die Plattform erklärt.
 
+## Bemerkungen und Mahnsperre direkt bearbeiten
+
+Der Abschnitt Bemerkungen und Mahnsperre auf der Vertragsseite wird an Ort und Stelle
+geändert (Recht Verträge ändern) und erzeugt keine neue Vertragsversion. Wird die Mahnsperre
+gesetzt, ist eine Begründung Pflicht; die Sperre wird erst zusammen mit der Begründung
+gespeichert. Alle übrigen Vertragsdaten (Laufzeit, Parteien, Sollbeträge, Zahlungsplan)
+bleiben versioniert und werden über Bearbeiten als neue Version erfasst. Die
+Verknüpfungsleiste unter dem Kopf führt zu Objekt, Einheit, Vertragspartner, Buchhaltung und
+Tickets der Einheit; das Ereignisprotokoll am Seitenende zeigt jede Änderung mit altem und
+neuem Wert (Recht audit:read).
+
 ## Verweise
 
 - Kapitel Buchhaltung: Sollstellungslauf, offene Posten, Mahnwesen.

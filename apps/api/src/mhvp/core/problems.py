@@ -13,6 +13,7 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
+from pydantic import ValidationError as PydanticValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from mhvp.core.context import get_correlation_id
@@ -401,6 +402,25 @@ class ErrorCodes:
         "Verbindung pausiert",
         "The connection is paused; no test and no sync until it is active again.",
     )
+    # Controlled write workflows (section 12).
+    METERING_TRANSMISSION_STATE = ErrorCode(
+        "MHVP-METR-0011",
+        409,
+        "Übermittlung in diesem Status nicht möglich",
+        "The transmission is not in the status required for this step (check, release, order).",
+    )
+    METERING_RELEASE_INVALIDATED = ErrorCode(
+        "MHVP-METR-0012",
+        409,
+        "Freigabe entwertet, Daten erneut prüfen",
+        "The checked payload or a relevant assignment changed; the fingerprint no longer matches.",
+    )
+    METERING_WARNINGS_UNACKNOWLEDGED = ErrorCode(
+        "MHVP-METR-0013",
+        422,
+        "Warnungen wurden nicht bestätigt",
+        "Provider or local warnings must be acknowledged explicitly before the release.",
+    )
 
 
 def _build_registry() -> dict[str, ErrorCode]:
@@ -561,3 +581,11 @@ def install_problem_handlers(app: FastAPI) -> None:
     app.add_exception_handler(ProblemError, _handle_problem)
     app.add_exception_handler(RequestValidationError, _handle_validation)
     app.add_exception_handler(StarletteHTTPException, _handle_http)
+
+
+def body_validation_error(exc: PydanticValidationError) -> RequestValidationError:
+    """Turns a pydantic error raised inside a handler (e.g. validating a merged partial update
+    against the full schema) into the same 422 problem a request body error produces."""
+    return RequestValidationError(
+        [{**item, "loc": ("body", *item.get("loc", ()))} for item in exc.errors()]
+    )

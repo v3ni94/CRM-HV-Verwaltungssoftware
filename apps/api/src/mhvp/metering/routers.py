@@ -3,7 +3,10 @@
 Permissions (section 9): ``metering_connections:manage`` (credentials, connections),
 ``metering_assignments:update`` (property and unit assignments, clearing, import),
 ``metering_sync:run`` (manual fetch), ``metering_data:read`` (everything readable),
-``metering_users:submit`` and ``metering_billing:order`` (reserved, no endpoint in stage 1).
+``metering_users:submit`` (user and role submission workflow) and ``metering_billing:order``
+(billing input workflow). "Daten prüfen" (``POST /transmissions/check``) and the binding
+order (``POST /transmissions/{id}/order``) are separate endpoints (section 12); a release in
+between (``/release``) is tied to the payload fingerprint.
 Every write endpoint is additionally locked by ``tenant_settings.metering_module_enabled``.
 Secrets are accepted on create and on ``PUT .../secrets`` only and are never returned.
 """
@@ -30,7 +33,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.escaping import content_disposition
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.metering import csv_io, services
+from mhvp.metering import csv_io, services, transmissions
 from mhvp.metering.models import (
     AssignmentStatus,
     ClearingStatus,
@@ -44,10 +47,12 @@ from mhvp.metering.models import (
     MeteringExternalBillingUnit,
     MeteringPropertyAssignment,
     MeteringSyncJob,
+    MeteringTransmission,
     MeteringUnitAssignment,
     OccupancyStatus,
     ServiceScope,
     SyncStatus,
+    TransmissionKind,
 )
 from mhvp.metering.providers import (
     DOCUMENTED_SUPPORT_LABELS,
@@ -147,6 +152,11 @@ class ConnectionPatch(_In):
     config: dict[str, Any] | None = None
     account_release: dict[str, bool] | None = None
     scheduled_sync_enabled: bool | None = None
+    write_sync_enabled: bool | None = Field(
+        default=None,
+        description="Freigabe der kontrollierten schreibenden Vorgänge (Rollen, Billing Input) "
+        "für diese Verbindung; Standard aus.",
+    )
 
 
 class SecretsIn(_In):
@@ -1153,3 +1163,194 @@ async def export_assignments(
             )
         },
     )
+
+
+# Controlled write workflows (section 12) ---------------------------------------------------
+
+
+async def _transmission_writer(principal: TenantPrincipal = Depends(READ)) -> TenantPrincipal:
+    """Dependency: any of the transmission write rights before the body is parsed, so a
+    reader gets 403 and never a body validation error (D50 matrix)."""
+    if not any(principal.has(p) for p in set(transmissions.KIND_PERMISSION.values())):
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing transmission right.")
+    return principal
+
+
+def _require_kind_permission(principal: TenantPrincipal, kind: str) -> None:
+    permission = transmissions.KIND_PERMISSION[kind]
+    if not principal.has(permission):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, developer_message=f"Missing permission {permission}."
+        )
+
+
+class TransmissionCheckIn(_In):
+    assignment_id: uuid.UUID
+    kind: TransmissionKind
+    period_from: date | None = None
+    period_to: date | None = None
+    inputs: dict[str, Any] = Field(
+        default_factory=dict,
+        description="Billing Input: ancillary_invoices, heating_system_invoices, energy_sources, "
+        "allocations (je externer Nutzeinheit), currency und expectedvat als Ersatz, wenn keine "
+        "Anbietervorlage geladen werden kann.",
+    )
+
+
+class TransmissionStepIn(_In):
+    version: int
+    fingerprint: str = Field(min_length=64, max_length=64)
+    acknowledge_warnings: bool = False
+
+
+class TransmissionOut(BaseModel):
+    id: uuid.UUID
+    connection_id: uuid.UUID
+    property_assignment_id: uuid.UUID
+    kind: str
+    period_from: date | None
+    period_to: date | None
+    status: str
+    fingerprint: str
+    assignment_version: int
+    validation: dict[str, Any]
+    diff: dict[str, Any]
+    summary: dict[str, Any]
+    payload: dict[str, Any]
+    released_by: uuid.UUID | None
+    released_at: datetime | None
+    warnings_acknowledged: bool
+    ordered_by: uuid.UUID | None
+    ordered_at: datetime | None
+    provider_transaction_id: str | None
+    provider_response: dict[str, Any]
+    log: list[dict[str, Any]]
+    version: int
+    created_at: datetime
+
+
+def _transmission_out(row: MeteringTransmission) -> TransmissionOut:
+    return TransmissionOut(
+        id=row.id,
+        connection_id=row.connection_id,
+        property_assignment_id=row.property_assignment_id,
+        kind=row.kind,
+        period_from=row.period_from,
+        period_to=row.period_to,
+        status=row.status,
+        fingerprint=row.fingerprint,
+        assignment_version=row.assignment_version,
+        validation=row.validation,
+        diff=row.diff,
+        summary=transmissions.summarize(row),
+        payload=row.payload,
+        released_by=row.released_by,
+        released_at=row.released_at,
+        warnings_acknowledged=row.warnings_acknowledged,
+        ordered_by=row.ordered_by,
+        ordered_at=row.ordered_at,
+        provider_transaction_id=row.provider_transaction_id,
+        provider_response=row.provider_response,
+        log=row.log,
+        version=row.version,
+        created_at=row.created_at,
+    )
+
+
+@router.get("/transmissions", summary="Übermittlungen (Rollen, Abrechnungsdaten)")
+async def list_transmissions(
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+    assignment_id: uuid.UUID | None = None,
+    connection_id: uuid.UUID | None = None,
+    kind: TransmissionKind | None = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+) -> list[TransmissionOut]:
+    async with tenant_tx(request, principal) as session:
+        rows = await transmissions.list_for(
+            session,
+            assignment_id=assignment_id,
+            connection_id=connection_id,
+            kind=kind.value if kind else None,
+            limit=limit,
+        )
+        return [_transmission_out(r) for r in rows]
+
+
+@router.get("/transmissions/{transmission_id}", summary="Übermittlung lesen")
+async def get_transmission(
+    transmission_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> TransmissionOut:
+    async with tenant_tx(request, principal) as session:
+        return _transmission_out(await transmissions.get(session, transmission_id))
+
+
+@router.post(
+    "/transmissions/check",
+    status_code=201,
+    summary="Daten prüfen (keine Beauftragung, beim Anbieter nur VALIDATE)",
+)
+async def check_transmission(
+    body: TransmissionCheckIn, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> TransmissionOut:
+    _require_kind_permission(principal, body.kind.value)
+    async with tenant_tx(request, principal) as session:
+        await services.ensure_module_enabled(session, principal.tenant_id)
+        assignment = await services.get_assignment(session, body.assignment_id)
+        row = await transmissions.check(
+            session,
+            tenant_id=principal.tenant_id,
+            actor=principal.user_id,
+            assignment=assignment,
+            kind=body.kind.value,
+            period_from=body.period_from,
+            period_to=body.period_to,
+            inputs=body.inputs,
+        )
+        return _transmission_out(row)
+
+
+@router.post("/transmissions/{transmission_id}/release", summary="Geprüfte Daten freigeben")
+async def release_transmission(
+    transmission_id: uuid.UUID,
+    body: TransmissionStepIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(_transmission_writer),
+) -> TransmissionOut:
+    async with tenant_tx(request, principal) as session:
+        await services.ensure_module_enabled(session, principal.tenant_id)
+        row = await transmissions.get(session, transmission_id)
+        _require_kind_permission(principal, row.kind)
+        row = await transmissions.release(
+            session,
+            row,
+            actor=principal.user_id,
+            version=body.version,
+            given_fingerprint=body.fingerprint,
+            acknowledge_warnings=body.acknowledge_warnings,
+        )
+        return _transmission_out(row)
+
+
+@router.post(
+    "/transmissions/{transmission_id}/order",
+    summary="Verbindlich beauftragen (Abrechnung) beziehungsweise Rollen übermitteln",
+)
+async def order_transmission(
+    transmission_id: uuid.UUID,
+    body: TransmissionStepIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(_transmission_writer),
+) -> TransmissionOut:
+    async with tenant_tx(request, principal) as session:
+        await services.ensure_module_enabled(session, principal.tenant_id)
+        row = await transmissions.get(session, transmission_id)
+        _require_kind_permission(principal, row.kind)
+        row = await transmissions.order(
+            session,
+            row,
+            actor=principal.user_id,
+            version=body.version,
+            given_fingerprint=body.fingerprint,
+        )
+        return _transmission_out(row)

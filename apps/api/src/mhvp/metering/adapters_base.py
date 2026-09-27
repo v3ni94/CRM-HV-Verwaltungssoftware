@@ -25,6 +25,7 @@ from mhvp.metering.adapters import (
     ExternalBillingUnitData,
     FetchResult,
     TestOutcome,
+    WriteResult,
 )
 from mhvp.metering.http import (
     AuthFailedError,
@@ -203,12 +204,14 @@ class BvedAdapterBase:
             )
         elif family.function == Function.CONSUMPTION:
             http.get_json(bved.join(base, "/eedbillingunits/count"), auth=auth)
-        elif family.function == Function.BILLING_RESULT:
-            # No list without a billing unit in 1.0.3: obtaining the token is the check.
+        elif family.function in (Function.BILLING_RESULT, Function.ROLES, Function.BILLING_INPUT):
+            # No side effect free list without a billing unit (billing result 1.0.3, billing
+            # input 1.0.3) or without a residential unit (on-site roles 2.0.2): obtaining the
+            # token is the check. Nothing is posted (case 12).
             if isinstance(auth, OAuth2ClientCredentials):
                 http._bearer(auth)
-            else:  # pragma: no cover - billing result is OAuth 2 only
-                raise ProviderHttpError("Billing Result ist nur mit OAuth 2 dokumentiert.")
+            else:  # pragma: no cover - these families are OAuth 2 only
+                raise ProviderHttpError(f"{family.spec} ist nur mit OAuth 2 dokumentiert.")
 
     def fetch(
         self,
@@ -440,6 +443,80 @@ class BvedAdapterBase:
                 customer_number=customer_number,
                 residential_units=residential_units,
                 pm_number=None,
+            )
+
+    def fetch_billing_template(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        period_to: date,
+    ) -> dict[str, Any]:
+        if Function.BILLING_INPUT not in self.implemented:
+            raise NotImplementedError("Billing Input ist für diesen Anbieter nicht implementiert.")
+        self.check_environment(config, environment)
+        family = self._family(Function.BILLING_INPUT)
+        base = self.base_url(config, environment, family)
+        auth = self.auth_for(family, config, secrets, environment)
+        with self._http(config, secrets, environment) as http:
+            return bved.billing_input_template(
+                http, base, auth=auth, billing_unit=external_billing_unit, period_to=period_to
+            )
+
+    def send_billing_input(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        period_to: date,
+        payload: Mapping[str, Any],
+        action: str,
+    ) -> WriteResult:
+        if Function.BILLING_INPUT not in self.implemented:
+            raise NotImplementedError("Billing Input ist für diesen Anbieter nicht implementiert.")
+        self.check_environment(config, environment)
+        family = self._family(Function.BILLING_INPUT)
+        base = self.base_url(config, environment, family)
+        auth = self.auth_for(family, config, secrets, environment)
+        with self._http(config, secrets, environment) as http:
+            return bved.send_billing_input(
+                http,
+                base,
+                auth=auth,
+                billing_unit=external_billing_unit,
+                period_to=period_to,
+                payload=payload,
+                action=action,
+            )
+
+    def send_roles(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        external_unit_number: str,
+        payload: Mapping[str, Any],
+    ) -> WriteResult:
+        if Function.ROLES not in self.implemented:
+            raise NotImplementedError("On-Site Roles ist für diesen Anbieter nicht implementiert.")
+        self.check_environment(config, environment)
+        family = self._family(Function.ROLES)
+        base = self.base_url(config, environment, family)
+        auth = self.auth_for(family, config, secrets, environment)
+        with self._http(config, secrets, environment) as http:
+            return bved.send_on_site_roles(
+                http,
+                base,
+                auth=auth,
+                billing_unit=external_billing_unit,
+                residential_unit=external_unit_number,
+                payload=payload,
             )
 
 

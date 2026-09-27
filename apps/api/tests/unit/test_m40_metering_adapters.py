@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import json
 from collections.abc import Callable
+from datetime import date
 from decimal import Decimal
 from typing import Any
 
@@ -33,6 +34,8 @@ ISTA_CONFIG: dict[str, Any] = {
         "billing_result": "https://br.example.test",
         "consumption": "https://eed.example.test",
         "documents": "https://docs.example.test",
+        "roles": "https://roles.example.test",
+        "billing_input": "https://bi.example.test",
     },
     "token_url": "https://auth.example.test/oauth/token",
     "backoff_seconds": 0.5,
@@ -110,7 +113,8 @@ def test_real_adapters_registered_and_documented_functions_only() -> None:
     ista = adapter_for("ista", {})
     kalo = adapter_for("kalo", {})
     assert isinstance(ista, IstaAdapter) and isinstance(kalo, KaloAdapter)  # noqa: PT018
-    assert Function.ROLES not in ista.implemented and Function.BILLING_INPUT not in ista.implemented  # noqa: PT018
+    # write families from the bved zip files (on-site-roles 2.0.2, billing-input 1.0.3)
+    assert Function.ROLES in ista.implemented and Function.BILLING_INPUT in ista.implemented  # noqa: PT018
     # KALO: billing unit data and billing result are not documented on Q3 -> not implemented
     assert kalo.implemented == {Function.CONSUMPTION, Function.DOCUMENTS}
     assert "26.09.2026" in ista.spec_version and "26.09.2026" in kalo.spec_version  # noqa: PT018
@@ -140,6 +144,8 @@ def test_ista_test_connection_uses_oauth2_and_basic_per_family_and_is_read_only(
         "billing_result",
         "consumption",
         "documents",
+        "roles",
+        "billing_input",
     }
     assert "Objektzugriff" in result.detail
     assert all(r.method == "GET" for r in rec.requests if r.url.path != "/oauth/token")
@@ -635,6 +641,119 @@ def test_setup_submission_timeout_is_unclear_and_sent_exactly_once() -> None:
         )
     assert second.value.unclear is False and "502" in second.value.message  # noqa: PT018
     assert sum(1 for r in rec.requests if r.method == "POST" and "setup" in r.url.path) == 2
+
+
+def test_billing_input_validate_send_and_rejection_are_distinct_calls() -> None:
+    """Section 12 / Q11: VALIDATE (204) stores nothing, SEND (200) returns the transaction id,
+    a 400 carries the provider messages, a 409 means the input was already received."""
+    period = "2025-12-31"
+    path = f"/billinginput/v1/billingunits/000123456/billingperiods/{period}"
+    rec = Recorder(
+        {
+            "POST /oauth/token": _token,
+            f"GET {path}": _bearer(
+                {
+                    "currency": "EUR",
+                    "expectedvat": "GROSS",
+                    "energysources": [],
+                    "billingrecipients": [],
+                }
+            ),
+            f"POST {path}": [
+                httpx.Response(204),
+                httpx.Response(200, json={"transactionid": "BI-1"}),
+                httpx.Response(
+                    400,
+                    json={
+                        "messages": [
+                            {
+                                "type": "ERROR",
+                                "message": "Kostenschlüssel fehlt",
+                                "shortmessage": "E1",
+                            },
+                            {"type": "WARNING", "message": "Datum", "shortmessage": "W1"},
+                        ]
+                    },
+                ),
+                httpx.Response(409),
+            ],
+        }
+    )
+    adapter = rec.attach(IstaAdapter())
+    template = adapter.fetch_billing_template(
+        config=ISTA_CONFIG,
+        secrets=ISTA_SECRETS,
+        environment="test",
+        external_billing_unit="000123456",
+        period_to=date.fromisoformat(period),
+    )
+    assert template["currency"] == "EUR"
+    body = {"currency": "EUR", "expectedvat": "GROSS"}
+    common = {
+        "config": ISTA_CONFIG,
+        "secrets": ISTA_SECRETS,
+        "environment": "test",
+        "external_billing_unit": "000123456",
+        "period_to": date.fromisoformat(period),
+        "payload": body,
+    }
+    validated = adapter.send_billing_input(action="VALIDATE", **common)
+    assert validated.outcome == "validated" and validated.transaction_id is None  # noqa: PT018
+    sent = adapter.send_billing_input(action="SEND", **common)
+    assert sent.outcome == "accepted" and sent.transaction_id == "BI-1"  # noqa: PT018
+    rejected = adapter.send_billing_input(action="SEND", **common)
+    assert rejected.outcome == "rejected"
+    assert [m["type"] for m in rejected.messages] == ["error", "warning"]
+    assert len(rejected.errors) == 1 and len(rejected.warnings) == 1  # noqa: PT018
+    duplicate = adapter.send_billing_input(action="SEND", **common)
+    assert duplicate.outcome == "rejected" and "409" in duplicate.messages[0]["message"]  # noqa: PT018
+    posts = [r for r in rec.requests if r.method == "POST" and "billinginput" in r.url.path]
+    assert [r.url.params["action"] for r in posts] == ["VALIDATE", "SEND", "SEND", "SEND"]
+    assert all(r.headers["Authorization"] == f"Bearer {TOKEN}" for r in posts)
+    with pytest.raises(ProviderHttpError):
+        adapter.send_billing_input(action="DELETE_EVERYTHING", **common)
+
+
+def test_roles_submission_timeout_is_unclear_and_sent_exactly_once() -> None:
+    """Case 11 for On-Site Roles 2.0: one POST per residential unit, a timeout ends as
+    ``unclear`` without any repetition, a 5xx is a failure that is not repeated either."""
+    path = "/onsiteroles/v2/billingunits/000123456/residentialunits/0001/on-site-roles"
+    rec = Recorder(
+        {
+            "POST /oauth/token": _token,
+            f"POST {path}": [
+                httpx.ReadTimeout("gone"),
+                httpx.Response(200, json={"transactionid": "R-1"}),
+                httpx.Response(502),
+            ],
+        }
+    )
+    adapter = rec.attach(IstaAdapter())
+    common = {
+        "config": ISTA_CONFIG,
+        "secrets": ISTA_SECRETS,
+        "environment": "test",
+        "external_billing_unit": "000123456",
+        "external_unit_number": "0001",
+        "payload": {
+            "billingunitMscnumber": "000123456",
+            "residentialunitMscnumber": "0001",
+            "partners": [],
+        },
+    }
+    unclear = adapter.send_roles(**common)
+    assert unclear.outcome == "unclear"
+    assert sum(1 for r in rec.requests if r.method == "POST" and "on-site-roles" in r.url.path) == 1
+    assert rec.sleeps == []
+    accepted = adapter.send_roles(**common)
+    assert accepted.outcome == "accepted" and accepted.transaction_id == "R-1"  # noqa: PT018
+    with pytest.raises(ProviderHttpError) as excinfo:
+        adapter.send_roles(**common)
+    assert excinfo.value.unclear is False and "502" in excinfo.value.message  # noqa: PT018
+    assert sum(1 for r in rec.requests if r.method == "POST" and "on-site-roles" in r.url.path) == 3
+    # a configuration for the production environment never runs the test connection
+    with pytest.raises(Exception, match="nicht für diese Umgebung"):
+        adapter.send_roles(**{**common, "environment": "production"})
 
 
 def test_write_sync_is_not_offered_by_the_service_layer() -> None:

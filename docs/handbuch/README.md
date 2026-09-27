@@ -61,6 +61,7 @@ Datenübernahme und Importe
 System
 
 - [Einstellungen (Benutzer, Rollen, Postfächer mit Telefonassistenz, DMS, SLA, KI, Wissen, Telefonie, Portalformulare, Automatisierung, WEG, Kautionszinsen, DATEV)](einstellungen.md)
+- [Kataloge und benutzerdefinierte Felder](kataloge.md)
 - [Messdienstleister (Verbindungen, Einrichtungsassistent, Zuordnungsübersicht, CSV, Objektreiter, Einheitenzuordnung, Abruf)](messdienstleister.md)
 
 Die folgenden Abschnitte fassen die Grundfunktionen der Startseite zusammen; Einzelheiten zu

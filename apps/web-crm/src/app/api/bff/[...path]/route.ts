@@ -84,6 +84,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^contacts/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^contacts/${ID}/name$`) },
   { method: "PUT", pattern: new RegExp(`^contacts/${ID}$`) },
+  // Inline-Bearbeitung der Stammdaten (AP8, ADR 0012): Teilupdate je Feld mit If-Match.
+  { method: "PATCH", pattern: new RegExp(`^contacts/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^properties/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^buildings/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^units/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^contracts/${ID}/notes$`) },
   { method: "DELETE", pattern: new RegExp(`^contacts/${ID}$`) },
   {
     method: "GET",
@@ -425,6 +431,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^tickets/${ID}/proposals/(contact-change|${ID}/(accept|accept-and-reply|correct|reject|reply-draft))$`) },
   { method: "POST", pattern: /^tickets\/merge$/ },
   { method: "GET", pattern: new RegExp(`^properties/${ID}$`) },
+  // Kataloge und Zusatzfelder (P1 AP4, 4.11 und Anhang B): Pflege in den Einstellungen.
+  { method: "GET", pattern: /^catalogs$/ },
+  { method: "GET", pattern: /^catalogs\/[a-z][a-z0-9_]{0,62}$/ },
+  { method: "POST", pattern: /^catalogs\/[a-z][a-z0-9_]{0,62}$/ },
+  { method: "PATCH", pattern: new RegExp(`^catalogs/[a-z][a-z0-9_]{0,62}/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^catalogs/[a-z][a-z0-9_]{0,62}/${ID}$`) },
+  { method: "GET", pattern: /^custom-fields$/ },
+  { method: "POST", pattern: /^custom-fields$/ },
+  { method: "PATCH", pattern: new RegExp(`^custom-fields/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^custom-fields/${ID}$`) },
   // Energieausweis am Objekt (A63): Objektstammdaten vollständig speichern.
   { method: "PUT", pattern: new RegExp(`^properties/${ID}$`) },
   // Zuweiser mit Grund (operator 25.09.2026, mail-optimierung M20).

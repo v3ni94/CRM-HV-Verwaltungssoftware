@@ -68,6 +68,18 @@ export function ConnectionsAdmin({
     upsert(res.data);
   }
 
+  async function toggleWrite(c: MeteringConnection) {
+    setBusy(c.id);
+    setError(null);
+    const res = await bff<MeteringConnection>(`/api/bff/metering/connections/${c.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ version: c.version, write_sync_enabled: !c.write_sync_enabled }),
+    });
+    setBusy(null);
+    if (!res.ok) return setError(res.message);
+    upsert(res.data);
+  }
+
   async function saveSecrets(c: MeteringConnection) {
     const secrets = Object.fromEntries(secretRows.filter((r) => r.name.trim()).map((r) => [r.name.trim(), r.value]));
     setBusy(c.id);
@@ -172,6 +184,9 @@ export function ConnectionsAdmin({
                     </button>
                     <button type="button" className={ui.buttonSm} disabled={busy === c.id} onClick={() => toggleStatus(c)}>
                       {c.status === "active" ? t("connection.pause") : t("connection.activate")}
+                    </button>
+                    <button type="button" className={ui.buttonSm} disabled={busy === c.id} onClick={() => toggleWrite(c)} title={t("connection.writeHint")}>
+                      {c.write_sync_enabled ? t("connection.writeLock") : t("connection.writeRelease")}
                     </button>
                     <button type="button" className={ui.buttonSm} onClick={() => setSecretsFor(secretsFor === c.id ? null : c.id)}>
                       {t("connection.replaceSecrets")}

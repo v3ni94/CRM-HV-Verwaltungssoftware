@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.30.0",
+    date: "27.09.2026",
+    title:
+      "Masterprompt-Ergänzung Welle B: Inline-Bearbeitung, Objekt- und Gebäudeseiten, Kataloge, Messdienstleister Stufe 3",
+    changes: [
+      "Stammdaten direkt bearbeiten (ADR 0012): Objekt, Gebäude, Einheit und Kontakt werden an Ort und Stelle mit Stift oder Bearbeiten je Abschnitt geändert, Speichern je Feld beim Verlassen mit sichtbarem Speicherstatus, Feldfehlern, Versionsprüfung und Konflikthinweis; beim Vertrag Bemerkungen und Mahnsperre mit Begründungspflicht, alles Übrige bleibt versioniert über das Vertragsformular; PATCH-Endpunkte für Objekt, Gebäude, Einheit, Kontakt und Vertragsbemerkungen mit Ereignisprotokoll und Änderungsdiff",
+      "Objekt-, Gebäude- und Einheitenseiten: neue Gebäudeseite mit Energieausweis, Anzeige von Eigentümerdetails (Verrechnungskonto, Vollmacht, Steuerberater), Abrechnungszeiträumen, Untergemeinschaften, Objektmappe, Dienstleistern mit Freistellungsbescheinigung, Leerstandswerten und Zählerwechseln; Verknüpfungsleiste und Ereignisprotokoll auf Objekt, Gebäude, Einheit, Kontakt und Vertrag",
+      "Kataloge und benutzerdefinierte Felder (4.11, Anhang B): alle Auswahllisten je Mandant als Systemeinträge mit Erweiterung und Deaktivierung, Zusatzfelder mit Gruppe, Gültigkeit, Eindeutigkeit, Min und Max, Standardwert und Feldtypen, neue Einstellungsseiten Kataloge und Felder (Migration 0152)",
+      "Messdienstleister Stufe 3: kontrollierte schreibende Vorgänge mit getrennten Schritten Daten prüfen, Freigeben und Abrechnung verbindlich beauftragen beziehungsweise Nutzer und Rollen verbindlich übermitteln (On-Site Roles 2.0 mit vollständigem Datensatz je Nutzeinheit, Billing Input mit Anbietervorlage und Anbieterprüfung), Datenversion entwertet Freigaben bei jeder Änderung, Protokoll je Schritt, Zeitüberschreitung ohne Wiederholung; Freigabe je Verbindung, Modulschalter in den Mandanteneinstellungen, Anbieterwechsel und Einheitenbearbeitung im Objektreiter (Migration 0153)",
+    ],
+  },
+  {
     version: "1.29.0",
     date: "27.09.2026",
     title:

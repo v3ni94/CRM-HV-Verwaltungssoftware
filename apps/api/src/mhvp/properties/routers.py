@@ -1,4 +1,5 @@
-"""Property endpoints (/api/v1/properties, units, buildings, meters, catalogues)."""
+"""Property endpoints (/api/v1/properties, units, buildings, meters; catalogues and custom
+fields live in routers_catalogs.py)."""
 
 import uuid
 from collections.abc import Sequence
@@ -28,8 +29,6 @@ from mhvp.properties.models import (
     AllocationKeyTemplate,
     BankAccountKind,
     Building,
-    CatalogEntry,
-    CustomFieldDefinition,
     LegalEntity,
     MaintenanceItem,
     ManagementType,
@@ -1730,37 +1729,7 @@ async def add_meter_change(
         return s.MeterChangeOut.model_validate(row)
 
 
-# Catalogues, templates, custom fields ---------------------------------------------------
-
-
-@router.get("/catalogs/{catalog}", summary="Katalog")
-async def list_catalog(
-    catalog: str, request: Request, principal: TenantPrincipal = Depends(READ)
-) -> list[s.CatalogEntryOut]:
-    async with tenant_tx(request, principal) as session:
-        rows = (
-            await session.scalars(
-                select(CatalogEntry)
-                .where(CatalogEntry.catalog == catalog)
-                .order_by(CatalogEntry.sort_order)
-            )
-        ).all()
-        return [s.CatalogEntryOut.model_validate(c) for c in rows]
-
-
-@router.post("/catalogs/{catalog}", status_code=201, summary="Katalogeintrag anlegen")
-async def add_catalog_entry(
-    catalog: str,
-    body: s.CatalogEntryIn,
-    request: Request,
-    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
-) -> s.CatalogEntryOut:
-    async with tenant_tx(request, principal) as session:
-        row = CatalogEntry(tenant_id=principal.tenant_id, catalog=catalog, **body.model_dump())
-        session.add(row)
-        await _unique(session, f"Eintrag {body.code} existiert bereits.")
-        await session.refresh(row)
-        return s.CatalogEntryOut.model_validate(row)
+# Templates (catalogues and custom fields: routers_catalogs.py) ----------------------------
 
 
 @router.get("/allocation-key-templates", summary="Muster Umlageschlüssel")
@@ -1784,32 +1753,3 @@ async def list_templates(
             )
             for t in rows
         ]
-
-
-@router.get("/custom-fields", summary="Zusatzfelder")
-async def list_custom_fields(
-    request: Request, principal: TenantPrincipal = Depends(READ)
-) -> list[s.CustomFieldOut]:
-    async with tenant_tx(request, principal) as session:
-        rows = (
-            await session.scalars(
-                select(CustomFieldDefinition).order_by(
-                    CustomFieldDefinition.entity_type, CustomFieldDefinition.key
-                )
-            )
-        ).all()
-        return [s.CustomFieldOut.model_validate(c) for c in rows]
-
-
-@router.post("/custom-fields", status_code=201, summary="Zusatzfeld definieren")
-async def add_custom_field(
-    body: s.CustomFieldIn,
-    request: Request,
-    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
-) -> s.CustomFieldOut:
-    async with tenant_tx(request, principal) as session:
-        row = CustomFieldDefinition(tenant_id=principal.tenant_id, **body.model_dump())
-        session.add(row)
-        await _unique(session, f"Zusatzfeld {body.key} existiert bereits.")
-        await session.refresh(row)
-        return s.CustomFieldOut.model_validate(row)

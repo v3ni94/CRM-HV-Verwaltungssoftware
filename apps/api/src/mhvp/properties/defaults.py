@@ -8,6 +8,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.properties.catalogs import ANNEX_B_CATALOGS
 from mhvp.properties.models import AllocationKeyTemplate, AllocationKind, CatalogEntry
 
 # Section 6.2 (meter) and annex A.3 (Zählerarten).
@@ -55,11 +56,13 @@ PAYMENT_TYPES: tuple[tuple[str, str], ...] = (
     ("other", "Sonstige"),
 )
 REDUCTION_PAYMENT_TYPES = frozenset({"rent_reduction"})
+# All seeded entries are system entries (AP4): the M4 lists plus annex B (catalogs.py).
 CATALOGS: dict[str, tuple[tuple[str, str], ...]] = {
     "payment_type": PAYMENT_TYPES,
     "meter_type": METER_TYPES,
     "provider_contract_type": PROVIDER_CONTRACT_TYPES,
     "property_contact_category": PROPERTY_CONTACT_CATEGORIES,
+    **{k: v for k, v in ANNEX_B_CATALOGS.items() if k != "payment_type"},
 }
 
 S, C, F, FS = (
@@ -113,6 +116,7 @@ async def ensure_tenant_defaults(session: AsyncSession, tenant_id: uuid.UUID) ->
                         code=code,
                         label=label,
                         sort_order=order,
+                        is_system=True,
                     )
                 )
     existing_keys = set((await session.scalars(select(AllocationKeyTemplate.code))).all())

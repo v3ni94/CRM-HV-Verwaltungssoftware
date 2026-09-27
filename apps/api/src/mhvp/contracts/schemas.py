@@ -92,6 +92,15 @@ class ContractIn(_In):
         return self
 
 
+class ContractNotesPatch(_In):
+    """Inline editing of a contract (AP8, operator decision (c) 4): only remarks and the
+    dunning block change in place; payments and terms stay versioned (7.4)."""
+
+    notes: str | None = None
+    dunning_block: bool | None = None
+    dunning_block_reason: str | None = None
+
+
 class ContractVersionIn(_In):
     effective_date: date
     direct_debit: bool | None = None

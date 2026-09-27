@@ -17,6 +17,13 @@ export type CurrentOwner = {
   share_percent: string | null;
   valid_from: string;
   valid_to: string | null;
+  legal_entity_id?: string | null;
+  /** AP2: Verrechnungskonto, Vollmacht und Steuerberater; die Namen löst die Seite auf. */
+  clearing_account_id?: string | null;
+  clearing_account_label?: string | null;
+  power_of_attorney_document_id?: string | null;
+  tax_advisor_contact_id?: string | null;
+  tax_advisor_name?: string | null;
 };
 
 type Hit = { id: string; display_name: string };
@@ -179,6 +186,24 @@ export function PropertyOwnerPanel({
                   {t("share", { share: share(o.share_percent) ?? "" })}
                 </span>
               ) : null}
+              <span className="basis-full text-xs text-muted" data-testid="owner-details">
+                {t("clearingAccount")}: {o.clearing_account_label ?? o.clearing_account_id ?? t("noDetail")}, {t("powerOfAttorney")}:{" "}
+                {o.power_of_attorney_document_id ? (
+                  <Link href={`/dokumente/${o.power_of_attorney_document_id}`} className="hover:underline">
+                    {t("openDocument")}
+                  </Link>
+                ) : (
+                  t("noDetail")
+                )}
+                , {t("taxAdvisor")}:{" "}
+                {o.tax_advisor_contact_id ? (
+                  <Link href={`/kontakte/${o.tax_advisor_contact_id}`} className="hover:underline">
+                    {o.tax_advisor_name ?? o.tax_advisor_contact_id}
+                  </Link>
+                ) : (
+                  t("noDetail")
+                )}
+              </span>
             </li>
           ))}
         </ul>

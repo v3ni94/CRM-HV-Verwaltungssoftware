@@ -6,6 +6,7 @@ from datetime import UTC, datetime
 from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from pydantic import BaseModel, ValidationError
 from sqlalchemy import case, func, or_, select
 
 from mhvp.ai.examples import delete_examples_for_contact
@@ -27,7 +28,7 @@ from mhvp.contacts.models import (
 from mhvp.contacts.validation import mask_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import diff, emit
-from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.problems import ErrorCodes, ProblemError, body_validation_error
 
 router = APIRouter(tags=["Kontakte"])
 
@@ -275,6 +276,86 @@ async def replace_contact(
             for key in ("addresses", "phones", "emails", "identifiers", "bank_accounts"):
                 doc[key] = [{k: v for k, v in item.items() if k != "id"} for item in doc[key]]
         changes = diff(old, new)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contact.updated",
+            entity_type="contact",
+            entity_id=contact.id,
+            actor_user_id=principal.user_id,
+            payload={"fields": sorted(changes)},
+            changes=changes,
+        )
+        response.headers["ETag"] = f'"{after.version}"'
+        return after
+
+
+_CHILD_IN: dict[str, type[BaseModel]] = {
+    "addresses": schemas.AddressIn,
+    "phones": schemas.PhoneIn,
+    "emails": schemas.EmailIn,
+    "identifiers": schemas.IdentifierIn,
+    "dates": schemas.ContactDateIn,
+}
+_MASTER_ONLY = {
+    "id",
+    "display_name",
+    "blocked_at",
+    "delete_after",
+    "bank_accounts",
+    "version",
+    "created_at",
+    "updated_at",
+    "deleted_at",
+}
+
+
+def _as_input(current: schemas.ContactOut, patch: schemas.ContactPatch) -> schemas.ContactIn:
+    """Current contact plus the patched fields as ``ContactIn`` so that the same validators
+    apply as on ``PUT`` (names per kind, language, lengths)."""
+    data: dict[str, Any] = current.model_dump(exclude=_MASTER_ONLY)
+    for key, model in _CHILD_IN.items():
+        data[key] = [
+            {k: v for k, v in item.items() if k in model.model_fields} for item in data[key]
+        ]
+    data["bank_accounts"] = None  # unchanged; the search text keeps the stored IBAN suffixes
+    data.update(patch.model_dump(exclude_unset=True))
+    try:
+        return schemas.ContactIn.model_validate(data)
+    except ValidationError as exc:
+        raise body_validation_error(exc) from None
+
+
+@router.patch("/contacts/{contact_id}", summary="Kontakt teilweise ändern (Stammdaten, If-Match)")
+async def patch_contact(
+    contact_id: uuid.UUID,
+    body: schemas.ContactPatch,
+    request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> schemas.ContactOut:
+    async with tenant_tx(request, principal) as session:
+        contact = await _active(session, contact_id)
+        if if_match is not None and if_match.strip('"') != str(contact.version):
+            raise ProblemError(ErrorCodes.VERSION_CONFLICT)
+        before = await services.load(session, contact_id)
+        if before is None:  # pragma: no cover - loaded in this transaction
+            raise _not_found()
+        merged = _as_input(before, body)
+        services.apply_fields(contact, merged, await services.iban_suffixes(session, contact_id))
+        if "retention_profile_id" in body.model_fields_set:
+            await services.apply_retention(session, contact, body.retention_profile_id)
+        contact.version += 1
+        contact.updated_by = principal.user_id
+        after = await services.load(session, contact_id)
+        if after is None:  # pragma: no cover - loaded in this transaction
+            raise _not_found()
+        ignore = {"version", "updated_at", "created_at"}
+        changes = diff(
+            before.model_dump(mode="json", exclude=ignore),
+            after.model_dump(mode="json", exclude=ignore),
+        )
         await emit(
             session,
             tenant_id=principal.tenant_id,

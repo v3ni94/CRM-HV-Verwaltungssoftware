@@ -27,6 +27,7 @@ import { ui } from "@/lib/ui";
 import { AssignmentWizard } from "./AssignmentWizard";
 import { AssignmentsTable, STATUS_VARIANT } from "./AssignmentsTable";
 import { MeteringDisabledNotice } from "./MeteringDisabledNotice";
+import { TransmissionWorkflow } from "./TransmissionWorkflow";
 
 /** Object tab "Messdienstleister" (sections 5, 7, 10, 11): assignments of this property with
  *  HVM number, provider, account, external number, scope, validity, status and last successful
@@ -41,6 +42,8 @@ export function PropertyMeteringTab({ property, permissions }: { property: Prope
   const canRead = permissions.includes("metering_data:read");
   const canUpdate = permissions.includes("metering_assignments:update");
   const canSync = permissions.includes("metering_sync:run");
+  const canSubmitUsers = permissions.includes("metering_users:submit");
+  const canOrderBilling = permissions.includes("metering_billing:order");
   const [enabled, setEnabled] = useState<boolean | null>(null);
   const [connections, setConnections] = useState<MeteringConnection[]>([]);
   const [units, setUnits] = useState<PropertyUnit[]>([]);
@@ -108,8 +111,11 @@ export function PropertyMeteringTab({ property, permissions }: { property: Prope
           assignment={selected}
           connection={connections.find((c) => c.id === selected.connection_id)}
           units={units}
+          connections={connections}
           canUpdate={canUpdate && enabled !== false}
           canSync={canSync && enabled !== false}
+          canSubmitUsers={canSubmitUsers && enabled !== false}
+          canOrderBilling={canOrderBilling && enabled !== false}
           onChanged={(a) => {
             setSelected(a);
             setReloadKey((k) => k + 1);
@@ -123,16 +129,22 @@ export function PropertyMeteringTab({ property, permissions }: { property: Prope
 function AssignmentDetail({
   assignment,
   connection,
+  connections,
   units,
   canUpdate,
   canSync,
+  canSubmitUsers,
+  canOrderBilling,
   onChanged,
 }: {
   assignment: Assignment;
   connection: MeteringConnection | undefined;
+  connections: MeteringConnection[];
   units: PropertyUnit[];
   canUpdate: boolean;
   canSync: boolean;
+  canSubmitUsers: boolean;
+  canOrderBilling: boolean;
   onChanged: (a: Assignment) => void;
 }) {
   const t = useTranslations("Metering");
@@ -147,6 +159,9 @@ function AssignmentDetail({
   const [busy, setBusy] = useState(false);
   const [basis, setBasis] = useState("");
   const [newUnit, setNewUnit] = useState({ unit_id: "", external_unit_number: "", valid_from: assignment.valid_from, occupancy_status: "unclear" });
+  const [providerChange, setProviderChange] = useState<{ change_date: string; new_connection_id: string; new_external_number: string } | null>(null);
+  const [providerChangeDone, setProviderChangeDone] = useState(false);
+  const [editUnit, setEditUnit] = useState<{ id: string; occupancy_status: string; valid_to: string } | null>(null);
 
   const loadUnits = useCallback(async () => {
     const res = await bff<UnitAssignment[]>(`/api/bff/metering/assignments/${assignment.id}/units`);
@@ -220,6 +235,40 @@ function AssignmentDetail({
     setBusy(false);
     if (!res.ok) return setError(res.message);
     setNewUnit({ ...newUnit, unit_id: "", external_unit_number: "" });
+    await loadUnits();
+  }
+
+  async function changeProvider() {
+    if (!providerChange) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ previous: Assignment; current: Assignment }>(`/api/bff/metering/assignments/${assignment.id}/change-provider`, {
+      method: "POST",
+      body: JSON.stringify({
+        version: assignment.version,
+        change_date: providerChange.change_date,
+        new_connection_id: providerChange.new_connection_id,
+        new_external_number: providerChange.new_external_number.trim(),
+      }),
+    });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    setProviderChange(null);
+    setProviderChangeDone(true);
+    onChanged(res.data.current);
+  }
+
+  async function saveUnit(row: UnitAssignment) {
+    if (!editUnit) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff<UnitAssignment>(`/api/bff/metering/unit-assignments/${row.id}`, {
+      method: "PATCH",
+      body: JSON.stringify({ version: row.version, occupancy_status: editUnit.occupancy_status, valid_to: editUnit.valid_to || null }),
+    });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    setEditUnit(null);
     await loadUnits();
   }
 
@@ -328,11 +377,54 @@ function AssignmentDetail({
                   {t("detail.archive")}
                 </button>
               ) : null}
+              {assignment.status !== "archived" && !providerChange ? (
+                <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => setProviderChange({ change_date: "", new_connection_id: "", new_external_number: "" })} data-testid="provider-change-open">
+                  {t("providerChange.open")}
+                </button>
+              ) : null}
             </div>
             <p className={ui.help}>{t("detail.confirmHint")}</p>
+            {providerChangeDone ? <p className={ui.success}>{t("providerChange.done")}</p> : null}
+            {providerChange ? (
+              <div className="mt-2 flex flex-col gap-2 rounded-md border border-border p-3" data-testid="provider-change">
+                <h4 className="text-sm font-semibold">{t("providerChange.title")}</h4>
+                <p className={ui.help}>{t("providerChange.hint")}</p>
+                <div className="grid gap-2 md:grid-cols-3">
+                  <label className="flex flex-col gap-1">
+                    <span className={ui.label}>{t("providerChange.changeDate")}</span>
+                    <input className={ui.input} type="date" value={providerChange.change_date} onChange={(e) => setProviderChange({ ...providerChange, change_date: e.target.value })} />
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className={ui.label}>{t("providerChange.newConnection")}</span>
+                    <select className={ui.input} value={providerChange.new_connection_id} onChange={(e) => setProviderChange({ ...providerChange, new_connection_id: e.target.value })}>
+                      <option value="">{t("assignment.choose")}</option>
+                      {connections.map((c) => (
+                        <option key={c.id} value={c.id}>
+                          {c.display_name} ({c.provider_code}, {t(`environment.${c.environment}`)})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className={ui.label}>{t("providerChange.newExternalNumber")}</span>
+                    <input className={`${ui.input} font-mono`} value={providerChange.new_external_number} maxLength={64} onChange={(e) => setProviderChange({ ...providerChange, new_external_number: e.target.value })} />
+                  </label>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" className={ui.primary} disabled={busy || !providerChange.change_date || !providerChange.new_connection_id || !providerChange.new_external_number.trim()} onClick={changeProvider} data-testid="provider-change-submit">
+                    {t("providerChange.submit")}
+                  </button>
+                  <button type="button" className={ui.buttonSm} onClick={() => setProviderChange(null)}>
+                    {t("cancel")}
+                  </button>
+                </div>
+              </div>
+            ) : null}
           </div>
         ) : null}
       </section>
+
+      <TransmissionWorkflow assignment={assignment} connection={connection} canSubmitUsers={canSubmitUsers} canOrderBilling={canOrderBilling} onOrdered={() => onChanged(assignment)} />
 
       <section className={ui.card} data-testid="fetch-actions">
         <h3 className={ui.subtitle}>{t("fetch.title")}</h3>
@@ -378,31 +470,72 @@ function AssignmentDetail({
                 <th>{t("unit.currentOccupants")}</th>
                 <th>{t("table.validity")}</th>
                 <th>{t("table.status")}</th>
+                {canUpdate ? <th /> : null}
               </tr>
             </thead>
             <tbody>
               {unitRows.map((r) => {
                 const u = unitById(r.unit_id);
+                const editing = editUnit?.id === r.id ? editUnit : null;
                 return (
                   <tr key={r.id} data-testid={`unit-assignment-${r.id}`}>
                     <td className="font-mono">{r.unit_number}</td>
                     <td className="font-mono">{r.external_unit_number}</td>
                     <td>{r.unit_floor ?? u?.floor ?? ""}</td>
                     <td className="tabular-nums">{u?.living_area_sqm ? formatDecimal(u.living_area_sqm, 2) : u?.total_area_sqm ? formatDecimal(u.total_area_sqm, 2) : ""}</td>
-                    <td>{t(`occupancy.${r.occupancy_status}`)}</td>
+                    <td>
+                      {editing ? (
+                        <select className={ui.input} aria-label={t("unit.occupancy")} value={editing.occupancy_status} onChange={(e) => setEditUnit({ ...editing, occupancy_status: e.target.value })}>
+                          {OCCUPANCY_STATUSES.map((s) => (
+                            <option key={s} value={s}>
+                              {t(`occupancy.${s}`)}
+                            </option>
+                          ))}
+                        </select>
+                      ) : (
+                        t(`occupancy.${r.occupancy_status}`)
+                      )}
+                    </td>
                     <td className="text-xs">{occupancyInfo(u)}</td>
                     <td className="tabular-nums">
-                      {formatDate(r.valid_from)} {t("until")} {r.valid_to ? formatDate(r.valid_to) : t("openEnd")}
+                      {editing ? (
+                        <span className="flex items-center gap-1">
+                          {formatDate(r.valid_from)} {t("until")}
+                          <input className={ui.input} type="date" aria-label={t("unitEdit.validTo")} value={editing.valid_to} onChange={(e) => setEditUnit({ ...editing, valid_to: e.target.value })} />
+                        </span>
+                      ) : (
+                        <>
+                          {formatDate(r.valid_from)} {t("until")} {r.valid_to ? formatDate(r.valid_to) : t("openEnd")}
+                        </>
+                      )}
                     </td>
                     <td>
                       <StatusPill variant={STATUS_VARIANT[r.status] ?? "neutral"} label={t(`status.${r.status}`)} />
                     </td>
+                    {canUpdate ? (
+                      <td>
+                        {editing ? (
+                          <span className="flex gap-1">
+                            <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => saveUnit(r)} data-testid={`unit-save-${r.id}`}>
+                              {t("unitEdit.save")}
+                            </button>
+                            <button type="button" className={ui.buttonSm} onClick={() => setEditUnit(null)}>
+                              {t("cancel")}
+                            </button>
+                          </span>
+                        ) : (
+                          <button type="button" className={ui.buttonSm} disabled={busy || r.status === "archived"} onClick={() => setEditUnit({ id: r.id, occupancy_status: r.occupancy_status, valid_to: r.valid_to ?? "" })} title={t("unitEdit.hint")} data-testid={`unit-edit-${r.id}`}>
+                            {t("unitEdit.edit")}
+                          </button>
+                        )}
+                      </td>
+                    ) : null}
                   </tr>
                 );
               })}
               {unitRows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-muted">
+                  <td colSpan={canUpdate ? 9 : 8} className="text-muted">
                     {t("unit.empty")}
                   </td>
                 </tr>

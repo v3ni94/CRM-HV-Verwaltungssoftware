@@ -61,3 +61,9 @@ eyes `DELETE /contacts/{id}`; there is no automatic deletion job. `GET /contacts
 is the block list. The approval logic of bank accounts is unchanged. Rule entry
 `docs/rules/P1-01-kontakt-sperre-loeschdatum.md`, tests
 `tests/integration/test_contacts_p1.py`.
+
+## Inline editing (Ergänzung CRM AP8, ADR 0012, 27.09.2026)
+
+`PATCH /contacts/{id}` (`ContactPatch`) changes master data fields only; the merged record is
+validated as `ContactIn`, `If-Match` against `version`, audit diff as on `PUT`. Addresses,
+phones, e-mails, identifiers, dates, bank accounts, types, roles and tags stay on `PUT`.

@@ -228,3 +228,38 @@ export function buildQuery(params: Record<string, string | number | boolean | un
   const s = q.toString();
   return s ? `?${s}` : "";
 }
+
+/** Controlled write workflow record (section 12): GET/POST /metering/transmissions. */
+export type Transmission = {
+  id: string;
+  connection_id: string;
+  property_assignment_id: string;
+  kind: "roles" | "billing_input";
+  period_from: string | null;
+  period_to: string | null;
+  status: string;
+  fingerprint: string;
+  assignment_version: number;
+  validation: {
+    errors?: string[];
+    warnings?: string[];
+    provider?: Record<string, unknown>;
+    function_available?: boolean;
+    function_reason?: string | null;
+  };
+  diff: { first_transmission?: boolean; added?: string[]; removed?: string[]; changed?: string[] };
+  summary: Record<string, unknown>;
+  payload: Record<string, unknown>;
+  released_by: string | null;
+  released_at: string | null;
+  warnings_acknowledged: boolean;
+  ordered_by: string | null;
+  ordered_at: string | null;
+  provider_transaction_id: string | null;
+  provider_response: Record<string, unknown>;
+  log: Record<string, unknown>[];
+  version: number;
+  created_at: string;
+};
+
+export const TRANSMISSION_KINDS = ["roles", "billing_input"] as const;

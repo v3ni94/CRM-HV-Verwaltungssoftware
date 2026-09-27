@@ -31,13 +31,18 @@ class IstaAdapter(BvedAdapterBase):
         "ista Developer Portal Q1/Q8/Q9 (26.09.2026) und bved OpenAPI: billing-unit-data 1.0.2, "
         "billing-result 1.0.3, consumption-data 1.2.1, documents 1.3 (Q6, Q7)"
     )
-    spec_version = "bved 1.0.2 / 1.0.3 / 1.2.1 / 1.3, geprüft 26.09.2026"
+    spec_version = (
+        "bved 1.0.2 / 1.0.3 / 1.2.1 / 1.3, geprüft 26.09.2026; on-site-roles 2.0.2 und "
+        "billing-input 1.0.3, geprüft 27.09.2026"
+    )
     implemented = frozenset(
         {
             Function.BILLING_UNIT_DATA,
             Function.BILLING_RESULT,
             Function.CONSUMPTION,
             Function.DOCUMENTS,
+            Function.ROLES,
+            Function.BILLING_INPUT,
         }
     )
     families: ClassVar[dict[Function, Family]] = {
@@ -55,6 +60,12 @@ class IstaAdapter(BvedAdapterBase):
         ),
         Function.DOCUMENTS: Family(
             Function.DOCUMENTS, ("basic", "oauth2"), "documents", "bved/ARGE documents 1.3 (3.10)"
+        ),
+        # Write families (section 12; Q10, Q11 and the bved zip files checked 27.09.2026).
+        # Offered only through the controlled transmission workflow of the service layer.
+        Function.ROLES: Family(Function.ROLES, ("oauth2",), "roles", "bved on-site-roles 2.0.2"),
+        Function.BILLING_INPUT: Family(
+            Function.BILLING_INPUT, ("oauth2",), "billing_input", "bved billing-input 1.0.3"
         ),
     }
 

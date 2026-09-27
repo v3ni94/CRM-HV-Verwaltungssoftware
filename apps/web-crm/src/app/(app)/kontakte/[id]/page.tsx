@@ -1,10 +1,12 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
 import { CallsPanel, type CallOut } from "@/components/contacts/CallsPanel";
 import { BankAccountApproval } from "@/components/contacts/BankAccountApproval";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
+import { ContactMasterData } from "@/components/contacts/ContactMasterData";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
 import { PortalAccessSection } from "@/components/contacts/PortalAccessSection";
 import { RelationsPanel } from "@/components/contacts/RelationsPanel";
@@ -134,10 +136,23 @@ export default async function ContactDetailPage({
           ).values(),
         ]
       : [];
-  const relations =
-    tab === "beziehungen"
-      ? ((await api.GET("/api/v1/contacts/{contact_id}/relations", { params: { path: { contact_id: id } } })).data ?? [])
-      : [];
+  // Relations feed the tab and the link bar (Ergänzung 5): properties, units and contracts.
+  const relations = (await api.GET("/api/v1/contacts/{contact_id}/relations", { params: { path: { contact_id: id } } })).data ?? [];
+  const uniqueLinks = (type: EntityLink["type"], key: "property_id" | "unit_id" | "contract_id", label: (r: (typeof relations)[number]) => string | null) => {
+    const seen = new Set<string>();
+    return relations.flatMap((r) => {
+      const value = r[key];
+      if (!value || seen.has(value)) return [];
+      seen.add(value);
+      return [{ type, id: value, label: label(r) } satisfies EntityLink];
+    });
+  };
+  const entityLinks: EntityLink[] = [
+    ...uniqueLinks("property", "property_id", (r) => r.property_name),
+    ...uniqueLinks("unit", "unit_id", (r) => r.unit_label ?? null),
+    ...uniqueLinks("contract", "contract_id", () => null),
+    { type: "ticket", href: `/tickets?contact_id=${contact.id}`, label: t("links.tickets") },
+  ];
   // Authorised representatives with delivery rule (operator decision 26.09.2026).
   const contactRelations =
     tab === "beziehungen"
@@ -154,6 +169,7 @@ export default async function ContactDetailPage({
   const canReadAudit = me.data?.permissions.includes("audit:read") ?? false;
   const canEditRelations =
     me.data?.permissions.includes("contacts:update") ?? false;
+  const canEditMaster = canEditRelations;
   // Anrufliste (13.5, A70): typisierter BFF-Fetch, kein generierter Client nötig.
   const callsRes =
     tab === "kommunikation"
@@ -164,7 +180,6 @@ export default async function ContactDetailPage({
     : [];
   const canCreateTicket =
     me.data?.permissions.includes("tickets:create") ?? false;
-  const person = contact.kind === "person";
 
   return (
     <div className="flex flex-col gap-4">
@@ -194,6 +209,8 @@ export default async function ContactDetailPage({
         </div>
       </div>
 
+      <EntityLinksBar links={entityLinks} />
+
       <nav
         aria-label={t("tabs.master")}
         className="flex gap-1 border-b border-border text-sm"
@@ -211,36 +228,10 @@ export default async function ContactDetailPage({
       </nav>
 
       {tab === "stammdaten" ? (
+        <>
+        <ContactMasterData contact={contact} canEdit={canEditMaster} />
+        <h2 className="text-sm font-semibold">{t("masterData.readOnly")}</h2>
         <dl>
-          {person ? (
-            <>
-              <Row label={tf("salutation")} value={contact.salutation} />
-              <Row label={tf("letterSalutation")} value={contact.letter_salutation} />
-              <Row label={tf("title")} value={contact.title} />
-              <Row label={tf("firstName")} value={contact.first_name} />
-              <Row label={tf("lastName")} value={contact.last_name} />
-              <Row
-                label={tf("dateOfBirth")}
-                value={formatDate(contact.date_of_birth)}
-              />
-            </>
-          ) : (
-            <>
-              <Row label={tf("companyName")} value={contact.company_name} />
-              <Row label={tf("legalForm")} value={contact.legal_form} />
-              <Row label={tf("letterSalutation")} value={contact.letter_salutation} />
-            </>
-          )}
-          <Row label={tf("position")} value={contact.position} />
-          <Row label={tf("language")} value={contact.language} />
-          <Row
-            label={tf("preferredChannel")}
-            value={
-              contact.preferred_channel
-                ? tl(`channel.${contact.preferred_channel}`)
-                : null
-            }
-          />
           <Row label={tf("tags")} value={contact.tags.join(", ")} />
           <Row
             label={tf("dates")}
@@ -265,14 +256,6 @@ export default async function ContactDetailPage({
             }
           />
           <Row
-            label={tf("notes")}
-            value={
-              contact.notes ? (
-                <span className="whitespace-pre-wrap">{contact.notes}</span>
-              ) : null
-            }
-          />
-          <Row
             label={t("created")}
             value={formatDateTime(contact.created_at)}
           />
@@ -281,6 +264,7 @@ export default async function ContactDetailPage({
             value={formatDateTime(contact.updated_at)}
           />
         </dl>
+        </>
       ) : null}
 
       {tab === "kommunikation" ? (

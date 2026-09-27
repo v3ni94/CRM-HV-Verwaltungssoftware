@@ -198,6 +198,29 @@ class ContactIn(_Strict):
         return self
 
 
+class ContactPatch(_Strict):
+    """Partial master data update (inline editing, AP8). Only the fields sent are changed; the
+    merged contact is validated with the rules of ``ContactIn``. Addresses, phones, e-mails,
+    identifiers, dates, bank accounts, types, roles and tags keep the ``PUT`` route."""
+
+    salutation: str | None = None
+    letter_salutation: str | None = None
+    title: str | None = None
+    first_name: str | None = None
+    last_name: str | None = None
+    company_name: str | None = None
+    legal_form: str | None = None
+    position: str | None = None
+    date_of_birth: date | None = None
+    language: str | None = None
+    notes: str | None = None
+    preferred_channel: PreferredChannel | None = None
+    blocked: bool | None = None
+    retention_profile_id: uuid.UUID | None = None
+    external_ids: dict[str, str] | None = None
+    completeness: Completeness | None = None
+
+
 class AddressOut(AddressIn):
     id: uuid.UUID
 

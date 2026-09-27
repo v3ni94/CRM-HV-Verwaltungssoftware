@@ -104,6 +104,14 @@
     "ticketAnalytics": "Ticket analytics"
   },
   "Contacts": {
+    "masterData": {
+      "title": "Master data",
+      "description": "Fields are saved one by one. Addresses, phone numbers, e-mail addresses and bank accounts are maintained via Edit.",
+      "readOnly": "Further details"
+    },
+    "links": {
+      "tickets": "Tickets of the contact"
+    },
     "title": "Contacts",
     "new": "New contact",
     "search": "Search",
@@ -3430,7 +3438,23 @@
         "validUntil": "Valid until lies before the issue date."
       },
       "save": "Save energy certificate",
-      "saved": "Saved."
+      "saved": "Saved.",
+      "law": "Legal basis",
+      "laws": {
+        "geg": "GEG",
+        "enev_2014": "EnEV 2014"
+      },
+      "finalHeat": "Final energy heat in kWh/(m²a)",
+      "hotWaterIncluded": "Hot water included",
+      "finalElectricity": "Final energy electricity in kWh/(m²a)",
+      "heatingType": "Heating type",
+      "heatingTypes": {
+        "etage": "Floor heating",
+        "ofen": "Stove heating",
+        "zentral": "Central heating"
+      },
+      "sources": "Energy sources, comma separated",
+      "buildingHint": "The energy certificate belongs to building {name}."
     },
     "noOwnerHint": "Without a property owner the assignment finds no landlord and tenancies stay open. Set the owner on the property page.",
     "ownerColumn": "Owner",
@@ -3459,8 +3483,107 @@
       "next": "Next",
       "confirm": "Confirm",
       "back": "Back",
-      "cancel": "Cancel"
-    }
+      "cancel": "Cancel",
+      "clearingAccount": "Clearing account",
+      "powerOfAttorney": "Power of attorney",
+      "taxAdvisor": "Tax advisor",
+      "openDocument": "Open document",
+      "noDetail": "not set"
+    },
+    "masterData": {
+      "title": "Master data",
+      "description": "Every change is saved on its own.",
+      "propertyTypeCode": "Property type",
+      "country": "Country",
+      "municipalityCode": "Municipality code",
+      "landRegistryDistrict": "Land registry district",
+      "landRegistrySheet": "Land registry sheet",
+      "parcel": "Parcel",
+      "builtAreaSqm": "Built area in m²",
+      "unbuiltAreaSqm": "Unbuilt area in m²",
+      "sealedAreaSqm": "Sealed area in m²",
+      "gardenUse": "Garden use",
+      "gardenNotes": "Garden notes",
+      "renovationFlag": "Renovation",
+      "renovationNotes": "Renovation notes",
+      "allocationLossRisk": "Allocation loss risk in percent",
+      "managedFrom": "Managed from",
+      "managedTo": "Managed to",
+      "notes": "Notes",
+      "gardenUses": {
+        "none": "none",
+        "yes": "yes",
+        "partial": "partial"
+      },
+      "invalidPercent": "Please enter a value between 0 and 100.",
+      "invalidArea": "Area must not be negative."
+    },
+    "buildings": {
+      "title": "Buildings",
+      "empty": "No buildings recorded.",
+      "name": "Name",
+      "address": "Address",
+      "addressAddition": "Address addition",
+      "constructionYear": "Construction year",
+      "floors": "Floors",
+      "energyCertificate": "Energy certificate",
+      "noEnergyCertificate": "no energy certificate",
+      "open": "Open building"
+    },
+    "billingPeriods": {
+      "title": "Billing periods",
+      "empty": "No billing periods recorded.",
+      "kind": "Kind",
+      "from": "From",
+      "to": "To",
+      "boardOnlineAudit": "Online audit by the advisory board",
+      "notes": "Note",
+      "kinds": {
+        "hoa": "HOA statement",
+        "operating_costs": "Operating cost statement",
+        "heating_costs": "Heating cost statement",
+        "economic_plan": "Economic plan",
+        "owner_statement": "Owner statement"
+      }
+    },
+    "subCommunities": {
+      "title": "Sub communities",
+      "empty": "No sub communities recorded.",
+      "code": "Code",
+      "name": "Name",
+      "notes": "Note"
+    },
+    "portalDocuments": {
+      "title": "Property folder",
+      "empty": "No documents in the property folder.",
+      "document": "Document",
+      "visibleFor": "Visible for",
+      "visibility": {
+        "tenant": "Tenants",
+        "owner": "Owners"
+      },
+      "nobody": "nobody"
+    },
+    "serviceProviders": {
+      "title": "Service providers",
+      "empty": "No service provider relations recorded.",
+      "contact": "Contact",
+      "contractType": "Contract type",
+      "customerNumber": "Customer number",
+      "exemption": "Exemption certificate",
+      "exemptionValidUntil": "valid until {date}",
+      "creditorAccount": "Creditor account",
+      "validity": "Validity",
+      "exemptionStatus": {
+        "valid": "valid",
+        "none": "none",
+        "invalid": "invalid",
+        "unknown": "not recorded"
+      }
+    },
+    "bankAccountsLedger": "Ledger account",
+    "bankAccountsNoLedger": "no ledger account",
+    "buildingOfUnit": "Building"
   },
   "AiChat": {
     "title": "AI assistant",
@@ -3638,9 +3761,174 @@
     },
     "depositRates": {
       "title": "Deposit interest",
-      "description": "Reference interest rate per year for the deposit settlement."
+      "description": "Reference interest rate per year for the deposit statement."
+    },
+    "catalogs": {
+      "title": "Catalogues",
+      "description": "Maintain the annex B select lists per tenant: add, rename and deactivate entries.",
+      "intro": "All select lists of the tenant. System entries can be deactivated and renamed but not deleted. Own entries extend the lists.",
+      "listTitle": "Catalogues",
+      "entriesHelp": "Internal catalogue name: {code}",
+      "loading": "Loading.",
+      "empty": "This catalogue has no entries yet.",
+      "colOrder": "Order",
+      "colCode": "Code",
+      "colLabel": "Label",
+      "colKind": "Kind",
+      "colActive": "Active",
+      "system": "System",
+      "own": "Own",
+      "activeFor": "{label} active",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "cancel": "Cancel",
+      "code": "Code",
+      "label": "Label",
+      "add": "Add",
+      "saved": "Saved.",
+      "failed": "The change could not be saved.",
+      "codeInvalid": "The code may contain lowercase letters, digits and underscores only.",
+      "labelRequired": "Please enter a label.",
+      "confirmDelete": "Really delete entry {label}?",
+      "readOnly": "Maintenance requires the permission to update tenant settings.",
+      "systemHint": "System entries come from annex B of the specification and are deactivated instead of deleted because existing records use their codes.",
+      "names": {
+        "contact_group": "Contact groups",
+        "trade": "Trades",
+        "address_label": "Address labels",
+        "phone_label": "Phone labels",
+        "email_label": "Email labels",
+        "bank_account_type": "Account types",
+        "privacy_purpose": "Privacy purposes",
+        "note_category": "Note categories",
+        "property_type": "Property types",
+        "management_type": "Management types",
+        "management_kind": "Management kind",
+        "energy_source_property": "Energy sources (property)",
+        "energy_source_building": "Energy sources (building)",
+        "heating_type": "Heating types",
+        "payment_type": "Payment types",
+        "payment_interval": "Payment intervals",
+        "due_rule": "Due rules",
+        "mandate_income_type": "Income types for mandates",
+        "unit_type": "Unit types",
+        "unit_commercial_type": "Commercial types",
+        "equipment_kitchen": "Equipment kitchen",
+        "equipment_sanitary": "Equipment sanitary",
+        "equipment_misc": "Equipment other",
+        "equipment_hot_water": "Equipment hot water",
+        "equipment_heating": "Equipment heating",
+        "equipment_additional": "Equipment additional",
+        "vat_option": "VAT options",
+        "vat_rate": "VAT rates",
+        "vat_account_mode": "VAT per account",
+        "deposit_kind": "Deposit kinds",
+        "delivery_channel": "Delivery channels",
+        "delivery_status": "Delivery status",
+        "notice_category": "Notice board categories",
+        "notice_type": "Notice board types",
+        "booking_type": "Booking types",
+        "bank_rule_action": "Bank rule actions",
+        "invoice_plan_interval": "Invoice plan intervals",
+        "bank_rule_criterion": "Bank rule criteria",
+        "bank_rule_operator": "Bank rule operators",
+        "meeting_type": "Meeting types",
+        "meeting_presence": "Presence types",
+        "majority_rule": "Majority rules",
+        "voting_principle": "Voting principles",
+        "proxy_kind": "Proxy kinds",
+        "proxy_status": "Proxy status",
+        "attendance_wish": "Attendance wish",
+        "resolution_status": "Resolution status",
+        "ticket_tracker": "Trackers",
+        "ticket_template": "Ticket templates",
+        "portal_form_kind": "Portal forms",
+        "ticket_status": "Ticket status",
+        "ticket_priority": "Ticket priority",
+        "dms_category": "DMS categories",
+        "template_category": "Template categories",
+        "custom_field_type": "Custom field types",
+        "calendar_recurrence": "Calendar recurrence",
+        "calendar_reminder": "Calendar reminder",
+        "maintenance_reminder": "Maintenance reminder",
+        "portal_access_end": "Portal access end",
+        "meter_type": "Meter types",
+        "provider_contract_type": "Provider contract types",
+        "property_contact_category": "Contact categories"
+      }
+    },
+    "customFields": {
+      "title": "Custom fields",
+      "description": "Define custom fields per entity with field type, group, required flag and validity.",
+      "intro": "Custom fields for property, building, unit, contract, contact, service provider and provider contract. Entity, internal name and field type are immutable after creation.",
+      "listTitle": "Defined fields",
+      "empty": "No custom fields defined yet.",
+      "colLabel": "Label",
+      "colKey": "Internal name",
+      "colType": "Field type",
+      "colGroup": "Group",
+      "colRequired": "Required",
+      "colMain": "Main view",
+      "yes": "Yes",
+      "no": "No",
+      "edit": "Edit",
+      "delete": "Delete",
+      "createTitle": "New field",
+      "editTitle": "Edit field {label}",
+      "entity": "Entity",
+      "key": "Internal name",
+      "label": "Label",
+      "fieldType": "Field type",
+      "group": "Group",
+      "uniqueness": "Uniqueness",
+      "uniquenessValues": {
+        "none": "not unique",
+        "contract": "within the contract",
+        "all_contracts": "across all contracts"
+      },
+      "managementTypes": "Valid for management types",
+      "managementTypesHelp": "No selection means valid for all management types.",
+      "managementTypeValues": {
+        "rental": "Rental management",
+        "hoa": "HOA management",
+        "hoa_with_sev": "HOA with SEV management"
+      },
+      "contractKinds": "Valid for contract kinds",
+      "options": "Choice values",
+      "listHelp": "Separate several values with commas.",
+      "min": "Minimum",
+      "max": "Maximum",
+      "minLength": "Minimum length",
+      "maxLength": "Maximum length",
+      "defaultValue": "Default value",
+      "sortOrder": "Order",
+      "description": "Description",
+      "required": "Required",
+      "visibleInMain": "Visible in main view",
+      "create": "Create field",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Saved.",
+      "deleted": "Deleted.",
+      "labelRequired": "Please enter a label.",
+      "keyInvalid": "The internal name starts with a lowercase letter and contains lowercase letters, digits and underscores only.",
+      "optionsRequired": "A single choice needs choice values.",
+      "confirmDelete": "Really delete field {label}? Values already stored stay in the records.",
+      "immutableHint": "Entity, internal name and field type cannot be changed after creation because stored values depend on them.",
+      "readOnly": "Maintenance requires the permission to update tenant settings.",
+      "entities": {
+        "property": "Property",
+        "building": "Building",
+        "unit": "Unit",
+        "contract": "Contract",
+        "contact": "Contact",
+        "service_provider": "Service provider",
+        "service_provider_relation": "Provider contract"
+      }
     }
   },
+
   "Members": {
     "title": "Users and roles",
     "neverDeleted": "User accounts are never deleted, only disabled or re-enabled. This keeps traceability intact.",
@@ -6138,6 +6426,15 @@
     "testDelivery": "The API offers no test delivery. Creating a subscription emits the event webhook_subscription.created, which is delivered to existing subscriptions and can be checked in the log."
   },
   "ContractForm": {
+    "notesSection": {
+      "title": "Remarks and dunning block",
+      "description": "Saved immediately without a new contract version. Payments, term and parties stay versioned.",
+      "reasonRequired": "A dunning block needs a reason. Please enter the reason first.",
+      "reasonHelp": "Required as soon as the dunning block is set."
+    },
+    "links": {
+      "tickets": "Tickets of the unit"
+    },
     "hint": "Contracts are stored in versions. Unit, party, start and ownership data are fixed after creation; later changes create a new version.",
     "choose": "Please choose",
     "yes": "yes",
@@ -6448,7 +6745,44 @@
       "ownership": "Ownership",
       "tenancy": "Tenancy"
     },
-    "toProperty": "Properties"
+    "toProperty": "Properties",
+    "masterData": {
+      "title": "Unit master data",
+      "description": "Every change is saved on its own.",
+      "isFictional": "Fictional unit",
+      "subCommunity": "Sub community",
+      "commission": "Commission in EUR",
+      "commissionNote": "Commission note",
+      "depositAmount": "Deposit in EUR",
+      "vacancyVatOption": "VAT during vacancy",
+      "street": "Street",
+      "houseNumber": "House number",
+      "postalCode": "Postal code",
+      "city": "City",
+      "invalidAmount": "Amount must not be negative."
+    },
+    "vatOptions": {
+      "none": "none",
+      "commercial_no_vat": "Commercial without VAT",
+      "commercial_full_vat": "Commercial with full VAT",
+      "commercial_reduced_vat": "Commercial with reduced VAT"
+    },
+    "vacancyValues": {
+      "title": "Allocation values during vacancy",
+      "empty": "No vacancy values recorded.",
+      "hint": "Values allocated during vacancy instead of the contract values."
+    },
+    "meterChanges": {
+      "title": "Meter changes",
+      "empty": "No meter changes recorded.",
+      "meter": "Meter",
+      "changedOn": "Date",
+      "oldNumber": "Old number",
+      "oldFinal": "Final reading old",
+      "newNumber": "New number",
+      "newInitial": "Initial reading new"
+    },
+    "energyCertificateOfBuilding": "Energy certificate of the building"
   },
   "ResolutionKindsSettings": {
     "title": "Resolution kinds at ticket closure",
@@ -6794,7 +7128,10 @@
       "functions": "Functions",
       "test": "Test connection",
       "pause": "Pause",
-      "activate": "Activate"
+      "activate": "Activate",
+      "writeRelease": "Release write operations",
+      "writeLock": "Lock write operations",
+      "writeHint": "Release per connection for user and role submission and billing input. Without it only checks run; binding transmissions stay locked."
     },
     "wizard": {
       "title": "Setup wizard",
@@ -6970,7 +7307,80 @@
       "empty": "No open clearing items.",
       "assignHere": "Assign to this assignment",
       "dismiss": "Dismiss"
-    }
+    },
+      "transmission": {
+        "title": "Controlled transmissions",
+        "intro": "Checking data and placing a binding order are separate steps. A check stores nothing at the provider. Any change of assignments or data after the check invalidates the release.",
+        "roles": "Users and roles (On-Site Roles 2.0)",
+        "rolesHint": "The complete data set is sent per residential unit: occupancy, vacancy and termination explicitly. Omitted roles could otherwise count as ended at the provider.",
+        "billing": "Billing input",
+        "billingHint": "Flow: choose the period, load the provider template, take the CRM data, check assignments and costs, validate at the provider, review the result, release, and only then place the binding order. The binding transmission may trigger a billing at the provider.",
+        "periodFrom": "Period from",
+        "periodTo": "Period to",
+        "costs": "Ancillary costs (cost key, allocation key, gross amount)",
+        "costKey": "Cost key",
+        "allocationKey": "Allocation key",
+        "grossAmount": "Gross amount",
+        "invoiceDate": "Invoice date",
+        "addCost": "Add cost item",
+        "check": "Check data",
+        "release": "Release",
+        "acknowledgeWarnings": "I have reviewed the warnings and release the data anyway.",
+        "orderBilling": "Place binding billing order",
+        "submitRoles": "Submit users and roles (binding)",
+        "orderConfirm": "The data will now be sent to the provider as a binding order. This step is not repeated. Continue?",
+        "noPermissionRoles": "Submitting users requires the permission metering users submit.",
+        "noPermissionBilling": "Ordering requires the permission metering billing order.",
+        "notAvailable": "Binding transmission not possible: {reason}",
+        "status": {
+          "checked": "checked",
+          "invalid": "invalid",
+          "released": "released",
+          "superseded": "superseded",
+          "ordered": "ordered",
+          "rejected": "rejected",
+          "unclear": "outcome unclear",
+          "failed": "failed"
+        },
+        "unclearHint": "Timeout at the provider: outcome unclear. Nothing is retried automatically; clarify with the provider before sending again.",
+        "errors": "Errors",
+        "warnings": "Warnings",
+        "providerValidation": "Provider validation",
+        "providerSkipped": "Provider validation not executed: {reason}",
+        "diff": "Differences to the last confirmed transmission",
+        "diffFirst": "First transmission, no confirmed previous transmission.",
+        "diffNone": "No differences to the last confirmed transmission.",
+        "diffAdded": "New",
+        "diffRemoved": "Removed",
+        "diffChanged": "Changed",
+        "summaryUnits": "{count} residential units in the data set",
+        "summaryRecipients": "{count} billing recipients",
+        "summaryCosts": "{count} cost items",
+        "terminate": "Termination",
+        "log": "Log",
+        "logEntry": "{action} at {at}",
+        "transaction": "Provider transaction id",
+        "fingerprint": "Data version",
+        "history": "Previous transmissions",
+        "none": "No check performed yet."
+      },
+      "providerChange": {
+        "title": "Provider change",
+        "hint": "The previous assignment ends the day before the change date and keeps its documents and results. The new assignment starts on the change date.",
+        "changeDate": "Change date",
+        "newConnection": "New connection",
+        "newExternalNumber": "New external number",
+        "submit": "Perform provider change",
+        "open": "Change provider",
+        "done": "Provider change saved. The new assignment is open."
+      },
+      "unitEdit": {
+        "edit": "Edit",
+        "save": "Save",
+        "validTo": "Valid to",
+        "hint": "Only occupancy, recipients and validity change. A different residential unit is a new assignment."
+      }
+    
   },
   "Common": {
     "links": {
@@ -7100,5 +7510,71 @@
       "meterReadings": "Meter readings at termination",
       "meterReadingsHelp": "Optional per meter of the unit. The value is stored as a meter reading at the contract end."
     }
+  },
+  "Inline": {
+    "edit": "Edit",
+    "done": "Done",
+    "reload": "Reload",
+    "editField": "Edit {label}",
+    "empty": "not specified",
+    "yes": "Yes",
+    "no": "No",
+    "required": "Required field is missing.",
+    "invalidNumber": "Please enter a number.",
+    "status": {
+      "saving": "Saving",
+      "saved": "Saved",
+      "error": "Save failed",
+      "conflict": "Changed by someone else, please reload"
+    }
+  },
+  "Buildings": {
+    "title": "Building",
+    "toProperty": "To the property",
+    "unitsOfBuilding": "Units of the building",
+    "noUnits": "No units in this building.",
+    "masterData": {
+      "title": "Building master data",
+      "description": "Every change is saved on its own.",
+      "name": "Name",
+      "street": "Street",
+      "houseNumber": "House number",
+      "addressAddition": "Address addition",
+      "constructionYear": "Construction year",
+      "renovationLevel": "Renovation level",
+      "constructionTypeCode": "Construction type",
+      "buildingTypeCode": "Building type",
+      "floors": "Floors",
+      "windows": "Windows",
+      "totalArea": "Total area in m²",
+      "livingCommercialArea": "Living and commercial area in m²",
+      "heatedArea": "Heated area in m²",
+      "windowArea": "Window area in m²",
+      "hallwayArea": "Hallway area in m²",
+      "grossFloorArea": "Gross floor area in m²",
+      "builtArea": "Built area in m²",
+      "sealedArea": "Sealed area in m²",
+      "roofArea": "Roof area in m²",
+      "elevator": "Elevator",
+      "cellarRooms": "Cellar rooms",
+      "heritageProtection": "Heritage protection",
+      "heritageNotes": "Heritage notes",
+      "notes": "Notes",
+      "invalidYear": "Construction year as four digit year.",
+      "invalidArea": "Area must not be negative."
+    }
+  },
+  "MeteringModuleSwitch": {
+    "title": "Metering service module",
+    "status": {
+      "on": "on",
+      "off": "off"
+    },
+    "description": "Enables connections, assignments, fetches and controlled transmissions of the metering service module for this tenant. Default off. When off, all write endpoints stay locked; the provider catalogue and existing data remain readable.",
+    "risk": "Binding transmissions (users and roles, billing input) additionally need the release per connection and the permissions metering users submit or metering billing order. Every change is logged.",
+    "label": "Enable the metering service module for this tenant",
+    "saved": "Saved.",
+    "readOnly": "The change requires the permission tenant settings update.",
+    "link": "Go to connections"
   }
 }

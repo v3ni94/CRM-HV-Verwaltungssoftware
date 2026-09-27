@@ -104,6 +104,14 @@
     "ticketAnalytics": "Auswertung Tickets"
   },
   "Contacts": {
+    "masterData": {
+      "title": "Stammdaten",
+      "description": "Felder werden einzeln gespeichert. Adressen, Telefonnummern, E-Mail-Adressen und Bankverbindungen werden über Bearbeiten gepflegt.",
+      "readOnly": "Weitere Angaben"
+    },
+    "links": {
+      "tickets": "Tickets des Kontakts"
+    },
     "title": "Kontakte",
     "new": "Neuer Kontakt",
     "search": "Suche",
@@ -3430,7 +3438,23 @@
         "validUntil": "Das Datum Gültig bis liegt vor dem Ausstellungsdatum."
       },
       "save": "Energieausweis speichern",
-      "saved": "Gespeichert."
+      "saved": "Gespeichert.",
+      "law": "Rechtsgrundlage",
+      "laws": {
+        "geg": "GEG",
+        "enev_2014": "EnEV 2014"
+      },
+      "finalHeat": "Endenergie Wärme in kWh/(m²a)",
+      "hotWaterIncluded": "Warmwasser enthalten",
+      "finalElectricity": "Endenergie Strom in kWh/(m²a)",
+      "heatingType": "Heizungsart",
+      "heatingTypes": {
+        "etage": "Etagenheizung",
+        "ofen": "Ofenheizung",
+        "zentral": "Zentralheizung"
+      },
+      "sources": "Energieträger, durch Komma getrennt",
+      "buildingHint": "Der Energieausweis gehört zum Gebäude {name}."
     },
     "noOwnerHint": "Ohne Objekteigentümer findet die Zuordnung keinen Vermieter, die Mietverträge bleiben offen. Eigentümer auf der Objektseite festlegen.",
     "ownerColumn": "Eigentümer",
@@ -3459,8 +3483,107 @@
       "next": "Weiter",
       "confirm": "Bestätigen",
       "back": "Zurück",
-      "cancel": "Abbrechen"
-    }
+      "cancel": "Abbrechen",
+      "clearingAccount": "Verrechnungskonto",
+      "powerOfAttorney": "Vollmacht",
+      "taxAdvisor": "Steuerberater",
+      "openDocument": "Dokument öffnen",
+      "noDetail": "keine Angabe"
+    },
+    "masterData": {
+      "title": "Stammdaten",
+      "description": "Jede Änderung wird einzeln gespeichert.",
+      "propertyTypeCode": "Objektart",
+      "country": "Land",
+      "municipalityCode": "Gemeindeschlüssel",
+      "landRegistryDistrict": "Grundbuchbezirk",
+      "landRegistrySheet": "Grundbuchblatt",
+      "parcel": "Flurstück",
+      "builtAreaSqm": "Bebaute Fläche in m²",
+      "unbuiltAreaSqm": "Unbebaute Fläche in m²",
+      "sealedAreaSqm": "Versiegelte Fläche in m²",
+      "gardenUse": "Gartennutzung",
+      "gardenNotes": "Hinweise zum Garten",
+      "renovationFlag": "Sanierung",
+      "renovationNotes": "Hinweise zur Sanierung",
+      "allocationLossRisk": "Umlageausfallwagnis in Prozent",
+      "managedFrom": "Verwaltungsbeginn",
+      "managedTo": "Verwaltungsende",
+      "notes": "Bemerkungen",
+      "gardenUses": {
+        "none": "keine",
+        "yes": "ja",
+        "partial": "teilweise"
+      },
+      "invalidPercent": "Bitte einen Wert zwischen 0 und 100 angeben.",
+      "invalidArea": "Fläche darf nicht negativ sein."
+    },
+    "buildings": {
+      "title": "Gebäude",
+      "empty": "Keine Gebäude angelegt.",
+      "name": "Bezeichnung",
+      "address": "Anschrift",
+      "addressAddition": "Adresszusatz",
+      "constructionYear": "Baujahr",
+      "floors": "Geschosse",
+      "energyCertificate": "Energieausweis",
+      "noEnergyCertificate": "kein Energieausweis",
+      "open": "Gebäude öffnen"
+    },
+    "billingPeriods": {
+      "title": "Abrechnungszeiträume",
+      "empty": "Keine Abrechnungszeiträume hinterlegt.",
+      "kind": "Art",
+      "from": "Von",
+      "to": "Bis",
+      "boardOnlineAudit": "Online-Belegprüfung durch den Beirat",
+      "notes": "Bemerkung",
+      "kinds": {
+        "hoa": "Hausgeldabrechnung",
+        "operating_costs": "Betriebskostenabrechnung",
+        "heating_costs": "Heizkostenabrechnung",
+        "economic_plan": "Wirtschaftsplan",
+        "owner_statement": "Eigentümerabrechnung"
+      }
+    },
+    "subCommunities": {
+      "title": "Untergemeinschaften",
+      "empty": "Keine Untergemeinschaften angelegt.",
+      "code": "Kürzel",
+      "name": "Name",
+      "notes": "Bemerkung"
+    },
+    "portalDocuments": {
+      "title": "Objektmappe",
+      "empty": "Keine Dokumente in der Objektmappe.",
+      "document": "Dokument",
+      "visibleFor": "Sichtbar für",
+      "visibility": {
+        "tenant": "Mieter",
+        "owner": "Eigentümer"
+      },
+      "nobody": "niemand"
+    },
+    "serviceProviders": {
+      "title": "Dienstleister",
+      "empty": "Keine Dienstleisterverhältnisse hinterlegt.",
+      "contact": "Kontakt",
+      "contractType": "Vertragsart",
+      "customerNumber": "Kundennummer",
+      "exemption": "Freistellungsbescheinigung",
+      "exemptionValidUntil": "gültig bis {date}",
+      "creditorAccount": "Kreditorenkonto",
+      "validity": "Laufzeit",
+      "exemptionStatus": {
+        "valid": "gültig",
+        "none": "keine",
+        "invalid": "ungültig",
+        "unknown": "nicht erfasst"
+      }
+    },
+    "bankAccountsLedger": "Sachkonto",
+    "bankAccountsNoLedger": "kein Sachkonto",
+    "buildingOfUnit": "Gebäude"
   },
   "AiChat": {
     "title": "KI-Assistent",
@@ -3639,8 +3762,173 @@
     "depositRates": {
       "title": "Kautionszinsen",
       "description": "Referenzzinssatz je Jahr für die Kautionsabrechnung."
+    },
+    "catalogs": {
+      "title": "Kataloge",
+      "description": "Auswahllisten nach Anhang B je Mandant pflegen: Einträge anlegen, umbenennen, deaktivieren.",
+      "intro": "Alle Auswahllisten des Mandanten. Systemeinträge lassen sich deaktivieren und umbenennen, aber nicht löschen. Eigene Einträge ergänzen die Listen.",
+      "listTitle": "Kataloge",
+      "entriesHelp": "Interner Katalogname: {code}",
+      "loading": "Wird geladen.",
+      "empty": "Dieser Katalog hat noch keine Einträge.",
+      "colOrder": "Reihenfolge",
+      "colCode": "Code",
+      "colLabel": "Bezeichnung",
+      "colKind": "Art",
+      "colActive": "Aktiv",
+      "system": "System",
+      "own": "Eigen",
+      "activeFor": "{label} aktiv",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "code": "Code",
+      "label": "Bezeichnung",
+      "add": "Hinzufügen",
+      "saved": "Gespeichert.",
+      "failed": "Die Änderung konnte nicht gespeichert werden.",
+      "codeInvalid": "Der Code darf nur Kleinbuchstaben, Ziffern und Unterstriche enthalten.",
+      "labelRequired": "Bitte eine Bezeichnung angeben.",
+      "confirmDelete": "Eintrag {label} wirklich löschen?",
+      "readOnly": "Die Pflege erfordert das Recht Mandanteneinstellungen ändern.",
+      "systemHint": "Systemeinträge stammen aus Anhang B der Spezifikation und werden bei Bedarf deaktiviert statt gelöscht, weil bestehende Datensätze ihre Codes verwenden.",
+      "names": {
+        "contact_group": "Kontaktgruppen",
+        "trade": "Gewerke",
+        "address_label": "Adresslabels",
+        "phone_label": "Telefonlabels",
+        "email_label": "E-Mail-Labels",
+        "bank_account_type": "Kontotypen",
+        "privacy_purpose": "Datenschutz-Zwecke",
+        "note_category": "Notizkategorien",
+        "property_type": "Objektarten",
+        "management_type": "Verwaltungsarten",
+        "management_kind": "Verwaltungstyp",
+        "energy_source_property": "Energieträger (Liegenschaft)",
+        "energy_source_building": "Energieträger (Gebäude)",
+        "heating_type": "Heizungsarten",
+        "payment_type": "Zahlungsarten",
+        "payment_interval": "Zahlungsintervalle",
+        "due_rule": "Fälligkeitsregeln",
+        "mandate_income_type": "Ertragsarten für Mandate",
+        "unit_type": "Arten der Einheit",
+        "unit_commercial_type": "Gewerbearten",
+        "equipment_kitchen": "Ausstattung Küche",
+        "equipment_sanitary": "Ausstattung Sanitär",
+        "equipment_misc": "Ausstattung Sonstiges",
+        "equipment_hot_water": "Ausstattung Warmwasser",
+        "equipment_heating": "Ausstattung Heizung",
+        "equipment_additional": "Ausstattung Zusätzlich",
+        "vat_option": "USt-Optionen",
+        "vat_rate": "USt-Sätze",
+        "vat_account_mode": "USt kontoseitig",
+        "deposit_kind": "Kautionsarten",
+        "delivery_channel": "Zustellwege",
+        "delivery_status": "Zustellstatus",
+        "notice_category": "Schwarzes Brett Kategorien",
+        "notice_type": "Schwarzes Brett Typen",
+        "booking_type": "Buchungstypen",
+        "bank_rule_action": "Bankregel-Aktionen",
+        "invoice_plan_interval": "Rechnungsplan-Intervalle",
+        "bank_rule_criterion": "Bankregel-Kriterien",
+        "bank_rule_operator": "Bankregel-Operatoren",
+        "meeting_type": "Versammlungstypen",
+        "meeting_presence": "Präsenztypen",
+        "majority_rule": "Beschlussregeln",
+        "voting_principle": "Beschlussprinzipien",
+        "proxy_kind": "Vollmachtsarten",
+        "proxy_status": "Vollmachtsstatus",
+        "attendance_wish": "Teilnahmewunsch",
+        "resolution_status": "Beschlussstatus",
+        "ticket_tracker": "Tracker",
+        "ticket_template": "Ticketvorlagen",
+        "portal_form_kind": "Portalformulare",
+        "ticket_status": "Ticketstatus",
+        "ticket_priority": "Ticketpriorität",
+        "dms_category": "DMS-Kategorien",
+        "template_category": "Vorlagenkategorien",
+        "custom_field_type": "Feldtypen benutzerdefinierter Felder",
+        "calendar_recurrence": "Kalender Wiederholung",
+        "calendar_reminder": "Kalender Erinnerung",
+        "maintenance_reminder": "Sanierungserinnerung",
+        "portal_access_end": "Portal-Zugriffsende",
+        "meter_type": "Zählerarten",
+        "provider_contract_type": "Dienstleistervertragsarten",
+        "property_contact_category": "Ansprechpartner-Kategorien"
+      }
+    },
+    "customFields": {
+      "title": "Benutzerdefinierte Felder",
+      "description": "Zusatzfelder je Entität mit Feldtyp, Gruppe, Pflicht und Gültigkeit definieren.",
+      "intro": "Zusatzfelder für Objekt, Gebäude, Einheit, Vertrag, Kontakt, Dienstleister und Dienstleistervertrag. Entität, interner Name und Feldtyp sind nach dem Anlegen unveränderlich.",
+      "listTitle": "Definierte Felder",
+      "empty": "Noch keine Zusatzfelder definiert.",
+      "colLabel": "Bezeichnung",
+      "colKey": "Interner Name",
+      "colType": "Feldtyp",
+      "colGroup": "Gruppe",
+      "colRequired": "Pflicht",
+      "colMain": "Hauptansicht",
+      "yes": "Ja",
+      "no": "Nein",
+      "edit": "Bearbeiten",
+      "delete": "Löschen",
+      "createTitle": "Neues Feld",
+      "editTitle": "Feld {label} bearbeiten",
+      "entity": "Entität",
+      "key": "Interner Name",
+      "label": "Bezeichnung",
+      "fieldType": "Feldtyp",
+      "group": "Gruppe",
+      "uniqueness": "Eindeutigkeit",
+      "uniquenessValues": {
+        "none": "nicht eindeutig",
+        "contract": "im Vertrag",
+        "all_contracts": "in allen Verträgen"
+      },
+      "managementTypes": "Gültig für Verwaltungsarten",
+      "managementTypesHelp": "Keine Auswahl bedeutet gültig für alle Verwaltungsarten.",
+      "managementTypeValues": {
+        "rental": "Mietverwaltung",
+        "hoa": "WEG-Verwaltung",
+        "hoa_with_sev": "WEG mit SE-Verwaltung"
+      },
+      "contractKinds": "Gültig für Vertragsarten",
+      "options": "Auswahlwerte",
+      "listHelp": "Mehrere Werte durch Komma trennen.",
+      "min": "Minimum",
+      "max": "Maximum",
+      "minLength": "Mindestlänge",
+      "maxLength": "Höchstlänge",
+      "defaultValue": "Standardwert",
+      "sortOrder": "Reihenfolge",
+      "description": "Beschreibung",
+      "required": "Pflichtfeld",
+      "visibleInMain": "Sichtbar in Hauptansicht",
+      "create": "Feld anlegen",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "saved": "Gespeichert.",
+      "deleted": "Gelöscht.",
+      "labelRequired": "Bitte eine Bezeichnung angeben.",
+      "keyInvalid": "Der interne Name beginnt mit einem Kleinbuchstaben und enthält nur Kleinbuchstaben, Ziffern und Unterstriche.",
+      "optionsRequired": "Eine Einzelauswahl benötigt Auswahlwerte.",
+      "confirmDelete": "Feld {label} wirklich löschen? Bereits gespeicherte Werte bleiben in den Datensätzen erhalten.",
+      "immutableHint": "Entität, interner Name und Feldtyp lassen sich nach dem Anlegen nicht ändern, weil gespeicherte Werte davon abhängen.",
+      "readOnly": "Die Pflege erfordert das Recht Mandanteneinstellungen ändern.",
+      "entities": {
+        "property": "Objekt",
+        "building": "Gebäude",
+        "unit": "Einheit",
+        "contract": "Vertrag",
+        "contact": "Kontakt",
+        "service_provider": "Dienstleister",
+        "service_provider_relation": "Dienstleistervertrag"
+      }
     }
   },
+
   "Members": {
     "title": "Benutzer und Rollen",
     "neverDeleted": "Benutzerkonten werden nie gelöscht, sondern gesperrt oder wieder aktiviert. So bleibt die Nachvollziehbarkeit gewahrt.",
@@ -6138,6 +6426,15 @@
     "testDelivery": "Eine Testzustellung bietet die Schnittstelle nicht. Beim Anlegen entsteht das Ereignis webhook_subscription.created, das an bestehende Abonnements zugestellt wird und sich im Protokoll prüfen lässt."
   },
   "ContractForm": {
+    "notesSection": {
+      "title": "Bemerkungen und Mahnsperre",
+      "description": "Wird sofort ohne neue Vertragsversion gespeichert. Zahlungen, Laufzeit und Parteien bleiben versioniert.",
+      "reasonRequired": "Mahnsperre braucht eine Begründung. Bitte zuerst den Grund eintragen.",
+      "reasonHelp": "Pflichtangabe, sobald die Mahnsperre gesetzt ist."
+    },
+    "links": {
+      "tickets": "Tickets der Einheit"
+    },
     "hint": "Verträge werden versioniert gespeichert. Einheit, Vertragspartner, Beginn und Eigentumsangaben sind nach dem Anlegen fest; spätere Änderungen erzeugen eine neue Version.",
     "choose": "Bitte wählen",
     "yes": "ja",
@@ -6448,7 +6745,44 @@
       "ownership": "Eigentum",
       "tenancy": "Mietvertrag"
     },
-    "toProperty": "Objekte"
+    "toProperty": "Objekte",
+    "masterData": {
+      "title": "Stammdaten der Einheit",
+      "description": "Jede Änderung wird einzeln gespeichert.",
+      "isFictional": "Fiktive Einheit",
+      "subCommunity": "Untergemeinschaft",
+      "commission": "Provision in EUR",
+      "commissionNote": "Hinweis zur Provision",
+      "depositAmount": "Kaution in EUR",
+      "vacancyVatOption": "Umsatzsteuer bei Leerstand",
+      "street": "Straße",
+      "houseNumber": "Hausnummer",
+      "postalCode": "PLZ",
+      "city": "Ort",
+      "invalidAmount": "Betrag darf nicht negativ sein."
+    },
+    "vatOptions": {
+      "none": "keine",
+      "commercial_no_vat": "Gewerbe ohne Umsatzsteuer",
+      "commercial_full_vat": "Gewerbe mit vollem Umsatzsteuersatz",
+      "commercial_reduced_vat": "Gewerbe mit ermäßigtem Umsatzsteuersatz"
+    },
+    "vacancyValues": {
+      "title": "Umlagewerte bei Leerstand",
+      "empty": "Keine Leerstandswerte hinterlegt.",
+      "hint": "Werte, die in Leerstandszeiten anstelle der Vertragswerte umgelegt werden."
+    },
+    "meterChanges": {
+      "title": "Zählerwechsel",
+      "empty": "Keine Zählerwechsel erfasst.",
+      "meter": "Zähler",
+      "changedOn": "Datum",
+      "oldNumber": "Alte Nummer",
+      "oldFinal": "Endstand alt",
+      "newNumber": "Neue Nummer",
+      "newInitial": "Anfangsstand neu"
+    },
+    "energyCertificateOfBuilding": "Energieausweis des Gebäudes"
   },
   "ResolutionKindsSettings": {
     "title": "Erledigungsarten beim Ticketabschluss",
@@ -6794,7 +7128,10 @@
       "functions": "Funktionen",
       "test": "Verbindung testen",
       "pause": "Pausieren",
-      "activate": "Aktivieren"
+      "activate": "Aktivieren",
+      "writeRelease": "Schreibende Vorgänge freigeben",
+      "writeLock": "Schreibende Vorgänge sperren",
+      "writeHint": "Freigabe je Verbindung für Nutzer- und Rollenübermittlung sowie Abrechnungsdaten. Ohne Freigabe bleibt es bei Prüfungen; eine verbindliche Übermittlung ist gesperrt."
     },
     "wizard": {
       "title": "Einrichtungsassistent",
@@ -6970,7 +7307,80 @@
       "empty": "Keine offenen Klärungsfälle.",
       "assignHere": "Dieser Zuordnung zuweisen",
       "dismiss": "Verwerfen"
-    }
+    },
+      "transmission": {
+        "title": "Kontrollierte Übermittlungen",
+        "intro": "Daten prüfen und verbindlich beauftragen sind getrennte Schritte. Eine Prüfung speichert beim Anbieter nichts. Eine Änderung an Zuordnungen oder Daten nach der Prüfung entwertet die Freigabe.",
+        "roles": "Nutzer und Rollen (On-Site Roles 2.0)",
+        "rolesHint": "Es wird je Nutzeinheit der vollständige Datensatz gesendet: Belegung, Leerstand und Beendigung ausdrücklich. Ausgelassene Rollen könnten beim Anbieter sonst als beendet gelten.",
+        "billing": "Abrechnungsdaten (Billing Input)",
+        "billingHint": "Ablauf: Zeitraum wählen, Anbietervorlage laden, CRM-Daten übernehmen, Zuordnungen und Kosten prüfen, beim Anbieter validieren, Ergebnis prüfen, freigeben, erst dann verbindlich beauftragen. Die verbindliche Übertragung kann beim Anbieter eine Abrechnung auslösen.",
+        "periodFrom": "Zeitraum von",
+        "periodTo": "Zeitraum bis",
+        "costs": "Hausnebenkosten (Kostenschlüssel, Verteilschlüssel, Bruttobetrag)",
+        "costKey": "Kostenschlüssel",
+        "allocationKey": "Verteilschlüssel",
+        "grossAmount": "Bruttobetrag",
+        "invoiceDate": "Rechnungsdatum",
+        "addCost": "Weitere Kostenposition",
+        "check": "Daten prüfen",
+        "release": "Freigeben",
+        "acknowledgeWarnings": "Ich habe die Warnungen geprüft und gebe die Daten trotzdem frei.",
+        "orderBilling": "Abrechnung verbindlich beauftragen",
+        "submitRoles": "Nutzer und Rollen verbindlich übermitteln",
+        "orderConfirm": "Die Daten werden jetzt verbindlich an den Anbieter gesendet. Dieser Schritt wird nicht wiederholt. Fortfahren?",
+        "noPermissionRoles": "Zum Übermitteln von Nutzern fehlt das Recht Messdienstleister-Nutzer übermitteln.",
+        "noPermissionBilling": "Zum Beauftragen fehlt das Recht Messdienstleister-Abrechnung beauftragen.",
+        "notAvailable": "Verbindliche Übermittlung nicht möglich: {reason}",
+        "status": {
+          "checked": "geprüft",
+          "invalid": "fehlerhaft",
+          "released": "freigegeben",
+          "superseded": "entwertet",
+          "ordered": "beauftragt",
+          "rejected": "abgewiesen",
+          "unclear": "Ergebnis unklar",
+          "failed": "fehlgeschlagen"
+        },
+        "unclearHint": "Zeitüberschreitung beim Anbieter: Ergebnis unklar. Es erfolgt keine automatische Wiederholung; bitte beim Anbieter klären, bevor erneut gesendet wird.",
+        "errors": "Fehler",
+        "warnings": "Warnungen",
+        "providerValidation": "Anbieterprüfung",
+        "providerSkipped": "Anbieterprüfung nicht ausgeführt: {reason}",
+        "diff": "Unterschiede zur letzten bestätigten Übertragung",
+        "diffFirst": "Erste Übermittlung, keine bestätigte Vorübertragung vorhanden.",
+        "diffNone": "Keine Unterschiede zur letzten bestätigten Übertragung.",
+        "diffAdded": "Neu",
+        "diffRemoved": "Entfallen",
+        "diffChanged": "Geändert",
+        "summaryUnits": "{count} Nutzeinheiten im Datensatz",
+        "summaryRecipients": "{count} Abrechnungsempfänger",
+        "summaryCosts": "{count} Kostenpositionen",
+        "terminate": "Beendigung",
+        "log": "Protokoll",
+        "logEntry": "{action} am {at}",
+        "transaction": "Vorgangsnummer des Anbieters",
+        "fingerprint": "Datenversion",
+        "history": "Bisherige Übermittlungen",
+        "none": "Noch keine Prüfung durchgeführt."
+      },
+      "providerChange": {
+        "title": "Anbieterwechsel",
+        "hint": "Die bisherige Zuordnung endet am Tag vor dem Wechseldatum und bleibt für ihre Dokumente und Ergebnisse erhalten. Die neue Zuordnung beginnt am Wechseldatum.",
+        "changeDate": "Wechseldatum",
+        "newConnection": "Neue Verbindung",
+        "newExternalNumber": "Neue externe Nummer",
+        "submit": "Anbieterwechsel durchführen",
+        "open": "Anbieter wechseln",
+        "done": "Anbieterwechsel gespeichert. Die neue Zuordnung ist geöffnet."
+      },
+      "unitEdit": {
+        "edit": "Bearbeiten",
+        "save": "Speichern",
+        "validTo": "Gültig bis",
+        "hint": "Nur Belegung, Empfänger und Gültigkeit werden geändert. Eine andere Nutzeinheit ist eine neue Zuordnung."
+      }
+    
   },
   "Common": {
     "links": {
@@ -7100,5 +7510,71 @@
       "meterReadings": "Zählerstände zur Beendigung",
       "meterReadingsHelp": "Optional je Zähler der Einheit. Der Stand wird als Zählerstand zum Vertragsende gespeichert."
     }
+  },
+  "Inline": {
+    "edit": "Bearbeiten",
+    "done": "Fertig",
+    "reload": "Neu laden",
+    "editField": "{label} bearbeiten",
+    "empty": "keine Angabe",
+    "yes": "Ja",
+    "no": "Nein",
+    "required": "Pflichtangabe fehlt.",
+    "invalidNumber": "Bitte eine Zahl eingeben.",
+    "status": {
+      "saving": "Speichert",
+      "saved": "Gespeichert",
+      "error": "Fehler beim Speichern",
+      "conflict": "Von jemand anderem geändert, neu laden"
+    }
+  },
+  "Buildings": {
+    "title": "Gebäude",
+    "toProperty": "Zum Objekt",
+    "unitsOfBuilding": "Einheiten des Gebäudes",
+    "noUnits": "Keine Einheiten in diesem Gebäude.",
+    "masterData": {
+      "title": "Stammdaten des Gebäudes",
+      "description": "Jede Änderung wird einzeln gespeichert.",
+      "name": "Bezeichnung",
+      "street": "Straße",
+      "houseNumber": "Hausnummer",
+      "addressAddition": "Adresszusatz",
+      "constructionYear": "Baujahr",
+      "renovationLevel": "Sanierungsstand",
+      "constructionTypeCode": "Bauweise",
+      "buildingTypeCode": "Gebäudetyp",
+      "floors": "Geschosse",
+      "windows": "Fenster",
+      "totalArea": "Gesamtfläche in m²",
+      "livingCommercialArea": "Wohn- und Nutzfläche in m²",
+      "heatedArea": "Beheizte Fläche in m²",
+      "windowArea": "Fensterfläche in m²",
+      "hallwayArea": "Flurfläche in m²",
+      "grossFloorArea": "Bruttogrundfläche in m²",
+      "builtArea": "Bebaute Fläche in m²",
+      "sealedArea": "Versiegelte Fläche in m²",
+      "roofArea": "Dachfläche in m²",
+      "elevator": "Aufzug",
+      "cellarRooms": "Kellerräume",
+      "heritageProtection": "Denkmalschutz",
+      "heritageNotes": "Hinweise zum Denkmalschutz",
+      "notes": "Bemerkungen",
+      "invalidYear": "Baujahr als vierstellige Jahreszahl.",
+      "invalidArea": "Fläche darf nicht negativ sein."
+    }
+  },
+  "MeteringModuleSwitch": {
+    "title": "Messdienstleister-Modul",
+    "status": {
+      "on": "an",
+      "off": "aus"
+    },
+    "description": "Schaltet die Verbindungen, Zuordnungen, Abrufe und kontrollierten Übermittlungen des Messdienstleister-Moduls für diesen Mandanten frei. Standard aus. Ist der Schalter aus, bleiben alle schreibenden Endpunkte gesperrt; Anbieterkatalog und vorhandene Daten bleiben lesbar.",
+    "risk": "Verbindliche Übermittlungen (Nutzer und Rollen, Abrechnungsdaten) benötigen zusätzlich die Freigabe je Verbindung und die Rechte Messdienstleister-Nutzer übermitteln beziehungsweise Messdienstleister-Abrechnung beauftragen. Jede Änderung wird protokolliert.",
+    "label": "Messdienstleister-Modul für diesen Mandanten aktivieren",
+    "saved": "Gespeichert.",
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern.",
+    "link": "Zu den Verbindungen"
   }
 }

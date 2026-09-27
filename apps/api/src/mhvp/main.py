@@ -91,6 +91,8 @@ from mhvp.portal.owner import router as portal_owner_router
 from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.properties.routers import router as properties_router
+from mhvp.properties.routers_catalogs import router as catalogs_router
+from mhvp.properties.routers_patch import router as properties_patch_router
 from mhvp.receipts.routers import router as receipts_router
 from mhvp.sla.routers import router as sla_router
 from mhvp.sla.whatsapp_webhook import router as whatsapp_webhook_router
@@ -187,6 +189,8 @@ def create_app(
     app.include_router(tenant_setup_router, prefix=API_PREFIX)
     app.include_router(contacts_router, prefix=API_PREFIX)
     app.include_router(properties_router, prefix=API_PREFIX)
+    app.include_router(catalogs_router, prefix=API_PREFIX)
+    app.include_router(properties_patch_router, prefix=API_PREFIX)
     app.include_router(notice_crm_router, prefix=API_PREFIX)
     app.include_router(notice_portal_router, prefix=API_PREFIX)
     app.include_router(contracts_router, prefix=API_PREFIX)

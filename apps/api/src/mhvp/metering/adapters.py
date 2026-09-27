@@ -124,6 +124,38 @@ class FetchResult:
     waiting_provider: bool = False
 
 
+@dataclass(frozen=True)
+class WriteResult:
+    """Outcome of a controlled write (section 12). ``outcome`` is ``accepted`` (provider
+    transaction id present), ``validated`` (validate only, nothing stored at the provider),
+    ``rejected`` (provider validation errors), ``unclear`` (timeout after the request left the
+    process; never retried blindly, case 11) or ``failed`` (technical error before or without
+    a provider decision). ``messages`` carry the provider's validation messages as
+    ``{"type": "error" | "warning", "message": ..., "shortmessage": ...}``."""
+
+    outcome: str
+    transaction_id: str | None = None
+    messages: tuple[dict[str, Any], ...] = ()
+    detail: str = ""
+    raw: dict[str, Any] = field(default_factory=dict)
+
+    @property
+    def errors(self) -> tuple[dict[str, Any], ...]:
+        return tuple(m for m in self.messages if str(m.get("type", "")).lower() != "warning")
+
+    @property
+    def warnings(self) -> tuple[dict[str, Any], ...]:
+        return tuple(m for m in self.messages if str(m.get("type", "")).lower() == "warning")
+
+
+class WriteOutcome:
+    ACCEPTED = "accepted"
+    VALIDATED = "validated"
+    REJECTED = "rejected"
+    UNCLEAR = "unclear"
+    FAILED = "failed"
+
+
 class MeteringAdapter(Protocol):
     code: str
     spec_source: str
@@ -184,6 +216,51 @@ class MeteringAdapter(Protocol):
         offered by any endpoint while ``write_sync_enabled`` is off (M40-03)."""
         ...
 
+    def fetch_billing_template(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        period_to: date,
+    ) -> dict[str, Any]:
+        """Read only: the provider's billing template of a period (bved billing-input
+        ``GET .../billingperiods/{to}``). Raises ``NotImplementedError`` when the provider
+        has no documented and implemented billing input API."""
+        ...
+
+    def send_billing_input(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        period_to: date,
+        payload: Mapping[str, Any],
+        action: str,
+    ) -> WriteResult:
+        """bved billing-input ``POST .../billingperiods/{to}?action=``. ``VALIDATE`` stores
+        nothing at the provider; ``SEND`` and ``SEND_AND_IGNORE_WARNINGS`` are binding orders
+        (an accepted send may trigger the billing, Q11). Sent exactly once (case 11)."""
+        ...
+
+    def send_roles(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        external_unit_number: str,
+        payload: Mapping[str, Any],
+    ) -> WriteResult:
+        """bved on-site-roles 2.0 ``POST .../residentialunits/{unit}/on-site-roles``: the full
+        data set of one residential unit (omitted roles may be ended by the provider, hence
+        the service always sends the complete set, section 12). Sent exactly once."""
+        ...
+
 
 class ManualAdapter:
     """Provider without API or without implemented adapter: nothing is called. Used for
@@ -218,6 +295,15 @@ class ManualAdapter:
     def submit_billing_unit_setup(self, **kwargs: Any) -> str:
         raise NotImplementedError("kein Adapter")
 
+    def fetch_billing_template(self, **kwargs: Any) -> dict[str, Any]:
+        raise NotImplementedError("kein Adapter")
+
+    def send_billing_input(self, **kwargs: Any) -> WriteResult:
+        raise NotImplementedError("kein Adapter")
+
+    def send_roles(self, **kwargs: Any) -> WriteResult:
+        raise NotImplementedError("kein Adapter")
+
 
 class FakeAdapter:
     """Test double (artificial data only, never a sandbox or production system). Behaviour is
@@ -232,6 +318,8 @@ class FakeAdapter:
             Function.BILLING_RESULT,
             Function.BILLING_UNIT_DATA,
             Function.DOCUMENTS,
+            Function.ROLES,
+            Function.BILLING_INPUT,
         }
     )
     required_secrets: frozenset[str] = frozenset({"api_key"})
@@ -240,6 +328,8 @@ class FakeAdapter:
         # Test observation only: acknowledged external document ids in call order.
         self.acknowledged: list[str] = []
         self.downloads: list[str] = []
+        # Test observation only: every write call as (kind, action, external unit, payload).
+        self.writes: list[tuple[str, str, str, dict[str, Any]]] = []
 
     def test_connection(
         self, *, config: Mapping[str, Any], secrets: Mapping[str, str], environment: str
@@ -352,6 +442,86 @@ class FakeAdapter:
 
     def submit_billing_unit_setup(self, **kwargs: Any) -> str:
         raise NotImplementedError("Testdouble: schreibende Vorgänge sind gesperrt.")
+
+    def fetch_billing_template(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        period_to: date,
+    ) -> dict[str, Any]:
+        template = config.get("fake_billing_template")
+        if isinstance(template, dict):
+            return dict(template)
+        return {"currency": "EUR", "expectedvat": "GROSS", "billingrecipients": []}
+
+    def _write(
+        self,
+        kind: str,
+        action: str,
+        unit: str,
+        payload: Mapping[str, Any],
+        config: Mapping[str, Any],
+    ) -> WriteResult:
+        """Scripted through ``config``: ``fake_write_unclear`` (timeout after the request left,
+        exactly one attempt is recorded), ``fake_write_messages`` (provider validation
+        messages; an error rejects), ``fake_write_transaction`` (transaction id)."""
+        self.writes.append((kind, action, unit, dict(payload)))
+        if config.get("fake_write_unclear"):
+            return WriteResult(
+                WriteOutcome.UNCLEAR,
+                detail="Zeitüberschreitung bei schreibendem Aufruf; Ergebnis unklar, keine "
+                "automatische Wiederholung.",
+            )
+        messages = tuple(dict(m) for m in config.get("fake_write_messages", []))
+        errors = [m for m in messages if str(m.get("type", "")).lower() != "warning"]
+        if errors:
+            return WriteResult(WriteOutcome.REJECTED, messages=messages, detail="Abgewiesen.")
+        if action == "VALIDATE":
+            return WriteResult(WriteOutcome.VALIDATED, messages=messages, detail="Geprüft.")
+        if messages and action == "SEND":
+            return WriteResult(
+                WriteOutcome.REJECTED,
+                messages=messages,
+                detail="Warnungen vorhanden; SEND abgebrochen (Testdouble).",
+            )
+        return WriteResult(
+            WriteOutcome.ACCEPTED,
+            transaction_id=str(config.get("fake_write_transaction", "FAKE-TX-1")),
+            messages=messages,
+            detail="Angenommen (Testdouble).",
+        )
+
+    def send_billing_input(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        period_to: date,
+        payload: Mapping[str, Any],
+        action: str,
+    ) -> WriteResult:
+        if not secrets.get("api_key"):
+            return WriteResult(WriteOutcome.FAILED, detail="Zugangsdaten (api_key) fehlen.")
+        return self._write("billing_input", action, external_billing_unit, payload, config)
+
+    def send_roles(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        external_unit_number: str,
+        payload: Mapping[str, Any],
+    ) -> WriteResult:
+        if not secrets.get("api_key"):
+            return WriteResult(WriteOutcome.FAILED, detail="Zugangsdaten (api_key) fehlen.")
+        return self._write("roles", "SEND", external_unit_number, payload, config)
 
 
 _ADAPTERS: dict[str, MeteringAdapter] = {"manual": ManualAdapter(), "fake": FakeAdapter()}

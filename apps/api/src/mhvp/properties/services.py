@@ -2,7 +2,7 @@
 
 import re
 import uuid
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from typing import Any
 
@@ -163,14 +163,82 @@ async def check_custom_fields(
             if definition.required:
                 raise invalid(f"Zusatzfeld {definition.label} ist Pflicht.")
             continue
-        ok = {
-            "text": isinstance(value, str),
-            "number": isinstance(value, int | float) and not isinstance(value, bool),
-            "bool": isinstance(value, bool),
-            "date": isinstance(value, str) and _is_date(value),
-        }[definition.field_type]
-        if not ok:
+        if not _custom_value_ok(definition, value):
             raise invalid(f"Zusatzfeld {definition.label} hat den falschen Typ.")
+        if definition.field_type in _NUMERIC_TYPES:
+            number = Decimal(str(value))
+            if definition.min_value is not None and number < definition.min_value:
+                raise invalid(f"Zusatzfeld {definition.label} unterschreitet das Minimum.")
+            if definition.max_value is not None and number > definition.max_value:
+                raise invalid(f"Zusatzfeld {definition.label} überschreitet das Maximum.")
+        elif definition.field_type in _TEXT_TYPES and isinstance(value, str):
+            length = Decimal(len(value))
+            if definition.min_value is not None and length < definition.min_value:
+                raise invalid(f"Zusatzfeld {definition.label} ist zu kurz.")
+            if definition.max_value is not None and length > definition.max_value:
+                raise invalid(f"Zusatzfeld {definition.label} ist zu lang.")
+        elif definition.field_type == "choice" and value not in definition.options:
+            raise invalid(f"Zusatzfeld {definition.label}: unbekannter Auswahlwert.")
+
+
+# B.28 field types (catalogs.CUSTOM_FIELD_TYPES). Minimum and maximum apply to numeric
+# types as value bounds and to text types as length bounds.
+_NUMERIC_TYPES = frozenset({"integer", "number", "amount"})
+_TEXT_TYPES = frozenset({"string", "text", "rich_text", "url"})
+_REF_TYPES = frozenset({"contact_ref", "document_ref", "property_ref"})
+
+
+def _is_number(value: Any) -> bool:
+    if isinstance(value, bool):
+        return False
+    if isinstance(value, int | float):
+        return True
+    if isinstance(value, str):
+        try:
+            Decimal(value)
+        except ArithmeticError:
+            return False
+        return True
+    return False
+
+
+def _is_uuid(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        uuid.UUID(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _is_datetime(value: Any) -> bool:
+    if not isinstance(value, str):
+        return False
+    try:
+        datetime.fromisoformat(value)
+    except ValueError:
+        return False
+    return True
+
+
+def _custom_value_ok(definition: CustomFieldDefinition, value: Any) -> bool:
+    kind = definition.field_type
+    if kind == "integer":
+        return isinstance(value, int) and not isinstance(value, bool)
+    if kind in _NUMERIC_TYPES:
+        return _is_number(value)
+    if kind == "bool":
+        return isinstance(value, bool)
+    if kind == "date":
+        return isinstance(value, str) and _is_date(value)
+    if kind == "datetime":
+        return _is_datetime(value)
+    if kind in _TEXT_TYPES or kind == "choice":
+        return isinstance(value, str)
+    if kind in _REF_TYPES:
+        return _is_uuid(value)
+    return False
 
 
 def _is_date(value: str) -> bool:

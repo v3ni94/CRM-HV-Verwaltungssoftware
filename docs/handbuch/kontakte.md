@@ -127,6 +127,17 @@ Von der KI vorgeschlagene Kontaktdaten aus einem Import sind stets zu prüfen, b
 übernommen werden. Eine SEPA-Freigabe ist erst mit vollständigem Nachweis verbindlich;
 ohne Mandat darf keine Lastschrift eingezogen werden.
 
+## Stammdaten direkt bearbeiten
+
+Im Reiter Stammdaten lassen sich Anrede, Briefanrede, Titel, Vor- und Nachname beziehungsweise
+Firma und Rechtsform, Position, Geburtsdatum, Sprache, bevorzugter Kanal und Notizen an Ort und
+Stelle ändern (Stift am Feld oder "Bearbeiten" im Abschnittskopf, Recht Kontakte ändern).
+Jede Änderung wird einzeln gespeichert und im Ereignisprotokoll festgehalten; Bedienung und
+Konflikthinweis siehe Kapitel Stammdaten direkt bearbeiten. Adressen, Telefonnummern,
+E-Mail-Adressen, Bankverbindungen, Typen, Rollen und Schlagworte werden weiterhin über
+Bearbeiten im Formular gepflegt. Die Verknüpfungsleiste unter dem Kopf führt zu den Objekten,
+Einheiten und Verträgen des Kontakts sowie zu seinen Tickets.
+
 ## Häufige Fehler
 
 - **IBAN oder BIC ungültig**: Formatprüfung schlägt fehl; Eingabe ohne Leerzeichen und

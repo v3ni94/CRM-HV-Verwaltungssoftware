@@ -43,26 +43,73 @@ Die Detailseite zeigt oben Status, Verwaltungsart, Anschrift und die Anzahl der 
 Bei WEG-Objekten führt die Schaltfläche Zur WEG-Verwaltung in die laufende Verwaltung der
 Gemeinschaft (Kapitel WEG), bei allen Objekten Zur Vermietung in den Bereich Vermietung.
 
+Unter der Kopfzeile steht die Verknüpfungsleiste mit Sprungwegen zu Einheiten, Verträgen,
+Kontakten, Tickets und zur Buchhaltung des Objekts.
+
 Weitere Abschnitte der Detailseite:
 
+- Stammdaten: Name, Anschrift, Grundbuchangaben, Flächen, Garten, Sanierung,
+  Umlageausfallwagnis, Verwaltungsbeginn und Verwaltungsende, Bemerkungen. Die Felder werden
+  mit Schreibrecht für Objekte direkt auf der Seite geändert (Kapitel Stammdaten direkt
+  bearbeiten).
 - Rechtsträger: alle Rechtsträger des Objekts mit Art (GdWE, Eigentümer, SEV-Eigentümer,
   Verwalter) und Name.
+- Eigentümer: bei Mietverwaltung der Objekteigentümer mit Beginn und Anteil sowie
+  Verrechnungskonto, Vollmacht (Verweis auf das Dokument) und Steuerberater (Verweis auf den
+  Kontakt). Die drei Angaben werden über die Schnittstelle gepflegt.
+- Gebäude: alle Gebäude des Objekts mit Anschrift, Adresszusatz, Baujahr, Geschossen und dem
+  Stand des Energieausweises; der Name führt auf die Gebäudeseite.
 - Einheiten: Tabelle mit Nr., Bezeichnung, Art, Wohnfläche und Schlüsselwerten (zum Beispiel
   MEA: 125,00 oder WFL: 60,00). Arten: Wohnung, Gewerbe, Büro, Stellplatz, Garage, Lager,
   Garten, Sonstiges.
+- Untergemeinschaften (nur WEG) mit Kürzel und Name.
+- Abrechnungszeiträume je Art (Hausgeldabrechnung, Betriebskostenabrechnung,
+  Heizkostenabrechnung, Wirtschaftsplan, Eigentümerabrechnung) mit Von, Bis und dem Kennzeichen
+  für die Online-Belegprüfung durch den Beirat.
 - Ansprechpartner: zugeordnete Kontakte mit ihrer Rolle, verlinkt in die Kontakte.
 - Offene Wartungen und Prüfpflichten mit Fälligkeitsdatum. Fällige Wartungen erscheinen
   auch im Kalender und in den Benachrichtigungen (Kapitel Kalender).
+- Dienstleister: Dienstleisterverhältnisse mit Kontakt, Vertragsart, Laufzeit, Kundennummer,
+  Stand und Gültigkeit der Freistellungsbescheinigung und Kreditorenkonto.
 - Bankkonten des Objekts: Konten der Rechtsträger und zugeordnete Bankverbindungen, ein Konto
   je Rechtsträger kann als Standardkonto für Hausgeld oder Miete markiert werden (Kapitel
-  Banking).
+  Banking). Darunter steht je Bankkonto das zugeordnete Sachkonto.
 - Dokumente (Paperless): Dokumente aus dem DMS mit Objektbezug (Kapitel Dokumente und DMS).
+- Objektmappe: Dokumente, die im Portal für Mieter oder Eigentümer sichtbar sind.
+- Schwarzes Brett: Aushänge für das Portal mit Gültigkeit und Zielgruppe (Kapitel Portal).
 - Vollständigkeit der Objektakte: Pflichtunterlagen und ein Nachforderungsschreiben als
   Entwurf (Kapitel Dokumente und DMS).
 - Tickets zum Objekt (Kapitel Tickets).
-- Energieausweis: Art, Kennwert, Energieträger, Baujahr laut Ausweis, Ausstellungsdatum,
-  Gültig bis und Effizienzklasse; Anzeigen und Exposé übernehmen die Werte (Kapitel Makler).
-- Schwarzes Brett: Aushänge für das Portal mit Gültigkeit und Zielgruppe (Kapitel Portal).
+- Ereignisprotokoll: alle protokollierten Änderungen am Objekt mit altem und neuem Wert.
+
+Der Energieausweis wird seit der Ergänzung der Objektdaten am Gebäude geführt und auf der
+Gebäudeseite gepflegt (siehe unten).
+
+## Gebäudeseite
+
+Die Gebäudeseite erreicht man über den Gebäudenamen auf der Objektseite oder über die
+Verknüpfungsleiste der Einheit. Sie zeigt:
+
+- Stammdaten des Gebäudes: Bezeichnung, Straße, Hausnummer, Adresszusatz, Baujahr,
+  Sanierungsstand, Bauweise, Gebäudetyp, Geschosse, Fenster, Flächen, Aufzug, Kellerräume,
+  Denkmalschutz und Bemerkungen, direkt auf der Seite änderbar.
+- Energieausweis: Rechtsgrundlage (GEG oder EnEV 2014), Art des Ausweises, Endenergie Wärme
+  und Strom in kWh/(m²a), Warmwasser enthalten, Heizungsart, Energieträger, Baujahr laut
+  Ausweis, Ausstellungsdatum, Gültig bis und Effizienzklasse. Die Werte werden aus dem Ausweis
+  übernommen, nichts wird abgeleitet; Anzeigen und Exposé lesen sie vom Gebäude der Einheit
+  (Kapitel Makler). Gespeichert wird mit der Schaltfläche Energieausweis speichern.
+- Einheiten des Gebäudes und das Ereignisprotokoll des Gebäudes.
+
+## Einheitenseite
+
+Die Einheitenseite (Bereich Vermietung) zeigt die Verknüpfungsleiste (Objekt, Gebäude,
+laufende Verträge, Mieterkontakte, Tickets, Buchhaltung), die Stammdaten der Einheit
+(Nummer, Bezeichnung, Art, Lage, Etage, Flächen, Zimmer, Ausstattung, Anschrift, fiktive
+Einheit, Untergemeinschaft, Umsatzsteuer bei Leerstand, Provision, Kaution) direkt änderbar,
+Eigentümer und Mieter, Umlageschlüsselwerte, Umlagewerte bei Leerstand, Zählerwechsel der
+Zähler der Einheit, den Energieausweis des Gebäudes, das Exposé, Interessenten, Tickets und
+das Ereignisprotokoll. Provision und Kaution sind Stammwerte der Einheit; Zahlungen und
+Kautionskonten werden davon nicht berührt.
 
 ## Einheiten, Gebäude und Umlageschlüssel
 
@@ -78,7 +125,8 @@ Umsatzsteueroption wird ebenfalls mit Zeitraum geführt.
 
 Die Anlage von Gebäuden, Einheiten und Schlüsselwerten erfolgt derzeit über die
 Datenübernahme (Berichte Objekte und Einheiten) oder die Schnittstelle; ein eigenes
-Formular in der Oberfläche gibt es dafür noch nicht.
+Formular in der Oberfläche gibt es dafür noch nicht. Bestehende Gebäude und Einheiten werden
+auf ihrer Seite direkt bearbeitet.
 
 ## Objekteigentümer und Rechtsträger
 
@@ -92,10 +140,12 @@ Anlage des Objekts.
 Über die Schnittstelle stehen je Objekt außerdem bereit: Zähler mit Zählerständen,
 Dienstleisterverhältnisse, Wartungen und Prüfpflichten mit Vorlaufzeit, ein Katalog für
 Ausstattungsmerkmale und frei definierbare Zusatzfelder. In der Oberfläche sichtbar sind
-davon derzeit die offenen Wartungen (Objektdetail, Kalender, Benachrichtigungen).
+davon die offenen Wartungen (Objektdetail, Kalender, Benachrichtigungen), die
+Dienstleisterverhältnisse (Objektdetail) und die Zählerwechsel (Einheitenseite).
 
 ## Verweise
 
 - Kapitel Datenübernahmen: Objekte und Kontakte aus Immoware24-Listen anlegen.
 - Kapitel Verträge: Miet- und Eigentumsverhältnisse je Einheit.
 - Kapitel WEG: laufende Verwaltung der Gemeinschaft.
+- Kapitel Stammdaten direkt bearbeiten: Bedienung, Speicherzustände und Konflikthinweis.

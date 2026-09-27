@@ -182,7 +182,7 @@ def test_case_7_document_redownload_versions_and_receipt_only_after_storage(
     fake.acknowledged.clear()
     fake.downloads.clear()
     settings = _settings(database, redis_url)
-    prop = _property(client, admin, "915")
+    prop = _property(client, admin, "917")
     records = [
         _document(f"DOC-{RUN}-1", "h1", _pdf("Abrechnung 2025"), external_unit_number="0001"),
         _document(f"DOC-{RUN}-2", "h1", "bm9wZQ=="),  # not a PDF: rejected, never acknowledged

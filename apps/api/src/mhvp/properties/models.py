@@ -162,17 +162,46 @@ class CatalogEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     label: Mapped[str] = mapped_column(String(200), nullable=False)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # Annex B system entry (AP4): seeded per tenant, may be deactivated, never deleted.
+    is_system: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class CustomFieldDefinition(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Custom field per entity (4.11 Benutzerdefiniertes Feld, field types B.28)."""
+
     __tablename__ = "custom_field_definition"
     __table_args__ = (UniqueConstraint("tenant_id", "entity_type", "key"),)
 
     entity_type: Mapped[str] = mapped_column(String(63), nullable=False)
     key: Mapped[str] = mapped_column(String(63), nullable=False)
     label: Mapped[str] = mapped_column(String(200), nullable=False)
-    field_type: Mapped[str] = mapped_column(String(16), nullable=False)  # text, number, date, bool
+    field_type: Mapped[str] = mapped_column(String(16), nullable=False)  # B.28 codes
     required: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    group: Mapped[str | None] = mapped_column(String(100))
+    valid_for_management_types: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    valid_for_contract_kinds: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    uniqueness: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="none", server_default=text("'none'")
+    )  # none, contract, all_contracts
+    visible_in_main: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    min_value: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
+    max_value: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
+    default_value: Mapped[Any | None] = mapped_column(JSONB)
+    options: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )  # choice values (B.28 Einzelauswahl)
+    description: Mapped[str | None] = mapped_column(Text)
+    sort_order: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
 
 
 class AllocationKeyTemplate(IdMixin, TimestampMixin, TenantMixin, Base):

@@ -41,8 +41,10 @@ from mhvp.metering.models import (
     MeteringExternalBillingUnit,
     MeteringPropertyAssignment,
     MeteringSyncJob,
+    MeteringTransmission,
     MeteringUnitAssignment,
     SyncStatus,
+    TransmissionStatus,
     ValueKind,
 )
 from mhvp.metering.providers import (
@@ -122,6 +124,46 @@ async def ensure_module_enabled(session: AsyncSession, tenant_id: uuid.UUID) -> 
         )
 
 
+# Controlled write workflows (section 12): a change of a relevant assignment supersedes every
+# checked or released transmission of that assignment. Called by the assignment services below;
+# the workflow itself lives in ``mhvp.metering.transmissions``.
+OPEN_TRANSMISSION_STATUSES: tuple[str, ...] = (
+    TransmissionStatus.CHECKED,
+    TransmissionStatus.RELEASED,
+)
+
+
+async def invalidate_transmissions(
+    session: AsyncSession, assignment_id: uuid.UUID, *, actor: uuid.UUID | None, reason: str
+) -> int:
+    rows = list(
+        await session.scalars(
+            select(MeteringTransmission).where(
+                MeteringTransmission.property_assignment_id == assignment_id,
+                MeteringTransmission.status.in_(OPEN_TRANSMISSION_STATUSES),
+            )
+        )
+    )
+    for row in rows:
+        row.status = TransmissionStatus.SUPERSEDED
+        row.version += 1
+        row.updated_by = actor
+        row.log = [
+            *row.log,
+            {
+                "action": "superseded",
+                "user_id": str(actor) if actor else None,
+                "at": _now().isoformat(),
+                "fingerprint": row.fingerprint,
+                "data_version": row.assignment_version,
+                "reason": reason,
+            },
+        ]
+    if rows:
+        await session.flush()
+    return len(rows)
+
+
 # Connections -----------------------------------------------------------------------------
 
 
@@ -175,11 +217,15 @@ def capability_matrix(connection: MeteringConnection) -> list[dict[str, Any]]:
                 if connection.test_stale
                 else "Verbindung noch nicht erfolgreich geprüft."
             )
-        elif function in WRITING_FUNCTIONS:
-            reason = "Schreibende Vorgänge sind in Stufe 1 deaktiviert."
+        elif function in WRITING_FUNCTIONS and not connection.write_sync_enabled:
+            reason = (
+                "Schreibende Vorgänge sind für diese Verbindung nicht freigegeben "
+                "(write_sync_enabled)."
+            )
         label = (
             "Verbindung erfolgreich geprüft"
-            if reason is None or (test_ok and function in WRITING_FUNCTIONS)
+            if reason is None
+            or (test_ok and function in WRITING_FUNCTIONS and implemented and account_release)
             else "Ja, Freischaltung ausstehend"
             if documented == DocumentedSupport.YES and implemented and not account_release
             else DOCUMENTED_SUPPORT_LABELS.get(documented, "Ungeklärt")
@@ -322,6 +368,7 @@ async def update_connection(
             "customer_references",
             "contracting_company",
             "scheduled_sync_enabled",
+            "write_sync_enabled",
         }:
             setattr(connection, key, value)
         else:
@@ -694,6 +741,7 @@ async def update_assignment(
             if before[k] != getattr(row, k)
         },
     )
+    await invalidate_transmissions(session, row.id, actor=actor, reason="Objektzuordnung geändert.")
     return row
 
 
@@ -748,6 +796,7 @@ async def change_provider(
     old.updated_by = actor
     await session.flush()
     await session.refresh(old)
+    await invalidate_transmissions(session, old.id, actor=actor, reason="Anbieterwechsel.")
     new = await create_assignment(
         session,
         tenant_id=tenant_id,
@@ -882,6 +931,9 @@ async def create_unit_assignment(
     session.add(row)
     await session.flush()
     await session.refresh(row)
+    await invalidate_transmissions(
+        session, property_assignment.id, actor=actor, reason="Einheitenzuordnung angelegt."
+    )
     return row
 
 
@@ -924,6 +976,9 @@ async def update_unit_assignment(
     row.updated_by = actor
     await session.flush()
     await session.refresh(row)
+    await invalidate_transmissions(
+        session, row.property_assignment_id, actor=actor, reason="Einheitenzuordnung geändert."
+    )
     return row
 
 

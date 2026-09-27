@@ -29,9 +29,9 @@ from mhvp.contracts.models import (
     SepaMandate,
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.events import emit
+from mhvp.core.events import diff, emit
 from mhvp.core.pagination import PAGE_HEADERS, paginate
-from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 from mhvp.properties.models import AllocationKey, ManagementType, Property, Unit
 from mhvp.properties.services import check_catalog
 
@@ -430,6 +430,52 @@ async def get_contract(
 ) -> s.ContractOut:
     async with tenant_tx(request, principal) as session:
         return await _out(session, await _get(session, Contract, contract_id))
+
+
+_NOTES_FIELDS = ("notes", "dunning_block", "dunning_block_reason")
+
+
+@router.patch("/contracts/{contract_id}/notes", summary="Bemerkungen und Mahnsperre ändern")
+async def patch_contract_notes(
+    contract_id: uuid.UUID,
+    body: s.ContractNotesPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.ContractOut:
+    """In place update without a new contract version (AP8): remarks, dunning block and its
+    reason only. Payments, terms and parties keep the version path (``POST .../versions``)."""
+    async with tenant_tx(request, principal) as session:
+        contract = await _get(session, Contract, contract_id)
+        before = {k: getattr(contract, k) for k in _NOTES_FIELDS}
+        after = before | body.model_dump(exclude_unset=True)
+        if after["dunning_block"] and not (after["dunning_block_reason"] or "").strip():
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Mahnsperre braucht eine Begründung",
+                errors=[
+                    FieldError(
+                        location=["body", "dunning_block_reason"],
+                        field="dunning_block_reason",
+                        code="required",
+                        message="Mahnsperre braucht eine Begründung",
+                    )
+                ],
+            )
+        for key, value in after.items():
+            setattr(contract, key, value)
+        contract.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="contract.updated",
+            entity_type="contract",
+            entity_id=contract.id,
+            actor_user_id=principal.user_id,
+            payload={"fields": sorted(body.model_dump(exclude_unset=True))},
+            changes=diff(before, after),
+        )
+        return await _out(session, contract)
 
 
 @router.get("/contracts/{contract_id}/versions", summary="Vertragsversionen")

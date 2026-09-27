@@ -4749,6 +4749,459 @@
         "title": "BuildingOut",
         "type": "object"
       },
+      "BuildingPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "address_addition": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Addition"
+          },
+          "building_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building Type Code"
+          },
+          "built_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built Area Sqm"
+          },
+          "cellar_rooms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cellar Rooms"
+          },
+          "construction_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Construction Type Code"
+          },
+          "construction_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Construction Year"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
+          "elevator": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Elevator"
+          },
+          "energy_certificate_class": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Class"
+          },
+          "energy_certificate_construction_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Construction Year"
+          },
+          "energy_certificate_issued_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Issued On"
+          },
+          "energy_certificate_law": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Law"
+          },
+          "energy_certificate_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Type"
+          },
+          "energy_certificate_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Valid Until"
+          },
+          "energy_final_electricity_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Final Electricity Kwh"
+          },
+          "energy_final_heat_kwh": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Final Heat Kwh"
+          },
+          "energy_hot_water_included": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Hot Water Included"
+          },
+          "energy_sources": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Sources"
+          },
+          "floors": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floors"
+          },
+          "gross_floor_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gross Floor Area Sqm"
+          },
+          "hallway_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hallway Area Sqm"
+          },
+          "heated_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heated Area Sqm"
+          },
+          "heating_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating Type Code"
+          },
+          "heritage_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heritage Notes"
+          },
+          "heritage_protection": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heritage Protection"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "living_commercial_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living Commercial Area Sqm"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "renovation_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renovation Level"
+          },
+          "roof_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Roof Area Sqm"
+          },
+          "sealed_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed Area Sqm"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "total_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Area Sqm"
+          },
+          "window_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Window Area Sqm"
+          },
+          "windows": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Windows"
+          }
+        },
+        "title": "BuildingPatch",
+        "type": "object"
+      },
       "BulkDecisionIn": {
         "properties": {
           "case_ids": {
@@ -5822,6 +6275,10 @@
             "title": "Id",
             "type": "string"
           },
+          "is_system": {
+            "title": "Is System",
+            "type": "boolean"
+          },
           "label": {
             "maxLength": 200,
             "minLength": 1,
@@ -5839,9 +6296,81 @@
           "label",
           "id",
           "catalog",
-          "active"
+          "active",
+          "is_system"
         ],
         "title": "CatalogEntryOut",
+        "type": "object"
+      },
+      "CatalogEntryPatch": {
+        "additionalProperties": false,
+        "description": "Partial update (AP4): system entries accept label, sort order and active only; the\ncode of any entry is immutable because rows reference it.",
+        "properties": {
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          }
+        },
+        "title": "CatalogEntryPatch",
+        "type": "object"
+      },
+      "CatalogSummaryOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "integer"
+          },
+          "catalog": {
+            "title": "Catalog",
+            "type": "string"
+          },
+          "entries": {
+            "title": "Entries",
+            "type": "integer"
+          },
+          "system": {
+            "title": "System",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "catalog",
+          "entries",
+          "active",
+          "system"
+        ],
+        "title": "CatalogSummaryOut",
         "type": "object"
       },
       "CategoryIn": {
@@ -7360,6 +7889,18 @@
           "version": {
             "title": "Version",
             "type": "integer"
+          },
+          "write_sync_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Freigabe der kontrollierten schreibenden Vorgänge (Rollen, Billing Input) für diese Verbindung; Standard aus.",
+            "title": "Write Sync Enabled"
           }
         },
         "required": [
@@ -8658,6 +9199,193 @@
         "title": "ContactPage",
         "type": "object"
       },
+      "ContactPatch": {
+        "additionalProperties": false,
+        "description": "Partial master data update (inline editing, AP8). Only the fields sent are changed; the\nmerged contact is validated with the rules of ``ContactIn``. Addresses, phones, e-mails,\nidentifiers, dates, bank accounts, types, roles and tags keep the ``PUT`` route.",
+        "properties": {
+          "blocked": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked"
+          },
+          "company_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Company Name"
+          },
+          "completeness": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/Completeness"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "date_of_birth": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Of Birth"
+          },
+          "external_ids": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "External Ids"
+          },
+          "first_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "First Name"
+          },
+          "language": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Language"
+          },
+          "last_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Name"
+          },
+          "legal_form": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Form"
+          },
+          "letter_salutation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Salutation"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          },
+          "preferred_channel": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/PreferredChannel"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "retention_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Profile Id"
+          },
+          "salutation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Salutation"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ContactPatch",
+        "type": "object"
+      },
       "ContactRoleCode": {
         "description": "Operator classification, multiple values allowed (task M3-02). Distinct from `kind`\n(person/organisation) and from `ContactTypeCode` (process derived contact types).",
         "enum": [
@@ -9137,6 +9865,47 @@
         ],
         "title": "ContractKind",
         "type": "string"
+      },
+      "ContractNotesPatch": {
+        "additionalProperties": false,
+        "description": "Inline editing of a contract (AP8, operator decision (c) 4): only remarks and the\ndunning block change in place; payments and terms stay versioned (7.4).",
+        "properties": {
+          "dunning_block": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dunning Block"
+          },
+          "dunning_block_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dunning Block Reason"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "title": "ContractNotesPatch",
+        "type": "object"
       },
       "ContractOut": {
         "properties": {
@@ -10003,15 +10772,48 @@
       "CustomFieldIn": {
         "additionalProperties": false,
         "properties": {
+          "default_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "entity_type": {
-            "pattern": "^(property|building|unit|service_provider_relation)$",
+            "pattern": "^(property|building|unit|contract|contact|service_provider|service_provider_relation)$",
             "title": "Entity Type",
             "type": "string"
           },
           "field_type": {
-            "pattern": "^(text|number|date|bool)$",
+            "pattern": "^(amount|bool|choice|contact_ref|date|datetime|document_ref|integer|number|property_ref|rich_text|string|text|url)$",
             "title": "Field Type",
             "type": "string"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
           },
           "key": {
             "pattern": "^[a-z][a-z0-9_]{0,62}$",
@@ -10024,16 +10826,83 @@
             "title": "Label",
             "type": "string"
           },
+          "max_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "min_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Value"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
           "required": {
             "default": false,
             "title": "Required",
             "type": "boolean"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "uniqueness": {
+            "default": "none",
+            "pattern": "^(none|contract|all_contracts)$",
+            "title": "Uniqueness",
+            "type": "string"
+          },
+          "valid_for_contract_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Valid For Contract Kinds",
+            "type": "array"
+          },
+          "valid_for_management_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Valid For Management Types",
+            "type": "array"
+          },
+          "visible_in_main": {
+            "default": false,
+            "title": "Visible In Main",
+            "type": "boolean"
           }
         },
         "required": [
+          "label",
           "entity_type",
           "key",
-          "label",
           "field_type"
         ],
         "title": "CustomFieldIn",
@@ -10041,15 +10910,48 @@
       },
       "CustomFieldOut": {
         "properties": {
+          "default_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
           "entity_type": {
-            "pattern": "^(property|building|unit|service_provider_relation)$",
+            "pattern": "^(property|building|unit|contract|contact|service_provider|service_provider_relation)$",
             "title": "Entity Type",
             "type": "string"
           },
           "field_type": {
-            "pattern": "^(text|number|date|bool)$",
+            "pattern": "^(amount|bool|choice|contact_ref|date|datetime|document_ref|integer|number|property_ref|rich_text|string|text|url)$",
             "title": "Field Type",
             "type": "string"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
           },
           "id": {
             "format": "uuid",
@@ -10067,20 +10969,252 @@
             "title": "Label",
             "type": "string"
           },
+          "max_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "min_value": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Value"
+          },
+          "options": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Options",
+            "type": "array"
+          },
           "required": {
             "default": false,
             "title": "Required",
             "type": "boolean"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "uniqueness": {
+            "default": "none",
+            "pattern": "^(none|contract|all_contracts)$",
+            "title": "Uniqueness",
+            "type": "string"
+          },
+          "valid_for_contract_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Valid For Contract Kinds",
+            "type": "array"
+          },
+          "valid_for_management_types": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Valid For Management Types",
+            "type": "array"
+          },
+          "visible_in_main": {
+            "default": false,
+            "title": "Visible In Main",
+            "type": "boolean"
           }
         },
         "required": [
+          "label",
           "entity_type",
           "key",
-          "label",
           "field_type",
           "id"
         ],
         "title": "CustomFieldOut",
+        "type": "object"
+      },
+      "CustomFieldPatch": {
+        "additionalProperties": false,
+        "description": "Partial update (AP4). Entity, key and field type are immutable: stored values depend\non them.",
+        "properties": {
+          "default_value": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "group": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Group"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "max_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Max Value"
+          },
+          "min_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Min Value"
+          },
+          "options": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Options"
+          },
+          "required": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "uniqueness": {
+            "anyOf": [
+              {
+                "pattern": "^(none|contract|all_contracts)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uniqueness"
+          },
+          "valid_for_contract_kinds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid For Contract Kinds"
+          },
+          "valid_for_management_types": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid For Management Types"
+          },
+          "visible_in_main": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visible In Main"
+          }
+        },
+        "title": "CustomFieldPatch",
         "type": "object"
       },
       "CustomResolutionKind": {
@@ -27475,6 +28609,369 @@
         "title": "PropertyPage",
         "type": "object"
       },
+      "PropertyPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_loss_risk_percent": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Loss Risk Percent"
+          },
+          "built_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Built Area Sqm"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "country": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
+          "garden_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Garden Notes"
+          },
+          "garden_use": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Garden Use"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "land_registry_district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Registry District"
+          },
+          "land_registry_sheet": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Land Registry Sheet"
+          },
+          "latitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latitude"
+          },
+          "longitude": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Longitude"
+          },
+          "managed_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed From"
+          },
+          "managed_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Managed To"
+          },
+          "management_mode": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManagementMode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "management_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ManagementType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "manager_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager User Id"
+          },
+          "municipality_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Municipality Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "parcel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parcel"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "property_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Type Code"
+          },
+          "renovation_flag": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renovation Flag"
+          },
+          "renovation_notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Renovation Notes"
+          },
+          "sealed_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sealed Area Sqm"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "State"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "unbuilt_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unbuilt Area Sqm"
+          }
+        },
+        "title": "PropertyPatch",
+        "type": "object"
+      },
       "PropertyStatus": {
         "enum": [
           "onboarding",
@@ -35686,6 +37183,281 @@
         "title": "TransitionIn",
         "type": "object"
       },
+      "TransmissionCheckIn": {
+        "additionalProperties": false,
+        "properties": {
+          "assignment_id": {
+            "format": "uuid",
+            "title": "Assignment Id",
+            "type": "string"
+          },
+          "inputs": {
+            "additionalProperties": true,
+            "description": "Billing Input: ancillary_invoices, heating_system_invoices, energy_sources, allocations (je externer Nutzeinheit), currency und expectedvat als Ersatz, wenn keine Anbietervorlage geladen werden kann.",
+            "title": "Inputs",
+            "type": "object"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TransmissionKind"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          }
+        },
+        "required": [
+          "assignment_id",
+          "kind"
+        ],
+        "title": "TransmissionCheckIn",
+        "type": "object"
+      },
+      "TransmissionKind": {
+        "description": "Controlled write workflows (section 12): user and role submission (On-Site Roles 2.0)\nand billing input (bved billing-input, the binding send can trigger a billing).",
+        "enum": [
+          "roles",
+          "billing_input"
+        ],
+        "title": "TransmissionKind",
+        "type": "string"
+      },
+      "TransmissionOut": {
+        "properties": {
+          "assignment_version": {
+            "title": "Assignment Version",
+            "type": "integer"
+          },
+          "connection_id": {
+            "format": "uuid",
+            "title": "Connection Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "diff": {
+            "additionalProperties": true,
+            "title": "Diff",
+            "type": "object"
+          },
+          "fingerprint": {
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "log": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Log",
+            "type": "array"
+          },
+          "ordered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ordered At"
+          },
+          "ordered_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ordered By"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "period_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period From"
+          },
+          "period_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Period To"
+          },
+          "property_assignment_id": {
+            "format": "uuid",
+            "title": "Property Assignment Id",
+            "type": "string"
+          },
+          "provider_response": {
+            "additionalProperties": true,
+            "title": "Provider Response",
+            "type": "object"
+          },
+          "provider_transaction_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Transaction Id"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "released_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released By"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "validation": {
+            "additionalProperties": true,
+            "title": "Validation",
+            "type": "object"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
+          "warnings_acknowledged": {
+            "title": "Warnings Acknowledged",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "connection_id",
+          "property_assignment_id",
+          "kind",
+          "period_from",
+          "period_to",
+          "status",
+          "fingerprint",
+          "assignment_version",
+          "validation",
+          "diff",
+          "summary",
+          "payload",
+          "released_by",
+          "released_at",
+          "warnings_acknowledged",
+          "ordered_by",
+          "ordered_at",
+          "provider_transaction_id",
+          "provider_response",
+          "log",
+          "version",
+          "created_at"
+        ],
+        "title": "TransmissionOut",
+        "type": "object"
+      },
+      "TransmissionStepIn": {
+        "additionalProperties": false,
+        "properties": {
+          "acknowledge_warnings": {
+            "default": false,
+            "title": "Acknowledge Warnings",
+            "type": "boolean"
+          },
+          "fingerprint": {
+            "maxLength": 64,
+            "minLength": 64,
+            "title": "Fingerprint",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "version",
+          "fingerprint"
+        ],
+        "title": "TransmissionStepIn",
+        "type": "object"
+      },
       "TrustedDeviceOut": {
         "properties": {
           "created_at": {
@@ -36736,6 +38508,320 @@
           "version"
         ],
         "title": "UnitOut",
+        "type": "object"
+      },
+      "UnitPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "bathrooms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bathrooms"
+          },
+          "bedrooms": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bedrooms"
+          },
+          "building_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Building Id"
+          },
+          "cellar_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cellar Number"
+          },
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "commission": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission"
+          },
+          "commission_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission Note"
+          },
+          "custom_fields": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Custom Fields"
+          },
+          "deposit_amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Amount"
+          },
+          "features": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Features"
+          },
+          "floor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Floor"
+          },
+          "house_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "House Number"
+          },
+          "internal_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Name"
+          },
+          "is_fictional": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Fictional"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "last_modernization_year": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Modernization Year"
+          },
+          "living_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Living Area Sqm"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Number"
+          },
+          "postal_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postal Code"
+          },
+          "rooms": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rooms"
+          },
+          "street": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Street"
+          },
+          "sub_community_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Community Id"
+          },
+          "total_area_sqm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Area Sqm"
+          },
+          "unit_type": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/UnitType"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "vacancy_vat_option": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VatOption"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "title": "UnitPatch",
         "type": "object"
       },
       "UnitType": {
@@ -48602,6 +50688,73 @@
           "Objekte"
         ]
       },
+      "patch": {
+        "operationId": "patch_building_api_v1_buildings__building_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "building_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Building Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildingPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gebäude teilweise ändern (If-Match)",
+        "tags": [
+          "Objekte"
+        ]
+      },
       "put": {
         "operationId": "update_building_api_v1_buildings__building_id__put",
         "parameters": [
@@ -48670,6 +50823,32 @@
         ]
       }
     },
+    "/api/v1/catalogs": {
+      "get": {
+        "description": "All catalogues of the tenant with counts; annex B catalogues without entries (after a\ntenant deactivated nothing they still exist) appear with their seeded rows.",
+        "operationId": "list_catalogs_api_v1_catalogs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogSummaryOut"
+                  },
+                  "title": "Response List Catalogs Api V1 Catalogs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Kataloge",
+        "tags": [
+          "Kataloge"
+        ]
+      }
+    },
     "/api/v1/catalogs/{catalog}": {
       "get": {
         "operationId": "list_catalog_api_v1_catalogs__catalog__get",
@@ -48681,6 +50860,16 @@
             "schema": {
               "title": "Catalog",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "include_inactive",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "Include Inactive",
+              "type": "boolean"
             }
           }
         ],
@@ -48712,7 +50901,7 @@
         },
         "summary": "Katalog",
         "tags": [
-          "Objekte"
+          "Kataloge"
         ]
       },
       "post": {
@@ -48762,7 +50951,113 @@
         },
         "summary": "Katalogeintrag anlegen",
         "tags": [
-          "Objekte"
+          "Kataloge"
+        ]
+      }
+    },
+    "/api/v1/catalogs/{catalog}/{entry_id}": {
+      "delete": {
+        "description": "Tenant entries only. System entries (annex B) are deactivated instead; rows may\nreference their codes.",
+        "operationId": "delete_catalog_entry_api_v1_catalogs__catalog___entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "catalog",
+            "required": true,
+            "schema": {
+              "title": "Catalog",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Katalogeintrag löschen",
+        "tags": [
+          "Kataloge"
+        ]
+      },
+      "patch": {
+        "operationId": "update_catalog_entry_api_v1_catalogs__catalog___entry_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "catalog",
+            "required": true,
+            "schema": {
+              "title": "Catalog",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CatalogEntryPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogEntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Katalogeintrag ändern",
+        "tags": [
+          "Kataloge"
         ]
       }
     },
@@ -49657,6 +51952,73 @@
           }
         },
         "summary": "Kontakt lesen",
+        "tags": [
+          "Kontakte"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_contact_api_v1_contacts__contact_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kontakt teilweise ändern (Stammdaten, If-Match)",
         "tags": [
           "Kontakte"
         ]
@@ -51360,6 +53722,60 @@
         ]
       }
     },
+    "/api/v1/contracts/{contract_id}/notes": {
+      "patch": {
+        "description": "In place update without a new contract version (AP8): remarks, dunning block and its\nreason only. Payments, terms and parties keep the version path (``POST .../versions``).",
+        "operationId": "patch_contract_notes_api_v1_contracts__contract_id__notes_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractNotesPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bemerkungen und Mahnsperre ändern",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
     "/api/v1/contracts/{contract_id}/ownership-transfer": {
       "post": {
         "description": "Ends the current ownership the day before the title transfer (D16, D17).",
@@ -51820,6 +54236,24 @@
     "/api/v1/custom-fields": {
       "get": {
         "operationId": "list_custom_fields_api_v1_custom_fields_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -51834,11 +54268,21 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Zusatzfelder",
         "tags": [
-          "Objekte"
+          "Kataloge"
         ]
       },
       "post": {
@@ -51877,7 +54321,95 @@
         },
         "summary": "Zusatzfeld definieren",
         "tags": [
-          "Objekte"
+          "Kataloge"
+        ]
+      }
+    },
+    "/api/v1/custom-fields/{field_id}": {
+      "delete": {
+        "description": "Removes the definition. Values already stored under the key stay in the JSONB of the\nrows (no data loss); a later full update of such a row must omit the key.",
+        "operationId": "delete_custom_field_api_v1_custom_fields__field_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "field_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Field Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zusatzfeld löschen",
+        "tags": [
+          "Kataloge"
+        ]
+      },
+      "patch": {
+        "operationId": "update_custom_field_api_v1_custom_fields__field_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "field_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Field Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomFieldPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomFieldOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zusatzfeld ändern",
+        "tags": [
+          "Kataloge"
         ]
       }
     },
@@ -67242,6 +69774,295 @@
         ]
       }
     },
+    "/api/v1/metering/transmissions": {
+      "get": {
+        "operationId": "list_transmissions_api_v1_metering_transmissions_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "assignment_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Assignment Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "connection_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Connection Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "kind",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/TransmissionKind"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Kind"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TransmissionOut"
+                  },
+                  "title": "Response List Transmissions Api V1 Metering Transmissions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übermittlungen (Rollen, Abrechnungsdaten)",
+        "tags": [
+          "Messdienstleister"
+        ]
+      }
+    },
+    "/api/v1/metering/transmissions/check": {
+      "post": {
+        "operationId": "check_transmission_api_v1_metering_transmissions_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransmissionCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransmissionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Daten prüfen (keine Beauftragung, beim Anbieter nur VALIDATE)",
+        "tags": [
+          "Messdienstleister"
+        ]
+      }
+    },
+    "/api/v1/metering/transmissions/{transmission_id}": {
+      "get": {
+        "operationId": "get_transmission_api_v1_metering_transmissions__transmission_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transmission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transmission Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransmissionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Übermittlung lesen",
+        "tags": [
+          "Messdienstleister"
+        ]
+      }
+    },
+    "/api/v1/metering/transmissions/{transmission_id}/order": {
+      "post": {
+        "operationId": "order_transmission_api_v1_metering_transmissions__transmission_id__order_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transmission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transmission Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransmissionStepIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransmissionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verbindlich beauftragen (Abrechnung) beziehungsweise Rollen übermitteln",
+        "tags": [
+          "Messdienstleister"
+        ]
+      }
+    },
+    "/api/v1/metering/transmissions/{transmission_id}/release": {
+      "post": {
+        "operationId": "release_transmission_api_v1_metering_transmissions__transmission_id__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transmission_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transmission Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TransmissionStepIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransmissionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Geprüfte Daten freigeben",
+        "tags": [
+          "Messdienstleister"
+        ]
+      }
+    },
     "/api/v1/metering/unit-assignments/{unit_assignment_id}": {
       "patch": {
         "operationId": "patch_unit_assignment_api_v1_metering_unit_assignments__unit_assignment_id__patch",
@@ -73720,6 +76541,73 @@
           }
         },
         "summary": "Objekt lesen",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_property_api_v1_properties__property_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekt teilweise ändern (If-Match)",
         "tags": [
           "Objekte"
         ]
@@ -82500,6 +85388,73 @@
           }
         },
         "summary": "Einheit lesen, optional zum Stichtag",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_unit_api_v1_units__unit_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnitPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnitOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einheit teilweise ändern (If-Match)",
         "tags": [
           "Objekte"
         ]

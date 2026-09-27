@@ -100,3 +100,9 @@ Datensätze und Anzeige, keine Buchungen; G1 bis G3 bleiben geschlossen.
   Bearbeitungsformular mit Auszugsdatum und Zählerständen je Zähler der Einheit.
 * Tests: `tests/integration/test_contracts_p1.py` (Happy Path, Validierung, Rechte,
   Mandantentrennung), `apps/web-crm/src/components/contracts/ContractAllocationValues.test.tsx`.
+
+## Inline editing (Ergänzung CRM AP8, ADR 0012, 27.09.2026)
+
+`PATCH /contracts/{id}/notes` (`ContractNotesPatch`) changes `notes`, `dunning_block` and
+`dunning_block_reason` in place without a new contract version (operator decision (c) 4,
+option a); a block needs a reason (422). Payments, terms and parties keep the version path.

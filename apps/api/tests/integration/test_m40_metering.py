@@ -142,11 +142,13 @@ def test_module_switch_locks_writes(client: TestClient, world: World) -> None:
     assert {"ista", "techem", "kalo", "brunata_minol", "brunata_metrona", "other"} <= codes
     ista = next(p for p in providers if p["code"] == "ista")
     assert "erneut prüfen" in ista["research_note"]
-    # stage 2: read paths implemented for ista, writing functions never
+    # stage 2: read paths implemented for ista; the write families (on-site-roles 2.0.2,
+    # billing-input 1.0.3, bved zip files) are implemented but only reachable through the
+    # controlled transmission workflow (test_m40_metering_write.py)
     by_function = {f["function"]: f for f in ista["functions"]}
     assert by_function["consumption"]["adapter_implemented"] is True
-    assert by_function["roles"]["adapter_implemented"] is False
-    assert by_function["billing_input"]["adapter_implemented"] is False
+    assert by_function["roles"]["adapter_implemented"] is True
+    assert by_function["billing_input"]["adapter_implemented"] is True
     techem = next(p for p in providers if p["code"] == "techem")
     assert {f["documented_support"] for f in techem["functions"]} == {"documentation_required"}
     assert not any(f["documented_support"] == "no" for p in providers for f in p["functions"])
@@ -456,7 +458,8 @@ def test_case_6_and_12_sync_clearing_and_read_only_test(
     assert test["outcome"] == "ok" and "Objektzugriff" in test["detail"]  # noqa: PT018
     caps = {c["function"]: c for c in test["connection"]["capabilities"]}
     assert caps["consumption"]["available"] is True
-    assert caps["billing_input"]["available"] is False  # writing functions stay off
+    # writing functions stay off until the connection's write_sync_enabled is set
+    assert caps["billing_input"]["available"] is False
     assert caps["roles"]["available"] is False
     assert (
         client.post(

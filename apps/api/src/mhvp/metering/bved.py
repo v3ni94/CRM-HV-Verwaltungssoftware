@@ -8,6 +8,14 @@ OpenAPI files published by the bved (Q6, Q7; copies checked on 26.09.2026):
   {billingunit}/billingperiods`` and ``.../billingperiods/{to}/billingresult``; OAuth 2.
 * ``arge-spec-consumption-data-1_2_1.yaml`` 1.2.1 (Q7, Q3): ``GET /billingunits/{billingunit}/
   consumptions/periods[/{period}]``; Basic or OAuth 2.
+* ``bved-billing-input-1-0.openapi.yaml`` 1.0.3 (Q6, Q11; zip checked 27.09.2026): ``GET
+  /billinginput/v1/billingunits/{billingunit}/billingperiods[/{to}]`` (periods, template) and
+  ``POST .../billingperiods/{to}?action=VALIDATE|SEND|SEND_AND_IGNORE_WARNINGS`` (200 with
+  ``transactionid`` for SEND, 204 for VALIDATE, 400 with ``Validation.messages``, 409 when
+  input was already received); OAuth 2.
+* ``bved-on-site-roles-2-0.openapi.yaml`` 2.0.2 (Q6, Q10; zip checked 27.09.2026): ``POST
+  /onsiteroles/v2/billingunits/{billingunit}/residentialunits/{unit}/on-site-roles`` with the
+  complete data set of the unit (200 ``transactionid``, 400 ``ValidationResponse``); OAuth 2.
 * ``bved-documents-1-3.openapi.yaml`` 1.3 (Q7, Q3): ``GET /documents/out`` (``offset``,
   ``limit``, ``_links.next``), ``GET /documents/out/{id}/data``, ``PUT /documents/out/{id}/
   status``; Basic or OAuth 2.
@@ -32,6 +40,7 @@ from mhvp.metering.adapters import (
     DocumentRecord,
     ExternalBillingUnitData,
     ExternalUnitData,
+    WriteResult,
 )
 from mhvp.metering.http import (
     MAX_PAGE_LIMIT,
@@ -45,6 +54,7 @@ from mhvp.metering.http import (
 __all__ = [
     "BvedPayloadError",
     "acknowledge_document",
+    "billing_input_template",
     "billing_periods",
     "billing_result",
     "consumption_data",
@@ -61,6 +71,8 @@ __all__ = [
     "parse_consumption",
     "parse_document",
     "run_bounded",
+    "send_billing_input",
+    "send_on_site_roles",
     "setup_result",
     "submit_setup",
 ]
@@ -278,6 +290,159 @@ def submit_setup(
         return str(response.json()["transactionid"])
     except (ValueError, KeyError, TypeError) as exc:
         raise ProviderHttpError("Antwort ohne transactionid.") from exc
+
+
+# Billing input 1.0.3 and on-site roles 2.0.2 (write, section 12) ---------------------------
+
+WRITE_ACTIONS: tuple[str, ...] = ("VALIDATE", "SEND", "SEND_AND_IGNORE_WARNINGS")
+
+
+def _messages(body: Any) -> tuple[dict[str, Any], ...]:
+    """``Validation.messages`` / ``ValidationResponse.messages`` as plain dictionaries."""
+    if not isinstance(body, Mapping):
+        return ()
+    items = body.get("messages")
+    if not isinstance(items, list):
+        return ()
+    out: list[dict[str, Any]] = []
+    for item in items:
+        if isinstance(item, Mapping):
+            out.append(
+                {
+                    "type": str(item.get("type", "error")).lower(),
+                    "message": str(item.get("message", "")),
+                    "shortmessage": str(item.get("shortmessage", "")),
+                }
+            )
+    return tuple(out)
+
+
+def billing_input_template(
+    http: ProviderHttp, base_url: str, *, auth: Auth, billing_unit: str, period_to: date
+) -> dict[str, Any]:
+    """``GET /billinginput/v1/billingunits/{billingunit}/billingperiods/{to}`` (read only)."""
+    body = http.get_json(
+        join(base_url, f"/billinginput/v1/billingunits/{billing_unit}/billingperiods/{period_to}"),
+        auth=auth,
+    )
+    if not isinstance(body, Mapping):
+        raise BvedPayloadError("Abrechnungsvorlage ist kein Objekt.")
+    return dict(body)
+
+
+def _write_result(response: Any) -> WriteResult:
+    from mhvp.metering.adapters import WriteOutcome
+
+    if response.status_code == 204:
+        return WriteResult(
+            WriteOutcome.VALIDATED, detail="Beim Anbieter geprüft, nichts gespeichert."
+        )
+    if response.status_code == 200:
+        try:
+            body = response.json()
+        except ValueError as exc:
+            raise ProviderHttpError("Antwort ist kein JSON.") from exc
+        transaction = body.get("transactionid") if isinstance(body, Mapping) else None
+        if not transaction:
+            raise ProviderHttpError("Antwort ohne transactionid.")
+        return WriteResult(
+            WriteOutcome.ACCEPTED,
+            transaction_id=str(transaction),
+            messages=_messages(body),
+            detail="Vom Anbieter angenommen.",
+            raw={"transactionid": str(transaction)},
+        )
+    if response.status_code == 400:
+        try:
+            body = response.json()
+        except ValueError:
+            body = {}
+        messages = _messages(body) or (
+            {"type": "error", "message": "Abgewiesen (HTTP 400).", "shortmessage": ""},
+        )
+        return WriteResult(
+            WriteOutcome.REJECTED, messages=messages, detail="Vom Anbieter abgewiesen."
+        )
+    if response.status_code == 409:
+        return WriteResult(
+            WriteOutcome.REJECTED,
+            messages=(
+                {
+                    "type": "error",
+                    "message": "Abrechnungsdaten für diesen Zeitraum wurden beim Anbieter "
+                    "bereits angenommen (HTTP 409).",
+                    "shortmessage": "ALREADY_RECEIVED",
+                },
+            ),
+            detail="Bereits angenommen.",
+        )
+    raise ProviderHttpError(
+        f"Übermittlung abgewiesen (HTTP {response.status_code}).", status=response.status_code
+    )
+
+
+def send_billing_input(
+    http: ProviderHttp,
+    base_url: str,
+    *,
+    auth: Auth,
+    billing_unit: str,
+    period_to: date,
+    payload: Mapping[str, Any],
+    action: str,
+) -> WriteResult:
+    """``POST /billinginput/v1/billingunits/{billingunit}/billingperiods/{to}?action=`` sent
+    exactly once by ``ProviderHttp``; a timeout surfaces as ``unclear`` (case 11)."""
+    from mhvp.metering.adapters import WriteOutcome
+
+    if action not in WRITE_ACTIONS:
+        raise ProviderHttpError(f"Unbekannte Aktion {action!r}.")
+    try:
+        response = http.request(
+            "POST",
+            join(
+                base_url, f"/billinginput/v1/billingunits/{billing_unit}/billingperiods/{period_to}"
+            ),
+            auth=auth,
+            params={"action": action},
+            json=dict(payload),
+        )
+    except ProviderHttpError as exc:
+        if exc.unclear:
+            return WriteResult(WriteOutcome.UNCLEAR, detail=exc.message)
+        raise
+    return _write_result(response)
+
+
+def send_on_site_roles(
+    http: ProviderHttp,
+    base_url: str,
+    *,
+    auth: Auth,
+    billing_unit: str,
+    residential_unit: str,
+    payload: Mapping[str, Any],
+) -> WriteResult:
+    """``POST /onsiteroles/v2/billingunits/{billingunit}/residentialunits/{unit}/on-site-roles``
+    with the complete data set of the unit; sent exactly once (case 11)."""
+    from mhvp.metering.adapters import WriteOutcome
+
+    try:
+        response = http.request(
+            "POST",
+            join(
+                base_url,
+                f"/onsiteroles/v2/billingunits/{billing_unit}/residentialunits/{residential_unit}"
+                "/on-site-roles",
+            ),
+            auth=auth,
+            json=dict(payload),
+        )
+    except ProviderHttpError as exc:
+        if exc.unclear:
+            return WriteResult(WriteOutcome.UNCLEAR, detail=exc.message)
+        raise
+    return _write_result(response)
 
 
 # Consumption data 1.2.1 -------------------------------------------------------------------

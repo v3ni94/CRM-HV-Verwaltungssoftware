@@ -8,6 +8,11 @@ from typing import Any, Literal, Self
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from mhvp.contacts.validation import InvalidValueError, normalise_iban
+from mhvp.properties.catalogs import (
+    CUSTOM_FIELD_ENTITIES,
+    CUSTOM_FIELD_TYPES,
+    CUSTOM_FIELD_UNIQUENESS,
+)
 from mhvp.properties.models import (
     AllocationKind,
     BankAccountKind,
@@ -574,19 +579,107 @@ class CatalogEntryIn(_In):
     sort_order: int = 0
 
 
+class CatalogEntryPatch(_In):
+    """Partial update (AP4): system entries accept label, sort order and active only; the
+    code of any entry is immutable because rows reference it."""
+
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+    sort_order: int | None = None
+    active: bool | None = None
+
+
 class CatalogEntryOut(CatalogEntryIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
     catalog: str
     active: bool
+    is_system: bool
 
 
-class CustomFieldIn(_In):
-    entity_type: str = Field(pattern=r"^(property|building|unit|service_provider_relation)$")
-    key: str = Field(pattern=r"^[a-z][a-z0-9_]{0,62}$")
+class CatalogSummaryOut(_Out):
+    catalog: str
+    entries: int
+    active: int
+    system: int
+
+
+_FIELD_TYPE = "|".join(sorted(CUSTOM_FIELD_TYPES))
+_ENTITY = "|".join(CUSTOM_FIELD_ENTITIES)
+_UNIQUENESS = "|".join(CUSTOM_FIELD_UNIQUENESS)
+
+
+class _CustomFieldBase(_In):
     label: str = Field(min_length=1, max_length=200)
-    field_type: str = Field(pattern=r"^(text|number|date|bool)$")
     required: bool = False
+    group: str | None = Field(default=None, max_length=100)
+    valid_for_management_types: list[str] = Field(default_factory=list)
+    valid_for_contract_kinds: list[str] = Field(default_factory=list)
+    uniqueness: str = Field(default="none", pattern=rf"^({_UNIQUENESS})$")
+    visible_in_main: bool = False
+    min_value: Decimal | None = None
+    max_value: Decimal | None = None
+    default_value: Any | None = None
+    options: list[str] = Field(default_factory=list)
+    description: str | None = Field(default=None, max_length=2000)
+    sort_order: int = 0
+
+    @field_validator("valid_for_management_types")
+    @classmethod
+    def _management_types(cls, value: list[str]) -> list[str]:
+        allowed = {m.value for m in ManagementType}
+        unknown = sorted(set(value) - allowed)
+        if unknown:
+            raise ValueError(f"Unbekannte Verwaltungsart: {', '.join(unknown)}")
+        return list(dict.fromkeys(value))
+
+    @field_validator("valid_for_contract_kinds", "options")
+    @classmethod
+    def _codes(cls, value: list[str]) -> list[str]:
+        cleaned = [v.strip() for v in value if v and v.strip()]
+        if any(len(v) > 100 for v in cleaned):
+            raise ValueError("Eintrag höchstens 100 Zeichen")
+        return list(dict.fromkeys(cleaned))
+
+    @model_validator(mode="after")
+    def _range(self) -> Self:
+        if (
+            self.min_value is not None
+            and self.max_value is not None
+            and self.max_value < self.min_value
+        ):
+            raise ValueError("Maximum darf nicht kleiner als Minimum sein")
+        return self
+
+
+class CustomFieldIn(_CustomFieldBase):
+    entity_type: str = Field(pattern=rf"^({_ENTITY})$")
+    key: str = Field(pattern=r"^[a-z][a-z0-9_]{0,62}$")
+    field_type: str = Field(pattern=rf"^({_FIELD_TYPE})$")
+
+    @model_validator(mode="after")
+    def _choice_options(self) -> Self:
+        if self.field_type == "choice" and not self.options:
+            raise ValueError("Einzelauswahl benötigt Auswahlwerte")
+        return self
+
+
+class CustomFieldPatch(_In):
+    """Partial update (AP4). Entity, key and field type are immutable: stored values depend
+    on them."""
+
+    label: str | None = Field(default=None, min_length=1, max_length=200)
+    required: bool | None = None
+    group: str | None = Field(default=None, max_length=100)
+    valid_for_management_types: list[str] | None = None
+    valid_for_contract_kinds: list[str] | None = None
+    uniqueness: str | None = Field(default=None, pattern=rf"^({_UNIQUENESS})$")
+    visible_in_main: bool | None = None
+    min_value: Decimal | None = None
+    max_value: Decimal | None = None
+    default_value: Any | None = None
+    options: list[str] | None = None
+    description: str | None = Field(default=None, max_length=2000)
+    sort_order: int | None = None
 
 
 class CustomFieldOut(CustomFieldIn):

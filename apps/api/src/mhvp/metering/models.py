@@ -108,6 +108,25 @@ class ReadingType(StrEnum):
     METER_READING = "meter_reading"
 
 
+class TransmissionKind(StrEnum):
+    """Controlled write workflows (section 12): user and role submission (On-Site Roles 2.0)
+    and billing input (bved billing-input, the binding send can trigger a billing)."""
+
+    ROLES = "roles"
+    BILLING_INPUT = "billing_input"
+
+
+class TransmissionStatus(StrEnum):
+    CHECKED = "checked"  # "Daten prüfen" done, no errors; may still carry warnings
+    INVALID = "invalid"  # "Daten prüfen" reported errors (local or provider validation)
+    RELEASED = "released"  # explicitly released against the checked fingerprint
+    SUPERSEDED = "superseded"  # payload or relevant assignments changed after check/release
+    ORDERED = "ordered"  # binding send accepted by the provider (transaction id)
+    REJECTED = "rejected"  # binding send rejected by the provider (validation errors)
+    UNCLEAR = "unclear"  # write timeout: outcome unknown, manual clarification, no retry
+    FAILED = "failed"  # technical failure before the request left the process
+
+
 class ReviewStatus(StrEnum):
     IMPORTED = "imported"
     REVIEWED = "reviewed"
@@ -386,7 +405,50 @@ class MeteringBillingResult(IdMixin, TimestampMixin, TenantMixin, Base):
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
 
 
+class MeteringTransmission(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One checked data set of a controlled write workflow (section 12). ``payload`` is the
+    exact data set that was checked; ``fingerprint`` hashes it together with the versions of
+    the relevant assignments, so any later change invalidates a release. ``log`` keeps user,
+    time, data version and provider answer of every step; nothing is retried after an
+    ``unclear`` outcome (case 11)."""
+
+    __tablename__ = "metering_transmission"
+    __table_args__ = (
+        _in("kind", TransmissionKind, "kind"),
+        _in("status", TransmissionStatus, "status"),
+        Index(
+            "ix_metering_transmission_tenant_id_property_assignment_id",
+            "tenant_id",
+            "property_assignment_id",
+        ),
+    )
+
+    connection_id: Mapped[uuid.UUID] = _fk("metering_connection.id")
+    property_assignment_id: Mapped[uuid.UUID] = _fk("metering_property_assignment.id")
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    period_from: Mapped[date | None] = mapped_column(Date)
+    period_to: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(String(16), nullable=False)
+    payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    fingerprint: Mapped[str] = mapped_column(String(64), nullable=False)
+    assignment_version: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Validation outcome of "Daten prüfen": {"errors": [...], "warnings": [...], "provider": ...}
+    validation: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # Differences against the last ordered transmission of the same assignment and kind.
+    diff: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    warnings_acknowledged: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    ordered_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    ordered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_transaction_id: Mapped[str | None] = mapped_column(String(128))
+    provider_response: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    log: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
 METERING_TABLES: tuple[str, ...] = (
+    MeteringTransmission.__tablename__,
     MeteringConnection.__tablename__,
     MeteringExternalBillingUnit.__tablename__,
     MeteringPropertyAssignment.__tablename__,
