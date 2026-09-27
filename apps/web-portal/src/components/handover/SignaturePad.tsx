@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -14,7 +14,11 @@ import {
   mainRoles,
 } from "./types";
 
-/** Canvas signature (finger, pen or mouse) stored as PNG with SHA-256 on the server (M30). */
+/** Canvas signature (finger, pen or mouse) stored as PNG with SHA-256 on the server (M30).
+ *  Accessibility: the canvas only accepts pointer input (finger, pen, mouse); there is no
+ *  keyboard equivalent for drawing a signature. The canvas therefore carries an aria-label
+ *  and an aria-describedby hint that states this limitation; on shared devices a signer
+ *  without pointer access needs assistance from the person conducting the handover. */
 export function SignaturePad({
   base,
   kind,
@@ -32,6 +36,7 @@ export function SignaturePad({
   onSaved: () => void;
 }) {
   const t = useTranslations("Handover");
+  const hintId = useId();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const drawing = useRef(false);
   const dirty = useRef(false);
@@ -225,12 +230,16 @@ export function SignaturePad({
         ref={canvasRef}
         className="h-[180px] w-full touch-none rounded-md border border-border bg-white"
         aria-label={t("signature.canvas")}
+        aria-describedby={hintId}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
         onPointerLeave={up}
         onPointerCancel={up}
       />
+      <p id={hintId} className={ui.help}>
+        {t("signature.pointerHint")}
+      </p>
       <div className="flex flex-wrap gap-2">
         <button
           type="button"
@@ -249,7 +258,9 @@ export function SignaturePad({
           {t("signature.save")}
         </button>
         {message ? (
-          <span className="self-center text-sm text-muted">{message}</span>
+          <span role="status" className="self-center text-sm text-muted">
+            {message}
+          </span>
         ) : null}
       </div>
     </div>

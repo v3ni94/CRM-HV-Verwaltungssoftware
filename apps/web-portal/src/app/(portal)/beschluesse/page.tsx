@@ -13,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function ResolutionsPage() {
   const t = await getTranslations("Resolutions");
   const response = await serverFetch("/api/v1/portal/resolutions");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (response.status === 403) {
     return (
       <div className={ui.pageGap}>

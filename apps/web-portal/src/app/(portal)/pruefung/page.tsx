@@ -12,7 +12,10 @@ export const dynamic = "force-dynamic";
 export default async function AuditListPage() {
   const [t, format] = await Promise.all([getTranslations("Audit"), getFormatter()]);
   const response = await serverFetch("/api/v1/portal/board/engagements");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
+  // 403 (keine Beiratsrolle) bleibt die leere Ansicht mit Hinweis; jeder andere Fehler wirft
+  // und landet auf der generischen Fehlerseite statt still eine leere Liste zu zeigen.
+  if (!response.ok && response.status !== 403) throw new Error(`HTTP ${response.status}`);
   const rows = response.ok ? ((await response.json()) as BoardEngagement[]) : [];
   const date = (value: string) => format.dateTime(new Date(value), { day: "2-digit", month: "2-digit", year: "numeric" });
   return (

@@ -12,7 +12,7 @@ export const dynamic = "force-dynamic";
 export default async function FormsPage() {
   const t = await getTranslations("Forms");
   const response = await serverFetch("/api/v1/portal/forms");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (!response.ok) throw new Error(`portal forms ${response.status}`);
   const data = (await response.json()) as PortalForm[];
   return (

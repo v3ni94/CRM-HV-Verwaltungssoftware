@@ -7,37 +7,68 @@ import { MfaForm } from "./MfaForm";
 
 const push = vi.fn();
 const refresh = vi.fn();
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push, refresh, back: vi.fn() }) }));
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({ push, refresh }),
+}));
 
-describe("MfaForm (portal)", () => {
-  const fetchMock = vi.fn<typeof fetch>();
+async function submitCode(code: string) {
+  const user = userEvent.setup();
+  await user.type(screen.getByLabelText("Code"), code);
+  await user.click(screen.getByRole("button", { name: "Bestätigen" }));
+}
+
+describe("MfaForm", () => {
   beforeEach(() => {
-    push.mockReset();
-    refresh.mockReset();
-    fetchMock.mockReset();
-    vi.stubGlobal("fetch", fetchMock);
+    vi.stubGlobal("fetch", vi.fn());
+    push.mockClear();
+    refresh.mockClear();
   });
-  afterEach(() => vi.unstubAllGlobals());
 
-  it("does not remember the device by default", async () => {
-    fetchMock.mockImplementation(async () => jsonResponse({ tenant_id: "t-1", tenants: [{ id: "t-1", name: "HVM" }] }));
-    renderIntl(<MfaForm next="/dokumente" />);
-    await userEvent.type(screen.getByLabelText("Code"), "123456");
-    await userEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+  it("verifies the code and redirects to the relative next target", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ tenant_id: "t1", tenants: [{ id: "t1", name: "WEG A" }] }));
+    renderIntl(<MfaForm setup={false} next="/dokumente" />);
+    await submitCode("123456");
     await waitFor(() => expect(push).toHaveBeenCalledWith("/dokumente"));
-    const [url, init] = fetchMock.mock.calls[0]!;
-    expect(url).toBe("/api/session/mfa/verify");
-    expect(JSON.parse(String(init?.body))).toEqual({ code: "123456", remember_device: false });
+    expect(refresh).toHaveBeenCalled();
+    expect(fetch).toHaveBeenCalledWith(
+      "/api/session/mfa/verify",
+      expect.objectContaining({ method: "POST", body: JSON.stringify({ code: "123456" }) }),
+    );
   });
 
-  it("sends remember_device when 'Dieses Gerät 90 Tage merken' is ticked", async () => {
-    fetchMock.mockImplementation(async () => jsonResponse({ tenant_id: "t-1", tenants: [{ id: "t-1", name: "HVM" }] }));
-    renderIntl(<MfaForm />);
-    await userEvent.click(screen.getByText("Dieses Gerät 90 Tage merken"));
-    await userEvent.type(screen.getByLabelText("Code"), "654321");
-    await userEvent.click(screen.getByRole("button", { name: "Bestätigen" }));
+  it("falls back to /start without a safe next target", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ tenant_id: "t1", tenants: [{ id: "t1", name: "WEG A" }] }));
+    renderIntl(<MfaForm setup={false} next="//evil.example" />);
+    await submitCode("123456");
     await waitFor(() => expect(push).toHaveBeenCalledWith("/start"));
-    const [, init] = fetchMock.mock.calls[0]!;
-    expect(JSON.parse(String(init?.body))).toEqual({ code: "654321", remember_device: true });
+  });
+
+  it("rejects a malformed code locally without a request", async () => {
+    renderIntl(<MfaForm setup={false} />);
+    await submitCode("12ab");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Der Code besteht aus 6 bis 8 Ziffern.");
+    expect(fetch).not.toHaveBeenCalled();
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("shows the problem detail for a wrong code", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      jsonResponse({ title: "Ungültiger Code", status: 401, detail: "Der Code ist ungültig oder abgelaufen." }, 401),
+    );
+    renderIntl(<MfaForm setup={false} />);
+    await submitCode("654321");
+    expect(await screen.findByRole("alert")).toHaveTextContent("Der Code ist ungültig oder abgelaufen.");
+    expect(push).not.toHaveBeenCalled();
+    expect(refresh).not.toHaveBeenCalled();
+  });
+
+  it("shows the tenant error when the verified session has no tenant", async () => {
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ tenant_id: null, tenants: [] }));
+    renderIntl(<MfaForm setup={false} />);
+    await submitCode("123456");
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Für Ihren Zugang ist kein Mandant freigeschaltet. Bitte wenden Sie sich an Ihre Verwaltung.",
+    );
+    expect(push).not.toHaveBeenCalled();
   });
 });

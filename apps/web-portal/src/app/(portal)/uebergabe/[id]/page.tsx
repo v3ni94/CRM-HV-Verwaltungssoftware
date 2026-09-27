@@ -15,7 +15,7 @@ export default async function HandoverFillPage({ params }: { params: Promise<{ i
   const { data, error, response } = await serverApi().GET("/api/v1/portal/handover/{protocol_id}", {
     params: { path: { protocol_id: id } },
   });
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (response.status === 404) notFound();
   if (!data) throw new Error(String(error));
   const protocol = data as unknown as Full;

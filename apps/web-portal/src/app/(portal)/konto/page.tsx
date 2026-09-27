@@ -15,7 +15,7 @@ function formatAmount(value: string): string {
 export default async function AccountPage() {
   const [t, format] = await Promise.all([getTranslations("Account"), getFormatter()]);
   const { data, error, response } = await serverApi().GET("/api/v1/portal/account");
-  redirectIfUnauthenticated(response);
+  await redirectIfUnauthenticated(response);
   if (!data) throw new Error(String(error));
   const statement = data as unknown as AccountStatement;
   return (

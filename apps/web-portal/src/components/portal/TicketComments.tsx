@@ -38,7 +38,7 @@ export function TicketComments({ ticketId, comments }: { ticketId: string; comme
     <div className={`${ui.card} flex flex-col gap-3`}>
       <h2 className={ui.h2}>{t("history")}</h2>
       {comments.length === 0 ? (
-        <p className="text-sm text-muted">{t("empty")}</p>
+        <p className="text-sm text-muted">{t("noComments")}</p>
       ) : (
         <ul className="flex flex-col gap-2">
           {comments.map((c, i) => (

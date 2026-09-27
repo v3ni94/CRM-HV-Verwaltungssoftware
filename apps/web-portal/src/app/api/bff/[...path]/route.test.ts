@@ -97,6 +97,8 @@ describe("portal bff", () => {
     );
     for (const path of [
       "portal/documents",
+      // Metadata of one document (read receipt "opened", 11.3/D34).
+      `portal/documents/${ID}`,
       "portal/tickets",
       "portal/account",
       "portal/work-orders",

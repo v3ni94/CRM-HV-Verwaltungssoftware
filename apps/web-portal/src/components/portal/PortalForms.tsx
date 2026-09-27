@@ -22,7 +22,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
   const [busy, setBusy] = useState(false);
   const headingRef = useRef<HTMLHeadingElement>(null);
 
-  // Keyboard: the opening button is replaced by the form, so focus moves to its heading.
+  // Keyboard: on opening, focus moves from the disclosure button to the form heading.
   useEffect(() => {
     headingRef.current?.focus();
   }, []);
@@ -164,25 +164,32 @@ export function PortalForms({ forms }: { forms: PortalForm[] }) {
         </p>
       ) : null}
       <ul className="flex flex-col gap-3">
-        {forms.map((form) => (
-          <li key={form.id}>
-            {open === form.id ? (
-              <FormCard
-                form={form}
-                onDone={() => {
-                  setOpen(null);
-                  setDone(form.name);
-                  router.refresh();
-                }}
-              />
-            ) : (
-              <button type="button" className={`${ui.cardLink} w-full text-left`} aria-expanded="false" onClick={() => setOpen(form.id)}>
+        {forms.map((form) => {
+          const isOpen = open === form.id;
+          return (
+            <li key={form.id} className="flex flex-col gap-3">
+              <button
+                type="button"
+                className={`${ui.cardLink} w-full text-left`}
+                aria-expanded={isOpen}
+                onClick={() => setOpen(isOpen ? null : form.id)}
+              >
                 <span className="font-medium">{form.name}</span>
                 {form.description ? <span className="mt-1 block text-sm text-muted">{form.description}</span> : null}
               </button>
-            )}
-          </li>
-        ))}
+              {isOpen ? (
+                <FormCard
+                  form={form}
+                  onDone={() => {
+                    setOpen(null);
+                    setDone(form.name);
+                    router.refresh();
+                  }}
+                />
+              ) : null}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

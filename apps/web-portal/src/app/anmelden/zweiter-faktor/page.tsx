@@ -11,13 +11,14 @@ export const dynamic = "force-dynamic";
 export default async function MfaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string }>;
+  searchParams: Promise<{ einrichten?: string; next?: string }>;
 }) {
   const [t, params, store] = await Promise.all([getTranslations("Auth"), searchParams, cookies()]);
   if (!store.get(COOKIE.mfa)) redirect("/anmelden");
+  const setup = params.einrichten === "1";
   return (
-    <AuthCard title={t("mfaTitle")}>
-      <MfaForm {...(params.next ? { next: params.next } : {})} />
+    <AuthCard title={setup ? t("mfaSetupTitle") : t("mfaTitle")}>
+      <MfaForm setup={setup} {...(params.next ? { next: params.next } : {})} />
     </AuthCard>
   );
 }

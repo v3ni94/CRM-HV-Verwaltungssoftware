@@ -24,21 +24,49 @@ const order: WorkOrder = {
 describe("WorkOrderDetail", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     refresh.mockReset();
   });
 
-  it("declines the order after confirmation", async () => {
+  it("declines the order after the inline confirmation", async () => {
     const user = userEvent.setup();
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ ...order, status: "rejected" }));
     renderIntl(<WorkOrderDetail order={order} />);
     await user.click(screen.getByRole("button", { name: "Auftrag ablehnen" }));
+    // First click only opens the confirmation, nothing is sent yet.
+    expect(fetch).not.toHaveBeenCalled();
+    expect(screen.getByText("Auftrag wirklich ablehnen?")).toBeInTheDocument();
+    const confirm = screen.getByRole("button", { name: "Ablehnen bestätigen" });
+    expect(confirm).toHaveFocus();
+    await user.click(confirm);
     await waitFor(() => expect(screen.getByText("Auftrag wurde abgelehnt.")).toBeInTheDocument());
     expect(fetch).toHaveBeenCalledWith(
       "/api/bff/portal/work-orders/o1/decline",
       expect.objectContaining({ method: "POST" }),
     );
     expect(refresh).toHaveBeenCalled();
+  });
+
+  it("does not call the API when the inline confirmation is cancelled", async () => {
+    const user = userEvent.setup();
+    renderIntl(<WorkOrderDetail order={order} />);
+    await user.click(screen.getByRole("button", { name: "Auftrag ablehnen" }));
+    await user.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(fetch).not.toHaveBeenCalled();
+    expect(screen.queryByText("Auftrag wirklich ablehnen?")).not.toBeInTheDocument();
+    // Focus returns to the decline button.
+    expect(screen.getByRole("button", { name: "Auftrag ablehnen" })).toHaveFocus();
+  });
+
+  it("shows a sending status while the request is running", async () => {
+    const user = userEvent.setup();
+    let resolve: (value: Response) => void = () => {};
+    vi.mocked(fetch).mockReturnValue(new Promise<Response>((r) => (resolve = r)));
+    renderIntl(<WorkOrderDetail order={order} />);
+    await user.click(screen.getByRole("button", { name: "Auftrag ablehnen" }));
+    await user.click(screen.getByRole("button", { name: "Ablehnen bestätigen" }));
+    expect(await screen.findByText("Wird gesendet")).toHaveAttribute("role", "status");
+    resolve(jsonResponse({ ...order, status: "rejected" }));
+    await waitFor(() => expect(screen.queryByText("Wird gesendet")).not.toBeInTheDocument());
   });
 
   it("sends up to three appointment proposals once the order is approved (A58)", async () => {
@@ -106,11 +134,51 @@ describe("WorkOrderDetail", () => {
     expect(JSON.parse(String(calls[1]?.[1].body))).toEqual({ report: "Ziegel ersetzt", document_ids: ["d1"] });
   });
 
-  it("does not call the API when the confirmation is cancelled", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false);
-    const user = userEvent.setup();
+  it("offers quote and decline while requested, but no report or invoice yet", () => {
     renderIntl(<WorkOrderDetail order={order} />);
-    await user.click(screen.getByRole("button", { name: "Auftrag ablehnen" }));
-    expect(fetch).not.toHaveBeenCalled();
+    expect(screen.getByRole("button", { name: "Angebot abgeben" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Auftrag ablehnen" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Termin festlegen" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ausführung dokumentieren" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rechnung einreichen" })).not.toBeInTheDocument();
+  });
+
+  it("offers appointment and report once approved, but no quote resubmission", () => {
+    renderIntl(<WorkOrderDetail order={{ ...order, status: "approved" }} />);
+    expect(screen.queryByRole("button", { name: "Angebot abgeben" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Auftrag ablehnen" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Termin festlegen" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ausführung dokumentieren" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Rechnung einreichen" })).not.toBeInTheDocument();
+  });
+
+  it("offers only the invoice once the work is done", () => {
+    renderIntl(<WorkOrderDetail order={{ ...order, status: "done" }} />);
+    expect(screen.getByRole("button", { name: "Rechnung einreichen" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Angebot abgeben" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Auftrag ablehnen" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Termin festlegen" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Ausführung dokumentieren" })).not.toBeInTheDocument();
+  });
+
+  it("offers no actions on a closed order", () => {
+    for (const status of ["rejected", "cancelled", "accepted", "invoiced"]) {
+      const { unmount } = renderIntl(<WorkOrderDetail order={{ ...order, status }} />);
+      expect(screen.queryByRole("button", { name: "Auftrag ablehnen" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Angebot abgeben" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Termin festlegen" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Ausführung dokumentieren" })).not.toBeInTheDocument();
+      expect(screen.queryByRole("button", { name: "Rechnung einreichen" })).not.toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("shows all actions for an unknown status (defensive default)", () => {
+    renderIntl(<WorkOrderDetail order={{ ...order, status: "unbekannt" }} />);
+    expect(screen.getByRole("button", { name: "Auftrag ablehnen" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Angebot abgeben" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Termin festlegen" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Ausführung dokumentieren" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Rechnung einreichen" })).toBeInTheDocument();
   });
 });

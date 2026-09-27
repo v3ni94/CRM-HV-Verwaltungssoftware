@@ -30,6 +30,8 @@ describe("NewTicket", () => {
     await user.type(screen.getByLabelText("Beschreibung"), "Rohrbruch im Bad");
     await user.click(screen.getByRole("button", { name: "Melden" }));
     await waitFor(() => expect(screen.getByText("Meldung wurde übermittelt.")).toBeInTheDocument());
+    // The confirmation receives the focus (keyboard/screen reader users).
+    expect(screen.getByText("Meldung wurde übermittelt.")).toHaveFocus();
     expect(fetch).toHaveBeenCalledWith(
       "/api/bff/portal/tickets",
       expect.objectContaining({
@@ -48,7 +50,7 @@ describe("NewTicket", () => {
     renderIntl(<NewTicket />);
     await user.type(screen.getByLabelText("Titel"), "Wasserschaden");
     await user.type(screen.getByLabelText("Beschreibung"), "Rohrbruch im Bad");
-    await user.upload(screen.getByLabelText("Fotos anhängen (optional, JPEG, PNG oder HEIC vom iPhone)"), [
+    await user.upload(screen.getByLabelText("Fotos anhängen (optional, JPEG oder PNG)"), [
       new File(["a"], "a.jpg", { type: "image/jpeg" }),
       new File(["b"], "b.png", { type: "image/png" }),
     ]);
@@ -75,7 +77,7 @@ describe("NewTicket", () => {
     await user.type(screen.getByLabelText("Titel"), "Wasserschaden");
     await user.type(screen.getByLabelText("Beschreibung"), "Rohrbruch im Bad");
     await user.upload(
-      screen.getByLabelText("Fotos anhängen (optional, JPEG, PNG oder HEIC vom iPhone)"),
+      screen.getByLabelText("Fotos anhängen (optional, JPEG oder PNG)"),
       new File(["a"], "a.jpg", { type: "image/jpeg" }),
     );
     await user.click(screen.getByRole("button", { name: "Melden" }));

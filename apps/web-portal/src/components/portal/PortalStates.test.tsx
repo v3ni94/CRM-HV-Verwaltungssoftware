@@ -83,15 +83,18 @@ describe("WorkOrderDetail states", () => {
 
   it("names the missing input instead of failing silently", async () => {
     const user = userEvent.setup();
-    renderIntl(<WorkOrderDetail order={order} />);
+    // The quote form exists while the order is requested, appointment and report once approved.
+    const requested = renderIntl(<WorkOrderDetail order={{ ...order, status: "requested" }} />);
     await user.click(screen.getByRole("button", { name: "Angebot abgeben" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Bitte den Angebotsbetrag eingeben.");
+    expect(screen.getByLabelText("Angebotsbetrag (EUR)")).toHaveAttribute("aria-required", "true");
+    requested.unmount();
+    renderIntl(<WorkOrderDetail order={order} />);
     await user.click(screen.getByRole("button", { name: "Termin festlegen" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Bitte einen Termin auswählen.");
     await user.click(screen.getByRole("button", { name: "Ausführung dokumentieren" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Bitte den Ausführungsbericht eingeben.");
     expect(fetch).not.toHaveBeenCalled();
-    expect(screen.getByLabelText("Angebotsbetrag (EUR)")).toHaveAttribute("aria-required", "true");
   });
 
   it("falls back to the raw status for unknown values", () => {
@@ -124,7 +127,7 @@ describe("TicketComments states", () => {
     const user = userEvent.setup();
     vi.mocked(fetch).mockResolvedValue(jsonResponse({ title: "Fehler", status: 422, detail: "Text zu lang." }, 422));
     renderIntl(<TicketComments ticketId="t1" comments={[]} />);
-    expect(screen.getByText("Keine Meldungen vorhanden.")).toBeInTheDocument();
+    expect(screen.getByText("Noch keine Nachrichten.")).toBeInTheDocument();
     await user.type(screen.getByLabelText("Nachricht"), "Hallo");
     await user.click(screen.getByRole("button", { name: "Senden" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("Text zu lang.");

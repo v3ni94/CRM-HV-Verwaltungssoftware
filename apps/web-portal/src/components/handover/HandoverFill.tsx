@@ -257,7 +257,7 @@ export function HandoverFill({ initial }: { initial: Full }) {
   return (
     <div className="flex flex-col gap-4" data-testid="handover-fill">
       {!editable ? <p className={ui.notice}>{t("locked")}</p> : <p className="text-sm text-muted">{t("intro")}</p>}
-      <nav className="flex flex-wrap gap-1" aria-label={t("tabs.summary")}>
+      <nav className="flex flex-wrap gap-1" aria-label={t("tabsLabel")}>
         {TABS.map((name) => (
           <button
             key={name}
