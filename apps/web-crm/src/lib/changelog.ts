@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.33.0",
+    date: "27.09.2026",
+    title: "Eigentümer und Mieter an die Objektübernahme übergeben",
+    changes: [
+      "DMS: Einheiten mit Eigentümern und Mietern (nur Namen) als Importvorschlag an die Objektübernahme übergeben, Übernahme erst nach Prüfung dort",
+    ],
+  },
+  {
     version: "1.32.0",
     date: "27.09.2026",
     title: "Upload im CRM mit Ablage über objektakte in Drive und Paperless",

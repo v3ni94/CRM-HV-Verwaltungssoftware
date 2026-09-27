@@ -7195,6 +7195,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/integrations/objektakte/objects/{number}/persons-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Einheiten, Eigentümer und Mieter als Importvorschlag an objektakte übergeben
+         * @description Sends the unit list of the property (names only, mhvp.objektakte.person_export) to
+         *     objektakte, where it becomes an import proposal; objektakte takes nothing over before its
+         *     import assistant releases the rows.
+         */
+        post: operations["export_persons_api_v1_integrations_objektakte_objects__number__persons_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/integrations/objektakte/objects/{number}/{kind}": {
         parameters: {
             query?: never;
@@ -42725,6 +42747,39 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_persons_api_v1_integrations_objektakte_objects__number__persons_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

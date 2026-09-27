@@ -65097,6 +65097,51 @@
         ]
       }
     },
+    "/api/v1/integrations/objektakte/objects/{number}/persons-export": {
+      "post": {
+        "description": "Sends the unit list of the property (names only, mhvp.objektakte.person_export) to\nobjektakte, where it becomes an import proposal; objektakte takes nothing over before its\nimport assistant releases the rows.",
+        "operationId": "export_persons_api_v1_integrations_objektakte_objects__number__persons_export_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "number",
+            "required": true,
+            "schema": {
+              "title": "Number",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Export Persons Api V1 Integrations Objektakte Objects  Number  Persons Export Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Einheiten, Eigentümer und Mieter als Importvorschlag an objektakte übergeben",
+        "tags": [
+          "objektakte-dms"
+        ]
+      }
+    },
     "/api/v1/integrations/objektakte/objects/{number}/{kind}": {
       "get": {
         "operationId": "object_persons_api_v1_integrations_objektakte_objects__number___kind__get",

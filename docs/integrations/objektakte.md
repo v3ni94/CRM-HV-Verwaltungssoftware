@@ -181,3 +181,20 @@ Dokument im CRM gelöscht (Aufbewahrung abgelaufen oder von Hand), bleiben die A
 objektakte, Drive und Paperless bestehen; die Löschspiegelung des CRM (`mirror_deletion`) gilt
 nur für die eigenen Spiegel. Die Löschung dort erfolgt nach den Aufbewahrungsregeln von
 objektakte.
+
+## 5. Einheiten, Eigentümer und Mieter an objektakte (Ergänzung 27.09.2026)
+
+Damit objektakte Uploads in die Eigentümer- und Mieterakten mit Namen einordnen kann, überträgt
+das CRM je Objekt eine Einheitenliste: `POST /api/v1/integrations/objektakte/objects/{number}/persons-export`
+(`objektakte:update` und `contacts:read`), Knopf "Liste übergeben" auf der DMS-Seite des Objekts.
+Inhalt (`mhvp.objektakte.person_export`): Format der Immoware24-Einheitenliste mit Objektnummer,
+Objekt, Verwaltungsart, Gebäude, Einheitennummer und Bezeichnung sowie den Namen der am
+Stichtag laufenden Eigentums- und Mietverträge (mehrere Personen mit "und"). Keine Anschriften,
+E-Mail, Telefon, Bankdaten oder Beträge; die Geldspalten des Formats bleiben leer.
+
+objektakte legt daraus einen Import des Objekts an (Endpunkt `objects/{number}/imports/`, Scope
+`persons:write`, Schalter `sync.crm_persons_enabled`). Übernommen wird erst nach Prüfung und
+Freigabe im Importassistenten von objektakte; die Antwort nennt den Link zur Prüfung. Dieselbe
+Liste ein zweites Mal ergibt keinen neuen Import (Prüfsumme). Ereignis im CRM:
+`objektakte.persons_exported`. Einrichtung: Token in objektakte um `persons:write` erweitern (neues
+Token anlegen, altes sperren), Schalter `sync.crm_persons_enabled` einschalten.

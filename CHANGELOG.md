@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.33.0 (27.09.2026) Eigentümer und Mieter an die Objektübernahme übergeben
+
+- DMS und Objektübernahme: Knopf "Liste übergeben" auf der DMS-Seite eines Objekts überträgt die Einheiten mit den Namen der laufenden Eigentums- und Mietverträge als Importvorschlag an objektakte (Format Immoware24-Einheitenliste, keine Kontaktdaten, keine Beträge). Übernommen wird erst nach Prüfung im Importassistenten von objektakte; danach tragen die Eigentümer- und Mieterakten dort die Namen und Uploads aus dem CRM landen in der richtigen Akte. Neuer Endpunkt POST /integrations/objektakte/objects/{nummer}/persons-export.
+
 ## 1.32.0 (27.09.2026) Upload im CRM mit Ablage über objektakte in Drive und Paperless
 
 - Dokumente: Ein im CRM hochgeladenes oder gescanntes Dokument, das genau einem Objekt zugeordnet ist (direkt, über eine Einheit oder über ein Ticket), geht an objektakte und wird dort verarbeitet und abgelegt: Drive-Struktur des Objekts mit Eigentümer- und Mieterakten und Paperless. Das CRM spiegelt solche Dokumente nicht mehr selbst nach Paperless oder Drive, damit jedes System das Dokument genau einmal hält; Original und Index bleiben im CRM. Schalter OBJEKTAKTE_UPLOAD_ENABLED (Vorgabe aus), in objektakte zusätzlich Token mit documents:write und Schalter sync.crm_uploads_enabled.

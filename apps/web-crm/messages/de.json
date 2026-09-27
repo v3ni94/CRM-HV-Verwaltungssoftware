@@ -4366,7 +4366,15 @@
         "crm_only": "nur im CRM"
       }
     },
-    "searchDocuments": "Dokumentsuche"
+    "searchDocuments": "Dokumentsuche",
+    "personExport": {
+      "title": "Eigentümer und Mieter an die Objektübernahme",
+      "intro": "Überträgt Einheiten mit den aktuellen Eigentümern und Mietern (nur Namen, keine Kontaktdaten) als Importvorschlag. Übernommen wird erst nach Prüfung im Importassistenten der Objektübernahme; danach tragen die Eigentümer- und Mieterakten die Namen.",
+      "send": "Liste übergeben",
+      "done": "Übergeben: {units} Einheiten, {owners} mit Eigentümer, {tenants} mit Mieter.",
+      "already": "Diese Liste liegt dort bereits vor ({units} Einheiten).",
+      "review": "Import prüfen"
+    }
   },
   "MailPlaybooks": {
     "title": "Playbooks",

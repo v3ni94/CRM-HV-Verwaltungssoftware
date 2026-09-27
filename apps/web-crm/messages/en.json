@@ -4366,7 +4366,15 @@
         "crm_only": "only in the CRM"
       }
     },
-    "searchDocuments": "Document search"
+    "searchDocuments": "Document search",
+    "personExport": {
+      "title": "Owners and tenants to the takeover system",
+      "intro": "Sends units with the current owners and tenants (names only, no contact data) as an import proposal. Nothing is taken over before the review in the import assistant of the takeover system; afterwards the owner and tenant files carry the names.",
+      "send": "Send list",
+      "done": "Sent: {units} units, {owners} with owner, {tenants} with tenant.",
+      "already": "This list is already there ({units} units).",
+      "review": "Review import"
+    }
   },
   "MailPlaybooks": {
     "title": "Playbooks",
