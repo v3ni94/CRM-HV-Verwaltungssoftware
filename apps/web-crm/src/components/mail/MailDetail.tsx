@@ -179,12 +179,9 @@ export function MailDetail({
       showReplyDraft(replyDraft);
       return;
     }
-    // Ein bereits vorhandener Entwurf des Verlaufs wird geöffnet, kein zweiter angelegt.
-    const existing = thread?.find((m) => m.direction === "out" && m.status === "draft");
-    if (existing) {
-      showReplyDraft(existing);
-      return;
-    }
+    // Review 1.36.0: no client side pick from the thread. Any open draft of the thread could be
+    // a stale answer to an older mail or a colleague's draft. The server returns only the
+    // caller's own open draft that replies to exactly this message, otherwise it creates one.
     const next = await act("/reply-draft", "POST", {});
     if (next) {
       showReplyDraft(next);
@@ -394,7 +391,7 @@ export function MailDetail({
       {!bodyLoaded ? (
         <p className="text-sm text-muted">{t("loadingDetail")}</p>
       ) : message.status === "draft" ? (
-        <DraftEditor message={message} onUpdated={onUpdated} />
+        <DraftEditor key={message.id} message={message} onUpdated={onUpdated} />
       ) : message.status === "sending" ? (
         <div className="flex flex-col gap-3">
           <p className={ui.notice} data-testid="mail-sending-hint">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useCallback, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -29,7 +29,7 @@ export type AssignmentReview = {
   entity_type: "message" | "ticket";
   entity_id: string;
   dimension: Dimension;
-  status: "auto" | "open" | "accepted" | "rejected" | "none" | "preset";
+  status: "auto" | "open" | "accepted" | "rejected" | "none" | "preset" | "superseded";
   candidates: AssignmentCandidate[];
   chosen_id: string | null;
   reason: string | null;
@@ -42,20 +42,23 @@ function basePath(entityType: "message" | "ticket", entityId: string): string {
   return entityType === "message" ? `/api/bff/mail/messages/${entityId}/assignment-review` : `/api/bff/tickets/${entityId}/assignment-review`;
 }
 
-export function AssignmentPrompt({
-  entityType,
-  entityId,
-  canDecide,
-  initialReviews,
-  onDecided,
-}: {
+type AssignmentPromptProps = {
   entityType: "message" | "ticket";
   entityId: string;
   canDecide: boolean;
   /** Vorab geladene Prüfzeilen (z. B. aus dem Detailabruf); ohne Angabe lädt die Karte selbst. */
   initialReviews?: AssignmentReview[];
   onDecided?: (reviews: AssignmentReview[]) => void;
-}) {
+};
+
+/** Review 1.36.0: keyed by the entity, so switching to another mail or ticket starts with empty
+ *  reviews, search and hits, and a late answer for the previous entity only reaches the
+ *  unmounted instance. Ja and Übernehmen therefore always act on the entity shown. */
+export function AssignmentPrompt(props: AssignmentPromptProps) {
+  return <EntityAssignmentPrompt key={`${props.entityType}:${props.entityId}`} {...props} />;
+}
+
+function EntityAssignmentPrompt({ entityType, entityId, canDecide, initialReviews, onDecided }: AssignmentPromptProps) {
   const t = useTranslations("AssignmentPrompt");
   const [reviews, setReviews] = useState<AssignmentReview[]>(initialReviews ?? []);
   const [busy, setBusy] = useState<Dimension | null>(null);
@@ -64,27 +67,41 @@ export function AssignmentPrompt({
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
 
-  const load = useCallback(async () => {
-    const res = await bff<AssignmentReview[]>(basePath(entityType, entityId));
-    if (res.ok) setReviews(res.data ?? []);
-  }, [entityType, entityId]);
-
   useEffect(() => {
-    if (!initialReviews) void load();
-  }, [initialReviews, load]);
+    if (initialReviews) return;
+    // Only the answer of the latest request is applied (no stale overwrite).
+    let active = true;
+    void bff<AssignmentReview[]>(basePath(entityType, entityId)).then((res) => {
+      if (active && res.ok) setReviews(res.data ?? []);
+    });
+    return () => {
+      active = false;
+    };
+  }, [initialReviews, entityType, entityId]);
 
-  async function decide(dimension: Dimension, decision: "accept" | "reject", candidateId?: string) {
+  /** Review 1.36.0: every decision names what the member saw, the field value shown with the
+   *  question (`seen_value`, null for an empty field) and for Ja the confirmed candidate
+   *  (`candidate_id`, also for a single proposal). A 409 means the assignment changed meanwhile:
+   *  the review is reloaded and the German detail is shown. */
+  async function decide(review: AssignmentReview, decision: "accept" | "reject", candidateId?: string) {
+    const dimension = review.dimension;
     setBusy(dimension);
     setError(null);
     const res = await bff<AssignmentReview[]>(`${basePath(entityType, entityId)}/decide`, {
       method: "POST",
-      body: JSON.stringify({ dimension, decision, candidate_id: candidateId ?? null }),
+      body: JSON.stringify({ dimension, decision, candidate_id: candidateId ?? null, seen_value: review.chosen_id ?? null }),
     });
-    setBusy(null);
     if (!res.ok) {
+      if (res.status === 409) {
+        const reload = await bff<AssignmentReview[]>(basePath(entityType, entityId));
+        if (reload.ok) setReviews(reload.data ?? []);
+        setSearching(null);
+      }
+      setBusy(null);
       setError(res.message || t("error"));
       return;
     }
+    setBusy(null);
     setReviews(res.data ?? []);
     onDecided?.(res.data ?? []);
     if (decision === "reject") {
@@ -166,7 +183,7 @@ export function AssignmentPrompt({
                       <span className="text-muted"> {t("confidence", { percent: Math.round(c.confidence * 100) })}</span>
                     </span>
                     {canDecide ? (
-                      <button type="button" className={ui.buttonSm} disabled={busy === review.dimension} onClick={() => decide(review.dimension, "accept", c.id)}>
+                      <button type="button" className={ui.buttonSm} disabled={busy === review.dimension} onClick={() => decide(review, "accept", c.id)}>
                         {t("choose")}
                       </button>
                     ) : null}
@@ -177,11 +194,11 @@ export function AssignmentPrompt({
             {canDecide ? (
               <div className="flex gap-2">
                 {!many ? (
-                  <button type="button" className={ui.primary} disabled={busy === review.dimension} onClick={() => decide(review.dimension, "accept")}>
+                  <button type="button" className={ui.primary} disabled={busy === review.dimension || !first} onClick={() => first && decide(review, "accept", first.id)}>
                     {t("yes")}
                   </button>
                 ) : null}
-                <button type="button" className={ui.buttonSm} disabled={busy === review.dimension} onClick={() => decide(review.dimension, "reject")}>
+                <button type="button" className={ui.buttonSm} disabled={busy === review.dimension} onClick={() => decide(review, "reject")}>
                   {t("no")}
                 </button>
               </div>
@@ -219,7 +236,7 @@ export function AssignmentPrompt({
               {hits.map((hit) => (
                 <li key={hit.id} className="flex items-center justify-between gap-2 text-sm">
                   <span>{hit.label}</span>
-                  <button type="button" className={ui.buttonSm} disabled={busy === review.dimension} onClick={() => decide(review.dimension, "accept", hit.id)}>
+                  <button type="button" className={ui.buttonSm} disabled={busy === review.dimension} onClick={() => decide(review, "accept", hit.id)}>
                     {t("choose")}
                   </button>
                 </li>

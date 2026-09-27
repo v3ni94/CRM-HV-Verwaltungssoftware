@@ -1,11 +1,18 @@
 """E-Mail-Signatur (operator 27.09.2026): Rendering für beide Seed-Mandanten, Positionskatalog
-mit Freitext, Vorlage mit Platzhaltern und idempotentes Anhängen über die Signaturmarke."""
+mit Freitext, Vorlage mit Platzhaltern und idempotentes Anhängen über den Signaturtext
+(Review 1.36.0: nicht über die Trennzeile, Platzhalter [Name]/[Firma] entfallen, unbekannte
+Platzhalter bleiben leer statt eine Ausnahme auszulösen)."""
 
 import json
+import logging
 from pathlib import Path
 from typing import Any
 
+import pytest
+
+from mhvp.communication import mail
 from mhvp.communication import signatures as sig
+from mhvp.core.problems import ProblemError
 
 SEEDS = Path(__file__).resolve().parents[2] / "src/mhvp/tenant/seeds"
 
@@ -114,7 +121,7 @@ def test_with_signature_is_idempotent() -> None:
     s = _hvm()
     once = sig.with_signature("Hallo\n", s)
     assert once.endswith(s.text + "\n")
-    assert sig.has_signature(once)
+    assert sig.has_signature(once, s)
     assert sig.with_signature(once, s) == once
     assert sig.with_signature("x", None) == "x"
     html = sig.with_signature_html("<p>Hallo</p>", s)
@@ -122,3 +129,145 @@ def test_with_signature_is_idempotent() -> None:
     assert html.count(sig.HTML_MARKER) == 1
     assert sig.with_signature_html(html, s) == html
     assert sig.with_signature_html(None, s) is None
+
+
+def test_idempotency_uses_rendered_text_not_the_delimiter() -> None:
+    s = _hvm()
+    once = sig.with_signature("Hallo", s)
+    # Trennzeile entfernt oder ohne Leerzeichen: keine zweite Signatur.
+    without_marker = once.replace("-- \n", "")
+    assert sig.with_signature(without_marker, s) == without_marker
+    dashes = once.replace("-- \n", "--\n")
+    assert sig.with_signature(dashes, s) == dashes
+    # Anderer Leerraum (CRLF, Einrückung, Leerzeilen) zählt nicht als Abweichung.
+    crlf = once.replace("\n", "\r\n").replace("Ina Brink", "  Ina Brink  ")
+    assert sig.with_signature(crlf, s) == crlf
+    assert sig.has_signature(crlf, s)
+    # Eingefügter Fremdtext mit RFC-3676-Trennzeile unterdrückt die Signatur nicht.
+    pasted = "Hallo\n\n-- \nMax Fremd\nFremdfirma AG\n"
+    signed = sig.with_signature(pasted, s)
+    assert signed.endswith(s.text + "\n")
+    assert signed.count("Ina Brink") == 1
+    # Geänderte Signaturdaten gelten als fehlende Signatur (Vorlage bleibt die Quelle).
+    other = _hvm(position="Buchhaltung")
+    assert not sig.has_signature(once, other)
+
+
+def test_submit_counts_the_delimiter_so_an_edited_block_is_not_signed_twice() -> None:
+    s = _hvm(phone="02173 100")
+    once = sig.with_signature("Hallo", s)
+    # Signaturblock bearbeitet (Durchwahl für diese Mail entfernt): der Signaturtext fehlt,
+    # beim Einreichen zählt die Trennzeile, es kommt keine zweite Signatur hinzu.
+    edited = once.replace("Telefon 02173 100\n", "")
+    assert not sig.has_signature(edited, s)
+    assert sig.with_signature(edited, s, respect_delimiter=True) == edited
+    # Position, Vorlage oder Postfach seit dem Anlegen geändert: der Block bleibt wie er ist.
+    moved = _hvm(phone="02173 100", position="Buchhaltung", email="info@muellerhv.de")
+    assert sig.with_signature(once, moved, respect_delimiter=True) == once
+    # CRLF-Zeilenenden: die Trennzeile zählt weiterhin.
+    crlf = edited.replace("\n", "\r\n")
+    assert sig.has_delimiter(crlf)
+    assert sig.with_signature(crlf, s, respect_delimiter=True) == crlf
+    # Weder Signaturtext noch Trennzeile: die Signatur wird angefügt.
+    bare = edited.replace("-- \n", "")
+    assert sig.with_signature(bare, s, respect_delimiter=True) == (
+        bare.rstrip() + "\n\n" + s.text + "\n"
+    )
+    # Zitierte Trennzeile und "--" ohne Leerzeichen sind keine Standardtrennzeile.
+    quoted = "Hallo\n\n> -- \n> Max Fremd\n"
+    assert not sig.has_delimiter(quoted)
+    assert sig.with_signature(quoted, s, respect_delimiter=True).endswith(s.text + "\n")
+    assert not sig.has_delimiter("Hallo\n--\nMax")
+    # Eingefügter Fremdblock mit Trennzeile zählt beim Einreichen als vorhanden (in Kauf
+    # genommen, vor der Freigabe im Text sichtbar).
+    pasted = "Hallo\n\n-- \nMax Fremd\nFremdfirma AG\n"
+    assert sig.with_signature(pasted, s, respect_delimiter=True) == pasted
+    # Beim Anlegen (Standard) entscheidet weiterhin nur der Signaturtext.
+    assert sig.with_signature(edited, s).count("-- \n") == 2
+
+
+def test_closing_placeholders_removed_when_signature_is_appended() -> None:
+    s = _hvm()
+    draft = mail.draft_reply("Sehr geehrte Frau Muster", "Frage", None)
+    assert "[Name]" in draft
+    assert "[Firma]" in draft
+    signed = sig.with_signature(draft, s)
+    assert "[Name]" not in signed
+    assert "[Firma]" not in signed
+    assert "Mit freundlichen Grüßen\n\n-- \nIna Brink\n" in signed
+    # Ohne Signatur (API-Schlüssel) bleibt der Text unverändert.
+    assert sig.with_signature(draft, None) == draft
+    # Ein schon signierter Text wird nicht mehr verändert.
+    assert sig.with_signature(signed, s) == signed
+
+
+@pytest.mark.parametrize(
+    "placeholder",
+    [
+        "{company.name}",
+        "{firma.name}",
+        "{user.name}",
+        "{name[x]}",
+        "{name[0]}",
+        "{name.upper}",
+        "{company.__class__}",
+        "{name:>999999999}",
+        "{name!r}",
+        "{unbekannt}",
+        "{}",
+    ],
+)
+def test_unknown_or_malformed_placeholders_render_empty(
+    placeholder: str, caplog: pytest.LogCaptureFixture
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="mhvp.communication.signatures"):
+        s = _hvm(
+            template={
+                "text": "{name}\nFirma " + placeholder + "\n" + placeholder + " {company}",
+                "html": "<p>" + placeholder + "{name}</p>",
+            }
+        )
+    assert s.text == "-- \nIna Brink\n Hausverwaltung Müller GmbH"
+    assert s.html == sig.HTML_MARKER + "<p>Ina Brink</p>"
+    assert "class" not in s.text
+    assert any("rendered empty" in r.getMessage() for r in caplog.records)
+    assert sig.unknown_placeholders(placeholder) == [placeholder[1:-1]]
+
+
+def test_lines_of_only_unknown_placeholders_are_logged_by_name(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    with caplog.at_level(logging.WARNING, logger="mhvp.communication.signatures"):
+        s = _hvm(template={"text": "{name}\n{unbekannt}\nTelefon {firma.telefon}"})
+    # Beide Zeilen bestehen nur aus unbekannten Platzhaltern und entfallen.
+    assert s.text == "-- \nIna Brink"
+    warnings = [
+        r.getMessage()
+        for r in caplog.records
+        if r.name == "mhvp.communication.signatures" and r.levelno == logging.WARNING
+    ]
+    assert len(warnings) == 1
+    assert "'unbekannt'" in warnings[0]
+    assert "'firma.telefon'" in warnings[0]
+    # Nur die Platzhalternamen, keine Werte (keine personenbezogenen Daten).
+    assert "Ina Brink" not in warnings[0]
+    assert "Objektbetreuung" not in warnings[0]
+
+
+def test_escaped_braces_and_known_placeholders_only() -> None:
+    s = _hvm(template={"text": "{{name}} {name}\n{position}", "html": None})
+    assert s.text == "-- \n{name} Ina Brink\nObjektbetreuung"
+    assert sig.unknown_placeholders("{{x}} {name} {phone}\n{mobile}") == []
+    assert sig.unknown_placeholders("{a} {b} {a}") == ["a", "b"]
+    assert sig.unknown_placeholders(None) == []
+
+
+def test_assert_known_placeholders_lists_unknown_names() -> None:
+    sig.assert_known_placeholders({"text": "{name}", "html": "<b>{email}</b>"})
+    with pytest.raises(ProblemError) as exc:
+        sig.assert_known_placeholders({"text": "{name} {firma}", "html": "<b>{user.name}</b>"})
+    assert exc.value.status == 422
+    assert exc.value.detail is not None
+    assert "{firma}" in exc.value.detail
+    assert "{user.name}" in exc.value.detail
+    assert exc.value.extensions["unknown_placeholders"] == ["firma", "user.name"]

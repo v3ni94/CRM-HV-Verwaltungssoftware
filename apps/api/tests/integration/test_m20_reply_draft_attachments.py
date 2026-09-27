@@ -143,10 +143,11 @@ def test_reply_draft_is_reused_and_editable(client: TestClient, world: World) ->
         201,
     )
     assert second["id"] == first["id"]
-    assert second["body"] == "Vorgeschlagener Text."
+    # Der übernommene Text trägt die Signatur im gespeicherten Text (Review 1.36.0).
+    assert second["body"].startswith("Vorgeschlagener Text.\n\n-- \nraadmin\n")
     third = _ok(client.post(f"{M}/messages/{msg['id']}/reply-draft", headers=h), 201)
     assert third["id"] == first["id"]
-    assert third["body"] == "Vorgeschlagener Text."
+    assert third["body"] == second["body"]
     drafts = _ok(
         client.get(f"{M}/messages", params={"direction": "out", "status": "draft"}, headers=h)
     )

@@ -464,7 +464,11 @@ async def patch_settings(
             # M20-04 Vier-Augen-Prinzip beim Mailversand, Änderung protokolliert.
             row.mail_approval_mode = body.mail_approval_mode
         if body.signature_template is not None:
+            from mhvp.communication.signatures import assert_known_placeholders
+
             # E-Mail-Signaturvorlage (operator 27.09.2026), Änderung protokolliert.
+            # Unknown placeholders are refused with 422 on save (review 1.36.0).
+            assert_known_placeholders(body.signature_template.model_dump(mode="json"))
             row.signature_template = body.signature_template.model_dump(mode="json")
         if body.position_catalogue_extra is not None:
             row.position_catalogue_extra = list(body.position_catalogue_extra)

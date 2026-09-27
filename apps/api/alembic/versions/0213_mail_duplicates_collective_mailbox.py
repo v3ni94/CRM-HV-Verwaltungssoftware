@@ -41,7 +41,12 @@ def upgrade() -> None:
             )
             sql = "UPDATE mailbox SET is_collective = true WHERE lower(address) ~ :rx"
             statement = sa.text(sql)
+            # mailbox forces row level security (ADR 0002); without a tenant context the owner
+            # would update no rows, so the force is lifted for the backfill and restored
+            # afterwards (as in 0139, 0151 and 0203; review 1.36.0).
+            op.execute("ALTER TABLE mailbox NO FORCE ROW LEVEL SECURITY")
             op.execute(statement.bindparams(rx=_COLLECTIVE_REGEX))
+            op.execute("ALTER TABLE mailbox FORCE ROW LEVEL SECURITY")
     if inspector.has_table("message"):
         cols = {c["name"] for c in inspector.get_columns("message")}
         if "duplicate_of_id" not in cols:

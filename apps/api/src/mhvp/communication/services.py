@@ -45,21 +45,22 @@ async def ingest_parsed(
     ``gmail_message_id`` and ``gmail_thread_id`` come from the Gmail sync (Review 26.09.2026,
     M15): the archive job and the forwarding need the Gmail id, the thread id is the last
     resort for threading (M7)."""
-    from mhvp.contacts.models import ContactEmail
+    from mhvp.contacts.models import Contact, ContactEmail
     from mhvp.documents.models import DocumentSource
     from mhvp.documents.services import check_upload, store_document
     from mhvp.properties.models import Property
     from mhvp.tickets.models import TicketTemplate
 
-    known = await duplicates.find_known(session, parsed)
-    if known:
-        # Same mail already stored: the same mailbox (or no mailbox binding) is a re-import
-        # and returns the stored copy; another own mailbox gets a linked duplicate copy
-        # (operator 27.09.2026): the personal mailbox leads, the collective one is hidden.
-        for member in known:
-            if mailbox_id is None or member.mailbox_id == mailbox_id:
-                return member, False
-        primary = known[0]
+    # Parallel syncs of two own mailboxes wait here for each other (review 1.36.0).
+    await duplicates.lock_mail(session, tenant_id, parsed)
+    stored, primary = await duplicates.find_known(session, parsed, mailbox_id)
+    if stored is not None:
+        # Same mail already stored for this mailbox binding: a re-import returns it.
+        return stored, False
+    if primary is not None:
+        # Same mail (Message-ID and content) in another own mailbox: linked duplicate copy
+        # (operator 27.09.2026): the personal mailbox leads, the collective one is hidden. A
+        # Message-ID collision with different content is stored below as a mail of its own.
         copy = duplicates.copy_of(
             primary,
             mailbox_id=mailbox_id,
@@ -75,11 +76,21 @@ async def ingest_parsed(
         return copy, True
     contact_id = None
     if parsed["from"]:
-        contact_id = await session.scalar(
-            select(ContactEmail.contact_id)
-            .where(func.lower(ContactEmail.email) == parsed["from"])
-            .limit(1)
+        # Pre-filled only when exactly one active contact carries the sender address (review
+        # 1.36.0): a shared address (couple, company and contact person) or a deleted duplicate
+        # stays empty, the assignment review asks, and property and unit are never derived
+        # from the contracts of an arbitrarily picked contact.
+        sender_ids = set(
+            await session.scalars(
+                select(ContactEmail.contact_id)
+                .join(Contact, Contact.id == ContactEmail.contact_id)
+                .where(
+                    func.lower(ContactEmail.email) == parsed["from"],
+                    Contact.deleted_at.is_(None),
+                )
+            )
         )
+        contact_id = next(iter(sender_ids)) if len(sender_ids) == 1 else None
     number = mail.property_number(parsed["subject"], parsed["body"])
     property_id = (
         await session.scalar(select(Property.id).where(Property.number == number))
@@ -292,10 +303,37 @@ async def _classify_and_queue_forward(
     classification = dict(row.classification)
     forward: dict[str, Any] = {"decision": result.decision, "reason": result.reason}
     if result.decision == "forward":
-        forward["status"] = "queued"
+        other = await _forwarded_sibling(session, row)
+        if other is None:
+            forward["status"] = "queued"
+        else:
+            forward["status"], forward["of"] = "duplicate", str(other)
     classification["invoice_forward"] = forward
     row.classification = classification
     await session.flush()
+
+
+async def _forwarded_sibling(session: AsyncSession, row: Message) -> uuid.UUID | None:
+    """Another inbound row of the tenant with the same header Message-ID whose invoice forward
+    is already queued or sent (review 1.36.0). A relay that changes body, subject or sender
+    but keeps the Message-ID yields a mail of its own (``duplicates.same_content``); its
+    invoice must not reach accounting a second time. The ingest of one Message-ID is
+    serialised by ``duplicates.lock_mail``, so the committed state of the sibling is seen."""
+    if not row.header_message_id:
+        return None
+    other: uuid.UUID | None = await session.scalar(
+        select(Message.id)
+        .where(
+            Message.tenant_id == row.tenant_id,
+            Message.direction == "in",
+            Message.header_message_id == row.header_message_id,
+            Message.id != row.id,
+            Message.classification["invoice_forward"]["status"].astext.in_(("queued", "sent")),
+        )
+        .order_by(Message.created_at)
+        .limit(1)
+    )
+    return other
 
 
 FORWARD_QUEUE_LIMIT = 50
@@ -308,8 +346,10 @@ async def forward_queued(
     vorgemerkte Nachricht des Mandanten genau einmal. Die Zeilensperre (``FOR UPDATE SKIP
     LOCKED``) serialisiert parallele Läufe; nach dem Versand wird der Marker auf ``sent``
     gesetzt, ein Fehler auf ``failed`` mit Grund (kein automatischer zweiter Versuch, der
-    Vorschlag bleibt im Postfach manuell auslösbar)."""
-    from mhvp.communication.forwarding_dispatch import forward_and_archive
+    Vorschlag bleibt im Postfach manuell auslösbar). Ohne Gmail-Postfach geht nichts hinaus;
+    der Marker wird ``not_sent`` mit Grund (review 1.36.0) und sperrt keine spätere Kopie
+    (``_forwarded_sibling`` zählt nur ``queued`` und ``sent``)."""
+    from mhvp.communication.forwarding_dispatch import NOT_SENT_NO_GMAIL, forward_and_archive
     from mhvp.platform.models import TenantSettings
 
     counts = {"forwarded": 0, "failed": 0}
@@ -338,12 +378,14 @@ async def forward_queued(
             forward["error"] = "Weiterleitung nicht mehr eingerichtet."
         else:
             try:
-                await forward_and_archive(
+                if await forward_and_archive(
                     session, settings, tenant_id, row.created_by, row, address
-                )
-                forward["status"] = "sent"
-                forward["forwarded_to"] = address
-                counts["forwarded"] += 1
+                ):
+                    forward["status"] = "sent"
+                    forward["forwarded_to"] = address
+                    counts["forwarded"] += 1
+                else:
+                    forward["status"], forward["error"] = "not_sent", NOT_SENT_NO_GMAIL
             except Exception as exc:
                 log.warning("invoice forward failed", extra={"message_id": str(row.id)})
                 forward["status"] = "failed"
@@ -427,9 +469,10 @@ async def ingest_raw(
     from mhvp.documents.services import store_document
 
     parsed = mail.parse(raw)
-    for member in await duplicates.find_known(session, parsed):
-        if mailbox_id is None or member.mailbox_id == mailbox_id:
-            return member, False
+    await duplicates.lock_mail(session, tenant_id, parsed)
+    stored, _ = await duplicates.find_known(session, parsed, mailbox_id)
+    if stored is not None:
+        return stored, False
     document = await store_document(
         session,
         blobs,
@@ -916,7 +959,9 @@ async def create_ticket(
     await auto_assign_new_ticket(session, row.tenant_id, row, ticket)
     from mhvp.communication.assignment_review import review_ticket
 
-    await review_ticket(session, ticket, actor_user_id)
+    # The message is linked only below: pass its sender, so a customer number or name in the
+    # text of an unknown sender stays a question (review 1.36.0).
+    await review_ticket(session, ticket, actor_user_id, from_address=row.from_address)
     row.ticket_id, row.status = ticket.id, "assigned"
     await session.flush()
     await duplicates.share_case(session, row)  # every copy of the mail joins the ticket

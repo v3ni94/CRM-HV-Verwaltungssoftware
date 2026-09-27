@@ -1,7 +1,8 @@
 """Zuordnungsprüfung mit Rückfrage (Betreiber 27.09.2026): Tabelle ``assignment_review``,
 eine Zeile je Vorgang (Mail oder Ticket) und Dimension (Kontakt, Objekt, Einheit) mit
-Kandidaten, Status, Entscheidung und Protokoll (wer, wann). Idempotent, RLS wie alle
-Mandantentabellen (ADR 0002).
+Kandidaten, Status, Entscheidung und Protokoll (wer, wann). ``basis_id`` ist der Feldwert, gegen
+den die Zeile gerechnet wurde, getrennt von der Entscheidung ``chosen_id`` (Review 1.36.0,
+Schutz gegen verlorene Entscheidungen). Idempotent, RLS wie alle Mandantentabellen (ADR 0002).
 
 Revision ID: 0216
 Revises: 0215
@@ -59,6 +60,7 @@ def upgrade() -> None:
             server_default=sa.text("'[]'::jsonb"),
         ),
         sa.Column("chosen_id", sa.UUID(), nullable=True),
+        sa.Column("basis_id", sa.UUID(), nullable=True),
         sa.Column("reason", sa.Text(), nullable=True),
         sa.Column("decision", sa.String(16), nullable=True),
         sa.Column("decided_by", sa.UUID(), nullable=True),

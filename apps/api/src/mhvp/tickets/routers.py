@@ -996,6 +996,7 @@ async def reply_to_ticket(
     Regel M20-06) durch denselben Nutzer freigegeben und versendet. Die Antwort enthält
     ``direct_send`` mit ``attempted``, ``reason`` (``author_flagged``, ``tenant_all``,
     ``no_permission`` oder ``None``) und ``error``."""
+    from mhvp.communication import signatures
     from mhvp.communication.models import Message
     from mhvp.communication.routers import _out as message_out
     from mhvp.communication.routers import approve_and_send, mailbox_accessible, tnr_references
@@ -1057,7 +1058,11 @@ async def reply_to_ticket(
             cc_addresses=cc_addresses,
             # Kennung TNR#<nummer> genau einmal im Betreff (docs/rules/M19-02-tnr.md).
             subject=tnr.subject_with_tnr(body.subject, ticket.number),
-            body=body.body,
+            # Created as submitted: the stored body carries the signature, the send path sends
+            # it verbatim (review 1.36.0).
+            body=await signatures.sign_body(
+                session, principal.tenant_id, principal.user_id, body.body, mailbox_id=mailbox.id
+            ),
             in_reply_to=inbound.header_message_id if inbound else None,
             references_header=tnr_references(inbound) if inbound else None,
             thread_id=(inbound.thread_id or inbound.id) if inbound else None,

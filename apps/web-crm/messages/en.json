@@ -3397,6 +3397,11 @@
     "replyDraftTitle": "Reply draft",
     "replyDraftSubmitted": "The reply draft has been submitted for approval. It is approved and sent from the Approvals tab.",
     "replyDraftClosed": "The reply draft is closed. The thread shows the sent message.",
+    "draftNewerVersion": {
+      "hint": "A newer text is available for this draft, for example from adopting a suggestion or a preparation. You have unsaved changes. Which text should apply?",
+      "take": "Use the new text",
+      "keep": "Keep my changes"
+    },
     "draftAttachments": {
       "title": "Attachments",
       "loading": "Loading attachments...",
@@ -3478,6 +3483,7 @@
       "playbook": "Matching playbook",
       "playbookScore": "Match {percent}%",
       "useReply": "Reply from suggestion",
+      "sendReplyDraft": "Adopt suggestion",
       "applyPlaybook": "Apply playbook",
       "status": {
         "none": "No suggestion yet.",
@@ -4449,7 +4455,7 @@
   },
   "Signature": {
     "title": "E-mail signature",
-    "hint": "Position and extension appear in your e-mail signature. The signature is appended automatically to reply drafts and on sending unless the draft already contains a signature marker.",
+    "hint": "Position and extension appear in your e-mail signature. The signature is inserted automatically into reply drafts and on submission for approval unless the draft already contains a signature marker.",
     "position": "Position",
     "noPosition": "No position",
     "customPosition": "Other position (enter manually)",
@@ -4461,7 +4467,8 @@
     "cancel": "Cancel",
     "saved": "Saved.",
     "previewText": "Text preview",
-    "previewHtml": "HTML preview",
+    "previewHtml": "HTML preview (not sent)",
+    "previewHtmlHint": "Preview only. E-mails are currently sent as plain text with the text signature; recipients do not get the HTML signature.",
     "editPosition": "Set position",
     "positionShow": "Position: {position}"
   },
@@ -4471,10 +4478,11 @@
     "placeholders": "Placeholders",
     "text": "Text template",
     "textPlaceholder": "{name}\n{position}\n{company}\n...",
-    "html": "HTML template",
+    "html": "HTML template (currently not used for sending)",
     "htmlPlaceholder": "<p>{name}<br>{position}</p>",
+    "htmlHint": "E-mails are currently sent as plain text with the text template. HTML template and logo only appear in the signature preview in the profile.",
     "logoUrl": "Logo URL (https)",
-    "logoHint": "Rendered at most 180 pixels wide in the HTML signature. Without a URL no image is shown.",
+    "logoHint": "Rendered at most 180 pixels wide in the HTML preview only. Without a URL no image is shown.",
     "save": "Save",
     "saved": "Saved."
   },

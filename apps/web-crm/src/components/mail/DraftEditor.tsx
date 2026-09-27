@@ -31,17 +31,42 @@ function splitAddresses(value: string): string[] {
     .filter(Boolean);
 }
 
+/** The editable fields of a draft as the inputs show them. */
+type DraftFields = { to: string; cc: string; subject: string; body: string };
+
+function draftFields(message: Message): DraftFields {
+  return {
+    to: message.to_addresses.join(", "),
+    cc: ((message as { cc_addresses?: string[] }).cc_addresses ?? []).join(", "),
+    subject: message.subject ?? "",
+    body: message.body ?? "",
+  };
+}
+
+function sameFields(a: DraftFields, b: DraftFields): boolean {
+  return a.to === b.to && a.cc === b.cc && a.subject === b.subject && a.body === b.body;
+}
+
 /** Antwortentwurf (operator 27.09.2026): An, Cc, Betreff und Text frei bearbeitbar, Anhänge aus
  * dem DMS verknüpfen (Verweis, keine Kopie) oder vom lokalen Rechner hochladen, Anhänge
  * entfernen. Senden läuft weiter über Einreichen und Freigabe nach den Regeln M20-03/M20-04. */
 export function DraftEditor({ message, onUpdated }: { message: Message; onUpdated: (next: Message) => void }) {
   const t = useTranslations("Mail");
   const ta = useTranslations("Mail.draftAttachments");
-  const initialCc = (message as { cc_addresses?: string[] }).cc_addresses ?? [];
-  const [to, setTo] = useState(message.to_addresses.join(", "));
-  const [cc, setCc] = useState(initialCc.join(", "));
-  const [subject, setSubject] = useState(message.subject ?? "");
-  const [body, setBody] = useState(message.body ?? "");
+  const server = draftFields(message);
+  const [to, setTo] = useState(server.to);
+  const [cc, setCc] = useState(server.cc);
+  const [subject, setSubject] = useState(server.subject);
+  const [body, setBody] = useState(server.body);
+  // Review 1.36.0: the same draft can come back from outside the editor with a newer text
+  // ("Vorschlag übernehmen", "Vorbereiten", "Antworten" return the open draft). `seen` is the
+  // last server version received through props, `pristine` the local values that count as
+  // "no unsaved edits", `echo` the server answer to this editor's own save, `incoming` a newer
+  // server version waiting for the user's decision because local edits would be lost.
+  const [seen, setSeen] = useState(server);
+  const [pristine, setPristine] = useState(server);
+  const [echo, setEcho] = useState<DraftFields | null>(null);
+  const [incoming, setIncoming] = useState<DraftFields | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [attachments, setAttachments] = useState<DraftAttachment[] | null>(null);
@@ -50,6 +75,24 @@ export function DraftEditor({ message, onUpdated }: { message: Message; onUpdate
   const [dmsQuery, setDmsQuery] = useState("");
   const [dmsHits, setDmsHits] = useState<DraftAttachment[] | null>(null);
   const fileInput = useRef<HTMLInputElement | null>(null);
+
+  const applyFields = (next: DraftFields) => {
+    setTo(next.to);
+    setCc(next.cc);
+    setSubject(next.subject);
+    setBody(next.body);
+    setPristine(next);
+    setIncoming(null);
+  };
+
+  // Adjusting state while rendering when the prop changes (React: "storing information from
+  // previous renders"), so the inputs never show the stale text for a committed frame.
+  if (!sameFields(server, seen)) {
+    setSeen(server);
+    if (echo && sameFields(server, echo)) setEcho(null);
+    else if (sameFields({ to, cc, subject, body }, pristine)) applyFields(server);
+    else setIncoming(server);
+  }
 
   useEffect(() => {
     setAttachments(null);
@@ -73,8 +116,12 @@ export function DraftEditor({ message, onUpdated }: { message: Message; onUpdate
       }),
     });
     setBusy(false);
-    if (res.ok) onUpdated(res.data);
-    else setError(res.status === 422 ? t("invalidAddresses") : res.message);
+    if (res.ok) {
+      // The saved values are the new baseline; the parent hands the answer back as a prop.
+      setPristine({ to, cc, subject, body });
+      setEcho(draftFields(res.data));
+      onUpdated(res.data);
+    } else setError(res.status === 422 ? t("invalidAddresses") : res.message);
     return res.ok;
   };
 
@@ -147,6 +194,19 @@ export function DraftEditor({ message, onUpdated }: { message: Message; onUpdate
   return (
     <div className="flex flex-col gap-3" data-testid="mail-draft-editor">
       {message.rejection_note ? <p className={ui.notice}>{t("rejectionNote", { note: message.rejection_note })}</p> : null}
+      {incoming ? (
+        <div className={`${ui.notice} flex flex-col gap-2`} role="status" data-testid="mail-draft-newer-version">
+          <span>{t("draftNewerVersion.hint")}</span>
+          <div className="flex flex-wrap items-center gap-2">
+            <button type="button" className={ui.button} onClick={() => applyFields(incoming)}>
+              {t("draftNewerVersion.take")}
+            </button>
+            <button type="button" className={ui.button} onClick={() => setIncoming(null)}>
+              {t("draftNewerVersion.keep")}
+            </button>
+          </div>
+        </div>
+      ) : null}
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("to")}</span>
         <input className={ui.input} value={to} onChange={(e) => setTo(e.target.value)} disabled={busy} />
@@ -257,10 +317,15 @@ export function DraftEditor({ message, onUpdated }: { message: Message; onUpdate
       </section>
 
       <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className={ui.button} disabled={busy} onClick={() => void save()}>
+        <button type="button" className={ui.button} disabled={busy || incoming !== null} onClick={() => void save()}>
           {t("save")}
         </button>
-        <button type="button" className={ui.primary} disabled={busy || !to.trim() || !body.trim()} onClick={() => void submit()}>
+        <button
+          type="button"
+          className={ui.primary}
+          disabled={busy || incoming !== null || !to.trim() || !body.trim()}
+          onClick={() => void submit()}
+        >
           {t("submitForApproval")}
         </button>
       </div>

@@ -458,7 +458,10 @@ export function MailWorkspace({
               {t("backToList")}
             </button>
           ) : null}
+          {/* Keyed per mail (review 1.36.0): a late answer of a request for the previous mail
+              (reply draft, suggestion) must not land in the mail shown now. */}
           <MailDetail
+            key={selected?.id ?? "none"}
             message={selected}
             canApprove={canApprove}
             canReadMembers={canReadMembers}

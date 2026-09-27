@@ -3397,6 +3397,11 @@
     "replyDraftTitle": "Antwortentwurf",
     "replyDraftSubmitted": "Der Antwortentwurf ist zur Freigabe eingereicht. Er wird im Reiter Freigaben freigegeben und gesendet.",
     "replyDraftClosed": "Der Antwortentwurf ist abgeschlossen. Der Verlauf zeigt die gesendete Nachricht.",
+    "draftNewerVersion": {
+      "hint": "Für diesen Entwurf liegt ein neuer Text vor, zum Beispiel aus Vorschlag übernehmen oder Vorbereiten. Sie haben ungespeicherte Änderungen. Welcher Text soll gelten?",
+      "take": "Neuen Text übernehmen",
+      "keep": "Meine Änderungen behalten"
+    },
     "draftAttachments": {
       "title": "Anhänge",
       "loading": "Anhänge werden geladen...",
@@ -3478,6 +3483,7 @@
       "playbook": "Passendes Playbook",
       "playbookScore": "Übereinstimmung {percent}%",
       "useReply": "Antwort aus Vorschlag",
+      "sendReplyDraft": "Vorschlag übernehmen",
       "applyPlaybook": "Playbook anwenden",
       "status": {
         "none": "Noch kein Vorschlag.",
@@ -4449,7 +4455,7 @@
   },
   "Signature": {
     "title": "E-Mail-Signatur",
-    "hint": "Position und Durchwahl erscheinen in Ihrer E-Mail-Signatur. Die Signatur wird beim Erstellen von Antwortentwürfen und beim Versand automatisch angehängt, sofern der Entwurf noch keine Signaturmarke enthält.",
+    "hint": "Position und Durchwahl erscheinen in Ihrer E-Mail-Signatur. Die Signatur wird beim Erstellen von Antwortentwürfen und beim Einreichen zur Freigabe automatisch eingefügt, sofern der Entwurf noch keine Signaturmarke enthält.",
     "position": "Position",
     "noPosition": "Keine Position",
     "customPosition": "Andere Position (manuell anlegen)",
@@ -4461,7 +4467,8 @@
     "cancel": "Abbrechen",
     "saved": "Gespeichert.",
     "previewText": "Vorschau Text",
-    "previewHtml": "Vorschau HTML",
+    "previewHtml": "Vorschau HTML (nicht im Versand)",
+    "previewHtmlHint": "Nur Vorschau. E-Mails werden derzeit als Klartext mit der Textsignatur versendet, die HTML-Signatur erhält der Empfänger nicht.",
     "editPosition": "Position pflegen",
     "positionShow": "Position: {position}"
   },
@@ -4471,10 +4478,11 @@
     "placeholders": "Platzhalter",
     "text": "Textvorlage",
     "textPlaceholder": "{name}\n{position}\n{company}\n...",
-    "html": "HTML-Vorlage",
+    "html": "HTML-Vorlage (derzeit nicht im Versand verwendet)",
     "htmlPlaceholder": "<p>{name}<br>{position}</p>",
+    "htmlHint": "E-Mails werden derzeit als Klartext mit der Textvorlage versendet. HTML-Vorlage und Logo erscheinen nur in der Signaturvorschau im Profil.",
     "logoUrl": "Logo-URL (https)",
-    "logoHint": "Wird in der HTML-Signatur höchstens 180 Pixel breit dargestellt. Ohne URL erscheint kein Bild.",
+    "logoHint": "Wird nur in der HTML-Vorschau höchstens 180 Pixel breit dargestellt. Ohne URL erscheint kein Bild.",
     "save": "Speichern",
     "saved": "Gespeichert."
   },

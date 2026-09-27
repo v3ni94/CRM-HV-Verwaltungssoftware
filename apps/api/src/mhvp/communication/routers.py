@@ -1293,6 +1293,38 @@ async def put_call_assistant(
         return _call_assistant_out(row.call_assistant)
 
 
+async def _forwarded_sibling_detail(
+    session: AsyncSession, principal: TenantPrincipal, sibling_id: uuid.UUID
+) -> str:
+    """German conflict detail naming the mail with the same Message-ID whose invoice is
+    already queued or sent (review 1.36.0). Subject, date and mailbox are named only when the
+    caller may open that mail (``assert_message_accessible``), otherwise it stays unnamed."""
+    from zoneinfo import ZoneInfo
+
+    sibling = await session.get(Message, sibling_id)
+    forward = (sibling.classification.get("invoice_forward") or {}) if sibling else {}
+    sent = forward.get("status") == "sent"
+    done = "wurde bereits weitergeleitet" if sent else "ist bereits zur Weiterleitung vorgemerkt"
+    named = "eine Mail in einem anderen Postfach"
+    if sibling is not None:
+        try:
+            await assert_message_accessible(session, principal, sibling)
+        except ProblemError:
+            pass
+        else:
+            named = f"Mail „{sibling.subject or 'ohne Betreff'}“"
+            if sibling.received_at is not None:
+                local = sibling.received_at.astimezone(ZoneInfo("Europe/Berlin"))
+                named += f" vom {local.strftime('%d.%m.%Y')}"
+            box = await session.get(Mailbox, sibling.mailbox_id) if sibling.mailbox_id else None
+            if box is not None:
+                named += f" im Postfach {box.address}"
+    return (
+        f"Die Rechnung dieser Mail {done}: {named} mit derselben Message-ID. "
+        "Eine zweite Weiterleitung an die Buchhaltung erfolgt nicht."
+    )
+
+
 @router.post(
     "/messages/{message_id}/forward-invoice",
     summary='Rechnung weiterleiten ("Weiterleiten?"-Vorschlag bestätigen)',
@@ -1304,10 +1336,21 @@ async def forward_invoice(
     Bestätigung eines Absenders landet dieser auf der Lernliste (operator 25.09.2026) und
     künftige Mails desselben Absenders werden automatisch weitergeleitet."""
     from mhvp.communication.forwarding import register_confirmation
-    from mhvp.communication.forwarding_dispatch import forward_and_archive
+    from mhvp.communication.forwarding_dispatch import NOT_SENT_NO_GMAIL, forward_and_archive
     from mhvp.platform.models import TenantSettings
 
     async with tenant_tx(request, principal) as session:
+        # Review 1.36.0: the mail lock of the Message-ID comes before the row lock, in the
+        # order of the ingest (``duplicates.lock_mail``, then updates of stored copies), so the
+        # guard below sees the committed forward status of a relay ingested or forwarded in
+        # parallel instead of missing it.
+        header_message_id = await session.scalar(
+            select(Message.header_message_id).where(Message.id == message_id)
+        )
+        if header_message_id:
+            await duplicates.lock_mail(
+                session, principal.tenant_id, {"message_id": header_message_id}
+            )
         row = await _message(session, message_id, principal)
         settings_row = await session.scalar(
             select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
@@ -1317,8 +1360,17 @@ async def forward_invoice(
                 ErrorCodes.VALIDATION,
                 detail="Keine Zieladresse für die Weiterleitung hinterlegt (Postfächer).",
             )
+        # Review 1.36.0: the guard of the automatic forward (``services._forwarded_sibling``).
+        # The invoice of a relay with the same Message-ID that is already queued or sent does
+        # not reach accounting a second time; the endpoint has no override.
+        sibling_id = await services._forwarded_sibling(session, row)
+        if sibling_id is not None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=await _forwarded_sibling_detail(session, principal, sibling_id),
+            )
         forward_address = settings_row.invoice_forwarding["forward_address"]
-        await forward_and_archive(
+        sent = await forward_and_archive(
             session,
             request.app.state.settings,
             principal.tenant_id,
@@ -1326,16 +1378,27 @@ async def forward_invoice(
             row,
             forward_address,
         )
-        settings_row.invoice_forwarding = register_confirmation(
-            settings_row.invoice_forwarding, row.from_address or ""
-        )
         classification = dict(row.classification)
         forward = dict(classification.get("invoice_forward") or {})
-        forward["status"], forward["forwarded_to"] = "sent", forward_address
+        if sent:
+            settings_row.invoice_forwarding = register_confirmation(
+                settings_row.invoice_forwarding, row.from_address or ""
+            )
+            forward["status"], forward["forwarded_to"] = "sent", forward_address
+            forward.pop("error", None)
+        elif forward.get("status") != "sent":
+            # Review 1.36.0: nothing went out (no Gmail mailbox). The mark is ``not_sent``, so
+            # it never blocks a later real forward of the same Message-ID (the guard counts
+            # ``queued`` and ``sent`` only) and it is no confirmation of the sender. An earlier
+            # ``sent`` is kept, so the guard still protects the invoice sent before.
+            forward["status"], forward["error"] = "not_sent", NOT_SENT_NO_GMAIL
         classification["invoice_forward"] = forward
         row.classification = classification
         await session.flush()
-        return {"forwarded_to": forward_address}
+    if not sent:
+        # Raised after the commit, so the ``not_sent`` mark is stored.
+        raise ProblemError(ErrorCodes.CONFLICT, detail=NOT_SENT_NO_GMAIL)
+    return {"forwarded_to": forward_address}
 
 
 @router.post(
@@ -1363,20 +1426,37 @@ async def reply_draft(
         # an, "Antworten" öffnet ihn wieder, statt bei jedem Klick einen weiteren Entwurf im
         # Reiter Entwürfe zu erzeugen. Ein übergebener Text (Vorschlag übernehmen) ersetzt
         # den Text des offenen Entwurfs.
-        existing = await session.scalar(
-            select(Message)
-            .where(
-                Message.direction == "out",
-                Message.status == "draft",
-                Message.thread_id == (row.thread_id or row.id),
-                Message.in_reply_to == row.header_message_id,
+        # Review 1.36.0: only the caller's own open draft in the mailbox of this very copy is
+        # reused. Duplicate copies in other mailboxes share thread and Message-ID, and
+        # ``_message`` checked access for this copy's mailbox only; another user's draft is
+        # never returned or overwritten.
+        existing = (
+            await session.scalar(
+                select(Message)
+                .where(
+                    Message.direction == "out",
+                    Message.status == "draft",
+                    Message.thread_id == (row.thread_id or row.id),
+                    Message.in_reply_to == row.header_message_id,
+                    Message.mailbox_id.is_not_distinct_from(row.mailbox_id),
+                    Message.created_by == principal.user_id,
+                )
+                .order_by(Message.created_at.desc())
+                .limit(1)
             )
-            .order_by(Message.created_at.desc())
-            .limit(1)
+            if principal.user_id is not None
+            else None
         )
         if existing is not None:
             if body is not None and body.body is not None:
-                existing.body = body.body
+                # The stored body carries the signature (review 1.36.0).
+                existing.body = await signatures.sign_body(
+                    session,
+                    principal.tenant_id,
+                    principal.user_id,
+                    body.body,
+                    mailbox_id=existing.mailbox_id,
+                )
                 existing.updated_by = principal.user_id
                 await session.flush()
             return _out(existing)
@@ -1398,13 +1478,14 @@ async def reply_draft(
                 if ticket is not None
                 else f"AW: {row.subject or ''}"[:998]
             ),
-            body=signatures.with_signature(
+            body=await signatures.sign_body(
+                session,
+                principal.tenant_id,
+                principal.user_id,
                 body.body
                 if body is not None and body.body is not None
                 else mail.draft_reply(salutation, row.subject, ticket.number if ticket else None),
-                await signatures.signature_for_user(
-                    session, principal.tenant_id, principal.user_id
-                ),
+                mailbox_id=row.mailbox_id,
             ),
             in_reply_to=row.header_message_id,
             references_header=tnr_references(row),
@@ -1631,6 +1712,18 @@ async def submit(
             raise ProblemError(ErrorCodes.VALIDATION, detail="Der Entwurf hat keinen Empfänger.")
         if not (row.body or "").strip():
             raise ProblemError(ErrorCodes.VALIDATION, detail="Der Entwurf hat keinen Text.")
+        # Review 1.36.0: the approver reviews exactly the text that is sent, so a missing
+        # signature (drafts from playbooks, proposals, jobs) is inserted into the stored body
+        # now; the send path sends the body verbatim. A ``-- `` delimiter line counts as
+        # present, so an edited signature block is not signed a second time.
+        row.body = await signatures.sign_body(
+            session,
+            principal.tenant_id,
+            row.created_by or principal.user_id,
+            row.body,
+            mailbox_id=row.mailbox_id,
+            respect_delimiter=True,
+        )
         row.status = "pending"
         row.submitted_by, row.submitted_at = principal.user_id, datetime.now(UTC)
         row.rejection_note = None
@@ -1936,11 +2029,10 @@ async def approve_and_send(
             if row.in_reply_to:
                 msg["In-Reply-To"] = row.in_reply_to
                 msg["References"] = row.references_header or row.in_reply_to
-            # Signatur des Verfassers (operator 27.09.2026), no-op wenn die Marke schon steht.
-            signature = await signatures.signature_for_user(
-                session, principal.tenant_id, row.created_by or principal.user_id
-            )
-            msg.set_content(signatures.with_signature(row.body, signature))
+            # The stored and approved body is sent verbatim (review 1.36.0): the signature was
+            # inserted at draft creation or submission; nothing is appended here, so drafts
+            # submitted before 1.36.0 go out exactly as approved.
+            msg.set_content(row.body or "")
             # Standardanhänge aus Antwortvorlagen (operator 26.09.2026): Dokumentverweise der
             # ausgehenden Nachricht werden beim Versand beigefügt.
             await attachments.attach_documents(session, request, msg, row.attachment_document_ids)
@@ -2233,7 +2325,13 @@ async def apply_playbook(
                 if ticket is not None
                 else f"AW: {row.subject or ''}"[:998]
             ),
-            body=body_text,
+            body=await signatures.sign_body(
+                session,
+                principal.tenant_id,
+                principal.user_id,
+                body_text,
+                mailbox_id=row.mailbox_id,
+            ),
             in_reply_to=row.header_message_id,
             references_header=tnr_references(row),
             thread_id=row.thread_id or row.id,

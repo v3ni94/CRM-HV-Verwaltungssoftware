@@ -1,7 +1,9 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { NextIntlClientProvider } from "next-intl";
+import { useState } from "react";
 
-import { jsonResponse, renderIntl } from "@/test/intl";
+import { jsonResponse, messages, renderIntl } from "@/test/intl";
 
 import { DraftEditor } from "./DraftEditor";
 import type { Message } from "./MailWorkspace";
@@ -37,6 +39,26 @@ function makeDraft(overrides: Partial<Message> = {}): Message {
     suggestion_status: "none",
     ...overrides,
   };
+}
+
+function withIntl(ui: React.ReactElement) {
+  return (
+    <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+      {ui}
+    </NextIntlClientProvider>
+  );
+}
+
+/** Hands the saved draft back as a prop, like MailDetail and MailWorkspace do. */
+function Harness({ initial }: { initial: Message }) {
+  const [message, setMessage] = useState(initial);
+  return <DraftEditor message={message} onUpdated={setMessage} />;
+}
+
+function patchPayloads(fetchMock: { mock: { calls: unknown[][] } }): Record<string, unknown>[] {
+  return fetchMock.mock.calls
+    .filter(([, init]) => (init as RequestInit | undefined)?.method === "PATCH")
+    .map(([, init]) => JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>);
 }
 
 const pdf = { document_id: "doc1", title: "Hausordnung", filename: "hausordnung.pdf", mime_type: "application/pdf", size: 2048 };
@@ -146,5 +168,73 @@ describe("DraftEditor", () => {
     await screen.findByText("Keine Anhänge.");
     await userEvent.click(screen.getByRole("button", { name: "Zur Freigabe" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("nicht mit Google verbunden");
+  });
+
+  it("shows the newer text when the same draft comes back from outside and submits it (review 1.36.0)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/draft") && init?.method === "PATCH") return jsonResponse(makeDraft({ body: JSON.parse(String(init.body)).body }), 200);
+      if (url.endsWith("/submit") && init?.method === "POST") return jsonResponse(makeDraft({ status: "pending" }), 200);
+      return jsonResponse([], 200);
+    });
+    const { rerender } = renderIntl(<DraftEditor message={makeDraft({ body: "Guten Tag [Name]," })} onUpdated={() => {}} />);
+    await screen.findByText("Keine Anhänge.");
+    expect(screen.getByLabelText("Text")).toHaveValue("Guten Tag [Name],");
+
+    // "Vorschlag übernehmen" stored a new text on the same draft id.
+    rerender(withIntl(<DraftEditor message={makeDraft({ body: "Übernommener Vorschlag" })} onUpdated={() => {}} />));
+    expect(screen.getByLabelText("Text")).toHaveValue("Übernommener Vorschlag");
+    expect(screen.queryByTestId("mail-draft-newer-version")).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole("button", { name: "Zur Freigabe" }));
+    await waitFor(() => expect(patchPayloads(fetchMock)).toHaveLength(1));
+    expect(patchPayloads(fetchMock)[0]?.body).toBe("Übernommener Vorschlag");
+  });
+
+  it("asks before a newer text replaces unsaved edits (review 1.36.0)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse([], 200));
+    const { rerender } = renderIntl(<DraftEditor message={makeDraft({ body: "Vorlage" })} onUpdated={() => {}} />);
+    await screen.findByText("Keine Anhänge.");
+    const text = screen.getByLabelText("Text");
+    await userEvent.clear(text);
+    await userEvent.type(text, "Eigene Formulierung");
+
+    rerender(withIntl(<DraftEditor message={makeDraft({ body: "Vorschlag eins" })} onUpdated={() => {}} />));
+    const notice = screen.getByTestId("mail-draft-newer-version");
+    expect(notice).toHaveTextContent("Sie haben ungespeicherte Änderungen");
+    expect(screen.getByLabelText("Text")).toHaveValue("Eigene Formulierung");
+    // Nothing is written back until the user has decided.
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Zur Freigabe" })).toBeDisabled();
+
+    await userEvent.click(within(notice).getByRole("button", { name: "Meine Änderungen behalten" }));
+    expect(screen.queryByTestId("mail-draft-newer-version")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Text")).toHaveValue("Eigene Formulierung");
+    expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled();
+
+    rerender(withIntl(<DraftEditor message={makeDraft({ body: "Vorschlag zwei" })} onUpdated={() => {}} />));
+    await userEvent.click(within(screen.getByTestId("mail-draft-newer-version")).getByRole("button", { name: "Neuen Text übernehmen" }));
+    expect(screen.getByLabelText("Text")).toHaveValue("Vorschlag zwei");
+    expect(screen.queryByTestId("mail-draft-newer-version")).not.toBeInTheDocument();
+  });
+
+  it("does not take its own saved answer for a newer version", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/draft") && init?.method === "PATCH") {
+        const sent = JSON.parse(String(init.body));
+        return jsonResponse(makeDraft({ subject: sent.subject, body: sent.body }), 200);
+      }
+      return jsonResponse([], 200);
+    });
+    renderIntl(<Harness initial={makeDraft()} />);
+    await screen.findByText("Keine Anhänge.");
+    // The server stores the trimmed subject, the input keeps the trailing blank.
+    await userEvent.type(screen.getByLabelText("Betreff"), " ");
+    await userEvent.type(screen.getByLabelText("Text"), " Danke.");
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Speichern" })).toBeEnabled());
+    expect(screen.queryByTestId("mail-draft-newer-version")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("Text")).toHaveValue("Sehr geehrte Damen und Herren, Danke.");
   });
 });

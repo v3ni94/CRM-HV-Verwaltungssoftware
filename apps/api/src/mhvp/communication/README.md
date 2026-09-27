@@ -211,8 +211,8 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 
 ## E-Mail-Signatur je Nutzer (`signatures.py`, operator 27.09.2026, migration 0215)
 
-`render_signature(...)` liefert Text und HTML aus Nutzer (`app_user`), Mitgliedschaft
-(`membership.position`, `membership.phone`, `membership.mobile_phone`) und Mandant
+Stand Review 1.36.0. `render_signature(...)` liefert Text und HTML aus Nutzer (`app_user`, nur
+der Anzeigename), Mitgliedschaft (`membership.position`, `membership.phone`) und Mandant
 (Firmendaten, Branding, `tenant_settings.signature_template` mit Platzhaltern `{name}`,
 `{position}`, `{phone}`, `{mobile}`, `{email}`, `{company}`, `{street}`, `{postal_code}`,
 `{city}`, `{register}`, `{website}`; leer bedeutet Standard). HVM: Kennlinie 3 px, Position,
@@ -220,19 +220,56 @@ Registerzeile; Einzelunternehmen: Wortmarke, kurze Akzentlinie, ohne Funktion un
 Positionskatalog `POSITION_CATALOGUE` plus `tenant_settings.position_catalogue_extra` (frei
 eingegebene Positionen werden dort gemerkt, `remember_position`).
 
-Einbindung in den Versandpfad: `signature = await signature_for_user(session, tenant_id,
-principal.user_id)`, dann `with_signature(body, signature)` für den Klartext und
-`with_signature_html(body_html, signature)` für HTML. Beide sind idempotent über die
-Signaturmarke (`TEXT_MARKER` = `-- ` als eigene Zeile, `HTML_MARKER` als Kommentar): enthält der
-Entwurf die Marke, wird nichts angehängt. Aufrufstellen: `reply_draft` (Entwurfstext) und der
-Versand (`msg.set_content`) in `routers.py`.
+Nie Teil der Signatur: `membership.mobile_phone` (interne Bereitschaftsnummer für
+SMS-Eskalationen, M35; `{mobile}` bleibt als Platzhalter zulässig, bleibt aber immer leer),
+die Anmeldeadresse `app_user.email` (gilt für alle Mandanten des Nutzers), Steuernummern und
+Bankverbindungen. Die E-Mail-Zeile trägt die Adresse des sendenden Postfachs
+(`mailbox_address`, ein entferntes Postfach hat keine). Die Vorschau nutzt das einzige
+freigegebene persönliche Postfach des Nutzers im Mandanten (`personal_mailbox_address`: kein
+Sammelpostfach, nicht entfernt); gibt es keines oder mehrere, entfällt die Zeile.
+
+Vorlagen kennen nur diese Platzhalter; `{{` und `}}` stehen für geschweifte Klammern (etwa
+CSS in der HTML-Vorlage). `PATCH /tenant/settings` lehnt unbekannte Platzhalter mit 422 ab
+(`assert_known_placeholders`, Erweiterung `unknown_placeholders` mit den Namen). In einer
+bereits gespeicherten Vorlage bleiben unbekannte oder fehlerhafte Platzhalter leer, blockieren
+weder Vorschau noch Entwurf und werden je Vorlage einmal als Warnung mit ihren Namen
+protokolliert, ohne Werte. Zeilen, deren Platzhalter alle leer bleiben, entfallen.
+
+Die Signatur steht im gespeicherten Text: `sign_body(session, tenant_id, user_id, body,
+mailbox_id=...)` fügt die Klartextsignatur in `Message.body` ein, beim Anlegen des Entwurfs
+(`reply_draft` für neue Entwürfe und für einen übergebenen Text beim Übernehmen eines
+Vorschlags, `apply_playbook`, Ticketantwort in `tickets/routers.py:reply_to_ticket`) und
+spätestens beim Einreichen (`submit`), wenn sie noch fehlt (etwa bei Entwürfen aus
+Vorschlägen, Automatiken oder Jobs). Beim Einreichen gilt die Signatur der Person, die den
+Entwurf angelegt hat (`created_by`, sonst der einreichenden Person); ohne Nutzer
+(API-Schlüssel) gibt es keine Signatur, der Text bleibt dann unverändert. Die freigebende Person sieht damit genau den
+Text, der versendet wird. Der Versand (`approve_and_send`) sendet `Message.body` unverändert
+(`msg.set_content(row.body)`) und hängt nichts an; vor 1.36.0 eingereichte Entwürfe gehen so
+hinaus, wie sie gespeichert sind.
+
+Erkennung einer vorhandenen Signatur (`with_signature`): Beim Anlegen zählt nur der
+gerenderte Signaturtext ohne Trennzeile mit normalisiertem Leerraum (`has_signature`); eine
+gelöschte Trennzeile führt nicht zu einer zweiten Signatur, eine Trennzeile in eingefügtem
+Fremdtext unterdrückt sie nicht. Beim Einreichen (`respect_delimiter=True`) zählt zusätzlich
+eine Standardtrennzeile `-- ` als eigene Zeile (`has_delimiter`; CRLF erlaubt, zitiertes
+`> -- ` und `--` ohne Leerzeichen zählen nicht). So bekommt ein bearbeiteter Signaturblock
+oder ein Entwurf, dessen Position, Durchwahl, Vorlage oder Postfach sich seit dem Anlegen
+geändert hat, keine zweite Signatur. Ein eingefügter Fremdtext mit Trennzeile unterdrückt die
+Signatur beim Einreichen; das ist vor der Freigabe im Text sichtbar. Beim Anfügen entfallen
+die Platzhalterzeilen `[Name]` und `[Firma]` der Antwortvorlagen.
+
+Versand nur als `text/plain`: Die HTML-Signatur (`with_signature_html`, Feld `html` der
+Vorschau, Kennlinie, Logo aus `logo_url`, eigene HTML-Vorlage) ist nur Vorschau und wird nicht
+versendet. Das Feld `text` der Vorschau entspricht dem Block, der in ausgehende Mails
+eingefügt wird; nur die E-Mail-Zeile folgt beim Versand dem sendenden Postfach und kann
+deshalb von der Vorschau abweichen.
 
 Endpunkte: `GET /mail/signature/preview` (eigene Signatur; `?membership_id=` mit
-`members:read`), `GET`/`PUT /mail/signature/profile` (eigene Position und Durchwahl),
-`GET /tenant/position-catalogue`, `PUT /tenant/members/{id}/position` (`members:update`),
-`PATCH /tenant/settings` mit `signature_template` und `position_catalogue_extra`
-(`tenant_settings:update`). Ereignis `membership.position_changed` (Durchwahl nur als
-gesetzt/nicht gesetzt).
+`members:read`), `GET`/`PUT /mail/signature/profile` (eigene Position und Durchwahl; eine
+geänderte Durchwahl wird immer gespeichert), `GET /tenant/position-catalogue`, `PUT
+/tenant/members/{id}/position` (`members:update`), `PATCH /tenant/settings` mit
+`signature_template` und `position_catalogue_extra` (`tenant_settings:update`). Ereignis
+`membership.position_changed` (Durchwahl nur als gesetzt/nicht gesetzt, nie die Nummer).
 
 ## Zuordnungsprüfung mit Rückfrage (Betreiber 27.09.2026)
 

@@ -719,6 +719,18 @@ class ErrorCodes:
             "(mhvp.communication.mail_approval.REAUTH_WINDOW)."
         ),
     )
+    # Zuordnungsprüfung mit Rückfrage (review 1.36.0, mhvp.communication.assignment_review).
+    ASSIGNMENT_CHANGED = ErrorCode(
+        "MHVP-COMM-0003",
+        409,
+        "Zuordnung inzwischen geändert",
+        (
+            "The assignment decision refers to an outdated view: the field no longer holds "
+            "seen_value or the value the row was computed against, the row is already accepted, "
+            "or candidate_id is not among the current candidates. Nothing was written; reload "
+            "the review and decide again."
+        ),
+    )
     # WEG circular resolution with a lowered majority (M25-02).
     HOA_CIRCULAR_LOWER_MAJORITY_DISABLED = ErrorCode(
         "MHVP-HOA-0001",

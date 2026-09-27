@@ -167,23 +167,59 @@ describe("MailDetail", () => {
     expect(fetchMock.mock.calls.filter(([input, init]) => String(input).endsWith("/reply-draft") && init?.method === "POST")).toHaveLength(1);
   });
 
-  it("reuses an existing draft of the thread and shows the submitted state", async () => {
-    const draft = makeMessage({ id: "d1", direction: "out", status: "draft", to_addresses: ["mieter@example.com"], body: "Entwurf aus Vorbereitung" });
+  it("asks the server for the reply draft instead of opening any draft of the thread (review 1.36.0)", async () => {
+    // An older inbound mail of the thread with an abandoned draft addressed to its sender.
+    const older = makeMessage({ id: "m0", from_address: "handwerker@example.com", received_at: "2026-09-10T08:00:00Z" });
+    const stale = makeMessage({ id: "d0", direction: "out", status: "draft", to_addresses: ["handwerker@example.com"], body: "Alte Antwort zu Mail 1" });
+    const draft = makeMessage({ id: "d2", direction: "out", status: "draft", to_addresses: ["mieter@example.com"], body: "Entwurf zu dieser Mail" });
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
-      if (url.endsWith("/messages/m1/thread")) return jsonResponse([makeMessage({}), draft], 200);
-      if (url.endsWith("/messages/d1/draft") && init?.method === "PATCH") return jsonResponse(draft, 200);
-      if (url.endsWith("/messages/d1/submit") && init?.method === "POST") return jsonResponse({ ...draft, status: "pending" }, 200);
+      if (url.endsWith("/messages/m1/thread")) return jsonResponse([older, stale, makeMessage({})], 200);
+      if (url.endsWith("/messages/m1/reply-draft") && init?.method === "POST") return jsonResponse(draft, 200);
+      if (url.endsWith("/messages/d2/draft") && init?.method === "PATCH") return jsonResponse(draft, 200);
+      if (url.endsWith("/messages/d2/submit") && init?.method === "POST") return jsonResponse({ ...draft, status: "pending" }, 200);
       return jsonResponse([], 200);
     });
     renderIntl(<MailDetail message={makeMessage({})} canApprove={false} canReadMembers={false} onUpdated={() => {}} onCreated={() => {}} />);
     await screen.findByText("Verlauf");
     await userEvent.click(within(screen.getByTestId("mail-actions-top")).getByRole("button", { name: "Antworten" }));
     const section = await screen.findByTestId("mail-reply-draft");
-    expect(within(section).getByLabelText("Text")).toHaveValue("Entwurf aus Vorbereitung");
-    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith("/reply-draft") && init?.method === "POST")).toBe(false);
+    expect(within(section).getByLabelText("Text")).toHaveValue("Entwurf zu dieser Mail");
+    expect(within(section).getByLabelText("An (kommagetrennt)")).toHaveValue("mieter@example.com");
+    const replyPosts = fetchMock.mock.calls.filter(([input, init]) => String(input).endsWith("/messages/m1/reply-draft") && init?.method === "POST");
+    expect(replyPosts).toHaveLength(1);
+    expect(JSON.parse(String(replyPosts[0]?.[1]?.body))).toEqual({});
+    expect(fetchMock.mock.calls.some(([input]) => String(input).includes("/messages/d0/"))).toBe(false);
     await userEvent.click(within(section).getByRole("button", { name: "Zur Freigabe" }));
     expect(await screen.findByTestId("mail-reply-draft-status")).toHaveTextContent("zur Freigabe eingereicht");
+  });
+
+  it("shows an adopted suggestion in the open reply editor and submits it (review 1.36.0)", async () => {
+    const template = makeMessage({ id: "d1", direction: "out", status: "draft", to_addresses: ["mieter@example.com"], body: "Guten Tag [Name]," });
+    const adopted = { ...template, body: "Vielen Dank, der Techniker kommt am Montag.\n\n-- \nMax Muster" };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/messages/m1/reply-draft") && init?.method === "POST") {
+        const sent = JSON.parse(String(init.body)) as { body?: string };
+        return jsonResponse(sent.body ? adopted : template, 200);
+      }
+      if (url.endsWith("/messages/d1/draft") && init?.method === "PATCH") return jsonResponse({ ...template, body: JSON.parse(String(init.body)).body }, 200);
+      if (url.endsWith("/messages/d1/submit") && init?.method === "POST") return jsonResponse({ ...adopted, status: "pending" }, 200);
+      return jsonResponse([], 200);
+    });
+    const message = makeMessage({ suggestion_status: "ready", suggestion: { reply_draft: "Vielen Dank, der Techniker kommt am Montag." } });
+    renderIntl(<MailDetail message={message} canApprove={false} canReadMembers={false} onUpdated={() => {}} onCreated={() => {}} />);
+    await userEvent.click(within(screen.getByTestId("mail-actions-top")).getByRole("button", { name: "Antworten" }));
+    const section = await screen.findByTestId("mail-reply-draft");
+    expect(within(section).getByLabelText("Text")).toHaveValue("Guten Tag [Name],");
+
+    // The server replaces the text of the same draft id; the open editor must show it.
+    await userEvent.click(screen.getByRole("button", { name: "Vorschlag übernehmen" }));
+    await waitFor(() => expect(within(section).getByLabelText("Text")).toHaveValue(adopted.body));
+    await userEvent.click(within(section).getByRole("button", { name: "Zur Freigabe" }));
+    expect(await screen.findByTestId("mail-reply-draft-status")).toHaveTextContent("zur Freigabe eingereicht");
+    const patch = fetchMock.mock.calls.find(([input, init]) => String(input).endsWith("/messages/d1/draft") && init?.method === "PATCH");
+    expect(JSON.parse(String(patch?.[1]?.body)).body).toBe(adopted.body);
   });
 
   it("shows the server's reason when Antworten is refused", async () => {

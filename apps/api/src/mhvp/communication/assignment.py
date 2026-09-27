@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import re
 import uuid
+from collections.abc import Collection
 from dataclasses import dataclass
 from typing import Any
 
@@ -217,9 +218,17 @@ _CUSTOMER_NUMBER_RE = re.compile(
     re.IGNORECASE,
 )
 _PHONE_RE = re.compile(r"(?:\+49|0049|0)[\d\s/().\-]{6,20}\d")
+# A bare "Nr." is no unit keyword (house, invoice or order numbers); it only counts after an
+# explicit unit word such as "Wohnung Nr. 3" or "WE Nr. 3" (review 1.36.0).
 _UNIT_RE = re.compile(
-    r"\b(?:einheit|we|whg\.?|wohnung|wohneinheit|nr\.?|stellplatz|tg)\s*(?:nr\.?\s*)?"
+    r"\b(?:einheit|we|whg\.?|wohnung|wohneinheit|stellplatz|tg)\s*(?:nr\.?\s*)?"
     r"([A-Za-z]?\d{1,4}[A-Za-z]?)\b",
+    re.IGNORECASE,
+)
+# A line starting with a greeting names the recipient; own staff named there is never the
+# sender (review 1.36.0). "Liebe Grüße" is a closing formula, not a salutation.
+_SALUTATION_LINE_RE = re.compile(
+    r"^\s*(?:sehr\s+geehrte[rs]?|hallo|hi|moin|liebe[rs]?(?!\s+gr)|guten\s+(?:tag|morgen|abend))\b",
     re.IGNORECASE,
 )
 _NAME_WORD_RE = re.compile(r"[A-ZÄÖÜ][\wäöüß\-]{2,}")
@@ -227,13 +236,32 @@ _NAME_STOP = {
     "sehr",
     "geehrte",
     "geehrter",
+    "geehrtes",
+    "werte",
+    "werter",
     "hallo",
+    "hey",
+    "moin",
+    "servus",
     "liebe",
     "lieber",
+    "liebes",
     "guten",
     "tag",
+    "morgen",
+    "abend",
+    "damen",
+    "herren",
     "herr",
+    "herrn",
     "frau",
+    "familie",
+    "zusammen",
+    "allerseits",
+    "team",
+    "dear",
+    "hello",
+    "prof",
     "mit",
     "freundlichen",
     "grüßen",
@@ -241,6 +269,18 @@ _NAME_STOP = {
     "viele",
     "beste",
     "grüße",
+    "gruss",
+    "grüsse",
+    "grüssen",
+    "freundliche",
+    "herzliche",
+    "herzlichen",
+    "schöne",
+    "schönen",
+    "besten",
+    "lieben",
+    "mfg",
+    "regards",
     "danke",
     "vielen",
     "dank",
@@ -321,16 +361,62 @@ def _bump(
         row.reasons.append(reason)
 
 
-def name_tokens(text: str) -> set[str]:
-    """Großgeschriebene Wörter aus Anrede und Signaturblock (letzte Zeilen), ohne Floskeln."""
+def has_salutation_line(text: str) -> bool:
+    return any(_SALUTATION_LINE_RE.match(line) for line in (text or "").splitlines())
+
+
+_REPLY_MARKER_RE = re.compile(
+    r"^(Am .{3,120} schrieb .{0,200}:\s*$|On .{3,120} wrote:\s*$"
+    r"|-{2,}\s*Urspr.ngliche Nachricht\s*-{2,}|-{2,}\s*Original Message\s*-{2,})",
+    re.IGNORECASE,
+)
+_HEADER_FROM_RE = re.compile(r"^(Von|From):\s*\S", re.IGNORECASE)
+_HEADER_NEXT_RE = re.compile(r"^(Gesendet|Sent|An|To|Betreff|Subject):", re.IGNORECASE)
+_HEADER_WINDOW = 3
+
+
+def without_quoted(text: str) -> str:
+    """Text without quoted earlier mails, for the sender name of a message (review 1.36.0):
+    lines starting with ``>`` are left out, and only a real reply or forward header ends the
+    text: "Am ... schrieb ...:", "Ursprüngliche Nachricht", or a "Von:"/"From:" line followed
+    within the next three lines by "Gesendet:", "Sent:", "An:", "To:", "Betreff:" or
+    "Subject:". A line of underscores or an own line "Von: Hausverwaltung" does not end it.
+    Without any text left (a bottom-posted reply below the quote) the text with the ``>``
+    lines removed is used. Unlike the ticket description the sender's own signature stays, it
+    names the sender; a quoted own signature does not."""
+    lines = (text or "").splitlines()
+    unquoted = [line for line in lines if not line.strip().startswith(">")]
+    kept: list[str] = []
+    for index, line in enumerate(unquoted):
+        stripped = line.strip()
+        if _REPLY_MARKER_RE.match(stripped):
+            break
+        if _HEADER_FROM_RE.match(stripped) and any(
+            _HEADER_NEXT_RE.match(following.strip())
+            for following in unquoted[index + 1 : index + 1 + _HEADER_WINDOW]
+        ):
+            break
+        kept.append(line)
+    if not "\n".join(kept).strip():
+        return "\n".join(unquoted)
+    return "\n".join(kept)
+
+
+def name_tokens(text: str, staff_names: Collection[str] = ()) -> set[str]:
+    """Capitalised words of the first two lines (call notes start with the name) and of the
+    signature block (last lines), without stock phrases. ``staff_names`` (names of own active
+    members) are dropped only from salutation lines, which name the recipient; every other word
+    and line counts, also a contact sharing a staff surname (review 1.36.0)."""
     if not text:
         return set()
     lines = [line for line in text.splitlines() if line.strip()]
-    window = "\n".join(lines[:2] + lines[-_SIGNATURE_WINDOW:])
-    tokens = {_norm(w) for w in _NAME_WORD_RE.findall(window)}
-    salutation = _SALUTATION_RE.search(text)
-    if salutation:
-        tokens.add(_norm(salutation.group(1)))
+    staff = {_norm(name) for name in staff_names}
+    tokens: set[str] = set()
+    for line in lines[:2] + lines[-_SIGNATURE_WINDOW:]:
+        words = {_norm(w) for w in _NAME_WORD_RE.findall(line)}
+        if staff and _SALUTATION_LINE_RE.match(line):
+            words -= staff
+        tokens |= words
     return {t for t in tokens if t not in _NAME_STOP and len(t) >= 3}
 
 
@@ -370,7 +456,10 @@ async def evaluate_contact(
     from_address: str | None,
     text: str,
     ai_contact_name: str | None = None,
+    name_text: str | None = None,
 ) -> DimensionResult:
+    """``name_text``: the text sender names are taken from, if it differs from ``text`` (a
+    message without its quoted earlier mails, review 1.36.0)."""
     from sqlalchemy import func
 
     from mhvp.contacts.models import (
@@ -383,6 +472,7 @@ async def evaluate_contact(
 
     scores: dict[uuid.UUID, Candidate] = {}
     contacts: dict[uuid.UUID, Any] = {}
+    sender_ids: set[uuid.UUID] = set()
 
     async def _load(ids: set[uuid.UUID]) -> None:
         missing = [i for i in ids if i not in contacts]
@@ -408,6 +498,7 @@ async def evaluate_contact(
         await _load(email_ids)
         hit = [i for i in email_ids if i in contacts]
         score = 1.0 if len(hit) == 1 else 0.6
+        sender_ids = set(hit)
         for cid in hit:
             label, detail = _contact_label(contacts[cid])
             _bump(scores, cid, label, detail, score, _SENDER_REASON)
@@ -447,7 +538,15 @@ async def evaluate_contact(
                 label, detail = _contact_label(contacts[cid])
                 _bump(scores, cid, label, detail, 0.7, "Telefonnummer aus der Signatur")
 
-    tokens = name_tokens(text)
+    names_from = text if name_text is None else name_text
+    staff_names: set[str] = set()
+    if has_salutation_line(names_from):
+        staff_names = {
+            word
+            for member in await active_members(session, tenant_id)
+            for word in member.display_name.split()
+        }
+    tokens = name_tokens(names_from, staff_names)
     if ai_contact_name:
         tokens |= {_norm(w) for w in ai_contact_name.split() if len(w) >= 3}
     if tokens:
@@ -465,19 +564,27 @@ async def evaluate_contact(
             if first and first in tokens:
                 _bump(scores, row.id, label, detail, 0.7, "Vor- und Nachname im Text")
             else:
-                _bump(scores, row.id, label, detail, 0.5, "Nachname in Anrede oder Signatur")
+                _bump(scores, row.id, label, detail, 0.5, "Nachname im Text")
     if ai_contact_name:
         for cid, cand in scores.items():
             if _norm(ai_contact_name) == _norm(contacts[cid].display_name):
                 cand.reasons.append("KI-Vorschlag (nur Hinweis)")
-    if from_address:
-        # Unbekannte Absenderadresse: Name, Telefon oder Kundennummer im Text reichen bei einer
-        # Mail nicht für eine automatische Zuordnung (Weiterleitungen, Anrufnotizen, Dritte
-        # schreiben über einen Kontakt); höchstens Rückfrage.
-        for cand in scores.values():
-            if _SENDER_REASON not in cand.reasons and cand.confidence > UNSURE_CAP:
-                cand.confidence = UNSURE_CAP
-                cand.reasons.append("Absenderadresse unbekannt")
+    # Operator rule (review 1.36.0): only an exact sender address of exactly one active contact
+    # is sure. Customer number, phone, name or a shared sender address are proposals at most
+    # (forwardings, call notes, third parties writing about a contact), also for tickets
+    # without a sender address.
+    for cid, cand in scores.items():
+        if cand.confidence <= UNSURE_CAP or (len(sender_ids) == 1 and cid in sender_ids):
+            continue
+        cand.confidence = UNSURE_CAP
+        if not from_address:
+            cand.reasons.append("Keine Absenderadresse")
+        elif cid in sender_ids:
+            cand.reasons.append("Absenderadresse mehrfach vergeben")
+        elif sender_ids:
+            cand.reasons.append("Absenderadresse gehört zu einem anderen Kontakt")
+        else:
+            cand.reasons.append("Absenderadresse unbekannt")
     return _finish(scores)
 
 
@@ -592,6 +699,7 @@ async def evaluate_unit(
 
     scores: dict[uuid.UUID, Candidate] = {}
     units: dict[uuid.UUID, Any] = {}
+    backed: set[uuid.UUID] = set()  # units found through a contract of the contact
     if property_id is not None:
         for unit in await session.scalars(
             select(Unit).where(Unit.tenant_id == tenant_id, Unit.property_id == property_id)
@@ -602,7 +710,7 @@ async def evaluate_unit(
         for unit in units.values():
             label, detail = _unit_label(unit)
             if unit.number.lower() in tokens:
-                _bump(scores, unit.id, label, detail, 0.9, f"Einheitennummer {unit.number} im Text")
+                _bump(scores, unit.id, label, detail, 0.6, f"Einheitennummer {unit.number} im Text")
             location = (unit.location or "").strip().lower()
             if len(location) >= 4 and location in haystack:
                 _bump(scores, unit.id, label, detail, 0.6, f"Wohnungslage {unit.location} im Text")
@@ -618,11 +726,15 @@ async def evaluate_unit(
             for unit in await session.scalars(select(Unit).where(Unit.id.in_(missing))):
                 units[unit.id] = unit
         score = 0.85 if len(unit_ids) == 1 else 0.5
-        seen: set[uuid.UUID] = set()
         for _pid, uid, reason in links:
-            if uid is None or uid in seen or uid not in units:
+            if uid is None or uid in backed or uid not in units:
                 continue
-            seen.add(uid)
+            backed.add(uid)
             label, detail = _unit_label(units[uid])
             _bump(scores, uid, label, detail, score, reason)
+    # Operator rule (review 1.36.0): a unit number or location in the text alone is a proposal,
+    # never an automatic assignment; only together with a contract of the contact it is sure.
+    for uid, cand in scores.items():
+        if uid not in backed and cand.confidence > UNSURE_CAP:
+            cand.confidence = UNSURE_CAP
     return _finish(scores)

@@ -99,7 +99,15 @@ async def test_forward_with_all_attachments_archives_original(
         return [("rechnung.pdf", "application/pdf", b"%PDF")], 1
 
     monkeypatch.setattr(fd, "load_attachments", load)
-    await fd.forward_and_archive(session, SimpleNamespace(), uuid.uuid4(), None, message, "b@x.org")  # type: ignore[arg-type]
+    sent = await fd.forward_and_archive(
+        cast(AsyncSession, session),
+        cast(Settings, SimpleNamespace()),
+        uuid.uuid4(),
+        None,
+        message,
+        "b@x.org",
+    )
+    assert sent is True
     parsed = message_from_bytes(client.sent[0], policy=default)
     assert len(list(parsed.iter_attachments())) == 1
     assert client.archived == ["g-1"]
@@ -145,3 +153,29 @@ async def test_forward_without_attachment_keeps_original_in_inbox(
         "b@x.org",
     )
     assert client.archived == []
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mailbox_kind", [None, "imap"])
+async def test_forward_without_gmail_mailbox_reports_not_sent(
+    wired: tuple[_FakeClient, _FakeSession, Any], mailbox_kind: str | None
+) -> None:
+    """Review 1.36.0: a mail without mailbox (upload) or in an IMAP mailbox has no Gmail send
+    path. Nothing is sent, archived or logged, and the caller learns it (``False``) instead of
+    marking the forward ``sent``."""
+    client, session, mailbox = wired
+    if mailbox_kind is None:
+        message = _message(mailbox_id=None)
+    else:
+        mailbox.kind = mailbox_kind
+        message = _message()
+    sent = await fd.forward_and_archive(
+        cast(AsyncSession, session),
+        cast(Settings, SimpleNamespace()),
+        uuid.uuid4(),
+        None,
+        message,
+        "b@x.org",
+    )
+    assert sent is False
+    assert (client.sent, client.archived, session.added) == ([], [], [])

@@ -12,7 +12,8 @@ const PLACEHOLDERS = "{name} {position} {phone} {mobile} {email} {company} {stre
 
 /** Tenant wide e-mail signature template (operator 27.09.2026): text and HTML building blocks
  *  with placeholders; empty fields fall back to the default rendered from the company data
- *  (`PATCH /tenant/settings`, field `signature_template`). */
+ *  (`PATCH /tenant/settings`, field `signature_template`). Outgoing mail is plain text with the
+ *  text template (review 1.36.0); HTML template and logo only feed the preview. */
 export function SignatureTemplateSettings({ initial, canUpdate }: { initial: SignatureTemplate; canUpdate: boolean }) {
   const t = useTranslations("SignatureTemplate");
   const [text, setText] = useState(initial.text ?? "");
@@ -53,6 +54,9 @@ export function SignatureTemplateSettings({ initial, canUpdate }: { initial: Sig
         <span className={ui.label}>{t("html")}</span>
         <textarea className={`${ui.input} min-h-32 font-mono`} value={html} disabled={!canUpdate} onChange={(e) => setHtml(e.target.value)} placeholder={t("htmlPlaceholder")} />
       </label>
+      <p className="text-xs text-muted" data-testid="signature-template-html-hint">
+        {t("htmlHint")}
+      </p>
       <label className="flex flex-col gap-1 text-xs sm:max-w-md">
         <span className={ui.label}>{t("logoUrl")}</span>
         <input type="url" className={ui.input} value={logoUrl} disabled={!canUpdate} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://" />

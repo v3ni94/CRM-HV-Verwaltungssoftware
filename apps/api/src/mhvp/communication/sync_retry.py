@@ -47,7 +47,9 @@ Index(
 # Deduplication of inbound mails (M2): one inbound message per Message-ID, tenant and
 # mailbox (since migration 0213 a copy per own mailbox is allowed and linked as duplicate,
 # operator 27.09.2026). The ingest still checks first (returns the known row); the index only
-# closes the race between two syncs or a parallel .eml upload.
+# closes the race of two ingests into the same mailbox. Ingests into different own mailboxes
+# are serialised by ``duplicates.lock_mail`` (advisory lock per tenant and mail key, review
+# 1.36.0), because this index no longer rejects the second leading copy.
 Index(
     "uq_message_inbound_header_id",
     Message.__table__.c.tenant_id,

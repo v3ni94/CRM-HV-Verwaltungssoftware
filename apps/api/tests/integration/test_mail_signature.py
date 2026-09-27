@@ -117,3 +117,14 @@ def test_template_from_settings_and_tenant_boundary(client: TestClient, world: W
         ).status_code
         == 422
     )
+    # Review 1.36.0: unbekannte Platzhalter werden beim Speichern mit ihren Namen abgelehnt,
+    # die gespeicherte Vorlage bleibt unverändert.
+    refused = client.patch(
+        "/api/v1/tenant/settings",
+        json={"signature_template": {"text": "{name}\n{firma}\n{company.name}", "html": "{name}"}},
+        headers=admin,
+    )
+    assert refused.status_code == 422, refused.text
+    assert refused.json()["unknown_placeholders"] == ["company.name", "firma"]
+    assert "{firma}" in refused.json()["detail"]
+    assert _ok(client.get(f"{S}/preview", headers=admin))["text"] == "-- \nadmin\nMandant A"

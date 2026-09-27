@@ -24,6 +24,12 @@ from mhvp.core.events import emit
 
 log = logging.getLogger(__name__)
 
+# Review 1.36.0: reason of the forward status ``not_sent`` when ``forward_and_archive`` had no
+# Gmail mailbox to send from (manual upload without mailbox, IMAP mailbox).
+NOT_SENT_NO_GMAIL = (
+    "Kein Gmail-Postfach für den Versand verbunden. Die Rechnung wurde nicht weitergeleitet."
+)
+
 
 def _build_forward(
     original: Message,
@@ -92,12 +98,15 @@ async def forward_and_archive(
     actor_user_id: uuid.UUID | None,
     message: Message,
     forward_address: str,
-) -> None:
+) -> bool:
+    """Sends the forward and reports whether it went out (review 1.36.0). Without a Gmail
+    mailbox nothing is sent and ``False`` is returned; the caller marks the forward
+    ``not_sent`` with ``NOT_SENT_NO_GMAIL`` instead of ``sent``."""
     if message.mailbox_id is None:
-        return
+        return False
     mailbox = await session.get(Mailbox, message.mailbox_id)
     if mailbox is None or mailbox.kind != "gmail":
-        return  # nur Gmail-Postfächer haben den Sendeweg dieser Weiterleitung
+        return False  # nur Gmail-Postfächer haben den Sendeweg dieser Weiterleitung
     attachments, expected = await load_attachments(session, settings, message)
     complete = expected > 0 and len(attachments) == expected
     client_id, client_secret = await oauth_client(session, settings)
@@ -128,3 +137,4 @@ async def forward_and_archive(
             "archived": bool(complete and message.gmail_message_id),
         },
     )
+    return True

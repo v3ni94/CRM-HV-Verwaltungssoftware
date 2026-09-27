@@ -8,7 +8,11 @@ the overview. Every copy of a group shares ticket and thread, so replies, commen
 "in progress" marker (``mhvp.communication.progress``) apply to the whole group.
 
 Matching: the RFC 5322 ``Message-ID`` first; without one, or when a relay rewrote it, the
-same sender, subject, timestamp and text hash (``md5`` of the plain text in SQL).
+same sender, subject, timestamp and text hash (``md5`` of the plain text in SQL). The sender
+chooses the Message-ID, so a match in another mailbox only counts as the same mail when the
+content fingerprint (``same_content``) agrees too; otherwise the received mail is stored as a
+mail of its own (review 1.36.0). The ingest of one mail is serialised per tenant and mail key
+(``lock_mail``) so that parallel syncs of two own mailboxes cannot both store a leading copy.
 
 Which mailbox is collective is a stored flag (``Mailbox.is_collective``) with a default
 derived from the local part (``is_collective_address``); the rule is an assumption
@@ -17,10 +21,12 @@ derived from the local part (``is_collective_address``); the rule is an assumpti
 
 from __future__ import annotations
 
+import hashlib
 import uuid
+from collections import Counter
 from typing import Any
 
-from sqlalchemy import func, or_, select, update
+from sqlalchemy import func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication.models import Mailbox, Message
@@ -77,26 +83,44 @@ async def group_members(session: AsyncSession, row: Message) -> list[Message]:
     return list(rows)
 
 
-async def find_known(session: AsyncSession, parsed: dict[str, Any]) -> list[Message]:
-    """Stored copies of the parsed inbound mail in any mailbox (leading copy first, empty when
-    the mail is new). Message-ID first, then sender, subject, timestamp and text hash."""
-    found: Message | None = None
+def _mail_key(parsed: dict[str, Any]) -> str | None:
     if parsed.get("message_id"):
-        found = await session.scalar(
+        return f"id:{parsed['message_id']}"
+    if parsed.get("from") and parsed.get("received_at"):
+        return f"fb:{parsed['from']}|{parsed.get('subject') or ''}|{parsed['received_at']}"
+    return None
+
+
+async def lock_mail(session: AsyncSession, tenant_id: uuid.UUID, parsed: dict[str, Any]) -> None:
+    """Serialises the ingest of one mail per tenant and mail key until the transaction ends
+    (review 1.36.0). Since migration 0213 the unique index allows one row per mailbox, so two
+    parallel syncs of own mailboxes would both miss the uncommitted row of the other and store
+    two leading copies (two tickets, two invoice forwards). The second sync now waits for the
+    first commit and stores a linked copy instead. Taking the lock twice in one transaction
+    (``ingest_raw`` and ``ingest_parsed``) is harmless."""
+    key = _mail_key(parsed)
+    if key is None:
+        return
+    await session.execute(
+        text("SELECT pg_advisory_xact_lock(hashtext(:key))"),
+        {"key": f"mhvp:mail-in:{tenant_id}:{key}"},
+    )
+
+
+async def _candidates(session: AsyncSession, parsed: dict[str, Any]) -> list[Message]:
+    """Stored inbound rows matching the parsed mail by Message-ID, or without one by sender,
+    subject, timestamp and text hash (oldest first)."""
+    if parsed.get("message_id"):
+        by_id = await session.scalars(
             select(Message)
             .where(Message.header_message_id == parsed["message_id"], Message.direction == "in")
             .order_by(Message.created_at)
-            .limit(1)
         )
+        return list(by_id.all())
     # The fallback applies only to mails without a Message-ID: a known, different Message-ID
     # is a different mail even when sender, subject, timestamp and text coincide (call notes).
-    if (
-        found is None
-        and not parsed.get("message_id")
-        and parsed.get("from")
-        and parsed.get("received_at")
-    ):
-        found = await session.scalar(
+    if parsed.get("from") and parsed.get("received_at"):
+        by_content = await session.scalars(
             select(Message)
             .where(
                 Message.direction == "in",
@@ -106,11 +130,71 @@ async def find_known(session: AsyncSession, parsed: dict[str, Any]) -> list[Mess
                 func.md5(func.coalesce(Message.body, "")) == func.md5(parsed.get("body") or ""),
             )
             .order_by(Message.created_at)
-            .limit(1)
         )
-    if found is None:
-        return []
-    return await group_members(session, found)
+        return list(by_content.all())
+    return []
+
+
+async def same_content(session: AsyncSession, row: Message, parsed: dict[str, Any]) -> bool:
+    """Content fingerprint of a stored row and a parsed mail: sender, subject, plain text and
+    the attachments (SHA-256 of the data) agree. Rejected attachments are not stored as
+    documents, so every stored attachment must occur in the mail and the total must match."""
+    from mhvp.documents.models import Document
+
+    if row.from_address != parsed.get("from") or row.subject != parsed.get("subject"):
+        return False
+    if (row.body or "") != (parsed.get("body") or ""):
+        return False
+    received = Counter(
+        hashlib.sha256(att["data"]).hexdigest() for att in parsed.get("attachments") or []
+    )
+    total = (row.classification or {}).get("attachments_total")
+    if isinstance(total, int) and total != sum(received.values()):
+        return False
+    ids = list(row.attachment_document_ids or [])
+    if not ids:
+        return True
+    stored = Counter(
+        (await session.scalars(select(Document.sha256).where(Document.id.in_(ids)))).all()
+    )
+    return all(received[digest] >= n for digest, n in stored.items())
+
+
+async def _row_fingerprint(session: AsyncSession, row: Message) -> tuple[Any, ...]:
+    """``same_content`` for two stored rows (maintenance): sender, subject, text and the
+    SHA-256 of the stored attachments."""
+    from mhvp.documents.models import Document
+
+    ids = list(row.attachment_document_ids or [])
+    digests = (
+        sorted((await session.scalars(select(Document.sha256).where(Document.id.in_(ids)))).all())
+        if ids
+        else []
+    )
+    return (row.from_address, row.subject, row.body or "", digests)
+
+
+async def find_known(
+    session: AsyncSession, parsed: dict[str, Any], mailbox_id: uuid.UUID | None
+) -> tuple[Message | None, Message | None]:
+    """Stored copies of the parsed inbound mail as ``(stored, primary)``.
+
+    ``stored``: the row that already holds this mail for the same mailbox binding (a
+    re-import, nothing new is stored); an upload without mailbox also returns the leading copy
+    of a mail with the same content. ``primary``: the leading copy of the same mail in another
+    own mailbox; the received mail becomes its linked copy. Both are None for a new mail,
+    including a Message-ID collision with different content (review 1.36.0): that mail is
+    stored as its own message and never shows the content of the stored one."""
+    candidates = await _candidates(session, parsed)
+    for row in candidates:
+        if row.mailbox_id == mailbox_id:
+            return row, None
+    for row in candidates:
+        if await same_content(session, row, parsed):
+            members = await group_members(session, row)
+            lead = members[0] if members else row
+            return (lead, None) if mailbox_id is None else (None, lead)
+    return None, None
 
 
 async def mailbox_collective(session: AsyncSession, mailbox_id: uuid.UUID | None) -> bool:
@@ -131,7 +215,17 @@ def copy_of(
     actor_user_id: uuid.UUID | None,
 ) -> Message:
     """New row for the same mail in another mailbox; carries the case data of the leading
-    copy (ticket, thread, contact, property, attachments) so both copies read alike."""
+    copy (ticket, thread, contact, property, attachments) so both copies read alike.
+
+    A copy never forwards an invoice (review 1.36.0): it keeps the decision and reason of the
+    invoice classification (the "Weiterleiten?" proposal stays visible) but never the dispatch
+    state, so only the copy that went through the intake can be queued for ``forward_queued``."""
+    classification = dict(primary.classification) | {"duplicate_copy": True}
+    forward = primary.classification.get("invoice_forward")
+    if isinstance(forward, dict):
+        classification["invoice_forward"] = {
+            k: v for k, v in forward.items() if k in ("decision", "reason")
+        } | {"status": "duplicate", "of": str(primary.id)}
     return Message(
         tenant_id=primary.tenant_id,
         created_by=actor_user_id,
@@ -156,7 +250,7 @@ def copy_of(
         gmail_message_id=gmail_message_id,
         gmail_thread_id=gmail_thread_id,
         status=primary.status,
-        classification=dict(primary.classification) | {"duplicate_copy": True},
+        classification=classification,
         appointment_suggestions=list(primary.appointment_suggestions),
         duplicate_of_id=primary.id,
     )
@@ -213,7 +307,10 @@ async def share_case(session: AsyncSession, row: Message) -> None:
 async def link_existing(session: AsyncSession) -> dict[str, int]:
     """Maintenance for mails stored before this rule: groups inbound copies of the same
     mail across different mailboxes and links them. Counts ``groups``, ``linked`` and
-    ``ticket_conflicts`` (copies that already carry different tickets; left as they are)."""
+    ``ticket_conflicts``: a copy whose group would then carry different tickets is skipped and
+    stays visible on its own (linking would hide the mail of another case, review 1.36.0). A
+    row with the same Message-ID but different content is a mail of its own and stays apart,
+    as in the ingest (``same_content``)."""
     counts = {"groups": 0, "linked": 0, "ticket_conflicts": 0}
     key_id = func.coalesce(Message.header_message_id, "")
     key_fallback = func.concat(
@@ -246,14 +343,17 @@ async def link_existing(session: AsyncSession) -> dict[str, int]:
         if len(rows) < 2:
             continue
         counts["groups"] += 1
-        tickets = {m.ticket_id for m in rows if m.ticket_id}
-        if len(tickets) > 1:
-            counts["ticket_conflicts"] += 1
         lead = rows[0]
         for other in rows[1:]:
             if other.duplicate_of_id is not None or other.id == lead.id:
                 continue
             if lead.duplicate_of_id == other.id:
+                continue
+            if await _row_fingerprint(session, other) != await _row_fingerprint(session, lead):
+                continue
+            members = await group_members(session, lead) + await group_members(session, other)
+            if len({m.ticket_id for m in members if m.ticket_id}) > 1:
+                counts["ticket_conflicts"] += 1
                 continue
             lead = await link(session, lead, other)
             counts["linked"] += 1

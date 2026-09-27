@@ -81,7 +81,8 @@ export function PositionPicker({
 
 /** Own position, extension number and signature preview in Einstellungen, Profil. The
  *  signature itself is rendered by the server (`GET /mail/signature/preview`) from the
- *  tenant template, so the preview here is exactly what outgoing mail carries. */
+ *  tenant template. Outgoing mail is plain text with the text signature (review 1.36.0);
+ *  the HTML signature is shown as a preview only and is not sent. */
 export function SignatureProfile({
   initialProfile,
   initialPreview,
@@ -162,6 +163,9 @@ export function SignatureProfile({
           </div>
           <div>
             <h3 className={ui.label}>{t("previewHtml")}</h3>
+            <p className="mt-1 text-xs text-muted" data-testid="signature-html-hint">
+              {t("previewHtmlHint")}
+            </p>
             <iframe
               title={t("previewHtml")}
               sandbox=""

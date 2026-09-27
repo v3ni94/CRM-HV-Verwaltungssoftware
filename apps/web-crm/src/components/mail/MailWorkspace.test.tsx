@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
@@ -153,3 +153,70 @@ describe("MailWorkspace Seitensteuerung (Betreibermeldung 27.09.2026)", () => {
     await waitFor(() => expect(window.location.search).not.toContain("seite=2"));
   });
 });
+
+describe("MailWorkspace Antwortentwurf beim Wechsel der Mail (Review 1.36.0)", () => {
+  const mail = (id: string, subject: string, extra: Record<string, unknown> = {}) => ({
+    id,
+    channel: "email",
+    direction: "in",
+    status: "new",
+    from_address: `${id}@example.com`,
+    to_addresses: [],
+    subject,
+    received_at: null,
+    sent_at: null,
+    contact_id: null,
+    property_id: null,
+    ticket_id: null,
+    thread_id: null,
+    document_id: null,
+    attachment_document_ids: [],
+    classification: {},
+    appointment_suggestions: [],
+    created_by: null,
+    mailbox_id: null,
+    submitted_by: null,
+    submitted_at: null,
+    approved_by: null,
+    approved_at: null,
+    rejection_note: null,
+    suggestion: {},
+    suggestion_status: "none",
+    ...extra,
+  });
+  afterEach(() => vi.restoreAllMocks());
+
+  it("keeps a late reply draft of the previous mail out of the next mail", async () => {
+    window.history.replaceState(null, "", "/mail");
+    const a = mail("a", "Heizung Mail A");
+    const b = mail("b", "Wasser Mail B");
+    let resolveDraft: ((r: Response) => void) | undefined;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input: unknown, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes("/mail/messages?")) {
+        return jsonResponse([a, b], 200, { "x-total-count": "2", "x-page": "1", "x-page-size": "50" });
+      }
+      if (url.endsWith("/mail/messages/a/reply-draft") && init?.method === "POST") {
+        return new Promise<Response>((resolve) => {
+          resolveDraft = resolve;
+        });
+      }
+      // The detail call carries the full text (body), which shows the action bar.
+      if (url.endsWith("/mail/messages/a")) return jsonResponse({ ...a, body: "Text A" });
+      if (url.endsWith("/mail/messages/b")) return jsonResponse({ ...b, body: "Text B" });
+      return jsonResponse([]);
+    });
+    renderIntl(<MailWorkspace canApprove={false} canReadMembers={false} />);
+    await userEvent.click((await screen.findAllByText("Heizung Mail A"))[0]!);
+    const toolbar = await screen.findByTestId("mail-actions-top");
+    await userEvent.click(within(toolbar).getAllByRole("button")[0]!);
+    await waitFor(() => expect(resolveDraft).toBeDefined());
+    const beforeB = screen.getAllByText("Wasser Mail B").length;
+    await userEvent.click(screen.getAllByText("Wasser Mail B")[0]!);
+    await waitFor(() => expect(screen.getAllByText("Wasser Mail B").length).toBeGreaterThan(beforeB));
+    resolveDraft!(jsonResponse(mail("draft-a", "AW: Heizung Mail A", { direction: "out", status: "draft" })));
+    await new Promise((r) => setTimeout(r, 50));
+    expect(screen.queryByTestId("mail-reply-draft")).not.toBeInTheDocument();
+  });
+});
+
