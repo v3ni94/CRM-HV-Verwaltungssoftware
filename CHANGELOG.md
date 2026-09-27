@@ -5,6 +5,11 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.32.1 (27.09.2026) Bildpipeline für alle Uploads, Entscheidungen zu den Übergabeprotokollen
+
+- Dokumente: Jeder Upload über POST /documents läuft durch die Bildpipeline der Übergabeprotokolle (Metadaten wie EXIF und GPS entfernt, Ausrichtung angewendet, höchstens 2.000 Pixel Kantenlänge); bisher galt sie nur für Übergabe- und Portal-Uploads. Nicht dekodierbare Bilder werden unverändert gespeichert
+- Übergabeprotokolle: offene Fragen M30-02 bis M30-05 entschieden (Rechtsprüfung der Unterschriften angestoßen, keine Übernahme der U-Protokoll-Altdaten, Altanwendung bis 31.12.2026 lesend, zweiter Faktor freiwillig nach M2-01)
+
 ## 1.32.0 (27.09.2026) Upload im CRM mit Ablage über objektakte in Drive und Paperless
 
 - Dokumente: Ein im CRM hochgeladenes oder gescanntes Dokument, das genau einem Objekt zugeordnet ist (direkt, über eine Einheit oder über ein Ticket), geht an objektakte und wird dort verarbeitet und abgelegt: Drive-Struktur des Objekts mit Eigentümer- und Mieterakten und Paperless. Das CRM spiegelt solche Dokumente nicht mehr selbst nach Paperless oder Drive, damit jedes System das Dokument genau einmal hält; Original und Index bleiben im CRM. Schalter OBJEKTAKTE_UPLOAD_ENABLED (Vorgabe aus), in objektakte zusätzlich Token mit documents:write und Schalter sync.crm_uploads_enabled.

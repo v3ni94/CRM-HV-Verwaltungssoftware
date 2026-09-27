@@ -46,6 +46,7 @@ from mhvp.documents.paperless_search import (
     parse_company_options,
     parse_field_id,
 )
+from mhvp.handover import images
 
 router = APIRouter(tags=["Dokumente"])
 READ = require_permission("documents:read")
@@ -174,6 +175,17 @@ async def upload(
     data = await file.read(limit + 1)
     mime = (file.content_type or "application/octet-stream").split(";")[0].strip().lower()
     svc.check_upload(mime, data, limit)
+    if images.supports(mime):
+        # Photos lose metadata (EXIF, GPS, camera) and are scaled before they are stored, for
+        # every module that uploads through this endpoint (M30-04, operator 27.09.2026). An
+        # undecodable pseudo image carries no readable metadata and is stored as uploaded.
+        try:
+            data = images.sanitize_image(
+                data, mime, max_edge=request.app.state.settings.handover_image_max_edge
+            )
+            mime = images.output_mime_type(mime)
+        except images.ImageSanitizeError:
+            pass
     try:
         link_items = _LINKS.validate_json(links) if links else []
     except ValidationError as exc:
