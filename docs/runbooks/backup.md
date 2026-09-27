@@ -18,11 +18,12 @@ Source: MASTER-PROMPT 3.5, 6.9.5 (E05), 16. Backup protects operation; it is not
 * Alarm: any failure of `backup.sh` removes the half written files of the run and posts a short
   message to `ALERT_WEBHOOK_URL` (same target as `healthcheck.sh`); the e-mail to the operator
   is sent by Uptime Kuma (`monitoring.md` section 4, M9-04).
-* Document store: since 26.09.2026 (ADR 0005, M1-01) the documents live in IONOS S3 Object
-  Storage, not in a Docker volume. `BACKUP_OBJECTSTORE_VOLUME` stays empty; the documents are
-  copied by `backup-offsite.sh` from the primary bucket into the Hetzner bucket, encrypted per
-  object, see `objektspeicher-ionos-s3.md` section 6. `BACKUP_OBJECTSTORE_VOLUME` is only for
-  a local SeaweedFS container.
+* Document store: since 27.09.2026 (ADR 0005, operator decision) the documents live in the
+  local SeaweedFS container, volume `mhvp_objectstore-data`. `BACKUP_OBJECTSTORE_VOLUME` is
+  set to that name in `.env.backup`; every run then also writes `mhvp-objects-<STAMP>.tar.age`
+  and `backup-offsite.sh` copies it with the dump into `runs/<STAMP>/db/`. Restore of the
+  volume: `objektspeicher-ionos-s3.md` section 0. `BACKUP_SOURCE_S3_*` (per object mirror,
+  section 6 there) is only for an optional external IONOS bucket and stays empty.
 * WAL archiving (point in time recovery): not set up on the server; recovery point is the daily
   backup. Once an `archive_command` writes segments to `BACKUP_WAL_DIR`, `backup-offsite.sh`
   encrypts and uploads every new segment with the daily run.

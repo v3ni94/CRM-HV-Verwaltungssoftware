@@ -25,13 +25,15 @@ x-prod: &prod
 x-api-image: &api-image
   image: ${MHVP_IMAGE_REGISTRY:-ghcr.io/v3ni94}/mhvp-api:${MHVP_IMAGE_TAG:-latest}
 
-# External S3 endpoint (IONOS S3 Object Storage). The base file defaults to the dev container
-# http://objectstore:8333, which does not exist in prod/staging, so all four values are
-# required here. Names as read by mhvp.core.config.Settings (prefix MHVP_).
+# Object storage: local SeaweedFS container "objectstore" of the base file is the standard
+# (operator decision 27.09.2026, docs/runbooks/objektspeicher-ionos-s3.md section 0). The
+# defaults therefore point at http://objectstore:8333. An external S3 endpoint (IONOS) is
+# optional: set MHVP_S3_ENDPOINT_URL and MHVP_S3_REGION in .env.prod and stop the container
+# (docker compose stop objectstore). Names as read by mhvp.core.config.Settings (prefix MHVP_).
 x-s3-env: &s3-env
-  MHVP_S3_ENDPOINT_URL: ${MHVP_S3_ENDPOINT_URL:?MHVP_S3_ENDPOINT_URL must be set (IONOS S3 endpoint, see docs/runbooks/objektspeicher-ionos-s3.md)}
-  MHVP_S3_REGION: ${MHVP_S3_REGION:?MHVP_S3_REGION must be set (IONOS region, see docs/runbooks/objektspeicher-ionos-s3.md)}
-  MHVP_S3_BUCKET: ${MHVP_S3_BUCKET:?MHVP_S3_BUCKET must be set}
+  MHVP_S3_ENDPOINT_URL: ${MHVP_S3_ENDPOINT_URL:-http://objectstore:8333}
+  MHVP_S3_REGION: ${MHVP_S3_REGION:-us-east-1}
+  MHVP_S3_BUCKET: ${MHVP_S3_BUCKET:-mhvp}
 
 services:
   postgres:
@@ -76,25 +78,20 @@ services:
     <<: *prod
 
   objectstore:
-    # Production and staging use IONOS S3 Object Storage (EU region) via MHVP_S3_* (ADR 0005,
-    # Nachtrag 26.09.2026, docs/runbooks/objektspeicher-ionos-s3.md). The SeaweedFS service of
-    # the base file is therefore parked behind a profile and never started by this overlay;
-    # it stays available for dev, CI and e2e only. The profile is deliberately not documented
-    # for the operator.
+    # Local SeaweedFS as the permanent document store (ADR 0005, Nachtrag 27.09.2026). Always
+    # started, no profile; data in the volume objectstore-data (project name prefix on the
+    # server: mhvp_objectstore-data), archived daily by scripts/backup.sh via
+    # BACKUP_OBJECTSTORE_VOLUME. No ports are published; the API reaches it on the stack network.
     <<: *prod
-    profiles:
-      - local-objectstore
 
   migrate:
     <<: *api-image
     environment:
       <<: *s3-env
       MHVP_ENV: ${MHVP_ENV:-prod}
-    # Replaces the base dependency list: no objectstore container in prod/staging. The bucket
-    # bootstrap (mhvp.core.storage_bootstrap) runs against the external endpoint.
-    depends_on: !override
-      postgres:
-        condition: service_healthy
+    # Keeps the base dependency list (postgres healthy, objectstore healthy): the bucket
+    # bootstrap (mhvp.core.storage_bootstrap) needs the local store. With an optional external
+    # endpoint the local container is still healthy and simply unused.
 
   api:
     <<: [*prod, *api-image]
