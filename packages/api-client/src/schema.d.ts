@@ -10518,7 +10518,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Vorschau der E-Mail-Signatur (Text und HTML) */
+        /** Vorschau der E-Mail-Signatur (Klartext wird versendet, HTML nur Vorschau) */
         get: operations["preview_signature_api_v1_mail_signature_preview_get"];
         put?: never;
         post?: never;
@@ -18015,7 +18015,7 @@ export interface components {
         AssignmentDecideIn: {
             /**
              * Candidate Id
-             * @description Kandidat (aus der Liste oder manuell gewählt); ohne Angabe bei accept der erste Vorschlag.
+             * @description Bei accept Pflicht: der bestätigte Kandidat aus der aktuellen Liste, nach Nein auch ein manuell gewählter Datensatz. Kein Rückgriff auf den ersten Vorschlag; steht der Kandidat nicht mehr in der Liste, antwortet die API mit 409.
              */
             candidate_id?: string | null;
             /**
@@ -18028,6 +18028,11 @@ export interface components {
              * @enum {string}
              */
             dimension: "contact" | "property" | "unit";
+            /**
+             * Seen Value
+             * @description Feldwert, den das Mitglied mit der Rückfrage gesehen hat (null bei leerem Feld). Weicht der aktuelle Wert ab, antwortet die API mit 409 und speichert nichts.
+             */
+            seen_value: string | null;
         };
         /** AssignmentIn */
         AssignmentIn: {
@@ -30751,16 +30756,26 @@ export interface components {
             /** Signer Role */
             signer_role?: string | null;
         };
-        /** SignaturePreviewOut */
+        /**
+         * SignaturePreviewOut
+         * @description Outgoing mail is text/plain in 1.36.0: ``text`` is what is inserted and sent, ``html``
+         *     is a preview of the HTML signature only and is not sent.
+         */
         SignaturePreviewOut: {
-            /** Html */
+            /**
+             * Html
+             * @description Nur Vorschau: die HTML-Signatur wird derzeit nicht versendet (ausgehende Mails sind Klartext).
+             */
             html: string;
             /**
              * Membership Id
              * Format: uuid
              */
             membership_id: string;
-            /** Text */
+            /**
+             * Text
+             * @description Klartextsignatur, so wie sie in ausgehende Mails eingefügt wird.
+             */
             text: string;
         };
         /**

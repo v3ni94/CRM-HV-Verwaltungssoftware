@@ -603,7 +603,8 @@ def test_sync_holds_no_open_transaction_during_dav_fetch(
                     await session.scalar(
                         text(
                             "SELECT count(*) FROM pg_stat_activity "
-                            "WHERE usename = current_user AND state = 'idle in transaction'"
+                            "WHERE usename = current_user AND datname = current_database() "
+                            "AND state = 'idle in transaction'"
                         )
                     )
                     or 0

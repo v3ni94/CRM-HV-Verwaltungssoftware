@@ -81,6 +81,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
         postingStatus={String(d.posting_status)}
         released={Boolean(d.released)}
         ibanOpen={Boolean(d.payee_iban_suffix) && !d.iban_confirmed && findings.some((f) => f.startsWith("IBAN"))}
+        revision={[String(d.version), reviews.length, String(d.review_status), String(d.posting_status), String(d.released), String(d.iban_confirmed)].join(":")}
       />
       {String(d.posting_status) === "posted" ? <InvoiceMatchPanel invoiceId={invoiceId} /> : null}
     </div>

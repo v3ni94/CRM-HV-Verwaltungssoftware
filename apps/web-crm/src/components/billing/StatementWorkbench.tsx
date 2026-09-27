@@ -1,30 +1,27 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
+import { useRefreshAfterPost } from "@/lib/useRefreshAfterPost";
 import { ui } from "@/lib/ui";
 
 type Key = { id: string; code: string; name: string };
 
 /** Cost items, calculation and status steps of an operating cost statement (M17).
  *  Heating costs come from an external statement (H01) and are entered via the API. */
-export function StatementWorkbench({ id, status, keys }: { id: string; status: string; keys: Key[] }) {
+export function StatementWorkbench({ id, status, keys, revision = "" }: { id: string; status: string; keys: Key[]; revision?: string }) {
   const t = useTranslations("Billing");
-  const router = useRouter();
   const [label, setLabel] = useState("");
   const [amount, setAmount] = useState("");
   const [key, setKey] = useState(keys[0]?.id ?? "");
   const [basis, setBasis] = useState("");
   const [delivered, setDelivered] = useState("");
   const [posting, setBusy] = useState(false);
-  // The refresh after a post runs as a transition and keeps the buttons disabled until the
-  // server component has re-rendered (overlapping router.refresh calls are coalesced by
-  // Next.js and would drop the newer state, see InvoiceActions).
-  const [refreshing, startTransition] = useTransition();
+  // Buttons stay disabled until the server component has re-rendered (see useRefreshAfterPost).
+  const { refreshing, refresh } = useRefreshAfterPost(revision);
   const busy = posting || refreshing;
   const [error, setError] = useState<string | null>(null);
 
@@ -36,7 +33,7 @@ export function StatementWorkbench({ id, status, keys }: { id: string; status: s
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     setBusy(false);
-    if (res.ok) startTransition(() => router.refresh());
+    if (res.ok) refresh();
     else setError(res.message);
     return res.ok;
   };

@@ -292,6 +292,19 @@ Ticketereignis `assignment_review`, Lernbeispiel (`ai_example`, Aufgabe `classif
 `kind = assignment_review`) nur bei `ai_learning_examples_enabled` (ADR 0010). Oberfläche:
 `apps/web-crm/src/components/assignment/AssignmentPrompt.tsx` (Ticketseite; Mailansicht).
 
+Stand Review 1.36.0: Die GET-Endpunkte rechnen nur und speichern nichts; nicht gespeicherte
+Zeilen tragen eine feste, aus Vorgang und Dimension abgeleitete Kennung. Gespeichert wird beim
+Eingang, bei Anlage und Änderung eines Tickets und bei der Entscheidung. Jede Zeile führt den
+Feldwert, gegen den sie gerechnet wurde (`basis_id`), getrennt von der Entscheidung
+(`chosen_id`). `decide` verlangt den gesehenen Feldwert (`seen_value`) und bei `accept` den
+Kandidaten (`candidate_id`); weicht der aktuelle Feldwert ab, war die Zeile schon mit Ja
+entschieden (außer derselben Entscheidung bei unverändertem Feld) oder gehört der Kandidat
+nicht zur Rückfrage, antwortet die API mit 409 `MHVP-COMM-0003` und speichert nichts. Nur eine
+offene Rückfrage wird bei geändertem Feld `superseded`. Automatische Zuordnungen erzeugen
+einmal das Ereignis `assignment_review.auto` (mit `prefilled` bei vorbelegtem Wert), bei
+Tickets zusätzlich einen Eintrag im Ticketverlauf. Die offene Liste der Mails folgt der
+Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen.
+
 ## Sortierung, "in Bearbeitung" und Duplikate über Postfächer (operator 27.09.2026, migration 0213)
 
 - `GET /mail/messages` sortiert in jeder Ansicht (Posteingang, Filter, Suche) neueste zuerst
@@ -317,4 +330,14 @@ Ticketereignis `assignment_review`, Lernbeispiel (`ai_example`, Aufgabe `classif
 - `POST /mail/maintenance/link-duplicates` (Administrator): rückwirkende Verknüpfung
   vorhandener Kopien, idempotent; Kopien mit verschiedenen Tickets werden nur gezählt
   (`ticket_conflicts`), nicht zusammengeführt.
+- Stand Review 1.36.0: Dieselbe Mail setzt gleiche Message-ID und gleichen Inhaltsfingerabdruck
+  (Absender, Betreff, Text, Anhänge mit Anzahl und SHA-256) voraus, sonst eigene Mail. Der
+  Ingest serialisiert je Mandant und Mailschlüssel über `duplicates.lock_mail`
+  (`pg_advisory_xact_lock`). Ein Deadlock zwischen parallelen Abrufen rollt nur die Mail im
+  Savepoint zurück, sie landet in `mailbox_sync_retry` (bis `MAX_ATTEMPTS`). Die Wartung
+  verknüpft nur Kopien gleichen Inhalts mit höchstens einem Ticket je Gruppe.
+- Weiterleitungssperre: keine zweite Rechnungsweiterleitung je Mandant und Message-ID,
+  automatisch (Status `duplicate`) wie manuell (`forward-invoice`, 409 mit Verweis auf die
+  vorhandene Mail). Ohne Gmail-Postfach wird eine Weiterleitung `not_sent` mit Grund (manuell
+  409) und sperrt keine spätere Weiterleitung; gezählt werden nur `queued` und `sent`.
 - Annahmen: docs/ASSUMPTIONS.md A-069.

@@ -1967,7 +1967,7 @@
                 "type": "null"
               }
             ],
-            "description": "Kandidat (aus der Liste oder manuell gewählt); ohne Angabe bei accept der erste Vorschlag.",
+            "description": "Bei accept Pflicht: der bestätigte Kandidat aus der aktuellen Liste, nach Nein auch ein manuell gewählter Datensatz. Kein Rückgriff auf den ersten Vorschlag; steht der Kandidat nicht mehr in der Liste, antwortet die API mit 409.",
             "title": "Candidate Id"
           },
           "decision": {
@@ -1986,11 +1986,25 @@
             ],
             "title": "Dimension",
             "type": "string"
+          },
+          "seen_value": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Feldwert, den das Mitglied mit der Rückfrage gesehen hat (null bei leerem Feld). Weicht der aktuelle Wert ab, antwortet die API mit 409 und speichert nichts.",
+            "title": "Seen Value"
           }
         },
         "required": [
           "dimension",
-          "decision"
+          "decision",
+          "seen_value"
         ],
         "title": "AssignmentDecideIn",
         "type": "object"
@@ -41679,8 +41693,10 @@
         "type": "object"
       },
       "SignaturePreviewOut": {
+        "description": "Outgoing mail is text/plain in 1.36.0: ``text`` is what is inserted and sent, ``html``\nis a preview of the HTML signature only and is not sent.",
         "properties": {
           "html": {
+            "description": "Nur Vorschau: die HTML-Signatur wird derzeit nicht versendet (ausgehende Mails sind Klartext).",
             "title": "Html",
             "type": "string"
           },
@@ -41690,6 +41706,7 @@
             "type": "string"
           },
           "text": {
+            "description": "Klartextsignatur, so wie sie in ausgehende Mails eingefügt wird.",
             "title": "Text",
             "type": "string"
           }
@@ -83797,7 +83814,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Vorschau der E-Mail-Signatur (Text und HTML)",
+        "summary": "Vorschau der E-Mail-Signatur (Klartext wird versendet, HTML nur Vorschau)",
         "tags": [
           "Postfach"
         ]

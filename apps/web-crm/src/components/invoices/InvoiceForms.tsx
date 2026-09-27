@@ -2,10 +2,11 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState, useTransition } from "react";
+import { useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
+import { useRefreshAfterPost } from "@/lib/useRefreshAfterPost";
 import { ui } from "@/lib/ui";
 
 type Option = { id: string; label: string };
@@ -121,17 +122,14 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
 }
 
 /** Review steps (PÜ05), IBAN confirmation, release by a second person and posting. */
-export function InvoiceActions({ id, reviewStatus, postingStatus, released, ibanOpen }: { id: string; reviewStatus: string; postingStatus: string; released: boolean; ibanOpen: boolean }) {
+export function InvoiceActions({ id, reviewStatus, postingStatus, released, ibanOpen, revision = "" }: { id: string; reviewStatus: string; postingStatus: string; released: boolean; ibanOpen: boolean; revision?: string }) {
   const t = useTranslations("Invoices");
-  const router = useRouter();
   const [step, setStep] = useState("completeness");
   const [result, setResult] = useState("ok");
   const [reason, setReason] = useState("");
   const [posting, setBusy] = useState(false);
-  // The refresh after a post runs as a transition; the buttons stay disabled until the server
-  // component has re-rendered, so a second post cannot start while a refresh is still in flight
-  // (Next.js coalesces overlapping router.refresh calls and would drop the newer state).
-  const [refreshing, startTransition] = useTransition();
+  // Buttons stay disabled until the server component has re-rendered (see useRefreshAfterPost).
+  const { refreshing, refresh } = useRefreshAfterPost(revision);
   const busy = posting || refreshing;
   const [error, setError] = useState<string | null>(null);
   const post = async (path: string, body?: unknown, confirmText?: string) => {
@@ -140,7 +138,7 @@ export function InvoiceActions({ id, reviewStatus, postingStatus, released, iban
     setError(null);
     const res = await bff(`/api/bff/accounting/invoices/${id}/${path}`, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
     setBusy(false);
-    if (res.ok) startTransition(() => router.refresh());
+    if (res.ok) refresh();
     else setError(res.message);
     return res.ok;
   };

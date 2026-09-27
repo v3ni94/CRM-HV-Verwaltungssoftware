@@ -67,6 +67,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
       <StatementWorkbench
         id={id}
         status={String(data.status)}
+        revision={[String(data.version), String(data.status), items.length, snap?.hash ?? ""].join(":")}
         keys={((keys.data ?? []) as { id: string; code: string; name: string }[]).map((k) => ({ id: k.id, code: k.code, name: k.name }))}
       />
       <HeatingPanel id={id} status={String(data.status)} />
