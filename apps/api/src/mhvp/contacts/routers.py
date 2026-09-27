@@ -59,6 +59,7 @@ async def list_contacts(
     kind: str | None = None,
     tag: str | None = None,
     role: str | None = Query(default=None, description="Filter: eigentuemer, mieter, ..."),
+    blocked: bool | None = Query(default=None, description="Sperrliste: true zeigt nur gesperrte"),
     include_deleted: bool = False,
     page: Page = 1,
     page_size: PageSize = 50,
@@ -72,6 +73,8 @@ async def list_contacts(
             query = query.where(Contact.kind == kind)
         if role:
             query = query.where(Contact.roles.contains([role]))
+        if blocked is not None:
+            query = query.where(Contact.blocked.is_(blocked))
         if tag:
             query = query.where(
                 Contact.id.in_(
@@ -113,6 +116,7 @@ async def create_contact(
             display_name="",
         )
         services.apply_fields(contact, body)
+        await services.apply_retention(session, contact, body.retention_profile_id)
         session.add(contact)
         await session.flush()
         await services.write_children(
@@ -230,6 +234,7 @@ async def replace_contact(
             raise ProblemError(ErrorCodes.VERSION_CONFLICT)
         before = await services.load(session, contact_id)
         services.apply_fields(contact, body, await services.iban_suffixes(session, contact_id))
+        await services.apply_retention(session, contact, body.retention_profile_id)
         changed_mandate_references = await services.write_children(
             session, principal.tenant_id, contact.id, body, actor_user_id=principal.user_id
         )

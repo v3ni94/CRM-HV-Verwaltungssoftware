@@ -1,20 +1,32 @@
 """Celery task ``mhvp.metering.run_sync_job``: executes one queued, manually requested sync job
-(master prompt Messdienstleister section 10). No scheduled fetch exists in stage 1: the per
-connection flag ``scheduled_sync_enabled`` is stored but not evaluated by any beat entry."""
+(master prompt Messdienstleister section 10). No scheduled fetch exists: the per connection
+flag ``scheduled_sync_enabled`` is stored but not evaluated by any beat entry.
+
+Execution guarantees:
+
+* Lock against double starts: the job row is taken with ``FOR UPDATE SKIP LOCKED``; a second
+  worker that gets no row (or finds the job no longer queued) returns ``skipped`` without
+  touching the provider. Idempotent re runs: identical values are never stored twice.
+* The fetch and its results are committed in one transaction; only afterwards, in a second
+  transaction, the provider receipts for stored documents are sent (section 11: receipt
+  only after safe storage). A failed receipt stays pending on the document.
+* No secrets or payloads in logs; the job row carries the detail.
+"""
 
 import asyncio
 import logging
 import uuid
 
 from celery import shared_task
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import tenant_transaction
-from mhvp.metering.models import MeteringSyncJob
-from mhvp.metering.services import run_sync_job
+from mhvp.metering.models import DataKind, MeteringSyncJob, SyncStatus
+from mhvp.metering.services import acknowledge_documents, run_sync_job
 
 log = logging.getLogger(__name__)
 
@@ -25,12 +37,37 @@ async def run_sync_job_once(settings: Settings, tenant_id: uuid.UUID, job_id: uu
     )
     try:
         factory = create_session_factory(engine)
+        connection_id: uuid.UUID | None = None
         async with tenant_transaction(factory, tenant_id) as session:
-            job = await session.get(MeteringSyncJob, job_id)
+            job = await session.scalar(
+                select(MeteringSyncJob)
+                .where(MeteringSyncJob.id == job_id)
+                .with_for_update(skip_locked=True)
+            )
             if job is None:
-                return "missing"
-            job = await run_sync_job(session, job)
-            return str(job.status)
+                exists = await session.get(MeteringSyncJob, job_id)
+                return "missing" if exists is None else "skipped"
+            if job.status != SyncStatus.QUEUED:
+                return "skipped"
+            blobs = None
+            if job.data_kind == DataKind.DOCUMENTS:
+                from mhvp.documents.blobs import BlobStore
+
+                blobs = BlobStore(settings)
+            job = await run_sync_job(
+                session, job, blobs=blobs, max_document_bytes=settings.document_max_bytes
+            )
+            status = str(job.status)
+            if job.data_kind == DataKind.DOCUMENTS and job.status in {
+                SyncStatus.SUCCEEDED,
+                SyncStatus.PARTIAL,
+            }:
+                connection_id = job.connection_id
+        if connection_id is not None:
+            # Separate transaction: the documents are committed before any receipt leaves.
+            async with tenant_transaction(factory, tenant_id) as session:
+                await acknowledge_documents(session, connection_id)
+        return status
     finally:
         await engine.dispose()
 

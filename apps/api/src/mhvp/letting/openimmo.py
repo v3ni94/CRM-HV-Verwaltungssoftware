@@ -22,11 +22,12 @@ listing is blocked by the API unless the caller explicitly sets `force=true`
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from decimal import Decimal
 from typing import Any
 from xml.etree.ElementTree import Element, SubElement, tostring
 
 from mhvp.letting.models import Listing
-from mhvp.properties.models import Property, Unit
+from mhvp.properties.models import Building, Property, Unit
 
 OPENIMMO_VERSION = "1.2.7"
 
@@ -100,16 +101,18 @@ REQUIRED_FIELDS: tuple[tuple[str, str, str], ...] = (
 _LABELS = {key: label for key, label, _path in REQUIRED_FIELDS}
 _PATHS = {key: path for key, _label, path in REQUIRED_FIELDS}
 
-# Energieausweis fields of the property (A63) and their listing counterparts. The property
-# holds the certificate of the building, the listing the values as advertised.
+# Energieausweis fields of the building (A63, section 4.3; only the building carries the
+# certificate since migration 0149) and their listing counterparts. The listing holds the
+# values as advertised.
 ENERGY_FIELD_MAP: tuple[tuple[str, str], ...] = (
     ("energy_certificate_type", "energy_type"),
-    ("energy_certificate_value", "energy_value"),
-    ("energy_certificate_source", "energy_source"),
+    ("energy_final_heat_kwh", "energy_value"),
+    ("energy_sources", "energy_source"),
     ("energy_certificate_construction_year", "energy_building_year"),
     ("energy_certificate_issued_on", "energy_issued_on"),
     ("energy_certificate_valid_until", "energy_valid_until"),
     ("energy_certificate_class", "energy_class"),
+    ("energy_hot_water_included", "energy_includes_hot_water"),
 )
 # Exposé keys (German UI labels live in the CRM catalogue) for the energy certificate and the
 # asking rent; both blocks are reported field by field instead of one free text marker.
@@ -125,20 +128,44 @@ EXPOSE_ENERGY_KEYS = (
 EXPOSE_RENT_KEYS = ("net_rent", "additional_costs", "heating_costs", "deposit")
 
 
-def property_energy_prefill(prop: Property) -> dict[str, Any]:
-    """Listing values copied from the property's energy certificate (A63). Without any
+def _building_energy_value(building: Building | None, key: str) -> Any:
+    """Building certificate value in the listing's shape: the energy sources list becomes one
+    text (the listing field holds 32 characters), the number is quantized to two decimals."""
+    if building is None:
+        return None
+    value = getattr(building, key)
+    if key == "energy_sources":
+        return (", ".join(value)[:32] or None) if value else None
+    if key == "energy_final_heat_kwh" and value is not None:
+        return Decimal(value).quantize(Decimal("0.01"))
+    return value
+
+
+def building_energy_prefill(building: Building | None) -> dict[str, Any]:
+    """Listing values copied from the building's energy certificate (A63). Without any
     certificate value the status stays `in_erstellung`; with values it becomes `liegt_vor`."""
-    values = {listing_key: getattr(prop, prop_key) for prop_key, listing_key in ENERGY_FIELD_MAP}
-    status = "liegt_vor" if any(v is not None for v in values.values()) else "in_erstellung"
+    values = {
+        listing_key: _building_energy_value(building, building_key)
+        for building_key, listing_key in ENERGY_FIELD_MAP
+    }
+    status = (
+        "liegt_vor"
+        if any(v is not None for k, v in values.items() if k != "energy_includes_hot_water")
+        else "in_erstellung"
+    )
+    values["energy_includes_hot_water"] = bool(values["energy_includes_hot_water"])
     return {"energy_status": status, **values}
 
 
-def expose_energy_fields(prop: Property) -> dict[str, Any]:
-    """Energy certificate block of the exposé draft, read from the property only."""
+def expose_energy_fields(building: Building | None) -> dict[str, Any]:
+    """Energy certificate block of the exposé draft, read from the unit's building only."""
     return dict(
         zip(
             EXPOSE_ENERGY_KEYS,
-            (getattr(prop, prop_key) for prop_key, _listing_key in ENERGY_FIELD_MAP),
+            (
+                _building_energy_value(building, building_key)
+                for building_key, _listing_key in ENERGY_FIELD_MAP[: len(EXPOSE_ENERGY_KEYS)]
+            ),
             strict=True,
         )
     )

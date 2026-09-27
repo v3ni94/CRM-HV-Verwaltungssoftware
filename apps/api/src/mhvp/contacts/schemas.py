@@ -12,6 +12,8 @@ from mhvp.contacts.models import (
     BankAccountApproval,
     Completeness,
     ConsentKind,
+    ContactBankAccountKind,
+    ContactDateKind,
     ContactKind,
     ContactMandateStatus,
     ContactRoleCode,
@@ -38,6 +40,7 @@ class AddressIn(_Strict):
     house_number: str | None = Field(default=None, max_length=20)
     postal_code: str | None = Field(default=None, max_length=20)
     city: str | None = Field(default=None, max_length=100)
+    state: str | None = Field(default=None, max_length=100, description="Bundesland")
     country: str = Field(default="DE", pattern=r"^[A-Z]{2}$")
     addition: str | None = Field(default=None, max_length=200)
     is_primary: bool = False
@@ -46,6 +49,11 @@ class AddressIn(_Strict):
 class PhoneIn(_Strict):
     label: PhoneLabel = PhoneLabel.WORK
     number: str = Field(max_length=40)
+    country_code: str | None = Field(
+        default=None, pattern=r"^\+?[0-9]{1,4}$", description="Landesvorwahl, z. B. +49"
+    )
+    area_code: str | None = Field(default=None, pattern=r"^[0-9]{1,10}$", description="Vorwahl")
+    note: str | None = Field(default=None, max_length=200)
     is_primary: bool = False
 
     @field_validator("number")
@@ -74,8 +82,21 @@ class IdentifierIn(_Strict):
     value: str = Field(min_length=1, max_length=100)
 
 
+class ContactDateIn(_Strict):
+    kind: ContactDateKind
+    date: date
+    note: str | None = Field(default=None, max_length=200)
+
+
+class ContactDateOut(ContactDateIn):
+    id: uuid.UUID
+
+
 class BankAccountIn(_Strict):
     label: str | None = Field(default=None, max_length=100)
+    kind: ContactBankAccountKind | None = Field(default=None, description="Kontotyp (Anhang B.4)")
+    is_default: bool = Field(default=False, description="Standardkonto; genau eines je Kontakt")
+    bank_contact_id: uuid.UUID | None = Field(default=None, description="Bank als Kontakt")
     iban: str = Field(max_length=50)
     bic: str | None = Field(default=None, pattern=r"^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$")
     bank_name: str | None = Field(default=None, max_length=200)
@@ -121,6 +142,9 @@ class BankAccountIn(_Strict):
 class ContactIn(_Strict):
     kind: ContactKind
     salutation: str | None = Field(default=None, max_length=50)
+    letter_salutation: str | None = Field(
+        default=None, max_length=200, description="Briefanrede (Freitext)"
+    )
     title: str | None = Field(default=None, max_length=50)
     first_name: str | None = Field(default=None, max_length=100)
     last_name: str | None = Field(default=None, max_length=100)
@@ -132,12 +156,18 @@ class ContactIn(_Strict):
     notes: str | None = Field(default=None, max_length=10_000)
     preferred_channel: PreferredChannel | None = None
     blocked: bool = False
+    retention_profile_id: uuid.UUID | None = Field(
+        default=None,
+        description="Löschprofil (freigegebenes Aufbewahrungsprofil); daraus wird das "
+        "Löschdatum als Vormerkung berechnet.",
+    )
     external_ids: dict[str, str] = Field(default_factory=dict)
     completeness: Completeness = Completeness.COMPLETE
     addresses: list[AddressIn] = Field(default_factory=list, max_length=20)
     phones: list[PhoneIn] = Field(default_factory=list, max_length=20)
     emails: list[EmailIn] = Field(default_factory=list, max_length=20)
     identifiers: list[IdentifierIn] = Field(default_factory=list, max_length=20)
+    dates: list[ContactDateIn] = Field(default_factory=list, max_length=20)
     bank_accounts: list[BankAccountIn] | None = Field(
         default=None,
         max_length=20,
@@ -159,6 +189,14 @@ class ContactIn(_Strict):
             raise ValueError("Firmen benötigen einen Firmennamen")
         return self
 
+    @model_validator(mode="after")
+    def _single_flags(self) -> Self:
+        if sum(1 for e in self.emails if e.is_portal_login) > 1:
+            raise ValueError("Genau eine E-Mail-Adresse darf Portal-Login-Adresse sein")
+        if sum(1 for b in self.bank_accounts or [] if b.is_default) > 1:
+            raise ValueError("Genau ein Bankkonto darf Standardkonto sein")
+        return self
+
 
 class AddressOut(AddressIn):
     id: uuid.UUID
@@ -168,6 +206,9 @@ class PhoneOut(BaseModel):
     id: uuid.UUID
     label: PhoneLabel
     number: str
+    country_code: str | None = None
+    area_code: str | None = None
+    note: str | None = None
     is_primary: bool
 
 
@@ -186,6 +227,9 @@ class IdentifierOut(IdentifierIn):
 class BankAccountOut(BaseModel):
     id: uuid.UUID
     label: str | None
+    kind: ContactBankAccountKind | None = None
+    is_default: bool = False
+    bank_contact_id: uuid.UUID | None = None
     iban_masked: str
     bic: str | None
     bank_name: str | None
@@ -265,6 +309,7 @@ class ContactOut(BaseModel):
     kind: ContactKind
     display_name: str
     salutation: str | None
+    letter_salutation: str | None = None
     title: str | None
     first_name: str | None
     last_name: str | None
@@ -276,12 +321,20 @@ class ContactOut(BaseModel):
     notes: str | None
     preferred_channel: PreferredChannel | None
     blocked: bool
+    blocked_at: datetime | None = None
+    retention_profile_id: uuid.UUID | None = None
+    delete_after: date | None = Field(
+        default=None,
+        description="Vorgemerktes Löschdatum aus dem Löschprofil; nur Anzeige, die Löschung "
+        "erfolgt manuell im Vier-Augen-Prinzip (Betreiberentscheidung 26.09.2026).",
+    )
     external_ids: dict[str, str]
     completeness: Completeness
     addresses: list[AddressOut]
     phones: list[PhoneOut]
     emails: list[EmailOut]
     identifiers: list[IdentifierOut]
+    dates: list[ContactDateOut] = Field(default_factory=list)
     bank_accounts: list[BankAccountOut]
     types: list[ContactTypeCode]
     roles: list[ContactRoleCode]
@@ -317,8 +370,10 @@ class DuplicateCandidate(BaseModel):
 
 class NoteIn(_Strict):
     category: str | None = Field(default=None, max_length=63)
+    title: str | None = Field(default=None, max_length=200)
     body: str = Field(min_length=1, max_length=20_000)
     pinned: bool = False
+    follow_up_on: date | None = Field(default=None, description="Wiedervorlage")
 
 
 class NoteOut(NoteIn):

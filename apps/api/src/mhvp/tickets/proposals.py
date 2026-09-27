@@ -1039,8 +1039,8 @@ def _validate_changes(changes: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def _to_contact_in(out: contact_schemas.ContactOut) -> dict[str, Any]:
     data = out.model_dump(mode="json")
-    for key in ("id", "display_name", "version", "created_at", "updated_at", "deleted_at"):
-        data.pop(key, None)
+    allowed = set(contact_schemas.ContactIn.model_fields)
+    data = {key: value for key, value in data.items() if key in allowed}
     data["bank_accounts"] = None  # unverändert lassen (rule 0.1.6, nie IBAN über Vorschlag)
     for key in ("addresses", "phones", "emails", "identifiers"):
         data[key] = [{k: v for k, v in item.items() if k != "id"} for item in data[key]]

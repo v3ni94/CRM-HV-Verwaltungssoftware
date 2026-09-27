@@ -10,7 +10,23 @@ import { ui } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 
 type SearchParams = Record<string, string | undefined>;
-const KINDS = ["contract_end", "contract_termination", "meter_calibration", "bank_consent", "document_retention_end", "service_contract_notice", "meeting_resolution_deadline"];
+// Mirrors DEADLINE_KINDS of mhvp.workspace.jobs (P1 AP7 added the kinds from energy_certificate on).
+const KINDS = [
+  "contract_end",
+  "contract_termination",
+  "meter_calibration",
+  "bank_consent",
+  "document_retention_end",
+  "service_contract_notice",
+  "meeting_resolution_deadline",
+  "energy_certificate",
+  "move_in",
+  "move_out",
+  "maintenance",
+  "note_follow_up",
+  "meeting",
+  "ticket_due",
+];
 const STATUSES = ["open", "done", "all"];
 
 /** Fristenliste (A41): GET /api/v1/workspace/deadlines mit Filter Typ, Status, Zeitraum.

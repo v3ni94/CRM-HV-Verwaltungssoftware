@@ -9,7 +9,9 @@ open operator decision (M1-09) and is neither computed nor claimed here.
 
 from __future__ import annotations
 
+import importlib
 import uuid
+from collections.abc import Awaitable, Callable
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
@@ -18,7 +20,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.config import Settings
 from mhvp.core.ids import uuid7
-from mhvp.workspace.models import ComplianceDeadline, DigestRun, WorkspaceJobSettings
+from mhvp.workspace.models import (
+    CalendarEntry,
+    ComplianceDeadline,
+    DigestRun,
+    WorkspaceJobSettings,
+)
 from mhvp.workspace.services import local_date, notify
 
 DEFAULT_LEAD_DAYS = 30
@@ -30,6 +37,14 @@ DEADLINE_KINDS: tuple[str, ...] = (
     "document_retention_end",
     "service_contract_notice",
     "meeting_resolution_deadline",
+    # P1 AP7 (spec 4.10): further date fields with a calendar entry.
+    "energy_certificate",
+    "move_in",
+    "move_out",
+    "maintenance",
+    "note_follow_up",
+    "meeting",
+    "ticket_due",
 )
 # Fixed lead time per kind; overrides the tenant setting (M9-06: 14 days for the notice date
 # of service provider contracts).
@@ -49,6 +64,13 @@ DEADLINE_PERMISSIONS: dict[str, tuple[str, str]] = {
     "service_contract_notice": ("contracts:read", "contracts:update"),
     # Same permissions as the owners' meeting endpoints of the HOA module (M9-07).
     "meeting_resolution_deadline": ("accounting:read", "accounting:update"),
+    "energy_certificate": ("properties:read", "properties:update"),
+    "move_in": ("contracts:read", "contracts:update"),
+    "move_out": ("contracts:read", "contracts:update"),
+    "maintenance": ("properties:read", "properties:update"),
+    "note_follow_up": ("contacts:read", "contacts:update"),
+    "meeting": ("accounting:read", "accounting:update"),
+    "ticket_due": ("tickets:read", "tickets:update"),
 }
 DEADLINE_NOTIFICATION_KIND = "compliance_deadline"
 DIGEST_NOTIFICATION_KIND = "daily_digest"
@@ -97,73 +119,102 @@ async def save_job_settings(
 # Deadlines (A41) -----------------------------------------------------------------------
 
 
-async def deadline_candidates(
-    session: AsyncSession, tenant_id: uuid.UUID, today: date
-) -> list[dict[str, Any]]:
-    """Every future dated obligation known to the data model, keyed by (kind, source, date).
+# Source readers (P1 AP7, spec 4.10) ---------------------------------------------------
+#
+# Every dated obligation of the data model is read by one reader function that appends
+# candidates ``{kind, source_type, source_id, reference, due_on, property_id}``. The
+# candidates feed both the deadline list (``refresh_deadlines``, only future dates) and the
+# generated calendar entries (``calendar_sync``, dates from ``CALENDAR_PAST_DAYS`` back).
+# Readers of fields that other work packages add in parallel are registered only when the
+# model carries the field (``hasattr``), see ``CALENDAR_SOURCES``.
 
-    Resolution deadlines of virtual owners' meetings come from the entered field with its
-    source (M9-07), never from a computation. Service provider contracts are covered by
-    ``service_contract_notice`` (M9-06).
-    """
-    from mhvp.banking.models import BankConnection, ConnectionStatus, FinApiConnection
+Candidate = dict[str, Any]
+SourceReader = Callable[[AsyncSession, date, date], Awaitable[list[Candidate]]]
+# How far back generated calendar entries reach (historic move outs and meetings stay
+# visible for a year); the deadline list itself starts at today.
+CALENDAR_PAST_DAYS = 365
+# Reminder codes (B.30) per kind before the date; maintenance uses its own ``remind_before``.
+CALENDAR_REMINDERS: dict[str, list[str]] = {
+    "contract_end": ["1m", "1d"],
+    "contract_termination": ["1m", "1d"],
+    "meter_calibration": ["1m"],
+    "energy_certificate": ["3m", "1m"],
+    "move_in": ["1d"],
+    "move_out": ["1d"],
+    "maintenance": ["14d"],
+    "note_follow_up": ["0"],
+    "meeting": ["14d", "1d"],
+    "ticket_due": ["1d"],
+    "meeting_resolution_deadline": ["7d"],
+    "service_contract_notice": ["14d"],
+    "bank_consent": ["14d"],
+    "document_retention_end": ["1m"],
+}
+DEFAULT_REMINDERS = ["1d"]
+
+
+def _candidate(
+    kind: str,
+    source_type: str,
+    source_id: uuid.UUID,
+    reference: str,
+    due_on: date | None,
+    property_id: uuid.UUID | None = None,
+) -> Candidate | None:
+    if due_on is None:
+        return None
+    return {
+        "kind": kind,
+        "source_type": source_type,
+        "source_id": source_id,
+        "reference": reference[:300],
+        "due_on": due_on,
+        "property_id": property_id,
+    }
+
+
+async def _read_contracts(session: AsyncSession, since: date, today: date) -> list[Candidate]:
+    """Contract end, termination and, when the model carries them (AP3, 0150), the move
+    in and move out dates (spec 4.5)."""
     from mhvp.contracts.models import Contract
-    from mhvp.contracts.service_contracts import ServiceContract, terms_of
-    from mhvp.documents.models import Document
-    from mhvp.hoa.models import Meeting
+
+    move_in = getattr(Contract, "move_in_on", None)
+    move_out = getattr(Contract, "move_out_on", None)
+    dated = [Contract.end_date >= since, Contract.termination_date >= since]
+    if move_in is not None:
+        dated.append(move_in >= since)
+    if move_out is not None:
+        dated.append(move_out >= since)
+    out: list[Candidate] = []
+    for c in (await session.scalars(select(Contract).where(or_(*dated)))).all():
+        label = "Mietvertrag" if c.kind.value == "tenancy" else "Eigentumsverhältnis"
+        ref = f"{label} {c.number}"
+        fields = [
+            ("contract_end", c.end_date),
+            ("contract_termination", c.termination_date),
+            ("move_in", getattr(c, "move_in_on", None)),
+            ("move_out", getattr(c, "move_out_on", None)),
+        ]
+        for kind, value in fields:
+            cand = _candidate(kind, "contract", c.id, ref, value, c.property_id)
+            if cand is not None and cand["due_on"] >= since:
+                out.append(cand)
+    return out
+
+
+async def _read_meters(session: AsyncSession, since: date, today: date) -> list[Candidate]:
     from mhvp.properties.models import Meter, Property
 
-    out: list[dict[str, Any]] = []
-
-    def add(
-        kind: str,
-        source_type: str,
-        source_id: uuid.UUID,
-        reference: str,
-        due_on: date | None,
-        property_id: uuid.UUID | None = None,
-    ) -> None:
-        if due_on is None or due_on < today:
-            return
-        out.append(
-            {
-                "kind": kind,
-                "source_type": source_type,
-                "source_id": source_id,
-                "reference": reference[:300],
-                "due_on": due_on,
-                "property_id": property_id,
-            }
-        )
-
-    contracts = (
-        await session.scalars(
-            select(Contract).where(
-                or_(Contract.end_date >= today, Contract.termination_date >= today)
-            )
-        )
-    ).all()
-    for c in contracts:
-        label = "Mietvertrag" if c.kind.value == "tenancy" else "Eigentumsverhältnis"
-        add("contract_end", "contract", c.id, f"{label} {c.number}", c.end_date, c.property_id)
-        add(
-            "contract_termination",
-            "contract",
-            c.id,
-            f"{label} {c.number}",
-            c.termination_date,
-            c.property_id,
-        )
-
-    meters = (
+    rows = (
         await session.execute(
             select(Meter, Property.number, Property.name)
             .join(Property, Property.id == Meter.property_id)
-            .where(Meter.calibration_due_date >= today)
+            .where(Meter.calibration_due_date >= since)
         )
     ).all()
-    for meter, number, name in meters:
-        add(
+    out: list[Candidate] = []
+    for meter, number, name in rows:
+        cand = _candidate(
             "meter_calibration",
             "meter",
             meter.id,
@@ -171,7 +222,15 @@ async def deadline_candidates(
             meter.calibration_due_date,
             meter.property_id,
         )
+        if cand is not None:
+            out.append(cand)
+    return out
 
+
+async def _read_bank_consents(session: AsyncSession, since: date, today: date) -> list[Candidate]:
+    from mhvp.banking.models import BankConnection, ConnectionStatus, FinApiConnection
+
+    out: list[Candidate] = []
     connections = (
         await session.scalars(
             select(BankConnection).where(BankConnection.status != ConnectionStatus.DISABLED)
@@ -184,29 +243,49 @@ async def deadline_candidates(
         valid_until = (fa.consent_valid_until if fa is not None else None) or (
             conn.consent_valid_until
         )
-        add(
+        cand = _candidate(
             "bank_consent",
             "bank_connection",
             conn.id,
             f"Bankzustimmung {conn.bank_name}",
             valid_until,
         )
+        if cand is not None and cand["due_on"] >= since:
+            out.append(cand)
+    return out
 
-    documents = (
+
+async def _read_documents(session: AsyncSession, since: date, today: date) -> list[Candidate]:
+    from mhvp.documents.models import Document
+
+    rows = (
         await session.execute(
             select(Document.id, Document.title, Document.retention_until).where(
-                Document.retention_until >= today
+                Document.retention_until >= since
             )
         )
     ).all()
-    for doc_id, title, until in documents:
-        add("document_retention_end", "document", doc_id, f"Aufbewahrung {title}", until)
+    out: list[Candidate] = []
+    for doc_id, title, until in rows:
+        cand = _candidate(
+            "document_retention_end", "document", doc_id, f"Aufbewahrung {title}", until
+        )
+        if cand is not None:
+            out.append(cand)
+    return out
 
-    service_contracts = (
+
+async def _read_service_contracts(
+    session: AsyncSession, since: date, today: date
+) -> list[Candidate]:
+    from mhvp.contracts.service_contracts import ServiceContract, terms_of
+
+    out: list[Candidate] = []
+    rows = (
         await session.scalars(select(ServiceContract).where(ServiceContract.cancelled_at.is_(None)))
     ).all()
-    for sc in service_contracts:
-        add(
+    for sc in rows:
+        cand = _candidate(
             "service_contract_notice",
             "service_contract",
             sc.id,
@@ -214,22 +293,212 @@ async def deadline_candidates(
             terms_of(sc, today).notice_deadline,
             sc.property_id,
         )
+        if cand is not None and cand["due_on"] >= since:
+            out.append(cand)
+    return out
 
-    meetings = (
+
+async def _read_meetings(session: AsyncSession, since: date, today: date) -> list[Candidate]:
+    """Meeting date of every owners' meeting (spec 4.8) and the entered resolution
+    deadline of virtual meetings (M9-07), never a computed one."""
+    from mhvp.hoa.models import Meeting
+
+    out: list[Candidate] = []
+    rows = (
         await session.scalars(
             select(Meeting).where(
-                Meeting.mode == "virtual", Meeting.resolution_deadline_at >= today
+                or_(Meeting.scheduled_at >= since, Meeting.resolution_deadline_at >= since)
             )
         )
     ).all()
-    for m in meetings:
-        add(
-            MEETING_RESOLUTION_KIND,
-            "owners_meeting",
-            m.id,
-            meeting_deadline_reference(m.scheduled_at.date(), m.resolution_deadline_source),
-            m.resolution_deadline_at,
+    for m in rows:
+        held_on = local_date(m.scheduled_at)
+        if held_on >= since:
+            cand = _candidate(
+                "meeting",
+                "owners_meeting",
+                m.id,
+                f"Eigentümerversammlung am {held_on:%d.%m.%Y}",
+                held_on,
+            )
+            if cand is not None:
+                out.append(cand)
+        if m.mode == "virtual" and m.resolution_deadline_at is not None:
+            cand = _candidate(
+                MEETING_RESOLUTION_KIND,
+                "owners_meeting",
+                m.id,
+                meeting_deadline_reference(held_on, m.resolution_deadline_source),
+                m.resolution_deadline_at,
+            )
+            if cand is not None and m.resolution_deadline_at >= since:
+                out.append(cand)
+    return out
+
+
+async def _read_maintenance(session: AsyncSession, since: date, today: date) -> list[Candidate]:
+    from mhvp.properties.models import MaintenanceItem, Property
+
+    rows = (
+        await session.execute(
+            select(MaintenanceItem, Property.number, Property.name)
+            .join(Property, Property.id == MaintenanceItem.property_id)
+            .where(MaintenanceItem.status == "open", MaintenanceItem.due_date >= since)
         )
+    ).all()
+    out: list[Candidate] = []
+    for item, number, name in rows:
+        cand = _candidate(
+            "maintenance",
+            "maintenance_item",
+            item.id,
+            f"{item.title} ({number} {name})",
+            item.due_date,
+            item.property_id,
+        )
+        if cand is not None:
+            cand["reminders"] = [item.remind_before] if item.remind_before else None
+            out.append(cand)
+    return out
+
+
+async def _read_energy_certificates(
+    session: AsyncSession, since: date, today: date
+) -> list[Candidate]:
+    """Expiry of the energy certificate per building (spec 4.3); the property level field
+    is read as long as it exists (open question 1 of the P1 plan)."""
+    from mhvp.properties.models import Building, Property
+
+    out: list[Candidate] = []
+    rows = (
+        await session.execute(
+            select(Building, Property.number, Property.name)
+            .join(Property, Property.id == Building.property_id)
+            .where(Building.energy_certificate_valid_until >= since)
+        )
+    ).all()
+    for b, number, name in rows:
+        cand = _candidate(
+            "energy_certificate",
+            "building",
+            b.id,
+            f"Energieausweis {b.name} ({number} {name})",
+            b.energy_certificate_valid_until,
+            b.property_id,
+        )
+        if cand is not None:
+            out.append(cand)
+    property_column = getattr(Property, "energy_certificate_valid_until", None)
+    if property_column is not None:
+        props = (await session.scalars(select(Property).where(property_column >= since))).all()
+        for p in props:
+            cand = _candidate(
+                "energy_certificate",
+                "property",
+                p.id,
+                f"Energieausweis Objekt {p.number} {p.name}",
+                getattr(p, "energy_certificate_valid_until", None),
+                p.id,
+            )
+            if cand is not None:
+                out.append(cand)
+    return out
+
+
+async def _read_note_follow_ups(session: AsyncSession, since: date, today: date) -> list[Candidate]:
+    """Follow up dates of contact notes (spec 4.1 Notizen)."""
+    from mhvp.contacts.models import Contact, ContactNote
+
+    rows = (
+        await session.execute(
+            select(ContactNote, Contact.display_name)
+            .join(Contact, Contact.id == ContactNote.contact_id)
+            .where(ContactNote.follow_up_on >= since)
+        )
+    ).all()
+    out: list[Candidate] = []
+    for note, display_name in rows:
+        cand = _candidate(
+            "note_follow_up",
+            "contact",
+            note.contact_id,
+            f"Wiedervorlage {display_name}",
+            note.follow_up_on,
+        )
+        if cand is not None:
+            cand["source_id"] = note.id
+            cand["source_type"] = "contact_note"
+            out.append(cand)
+    return out
+
+
+async def _read_ticket_due(session: AsyncSession, since: date, today: date) -> list[Candidate]:
+    """Ticket deadlines (spec 4.9): the due date field of open tickets. Registered only when
+    the ticket model carries ``due_on`` (P4); the SLA due time is not a deadline here, its
+    escalation has its own notifications."""
+    from mhvp.tickets.models import Ticket, TicketStatus
+
+    due_column = getattr(Ticket, "due_on", None)
+    if due_column is None:
+        return []
+    open_statuses = [TicketStatus(s) for s in OPEN_TICKET_STATUSES]
+    rows = (
+        await session.scalars(
+            select(Ticket).where(Ticket.status.in_(open_statuses), due_column >= since)
+        )
+    ).all()
+    out: list[Candidate] = []
+    for t in rows:
+        cand = _candidate(
+            "ticket_due",
+            "ticket",
+            t.id,
+            f"Ticket {t.number} {t.title}",
+            getattr(t, "due_on", None),
+            t.property_id,
+        )
+        if cand is not None:
+            out.append(cand)
+    return out
+
+
+def _has_attr(dotted: str, attr: str) -> bool:
+    module_name, _, class_name = dotted.rpartition(".")
+    module = importlib.import_module(module_name)
+    return hasattr(getattr(module, class_name), attr)
+
+
+def calendar_sources() -> list[SourceReader]:
+    """Registry of the source readers; fields added by parallel work packages join once the
+    model carries them (P1 plan AP1 to AP3, migrations 0147 to 0150)."""
+    readers: list[SourceReader] = [
+        _read_contracts,
+        _read_meters,
+        _read_bank_consents,
+        _read_documents,
+        _read_service_contracts,
+        _read_meetings,
+        _read_maintenance,
+        _read_energy_certificates,
+    ]
+    # TODO(P1 merge): fields of parallel packages; the readers join once the model has them.
+    if _has_attr("mhvp.contacts.models.ContactNote", "follow_up_on"):
+        readers.append(_read_note_follow_ups)
+    if _has_attr("mhvp.tickets.models.Ticket", "due_on"):
+        readers.append(_read_ticket_due)
+    return readers
+
+
+async def deadline_candidates(
+    session: AsyncSession, tenant_id: uuid.UUID, today: date, *, since: date | None = None
+) -> list[dict[str, Any]]:
+    """Every dated obligation known to the data model from ``since`` (default: today) on,
+    keyed by (kind, source, date). Resolution deadlines of virtual owners' meetings come
+    from the entered field with its source (M9-07), never from a computation."""
+    lower = today if since is None else since
+    out: list[Candidate] = []
+    for reader in calendar_sources():
+        out.extend(await reader(session, lower, today))
     return out
 
 
@@ -257,7 +526,10 @@ async def refresh_deadlines(
 ) -> dict[str, int]:
     """Upsert the deadline list from the sources; rows whose date vanished or passed are
     marked done. Idempotent: a second run on the same data changes nothing."""
-    candidates = await deadline_candidates(session, tenant_id, today)
+    candidates = [
+        {k: v for k, v in c.items() if k != "reminders"}
+        for c in await deadline_candidates(session, tenant_id, today)
+    ]
     existing = {
         (row.kind, row.source_id, row.due_on): row
         for row in (
@@ -361,6 +633,75 @@ async def deadlines_tenant(
     settings_row = await job_settings(session, tenant_id)
     counts = await refresh_deadlines(session, tenant_id, today, settings_row.deadline_lead_days)
     counts["notified"] = await notify_deadlines(session, tenant_id, today)
+    calendar = await calendar_sync(session, tenant_id, today)
+    for key, value in calendar.items():
+        counts[f"calendar_{key}"] = value
+    return counts
+
+
+# Generated calendar entries (P1 AP7) ---------------------------------------------------
+
+
+def reminders_for(kind: str, own: list[str] | None) -> list[str]:
+    """Reminder codes (B.30) of a generated entry: the source's own setting wins."""
+    return own or CALENDAR_REMINDERS.get(kind, DEFAULT_REMINDERS)
+
+
+async def calendar_sync(session: AsyncSession, tenant_id: uuid.UUID, today: date) -> dict[str, int]:
+    """Upsert the generated calendar entries from the source readers and delete entries whose
+    source or date vanished. Idempotent: a second run on the same data changes nothing.
+    Generated entries have no owner and are shared; manual entries are never touched."""
+    since = today - timedelta(days=CALENDAR_PAST_DAYS)
+    candidates = await deadline_candidates(session, tenant_id, today, since=since)
+    existing = {
+        (row.source_type, row.source_id, row.category): row
+        for row in (
+            await session.scalars(
+                select(CalendarEntry).where(CalendarEntry.owner_user_id.is_(None))
+            )
+        ).all()
+    }
+    counts = {"created": 0, "updated": 0, "deleted": 0}
+    seen: set[tuple[str, uuid.UUID | None, str]] = set()
+    for cand in candidates:
+        key = (cand["source_type"], cand["source_id"], cand["kind"])
+        if key in seen:
+            continue
+        seen.add(key)
+        wanted = {
+            "title": cand["reference"],
+            "starts_on": cand["due_on"],
+            "property_id": cand["property_id"],
+            "reminders": reminders_for(cand["kind"], cand.get("reminders")),
+        }
+        row = existing.get(key)
+        if row is None:
+            session.add(
+                CalendarEntry(
+                    tenant_id=tenant_id,
+                    owner_user_id=None,
+                    source_type=cand["source_type"],
+                    source_id=cand["source_id"],
+                    category=cand["kind"],
+                    all_day=True,
+                    shared=True,
+                    ends_on=None,
+                    **wanted,
+                )
+            )
+            counts["created"] += 1
+            continue
+        changed = False
+        for field, value in wanted.items():
+            if getattr(row, field) != value:
+                setattr(row, field, value)
+                changed = True
+        counts["updated"] += int(changed)
+    for key, row in existing.items():
+        if key not in seen:
+            await session.delete(row)
+            counts["deleted"] += 1
+    await session.flush()
     return counts
 
 

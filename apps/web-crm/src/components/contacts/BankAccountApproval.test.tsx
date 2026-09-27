@@ -39,6 +39,7 @@ function account(overrides: Partial<BankAccount> = {}): BankAccount {
     mandate_status: "active",
     mandate_revoked_on: null,
     approval_status: "pending",
+    is_default: false,
     requested_by: CLERK,
     decided_by: null,
     decided_at: null,

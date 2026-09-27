@@ -16,6 +16,8 @@ import { bff } from "@/lib/bff";
 import {
   ADDRESS_LABELS,
   CHANNELS,
+  CONTACT_BANK_ACCOUNT_KINDS,
+  CONTACT_DATE_KINDS,
   CONTACT_ROLES,
   CONTACT_TYPES,
   MANDATE_GRANTED_VIA,
@@ -34,7 +36,11 @@ import { ui } from "@/lib/ui";
 
 import { DuplicateWarning, type DuplicateCandidate } from "./DuplicateWarning";
 
-type Props = { mode: "create" } | { mode: "edit"; contact: ContactOut };
+export type RetentionProfileOption = { id: string; document_class: string; legal_entity_kind: string | null };
+type Props = ({ mode: "create" } | { mode: "edit"; contact: ContactOut }) & {
+  /** Released retention profiles for the deletion reservation (4.1); loaded by the page. */
+  retentionProfiles?: RetentionProfileOption[];
+};
 
 function errorAt(errors: FieldErrors<ContactFormValues>, path: string): string | undefined {
   let node: unknown = errors;
@@ -107,7 +113,9 @@ export function ContactForm(props: Props) {
   const addresses = useFieldArray({ control, name: "addresses" });
   const phones = useFieldArray({ control, name: "phones" });
   const emails = useFieldArray({ control, name: "emails" });
+  const dates = useFieldArray({ control, name: "dates" });
   const banks = useFieldArray({ control, name: "bank_accounts" });
+  const retentionProfiles = props.retentionProfiles ?? [];
   const [formError, setFormError] = useState<string | null>(null);
   const [candidates, setCandidates] = useState<DuplicateCandidate[] | null>(null);
   const [saving, setSaving] = useState(false);
@@ -200,6 +208,7 @@ export function ContactForm(props: Props) {
         {kind === "person" ? (
           <>
             <Text name="salutation" label={t("salutation")} register={register} errors={errors} />
+            <Text name="letter_salutation" label={t("letterSalutation")} register={register} errors={errors} className="sm:col-span-2" />
             <Text name="title" label={t("title")} register={register} errors={errors} />
             <Text name="first_name" label={t("firstName")} register={register} errors={errors} />
             <Text name="last_name" label={t("lastName")} register={register} errors={errors} />
@@ -209,6 +218,7 @@ export function ContactForm(props: Props) {
           <>
             <Text name="company_name" label={t("companyName")} register={register} errors={errors} className="sm:col-span-2" />
             <Text name="legal_form" label={t("legalForm")} register={register} errors={errors} />
+            <Text name="letter_salutation" label={t("letterSalutation")} register={register} errors={errors} className="sm:col-span-2" />
           </>
         )}
         <Text name="position" label={t("position")} register={register} errors={errors} />
@@ -231,6 +241,21 @@ export function ContactForm(props: Props) {
           <input type="checkbox" {...register("blocked")} />
           {t("blocked")}
         </label>
+        <div className="sm:col-span-2">
+          <label htmlFor="f-retention_profile_id" className={ui.label}>
+            {t("retentionProfile")}
+          </label>
+          <select id="f-retention_profile_id" className={ui.input} {...register("retention_profile_id")}>
+            <option value="">{t("noRetentionProfile")}</option>
+            {retentionProfiles.map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.document_class}
+                {p.legal_entity_kind ? ` (${p.legal_entity_kind})` : ""}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted">{t("retentionHint")}</p>
+        </div>
       </section>
 
       <fieldset className="flex flex-wrap gap-3">
@@ -253,7 +278,7 @@ export function ContactForm(props: Props) {
         ))}
       </fieldset>
 
-      <Group title={t("addresses")} onAdd={() => addresses.append({ label: "postal", street: "", house_number: "", postal_code: "", city: "", country: "DE", addition: "", is_primary: addresses.fields.length === 0 })} addLabel={t("add")}>
+      <Group title={t("addresses")} onAdd={() => addresses.append({ label: "postal", street: "", house_number: "", postal_code: "", city: "", state: "", country: "DE", addition: "", is_primary: addresses.fields.length === 0 })} addLabel={t("add")}>
         {addresses.fields.map((field, i) => (
           <Row key={field.id} onRemove={() => addresses.remove(i)} removeLabel={t("remove")}>
             <Select name={`addresses.${i}.label`} label={t("label")} register={register} options={ADDRESS_LABELS.map((v) => [v, tl(`address.${v}`)])} />
@@ -261,6 +286,7 @@ export function ContactForm(props: Props) {
             <Text name={`addresses.${i}.house_number`} label={t("houseNumber")} register={register} errors={errors} />
             <Text name={`addresses.${i}.postal_code`} label={t("postalCode")} register={register} errors={errors} />
             <Text name={`addresses.${i}.city`} label={t("city")} register={register} errors={errors} />
+            <Text name={`addresses.${i}.state`} label={t("state")} register={register} errors={errors} />
             <Text name={`addresses.${i}.country`} label={t("country")} register={register} errors={errors} />
             <Text name={`addresses.${i}.addition`} label={t("addition")} register={register} errors={errors} />
             <Check name={`addresses.${i}.is_primary`} label={t("primary")} register={register} />
@@ -268,11 +294,14 @@ export function ContactForm(props: Props) {
         ))}
       </Group>
 
-      <Group title={t("phones")} onAdd={() => phones.append({ label: "work", number: "", is_primary: phones.fields.length === 0 })} addLabel={t("add")}>
+      <Group title={t("phones")} onAdd={() => phones.append({ label: "work", number: "", country_code: "", area_code: "", note: "", is_primary: phones.fields.length === 0 })} addLabel={t("add")}>
         {phones.fields.map((field, i) => (
           <Row key={field.id} onRemove={() => phones.remove(i)} removeLabel={t("remove")}>
             <Select name={`phones.${i}.label`} label={t("label")} register={register} options={PHONE_LABELS.map((v) => [v, tl(`phone.${v}`)])} />
+            <Text name={`phones.${i}.country_code`} label={t("countryCode")} register={register} errors={errors} />
+            <Text name={`phones.${i}.area_code`} label={t("areaCode")} register={register} errors={errors} />
             <Text name={`phones.${i}.number`} label={t("number")} type="tel" register={register} errors={errors} className="sm:col-span-2" />
+            <Text name={`phones.${i}.note`} label={t("phoneNote")} register={register} errors={errors} className="sm:col-span-2" />
             <Check name={`phones.${i}.is_primary`} label={t("primary")} register={register} />
           </Row>
         ))}
@@ -285,6 +314,17 @@ export function ContactForm(props: Props) {
             <Text name={`emails.${i}.email`} label={t("email")} type="email" register={register} errors={errors} className="sm:col-span-2" />
             <Check name={`emails.${i}.is_primary`} label={t("primary")} register={register} />
             <Check name={`emails.${i}.is_portal_login`} label={t("portalLogin")} register={register} />
+          </Row>
+        ))}
+      </Group>
+      {errorAt(errors, "emails") ? <p className={ui.error}>{errorAt(errors, "emails")}</p> : null}
+
+      <Group title={t("dates")} onAdd={() => dates.append({ kind: "other", date: "", note: "" })} addLabel={t("add")}>
+        {dates.fields.map((field, i) => (
+          <Row key={field.id} onRemove={() => dates.remove(i)} removeLabel={t("remove")}>
+            <Select name={`dates.${i}.kind`} label={t("dateKindLabel")} register={register} options={CONTACT_DATE_KINDS.map((v) => [v, t(`dateKind.${v}`)])} />
+            <Text name={`dates.${i}.date`} label={t("date")} type="date" register={register} errors={errors} />
+            <Text name={`dates.${i}.note`} label={t("dateNote")} register={register} errors={errors} className="sm:col-span-2" />
           </Row>
         ))}
       </Group>
@@ -308,6 +348,8 @@ export function ContactForm(props: Props) {
           onAdd={() =>
             banks.append({
               label: "",
+              kind: "",
+              is_default: banks.fields.length === 0,
               iban: "",
               bic: "",
               bank_name: "",
@@ -335,6 +377,8 @@ export function ContactForm(props: Props) {
                 <Text name={`bank_accounts.${i}.bank_name`} label={t("bankName")} register={register} errors={errors} />
                 <Text name={`bank_accounts.${i}.holder`} label={t("holder")} register={register} errors={errors} />
                 <Text name={`bank_accounts.${i}.label`} label={t("label")} register={register} errors={errors} />
+                <Select name={`bank_accounts.${i}.kind`} label={t("accountKind")} register={register} options={[["", t("noAccountKind")], ...CONTACT_BANK_ACCOUNT_KINDS.map((v) => [v, t(`accountKind.${v}`)] as [string, string])]} />
+                <Check name={`bank_accounts.${i}.is_default`} label={t("defaultAccount")} register={register} />
                 <Text name={`bank_accounts.${i}.valid_from`} label={t("validFrom")} type="date" register={register} errors={errors} />
                 <Text name={`bank_accounts.${i}.valid_to`} label={t("validTo")} type="date" register={register} errors={errors} />
 
@@ -402,6 +446,7 @@ export function ContactForm(props: Props) {
           })}
         </Group>
       )}
+      {errorAt(errors, "bank_accounts") ? <p className={ui.error}>{errorAt(errors, "bank_accounts")}</p> : null}
 
       <div>
         <label htmlFor="f-notes" className={ui.label}>

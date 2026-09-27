@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { PropertyBankAccounts } from "@/components/banking/PropertyBankAccounts";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
+import { PropertyMeteringTab } from "@/components/metering/PropertyMeteringTab";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
 import { EnergyCertificateForm } from "@/components/properties/EnergyCertificateForm";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
@@ -163,6 +164,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       <PropertyBankAccounts propertyId={propertyId} legalEntities={(data.legal_entities ?? []).map((e) => ({ id: e.id, kind: e.kind, name: e.name }))} />
       <DmsDocumentsPanel entity="property" id={propertyId} />
       <PropertyNotices propertyId={propertyId} />
+      <PropertyMeteringTab property={{ id: data.id, number: data.number, name: data.name, street: data.street, house_number: data.house_number, postal_code: data.postal_code, city: data.city }} permissions={me.data?.permissions ?? []} />
       <CompletenessPanel propertyId={propertyId} />
       <TicketsSection tickets={(tickets.data ?? []) as TicketSummary[]} />
     </div>

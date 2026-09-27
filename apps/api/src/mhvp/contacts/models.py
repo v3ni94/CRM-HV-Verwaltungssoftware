@@ -151,6 +151,29 @@ class PartyRole(StrEnum):
     LEGAL_REPRESENTATIVE = "legal_representative"
 
 
+class ContactBankAccountKind(StrEnum):
+    """Account types of catalogue B.4 (Masterprompt Ergänzung 27.09.2026)."""
+
+    RENT = "rent"
+    BANK_1 = "bank_1"
+    BANK_2 = "bank_2"
+    HOA = "hoa"
+    RESERVE = "reserve"
+    DEPOSIT = "deposit"
+    HOUSE_MONEY = "house_money"
+    LEGACY = "legacy"
+
+
+class ContactDateKind(StrEnum):
+    """Typed dates on a contact (4.1); the birthday stays on ``Contact.date_of_birth``."""
+
+    BIRTHDAY = "birthday"
+    DEATH = "death"
+    WEDDING = "wedding"
+    FOUNDATION = "foundation"
+    OTHER = "other"
+
+
 class ConsentKind(StrEnum):
     DATA_SHARING = "data_sharing"
     PORTAL_TERMS = "portal_terms"
@@ -189,6 +212,7 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
 
     kind: Mapped[ContactKind] = mapped_column(_enum(ContactKind, "contact_kind"), nullable=False)
     salutation: Mapped[str | None] = mapped_column(String(50))
+    letter_salutation: Mapped[str | None] = mapped_column(String(200))
     title: Mapped[str | None] = mapped_column(String(50))
     first_name: Mapped[str | None] = mapped_column(String(100))
     last_name: Mapped[str | None] = mapped_column(String(100))
@@ -203,6 +227,14 @@ class Contact(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(PreferredChannel, "preferred_channel")
     )
     blocked: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Block date and deletion reservation (4.1; operator decision 26.09.2026): ``delete_after``
+    # is computed from the retention profile and only shown as due, the deletion itself stays a
+    # manual four eyes step on the existing deletion path. No automatic deletion job.
+    blocked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    retention_profile_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("retention_profile.id", ondelete="SET NULL")
+    )
+    delete_after: Mapped[date | None] = mapped_column(Date)
     external_ids: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     completeness: Mapped[Completeness] = mapped_column(
         _enum(Completeness, "contact_completeness"), nullable=False, default=Completeness.COMPLETE
@@ -241,6 +273,7 @@ class ContactAddress(IdMixin, TimestampMixin, TenantMixin, Base):
     house_number: Mapped[str | None] = mapped_column(String(20))
     postal_code: Mapped[str | None] = mapped_column(String(20))
     city: Mapped[str | None] = mapped_column(String(100))
+    state: Mapped[str | None] = mapped_column(String(100))
     country: Mapped[str] = mapped_column(String(2), nullable=False, default="DE")
     addition: Mapped[str | None] = mapped_column(String(200))
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -252,12 +285,24 @@ class ContactPhone(IdMixin, TimestampMixin, TenantMixin, Base):
     contact_id: Mapped[uuid.UUID] = _contact_fk()
     label: Mapped[PhoneLabel] = mapped_column(_enum(PhoneLabel, "phone_label"), nullable=False)
     number: Mapped[str] = mapped_column(String(32), nullable=False)  # E.164
+    country_code: Mapped[str | None] = mapped_column(String(5))
+    area_code: Mapped[str | None] = mapped_column(String(10))
+    note: Mapped[str | None] = mapped_column(String(200))
     is_primary: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
 
 class ContactEmail(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "contact_email"
-    __table_args__ = (Index("ix_contact_email_tenant_id_email", "tenant_id", "email"),)
+    __table_args__ = (
+        Index("ix_contact_email_tenant_id_email", "tenant_id", "email"),
+        # Exactly one portal login address per contact (4.1): own attribute, not the order.
+        Index(
+            "ux_contact_email_portal_login",
+            "contact_id",
+            unique=True,
+            postgresql_where=text("is_portal_login"),
+        ),
+    )
 
     contact_id: Mapped[uuid.UUID] = _contact_fk()
     label: Mapped[str] = mapped_column(String(32), nullable=False, default="work")
@@ -276,6 +321,20 @@ class ContactIdentifier(IdMixin, TimestampMixin, TenantMixin, Base):
     value: Mapped[str] = mapped_column(String(100), nullable=False)
 
 
+class ContactDate(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Typed dates of a contact, any number (4.1)."""
+
+    __tablename__ = "contact_date"
+    __table_args__ = (UniqueConstraint("tenant_id", "contact_id", "kind", "date"),)
+
+    contact_id: Mapped[uuid.UUID] = _contact_fk()
+    kind: Mapped[ContactDateKind] = mapped_column(
+        _enum(ContactDateKind, "contact_date_kind"), nullable=False
+    )
+    value: Mapped[date] = mapped_column("date", Date, nullable=False)
+    note: Mapped[str | None] = mapped_column(String(200))
+
+
 class ContactBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     """IBAN encrypted per tenant; last four characters in clear for search (6.1)."""
 
@@ -289,10 +348,26 @@ class ContactBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
             unique=True,
             postgresql_where=text("mandate_reference IS NOT NULL"),
         ),
+        # Exactly one default account per contact (4.1).
+        Index(
+            "ux_contact_bank_account_default",
+            "contact_id",
+            unique=True,
+            postgresql_where=text("is_default"),
+        ),
     )
 
     contact_id: Mapped[uuid.UUID] = _contact_fk()
     label: Mapped[str | None] = mapped_column(String(100))
+    kind: Mapped[ContactBankAccountKind | None] = mapped_column(
+        _enum(ContactBankAccountKind, "contact_bank_account_kind")
+    )
+    is_default: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    bank_contact_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contact.id", ondelete="SET NULL")
+    )
     iban: Mapped[str] = mapped_column(EncryptedText(), nullable=False)
     iban_suffix: Mapped[str] = mapped_column(String(4), nullable=False)
     # Keyed hash of the normalised IBAN: exact duplicate matching without decryption.
@@ -380,8 +455,10 @@ class ContactNote(IdMixin, TimestampMixin, TenantMixin, Base):
 
     contact_id: Mapped[uuid.UUID] = _contact_fk()
     category: Mapped[str | None] = mapped_column(String(63))
+    title: Mapped[str | None] = mapped_column(String(200))
     body: Mapped[str] = mapped_column(Text, nullable=False)
     pinned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    follow_up_on: Mapped[date | None] = mapped_column(Date)
 
 
 class ContactRelation(IdMixin, TimestampMixin, TenantMixin, Base):

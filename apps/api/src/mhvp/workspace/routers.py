@@ -8,7 +8,19 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import delete, func, or_, select, update
+from sqlalchemy import (
+    ColumnElement,
+    cast,
+    delete,
+    func,
+    literal,
+    null,
+    or_,
+    select,
+    union_all,
+    update,
+)
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import gcal, gmail
@@ -48,10 +60,14 @@ class _In(BaseModel):
 
 
 class Hit(BaseModel):
+    """Search hit. ``parent_id`` carries the context a jump needs (property of a building,
+    ledger of a posting); the web app builds the route from it."""
+
     entity_type: str
     id: uuid.UUID
     title: str
     subtitle: str | None = None
+    parent_id: uuid.UUID | None = None
 
 
 class NotificationOut(BaseModel):
@@ -147,6 +163,12 @@ class CalendarItem(BaseModel):
     # True when Google's etag no longer matches the last synced etag on our link row: the
     # Google version is shown here, the CRM copy is marked stale, neither side is overwritten.
     is_stale: bool = False
+    # P1 AP7: generated entries carry their category (deadline kind), reminder codes (B.30)
+    # and the route to the source row; ``calendar_entry_id`` is the internal row.
+    category: str = "appointment"
+    reminders: list[str] = Field(default_factory=list)
+    href: str | None = None
+    calendar_entry_id: uuid.UUID | None = None
 
 
 class CalendarNotice(BaseModel):
@@ -400,13 +422,22 @@ async def search(
     limit: int = Query(default=8, ge=1, le=25),
     principal: TenantPrincipal = Depends(member),
 ) -> list[Hit]:
+    """Every hit type is guarded by its own read permission (contacts, properties incl.
+    buildings and units, contracts, documents, tickets, postings); postings additionally
+    respect the legal entity scope of the principal (ADR 0005)."""
+    from mhvp.accounting.models import JournalEntry, Ledger
     from mhvp.contacts.models import Contact
     from mhvp.contacts.services import search_filter
     from mhvp.contracts.models import Contract
+    from mhvp.core.auth.scope import allowed_legal_entity_ids
     from mhvp.documents.models import Document
-    from mhvp.properties.models import Property, Unit
+    from mhvp.properties.models import Building, Property, Unit
+    from mhvp.tickets.models import Ticket
 
     like = f"%{q.strip()}%"
+    # "#12" and "TNR#12" address a ticket number (M19-06), digits alone match numbers too.
+    number_text = q.strip().upper().removeprefix("TNR").lstrip("#").strip()
+    number = int(number_text) if number_text.isdigit() else None
     hits: list[Hit] = []
     async with tenant_tx(request, principal) as session:
         if principal.has("contacts:read"):
@@ -415,43 +446,71 @@ async def search(
             for c in (await session.scalars(query.order_by(sim.desc()).limit(limit))).all():
                 hits.append(Hit(entity_type="contact", id=c.id, title=c.display_name))
         if principal.has("properties:read"):
-            props = await session.scalars(
-                select(Property)
-                .where(
-                    or_(
-                        Property.number.ilike(like),
-                        Property.name.ilike(like),
-                        Property.street.ilike(like),
-                        Property.city.ilike(like),
-                    )
+            # Properties, units and buildings in one statement (query budget of
+            # tests/integration/test_perf_queries.py): per type at most ``limit`` hits.
+            no_parent = cast(null(), UUID(as_uuid=True))
+            props = select(
+                literal("property").label("kind"),
+                Property.id.label("id"),
+                func.concat(Property.number, " ", Property.name).label("title"),
+                func.concat_ws(" ", Property.street, Property.house_number, Property.city).label(
+                    "subtitle"
+                ),
+                no_parent.label("parent_id"),
+                Property.number.label("sort1"),
+                literal("").label("sort2"),
+            ).where(
+                or_(
+                    Property.number.ilike(like),
+                    Property.name.ilike(like),
+                    Property.street.ilike(like),
+                    Property.city.ilike(like),
                 )
-                .order_by(Property.number)
-                .limit(limit)
             )
-            for p in props.all():
-                address = " ".join(x for x in (p.street, p.house_number, p.city) if x)
-                hits.append(
-                    Hit(
-                        entity_type="property",
-                        id=p.id,
-                        title=f"{p.number} {p.name}",
-                        subtitle=address or None,
-                    )
+            units = (
+                select(
+                    literal("unit"),
+                    Unit.id,
+                    func.concat(Property.number, "/", Unit.number),
+                    Unit.label,
+                    no_parent,
+                    Property.number,
+                    Unit.number,
                 )
-            units = await session.execute(
-                select(Unit, Property.number)
                 .join(Property, Property.id == Unit.property_id)
                 .where(or_(Unit.number.ilike(like), Unit.label.ilike(like)))
-                .order_by(Property.number, Unit.number)
-                .limit(limit)
             )
-            for u, number in units.all():
+            buildings = (
+                select(
+                    literal("building"),
+                    Building.id,
+                    func.concat(Property.number, " ", Building.name),
+                    func.concat_ws(" ", Building.street, Building.house_number),
+                    Building.property_id,
+                    Property.number,
+                    Building.name,
+                )
+                .join(Property, Property.id == Building.property_id)
+                .where(or_(Building.name.ilike(like), Building.street.ilike(like)))
+            )
+            combined = union_all(props, units, buildings).subquery()
+            rows = await session.execute(
+                select(combined)
+                .order_by(combined.c.kind, combined.c.sort1, combined.c.sort2)
+                .limit(3 * limit)
+            )
+            seen: dict[str, int] = {}
+            for row in rows.all():
+                seen[row.kind] = seen.get(row.kind, 0) + 1
+                if seen[row.kind] > limit:
+                    continue
                 hits.append(
                     Hit(
-                        entity_type="unit",
-                        id=u.id,
-                        title=f"{number}/{u.number}",
-                        subtitle=u.label,
+                        entity_type=row.kind,
+                        id=row.id,
+                        title=row.title,
+                        subtitle=row.subtitle or None,
+                        parent_id=row.parent_id,
                     )
                 )
         if principal.has("contracts:read"):
@@ -476,6 +535,50 @@ async def search(
             for d in docs.all():
                 hits.append(
                     Hit(entity_type="document", id=d.id, title=d.title, subtitle=d.filename)
+                )
+        if principal.has("tickets:read"):
+            conditions: list[ColumnElement[bool]] = [Ticket.title.ilike(like)]
+            if number is not None:
+                conditions.append(Ticket.number == number)
+            tickets = await session.scalars(
+                select(Ticket).where(or_(*conditions)).order_by(Ticket.number.desc()).limit(limit)
+            )
+            for t in tickets.all():
+                hits.append(
+                    Hit(
+                        entity_type="ticket",
+                        id=t.id,
+                        title=f"#{t.number} {t.title}",
+                        subtitle=t.status.value,
+                    )
+                )
+        if principal.has("accounting:read"):
+            conditions = [JournalEntry.text.ilike(like), JournalEntry.reference.ilike(like)]
+            if number is not None:
+                conditions.append(JournalEntry.number == number)
+            query = (
+                select(JournalEntry)
+                .join(Ledger, Ledger.id == JournalEntry.ledger_id)
+                .where(or_(*conditions))
+            )
+            scope = allowed_legal_entity_ids(principal)
+            if scope is not None:
+                query = query.where(Ledger.legal_entity_id.in_(scope))
+            entries = await session.scalars(
+                query.order_by(JournalEntry.booking_date.desc(), JournalEntry.number.desc()).limit(
+                    limit
+                )
+            )
+            for e in entries.all():
+                title = f"Buchung {e.number}" if e.number is not None else "Buchung (Entwurf)"
+                hits.append(
+                    Hit(
+                        entity_type="posting",
+                        id=e.id,
+                        title=f"{title} {e.text}",
+                        subtitle=f"{e.booking_date.isoformat()} {e.status.value}",
+                        parent_id=e.ledger_id,
+                    )
                 )
     return hits
 
@@ -508,6 +611,14 @@ class DeadlineOut(BaseModel):
     notified_at: datetime | None
     done_at: datetime | None
     updated_at: datetime
+    # Route to the source row (P1 AP7, "Sprung in die Quelle"); None without a page.
+    href: str | None = None
+
+
+def _deadline_out(row: Any) -> DeadlineOut:
+    out = DeadlineOut.model_validate(row)
+    out.href = links.target_href(row.source_type, row.source_id, property_id=row.property_id)
+    return out
 
 
 @router.get("/digest", summary="Tagesübersicht des angemeldeten Benutzers (A40)")
@@ -557,7 +668,7 @@ async def deadlines(
     query = query.order_by(ComplianceDeadline.due_on, ComplianceDeadline.reference).limit(limit)
     async with tenant_tx(request, principal) as session:
         rows = (await session.scalars(query)).all()
-        return [DeadlineOut.model_validate(r) for r in rows]
+        return [_deadline_out(r) for r in rows]
 
 
 @router.get("/job-settings", summary="Schalter der Tagesjobs (Digest-Mail, Vorfrist)")
@@ -799,20 +910,53 @@ async def calendar(
                 func.coalesce(CalendarEntry.ends_on, CalendarEntry.starts_on) >= start,
             )
         )
-        items = [
-            CalendarItem(
-                kind="appointment",
-                title=e.title,
-                date=e.starts_on,
-                ends_on=e.ends_on,
-                entity_type="calendar_entry",
-                entity_id=e.id,
-                property_id=e.property_id,
-                editable=e.owner_user_id == principal.user_id,
-                source="internal",
+        items = []
+        generated: set[tuple[str | None, uuid.UUID | None, date]] = set()
+        for e in entries.all():
+            if e.owner_user_id is None:
+                # Generated from a date field (P1 AP7): visible with the read permission of
+                # its kind, jumps to the source row, never editable here.
+                read_permission = jobs.DEADLINE_PERMISSIONS.get(e.category, ("", ""))[0]
+                if read_permission and not principal.has(read_permission):
+                    continue
+                generated.add((e.source_type, e.source_id, e.starts_on))
+                items.append(
+                    CalendarItem(
+                        kind=e.category,
+                        title=e.title,
+                        date=e.starts_on,
+                        ends_on=e.ends_on,
+                        entity_type=e.source_type,
+                        entity_id=e.source_id,
+                        property_id=e.property_id,
+                        editable=False,
+                        source="internal",
+                        category=e.category,
+                        reminders=[str(r) for r in e.reminders],
+                        href=links.target_href(
+                            e.source_type, e.source_id, property_id=e.property_id
+                        ),
+                        calendar_entry_id=e.id,
+                    )
+                )
+                continue
+            items.append(
+                CalendarItem(
+                    kind="appointment",
+                    title=e.title,
+                    date=e.starts_on,
+                    ends_on=e.ends_on,
+                    entity_type="calendar_entry",
+                    entity_id=e.id,
+                    property_id=e.property_id,
+                    editable=e.owner_user_id == principal.user_id,
+                    source="internal",
+                    reminders=[str(r) for r in e.reminders],
+                    calendar_entry_id=e.id,
+                )
             )
-            for e in entries.all()
-        ]
+        # Live derived dates stay for sources the nightly job has not yet materialised;
+        # a generated entry of the same source and date replaces them.
         derived = await services.derived_dates(
             session,
             start,
@@ -820,7 +964,18 @@ async def calendar(
             contracts=principal.has("contracts:read"),
             properties=principal.has("properties:read"),
         )
-        items += [CalendarItem(**d, source="internal") for d in derived]
+        for d in derived:
+            if (d["entity_type"], d["entity_id"], d["date"]) in generated:
+                continue
+            items.append(
+                CalendarItem(
+                    **d,
+                    source="internal",
+                    href=links.target_href(
+                        d["entity_type"], d["entity_id"], property_id=d.get("property_id")
+                    ),
+                )
+            )
 
         notices: list[CalendarNotice] = []
         default_mailbox, own_mailbox = await _resolve_calendars(session, principal)

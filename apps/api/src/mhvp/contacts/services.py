@@ -1,5 +1,6 @@
 """Contact services: create/replace with children, search text, duplicates, export."""
 
+import calendar
 import re
 import uuid
 from datetime import UTC, date, datetime
@@ -15,6 +16,7 @@ from mhvp.contacts.models import (
     Contact,
     ContactAddress,
     ContactBankAccount,
+    ContactDate,
     ContactEmail,
     ContactIdentifier,
     ContactKind,
@@ -33,7 +35,8 @@ from mhvp.contacts.validation import mask_iban, normalise_iban, normalise_phone
 from mhvp.contracts.models import Contract
 from mhvp.core import crypto
 from mhvp.core.events import DomainEvent, emit
-from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
+from mhvp.documents.models import RetentionProfile, RetentionStart
 from mhvp.objektakte.models import ObjektakteAssignment
 from mhvp.properties.models import Property, PropertyContact, PropertyOwner, Unit
 
@@ -42,6 +45,7 @@ _CHILDREN = (
     ContactPhone,
     ContactEmail,
     ContactIdentifier,
+    ContactDate,
     ContactBankAccount,
     ContactType,
     ContactTagLink,
@@ -166,6 +170,8 @@ async def write_children(
         session.add(ContactEmail(**common, **email.model_dump()))
     for identifier in data.identifiers:
         session.add(ContactIdentifier(**common, **identifier.model_dump()))
+    for item in data.dates:
+        session.add(ContactDate(**common, kind=item.kind, value=item.date, note=item.note))
     pending: list[ContactBankAccount] = []
     for account in data.bank_accounts or []:
         values = account.model_dump()
@@ -292,14 +298,21 @@ def apply_fields(
             "phones",
             "emails",
             "identifiers",
+            "dates",
             "bank_accounts",
             "types",
             "roles",
             "tags",
+            "retention_profile_id",
         }
     )
     for key, value in fields.items():
         setattr(contact, key, value)
+    # Block date (4.1): set when the block starts, cleared when it is lifted.
+    if contact.blocked and contact.blocked_at is None:
+        contact.blocked_at = datetime.now(UTC)
+    elif not contact.blocked:
+        contact.blocked_at = None
     contact.display_name = display_name(data)
     contact.search_text = build_search_text(data, suffixes)
     # Full replacement per the update semantics of this endpoint (rule 0.1.7 style updates
@@ -307,6 +320,66 @@ def apply_fields(
     # derived ones it saw in the previous GET. See recompute_derived_roles for how derived
     # roles are added automatically when a contract exists.
     contact.roles = sorted({r.value for r in data.roles})
+
+
+def delete_after(
+    profile: RetentionProfile | None, *, blocked_at: datetime | None, reference: date
+) -> date | None:
+    """Deletion reservation of a contact from its retention profile (4.1).
+
+    Operator decision 26.09.2026: the date is a reservation only, shown as due; the deletion
+    itself is a manual four eyes step on the existing deletion path, no automatic job. The period
+    starts at the block date if the contact is blocked, otherwise at ``reference`` (the date of
+    the assignment); ``end_of_year_*`` rules round the start up to 31.12. Permanent profiles
+    yield no date."""
+    if profile is None or profile.permanent:
+        return None
+    start = blocked_at.date() if blocked_at is not None else reference
+    if profile.start_rule in (
+        RetentionStart.END_OF_YEAR_CREATED,
+        RetentionStart.END_OF_YEAR_LAST_ENTRY,
+    ):
+        start = date(start.year, 12, 31)
+    months = start.month + profile.retention_months
+    year = start.year + profile.retention_years + (months - 1) // 12
+    month = (months - 1) % 12 + 1
+    last_day = calendar.monthrange(year, month)[1]
+    return date(year, month, min(start.day, last_day))
+
+
+def _retention_error(message: str) -> FieldError:
+    return FieldError(
+        location=["body", "retention_profile_id"],
+        field="retention_profile_id",
+        code="invalid",
+        message=message,
+    )
+
+
+async def apply_retention(
+    session: AsyncSession, contact: Contact, profile_id: uuid.UUID | None
+) -> None:
+    """Assigns the retention profile and recomputes ``delete_after``; only a released profile of
+    the tenant is accepted (RLS scopes the lookup)."""
+    profile: RetentionProfile | None = None
+    if profile_id is not None:
+        profile = await session.get(RetentionProfile, profile_id)
+        if profile is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Löschprofil nicht gefunden",
+                errors=[_retention_error("Löschprofil nicht gefunden")],
+            )
+        if profile.released_at is None:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Löschprofil ist nicht freigegeben",
+                errors=[_retention_error("Löschprofil ist nicht freigegeben")],
+            )
+    contact.retention_profile_id = profile_id
+    contact.delete_after = delete_after(
+        profile, blocked_at=contact.blocked_at, reference=datetime.now(UTC).date()
+    )
 
 
 TENANCY_ROLE = "mieter"
@@ -535,6 +608,9 @@ def bank_account_out(b: ContactBankAccount) -> schemas.BankAccountOut:
     return schemas.BankAccountOut(
         id=b.id,
         label=b.label,
+        kind=b.kind,
+        is_default=bool(getattr(b, "is_default", False)),
+        bank_contact_id=b.bank_contact_id,
         iban_masked=mask_iban(b.iban),
         bic=b.bic,
         bank_name=b.bank_name,
@@ -587,6 +663,7 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
         kind=contact.kind,
         display_name=contact.display_name,
         salutation=contact.salutation,
+        letter_salutation=contact.letter_salutation,
         title=contact.title,
         first_name=contact.first_name,
         last_name=contact.last_name,
@@ -598,6 +675,9 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
         notes=contact.notes,
         preferred_channel=contact.preferred_channel,
         blocked=contact.blocked,
+        blocked_at=contact.blocked_at,
+        retention_profile_id=contact.retention_profile_id,
+        delete_after=contact.delete_after,
         external_ids=contact.external_ids,
         completeness=contact.completeness,
         addresses=[
@@ -615,6 +695,10 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
         identifiers=[
             schemas.IdentifierOut.model_validate(i, from_attributes=True)
             for i in await rows(ContactIdentifier)
+        ],
+        dates=[
+            schemas.ContactDateOut(id=d.id, kind=d.kind, date=d.value, note=d.note)
+            for d in await rows(ContactDate)
         ],
         bank_accounts=[bank_account_out(b) for b in await rows(ContactBankAccount)],
         types=sorted(t.type for t in await rows(ContactType)),

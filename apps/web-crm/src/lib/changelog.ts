@@ -17,6 +17,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.29.0",
+    date: "27.09.2026",
+    title:
+      "Masterprompt-Ergänzung Welle A: Kontakt, Objekt und Einheit, Vertrag, Suche und Verknüpfungen, Kalender aus Datumsfeldern, Messdienstleister Stufe 2",
+    changes: [
+      "Kontakt nach Abschnitt 4.1 erweitert: Briefanrede, Bundesland, Landesvorwahl, Vorwahl und Notiz je Telefon, Datumsfelder, Kontotyp und Standardkonto je Bankverbindung, Sperrdatum, Löschprofil mit vorgemerktem Löschdatum (Löschung weiterhin manuell im Vier-Augen-Prinzip), Sperrliste, Notizen mit Titel und Wiedervorlage sowie die Reiter Beziehungen, Dokumente, Portal-Freigaben und Ereignisprotokoll (Migration 0147)",
+      "Objekte, Gebäude und Einheiten nach Abschnitt 4.2 bis 4.4 erweitert: Energieausweis vollständig und ausschließlich am Gebäude (Migration übernimmt Objektwerte), Gebäude und Einheit mit Versionsprüfung (ETag), Abrechnungszeiträume je Art, Untergemeinschaften, Objektmappe, Eigentümer mit Verrechnungskonto, Vollmacht und Steuerberater, Bankkonto mit Sachkonto, Dienstleister mit Kundennummer, Freistellungsbescheinigung und Kreditorenkonto, Einheit mit Provision, Kautionsbetrag und Leerstands-Umlagewerten, Zählerwechsel (Migrationen 0148, 0149)",
+      "Verträge: vertragsbezogene Umlagewerte mit Zeitraum, SEPA-Mandate mit Ertragsarten und Sonderumlage-Ausschluss, Einzugs- und Auszugsdatum, Vertragsbeendigung mit Zählerständen, Listen beendeter Verträge, Kautionen und Leerstand zum Stichtag; Vertragsseite mit Abschnitten Eigenschaften, Mandate und Debitorenkonto (Migration 0150)",
+      "Globale Suche findet jetzt auch Gebäude, Tickets (auch als #Nummer) und Buchungen mit Berechtigung je Trefferart; Verknüpfungsleiste und Ereignisprotokoll mit CSV-Export je Datensatz, zunächst im Ticketdetail; Änderungsprotokoll filtert nach Entitätstyp",
+      "Kalender und Fristen vereinheitlicht: Termine entstehen deterministisch aus Datumsfeldern (Eichdatum, Energieausweis, Vertragsende, Ein- und Auszug, Sanierung, Wiedervorlage, Versammlung), tragen Quelle, Kategorie und Erinnerungen und verlinken zur Quelle (Migration 0151)",
+      "Messdienstleister Stufe 2: Oberfläche unter Einstellungen, Schnittstellen (Verbindungen, Einrichtungsassistent mit ehrlichem Funktionsstand, zentrale Zuordnungsübersicht mit Sammelfreigabe, CSV) und Reiter am Objekt (Zuordnungen, Einheiten, Abruf je Datenart, Verbrauch, Abrechnungsergebnisse, Klärung); lesende Adapter für ista und KALO nach bved-Spezifikationen, Dokumentenübernahme ohne Dubletten und mit Versionierung, Auftragsausführung mit Sperre, Cursor und Wiederholungen; Fähigkeitsmatrix im Betreiberdokument",
+      "Betrieb: Migration 0146 idempotent, damit der Produktionsstand mit vorab eingespielter Vertragsfreigabe durchläuft",
+    ],
+  },
+  {
     version: "1.28.0",
     date: "26.09.2026",
     title:

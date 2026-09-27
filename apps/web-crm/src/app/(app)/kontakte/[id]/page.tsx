@@ -24,22 +24,40 @@ import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
+// Tabs of section 4.1 (Masterprompt Ergänzung): Übersicht, Beziehungen, Konten, Nachrichten,
+// Dokumente, Tickets, Portal-Freigaben, Notizen, Ereignisprotokoll (plus Einwilligungen).
 const TABS = [
   "stammdaten",
+  "beziehungen",
   "kommunikation",
   "tickets",
   "bankverbindungen",
+  "dokumente",
+  "freigaben",
   "notizen",
   "einwilligungen",
+  "protokoll",
 ] as const;
 type Tab = (typeof TABS)[number];
 const TAB_KEY: Record<Tab, string> = {
   stammdaten: "master",
+  beziehungen: "relations",
   kommunikation: "communication",
   tickets: "tickets",
   bankverbindungen: "bank",
+  dokumente: "documents",
+  freigaben: "releases",
   notizen: "notes",
   einwilligungen: "consents",
+  protokoll: "log",
+};
+
+type AuditEntry = {
+  id: string;
+  entity_type: string;
+  changes: Record<string, unknown>;
+  actor_user_id: string | null;
+  occurred_at: string;
 };
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
@@ -117,10 +135,23 @@ export default async function ContactDetailPage({
         ]
       : [];
   const relations =
-    (await api.GET("/api/v1/contacts/{contact_id}/relations", { params: { path: { contact_id: id } } })).data ?? [];
+    tab === "beziehungen"
+      ? ((await api.GET("/api/v1/contacts/{contact_id}/relations", { params: { path: { contact_id: id } } })).data ?? [])
+      : [];
   // Authorised representatives with delivery rule (operator decision 26.09.2026).
   const contactRelations =
-    (await api.GET("/api/v1/contacts/{contact_id}/contact-relations", { params: { path: { contact_id: id } } })).data ?? [];
+    tab === "beziehungen"
+      ? ((await api.GET("/api/v1/contacts/{contact_id}/contact-relations", { params: { path: { contact_id: id } } })).data ?? [])
+      : [];
+  // Dokumente (4.1): documents linked to the contact.
+  const documents =
+    tab === "dokumente"
+      ? ((await api.GET("/api/v1/documents", { params: { query: { entity_type: "contact", entity_id: id, page_size: 100 } } })).data?.items ?? [])
+      : [];
+  // Ereignisprotokoll (4.1): audit entries of this record; needs audit:read, otherwise empty.
+  const auditRes = tab === "protokoll" ? await serverFetch(`/api/v1/tenant/audit-log?entity_id=${id}`) : null;
+  const auditEntries: AuditEntry[] = auditRes?.ok ? ((await auditRes.json()) as AuditEntry[]) : [];
+  const canReadAudit = me.data?.permissions.includes("audit:read") ?? false;
   const canEditRelations =
     me.data?.permissions.includes("contacts:update") ?? false;
   // Anrufliste (13.5, A70): typisierter BFF-Fetch, kein generierter Client nötig.
@@ -184,6 +215,7 @@ export default async function ContactDetailPage({
           {person ? (
             <>
               <Row label={tf("salutation")} value={contact.salutation} />
+              <Row label={tf("letterSalutation")} value={contact.letter_salutation} />
               <Row label={tf("title")} value={contact.title} />
               <Row label={tf("firstName")} value={contact.first_name} />
               <Row label={tf("lastName")} value={contact.last_name} />
@@ -196,6 +228,7 @@ export default async function ContactDetailPage({
             <>
               <Row label={tf("companyName")} value={contact.company_name} />
               <Row label={tf("legalForm")} value={contact.legal_form} />
+              <Row label={tf("letterSalutation")} value={contact.letter_salutation} />
             </>
           )}
           <Row label={tf("position")} value={contact.position} />
@@ -209,6 +242,28 @@ export default async function ContactDetailPage({
             }
           />
           <Row label={tf("tags")} value={contact.tags.join(", ")} />
+          <Row
+            label={tf("dates")}
+            value={
+              contact.dates?.length
+                ? contact.dates
+                    .map((d) => `${tf(`dateKind.${d.kind}`)}: ${formatDate(d.date)}${d.note ? ` (${d.note})` : ""}`)
+                    .join(", ")
+                : null
+            }
+          />
+          <Row label={t("blockedAt")} value={formatDateTime(contact.blocked_at)} />
+          <Row
+            label={t("deleteAfter")}
+            value={
+              contact.delete_after ? (
+                <>
+                  {formatDate(contact.delete_after)}
+                  <span className="block text-xs text-muted">{t("deleteAfterHint")}</span>
+                </>
+              ) : null
+            }
+          />
           <Row
             label={tf("notes")}
             value={
@@ -246,6 +301,7 @@ export default async function ContactDetailPage({
                     <br />
                     {[a.postal_code, a.city].filter(Boolean).join(" ")}{" "}
                     {a.country}
+                    {a.state ? <>, {a.state}</> : null}
                   </li>
                 ))}
               </ul>
@@ -265,6 +321,8 @@ export default async function ContactDetailPage({
                     <span className="text-xs text-muted">
                       {tl(`phone.${p.label}`)}
                       {p.is_primary ? `, ${tf("primary")}` : ""}
+                      {p.country_code || p.area_code ? `, ${[p.country_code, p.area_code].filter(Boolean).join(" ")}` : ""}
+                      {p.note ? `, ${p.note}` : ""}
                     </span>
                   </li>
                 ))}
@@ -314,7 +372,9 @@ export default async function ContactDetailPage({
                 >
                   <span className="font-mono whitespace-nowrap">
                     {b.iban_masked}
+                    {b.is_default ? <span className="ml-1 font-sans text-xs text-muted">{tf("defaultAccount")}</span> : null}
                   </span>
+                  {b.kind ? <span className="text-xs text-muted">{tf(`accountKind.${b.kind}`)}</span> : null}
                   <span className="text-xs text-muted">
                     {[b.bank_name, b.bic, b.holder].filter(Boolean).join(", ")}
                   </span>
@@ -341,6 +401,7 @@ export default async function ContactDetailPage({
                 <thead className="border-b border-border text-left text-xs text-muted">
                   <tr>
                     <th className="py-1 pr-3 font-medium">{tf("iban")}</th>
+                    <th className="py-1 pr-3 font-medium">{tf("accountKind")}</th>
                     <th className="py-1 pr-3 font-medium">{tf("bic")}</th>
                     <th className="py-1 pr-3 font-medium">{tf("bankName")}</th>
                     <th className="py-1 pr-3 font-medium">{tf("holder")}</th>
@@ -356,7 +417,9 @@ export default async function ContactDetailPage({
                     <tr key={b.id} className="border-b border-border align-top">
                       <td className="py-1.5 pr-3 font-mono whitespace-nowrap">
                         {b.iban_masked}
+                        {b.is_default ? <span className="ml-1 text-xs text-muted">{tf("defaultAccount")}</span> : null}
                       </td>
+                      <td className="py-1.5 pr-3">{b.kind ? tf(`accountKind.${b.kind}`) : ""}</td>
                       <td className="py-1.5 pr-3">{b.bic ?? ""}</td>
                       <td className="py-1.5 pr-3">{b.bank_name ?? ""}</td>
                       <td className="py-1.5 pr-3">{b.holder ?? ""}</td>
@@ -396,7 +459,7 @@ export default async function ContactDetailPage({
       ) : null}
 
       {tab === "tickets" ? <TicketsSection tickets={tickets as TicketSummary[]} /> : null}
-      {tab === "kommunikation" ? (
+      {tab === "freigaben" ? (
         <PortalAccessSection
           contactId={contact.id}
           displayName={contact.display_name}
@@ -417,12 +480,60 @@ export default async function ContactDetailPage({
       {tab === "notizen" ? <NotesPanel contactId={contact.id} notes={notes} /> : null}
       {tab === "einwilligungen" ? <ConsentsPanel contactId={contact.id} consents={consents} /> : null}
 
-      <RelationsPanel relations={relations} />
-      <RepresentativesPanel
-        contactId={contact.id}
-        relations={contactRelations}
-        canEdit={canEditRelations}
-      />
+      {tab === "beziehungen" ? (
+        <>
+          <RelationsPanel relations={relations} />
+          <RepresentativesPanel
+            contactId={contact.id}
+            relations={contactRelations}
+            canEdit={canEditRelations}
+          />
+        </>
+      ) : null}
+      {tab === "dokumente" ? (
+        <section>
+          <h2 className="mb-1 text-sm font-semibold">{t("documents.title")}</h2>
+          {documents.length ? (
+            <ul className="flex flex-col gap-1 text-sm">
+              {documents.map((d) => (
+                <li key={d.id}>
+                  <Link href={`/dokumente/${d.id}`} className="hover:underline">
+                    {d.title}
+                  </Link>{" "}
+                  <span className="text-xs text-muted">
+                    {formatDateTime(d.created_at)}
+                    {d.is_draft ? `, ${t("documents.draft")}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">{t("none")}</p>
+          )}
+        </section>
+      ) : null}
+      {tab === "protokoll" ? (
+        <section>
+          <h2 className="mb-1 text-sm font-semibold">{t("log.title")}</h2>
+          {!canReadAudit ? (
+            <p className="text-sm text-muted">{t("log.noPermission")}</p>
+          ) : auditEntries.length ? (
+            <ul className="flex flex-col gap-2 text-sm" data-testid="contact-audit-log">
+              {auditEntries.map((entry) => (
+                <li key={entry.id} className={ui.card}>
+                  <p className="text-xs text-muted">
+                    {formatDateTime(entry.occurred_at)}
+                    {entry.actor_user_id ? `, ${t("log.actor")} ${entry.actor_user_id}` : ""}
+                  </p>
+                  <p>{Object.keys(entry.changes).join(", ") || t("log.noFields")}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="text-sm text-muted">{t("none")}</p>
+          )}
+        </section>
+      ) : null}
     </div>
   );
 }

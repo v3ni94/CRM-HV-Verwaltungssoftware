@@ -4,7 +4,7 @@ import uuid
 from collections.abc import Sequence
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy import or_, select
@@ -17,8 +17,10 @@ from mhvp.contracts import schemas as s
 from mhvp.contracts import services as svc
 from mhvp.contracts.models import (
     Contract,
+    ContractAllocationValue,
     ContractKind,
     ContractPayment,
+    ContractTerminationReading,
     DebtorAccountReservation,
     Deposit,
     DepositMovement,
@@ -30,7 +32,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.properties.models import ManagementType, Property, Unit
+from mhvp.properties.models import AllocationKey, ManagementType, Property, Unit
 from mhvp.properties.services import check_catalog
 
 router = APIRouter(tags=["Verträge"])
@@ -188,6 +190,12 @@ async def list_contracts(
     party_id: uuid.UUID | None = None,
     kind: ContractKind | None = None,
     active_on: date | None = None,
+    status: Literal["active", "ended", "upcoming"] | None = Query(
+        default=None,
+        description="Laufzeitstatus zum Stichtag as_of: active, ended (Ende vor dem Stichtag), "
+        "upcoming (Beginn nach dem Stichtag)",
+    ),
+    as_of: date | None = Query(default=None, description="Stichtag für status, Standard heute"),
     limit: int = Query(default=200, ge=1, le=1000),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
@@ -199,9 +207,21 @@ async def list_contracts(
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.ContractOut]:
     """Verträge nach Nummer und Version. Paginierung wie ``GET /tickets``: die Antwort bleibt
-    eine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``."""
+    eine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``.
+    ``status=ended`` liefert beendete Verträge (Ende vor dem Stichtag)."""
     async with tenant_tx(request, principal) as session:
         query = select(Contract)
+        if status is not None:
+            day = as_of or datetime.now(UTC).date()
+            if status == "ended":
+                query = query.where(Contract.end_date.is_not(None), Contract.end_date < day)
+            elif status == "upcoming":
+                query = query.where(Contract.start_date > day)
+            else:
+                query = query.where(
+                    Contract.start_date <= day,
+                    or_(Contract.end_date.is_(None), Contract.end_date >= day),
+                )
         for column, value in (
             (Contract.property_id, property_id),
             (Contract.unit_id, unit_id),
@@ -501,9 +521,141 @@ async def terminate(
         await svc.end_contract(session, contract, body.end_date)
         contract.termination_date = body.termination_date
         contract.termination_reason = body.termination_reason
+        if body.move_out_on is not None:
+            contract.move_out_on = body.move_out_on
         contract.updated_by = principal.user_id
-        await _event(session, principal, "contract.terminated", contract.id, end_date=body.end_date)
+        readings = await svc.record_termination_readings(
+            session,
+            contract,
+            [(r.meter_id, r.value, r.read_at) for r in body.meter_readings],
+            principal.user_id,
+        )
+        await _event(
+            session,
+            principal,
+            "contract.terminated",
+            contract.id,
+            end_date=body.end_date,
+            move_out_on=body.move_out_on,
+            meter_readings=len(readings),
+        )
         return await _out(session, contract)
+
+
+@router.get(
+    "/contracts/{contract_id}/termination-readings",
+    summary="Zählerstände zur Vertragsbeendigung",
+)
+async def termination_readings(
+    contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.TerminationReadingOut]:
+    async with tenant_tx(request, principal) as session:
+        await _get(session, Contract, contract_id)
+        rows = (
+            await session.scalars(
+                select(ContractTerminationReading)
+                .where(ContractTerminationReading.contract_id == contract_id)
+                .order_by(ContractTerminationReading.read_at, ContractTerminationReading.id)
+            )
+        ).all()
+        return [s.TerminationReadingOut.model_validate(r) for r in rows]
+
+
+# Contract related allocation values (4.5 Eigenschaften) --------------------------------
+
+
+async def _allocation_values_out(
+    session: Any, rows: Sequence[ContractAllocationValue]
+) -> list[s.ContractAllocationValueOut]:
+    if not rows:
+        return []
+    keys = {
+        k.id: k
+        for k in (
+            await session.scalars(
+                select(AllocationKey).where(
+                    AllocationKey.id.in_({r.allocation_key_id for r in rows})
+                )
+            )
+        ).all()
+    }
+    out = []
+    for r in rows:
+        item = s.ContractAllocationValueOut.model_validate(r)
+        key = keys.get(r.allocation_key_id)
+        if key is not None:
+            item.allocation_key_code = key.code
+            item.allocation_key_name = key.name
+            item.unit_of_measure = key.unit_of_measure
+        out.append(item)
+    return out
+
+
+@router.get("/contracts/{contract_id}/allocation-values", summary="Umlagewerte des Vertrags")
+async def list_allocation_values(
+    contract_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.ContractAllocationValueOut]:
+    """Vertragsbezogene Umlagewerte mit Zeitraum (z. B. Personen), alle Versionen der
+    Vertragsnummer."""
+    async with tenant_tx(request, principal) as session:
+        contract = await _get(session, Contract, contract_id)
+        ids = (
+            await session.scalars(select(Contract.id).where(Contract.number == contract.number))
+        ).all()
+        rows = (
+            await session.scalars(
+                select(ContractAllocationValue)
+                .where(ContractAllocationValue.contract_id.in_(ids))
+                .order_by(
+                    ContractAllocationValue.allocation_key_id, ContractAllocationValue.valid_from
+                )
+            )
+        ).all()
+        return await _allocation_values_out(session, rows)
+
+
+@router.post(
+    "/contracts/{contract_id}/allocation-values",
+    status_code=201,
+    summary="Umlagewert am Vertrag erfassen",
+)
+async def add_allocation_value(
+    contract_id: uuid.UUID,
+    body: s.ContractAllocationValueIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.ContractAllocationValueOut:
+    """Schließt einen offenen Vorwert desselben Schlüssels am Vortag; Zeiträume je Schlüssel
+    überschneiden sich nie. Keine Buchung, keine Abrechnungswirkung außerhalb der Module."""
+    async with tenant_tx(request, principal) as session:
+        contract = await _get(session, Contract, contract_id)
+        open_row = await session.scalar(
+            select(ContractAllocationValue).where(
+                ContractAllocationValue.contract_id == contract.id,
+                ContractAllocationValue.allocation_key_id == body.allocation_key_id,
+                ContractAllocationValue.valid_to.is_(None),
+                ContractAllocationValue.valid_from < body.valid_from,
+            )
+        )
+        if open_row is not None:
+            open_row.valid_to = body.valid_from - timedelta(days=1)
+            open_row.updated_by = principal.user_id
+            await session.flush()
+        row = await svc.add_allocation_value(
+            session, contract, body.allocation_key_id, body.value, body.valid_from, body.valid_to
+        )
+        row.created_by = principal.user_id
+        await _flush(session, "Der Umlagewert überschneidet sich mit einem bestehenden Wert.")
+        await _event(
+            session,
+            principal,
+            "contract.allocation_value_added",
+            contract.id,
+            allocation_key_id=body.allocation_key_id,
+            value=body.value,
+            valid_from=body.valid_from,
+        )
+        return (await _allocation_values_out(session, [row]))[0]
 
 
 @router.post(
@@ -703,6 +855,8 @@ async def create_mandate(
         await svc.check_b2b(session, body.party_id, body.type)
         if body.valid_until is not None and body.valid_until < body.signed_at:
             raise svc.invalid("Das Mandat endet vor der Unterschrift.")
+        for code in body.payment_type_codes:
+            await check_catalog(session, "payment_type", code)
         mandate = SepaMandate(tenant_id=principal.tenant_id, **body.model_dump())
         session.add(mandate)
         await _flush(session, "Die Mandatsreferenz ist für diese Gläubiger-ID bereits vergeben.")
@@ -804,6 +958,100 @@ async def list_deposits(
         return await _deposits_out(session, rows)
 
 
+@router.get("/deposits", summary="Kautionsliste", responses=PAGE_HEADERS)
+async def list_all_deposits(
+    request: Request,
+    response: Response,
+    property_id: uuid.UUID | None = None,
+    status: str | None = Query(default=None, description="Kautionsstatus, z. B. open"),
+    outstanding_only: bool = Query(default=False, description="Nur mit offenem Sollbetrag"),
+    limit: int = Query(default=200, ge=1, le=1000),
+    page: int = Query(default=1, ge=1),
+    page_size: int | None = Query(default=None, ge=1, le=1000),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[s.DepositListRow]:
+    """Kautionen über alle Verträge mit Objekt, Einheit, Partei, Sollbetrag, erhaltenem
+    Betrag, Guthaben und offenem Betrag (Datensätze, keine Buchungen; M10, G1)."""
+    async with tenant_tx(request, principal) as session:
+        query = select(Deposit).join(Contract, Contract.id == Deposit.contract_id)
+        if property_id is not None:
+            query = query.where(Contract.property_id == property_id)
+        if status is not None:
+            query = query.where(Deposit.status == status)
+        rows = await paginate(
+            session,
+            query.order_by(Contract.number, Deposit.valid_from, Deposit.id),
+            response,
+            page=page,
+            page_size=page_size,
+            limit=limit,
+        )
+        totals = {d.id: d for d in await _deposits_out(session, rows)}
+        contracts = {
+            c.id: c
+            for c in (
+                await session.scalars(
+                    select(Contract).where(Contract.id.in_({d.contract_id for d in rows}))
+                )
+            ).all()
+        }
+        props = {
+            p.id: p
+            for p in (
+                await session.scalars(
+                    select(Property).where(
+                        Property.id.in_({c.property_id for c in contracts.values()})
+                    )
+                )
+            ).all()
+        }
+        units = {
+            u.id: u
+            for u in (
+                await session.scalars(
+                    select(Unit).where(Unit.id.in_({c.unit_id for c in contracts.values()}))
+                )
+            ).all()
+        }
+        parties = {
+            p.id: p
+            for p in (
+                await session.scalars(
+                    select(Party).where(Party.id.in_({c.party_id for c in contracts.values()}))
+                )
+            ).all()
+        }
+        out = []
+        for d in rows:
+            c = contracts[d.contract_id]
+            t = totals[d.id]
+            if outstanding_only and t.outstanding <= 0:
+                continue
+            out.append(
+                s.DepositListRow(
+                    id=d.id,
+                    contract_id=c.id,
+                    contract_number=c.number,
+                    property_id=c.property_id,
+                    property_number=props[c.property_id].number,
+                    unit_id=c.unit_id,
+                    unit_number=units[c.unit_id].number,
+                    party_id=c.party_id,
+                    party_name=parties[c.party_id].name,
+                    kind=d.kind,
+                    status=d.status,
+                    amount_due=d.amount_due,
+                    received=t.received,
+                    balance=t.balance,
+                    outstanding=t.outstanding,
+                    valid_from=d.valid_from,
+                    valid_to=d.valid_to,
+                    contract_end_date=c.end_date,
+                )
+            )
+        return out
+
+
 @router.post("/deposits/{deposit_id}/movements", status_code=201, summary="Kautionsbewegung")
 async def add_deposit_movement(
     deposit_id: uuid.UUID,
@@ -900,3 +1148,51 @@ async def occupancy(
                 )
             )
         return rows
+
+
+@router.get("/properties/{property_id}/vacancies", summary="Leerstand zum Stichtag")
+async def vacancies(
+    property_id: uuid.UUID,
+    request: Request,
+    as_of: date = Query(default_factory=date.today),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[s.VacancyRow]:
+    """Vermietbare Einheiten ohne Mietverhältnis zum Stichtag (Mietobjekte und SEV-Eigentum)
+    mit Leerstandsbeginn (Tag nach dem letzten Mietende) und letztem Mietvertrag."""
+    async with tenant_tx(request, principal) as session:
+        occupancy_rows = await occupancy(property_id, request, as_of, principal)
+        vacant = [r for r in occupancy_rows if r.vacant]
+        if not vacant:
+            return []
+        unit_ids = [r.unit_id for r in vacant]
+        previous: dict[uuid.UUID, Contract] = {}
+        for c in (
+            await session.scalars(
+                select(Contract)
+                .where(
+                    Contract.unit_id.in_(unit_ids),
+                    Contract.kind == ContractKind.TENANCY,
+                    Contract.end_date.is_not(None),
+                    Contract.end_date < as_of,
+                )
+                .order_by(Contract.end_date.desc())
+            )
+        ).all():
+            previous.setdefault(c.unit_id, c)
+        return [
+            s.VacancyRow(
+                unit_id=r.unit_id,
+                unit_number=r.unit_number,
+                unit_label=r.unit_label,
+                unit_type=r.unit_type,
+                vacant_since=(
+                    prev.end_date + timedelta(days=1)
+                    if (prev := previous.get(r.unit_id)) is not None and prev.end_date
+                    else None
+                ),
+                previous_contract_id=prev.id if prev is not None else None,
+                ownership_contract_id=r.ownership_contract_id,
+                owner_party=r.owner_party,
+            )
+            for r in vacant
+        ]

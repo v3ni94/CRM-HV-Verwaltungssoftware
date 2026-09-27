@@ -43,6 +43,9 @@ def admin(client: TestClient, world: World) -> dict[str, str]:
 
 
 def _property(client: TestClient, h: dict[str, str], number: str) -> dict[str, Any]:
+    # Property numbers are NNN: derive a per run number so reruns on the shared database
+    # never reuse assignments of an earlier run.
+    number = f"{(int(RUN[:6], 16) + int(number)) % 1000:03d}"
     existing = _ok(client.get("/api/v1/properties", params={"search": number}, headers=h))
     for row in existing if isinstance(existing, list) else existing.get("items", []):
         if row.get("number") == number:
@@ -139,7 +142,11 @@ def test_module_switch_locks_writes(client: TestClient, world: World) -> None:
     assert {"ista", "techem", "kalo", "brunata_minol", "brunata_metrona", "other"} <= codes
     ista = next(p for p in providers if p["code"] == "ista")
     assert "erneut prüfen" in ista["research_note"]
-    assert all(f["adapter_implemented"] is False for f in ista["functions"])
+    # stage 2: read paths implemented for ista, writing functions never
+    by_function = {f["function"]: f for f in ista["functions"]}
+    assert by_function["consumption"]["adapter_implemented"] is True
+    assert by_function["roles"]["adapter_implemented"] is False
+    assert by_function["billing_input"]["adapter_implemented"] is False
     techem = next(p for p in providers if p["code"] == "techem")
     assert {f["documented_support"] for f in techem["functions"]} == {"documentation_required"}
     assert not any(f["documented_support"] == "no" for p in providers for f in p["functions"])
@@ -161,12 +168,14 @@ def test_case_1_2_9_connections_secrets_and_leading_zeros(
     row_b = _ok(_assign(client, admin, b, p8, external_number="0004711"), 201)
     # same external number on two accounts of the same provider stays separate
     assert row_a["external_billing_unit_id"] != row_b["external_billing_unit_id"]
-    assert row_a["property_number"] == "907" and row_a["external_number"] == "0004711"  # noqa: PT018
+    assert row_a["property_number"] == p7["number"]
+    assert row_a["external_number"] == "0004711"
     export = client.get(
         "/api/v1/metering/assignments-export", params={"property_id": p7["id"]}, headers=admin
     )
     assert export.status_code == 200
-    assert '"0004711"' in export.text and '"907"' in export.text  # noqa: PT018
+    assert '"0004711"' in export.text
+    assert f'"{p7["number"]}"' in export.text
     # secrets can be replaced but never read; replacing marks the test stale
     _ok(client.post(f"/api/v1/metering/connections/{a['id']}/test", headers=admin))
     replaced = _ok(
@@ -573,7 +582,10 @@ def test_case_6_and_12_sync_clearing_and_read_only_test(
         and results[0]["review_status"] == "imported"
     )
     connection = _ok(client.get(f"/api/v1/metering/connections/{conn['id']}", headers=admin))
-    assert set(connection["last_sync"]) == {"consumption", "billing_result"}
+    assert {k for k in connection["last_sync"] if not k.startswith("_")} == {
+        "consumption",
+        "billing_result",
+    }
     # resolving a clearing item records the decision only
     resolved = _ok(
         client.post(
@@ -655,7 +667,7 @@ def test_case_8_9_tenant_permission_and_environment_boundaries(
     # production never runs against the fake adapter (test and production stay apart)
     prod = _connection(client, admin, f"ista Produktion {RUN}", environment="production")
     test = _ok(client.post(f"/api/v1/metering/connections/{prod['id']}/test", headers=admin))
-    assert test["outcome"] == "not_implemented"
+    assert test["outcome"] == "credentials_missing"  # ista adapter exists, no secrets given
     assert SECRET not in json.dumps(test)
 
 
@@ -669,8 +681,8 @@ def test_csv_import_preview_apply_and_duplicates(
     assert template.status_code == 200 and template.text.startswith("property_number;")  # noqa: PT018
     csv_text = (
         "property_number;connection_name;external_number;service_scope;valid_from;valid_to\r\n"
-        f"915;{name};0004750;heating;01.01.2026;\r\n"
-        f"915;{name};0004750;heating;01.01.2026;\r\n"
+        f"{prop['number']};{name};0004750;heating;01.01.2026;\r\n"
+        f"{prop['number']};{name};0004750;heating;01.01.2026;\r\n"
         f"999;{name};=1+1;heating;2026-01-01;\r\n"
     )
     files = {"file": ("zuordnungen.csv", io.BytesIO(csv_text.encode()), "text/csv")}

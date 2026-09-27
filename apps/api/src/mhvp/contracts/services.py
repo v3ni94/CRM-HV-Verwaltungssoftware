@@ -11,8 +11,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.contacts.models import Contact, ContactKind, Party, PartyMember
 from mhvp.contracts.models import (
     Contract,
+    ContractAllocationValue,
     ContractKind,
     ContractPayment,
+    ContractTerminationReading,
     DebtorAccountReservation,
     Deposit,
     DepositMovement,
@@ -26,13 +28,17 @@ from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.defaults import REDUCTION_PAYMENT_TYPES
 from mhvp.properties.models import (
+    AllocationKey,
     BankAccountKind,
     LegalEntity,
     LegalEntityKind,
     ManagementType,
+    Meter,
+    MeterReading,
     Property,
     PropertyBankAccount,
     PropertyOwner,
+    ReadingSource,
     Unit,
 )
 
@@ -359,3 +365,88 @@ def deposit_totals(deposit: Deposit, movements: list[DepositMovement]) -> tuple[
         Decimal("0.00"),
     )
     return received, received + interest - out
+
+
+# P1 additions (Ergänzung CRM 4.5, migration 0150) ---------------------------------------
+
+
+async def add_allocation_value(
+    session: AsyncSession,
+    contract: Contract,
+    key_id: uuid.UUID,
+    value: Decimal,
+    valid_from: date,
+    valid_to: date | None,
+) -> ContractAllocationValue:
+    """Contract related allocation value (e.g. persons); the key must belong to the property
+    of the contract and the period must lie within the contract term."""
+    key = await session.get(AllocationKey, key_id)
+    if key is None or key.property_id != contract.property_id:
+        raise invalid("Der Umlageschlüssel gehört nicht zum Objekt des Vertrags.")
+    if valid_from < contract.start_date or (
+        contract.end_date is not None and valid_from > contract.end_date
+    ):
+        raise invalid("Der Umlagewert muss innerhalb der Vertragslaufzeit beginnen.")
+    row = ContractAllocationValue(
+        tenant_id=contract.tenant_id,
+        contract_id=contract.id,
+        allocation_key_id=key.id,
+        value=value,
+        valid_from=valid_from,
+        valid_to=valid_to,
+    )
+    session.add(row)
+    return row
+
+
+async def record_termination_readings(
+    session: AsyncSession,
+    contract: Contract,
+    readings: list[tuple[uuid.UUID, Decimal, date | None]],
+    actor: uuid.UUID | None,
+) -> list[ContractTerminationReading]:
+    """Meter readings at the end of a contract: each becomes a ``meter_reading`` (source
+    ``manual``) plus the link row. Meters must belong to the unit or the property of the
+    contract; a second termination reading for the same meter is rejected."""
+    if not readings or contract.end_date is None:
+        return []
+    out: list[ContractTerminationReading] = []
+    for meter_id, value, read_at in readings:
+        meter = await session.get(Meter, meter_id)
+        if meter is None or meter.property_id != contract.property_id:
+            raise invalid("Der Zähler gehört nicht zum Objekt des Vertrags.")
+        if meter.unit_id is not None and meter.unit_id != contract.unit_id:
+            raise invalid("Der Zähler gehört zu einer anderen Einheit.")
+        exists = await session.scalar(
+            select(ContractTerminationReading.id).where(
+                ContractTerminationReading.contract_id == contract.id,
+                ContractTerminationReading.meter_id == meter.id,
+            )
+        )
+        if exists is not None:
+            raise invalid("Für diesen Zähler ist zur Beendigung bereits ein Stand erfasst.")
+        day = read_at or contract.end_date
+        reading = MeterReading(
+            tenant_id=contract.tenant_id,
+            meter_id=meter.id,
+            read_at=day,
+            value=value,
+            source=ReadingSource.MANUAL,
+            notes=f"Vertragsende {contract.number}",
+            created_by=actor,
+        )
+        session.add(reading)
+        await session.flush()
+        link = ContractTerminationReading(
+            tenant_id=contract.tenant_id,
+            contract_id=contract.id,
+            meter_id=meter.id,
+            meter_reading_id=reading.id,
+            value=value,
+            read_at=day,
+            created_by=actor,
+        )
+        session.add(link)
+        out.append(link)
+    await session.flush()
+    return out

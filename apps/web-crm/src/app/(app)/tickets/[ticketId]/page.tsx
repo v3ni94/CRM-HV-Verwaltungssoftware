@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { AuditLogPanel } from "@/components/common/AuditLogPanel";
+import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketAppointmentButton } from "@/components/tickets/TicketAppointmentButton";
@@ -72,6 +74,14 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-4">
       <PageHeader breadcrumb={[{ href: "/tickets", label: t("title") }]} title={`#${String(data.number)} ${String(data.title ?? "")}`} />
+      <EntityLinksBar
+        links={[
+          { type: "property", id: data.property_id ? String(data.property_id) : null, label: property?.data?.name ? String(property.data.name) : null },
+          { type: "unit", id: data.unit_id ? String(data.unit_id) : null },
+          { type: "contact", id: data.contact_id ? String(data.contact_id) : null, label: contact?.data?.display_name ? String(contact.data.display_name) : null },
+          { type: "ticket", id: data.parent_ticket_id ? String(data.parent_ticket_id) : null, label: t("links.parent") },
+        ]}
+      />
       {data.public_description ? (
         <SafeText className="max-w-3xl text-sm text-muted" testId="ticket-description">
           {String(data.public_description)}
@@ -149,6 +159,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
         <TicketHistory events={events} />
       </section>
       <DmsDocumentsPanel entity="ticket" id={ticketId} />
+      <AuditLogPanel entityType="ticket" entityId={ticketId} />
     </div>
   );
 }

@@ -26,6 +26,7 @@ CRM_DETAIL_ROUTES: dict[str, str] = {
     "contract": "/vertraege",
     "property": "/objekte",
     "ai_conversation": "/assistent",
+    "contact": "/kontakte",
 }
 # Target types that lead to a list page of the CRM (no detail page or the id is not needed).
 CRM_LIST_ROUTES: dict[str, str] = {
@@ -85,6 +86,18 @@ def target_href(
         return f"/mail?message={target_id}" if target_id is not None else "/mail"
     if target_type == "maintenance_item":
         return f"/objekte/{property_id}#wartung" if property_id is not None else "/objekte"
+    # Sources of generated calendar entries (P1 AP7): meters, buildings and the energy
+    # certificate live on the property page, meetings under the HOA section of the property.
+    if target_type == "meter":
+        return f"/objekte/{property_id}#zaehler" if property_id is not None else "/objekte"
+    if target_type == "building":
+        return f"/objekte/{property_id}#gebaeude" if property_id is not None else "/objekte"
+    if target_type == "owners_meeting":
+        if property_id is not None and target_id is not None:
+            return f"/weg/{property_id}/versammlung/{target_id}"
+        return "/weg"
+    if target_type == "contact_note":
+        return f"/kontakte/{property_id}" if property_id is not None else "/kontakte"
     if target_id is not None and target_type in CRM_DETAIL_ROUTES:
         return f"{CRM_DETAIL_ROUTES[target_type]}/{target_id}"
     return CRM_LIST_ROUTES.get(target_type)

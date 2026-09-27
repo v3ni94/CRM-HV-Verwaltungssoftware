@@ -24,7 +24,9 @@ from mhvp.properties.models import (
     Property,
     PropertyOwner,
     PropertyStatus,
+    SubCommunity,
     UnitAllocationValue,
+    UnitVacancyAllocationValue,
 )
 
 ALLOWED_TRANSITIONS: dict[PropertyStatus, set[PropertyStatus]] = {
@@ -228,6 +230,77 @@ async def add_allocation_value(
     return row, previous
 
 
+async def add_vacancy_allocation_value(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    unit_id: uuid.UUID,
+    key_id: uuid.UUID,
+    value: Decimal,
+    valid_from: date,
+    valid_to: date | None,
+) -> UnitVacancyAllocationValue:
+    """Vacancy key value (4.4); an open ended earlier value is closed the day before."""
+    previous = await session.scalar(
+        select(UnitVacancyAllocationValue).where(
+            UnitVacancyAllocationValue.unit_id == unit_id,
+            UnitVacancyAllocationValue.allocation_key_id == key_id,
+            UnitVacancyAllocationValue.valid_to.is_(None),
+            UnitVacancyAllocationValue.valid_from < valid_from,
+        )
+    )
+    if previous is not None:
+        previous.valid_to = valid_from - timedelta(days=1)
+        await session.flush()
+    row = UnitVacancyAllocationValue(
+        tenant_id=tenant_id,
+        unit_id=unit_id,
+        allocation_key_id=key_id,
+        value=value,
+        valid_from=valid_from,
+        valid_to=valid_to,
+    )
+    session.add(row)
+    await session.flush()
+    return row
+
+
+async def check_ledger_account(
+    session: AsyncSession, account_id: uuid.UUID | None, property_id: uuid.UUID, label: str
+) -> None:
+    """An assigned ledger account must exist in the tenant and belong to a ledger of a legal
+    entity of this property (6.9.1: accounts never cross legal entities). Reference only."""
+    if account_id is None:
+        return
+    from mhvp.accounting.models import Ledger, LedgerAccount
+
+    row = (
+        await session.execute(
+            select(Ledger.property_id, LegalEntity.property_id)
+            .join(LedgerAccount, LedgerAccount.ledger_id == Ledger.id)
+            .join(LegalEntity, LegalEntity.id == Ledger.legal_entity_id)
+            .where(LedgerAccount.id == account_id)
+        )
+    ).first()
+    if row is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail=f"{label} nicht gefunden.")
+    if property_id not in row:
+        raise invalid(f"{label} gehört nicht zu einem Rechtsträger dieses Objekts.")
+
+
+async def check_sub_community(
+    session: AsyncSession, sub_community_id: uuid.UUID | None, property_id: uuid.UUID
+) -> None:
+    if sub_community_id is None:
+        return
+    row = await session.get(SubCommunity, sub_community_id)
+    if row is None:
+        raise ProblemError(
+            ErrorCodes.RESOURCE_NOT_FOUND, detail="Untergemeinschaft nicht gefunden."
+        )
+    if row.property_id != property_id:
+        raise invalid("Die Untergemeinschaft gehört nicht zu diesem Objekt.")
+
+
 async def reading_is_implausible(
     session: AsyncSession, meter_id: uuid.UUID, read_at: date, value: Decimal
 ) -> bool:
@@ -304,4 +377,7 @@ async def owner_view(
         "valid_from": owner.valid_from,
         "valid_to": owner.valid_to,
         "legal_entity_id": entity,
+        "clearing_account_id": owner.clearing_account_id,
+        "power_of_attorney_document_id": owner.power_of_attorney_document_id,
+        "tax_advisor_contact_id": owner.tax_advisor_contact_id,
     }

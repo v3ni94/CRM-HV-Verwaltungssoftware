@@ -20,7 +20,7 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
-from sqlalchemy.dialects.postgresql import UUID, ExcludeConstraint
+from sqlalchemy.dialects.postgresql import JSONB, UUID, ExcludeConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.core.db.base import Base
@@ -197,6 +197,9 @@ class Contract(IdMixin, TimestampMixin, TenantMixin, Base):
         Boolean, nullable=False, default=False
     )
     notes: Mapped[str | None] = mapped_column(Text)
+    # Calendar dates of the physical move (4.5, migration 0150); independent of start and end.
+    move_in_on: Mapped[date | None] = mapped_column(Date)
+    move_out_on: Mapped[date | None] = mapped_column(Date)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     supersedes_contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
     # Origin and management approval (migration 0133): imported contracts start ``pending`` and
@@ -305,6 +308,60 @@ class SepaMandate(IdMixin, TimestampMixin, TenantMixin, Base):
     document_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # 4.5 (migration 0150): payment types the mandate covers (empty list = all types of the
+    # contract) and whether special levies are excluded from the collection. Recording only;
+    # the collection itself stays locked until G2.
+    payment_type_codes: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    exclude_special_levy: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+
+class ContractAllocationValue(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Contract related allocation key value with period, e.g. persons (4.5 Eigenschaften).
+
+    Periods of one contract and key never overlap. Statements read these values only when
+    the allocation logic of the statement modules picks them up; no financial effect here.
+    """
+
+    __tablename__ = "contract_allocation_value"
+    __table_args__ = (
+        ExcludeConstraint(
+            ("contract_id", "="),
+            ("allocation_key_id", "="),
+            (text("daterange(valid_from, valid_to, '[]')"), "&&"),
+            name="ex_contract_allocation_value_period",
+            using="gist",
+        ),
+        CheckConstraint("valid_to IS NULL OR valid_to >= valid_from", name="period_order"),
+    )
+
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id", ondelete="CASCADE")
+    allocation_key_id: Mapped[uuid.UUID] = _fk("allocation_key.id", ondelete="CASCADE")
+    value: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_to: Mapped[date | None] = mapped_column(Date)
+
+
+class ContractTerminationReading(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Meter reading recorded with the termination of a contract (4.5 Aktionen).
+
+    The value is also written as a ``meter_reading`` (source ``manual``); this row keeps the
+    link between contract end and reading as evidence for the statement.
+    """
+
+    __tablename__ = "contract_termination_reading"
+    __table_args__ = (UniqueConstraint("contract_id", "meter_id"),)
+
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id", ondelete="CASCADE")
+    meter_id: Mapped[uuid.UUID] = _fk("meter.id", ondelete="CASCADE")
+    meter_reading_id: Mapped[uuid.UUID | None] = _fk(
+        "meter_reading.id", nullable=True, ondelete="SET NULL"
+    )
+    value: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    read_at: Mapped[date] = mapped_column(Date, nullable=False)
 
 
 class Deposit(IdMixin, TimestampMixin, TenantMixin, Base):

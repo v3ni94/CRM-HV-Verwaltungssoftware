@@ -199,6 +199,7 @@ describe("ContactForm", () => {
             {
               id: ID,
               label: null,
+              is_default: false,
               iban_masked: "DE89 **** **** 3000",
               bic: null,
               bank_name: null,

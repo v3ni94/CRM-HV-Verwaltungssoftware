@@ -31,6 +31,11 @@ export type CalendarItem = {
   invite_status: "draft" | "invited" | null;
   attendees: Attendee[];
   is_stale: boolean;
+  /** P1 AP7: generated entries carry the deadline kind, reminder codes (B.30) and the route to the source. */
+  category?: string;
+  reminders?: string[];
+  href?: string | null;
+  calendar_entry_id?: string | null;
 };
 
 export type CalendarNotice = { source: "default" | "own"; address: string; connected: boolean };
@@ -58,6 +63,7 @@ export function CalendarView({
   focusId?: string | null;
 }) {
   const t = useTranslations("Workspace");
+  const tc = useTranslations("Calendar");
   const [year, setYear] = useState(initialYear);
   const [month, setMonth] = useState(initialMonth);
   const [anchor, setAnchor] = useState(() => new Date());
@@ -240,11 +246,23 @@ export function CalendarView({
                 aria-hidden="true"
               />
               <span className="w-24 tabular-nums">{formatDate(item.date)}</span>
-              <span className="w-28 text-xs text-muted">{item.calendar_label ?? t(`kind.${item.kind}`)}</span>
+              <span className="w-28 text-xs text-muted">
+                {item.calendar_label ?? (tc.has(`kind.${item.kind}`) ? tc(`kind.${item.kind}`) : item.kind)}
+              </span>
               <span className="flex-1">
                 {item.title}
                 {item.is_stale ? <span className={`${ui.badgeWarning} ml-2`}>{t("staleBadge")}</span> : null}
+                {item.reminders && item.reminders.length > 0 ? (
+                  <span className="ml-2 text-xs text-muted" title={tc("generatedHint")}>
+                    {tc("reminders")}: {item.reminders.map((r) => (tc.has(`reminder.${r}`) ? tc(`reminder.${r}`) : r)).join(", ")}
+                  </span>
+                ) : null}
               </span>
+              {item.href ? (
+                <Link href={item.href} className={ui.buttonSm} data-testid="calendar-source-link">
+                  {tc("openSource")}
+                </Link>
+              ) : null}
               {item.google_event_id ? (
                 <button type="button" className={ui.buttonSm} onClick={() => setDetailItem(item)}>
                   {t("details")}

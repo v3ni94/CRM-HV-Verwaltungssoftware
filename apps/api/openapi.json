@@ -468,6 +468,19 @@
             ],
             "title": "Postal Code"
           },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Bundesland",
+            "title": "State"
+          },
           "street": {
             "anyOf": [
               {
@@ -564,6 +577,19 @@
               }
             ],
             "title": "Postal Code"
+          },
+          "state": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Bundesland",
+            "title": "State"
           },
           "street": {
             "anyOf": [
@@ -2933,6 +2959,112 @@
         "title": "BatchIn",
         "type": "object"
       },
+      "BillingPeriodIn": {
+        "additionalProperties": false,
+        "properties": {
+          "board_online_audit": {
+            "default": false,
+            "description": "Online-Belegprüfung durch Beirat",
+            "title": "Board Online Audit",
+            "type": "boolean"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BillingPeriodKind"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "format": "date",
+            "title": "Valid To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "valid_from",
+          "valid_to"
+        ],
+        "title": "BillingPeriodIn",
+        "type": "object"
+      },
+      "BillingPeriodKind": {
+        "enum": [
+          "hoa",
+          "operating_costs",
+          "heating_costs",
+          "economic_plan",
+          "owner_statement"
+        ],
+        "title": "BillingPeriodKind",
+        "type": "string"
+      },
+      "BillingPeriodOut": {
+        "properties": {
+          "board_online_audit": {
+            "default": false,
+            "description": "Online-Belegprüfung durch Beirat",
+            "title": "Board Online Audit",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BillingPeriodKind"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "format": "date",
+            "title": "Valid To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "valid_from",
+          "valid_to",
+          "id",
+          "property_id"
+        ],
+        "title": "BillingPeriodOut",
+        "type": "object"
+      },
       "BillingResultOut": {
         "properties": {
           "amount": {
@@ -3756,6 +3888,18 @@
       "BuildingIn": {
         "additionalProperties": false,
         "properties": {
+          "address_addition": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Addition"
+          },
           "building_type_code": {
             "anyOf": [
               {
@@ -3829,9 +3973,59 @@
             "title": "Elevator",
             "type": "boolean"
           },
+          "energy_certificate_class": {
+            "anyOf": [
+              {
+                "maxLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Class"
+          },
+          "energy_certificate_construction_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1500.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Construction Year"
+          },
+          "energy_certificate_issued_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Issued On"
+          },
+          "energy_certificate_law": {
+            "anyOf": [
+              {
+                "pattern": "^(geg|enev_2014)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Law"
+          },
           "energy_certificate_type": {
             "anyOf": [
               {
+                "pattern": "^(verbrauch|bedarf)$",
                 "type": "string"
               },
               {
@@ -3852,9 +4046,10 @@
             ],
             "title": "Energy Certificate Valid Until"
           },
-          "energy_certificate_value": {
+          "energy_final_electricity_kwh": {
             "anyOf": [
               {
+                "minimum": 0.0,
                 "type": "number"
               },
               {
@@ -3865,7 +4060,38 @@
                 "type": "null"
               }
             ],
-            "title": "Energy Certificate Value"
+            "description": "kWh/(m²a)",
+            "title": "Energy Final Electricity Kwh"
+          },
+          "energy_final_heat_kwh": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "kWh/(m²a)",
+            "title": "Energy Final Heat Kwh"
+          },
+          "energy_hot_water_included": {
+            "default": false,
+            "title": "Energy Hot Water Included",
+            "type": "boolean"
+          },
+          "energy_sources": {
+            "description": "Energieträger (B.8)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Energy Sources",
+            "type": "array"
           },
           "floors": {
             "anyOf": [
@@ -3927,6 +4153,18 @@
               }
             ],
             "title": "Heated Area Sqm"
+          },
+          "heating_type_code": {
+            "anyOf": [
+              {
+                "pattern": "^(etage|ofen|zentral)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating Type Code"
           },
           "heritage_notes": {
             "anyOf": [
@@ -4095,6 +4333,18 @@
       },
       "BuildingOut": {
         "properties": {
+          "address_addition": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Address Addition"
+          },
           "building_type_code": {
             "anyOf": [
               {
@@ -4164,9 +4414,59 @@
             "title": "Elevator",
             "type": "boolean"
           },
+          "energy_certificate_class": {
+            "anyOf": [
+              {
+                "maxLength": 4,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Class"
+          },
+          "energy_certificate_construction_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1500.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Construction Year"
+          },
+          "energy_certificate_issued_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Issued On"
+          },
+          "energy_certificate_law": {
+            "anyOf": [
+              {
+                "pattern": "^(geg|enev_2014)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Law"
+          },
           "energy_certificate_type": {
             "anyOf": [
               {
+                "pattern": "^(verbrauch|bedarf)$",
                 "type": "string"
               },
               {
@@ -4187,7 +4487,7 @@
             ],
             "title": "Energy Certificate Valid Until"
           },
-          "energy_certificate_value": {
+          "energy_final_electricity_kwh": {
             "anyOf": [
               {
                 "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -4197,7 +4497,34 @@
                 "type": "null"
               }
             ],
-            "title": "Energy Certificate Value"
+            "description": "kWh/(m²a)",
+            "title": "Energy Final Electricity Kwh"
+          },
+          "energy_final_heat_kwh": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "kWh/(m²a)",
+            "title": "Energy Final Heat Kwh"
+          },
+          "energy_hot_water_included": {
+            "default": false,
+            "title": "Energy Hot Water Included",
+            "type": "boolean"
+          },
+          "energy_sources": {
+            "description": "Energieträger (B.8)",
+            "items": {
+              "type": "string"
+            },
+            "title": "Energy Sources",
+            "type": "array"
           },
           "floors": {
             "anyOf": [
@@ -4247,6 +4574,18 @@
               }
             ],
             "title": "Heated Area Sqm"
+          },
+          "heating_type_code": {
+            "anyOf": [
+              {
+                "pattern": "^(etage|ofen|zentral)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Heating Type Code"
           },
           "heritage_notes": {
             "anyOf": [
@@ -4372,6 +4711,10 @@
             ],
             "title": "Total Area Sqm"
           },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          },
           "window_area_sqm": {
             "anyOf": [
               {
@@ -4400,7 +4743,8 @@
         "required": [
           "name",
           "id",
-          "property_id"
+          "property_id",
+          "version"
         ],
         "title": "BuildingOut",
         "type": "object"
@@ -4723,6 +5067,18 @@
             "title": "Attendees",
             "type": "array"
           },
+          "calendar_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calendar Entry Id"
+          },
           "calendar_event_id": {
             "anyOf": [
               {
@@ -4745,6 +5101,11 @@
               }
             ],
             "title": "Calendar Label"
+          },
+          "category": {
+            "default": "appointment",
+            "title": "Category",
+            "type": "string"
           },
           "date": {
             "format": "date",
@@ -4802,6 +5163,17 @@
             ],
             "title": "Google Event Id"
           },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Href"
+          },
           "invite_status": {
             "anyOf": [
               {
@@ -4845,6 +5217,13 @@
               }
             ],
             "title": "Property Id"
+          },
+          "reminders": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Reminders",
+            "type": "array"
           },
           "source": {
             "default": "internal",
@@ -7227,6 +7606,21 @@
         "title": "ConsumptionOut",
         "type": "object"
       },
+      "ContactBankAccountKind": {
+        "description": "Account types of catalogue B.4 (Masterprompt Ergänzung 27.09.2026).",
+        "enum": [
+          "rent",
+          "bank_1",
+          "bank_2",
+          "hoa",
+          "reserve",
+          "deposit",
+          "house_money",
+          "legacy"
+        ],
+        "title": "ContactBankAccountKind",
+        "type": "string"
+      },
       "ContactChangeContactOut": {
         "properties": {
           "city": {
@@ -7545,6 +7939,86 @@
         "title": "ContactChoice",
         "type": "object"
       },
+      "ContactDateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ContactDateKind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "kind",
+          "date"
+        ],
+        "title": "ContactDateIn",
+        "type": "object"
+      },
+      "ContactDateKind": {
+        "description": "Typed dates on a contact (4.1); the birthday stays on ``Contact.date_of_birth``.",
+        "enum": [
+          "birthday",
+          "death",
+          "wedding",
+          "foundation",
+          "other"
+        ],
+        "title": "ContactDateKind",
+        "type": "string"
+      },
+      "ContactDateOut": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "format": "date",
+            "title": "Date",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ContactDateKind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "kind",
+          "date",
+          "id"
+        ],
+        "title": "ContactDateOut",
+        "type": "object"
+      },
       "ContactIn": {
         "additionalProperties": false,
         "properties": {
@@ -7604,6 +8078,14 @@
               }
             ],
             "title": "Date Of Birth"
+          },
+          "dates": {
+            "items": {
+              "$ref": "#/components/schemas/ContactDateIn"
+            },
+            "maxItems": 20,
+            "title": "Dates",
+            "type": "array"
           },
           "emails": {
             "items": {
@@ -7673,6 +8155,19 @@
             ],
             "title": "Legal Form"
           },
+          "letter_salutation": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Briefanrede (Freitext)",
+            "title": "Letter Salutation"
+          },
           "notes": {
             "anyOf": [
               {
@@ -7714,6 +8209,19 @@
                 "type": "null"
               }
             ]
+          },
+          "retention_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Löschprofil (freigegebenes Aufbewahrungsprofil); daraus wird das Löschdatum als Vormerkung berechnet.",
+            "title": "Retention Profile Id"
           },
           "roles": {
             "description": "Manuelle Klassifizierung; automatisch abgeleitete Rollen aus Verträgen werden zusätzlich beibehalten.",
@@ -7825,6 +8333,18 @@
             "title": "Blocked",
             "type": "boolean"
           },
+          "blocked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked At"
+          },
           "company_name": {
             "anyOf": [
               {
@@ -7855,6 +8375,26 @@
               }
             ],
             "title": "Date Of Birth"
+          },
+          "dates": {
+            "items": {
+              "$ref": "#/components/schemas/ContactDateOut"
+            },
+            "title": "Dates",
+            "type": "array"
+          },
+          "delete_after": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Vorgemerktes Löschdatum aus dem Löschprofil; nur Anzeige, die Löschung erfolgt manuell im Vier-Augen-Prinzip (Betreiberentscheidung 26.09.2026).",
+            "title": "Delete After"
           },
           "deleted_at": {
             "anyOf": [
@@ -7938,6 +8478,17 @@
             ],
             "title": "Legal Form"
           },
+          "letter_salutation": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Salutation"
+          },
           "notes": {
             "anyOf": [
               {
@@ -7976,6 +8527,18 @@
                 "type": "null"
               }
             ]
+          },
+          "retention_profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retention Profile Id"
           },
           "roles": {
             "items": {
@@ -8227,6 +8790,138 @@
         "title": "ContactTypeCode",
         "type": "string"
       },
+      "ContractAllocationValueIn": {
+        "additionalProperties": false,
+        "description": "Contract related allocation key value with period (4.5 Eigenschaften).",
+        "properties": {
+          "allocation_key_id": {
+            "format": "uuid",
+            "title": "Allocation Key Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,21}0*$)\\d{0,12}\\.\\d{0,8}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "allocation_key_id",
+          "value",
+          "valid_from"
+        ],
+        "title": "ContractAllocationValueIn",
+        "type": "object"
+      },
+      "ContractAllocationValueOut": {
+        "properties": {
+          "allocation_key_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Key Code"
+          },
+          "allocation_key_id": {
+            "format": "uuid",
+            "title": "Allocation Key Id",
+            "type": "string"
+          },
+          "allocation_key_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Allocation Key Name"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "unit_of_measure": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Of Measure"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contract_id",
+          "allocation_key_id",
+          "value",
+          "valid_from",
+          "valid_to"
+        ],
+        "title": "ContractAllocationValueOut",
+        "type": "object"
+      },
       "ContractIn": {
         "additionalProperties": false,
         "properties": {
@@ -8305,6 +9000,32 @@
             ],
             "description": "Nur nötig, wenn der Vermieter nicht eindeutig ist",
             "title": "Legal Entity Id"
+          },
+          "move_in_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kalendertermin Einzug",
+            "title": "Move In On"
+          },
+          "move_out_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kalendertermin Auszug",
+            "title": "Move Out On"
           },
           "notes": {
             "anyOf": [
@@ -8520,6 +9241,30 @@
             "format": "uuid",
             "title": "Legal Entity Id",
             "type": "string"
+          },
+          "move_in_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move In On"
+          },
+          "move_out_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move Out On"
           },
           "notes": {
             "anyOf": [
@@ -8779,6 +9524,30 @@
             "format": "date",
             "title": "Effective Date",
             "type": "string"
+          },
+          "move_in_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move In On"
+          },
+          "move_out_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Move Out On"
           },
           "notes": {
             "anyOf": [
@@ -9102,6 +9871,18 @@
       },
       "CurrentOwnerOut": {
         "properties": {
+          "clearing_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clearing Account Id"
+          },
           "contact_id": {
             "anyOf": [
               {
@@ -9151,6 +9932,18 @@
             "title": "Party Name",
             "type": "string"
           },
+          "power_of_attorney_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Power Of Attorney Document Id"
+          },
           "share_percent": {
             "anyOf": [
               {
@@ -9162,6 +9955,18 @@
               }
             ],
             "title": "Share Percent"
+          },
+          "tax_advisor_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Advisor Contact Id"
           },
           "valid_from": {
             "format": "date",
@@ -9545,6 +10350,17 @@
             "format": "date",
             "title": "Due On",
             "type": "string"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Href"
           },
           "id": {
             "format": "uuid",
@@ -9964,6 +10780,130 @@
         ],
         "title": "DepositKind",
         "type": "string"
+      },
+      "DepositListRow": {
+        "description": "Row of the deposit list ``GET /deposits`` (4.5 Kaution).",
+        "properties": {
+          "amount_due": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount Due",
+            "type": "string"
+          },
+          "balance": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Balance",
+            "type": "string"
+          },
+          "contract_end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract End Date"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "contract_number": {
+            "title": "Contract Number",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DepositKind"
+          },
+          "outstanding": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Outstanding",
+            "type": "string"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "party_name": {
+            "title": "Party Name",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "property_number": {
+            "title": "Property Number",
+            "type": "string"
+          },
+          "received": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Received",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "unit_number": {
+            "title": "Unit Number",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "id",
+          "contract_id",
+          "contract_number",
+          "property_id",
+          "property_number",
+          "unit_id",
+          "unit_number",
+          "party_id",
+          "party_name",
+          "kind",
+          "status",
+          "amount_due",
+          "received",
+          "balance",
+          "outstanding",
+          "valid_from",
+          "valid_to",
+          "contract_end_date"
+        ],
+        "title": "DepositListRow",
+        "type": "object"
       },
       "DepositMovementIn": {
         "additionalProperties": false,
@@ -12572,6 +13512,15 @@
         "title": "EvidenceIn",
         "type": "object"
       },
+      "ExemptionCertStatus": {
+        "enum": [
+          "valid",
+          "none",
+          "invalid"
+        ],
+        "title": "ExemptionCertStatus",
+        "type": "string"
+      },
       "ExtraFieldIn": {
         "additionalProperties": false,
         "properties": {
@@ -13994,6 +14943,7 @@
         "type": "object"
       },
       "Hit": {
+        "description": "Search hit. ``parent_id`` carries the context a jump needs (property of a building,\nledger of a posting); the web app builds the route from it.",
         "properties": {
           "entity_type": {
             "title": "Entity Type",
@@ -14003,6 +14953,18 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "parent_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Id"
           },
           "subtitle": {
             "anyOf": [
@@ -19824,6 +20786,12 @@
             "title": "Document Id",
             "type": "string"
           },
+          "exclude_special_levy": {
+            "default": false,
+            "description": "Sonderumlagen vom Einzug über dieses Mandat ausschließen",
+            "title": "Exclude Special Levy",
+            "type": "boolean"
+          },
           "legal_entity_id": {
             "format": "uuid",
             "title": "Legal Entity Id",
@@ -19833,6 +20801,15 @@
             "format": "uuid",
             "title": "Party Id",
             "type": "string"
+          },
+          "payment_type_codes": {
+            "description": "Ertragsarten (Katalog payment_type), die das Mandat abdeckt; leer = alle",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Payment Type Codes",
+            "type": "array"
           },
           "reference": {
             "title": "Reference",
@@ -19892,6 +20869,11 @@
             "title": "Document Id",
             "type": "string"
           },
+          "exclude_special_levy": {
+            "default": false,
+            "title": "Exclude Special Levy",
+            "type": "boolean"
+          },
           "iban_masked": {
             "anyOf": [
               {
@@ -19917,6 +20899,13 @@
             "format": "uuid",
             "title": "Party Id",
             "type": "string"
+          },
+          "payment_type_codes": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Payment Type Codes",
+            "type": "array"
           },
           "reference": {
             "title": "Reference",
@@ -21099,6 +22088,144 @@
         "title": "MessageOut",
         "type": "object"
       },
+      "MeterChangeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "changed_on": {
+            "format": "date",
+            "title": "Changed On",
+            "type": "string"
+          },
+          "new_initial_value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "description": "Anfangsstand des neuen Zählers",
+            "title": "New Initial Value"
+          },
+          "new_number": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Number"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "old_final_value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "description": "Endstand des alten Zählers",
+            "title": "Old Final Value"
+          }
+        },
+        "required": [
+          "changed_on",
+          "old_final_value",
+          "new_initial_value"
+        ],
+        "title": "MeterChangeIn",
+        "type": "object"
+      },
+      "MeterChangeOut": {
+        "properties": {
+          "changed_on": {
+            "format": "date",
+            "title": "Changed On",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "meter_id": {
+            "format": "uuid",
+            "title": "Meter Id",
+            "type": "string"
+          },
+          "new_initial_value": {
+            "description": "Anfangsstand des neuen Zählers",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "New Initial Value",
+            "type": "string"
+          },
+          "new_number": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Number"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "old_final_value": {
+            "description": "Endstand des alten Zählers",
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Old Final Value",
+            "type": "string"
+          },
+          "old_number": {
+            "title": "Old Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "changed_on",
+          "old_final_value",
+          "new_initial_value",
+          "id",
+          "meter_id",
+          "old_number"
+        ],
+        "title": "MeterChangeOut",
+        "type": "object"
+      },
       "MeterConnection": {
         "enum": [
           "main",
@@ -22082,10 +23209,35 @@
             ],
             "title": "Category"
           },
+          "follow_up_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Wiedervorlage",
+            "title": "Follow Up On"
+          },
           "pinned": {
             "default": false,
             "title": "Pinned",
             "type": "boolean"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": [
@@ -22132,6 +23284,19 @@
             ],
             "title": "Created By"
           },
+          "follow_up_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Wiedervorlage",
+            "title": "Follow Up On"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -22141,6 +23306,18 @@
             "default": false,
             "title": "Pinned",
             "type": "boolean"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
           }
         },
         "required": [
@@ -23229,13 +24406,83 @@
         "title": "OrderStep",
         "type": "object"
       },
+      "OwnerDetailsIn": {
+        "additionalProperties": false,
+        "description": "Clearing account, power of attorney and tax advisor of an owner entry (4.2).",
+        "properties": {
+          "clearing_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clearing Account Id"
+          },
+          "power_of_attorney_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Power Of Attorney Document Id"
+          },
+          "tax_advisor_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Advisor Contact Id"
+          }
+        },
+        "title": "OwnerDetailsIn",
+        "type": "object"
+      },
       "OwnerIn": {
         "additionalProperties": false,
         "properties": {
+          "clearing_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Verrechnungskonto",
+            "title": "Clearing Account Id"
+          },
           "party_id": {
             "format": "uuid",
             "title": "Party Id",
             "type": "string"
+          },
+          "power_of_attorney_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Verwaltervollmacht (Dokument)",
+            "title": "Power Of Attorney Document Id"
           },
           "share_percent": {
             "anyOf": [
@@ -23253,6 +24500,19 @@
               }
             ],
             "title": "Share Percent"
+          },
+          "tax_advisor_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Steuerberater",
+            "title": "Tax Advisor Contact Id"
           },
           "valid_from": {
             "format": "date",
@@ -23281,6 +24541,18 @@
       },
       "OwnerOut": {
         "properties": {
+          "clearing_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Clearing Account Id"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -23303,6 +24575,18 @@
             "title": "Party Id",
             "type": "string"
           },
+          "power_of_attorney_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Power Of Attorney Document Id"
+          },
           "share_percent": {
             "anyOf": [
               {
@@ -23314,6 +24598,18 @@
               }
             ],
             "title": "Share Percent"
+          },
+          "tax_advisor_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tax Advisor Contact Id"
           },
           "valid_from": {
             "format": "date",
@@ -24123,6 +25419,32 @@
       "PhoneIn": {
         "additionalProperties": false,
         "properties": {
+          "area_code": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{1,10}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Vorwahl",
+            "title": "Area Code"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "pattern": "^\\+?[0-9]{1,4}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Landesvorwahl, z. B. +49",
+            "title": "Country Code"
+          },
           "is_primary": {
             "default": false,
             "title": "Is Primary",
@@ -24131,6 +25453,18 @@
           "label": {
             "$ref": "#/components/schemas/PhoneLabel",
             "default": "work"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
           },
           "number": {
             "maxLength": 40,
@@ -24157,6 +25491,28 @@
       },
       "PhoneOut": {
         "properties": {
+          "area_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area Code"
+          },
+          "country_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Country Code"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -24168,6 +25524,17 @@
           },
           "label": {
             "$ref": "#/components/schemas/PhoneLabel"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
           },
           "number": {
             "title": "Number",
@@ -24724,6 +26091,97 @@
           "accept"
         ],
         "title": "PortalDecideIn",
+        "type": "object"
+      },
+      "PortalDocumentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "visible_for": {
+            "description": "tenant, owner",
+            "items": {
+              "type": "string"
+            },
+            "title": "Visible For",
+            "type": "array"
+          }
+        },
+        "required": [
+          "document_id"
+        ],
+        "title": "PortalDocumentIn",
+        "type": "object"
+      },
+      "PortalDocumentOut": {
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "sort_order": {
+            "default": 0,
+            "title": "Sort Order",
+            "type": "integer"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "visible_for": {
+            "description": "tenant, owner",
+            "items": {
+              "type": "string"
+            },
+            "title": "Visible For",
+            "type": "array"
+          }
+        },
+        "required": [
+          "document_id",
+          "id",
+          "property_id"
+        ],
+        "title": "PortalDocumentOut",
         "type": "object"
       },
       "PortalInviteIn": {
@@ -25369,95 +26827,6 @@
             "title": "Custom Fields",
             "type": "object"
           },
-          "energy_certificate_class": {
-            "anyOf": [
-              {
-                "maxLength": 4,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Class"
-          },
-          "energy_certificate_construction_year": {
-            "anyOf": [
-              {
-                "maximum": 2100.0,
-                "minimum": 1500.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Construction Year"
-          },
-          "energy_certificate_issued_on": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Issued On"
-          },
-          "energy_certificate_source": {
-            "anyOf": [
-              {
-                "maxLength": 32,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Source"
-          },
-          "energy_certificate_type": {
-            "anyOf": [
-              {
-                "pattern": "^(verbrauch|bedarf)$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Type"
-          },
-          "energy_certificate_valid_until": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Valid Until"
-          },
-          "energy_certificate_value": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Value"
-          },
           "garden_notes": {
             "anyOf": [
               {
@@ -25788,91 +27157,6 @@
             "additionalProperties": true,
             "title": "Custom Fields",
             "type": "object"
-          },
-          "energy_certificate_class": {
-            "anyOf": [
-              {
-                "maxLength": 4,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Class"
-          },
-          "energy_certificate_construction_year": {
-            "anyOf": [
-              {
-                "maximum": 2100.0,
-                "minimum": 1500.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Construction Year"
-          },
-          "energy_certificate_issued_on": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Issued On"
-          },
-          "energy_certificate_source": {
-            "anyOf": [
-              {
-                "maxLength": 32,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Source"
-          },
-          "energy_certificate_type": {
-            "anyOf": [
-              {
-                "pattern": "^(verbrauch|bedarf)$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Type"
-          },
-          "energy_certificate_valid_until": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Valid Until"
-          },
-          "energy_certificate_value": {
-            "anyOf": [
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Energy Certificate Value"
           },
           "garden_notes": {
             "anyOf": [
@@ -31765,6 +33049,83 @@
         "title": "StorageKind",
         "type": "string"
       },
+      "SubCommunityIn": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "pattern": "^[A-Za-z0-9_-]{1,32}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          }
+        },
+        "required": [
+          "code",
+          "name"
+        ],
+        "title": "SubCommunityIn",
+        "type": "object"
+      },
+      "SubCommunityOut": {
+        "properties": {
+          "code": {
+            "pattern": "^[A-Za-z0-9_-]{1,32}$",
+            "title": "Code",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "id",
+          "property_id"
+        ],
+        "title": "SubCommunityOut",
+        "type": "object"
+      },
       "SuperadminOut": {
         "properties": {
           "email": {
@@ -32937,6 +34298,27 @@
             "title": "End Date",
             "type": "string"
           },
+          "meter_readings": {
+            "items": {
+              "$ref": "#/components/schemas/TerminationReadingIn"
+            },
+            "maxItems": 200,
+            "title": "Meter Readings",
+            "type": "array"
+          },
+          "move_out_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kalendertermin Auszug",
+            "title": "Move Out On"
+          },
           "termination_date": {
             "anyOf": [
               {
@@ -32966,6 +34348,100 @@
           "end_date"
         ],
         "title": "TerminationIn",
+        "type": "object"
+      },
+      "TerminationReadingIn": {
+        "additionalProperties": false,
+        "description": "Meter reading recorded with the termination (4.5 Aktionen).",
+        "properties": {
+          "meter_id": {
+            "format": "uuid",
+            "title": "Meter Id",
+            "type": "string"
+          },
+          "read_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Standard: Vertragsende",
+            "title": "Read At"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,21}0*$)\\d{0,12}\\.\\d{0,8}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "meter_id",
+          "value"
+        ],
+        "title": "TerminationReadingIn",
+        "type": "object"
+      },
+      "TerminationReadingOut": {
+        "properties": {
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "meter_id": {
+            "format": "uuid",
+            "title": "Meter Id",
+            "type": "string"
+          },
+          "meter_reading_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meter Reading Id"
+          },
+          "read_at": {
+            "format": "date",
+            "title": "Read At",
+            "type": "string"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "contract_id",
+          "meter_id",
+          "meter_reading_id",
+          "value",
+          "read_at"
+        ],
+        "title": "TerminationReadingOut",
         "type": "object"
       },
       "TestEventIn": {
@@ -34654,10 +36130,53 @@
             ],
             "title": "City"
           },
+          "commission": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission"
+          },
+          "commission_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission Note"
+          },
           "custom_fields": {
             "additionalProperties": true,
             "title": "Custom Fields",
             "type": "object"
+          },
+          "deposit_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Amount"
           },
           "features": {
             "anyOf": [
@@ -34805,6 +36324,18 @@
             ],
             "title": "Street"
           },
+          "sub_community_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Community Id"
+          },
           "total_area_sqm": {
             "anyOf": [
               {
@@ -34823,6 +36354,16 @@
           },
           "unit_type": {
             "$ref": "#/components/schemas/UnitType"
+          },
+          "vacancy_vat_option": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VatOption"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "required": [
@@ -34926,10 +36467,45 @@
             ],
             "title": "City"
           },
+          "commission": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission"
+          },
+          "commission_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Commission Note"
+          },
           "custom_fields": {
             "additionalProperties": true,
             "title": "Custom Fields",
             "type": "object"
+          },
+          "deposit_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deposit Amount"
           },
           "features": {
             "anyOf": [
@@ -35089,6 +36665,18 @@
             ],
             "title": "Street"
           },
+          "sub_community_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Community Id"
+          },
           "tenant": {
             "anyOf": [
               {
@@ -35114,6 +36702,16 @@
           "unit_type": {
             "$ref": "#/components/schemas/UnitType"
           },
+          "vacancy_vat_option": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VatOption"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "vat_option": {
             "anyOf": [
               {
@@ -35123,6 +36721,10 @@
                 "type": "null"
               }
             ]
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
           }
         },
         "required": [
@@ -35130,7 +36732,8 @@
           "number",
           "unit_type",
           "id",
-          "property_id"
+          "property_id",
+          "version"
         ],
         "title": "UnitOut",
         "type": "object"
@@ -35278,6 +36881,215 @@
           "totp_enabled"
         ],
         "title": "UserOut",
+        "type": "object"
+      },
+      "VacancyAllocationValueIn": {
+        "additionalProperties": false,
+        "properties": {
+          "allocation_key_id": {
+            "format": "uuid",
+            "title": "Allocation Key Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "value": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Value"
+          }
+        },
+        "required": [
+          "valid_from",
+          "allocation_key_id",
+          "value"
+        ],
+        "title": "VacancyAllocationValueIn",
+        "type": "object"
+      },
+      "VacancyAllocationValueOut": {
+        "properties": {
+          "allocation_key_id": {
+            "format": "uuid",
+            "title": "Allocation Key Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "key_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Code"
+          },
+          "key_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Key Name"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "unit_id",
+          "allocation_key_id",
+          "value",
+          "valid_from",
+          "valid_to"
+        ],
+        "title": "VacancyAllocationValueOut",
+        "type": "object"
+      },
+      "VacancyRow": {
+        "description": "Vacant let unit as of a date (``GET /properties/{id}/vacancies``).",
+        "properties": {
+          "owner_party": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Owner Party"
+          },
+          "ownership_contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ownership Contract Id"
+          },
+          "previous_contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Previous Contract Id"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "unit_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Label"
+          },
+          "unit_number": {
+            "title": "Unit Number",
+            "type": "string"
+          },
+          "unit_type": {
+            "title": "Unit Type",
+            "type": "string"
+          },
+          "vacant_since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Tag nach dem letzten Mietende, leer = nie vermietet",
+            "title": "Vacant Since"
+          }
+        },
+        "required": [
+          "unit_id",
+          "unit_number",
+          "unit_label",
+          "unit_type",
+          "vacant_since",
+          "previous_contract_id",
+          "ownership_contract_id",
+          "owner_party"
+        ],
+        "title": "VacancyRow",
         "type": "object"
       },
       "ValidateIn": {
@@ -36119,6 +37931,19 @@
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
+          "bank_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Bank als Kontakt",
+            "title": "Bank Contact Id"
+          },
           "bank_name": {
             "anyOf": [
               {
@@ -36159,6 +37984,23 @@
             "maxLength": 50,
             "title": "Iban",
             "type": "string"
+          },
+          "is_default": {
+            "default": false,
+            "description": "Standardkonto; genau eines je Kontakt",
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactBankAccountKind"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kontotyp (Anhang B.4)"
           },
           "label": {
             "anyOf": [
@@ -36286,6 +38128,18 @@
             "$ref": "#/components/schemas/BankAccountApproval",
             "description": "Vier-Augen-Freigabe der IBAN (M5-01): nur approved wird verwendet."
           },
+          "bank_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Contact Id"
+          },
           "bank_name": {
             "anyOf": [
               {
@@ -36351,6 +38205,21 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "is_default": {
+            "default": false,
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ContactBankAccountKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
           },
           "label": {
             "anyOf": [
@@ -36619,6 +38488,19 @@
           "kind": {
             "$ref": "#/components/schemas/BankAccountKind"
           },
+          "ledger_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Zugeordnetes Sachkonto",
+            "title": "Ledger Account Id"
+          },
           "legal_entity_id": {
             "format": "uuid",
             "title": "Legal Entity Id",
@@ -36703,10 +38585,33 @@
           "kind": {
             "$ref": "#/components/schemas/BankAccountKind"
           },
+          "ledger_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Account Id"
+          },
           "legal_entity_id": {
             "format": "uuid",
             "title": "Legal Entity Id",
             "type": "string"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
           },
           "segregated": {
             "title": "Segregated",
@@ -36781,10 +38686,58 @@
             "title": "Create Default Bank Rule",
             "type": "boolean"
           },
+          "creditor_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kreditorenkonto",
+            "title": "Creditor Account Id"
+          },
           "custom_fields": {
             "additionalProperties": true,
             "title": "Custom Fields",
             "type": "object"
+          },
+          "customer_number": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Number"
+          },
+          "exemption_cert_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExemptionCertStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Freistellungsbescheinigung § 48b EStG, laut Bescheinigung"
+          },
+          "exemption_cert_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exemption Cert Valid Until"
           },
           "notes": {
             "anyOf": [
@@ -36869,10 +38822,58 @@
             "title": "Create Default Bank Rule",
             "type": "boolean"
           },
+          "creditor_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kreditorenkonto",
+            "title": "Creditor Account Id"
+          },
           "custom_fields": {
             "additionalProperties": true,
             "title": "Custom Fields",
             "type": "object"
+          },
+          "customer_number": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Number"
+          },
+          "exemption_cert_status": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ExemptionCertStatus"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Freistellungsbescheinigung § 48b EStG, laut Bescheinigung"
+          },
+          "exemption_cert_valid_until": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Exemption Cert Valid Until"
           },
           "id": {
             "format": "uuid",
@@ -46559,6 +48560,116 @@
         ]
       }
     },
+    "/api/v1/buildings/{building_id}": {
+      "get": {
+        "operationId": "get_building_api_v1_buildings__building_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "building_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Building Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gebäude lesen",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "put": {
+        "operationId": "update_building_api_v1_buildings__building_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "building_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Building Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BuildingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BuildingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gebäude ändern (If-Match)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/catalogs/{catalog}": {
       "get": {
         "operationId": "list_catalog_api_v1_catalogs__catalog__get",
@@ -47198,6 +49309,24 @@
               ],
               "description": "Filter: eigentuemer, mieter, ...",
               "title": "Role"
+            }
+          },
+          {
+            "description": "Sperrliste: true zeigt nur gesperrte",
+            "in": "query",
+            "name": "blocked",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Sperrliste: true zeigt nur gesperrte",
+              "title": "Blocked"
             }
           },
           {
@@ -48534,7 +50663,7 @@
     },
     "/api/v1/contracts": {
       "get": {
-        "description": "Verträge nach Nummer und Version. Paginierung wie ``GET /tickets``: die Antwort bleibt\neine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``.",
+        "description": "Verträge nach Nummer und Version. Paginierung wie ``GET /tickets``: die Antwort bleibt\neine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``.\n``status=ended`` liefert beendete Verträge (Ende vor dem Stichtag).",
         "operationId": "list_contracts_api_v1_contracts_get",
         "parameters": [
           {
@@ -48619,6 +50748,48 @@
                 }
               ],
               "title": "Active On"
+            }
+          },
+          {
+            "description": "Laufzeitstatus zum Stichtag as_of: active, ended (Ende vor dem Stichtag), upcoming (Beginn nach dem Stichtag)",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "active",
+                    "ended",
+                    "upcoming"
+                  ],
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Laufzeitstatus zum Stichtag as_of: active, ended (Ende vor dem Stichtag), upcoming (Beginn nach dem Stichtag)",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Stichtag für status, Standard heute",
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Stichtag für status, Standard heute",
+              "title": "As Of"
             }
           },
           {
@@ -48986,6 +51157,106 @@
           }
         },
         "summary": "Vertrag lesen",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/allocation-values": {
+      "get": {
+        "description": "Vertragsbezogene Umlagewerte mit Zeitraum (z. B. Personen), alle Versionen der\nVertragsnummer.",
+        "operationId": "list_allocation_values_api_v1_contracts__contract_id__allocation_values_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ContractAllocationValueOut"
+                  },
+                  "title": "Response List Allocation Values Api V1 Contracts  Contract Id  Allocation Values Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlagewerte des Vertrags",
+        "tags": [
+          "Verträge"
+        ]
+      },
+      "post": {
+        "description": "Schließt einen offenen Vorwert desselben Schlüssels am Vortag; Zeiträume je Schlüssel\nüberschneiden sich nie. Keine Buchung, keine Abrechnungswirkung außerhalb der Module.",
+        "operationId": "add_allocation_value_api_v1_contracts__contract_id__allocation_values_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContractAllocationValueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContractAllocationValueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlagewert am Vertrag erfassen",
         "tags": [
           "Verträge"
         ]
@@ -49401,6 +51672,53 @@
         ]
       }
     },
+    "/api/v1/contracts/{contract_id}/termination-readings": {
+      "get": {
+        "operationId": "termination_readings_api_v1_contracts__contract_id__termination_readings_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TerminationReadingOut"
+                  },
+                  "title": "Response Termination Readings Api V1 Contracts  Contract Id  Termination Readings Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zählerstände zur Vertragsbeendigung",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
     "/api/v1/contracts/{contract_id}/versions": {
       "get": {
         "operationId": "contract_versions_api_v1_contracts__contract_id__versions_get",
@@ -49712,6 +52030,152 @@
           }
         },
         "summary": "Kautionsabrechnung freigeben (hinter G3)",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/deposits": {
+      "get": {
+        "description": "Kautionen über alle Verträge mit Objekt, Einheit, Partei, Sollbetrag, erhaltenem\nBetrag, Guthaben und offenem Betrag (Datensätze, keine Buchungen; M10, G1).",
+        "operationId": "list_all_deposits_api_v1_deposits_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          },
+          {
+            "description": "Kautionsstatus, z. B. open",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Kautionsstatus, z. B. open",
+              "title": "Status"
+            }
+          },
+          {
+            "description": "Nur mit offenem Sollbetrag",
+            "in": "query",
+            "name": "outstanding_only",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Nur mit offenem Sollbetrag",
+              "title": "Outstanding Only",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page_size",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maximum": 1000,
+                  "minimum": 1,
+                  "type": "integer"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DepositListRow"
+                  },
+                  "title": "Response List All Deposits Api V1 Deposits Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response",
+            "headers": {
+              "X-Page": {
+                "description": "Aktuelle Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Page-Size": {
+                "description": "Einträge je Seite",
+                "schema": {
+                  "type": "integer"
+                }
+              },
+              "X-Total-Count": {
+                "description": "Gesamtzahl der Einträge der Filterung",
+                "schema": {
+                  "type": "integer"
+                }
+              }
+            }
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kautionsliste",
         "tags": [
           "Verträge"
         ]
@@ -61147,7 +63611,7 @@
     },
     "/api/v1/letting/units/{unit_id}/expose": {
       "get": {
-        "description": "Draft only from master data; no personal data of former tenants, no invented text.\nEnergy certificate data come from the property (A63), the asking rent from the newest\nrental listing of the unit; both are reported as missing when not recorded. Whether the\nlisted values satisfy the Pflichtangaben of an advertisement stays open (M26-03).",
+        "description": "Draft only from master data; no personal data of former tenants, no invented text.\nEnergy certificate data come from the unit's building (A63, 4.3), the asking rent from\nthe newest rental listing of the unit; both are reported as missing when not recorded.\nWhether the listed values satisfy the Pflichtangaben of an advertisement stays open\n(M26-03).",
         "operationId": "expose_api_v1_letting_units__unit_id__expose_get",
         "parameters": [
           {
@@ -64828,6 +67292,105 @@
         "summary": "Einheitenzuordnung ändern",
         "tags": [
           "Messdienstleister"
+        ]
+      }
+    },
+    "/api/v1/meters/{meter_id}/changes": {
+      "get": {
+        "operationId": "list_meter_changes_api_v1_meters__meter_id__changes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meter_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meter Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MeterChangeOut"
+                  },
+                  "title": "Response List Meter Changes Api V1 Meters  Meter Id  Changes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zählerwechsel",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "description": "Records the change; the meter row keeps its id (readings before the change belong to\nthe old device, identified by ``old_number``). No reading rows are written: consumption\nacross a change is computed from the change record by the statement modules.",
+        "operationId": "add_meter_change_api_v1_meters__meter_id__changes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meter_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meter Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeterChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterChangeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zählerwechsel erfassen (Endstand alt, Anfangsstand neu)",
+        "tags": [
+          "Objekte"
         ]
       }
     },
@@ -71507,6 +74070,150 @@
         ]
       }
     },
+    "/api/v1/properties/{property_id}/billing-periods": {
+      "get": {
+        "operationId": "list_billing_periods_api_v1_properties__property_id__billing_periods_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/BillingPeriodOut"
+                  },
+                  "title": "Response List Billing Periods Api V1 Properties  Property Id  Billing Periods Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abrechnungszeiträume",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_billing_period_api_v1_properties__property_id__billing_periods_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPeriodIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPeriodOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abrechnungszeitraum je Abrechnungsart anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/billing-periods/{period_id}": {
+      "delete": {
+        "operationId": "delete_billing_period_api_v1_properties__property_id__billing_periods__period_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "period_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abrechnungszeitraum löschen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}/buildings": {
       "get": {
         "operationId": "list_buildings_api_v1_properties__property_id__buildings_get",
@@ -72322,6 +75029,213 @@
         ]
       }
     },
+    "/api/v1/properties/{property_id}/owners/{owner_id}/details": {
+      "put": {
+        "operationId": "set_owner_details_api_v1_properties__property_id__owners__owner_id__details_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "owner_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Owner Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerDetailsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verrechnungskonto, Vollmacht und Steuerberater eines Objekteigentümers",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/portal-documents": {
+      "get": {
+        "operationId": "list_portal_documents_api_v1_properties__property_id__portal_documents_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PortalDocumentOut"
+                  },
+                  "title": "Response List Portal Documents Api V1 Properties  Property Id  Portal Documents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objektmappe",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_portal_document_api_v1_properties__property_id__portal_documents_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalDocumentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PortalDocumentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dokument in die Objektmappe aufnehmen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/portal-documents/{entry_id}": {
+      "delete": {
+        "operationId": "delete_portal_document_api_v1_properties__property_id__portal_documents__entry_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dokument aus der Objektmappe entfernen (Dokument bleibt erhalten)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}/service-providers": {
       "get": {
         "operationId": "list_providers_api_v1_properties__property_id__service_providers_get",
@@ -72473,6 +75387,211 @@
         ]
       }
     },
+    "/api/v1/properties/{property_id}/sub-communities": {
+      "get": {
+        "operationId": "list_sub_communities_api_v1_properties__property_id__sub_communities_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SubCommunityOut"
+                  },
+                  "title": "Response List Sub Communities Api V1 Properties  Property Id  Sub Communities Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Untergemeinschaften",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_sub_community_api_v1_properties__property_id__sub_communities_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubCommunityIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubCommunityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Untergemeinschaft anlegen (Mehrhausanlage)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/sub-communities/{sub_community_id}": {
+      "delete": {
+        "operationId": "delete_sub_community_api_v1_properties__property_id__sub_communities__sub_community_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sub_community_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sub Community Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Untergemeinschaft löschen (Einheiten werden gelöst)",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "put": {
+        "operationId": "update_sub_community_api_v1_properties__property_id__sub_communities__sub_community_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "sub_community_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Sub Community Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SubCommunityIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SubCommunityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Untergemeinschaft ändern",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}/units": {
       "get": {
         "description": "Units in natural order of their number (\"1\" < \"2\" < \"10\", \"WE1\" < \"WE10\").\n\nWith ``with_occupants=true`` each unit carries its current owner and tenant (at ``as_of``,\ndefault today), loaded in one batch for the whole property.",
@@ -72596,6 +75715,64 @@
         "summary": "Einheit anlegen",
         "tags": [
           "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/vacancies": {
+      "get": {
+        "description": "Vermietbare Einheiten ohne Mietverhältnis zum Stichtag (Mietobjekte und SEV-Eigentum)\nmit Leerstandsbeginn (Tag nach dem letzten Mietende) und letztem Mietvertrag.",
+        "operationId": "vacancies_api_v1_properties__property_id__vacancies_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "format": "date",
+              "title": "As Of",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VacancyRow"
+                  },
+                  "title": "Response Vacancies Api V1 Properties  Property Id  Vacancies Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Leerstand zum Stichtag",
+        "tags": [
+          "Verträge"
         ]
       }
     },
@@ -75400,6 +78577,7 @@
     },
     "/api/v1/tenant/audit-log": {
       "get": {
+        "description": "Change log per entity (Ergänzung 7.2): filter by ``entity_type`` and ``entity_id``.",
         "operationId": "list_audit_api_v1_tenant_audit_log_get",
         "parameters": [
           {
@@ -75441,6 +78619,23 @@
               ],
               "title": "Entity Id"
             }
+          },
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
           }
         ],
         "responses": {
@@ -75470,6 +78665,72 @@
           }
         },
         "summary": "Änderungsprotokoll",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/audit-log/export": {
+      "get": {
+        "description": "CSV (UTF-8 with BOM, semicolon separated) of the filtered change log, one row per\nchanged field; capped at ``AUDIT_EXPORT_MAX_ROWS`` log entries.",
+        "operationId": "export_audit_api_v1_tenant_audit_log_export_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "entity_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Entity Type"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Änderungsprotokoll als CSV",
         "tags": [
           "Mandant"
         ]
@@ -79255,6 +82516,22 @@
               "title": "Unit Id",
               "type": "string"
             }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
+            }
           }
         ],
         "requestBody": {
@@ -79289,7 +82566,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Einheit ändern",
+        "summary": "Einheit ändern (If-Match)",
         "tags": [
           "Objekte"
         ]
@@ -79465,6 +82742,121 @@
           }
         },
         "summary": "Eigentümer, Mieter und Vertragshistorie",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/units/{unit_id}/vacancy-allocation-values": {
+      "get": {
+        "operationId": "list_vacancy_values_api_v1_units__unit_id__vacancy_allocation_values_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/VacancyAllocationValueOut"
+                  },
+                  "title": "Response List Vacancy Values Api V1 Units  Unit Id  Vacancy Allocation Values Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlagewerte für Leerstandszeiten, Historie oder Stichtag",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_vacancy_value_api_v1_units__unit_id__vacancy_allocation_values_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "unit_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Unit Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/VacancyAllocationValueIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VacancyAllocationValueOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlagewert für Leerstandszeiten erfassen (Vorwert wird beendet)",
         "tags": [
           "Objekte"
         ]
@@ -80228,7 +83620,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline)$",
+                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline|energy_certificate|move_in|move_out|maintenance|note_follow_up|meeting|ticket_due)$",
                   "type": "string"
                 },
                 {
@@ -80676,6 +84068,7 @@
     },
     "/api/v1/workspace/search": {
       "get": {
+        "description": "Every hit type is guarded by its own read permission (contacts, properties incl.\nbuildings and units, contracts, documents, tickets, postings); postings additionally\nrespect the legal entity scope of the principal (ADR 0005).",
         "operationId": "search_api_v1_workspace_search_get",
         "parameters": [
           {

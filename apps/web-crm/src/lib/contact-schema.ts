@@ -27,6 +27,9 @@ export const PHONE_LABELS = ["work", "mobile", "private", "fax", "other"] as con
 export const CHANNELS = ["post", "email", "portal"] as const;
 export const MANDATE_GRANTED_VIA = ["telefon", "brief", "email", "portal", "persoenlich"] as const;
 export const MANDATE_SCHEMES = ["core", "b2b"] as const;
+/** Account types of catalogue B.4 (contact bank accounts). */
+export const CONTACT_BANK_ACCOUNT_KINDS = ["rent", "bank_1", "bank_2", "hoa", "reserve", "deposit", "house_money", "legacy"] as const;
+export const CONTACT_DATE_KINDS = ["birthday", "death", "wedding", "foundation", "other"] as const;
 
 const IBAN_LENGTHS: Record<string, number> = {
   DE: 22, AT: 20, CH: 21, NL: 18, BE: 16, FR: 27, LU: 20, IT: 27, ES: 24,
@@ -58,6 +61,7 @@ export function buildContactSchema(t: Messages) {
     house_number: optional(20, t),
     postal_code: optional(20, t),
     city: optional(100, t),
+    state: optional(100, t),
     country: z.string().trim().regex(/^[A-Z]{2}$/, t("countryInvalid")),
     addition: optional(200, t),
     is_primary: z.boolean(),
@@ -69,7 +73,21 @@ export function buildContactSchema(t: Messages) {
       .trim()
       .max(40, t("tooLong"))
       .regex(/^\+?[0-9][0-9 ()/.-]{3,}$/, t("phoneInvalid")),
+    country_code: z
+      .string()
+      .trim()
+      .refine((v) => v === "" || /^\+?[0-9]{1,4}$/.test(v), t("phoneInvalid")),
+    area_code: z
+      .string()
+      .trim()
+      .refine((v) => v === "" || /^[0-9]{1,10}$/.test(v), t("phoneInvalid")),
+    note: optional(200, t),
     is_primary: z.boolean(),
+  });
+  const contactDate = z.object({
+    kind: z.enum(CONTACT_DATE_KINDS),
+    date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, t("dateRequired")),
+    note: optional(200, t),
   });
   const email = z.object({
     label: z.string().trim().max(32, t("tooLong")),
@@ -80,6 +98,8 @@ export function buildContactSchema(t: Messages) {
   const bank = z
     .object({
       label: optional(100, t),
+      kind: z.union([z.enum(CONTACT_BANK_ACCOUNT_KINDS), z.literal("")]),
+      is_default: z.boolean(),
       iban: z.string().max(50, t("tooLong")).refine(isValidIban, t("ibanInvalid")),
       bic: z
         .string()
@@ -118,6 +138,7 @@ export function buildContactSchema(t: Messages) {
     .object({
       kind: z.enum(["person", "company"]),
       salutation: optional(50, t),
+      letter_salutation: optional(200, t),
       title: optional(50, t),
       first_name: optional(100, t),
       last_name: optional(100, t),
@@ -129,15 +150,23 @@ export function buildContactSchema(t: Messages) {
       preferred_channel: z.union([z.enum(CHANNELS), z.literal("")]),
       notes: optional(10_000, t),
       blocked: z.boolean(),
+      retention_profile_id: z.string(),
       types: z.array(z.enum(CONTACT_TYPES)),
       roles: z.array(z.enum(CONTACT_ROLES)),
       tags: z.string(),
       addresses: z.array(address).max(20),
       phones: z.array(phone).max(20),
       emails: z.array(email).max(20),
+      dates: z.array(contactDate).max(20),
       bank_accounts: z.array(bank).max(20),
     })
     .superRefine((v, ctx) => {
+      if (v.emails.filter((e) => e.is_portal_login).length > 1) {
+        ctx.addIssue({ code: "custom", message: t("portalLoginSingle"), path: ["emails"] });
+      }
+      if (v.bank_accounts.filter((b) => b.is_default).length > 1) {
+        ctx.addIssue({ code: "custom", message: t("defaultAccountSingle"), path: ["bank_accounts"] });
+      }
       if (v.kind === "person" && !v.first_name && !v.last_name) {
         ctx.addIssue({ code: "custom", message: t("nameRequired"), path: ["last_name"] });
       }
@@ -153,6 +182,7 @@ export function emptyContact(): ContactFormValues {
   return {
     kind: "person",
     salutation: "",
+    letter_salutation: "",
     title: "",
     first_name: "",
     last_name: "",
@@ -164,11 +194,13 @@ export function emptyContact(): ContactFormValues {
     preferred_channel: "",
     notes: "",
     blocked: false,
+    retention_profile_id: "",
     types: [],
     roles: [],
     tags: "",
     addresses: [],
     phones: [],
+    dates: [],
     emails: [],
     bank_accounts: [],
   };
@@ -181,6 +213,7 @@ export function fromContact(c: ContactOut): ContactFormValues {
   return {
     kind: c.kind,
     salutation: s(c.salutation),
+    letter_salutation: s(c.letter_salutation),
     title: s(c.title),
     first_name: s(c.first_name),
     last_name: s(c.last_name),
@@ -192,6 +225,7 @@ export function fromContact(c: ContactOut): ContactFormValues {
     preferred_channel: c.preferred_channel ?? "",
     notes: s(c.notes),
     blocked: c.blocked,
+    retention_profile_id: c.retention_profile_id ?? "",
     types: c.types,
     roles: c.roles,
     tags: c.tags.join(", "),
@@ -201,17 +235,26 @@ export function fromContact(c: ContactOut): ContactFormValues {
       house_number: s(a.house_number),
       postal_code: s(a.postal_code),
       city: s(a.city),
+      state: s(a.state),
       country: a.country ?? "DE",
       addition: s(a.addition),
       is_primary: !!a.is_primary,
     })),
-    phones: c.phones.map((p) => ({ label: p.label, number: p.number, is_primary: p.is_primary })),
+    phones: c.phones.map((p) => ({
+      label: p.label,
+      number: p.number,
+      country_code: s(p.country_code),
+      area_code: s(p.area_code),
+      note: s(p.note),
+      is_primary: p.is_primary,
+    })),
     emails: c.emails.map((e) => ({
       label: e.label,
       email: e.email,
       is_primary: e.is_primary,
       is_portal_login: e.is_portal_login,
     })),
+    dates: (c.dates ?? []).map((d) => ({ kind: d.kind, date: d.date, note: s(d.note) })),
     // Only masked IBANs are delivered; bank accounts cannot be edited through this form.
     bank_accounts: [],
   };
@@ -223,6 +266,7 @@ export function toContactIn(v: ContactFormValues, existing?: ContactOut): Contac
   return {
     kind: v.kind,
     salutation: person ? n(v.salutation) : null,
+    letter_salutation: n(v.letter_salutation),
     title: person ? n(v.title) : null,
     first_name: person ? n(v.first_name) : null,
     last_name: person ? n(v.last_name) : null,
@@ -234,6 +278,7 @@ export function toContactIn(v: ContactFormValues, existing?: ContactOut): Contac
     notes: n(v.notes),
     preferred_channel: v.preferred_channel === "" ? null : v.preferred_channel,
     blocked: v.blocked,
+    retention_profile_id: v.retention_profile_id || null,
     external_ids: existing?.external_ids ?? {},
     completeness: existing?.completeness ?? "complete",
     identifiers: existing?.identifiers.map(({ kind, value }) => ({ kind, value })) ?? [],
@@ -249,20 +294,31 @@ export function toContactIn(v: ContactFormValues, existing?: ContactOut): Contac
       house_number: n(a.house_number),
       postal_code: n(a.postal_code),
       city: n(a.city),
+      state: n(a.state),
       country: a.country,
       addition: n(a.addition),
       is_primary: a.is_primary,
     })),
-    phones: v.phones.map((p) => ({ label: p.label, number: p.number.trim(), is_primary: p.is_primary })),
+    phones: v.phones.map((p) => ({
+      label: p.label,
+      number: p.number.trim(),
+      country_code: n(p.country_code),
+      area_code: n(p.area_code),
+      note: n(p.note),
+      is_primary: p.is_primary,
+    })),
     emails: v.emails.map((e) => ({
       label: e.label || "work",
       email: e.email.trim(),
       is_primary: e.is_primary,
       is_portal_login: e.is_portal_login,
     })),
+    dates: v.dates.map((d) => ({ kind: d.kind, date: d.date, note: n(d.note) })),
     // On edit the field is omitted: the API keeps existing bank accounts (mandate references).
     bank_accounts: existing ? undefined : v.bank_accounts.map((b) => ({
       label: n(b.label),
+      kind: b.kind || null,
+      is_default: b.is_default,
       iban: b.iban.replace(/\s+/g, "").toUpperCase(),
       bic: b.bic.trim() ? b.bic.trim().toUpperCase() : null,
       bank_name: n(b.bank_name),

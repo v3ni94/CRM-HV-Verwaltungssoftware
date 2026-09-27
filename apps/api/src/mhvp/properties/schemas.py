@@ -11,6 +11,8 @@ from mhvp.contacts.validation import InvalidValueError, normalise_iban
 from mhvp.properties.models import (
     AllocationKind,
     BankAccountKind,
+    BillingPeriodKind,
+    ExemptionCertStatus,
     LegalEntityKind,
     MaintenanceKind,
     ManagementMode,
@@ -77,22 +79,6 @@ class PropertyIn(_In):
     managed_from: date | None = None
     managed_to: date | None = None
     custom_fields: dict[str, Any] = Field(default_factory=dict)
-    # Energieausweis (A63): entered from the certificate, no derivation. Values are used by
-    # listings (prefill), the exposé draft and the OpenImmo completeness check.
-    energy_certificate_type: str | None = Field(default=None, pattern=r"^(verbrauch|bedarf)$")
-    energy_certificate_value: Decimal | None = Field(default=None, gt=0, decimal_places=2)
-    energy_certificate_source: str | None = Field(default=None, max_length=32)
-    energy_certificate_construction_year: int | None = Field(default=None, ge=1500, le=2100)
-    energy_certificate_issued_on: date | None = None
-    energy_certificate_valid_until: date | None = None
-    energy_certificate_class: str | None = Field(default=None, max_length=4)
-
-    @model_validator(mode="after")
-    def _energy_certificate_dates(self) -> Self:
-        issued, valid = self.energy_certificate_issued_on, self.energy_certificate_valid_until
-        if issued is not None and valid is not None and valid < issued:
-            raise ValueError("Gültigkeit des Energieausweises liegt vor dem Ausstellungsdatum.")
-        return self
 
 
 class LegalEntityOut(_Out):
@@ -139,6 +125,7 @@ class BuildingIn(_In):
     name: str = Field(min_length=1, max_length=200)
     street: str | None = None
     house_number: str | None = None
+    address_addition: str | None = Field(default=None, max_length=200)
     built_area_sqm: Qty | None = Field(default=None, ge=0)
     sealed_area_sqm: Qty | None = Field(default=None, ge=0)
     roof_area_sqm: Qty | None = Field(default=None, ge=0)
@@ -158,17 +145,43 @@ class BuildingIn(_In):
     cellar_rooms: int | None = Field(default=None, ge=0)
     heritage_protection: bool = False
     heritage_notes: str | None = None
-    energy_certificate_type: str | None = None
-    energy_certificate_value: Qty | None = None
+    # Energieausweis (4.3, A63): only on the building. Entered from the certificate, no
+    # derivation. Listings copy the values on creation, the exposé draft reads them.
+    energy_certificate_law: str | None = Field(default=None, pattern=r"^(geg|enev_2014)$")
+    energy_certificate_type: str | None = Field(default=None, pattern=r"^(verbrauch|bedarf)$")
+    energy_final_heat_kwh: Qty | None = Field(default=None, ge=0, description="kWh/(m²a)")
+    energy_hot_water_included: bool = False
+    energy_final_electricity_kwh: Qty | None = Field(default=None, ge=0, description="kWh/(m²a)")
+    heating_type_code: str | None = Field(default=None, pattern=r"^(etage|ofen|zentral)$")
+    energy_sources: list[str] = Field(default_factory=list, description="Energieträger (B.8)")
+    energy_certificate_class: str | None = Field(default=None, max_length=4)
+    energy_certificate_construction_year: int | None = Field(default=None, ge=1500, le=2100)
+    energy_certificate_issued_on: date | None = None
     energy_certificate_valid_until: date | None = None
     notes: str | None = None
     custom_fields: dict[str, Any] = Field(default_factory=dict)
+
+    @field_validator("energy_sources")
+    @classmethod
+    def _sources(cls, value: list[str]) -> list[str]:
+        cleaned = [v.strip() for v in value if v and v.strip()]
+        if any(len(v) > 63 for v in cleaned):
+            raise ValueError("Energieträger höchstens 63 Zeichen")
+        return list(dict.fromkeys(cleaned))
+
+    @model_validator(mode="after")
+    def _energy_certificate_dates(self) -> Self:
+        issued, valid = self.energy_certificate_issued_on, self.energy_certificate_valid_until
+        if issued is not None and valid is not None and valid < issued:
+            raise ValueError("Gültigkeit des Energieausweises liegt vor dem Ausstellungsdatum.")
+        return self
 
 
 class BuildingOut(BuildingIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
     property_id: uuid.UUID
+    version: int
 
 
 class UnitIn(_In):
@@ -193,6 +206,13 @@ class UnitIn(_In):
     postal_code: str | None = None
     city: str | None = None
     custom_fields: dict[str, Any] = Field(default_factory=dict)
+    # 4.4: sub community, commission, deposit amount and vacancy VAT option are informational;
+    # no receivable or posting derives from them.
+    sub_community_id: uuid.UUID | None = None
+    commission: Decimal | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+    commission_note: str | None = None
+    deposit_amount: Decimal | None = Field(default=None, ge=0, max_digits=14, decimal_places=2)
+    vacancy_vat_option: VatOption | None = None
 
 
 class AllocationValueIn(_Period):
@@ -211,6 +231,22 @@ class AllocationValueOut(_Out):
     valid_from: date
     valid_to: date | None
     source: ValueSource
+
+
+class VacancyAllocationValueIn(_Period):
+    allocation_key_id: uuid.UUID
+    value: Qty = Field(ge=0)
+
+
+class VacancyAllocationValueOut(_Out):
+    id: uuid.UUID
+    unit_id: uuid.UUID
+    allocation_key_id: uuid.UUID
+    key_code: str | None = None
+    key_name: str | None = None
+    value: Qty
+    valid_from: date
+    valid_to: date | None
 
 
 class OccupantMemberOut(BaseModel):
@@ -243,6 +279,7 @@ class UnitOut(UnitIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
     property_id: uuid.UUID
+    version: int
     allocation_values: list[AllocationValueOut] = Field(default_factory=list)
     vat_option: VatOption | None = None
     # Only filled with ?with_occupants=true: current owner and tenant at the reference date.
@@ -274,6 +311,11 @@ class VatOptionIn(_Period):
 class OwnerIn(_Period):
     party_id: uuid.UUID
     share_percent: Qty | None = Field(default=None, ge=0, le=100)
+    clearing_account_id: uuid.UUID | None = Field(default=None, description="Verrechnungskonto")
+    power_of_attorney_document_id: uuid.UUID | None = Field(
+        default=None, description="Verwaltervollmacht (Dokument)"
+    )
+    tax_advisor_contact_id: uuid.UUID | None = Field(default=None, description="Steuerberater")
 
 
 class OwnerOut(_Out):
@@ -283,6 +325,17 @@ class OwnerOut(_Out):
     valid_from: date
     valid_to: date | None
     legal_entity_id: uuid.UUID | None = None
+    clearing_account_id: uuid.UUID | None = None
+    power_of_attorney_document_id: uuid.UUID | None = None
+    tax_advisor_contact_id: uuid.UUID | None = None
+
+
+class OwnerDetailsIn(_In):
+    """Clearing account, power of attorney and tax advisor of an owner entry (4.2)."""
+
+    clearing_account_id: uuid.UUID | None = None
+    power_of_attorney_document_id: uuid.UUID | None = None
+    tax_advisor_contact_id: uuid.UUID | None = None
 
 
 class OwnerSetIn(_In):
@@ -306,6 +359,9 @@ class CurrentOwnerOut(BaseModel):
     valid_from: date
     valid_to: date | None
     legal_entity_id: uuid.UUID | None
+    clearing_account_id: uuid.UUID | None = None
+    power_of_attorney_document_id: uuid.UUID | None = None
+    tax_advisor_contact_id: uuid.UUID | None = None
 
 
 class OwnerSetOut(BaseModel):
@@ -322,6 +378,7 @@ class BankAccountIn(_Period):
     bank_name: str | None = None
     holder: str = Field(min_length=2, max_length=200)
     notes: str | None = None
+    ledger_account_id: uuid.UUID | None = Field(default=None, description="Zugeordnetes Sachkonto")
 
     @field_validator("iban")
     @classmethod
@@ -343,6 +400,60 @@ class BankAccountOut(_Out):
     segregated: bool
     valid_from: date
     valid_to: date | None
+    notes: str | None = None
+    ledger_account_id: uuid.UUID | None = None
+
+
+class BillingPeriodIn(_In):
+    kind: BillingPeriodKind
+    valid_from: date
+    valid_to: date
+    board_online_audit: bool = Field(default=False, description="Online-Belegprüfung durch Beirat")
+    notes: str | None = None
+
+    @model_validator(mode="after")
+    def _order(self) -> Self:
+        if self.valid_to < self.valid_from:
+            raise ValueError("valid_to liegt vor valid_from")
+        return self
+
+
+class BillingPeriodOut(BillingPeriodIn):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+    id: uuid.UUID
+    property_id: uuid.UUID
+
+
+class SubCommunityIn(_In):
+    code: str = Field(pattern=r"^[A-Za-z0-9_-]{1,32}$")
+    name: str = Field(min_length=1, max_length=200)
+    notes: str | None = None
+
+
+class SubCommunityOut(SubCommunityIn):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+    id: uuid.UUID
+    property_id: uuid.UUID
+
+
+class PortalDocumentIn(_In):
+    document_id: uuid.UUID
+    title: str | None = Field(default=None, max_length=200)
+    visible_for: list[str] = Field(default_factory=list, description="tenant, owner")
+    sort_order: int = 0
+
+    @field_validator("visible_for")
+    @classmethod
+    def _audience(cls, value: list[str]) -> list[str]:
+        if not value or not set(value) <= {"tenant", "owner"}:
+            raise ValueError("erlaubt: tenant, owner (mindestens einer)")
+        return sorted(set(value))
+
+
+class PortalDocumentOut(PortalDocumentIn):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+    id: uuid.UUID
+    property_id: uuid.UUID
 
 
 class PropertyContactIn(_Period):
@@ -396,6 +507,21 @@ class ReadingOut(ReadingIn):
     implausible: bool = False
 
 
+class MeterChangeIn(_In):
+    changed_on: date
+    old_final_value: Qty = Field(ge=0, description="Endstand des alten Zählers")
+    new_initial_value: Qty = Field(ge=0, description="Anfangsstand des neuen Zählers")
+    new_number: str | None = Field(default=None, min_length=1, max_length=100)
+    notes: str | None = None
+
+
+class MeterChangeOut(MeterChangeIn):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+    id: uuid.UUID
+    meter_id: uuid.UUID
+    old_number: str
+
+
 class ProviderIn(_Period):
     contact_id: uuid.UUID
     contract_type_code: str
@@ -405,6 +531,20 @@ class ProviderIn(_Period):
     categories: list[str] = Field(default_factory=list)
     notes: str | None = None
     custom_fields: dict[str, Any] = Field(default_factory=dict)
+    customer_number: str | None = Field(default=None, max_length=50)
+    exemption_cert_status: ExemptionCertStatus | None = Field(
+        default=None, description="Freistellungsbescheinigung § 48b EStG, laut Bescheinigung"
+    )
+    exemption_cert_valid_until: date | None = None
+    creditor_account_id: uuid.UUID | None = Field(default=None, description="Kreditorenkonto")
+
+    @model_validator(mode="after")
+    def _exemption(self) -> Self:
+        if self.exemption_cert_valid_until is not None and self.exemption_cert_status is not (
+            ExemptionCertStatus.VALID
+        ):
+            raise ValueError("Gültigkeitsdatum nur bei gültiger Freistellungsbescheinigung")
+        return self
 
 
 class ProviderOut(ProviderIn):

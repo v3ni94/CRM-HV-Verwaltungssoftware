@@ -25,6 +25,33 @@ calendar, saved list filters, bulk actions, operations metrics.
   one notification per row. Orientation only, no legal deadline calculation (rule M9-06).
 * `GET /workspace/digest`, `GET /workspace/deadlines`, `GET/PUT /workspace/job-settings`.
 
+## Calendar entries from date fields (P1 AP7, Ergänzung 4.10, migration 0151)
+
+Every dated field of the master data becomes one calendar entry with a source: meter
+calibration, energy certificate (building), contract end and termination, move in and
+move out, maintenance, follow up of a contact note, owners' meeting and its resolution
+deadline, ticket deadline, bank consent, document retention, notice date of service
+contracts. The same job `mhvp.workspace.compliance_deadlines` (20:00) reads all of them
+through the registry `jobs.calendar_sources()` (one reader per source) and writes
+
+* the deadline list `compliance_deadline` (future dates only, `DEADLINE_KINDS`, one
+  notification per row at its lead time) and
+* generated rows in `calendar_entry` (`jobs.calendar_sync`): no owner, shared,
+  `source_type`/`source_id`/`category` as idempotency key (partial unique index
+  `uq_calendar_entry_generated`), `reminders` with the codes of B.30 (`CALENDAR_REMINDERS`,
+  a maintenance item's `remind_before` wins), dates from `CALENDAR_PAST_DAYS` (365) back.
+  A second run on the same data changes nothing; a moved date updates the entry, a removed
+  date or deleted source row deletes it. Manual entries are never touched.
+
+`GET /workspace/calendar` shows generated entries with the read permission of their kind
+(`DEADLINE_PERMISSIONS`), `editable=false`, `category`, `reminders` and `href` (route to the
+source, `links.target_href`); `GET /workspace/deadlines` carries the same `href`. The live
+derived dates (`services.derived_dates`) remain for sources the job has not yet
+materialised and are suppressed when a generated entry of the same source and date exists.
+Readers of fields that other work packages add register only when the model carries the
+field (`hasattr`), see `calendar_sources()`. The Google Calendar link (`calendar_event`,
+M23-02) is unchanged; generated entries are not synced to Google.
+
 ## Job `ops.backup_verify` (A67)
 
 `mhvp.workspace.backup_verify`: täglich 02:00 (Beat `ops-backup-verify`, Queue `io`) läuft
@@ -39,11 +66,23 @@ oder kein Lauf). Tests: `tests/integration/test_ops_jobs.py`.
 
 Checked against the folder contents on 26.09.2026, the following files were not listed above:
 
-* `models.py`: notifications, calendar entries, saved filters, calendar event links (M9, M23-02)
+* `models.py`: notifications, calendar entries (manual and generated, P1 AP7), saved filters, calendar event links (M9, M23-02)
 * `routers.py`: `/api/v1/workspace` endpoints (dashboard, search, notifications, calendar, filters, digest, deadlines, job settings)
 * `services.py`: idempotent `notify`, derived calendar dates, maintenance reminders
 * `links.py`: routes of notification targets (CRM and portal), hint lookups for the calendar month and the property of a maintenance item
-* `tasks.py`: Celery jobs: reminders (hourly), digest (07:00), compliance deadlines (20:00)
+* `tasks.py`: Celery jobs: reminders (hourly), digest (07:00), compliance deadlines and generated calendar entries (20:00)
+* `jobs.py`: source reader registry, deadline list, generated calendar entries, digest
+
+## Global search (P1 AP6, Ergänzung 5 and 7.4)
+
+`GET /workspace/search?q=` returns hits of the types contact, property, building, unit,
+contract, document, ticket and posting. Each type is guarded by its own read permission
+(`contacts:read`, `properties:read` for property, building and unit, `contracts:read`,
+`documents:read`, `tickets:read`, `accounting:read`); postings additionally respect the legal
+entity scope of the principal. Property, unit and building hits come from one `UNION ALL`
+statement so the query budget of `test_perf_queries.py` holds. `parent_id` carries the
+property of a building and the ledger of a posting; the web app builds the route in
+`apps/web-crm/src/lib/entity-links.ts`. Tests: `tests/integration/test_workspace_search_p1.py`.
 
 ## Performance (Review 26.09.2026)
 

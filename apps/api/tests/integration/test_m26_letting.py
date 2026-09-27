@@ -1409,8 +1409,8 @@ def test_listing_images_upload_link_export_and_tenant_separation(
 
 ENERGY_CERTIFICATE = {
     "energy_certificate_type": "bedarf",
-    "energy_certificate_value": "95.50",
-    "energy_certificate_source": "Gas",
+    "energy_final_heat_kwh": "95.50",
+    "energy_sources": ["Gas"],
     "energy_certificate_construction_year": 1978,
     "energy_certificate_issued_on": "2024-03-01",
     "energy_certificate_valid_until": "2034-02-28",
@@ -1421,8 +1421,9 @@ ENERGY_CERTIFICATE = {
 def test_energy_certificate_and_asking_rent(
     clients: tuple[TestClient, TestClient], world: World
 ) -> None:
-    """A63: energy certificate on the property, copied to the listing, asking rent on the
-    listing; exposé and OpenImmo completeness check read these fields (no free text)."""
+    """A63: energy certificate on the building (4.3, only there since migration 0149), copied
+    to the listing, asking rent on the listing; exposé and OpenImmo completeness check read
+    these fields (no free text)."""
     import xml.etree.ElementTree as ET
 
     client, _ = clients
@@ -1436,25 +1437,19 @@ def test_energy_certificate_and_asking_rent(
         "postal_code": "40003",
         "city": f"Energiestadt {RUN}",
     }
-    # validity before issue date is rejected
-    bad = body | ENERGY_CERTIFICATE | {"energy_certificate_valid_until": "2024-02-01"}
-    assert client.post("/api/v1/properties", json=bad, headers=h).status_code == 422
     prop = _ok(client.post("/api/v1/properties", json=body, headers=h), 201)
-    assert prop["energy_certificate_type"] is None
-    without_energy = {k: v for k, v in prop.items() if k not in ("id", "status", "version")}
-    without_energy.pop("legal_entities", None)
-    prop = _ok(
-        client.put(
-            f"/api/v1/properties/{prop['id']}", json=without_energy | ENERGY_CERTIFICATE, headers=h
-        )
+    assert "energy_certificate_type" not in prop
+    buildings = f"/api/v1/properties/{prop['id']}/buildings"
+    # validity before issue date is rejected
+    bad = {"name": "Haus"} | ENERGY_CERTIFICATE | {"energy_certificate_valid_until": "2024-02-01"}
+    assert client.post(buildings, json=bad, headers=h).status_code == 422
+    building_row = _ok(
+        client.post(buildings, json={"name": "Haus"} | ENERGY_CERTIFICATE, headers=h), 201
     )
-    assert prop["energy_certificate_class"] == "D"
-    assert Decimal(prop["energy_certificate_value"]) == Decimal("95.50")
-    assert prop["energy_certificate_issued_on"] == "2024-03-01"
-    building = _ok(
-        client.post(f"/api/v1/properties/{prop['id']}/buildings", json={"name": "Haus"}, headers=h),
-        201,
-    )["id"]
+    assert building_row["energy_certificate_class"] == "D"
+    assert Decimal(building_row["energy_final_heat_kwh"]) == Decimal("95.50")
+    assert building_row["energy_certificate_issued_on"] == "2024-03-01"
+    building = building_row["id"]
     unit = _ok(
         client.post(
             f"/api/v1/properties/{prop['id']}/units",
@@ -1470,7 +1465,7 @@ def test_energy_certificate_and_asking_rent(
         201,
     )["id"]
 
-    # exposé before any listing: certificate from the property, asking rent missing
+    # exposé before any listing: certificate from the building, asking rent missing
     exp = _ok(client.get(f"{L}/units/{unit}/expose", headers=h))
     assert exp["energy_certificate"] == {
         "type": "bedarf",

@@ -40,7 +40,7 @@
     "switchTenant": "Switch tenant",
     "search": "Search",
     "searchShortcut": "Ctrl+K",
-    "searchPlaceholder": "Contacts, properties, units, contracts, documents",
+    "searchPlaceholder": "Contacts, properties, buildings, units, contracts, documents, tickets, postings",
     "searchEmpty": "No results.",
     "searchMin": "Enter at least two characters.",
     "searchTitle": "Global search",
@@ -59,7 +59,10 @@
       "property": "Property",
       "unit": "Unit",
       "contract": "Contract",
-      "document": "Document"
+      "document": "Document",
+      "building": "Building",
+      "ticket": "Ticket",
+      "posting": "Posting"
     },
     "accounting": "Accounting",
     "hoa": "HOA",
@@ -138,7 +141,11 @@
       "bank": "Bank accounts",
       "notes": "Notes",
       "consents": "Consents",
-      "tickets": "Tickets"
+      "tickets": "Tickets",
+      "relations": "Relations",
+      "documents": "Documents",
+      "releases": "Portal releases",
+      "log": "Event log"
     },
     "calls": {
       "title": "Calls"
@@ -152,7 +159,9 @@
       "category": "Category",
       "pinned": "Pinned",
       "save": "Save note",
-      "required": "Please enter a text."
+      "required": "Please enter a text.",
+      "title": "Title",
+      "followUp": "Follow up"
     },
     "consents": {
       "add": "Record consent",
@@ -266,6 +275,20 @@
       "picked": "Selected",
       "save": "Save representative",
       "error": "The change could not be saved."
+    },
+    "blockedAt": "Blocked since",
+    "deleteAfter": "Deletion reserved for",
+    "deleteAfterHint": "Reservation from the retention profile. Deletion is a manual four eyes step, no automatic run.",
+    "blockList": "Blocked contacts only",
+    "documents": {
+      "title": "Documents of this contact",
+      "draft": "draft"
+    },
+    "log": {
+      "title": "Event log",
+      "noPermission": "The event log requires the permission audit:read.",
+      "actor": "by",
+      "noFields": "No field changes"
     }
   },
   "ContactForm": {
@@ -334,7 +357,9 @@
       "languageInvalid": "Please enter a language code with two lowercase letters.",
       "sepaSignedRequired": "Please enter the date the mandate was granted.",
       "sepaGrantedViaRequired": "Please specify how the mandate was granted.",
-      "sepaProofRequired": "Please attach the mandate as PDF or enter a note."
+      "sepaProofRequired": "Please attach the mandate as PDF or enter a note.",
+      "portalLoginSingle": "Exactly one e-mail address may be the portal login address.",
+      "defaultAccountSingle": "Exactly one bank account may be the default account."
     },
     "roles": "Classification",
     "sepa": {
@@ -348,7 +373,38 @@
       "document": "Mandate as PDF",
       "uploading": "Uploading…",
       "documentStored": "Document stored."
-    }
+    },
+    "letterSalutation": "Letter salutation",
+    "state": "State",
+    "countryCode": "Country code",
+    "areaCode": "Area code",
+    "phoneNote": "Note",
+    "dates": "Dates",
+    "dateKind": {
+      "birthday": "Birthday",
+      "death": "Date of death",
+      "wedding": "Wedding",
+      "foundation": "Foundation",
+      "other": "Other"
+    },
+    "date": "Date",
+    "dateNote": "Note",
+    "accountKind": {
+      "rent": "Rent account",
+      "bank_1": "Bank account 1",
+      "bank_2": "Bank account 2",
+      "hoa": "HOA account",
+      "reserve": "Reserve account",
+      "deposit": "Deposit account",
+      "house_money": "House money account",
+      "legacy": "Legacy account"
+    },
+    "noAccountKind": "No account type",
+    "defaultAccount": "Default account",
+    "retentionProfile": "Retention profile",
+    "noRetentionProfile": "No retention profile",
+    "retentionHint": "A deletion date is reserved from the released profile. The deletion itself is a manual four eyes step.",
+    "dateKindLabel": "Kind"
   },
   "Duplicates": {
     "title": "Possible duplicates",
@@ -1168,7 +1224,8 @@
       "reference": "Reference",
       "lead_days": "Lead time",
       "status": "Status",
-      "notified_at": "Notified"
+      "notified_at": "Notified",
+      "source": "Source"
     },
     "kind": {
       "contract_end": "Contract end",
@@ -1177,8 +1234,16 @@
       "bank_consent": "Bank consent expiry",
       "document_retention_end": "Retention end",
       "service_contract_notice": "Notice date service contract",
-      "meeting_resolution_deadline": "Resolution deadline virtual meeting"
+      "meeting_resolution_deadline": "Resolution deadline virtual meeting",
+      "energy_certificate": "Energy certificate expiry",
+      "move_in": "Move in",
+      "move_out": "Move out",
+      "maintenance": "Maintenance",
+      "note_follow_up": "Follow up",
+      "meeting": "Owners' meeting",
+      "ticket_due": "Ticket deadline"
     },
+    "openSource": "Open source",
     "status": {
       "open": "open",
       "done": "done",
@@ -2248,6 +2313,9 @@
     "toListing": "Open listing"
   },
   "Tickets": {
+    "links": {
+      "parent": "Parent ticket"
+    },
     "mailAttachments": {
       "title": "Attachments from e-mails",
       "hint": "PDF and image attachments can be captured as receipts. The AI proposes the values; review and confirmation happen in the receipt intake. Nothing is posted.",
@@ -6616,5 +6684,421 @@
     "pendingBadge": "Approval pending",
     "rejectedBadge": "Import rejected",
     "link": "Imported contract approval"
+  },
+  "Metering": {
+    "title": "Metering providers",
+    "interfaces": "Interfaces",
+    "card": {
+      "title": "Metering providers",
+      "description": "Connections to ista, Techem, KALO, Brunata and others, property assignments, retrieval of consumption data and billing results."
+    },
+    "pageIntro": "Access is managed centrally, secrets are only set and never shown. A connection test checks the login only and orders no billing. The assignment overview shows the same records as the Metering tab on the property.",
+    "readOnlyHint": "Read only. Changes require the permission to manage metering connections or the module is not enabled for this tenant.",
+    "loadError": "The data could not be loaded.",
+    "none": "none",
+    "until": "to",
+    "openEnd": "open",
+    "since": "since",
+    "search": "Search",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "disabled": {
+      "text": "The metering module is not enabled for this tenant. Reading is possible, creating, changing and fetching are locked.",
+      "link": "Go to tenant settings"
+    },
+    "environment": {
+      "test": "Test",
+      "production": "Production"
+    },
+    "connectionStatus": {
+      "active": "active",
+      "paused": "paused"
+    },
+    "testOutcome": {
+      "success": "successful",
+      "failed": "failed",
+      "unclear": "unclear",
+      "not_released": "not released",
+      "manual": "manual, no remote access"
+    },
+    "functions": {
+      "billing_unit_data": "Billing unit master data",
+      "roles": "Submit users and roles",
+      "billing_input": "Send billing input",
+      "billing_result": "Fetch billing result",
+      "documents": "Fetch documents",
+      "consumption": "Fetch consumption data"
+    },
+    "capability": {
+      "available": "available",
+      "unavailable": "unavailable"
+    },
+    "scope": {
+      "heating": "Heating",
+      "hot_water": "Hot water",
+      "cold_water": "Cold water",
+      "smoke_detectors": "Smoke detectors",
+      "other": "Other"
+    },
+    "status": {
+      "open": "open",
+      "proposed": "proposed",
+      "confirmed": "confirmed",
+      "conflict": "conflict",
+      "archived": "archived"
+    },
+    "occupancy": {
+      "occupied": "occupied",
+      "vacant": "vacant",
+      "owner_use": "owner use",
+      "unclear": "unclear"
+    },
+    "jobStatus": {
+      "queued": "queued",
+      "running": "running",
+      "waiting_provider": "waiting for provider",
+      "succeeded": "succeeded",
+      "partial": "partial",
+      "failed": "failed",
+      "unclear": "unclear"
+    },
+    "valueKind": {
+      "actual": "measured",
+      "estimated": "estimated",
+      "missing": "missing",
+      "corrected": "corrected"
+    },
+    "reviewStatus": {
+      "imported": "imported",
+      "reviewed": "reviewed",
+      "rejected": "rejected"
+    },
+    "connection": {
+      "title": "Connections",
+      "new": "New connection",
+      "none": "No connection yet.",
+      "displayName": "Display name",
+      "environment": "Environment",
+      "references": "Customer and contract numbers",
+      "contractingCompany": "Contracting company",
+      "secrets": "Stored secrets",
+      "secretName": "Name (for example client_id)",
+      "secretValue": "Value",
+      "addSecret": "Another secret",
+      "replaceSecrets": "Replace secrets",
+      "secretsHint": "Values are stored encrypted and never shown. An empty value removes the secret. The last test then counts as stale.",
+      "lastTest": "Last connection test",
+      "notTested": "not tested yet",
+      "testStale": "stale",
+      "functions": "Functions",
+      "test": "Test connection",
+      "pause": "Pause",
+      "activate": "Activate"
+    },
+    "wizard": {
+      "title": "Setup wizard",
+      "steps": {
+        "provider": "Provider",
+        "details": "Connection",
+        "secrets": "Access",
+        "test": "Test",
+        "done": "Functions"
+      },
+      "providerIntro": "The function state per provider is the documented research state. Yes means a documented API, not automatically released access. Without an adapter the connection stays manual.",
+      "manualOnly": "manual only",
+      "noAdapter": "no adapter",
+      "environmentHint": "Test and production stay strictly separated. Create one connection with its own credentials per environment.",
+      "referencesHint": "Separate several numbers by comma or line break. Leading zeros are kept.",
+      "secretsIntro": "Credentials are only set. They are stored encrypted and not shown again. This step can be skipped.",
+      "create": "Create connection",
+      "created": "Connection {name} was created.",
+      "testIntro": "The test checks the login only. It orders no billing, changes no user data and acknowledges no documents.",
+      "skipTest": "Test later",
+      "releasedFunctions": "Released functions",
+      "testNotAllObjects": "A successful login does not confirm access to all properties. The assignment per property remains to be checked.",
+      "toAssignments": "Go to property assignment",
+      "next": "Next",
+      "back": "Back"
+    },
+    "assignment": {
+      "overviewTitle": "Assignment overview",
+      "wizardTitle": "Create property assignment",
+      "new": "New assignment",
+      "noConnections": "First create a connection under Settings, Interfaces, Metering providers.",
+      "connection": "Connection (customer account)",
+      "property": "Property",
+      "propertySearch": "Property number or name",
+      "choose": "Please choose",
+      "internal": "Internal (CRM)",
+      "external": "External (provider)",
+      "hvmNumber": "HVM property number",
+      "manualEntryHint": "No adapter lists billing units. The external number is entered manually or imported by CSV.",
+      "externalNumber": "External property or billing unit number",
+      "externalNumberHint": "As text, leading zeros are kept. Do not enter the customer, user unit or device number.",
+      "externalName": "Name at the provider",
+      "externalAddress": "Address at the provider",
+      "scope": "Service scope",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "expectedUnits": "Expected units",
+      "primary": "Primary assignment",
+      "primaryShort": "primary",
+      "note": "Note",
+      "confirmHint": "The assignment is saved as open. Confirmation and technical verification at the provider happen in the property tab with a verification basis.",
+      "save": "Save assignment",
+      "remoteConfirmed": "remote verified"
+    },
+    "table": {
+      "search": "Search (property, external number)",
+      "status": "Verification status",
+      "allStatus": "All statuses",
+      "scope": "Service scope",
+      "allScopes": "All scopes",
+      "connection": "Connection",
+      "allConnections": "All connections",
+      "includeArchived": "Show archived",
+      "hvmNumber": "HVM no.",
+      "address": "Property address",
+      "provider": "Provider",
+      "externalNumber": "External number",
+      "validity": "Validity",
+      "units": "Units (assigned/expected)",
+      "lastFetch": "Last fetch",
+      "errorHint": "Hint",
+      "open": "Open",
+      "empty": "No assignments found.",
+      "pagination": "Pagination",
+      "total": "{total} assignments",
+      "page": "Page {page} of {pages}",
+      "prev": "Previous",
+      "next": "Next"
+    },
+    "release": {
+      "button": "Release selected ({count})",
+      "hint": "Only assignments in status proposed are confirmed. Conflicts stay locked.",
+      "previewTitle": "Review bulk release",
+      "willConfirm": "will be confirmed",
+      "skipped": "skipped ({status})",
+      "apply": "Run release",
+      "select": "Select",
+      "rowOk": "Property {number}: confirmed.",
+      "rowFailed": "Property {number}: not confirmed ({message})"
+    },
+    "csv": {
+      "title": "CSV import and export",
+      "intro": "Download the template, fill it in, check it and only then apply it deliberately. Numbers stay text, duplicates are reported, uploading alone changes nothing.",
+      "template": "Download template",
+      "export": "Export assignments",
+      "file": "CSV file",
+      "preview": "Check",
+      "apply": "Apply",
+      "applyHint": "Only rows with status ok are applied. Error rows and duplicates are skipped.",
+      "previewSummary": "Check: {ok} ok, {errors} errors, {duplicates} duplicates. Nothing was saved.",
+      "appliedSummary": "{count} assignments applied.",
+      "line": "Line",
+      "status": "Status",
+      "values": "Values",
+      "messages": "Messages",
+      "rowStatus": {
+        "ok": "ok",
+        "error": "error",
+        "duplicate": "duplicate"
+      }
+    },
+    "tab": {
+      "title": "Metering providers",
+      "toSettings": "Manage connections"
+    },
+    "detail": {
+      "title": "Assignment",
+      "account": "Customer account",
+      "basis": "Verification basis",
+      "basisPlaceholder": "Verification basis, for example checked statement 2025 or provider reply of DD.MM.YYYY",
+      "confirmLocal": "Confirm locally",
+      "confirmRemote": "Record technical confirmation at the provider",
+      "archive": "Archive",
+      "confirmHint": "A local confirmation is no technical verification at the provider. Both are stored separately with their basis."
+    },
+    "fetch": {
+      "title": "Fetch now",
+      "button": "Fetch now",
+      "refresh": "Refresh status",
+      "noConnection": "Connection not found.",
+      "connectionPaused": "Connection is paused.",
+      "conflict": "Assignment in conflict, fetch locked.",
+      "unknownFunction": "Function not in catalogue.",
+      "noPermission": "Fetching requires the permission to run metering sync."
+    },
+    "unit": {
+      "title": "Unit assignment",
+      "internalNumber": "Internal unit",
+      "externalNumber": "External user unit",
+      "floor": "Floor",
+      "area": "Area (m²)",
+      "occupancy": "Occupancy",
+      "currentOccupants": "Current occupants (from contracts)",
+      "tenant": "Tenant",
+      "owner": "Owner",
+      "empty": "No unit assigned yet.",
+      "missing": "{count} units of the property are not assigned yet. Transfers stay locked until the assignment is complete.",
+      "add": "Assign unit",
+      "hint": "The user unit number is neither a device number nor a tenant name. An occupant change does not alter the unit assignment."
+    },
+    "data": {
+      "title": "Consumption data and billing results",
+      "periodFrom": "Period from",
+      "periodTo": "Period to",
+      "consumption": "Consumption values",
+      "billing": "Billing results",
+      "billingHint": "Third party data for review. Nothing is posted.",
+      "empty": "No data in the chosen period.",
+      "period": "Period",
+      "kind": "Kind",
+      "value": "Value",
+      "valueKind": "Value kind",
+      "source": "Source",
+      "version": "Version",
+      "missing": "missing",
+      "amount": "Amount",
+      "documentRef": "Document reference",
+      "review": "Review"
+    },
+    "clearing": {
+      "title": "Clearing",
+      "intro": "Unknown identifiers from fetches of this connection. Assign or dismiss, never distribute silently.",
+      "empty": "No open clearing items.",
+      "assignHere": "Assign to this assignment",
+      "dismiss": "Dismiss"
+    }
+  },
+  "Common": {
+    "links": {
+      "title": "Links",
+      "contact": "Contact",
+      "property": "Property",
+      "building": "Building",
+      "unit": "Unit",
+      "contract": "Contract",
+      "document": "Document",
+      "ticket": "Ticket",
+      "posting": "Posting",
+      "ledger": "Ledger",
+      "meeting": "Meeting",
+      "resolution": "Resolution"
+    }
+  },
+  "Audit": {
+    "title": "Change log",
+    "loading": "Loading the log.",
+    "empty": "No changes logged yet.",
+    "noAccess": "Permission for the change log is missing.",
+    "error": "The change log could not be loaded.",
+    "time": "Time",
+    "field": "Field",
+    "old": "Before",
+    "new": "After",
+    "actor": "User",
+    "system": "System",
+    "export": "Export CSV",
+    "more": "Load more"
+  },
+  "Calendar": {
+    "kind": {
+      "appointment": "Appointment",
+      "contract_end": "Contract end",
+      "contract_end_date": "Contract end",
+      "contract_termination": "Termination",
+      "contract_termination_date": "Termination",
+      "meter_calibration": "Meter calibration",
+      "bank_consent": "Bank consent expiry",
+      "document_retention_end": "Retention end",
+      "service_contract_notice": "Notice date service contract",
+      "meeting_resolution_deadline": "Resolution deadline virtual meeting",
+      "energy_certificate": "Energy certificate expiry",
+      "move_in": "Move in",
+      "move_out": "Move out",
+      "maintenance": "Maintenance",
+      "note_follow_up": "Follow up",
+      "meeting": "Owners' meeting",
+      "ticket_due": "Ticket deadline"
+    },
+    "openSource": "Open source",
+    "generatedHint": "Generated from the master data, to be verified.",
+    "reminders": "Reminder",
+    "reminder": {
+      "0": "at start",
+      "5min": "5 minutes before",
+      "10min": "10 minutes before",
+      "15min": "15 minutes before",
+      "30min": "30 minutes before",
+      "1h": "1 hour before",
+      "2h": "2 hours before",
+      "4h": "4 hours before",
+      "1d": "1 day before",
+      "7d": "7 days before",
+      "14d": "14 days before",
+      "1m": "1 month before",
+      "3m": "3 months before",
+      "6m": "6 months before"
+    }
+  },
+  "contracts": {
+    "allocation": {
+      "title": "Properties (allocation values)",
+      "help": "Contract related allocation values such as persons with a period. A new value closes the open previous value the day before; the history is kept.",
+      "none": "No allocation values recorded for the contract.",
+      "noKeys": "The property has no allocation keys.",
+      "key": "Allocation key",
+      "value": "Value",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "open": "open",
+      "add": "Add value",
+      "errors": {
+        "required": "Allocation key, value and valid from are required."
+      }
+    },
+    "mandates": {
+      "title": "SEPA mandates",
+      "directDebitOn": "Direct debit is enabled on the contract. Collection stays locked until release gate G2.",
+      "directDebitOff": "Direct debit is not enabled on the contract.",
+      "none": "No mandate recorded for the contract party.",
+      "reference": "Reference and creditor ID",
+      "role": "Role",
+      "default": "Default mandate",
+      "additional": "Additional mandate",
+      "iban": "IBAN",
+      "signedAt": "Signed",
+      "validUntil": "Valid until",
+      "openEnd": "open ended",
+      "paymentTypes": "Payment types",
+      "allTypes": "all payment types",
+      "excludeSpecialLevy": "without special levy",
+      "status": "Status",
+      "statuses": {
+        "active": "active",
+        "revoked": "revoked",
+        "expired": "expired"
+      }
+    },
+    "debtor": {
+      "title": "Debtor account",
+      "number": "Account number",
+      "name": "Account name",
+      "openItems": "Balance and open items",
+      "openItemsLink": "Go to ledger",
+      "noLedger": "No ledger exists for the creditor yet."
+    },
+    "dates": {
+      "moveInOn": "Move in",
+      "moveOutOn": "Move out",
+      "none": "not recorded"
+    },
+    "termination": {
+      "moveOutOn": "Move out (calendar date)",
+      "meterReadings": "Meter readings at termination",
+      "meterReadingsHelp": "Optional per meter of the unit. The value is stored as a meter reading at the contract end."
+    }
   }
 }

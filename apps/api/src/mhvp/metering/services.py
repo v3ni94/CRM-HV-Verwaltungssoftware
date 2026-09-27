@@ -20,8 +20,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.core.escaping import escape_like
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.documents.models import Document, DocumentSource, LinkRole
 from mhvp.metering.adapters import (
     ConnectionTestResult,
+    DocumentRecord,
+    ExternalBillingUnitData,
     FetchResult,
     MeteringAdapter,
     TestOutcome,
@@ -64,8 +67,29 @@ WRITING_FUNCTIONS: frozenset[Function] = frozenset({Function.ROLES, Function.BIL
 
 # Configuration keys whose change invalidates a previous connection test (section 4).
 TEST_RELEVANT_CONFIG_KEYS: frozenset[str] = frozenset(
-    {"base_url", "api_family", "api_version", "adapter", "client_id", "tenant_ref", "mtls"}
+    {
+        "base_url",
+        "base_urls",
+        "token_url",
+        "config_environment",
+        "api_family",
+        "api_version",
+        "adapter",
+        "client_id",
+        "tenant_ref",
+        "mtls",
+        "consumption_auth",
+        "documents_auth",
+        "billing_unit_data_auth",
+        "billing_result_auth",
+    }
 )
+
+# Provenance of provider documents in the document store (section 11).
+DOCUMENT_SOURCE_SYSTEM = "metering"
+# Key inside ``MeteringConnection.last_sync`` holding the per data kind cursor; advanced only
+# after the job's results are durably stored (section 10).
+CURSOR_KEY = "_cursors"
 
 
 def _now() -> datetime:
@@ -999,9 +1023,17 @@ def _find_assignment(
     return hits[0] if len(hits) == 1 else None
 
 
-async def run_sync_job(session: AsyncSession, job: MeteringSyncJob) -> MeteringSyncJob:
+async def run_sync_job(
+    session: AsyncSession,
+    job: MeteringSyncJob,
+    *,
+    blobs: Any | None = None,
+    max_document_bytes: int = 50 * 1024 * 1024,
+) -> MeteringSyncJob:
     """Executes a queued job through the adapter (worker context). Re-checks the assignment
-    version so a changed configuration never redirects a running job to another data set."""
+    version so a changed configuration never redirects a running job to another data set.
+    ``blobs`` is the document store (``BlobStore``) for document jobs; without it a document
+    job reports the intake part as failed instead of storing anything unsafe."""
     if job.status != SyncStatus.QUEUED:
         return job
     connection = await get_connection(session, job.connection_id)
@@ -1033,6 +1065,7 @@ async def run_sync_job(session: AsyncSession, job: MeteringSyncJob) -> MeteringS
         job.error_summary = "Zugangsdaten fehlen."
         job.finished_at = _now()
         return job
+    cursor = ((connection.last_sync or {}).get(CURSOR_KEY) or {}).get(job.data_kind)
     result: FetchResult = adapter.fetch(
         function=function,
         config=connection.config,
@@ -1043,17 +1076,16 @@ async def run_sync_job(session: AsyncSession, job: MeteringSyncJob) -> MeteringS
         ],
         period_from=job.period_from,
         period_to=job.period_to,
+        cursor=cursor,
     )
     if result.unclear:
         job.status = SyncStatus.UNCLEAR
         job.error_summary = "; ".join(result.errors) or "Ergebnis unklar."
         job.finished_at = _now()
         return job
-    if result.waiting_provider:
-        job.status = SyncStatus.WAITING_PROVIDER
-        return job
     stored = 0
     cleared = 0
+    part_errors: list[str] = []
     for record in result.consumption:
         assignment = _find_assignment(
             assignments, units, record.external_billing_unit, record.period_from, record.period_to
@@ -1130,6 +1162,43 @@ async def run_sync_job(session: AsyncSession, job: MeteringSyncJob) -> MeteringS
         )
         stored += await _store_billing_result(session, job, assignment, unit_assignment, billing)
         assignment.last_success_at = _now()
+    for external in result.billing_units:
+        outcome = await _store_billing_unit_result(session, job, connection, units, external)
+        if outcome is None:
+            cleared += 1
+        else:
+            stored += outcome
+    if result.documents:
+        if blobs is None:
+            part_errors.append("Dokumentablage nicht verfügbar; keine Dokumente übernommen.")
+        else:
+            for document in result.documents:
+                outcome_doc = await _intake_document(
+                    session,
+                    job,
+                    connection,
+                    adapter,
+                    secrets,
+                    assignments,
+                    units,
+                    document,
+                    blobs=blobs,
+                    max_bytes=max_document_bytes,
+                )
+                if outcome_doc == "cleared":
+                    cleared += 1
+                elif outcome_doc == "stored":
+                    stored += 1
+                elif outcome_doc.startswith("error:"):
+                    part_errors.append(outcome_doc[6:])
+    if wait := result.waiting_provider:
+        parts.append(
+            {
+                "part": "provider",
+                "status": "waiting",
+                "error": "Der Anbieter verarbeitet den Abgleich noch (asynchron).",
+            }
+        )
     parts.append(
         {
             "part": "fetch",
@@ -1137,7 +1206,14 @@ async def run_sync_job(session: AsyncSession, job: MeteringSyncJob) -> MeteringS
             "error": "; ".join(result.errors) or None,
         }
     )
-    parts.append({"part": "store", "status": "ok", "error": None, "stored": stored})
+    parts.append(
+        {
+            "part": "store",
+            "status": "ok" if not part_errors else "error",
+            "error": "; ".join(part_errors) or None,
+            "stored": stored,
+        }
+    )
     parts.append(
         {
             "part": "clearing",
@@ -1146,20 +1222,295 @@ async def run_sync_job(session: AsyncSession, job: MeteringSyncJob) -> MeteringS
         }
     )
     job.parts = parts
-    if result.errors and (stored or cleared):
+    errors = list(result.errors) + part_errors
+    if wait and not errors:
+        job.status = SyncStatus.WAITING_PROVIDER
+    elif errors and (stored or cleared):
         job.status = SyncStatus.PARTIAL
-    elif result.errors:
+    elif errors:
         job.status = SyncStatus.FAILED
     else:
         job.status = SyncStatus.SUCCEEDED  # "no data" is not an error (section 10)
-    job.error_summary = "; ".join(result.errors) or None
+    job.error_summary = "; ".join(errors) or None
     job.finished_at = _now()
-    if job.status in {SyncStatus.SUCCEEDED, SyncStatus.PARTIAL}:
+    if job.status in {SyncStatus.SUCCEEDED, SyncStatus.PARTIAL, SyncStatus.WAITING_PROVIDER}:
         last = dict(connection.last_sync or {})
         last[job.data_kind] = job.finished_at.isoformat()
+        if job.status == SyncStatus.SUCCEEDED and job.data_kind in {
+            DataKind.BILLING_UNIT_DATA,
+            DataKind.BILLING_RESULT,
+        }:
+            # Cursor advanced only after complete, durable processing (section 10); a
+            # partial run keeps the old cursor so the failed part is fetched again.
+            cursors = dict(last.get(CURSOR_KEY) or {})
+            cursors[job.data_kind] = job.started_at.isoformat() if job.started_at else None
+            last[CURSOR_KEY] = cursors
         connection.last_sync = last
     await session.flush()
     return job
+
+
+async def _store_billing_unit_result(
+    session: AsyncSession,
+    job: MeteringSyncJob,
+    connection: MeteringConnection,
+    units: Mapping[uuid.UUID, MeteringExternalBillingUnit],
+    external: ExternalBillingUnitData,
+) -> int | None:
+    """Result of the asynchronous Ordnungsbegriffsabgleich (Q8): status and matched external
+    unit numbers are stored on the known external billing unit as remote payload (reviewable,
+    no assignment is created or changed automatically). Unknown numbers go to clearing."""
+    row = next((u for u in units.values() if u.external_number == external.external_number), None)
+    if row is None:
+        await _clear(
+            session,
+            job,
+            connection,
+            "billing_unit",
+            external.external_number,
+            "Abrechnungseinheit des Anbieters ist keinem Objekt zugeordnet.",
+            {"name": external.name, "address": external.address, **external.payload},
+        )
+        return None
+    payload = {
+        **external.payload,
+        "matched_units": [
+            {"external_unit_number": u.external_unit_number, "label": u.label}
+            for u in external.units
+        ],
+        "fetched_at": _now().isoformat(),
+        "sync_job_id": str(job.id),
+    }
+    previous = dict(row.remote_payload or {})
+    previous.pop("fetched_at", None)
+    previous.pop("sync_job_id", None)
+    compare = {k: v for k, v in payload.items() if k not in {"fetched_at", "sync_job_id"}}
+    if previous == compare:
+        return 0
+    row.remote_payload = json.loads(json.dumps(payload, default=str))
+    if external.name and not row.external_name:
+        row.external_name = external.name[:200]
+    if external.address and not row.external_address:
+        row.external_address = external.address[:400]
+    if external.units:
+        row.expected_unit_count = len(external.units)
+    return 1
+
+
+async def _intake_document(
+    session: AsyncSession,
+    job: MeteringSyncJob,
+    connection: MeteringConnection,
+    adapter: MeteringAdapter,
+    secrets: Mapping[str, str],
+    assignments: Sequence[MeteringPropertyAssignment],
+    units: Mapping[uuid.UUID, MeteringExternalBillingUnit],
+    document: DocumentRecord,
+    *,
+    blobs: Any,
+    max_bytes: int,
+) -> str:
+    """Section 11: assignment before download, no duplicate on re download (same connection,
+    external id and version), changed billing as a new version, validation with the
+    document store's checks, provider receipt only after commit (``acknowledge_documents``).
+    Returns ``stored``, ``skipped``, ``cleared`` or ``error:<text>``."""
+    from mhvp.documents.services import check_upload, store_document
+
+    if not document.external_billing_unit:
+        await _clear(
+            session,
+            job,
+            connection,
+            "document",
+            document.external_id,
+            "Dokument ohne Referenz auf eine Abrechnungseinheit; keine Ablage nach Ähnlichkeit.",
+            _document_payload(document),
+        )
+        return "cleared"
+    period_from = document.period_from or job.period_from or date.min
+    period_to = document.period_to or job.period_to or date.max
+    assignment = _find_assignment(
+        assignments, units, document.external_billing_unit, period_from, period_to
+    )
+    if assignment is None:
+        await _clear(
+            session,
+            job,
+            connection,
+            "document",
+            document.external_id,
+            "Keine eindeutige Zuordnung für Abrechnungseinheit und Zeitraum.",
+            _document_payload(document),
+        )
+        return "cleared"
+    version = document.version or "1"
+    source_id = _document_source_id(connection, document.external_id, version)
+    existing = await session.scalar(
+        select(Document).where(
+            Document.tenant_id == job.tenant_id,
+            Document.source_system == DOCUMENT_SOURCE_SYSTEM,
+            Document.source_id == source_id,
+        )
+    )
+    if existing is not None:
+        return "skipped"  # re download never duplicates
+    earlier = list(
+        await session.scalars(
+            select(Document).where(
+                Document.tenant_id == job.tenant_id,
+                Document.source_system == DOCUMENT_SOURCE_SYSTEM,
+                Document.source_id.like(
+                    escape_like(_document_source_id(connection, document.external_id, "")) + "%",
+                    escape="\\",
+                ),
+            )
+        )
+    )
+    try:
+        data = adapter.download_document(
+            config=connection.config,
+            secrets=secrets,
+            environment=connection.environment,
+            document=document,
+        )
+    except Exception as exc:  # adapter errors are already sanitised
+        return f"error:Dokument {document.external_id}: Download fehlgeschlagen ({exc})"
+    mime_type = document.mime_type or "application/pdf"
+    try:
+        check_upload(mime_type, data, max_bytes)
+    except ProblemError as exc:
+        await _clear(
+            session,
+            job,
+            connection,
+            "document",
+            document.external_id,
+            f"Datei abgewiesen: {exc.detail or exc.error.code}",
+            _document_payload(document),
+        )
+        return "cleared"
+    unit_assignment = None
+    if document.external_unit_number:
+        unit_assignment = await _unit_assignment_for(
+            session, assignment, document.external_unit_number, period_from, period_to
+        )
+    links: list[tuple[str, uuid.UUID, LinkRole]] = [
+        ("property", assignment.property_id, LinkRole.ORIGINAL)
+    ]
+    if unit_assignment is not None:
+        links.append(("unit", unit_assignment.unit_id, LinkRole.ORIGINAL))
+    title = f"{connection.provider_code} {document.doctype} {document.filename}"
+    stored = await store_document(
+        session,
+        blobs,
+        tenant_id=job.tenant_id,
+        data=data,
+        title=title,
+        filename=document.filename,
+        mime_type=mime_type,
+        source=DocumentSource.IMPORT,
+        category_id=None,
+        links=links,
+        created_by=None,
+        visibility=["tenant"],  # never released to residents by the import alone
+    )
+    stored.source_system = DOCUMENT_SOURCE_SYSTEM
+    stored.source_id = source_id
+    stored.source_meta = json.loads(
+        json.dumps(
+            {
+                "provider_code": connection.provider_code,
+                "connection_id": str(connection.id),
+                "environment": connection.environment,
+                "external_id": document.external_id,
+                "version": version,
+                "doctype": document.doctype,
+                "period_from": document.period_from,
+                "period_to": document.period_to,
+                "external_billing_unit": document.external_billing_unit,
+                "external_unit_number": document.external_unit_number,
+                "property_assignment_id": str(assignment.id),
+                "unit_assignment_id": str(unit_assignment.id) if unit_assignment else None,
+                "sync_job_id": str(job.id),
+                "fetched_at": _now(),
+                "file_date": document.file_date,
+                "supersedes": [str(d.id) for d in earlier],
+                "acknowledged_at": None,
+                "acknowledge_pending": True,
+            },
+            default=str,
+        )
+    )
+    await session.flush()
+    assignment.last_success_at = _now()
+    return "stored"
+
+
+def _document_source_id(connection: MeteringConnection, external_id: str, version: str) -> str:
+    return f"{connection.id}:{external_id}:{version}"[:64]
+
+
+def _document_payload(document: DocumentRecord) -> dict[str, Any]:
+    payload = dict(document.__dict__)
+    payload.pop("payload", None)
+    return payload
+
+
+async def pending_document_receipts(
+    session: AsyncSession, connection_id: uuid.UUID
+) -> list[Document]:
+    return list(
+        await session.scalars(
+            select(Document).where(
+                Document.source_system == DOCUMENT_SOURCE_SYSTEM,
+                Document.source_meta["connection_id"].astext == str(connection_id),
+                Document.source_meta["acknowledge_pending"].astext == "true",
+            )
+        )
+    )
+
+
+async def acknowledge_documents(session: AsyncSession, connection_id: uuid.UUID) -> int:
+    """Provider receipt for documents that are committed in the store (section 11: "erst nach
+    sicherer Speicherung"). Called by the worker in a separate transaction after the sync
+    job committed. A failed or unclear receipt leaves ``acknowledge_pending`` set; the next
+    job repeats it (the document itself is never downloaded twice)."""
+    connection = await get_connection(session, connection_id)
+    adapter = _adapter(connection)
+    secrets = connection_secrets(connection)
+    done = 0
+    for document in await pending_document_receipts(session, connection_id):
+        meta = dict(document.source_meta or {})
+        record = DocumentRecord(
+            external_id=str(meta.get("external_id")),
+            filename=document.filename,
+            doctype=str(meta.get("doctype") or "OTHER"),
+            mime_type=document.mime_type,
+            version=meta.get("version"),
+            file_date=None,
+            external_billing_unit=meta.get("external_billing_unit"),
+            external_unit_number=meta.get("external_unit_number"),
+            period_from=None,
+            period_to=None,
+        )
+        try:
+            adapter.acknowledge_document(
+                config=connection.config,
+                secrets=secrets,
+                environment=connection.environment,
+                document=record,
+            )
+        except Exception as exc:  # kept pending, reported on the document
+            meta["acknowledge_error"] = str(exc)[:500]
+            document.source_meta = meta
+            continue
+        meta["acknowledge_pending"] = False
+        meta["acknowledged_at"] = _now().isoformat()
+        meta.pop("acknowledge_error", None)
+        document.source_meta = meta
+        done += 1
+    await session.flush()
+    return done
 
 
 async def _clear(

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
-import { formatDateTime } from "@/lib/format";
+import { formatDate, formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 type Note = components["schemas"]["NoteOut"];
@@ -16,6 +16,8 @@ export function NotesPanel({ contactId, notes }: { contactId: string; notes: Not
   const router = useRouter();
   const [body, setBody] = useState("");
   const [category, setCategory] = useState("");
+  const [title, setTitle] = useState("");
+  const [followUpOn, setFollowUpOn] = useState("");
   const [pinned, setPinned] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -30,7 +32,13 @@ export function NotesPanel({ contactId, notes }: { contactId: string; notes: Not
     setError(null);
     const result = await bff(`/api/bff/contacts/${contactId}/notes`, {
       method: "POST",
-      body: JSON.stringify({ body: body.trim(), category: category.trim() || null, pinned }),
+      body: JSON.stringify({
+        body: body.trim(),
+        category: category.trim() || null,
+        title: title.trim() || null,
+        follow_up_on: followUpOn || null,
+        pinned,
+      }),
     });
     setBusy(false);
     if (!result.ok) {
@@ -39,6 +47,8 @@ export function NotesPanel({ contactId, notes }: { contactId: string; notes: Not
     }
     setBody("");
     setCategory("");
+    setTitle("");
+    setFollowUpOn("");
     setPinned(false);
     router.refresh();
   }
@@ -53,7 +63,9 @@ export function NotesPanel({ contactId, notes }: { contactId: string; notes: Not
                 {formatDateTime(note.created_at)}
                 {note.category ? `, ${note.category}` : ""}
                 {note.pinned ? `, ${t("notes.pinned")}` : ""}
+                {note.follow_up_on ? `, ${t("notes.followUp")} ${formatDate(note.follow_up_on)}` : ""}
               </p>
+              {note.title ? <p className="text-sm font-medium">{note.title}</p> : null}
               <p className="whitespace-pre-wrap text-sm">{note.body}</p>
             </li>
           ))}
@@ -68,6 +80,10 @@ export function NotesPanel({ contactId, notes }: { contactId: string; notes: Not
             {error}
           </p>
         ) : null}
+        <label htmlFor="note-title" className={ui.label}>
+          {t("notes.title")}
+        </label>
+        <input id="note-title" maxLength={200} className={ui.input} value={title} onChange={(e) => setTitle(e.target.value)} />
         <label htmlFor="note-body" className={ui.label}>
           {t("notes.body")}
         </label>
@@ -78,6 +94,12 @@ export function NotesPanel({ contactId, notes }: { contactId: string; notes: Not
               {t("notes.category")}
             </label>
             <input id="note-category" maxLength={63} className={ui.input} value={category} onChange={(e) => setCategory(e.target.value)} />
+          </div>
+          <div>
+            <label htmlFor="note-follow-up" className={ui.label}>
+              {t("notes.followUp")}
+            </label>
+            <input id="note-follow-up" type="date" className={ui.input} value={followUpOn} onChange={(e) => setFollowUpOn(e.target.value)} />
           </div>
           <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={pinned} onChange={(e) => setPinned(e.target.checked)} />

@@ -17,6 +17,7 @@ const row: Deadline = {
   notified_at: "2026-09-26T18:00:00Z",
   done_at: null,
   updated_at: "2026-09-26T18:00:00Z",
+  href: "/objekte/01920000-0000-7000-8000-0000000000ee#zaehler",
 };
 
 describe("DeadlinesTable", () => {
@@ -33,5 +34,12 @@ describe("DeadlinesTable", () => {
     expect(screen.getByText("offen")).toBeInTheDocument();
     expect(screen.getByText("zu prüfen")).toBeInTheDocument();
     expect(screen.getByText("26.09.2026")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Zur Quelle" })).toHaveAttribute("href", row.href);
+  });
+
+  it("labels the P1 kinds and omits the link without a source page", () => {
+    renderIntl(<DeadlinesTable rows={[{ ...row, id: "x", kind: "energy_certificate", href: null }]} />);
+    expect(screen.getByText("Energieausweis läuft ab")).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: "Zur Quelle" })).not.toBeInTheDocument();
   });
 });

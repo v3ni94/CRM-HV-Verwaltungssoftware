@@ -6,9 +6,11 @@ tests. Real ista and KALO adapters are stage 2 and must be written from the offi
 specification (Q1, Q3, Q8 to Q11); no endpoint, payload or authentication scheme is invented
 here. Internal method names are not external URL conventions.
 
-Every adapter declares the functions it implements and the specification version it was
-verified against. A connection test is read only: it may authenticate and nothing else (no
-billing order, no user change, no document receipt).
+Stage 2 adds the real ista and KALO adapters (``adapters_ista``, ``adapters_kalo``) written from
+the bved OpenAPI files linked by Q6/Q7 and the provider pages Q1, Q3, Q8, Q9; they are registered
+at the end of this module. Every adapter declares the functions it implements and the
+specification version it was verified against. A connection test is read only: it may
+authenticate and nothing else (no billing order, no user change, no document receipt).
 
 Outbound HTTPS targets of real adapters must pass ``mhvp.core.webhooks.pin_target`` (SSRF
 guard, TLS verification stays on); secrets are never sent to a host other than the pinned
@@ -19,7 +21,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Protocol
 
@@ -89,6 +91,25 @@ class BillingResultRecord:
 
 
 @dataclass(frozen=True)
+class DocumentRecord:
+    """Metadata of a provider document (bved documents 1.3 ``documents[]``); the content is
+    downloaded separately after the assignment is known. ``version`` distinguishes a changed
+    billing under the same external id (hash value or document type version)."""
+
+    external_id: str
+    filename: str
+    doctype: str
+    mime_type: str | None
+    version: str | None
+    file_date: datetime | None
+    external_billing_unit: str | None
+    external_unit_number: str | None
+    period_from: date | None
+    period_to: date | None
+    payload: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
 class FetchResult:
     """Result of a read only fetch. ``unclear`` marks a call whose outcome could not be
     determined (timeout after the request left the process); the job is then reported as
@@ -97,6 +118,7 @@ class FetchResult:
     consumption: tuple[ConsumptionRecord, ...] = ()
     billing_results: tuple[BillingResultRecord, ...] = ()
     billing_units: tuple[ExternalBillingUnitData, ...] = ()
+    documents: tuple[DocumentRecord, ...] = ()
     errors: tuple[str, ...] = ()
     unclear: bool = False
     waiting_provider: bool = False
@@ -123,7 +145,44 @@ class MeteringAdapter(Protocol):
         external_billing_units: Sequence[str],
         period_from: date | None,
         period_to: date | None,
+        cursor: str | None = None,
     ) -> FetchResult: ...
+
+    def download_document(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        document: DocumentRecord,
+    ) -> bytes: ...
+
+    def acknowledge_document(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        document: DocumentRecord,
+    ) -> None:
+        """Provider receipt (bved documents ``PUT /documents/out/{id}/status``). Called by the
+        service only after the document is durably stored and committed (section 11)."""
+        ...
+
+    def submit_billing_unit_setup(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        external_billing_unit: str,
+        residential_units: Sequence[Mapping[str, Any]],
+        customer_number: str,
+    ) -> str:
+        """Writing step of the Ordnungsbegriffsabgleich (bved billing unit data ``sendSetup``).
+        Returns the provider transaction id. Never retried after a timeout (case 11). Not
+        offered by any endpoint while ``write_sync_enabled`` is off (M40-03)."""
+        ...
 
 
 class ManualAdapter:
@@ -150,6 +209,15 @@ class ManualAdapter:
             errors=("Für diesen Anbieter ist kein Abruf implementiert (kein Adapter).",)
         )
 
+    def download_document(self, **kwargs: Any) -> bytes:
+        raise NotImplementedError("kein Adapter")
+
+    def acknowledge_document(self, **kwargs: Any) -> None:
+        raise NotImplementedError("kein Adapter")
+
+    def submit_billing_unit_setup(self, **kwargs: Any) -> str:
+        raise NotImplementedError("kein Adapter")
+
 
 class FakeAdapter:
     """Test double (artificial data only, never a sandbox or production system). Behaviour is
@@ -159,9 +227,19 @@ class FakeAdapter:
     spec_source = "Testdouble, keine Anbieterspezifikation"
     spec_version = "test"
     implemented: frozenset[Function] = frozenset(
-        {Function.CONSUMPTION, Function.BILLING_RESULT, Function.BILLING_UNIT_DATA}
+        {
+            Function.CONSUMPTION,
+            Function.BILLING_RESULT,
+            Function.BILLING_UNIT_DATA,
+            Function.DOCUMENTS,
+        }
     )
     required_secrets: frozenset[str] = frozenset({"api_key"})
+
+    def __init__(self) -> None:
+        # Test observation only: acknowledged external document ids in call order.
+        self.acknowledged: list[str] = []
+        self.downloads: list[str] = []
 
     def test_connection(
         self, *, config: Mapping[str, Any], secrets: Mapping[str, str], environment: str
@@ -191,6 +269,7 @@ class FakeAdapter:
         external_billing_units: Sequence[str],
         period_from: date | None,
         period_to: date | None,
+        cursor: str | None = None,
     ) -> FetchResult:
         if not secrets.get("api_key"):
             return FetchResult(errors=("Zugangsdaten (api_key) sind nicht hinterlegt.",))
@@ -226,14 +305,59 @@ class FakeAdapter:
             for r in records
             if r.get("type") == "billing_result" and function == Function.BILLING_RESULT
         )
+        documents = tuple(
+            DocumentRecord(
+                external_id=str(r["external_id"]),
+                filename=str(r.get("filename", "dokument.pdf")),
+                doctype=str(r.get("doctype", "OTHER")),
+                mime_type=r.get("mime_type", "application/pdf"),
+                version=r.get("version"),
+                file_date=None,
+                external_billing_unit=r.get("external_billing_unit"),
+                external_unit_number=r.get("external_unit_number"),
+                period_from=date.fromisoformat(r["period_from"]) if r.get("period_from") else None,
+                period_to=date.fromisoformat(r["period_to"]) if r.get("period_to") else None,
+                payload={"content_b64": r.get("content_b64", "")},
+            )
+            for r in records
+            if r.get("type") == "document" and function == Function.DOCUMENTS
+        )
         errors = tuple(str(e) for e in config.get("fake_errors", []))
-        return FetchResult(consumption=consumption, billing_results=billing, errors=errors)
+        return FetchResult(
+            consumption=consumption, billing_results=billing, documents=documents, errors=errors
+        )
+
+    def download_document(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        document: DocumentRecord,
+    ) -> bytes:
+        import base64
+
+        self.downloads.append(document.external_id)
+        return base64.b64decode(document.payload.get("content_b64", ""))
+
+    def acknowledge_document(
+        self,
+        *,
+        config: Mapping[str, Any],
+        secrets: Mapping[str, str],
+        environment: str,
+        document: DocumentRecord,
+    ) -> None:
+        self.acknowledged.append(document.external_id)
+
+    def submit_billing_unit_setup(self, **kwargs: Any) -> str:
+        raise NotImplementedError("Testdouble: schreibende Vorgänge sind gesperrt.")
 
 
 _ADAPTERS: dict[str, MeteringAdapter] = {"manual": ManualAdapter(), "fake": FakeAdapter()}
 
-# Provider code to adapter code. Stage 1: every real provider maps to ``manual`` (no adapter
-# implemented); stage 2 replaces the entries for ista and KALO once written from Q1/Q3.
+# Provider code to adapter code. ista and KALO are replaced by ``_register_real_adapters``
+# (stage 2); the others stay ``manual`` until their technical documentation exists (M40-02).
 PROVIDER_ADAPTERS: dict[str, str] = {
     "ista": "manual",
     "techem": "manual",
@@ -256,3 +380,15 @@ def adapter_for(provider_code: str, config: Mapping[str, Any]) -> MeteringAdapte
 def register_adapter(adapter: MeteringAdapter, *, provider_code: str) -> None:
     _ADAPTERS[adapter.code] = adapter
     PROVIDER_ADAPTERS[provider_code] = adapter.code
+
+
+def _register_real_adapters() -> None:
+    # Imported here: the real adapters depend on the record types above.
+    from mhvp.metering.adapters_ista import IstaAdapter
+    from mhvp.metering.adapters_kalo import KaloAdapter
+
+    register_adapter(IstaAdapter(), provider_code="ista")
+    register_adapter(KaloAdapter(), provider_code="kalo")
+
+
+_register_real_adapters()

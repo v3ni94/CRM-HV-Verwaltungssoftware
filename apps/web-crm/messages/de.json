@@ -40,7 +40,7 @@
     "switchTenant": "Mandant wechseln",
     "search": "Suchen",
     "searchShortcut": "Strg+K",
-    "searchPlaceholder": "Kontakte, Objekte, Einheiten, Verträge, Dokumente",
+    "searchPlaceholder": "Kontakte, Objekte, Gebäude, Einheiten, Verträge, Dokumente, Tickets, Buchungen",
     "searchEmpty": "Keine Treffer.",
     "searchMin": "Mindestens zwei Zeichen eingeben.",
     "searchTitle": "Globale Suche",
@@ -59,7 +59,10 @@
       "property": "Objekt",
       "unit": "Einheit",
       "contract": "Vertrag",
-      "document": "Dokument"
+      "document": "Dokument",
+      "building": "Gebäude",
+      "ticket": "Ticket",
+      "posting": "Buchung"
     },
     "accounting": "Buchhaltung",
     "hoa": "WEG",
@@ -138,7 +141,11 @@
       "bank": "Bankverbindungen",
       "notes": "Notizen",
       "consents": "Einwilligungen",
-      "tickets": "Tickets"
+      "tickets": "Tickets",
+      "relations": "Beziehungen",
+      "documents": "Dokumente",
+      "releases": "Portal-Freigaben",
+      "log": "Ereignisprotokoll"
     },
     "calls": {
       "title": "Anrufe"
@@ -152,7 +159,9 @@
       "category": "Kategorie",
       "pinned": "Angeheftet",
       "save": "Notiz speichern",
-      "required": "Bitte einen Text eingeben."
+      "required": "Bitte einen Text eingeben.",
+      "title": "Titel",
+      "followUp": "Wiedervorlage"
     },
     "consents": {
       "add": "Einwilligung erfassen",
@@ -266,6 +275,20 @@
       "picked": "Ausgewählt",
       "save": "Bevollmächtigten speichern",
       "error": "Die Änderung konnte nicht gespeichert werden."
+    },
+    "blockedAt": "Gesperrt seit",
+    "deleteAfter": "Löschung vorgemerkt zum",
+    "deleteAfterHint": "Vormerkung aus dem Löschprofil. Die Löschung erfolgt manuell im Vier-Augen-Prinzip, kein automatischer Lauf.",
+    "blockList": "Nur gesperrte Kontakte",
+    "documents": {
+      "title": "Dokumente zum Kontakt",
+      "draft": "Entwurf"
+    },
+    "log": {
+      "title": "Ereignisprotokoll",
+      "noPermission": "Das Ereignisprotokoll erfordert das Recht audit:read.",
+      "actor": "durch",
+      "noFields": "Ohne Feldänderungen"
     }
   },
   "ContactForm": {
@@ -334,7 +357,9 @@
       "languageInvalid": "Bitte einen Sprachcode mit zwei Kleinbuchstaben angeben.",
       "sepaSignedRequired": "Bitte das Datum der Erteilung angeben.",
       "sepaGrantedViaRequired": "Bitte die Erteilungsart angeben.",
-      "sepaProofRequired": "Bitte das Mandat als PDF hinterlegen oder einen Vermerk eintragen."
+      "sepaProofRequired": "Bitte das Mandat als PDF hinterlegen oder einen Vermerk eintragen.",
+      "portalLoginSingle": "Genau eine E-Mail-Adresse darf Portal-Login-Adresse sein.",
+      "defaultAccountSingle": "Genau ein Bankkonto darf Standardkonto sein."
     },
     "roles": "Klassifizierung",
     "sepa": {
@@ -348,7 +373,38 @@
       "document": "Mandat als PDF",
       "uploading": "Wird hochgeladen…",
       "documentStored": "Dokument hinterlegt."
-    }
+    },
+    "letterSalutation": "Briefanrede",
+    "state": "Bundesland",
+    "countryCode": "Landesvorwahl",
+    "areaCode": "Vorwahl",
+    "phoneNote": "Notiz",
+    "dates": "Datumsfelder",
+    "dateKind": {
+      "birthday": "Geburtstag",
+      "death": "Sterbedatum",
+      "wedding": "Hochzeit",
+      "foundation": "Gründung",
+      "other": "Sonstiges"
+    },
+    "date": "Datum",
+    "dateNote": "Notiz",
+    "accountKind": {
+      "rent": "Mietkonto",
+      "bank_1": "Bankkonto 1",
+      "bank_2": "Bankkonto 2",
+      "hoa": "WEG-Konto",
+      "reserve": "Rücklagenkonto",
+      "deposit": "Kautionskonto",
+      "house_money": "Hausgeldkonto",
+      "legacy": "Altkonto"
+    },
+    "noAccountKind": "Kein Kontotyp",
+    "defaultAccount": "Standardkonto",
+    "retentionProfile": "Löschprofil",
+    "noRetentionProfile": "Kein Löschprofil",
+    "retentionHint": "Aus dem freigegebenen Profil wird ein Löschdatum vorgemerkt. Die Löschung selbst erfolgt manuell im Vier-Augen-Prinzip.",
+    "dateKindLabel": "Art"
   },
   "Duplicates": {
     "title": "Mögliche Dubletten",
@@ -1168,7 +1224,8 @@
       "reference": "Bezug",
       "lead_days": "Vorfrist",
       "status": "Status",
-      "notified_at": "Benachrichtigt"
+      "notified_at": "Benachrichtigt",
+      "source": "Quelle"
     },
     "kind": {
       "contract_end": "Vertragsende",
@@ -1177,8 +1234,16 @@
       "bank_consent": "Ablauf Bankzustimmung",
       "document_retention_end": "Ende Aufbewahrung",
       "service_contract_notice": "Kündigungsfrist Dienstleistervertrag",
-      "meeting_resolution_deadline": "Beschlussfrist virtuelle Versammlung"
+      "meeting_resolution_deadline": "Beschlussfrist virtuelle Versammlung",
+      "energy_certificate": "Energieausweis läuft ab",
+      "move_in": "Einzug",
+      "move_out": "Auszug",
+      "maintenance": "Sanierung und Wartung",
+      "note_follow_up": "Wiedervorlage",
+      "meeting": "Eigentümerversammlung",
+      "ticket_due": "Ticketfrist"
     },
+    "openSource": "Zur Quelle",
     "status": {
       "open": "offen",
       "done": "erledigt",
@@ -2248,6 +2313,9 @@
     "toListing": "Zur Anzeige"
   },
   "Tickets": {
+    "links": {
+      "parent": "Übergeordnetes Ticket"
+    },
     "mailAttachments": {
       "title": "Anhänge aus E-Mails",
       "hint": "PDF- und Bildanhänge können als Beleg erfasst werden. Die KI schlägt die Werte vor, geprüft und bestätigt wird im Belegeingang. Es wird nichts gebucht.",
@@ -6616,5 +6684,421 @@
     "pendingBadge": "Freigabe ausstehend",
     "rejectedBadge": "Import abgelehnt",
     "link": "Freigabe Importverträge"
+  },
+  "Metering": {
+    "title": "Messdienstleister",
+    "interfaces": "Schnittstellen",
+    "card": {
+      "title": "Messdienstleister",
+      "description": "Verbindungen zu ista, Techem, KALO, Brunata und weiteren Anbietern, Objektzuordnungen, Abruf von Verbrauchsdaten und Abrechnungsergebnissen."
+    },
+    "pageIntro": "Zugänge werden zentral verwaltet, Geheimnisse nur gesetzt und nie angezeigt. Ein Verbindungstest prüft ausschließlich die Anmeldung und beauftragt keine Abrechnung. Die Zuordnungsübersicht zeigt dieselben Datensätze wie der Reiter Messdienstleister am Objekt.",
+    "readOnlyHint": "Nur Lesezugriff. Änderungen erfordern das Recht Messdienstleister-Verbindungen verwalten oder das Modul ist für diesen Mandanten nicht aktiviert.",
+    "loadError": "Die Daten konnten nicht geladen werden.",
+    "none": "keine",
+    "until": "bis",
+    "openEnd": "offen",
+    "since": "seit",
+    "search": "Suchen",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "disabled": {
+      "text": "Das Modul Messdienstleister ist für diesen Mandanten nicht aktiviert. Lesen ist möglich, Anlegen, Ändern und Abrufen sind gesperrt.",
+      "link": "Zu den Mandanteneinstellungen"
+    },
+    "environment": {
+      "test": "Test",
+      "production": "Produktion"
+    },
+    "connectionStatus": {
+      "active": "aktiv",
+      "paused": "pausiert"
+    },
+    "testOutcome": {
+      "success": "erfolgreich",
+      "failed": "fehlgeschlagen",
+      "unclear": "ungeklärt",
+      "not_released": "nicht freigeschaltet",
+      "manual": "manuell, kein Fernzugriff"
+    },
+    "functions": {
+      "billing_unit_data": "Stammdaten der Abrechnungseinheit",
+      "roles": "Nutzer und Rollen übermitteln",
+      "billing_input": "Abrechnungsdaten senden",
+      "billing_result": "Abrechnungsergebnis abrufen",
+      "documents": "Dokumente abrufen",
+      "consumption": "Verbrauchsdaten abrufen"
+    },
+    "capability": {
+      "available": "verfügbar",
+      "unavailable": "nicht verfügbar"
+    },
+    "scope": {
+      "heating": "Heizung",
+      "hot_water": "Warmwasser",
+      "cold_water": "Kaltwasser",
+      "smoke_detectors": "Rauchwarnmelder",
+      "other": "Sonstiges"
+    },
+    "status": {
+      "open": "offen",
+      "proposed": "vorgeschlagen",
+      "confirmed": "bestätigt",
+      "conflict": "Konflikt",
+      "archived": "archiviert"
+    },
+    "occupancy": {
+      "occupied": "belegt",
+      "vacant": "Leerstand",
+      "owner_use": "Eigennutzung",
+      "unclear": "ungeklärt"
+    },
+    "jobStatus": {
+      "queued": "eingereiht",
+      "running": "läuft",
+      "waiting_provider": "wartet auf Anbieter",
+      "succeeded": "erfolgreich",
+      "partial": "teilweise",
+      "failed": "fehlgeschlagen",
+      "unclear": "ungeklärt"
+    },
+    "valueKind": {
+      "actual": "gemessen",
+      "estimated": "geschätzt",
+      "missing": "fehlt",
+      "corrected": "korrigiert"
+    },
+    "reviewStatus": {
+      "imported": "importiert",
+      "reviewed": "geprüft",
+      "rejected": "abgelehnt"
+    },
+    "connection": {
+      "title": "Verbindungen",
+      "new": "Neue Verbindung",
+      "none": "Noch keine Verbindung angelegt.",
+      "displayName": "Anzeigename",
+      "environment": "Umgebung",
+      "references": "Kunden- und Vertragsnummern",
+      "contractingCompany": "Vertragspartner (Gesellschaft)",
+      "secrets": "Hinterlegte Geheimnisse",
+      "secretName": "Bezeichnung (zum Beispiel client_id)",
+      "secretValue": "Wert",
+      "addSecret": "Weiteres Geheimnis",
+      "replaceSecrets": "Geheimnisse ersetzen",
+      "secretsHint": "Werte werden verschlüsselt gespeichert und nie angezeigt. Ein leerer Wert entfernt das Geheimnis. Danach gilt der letzte Test als veraltet.",
+      "lastTest": "Letzter Verbindungstest",
+      "notTested": "noch nicht getestet",
+      "testStale": "veraltet",
+      "functions": "Funktionen",
+      "test": "Verbindung testen",
+      "pause": "Pausieren",
+      "activate": "Aktivieren"
+    },
+    "wizard": {
+      "title": "Einrichtungsassistent",
+      "steps": {
+        "provider": "Anbieter",
+        "details": "Verbindung",
+        "secrets": "Zugang",
+        "test": "Test",
+        "done": "Funktionen"
+      },
+      "providerIntro": "Der Funktionsstand je Anbieter ist der dokumentierte Recherchestand. Ja bedeutet dokumentierte Schnittstelle, nicht automatisch freigeschalteter Zugriff. Ohne Adapter bleibt die Verbindung manuell.",
+      "manualOnly": "nur manuell",
+      "noAdapter": "kein Adapter",
+      "environmentHint": "Test und Produktion bleiben strikt getrennt. Für jede Umgebung ist eine eigene Verbindung mit eigenen Zugangsdaten anzulegen.",
+      "referencesHint": "Mehrere Nummern durch Komma oder Zeilenumbruch trennen. Führende Nullen bleiben erhalten.",
+      "secretsIntro": "Zugangsdaten werden nur gesetzt. Sie werden verschlüsselt gespeichert und nicht mehr angezeigt. Der Schritt kann übersprungen werden.",
+      "create": "Verbindung anlegen",
+      "created": "Verbindung {name} wurde angelegt.",
+      "testIntro": "Der Test prüft nur die Anmeldung. Er beauftragt keine Abrechnung, ändert keine Nutzerdaten und quittiert keine Dokumente.",
+      "skipTest": "Später testen",
+      "releasedFunctions": "Freigegebene Funktionen",
+      "testNotAllObjects": "Eine erfolgreiche Anmeldung bestätigt nicht den Zugriff auf alle Objekte. Die Zuordnung je Objekt bleibt zu prüfen.",
+      "toAssignments": "Zur Objektzuordnung",
+      "next": "Weiter",
+      "back": "Zurück"
+    },
+    "assignment": {
+      "overviewTitle": "Zuordnungsübersicht",
+      "wizardTitle": "Objektzuordnung anlegen",
+      "new": "Neue Zuordnung",
+      "noConnections": "Zuerst eine Verbindung unter Einstellungen, Schnittstellen, Messdienstleister anlegen.",
+      "connection": "Verbindung (Kundenkonto)",
+      "property": "Objekt",
+      "propertySearch": "Objektnummer oder Name",
+      "choose": "Bitte wählen",
+      "internal": "Intern (CRM)",
+      "external": "Extern (Anbieter)",
+      "hvmNumber": "HVM-Objektnummer",
+      "manualEntryHint": "Kein Adapter listet Liegenschaften auf. Die externe Nummer wird manuell eingegeben oder per CSV importiert.",
+      "externalNumber": "Externe Liegenschafts- oder Abrechnungseinheitsnummer",
+      "externalNumberHint": "Als Text, führende Nullen bleiben erhalten. Nicht die Kundennummer, Nutzeinheits- oder Gerätenummer eintragen.",
+      "externalName": "Bezeichnung beim Anbieter",
+      "externalAddress": "Adresse beim Anbieter",
+      "scope": "Leistungsbereich",
+      "validFrom": "Gültig ab",
+      "validTo": "Gültig bis",
+      "expectedUnits": "Erwartete Einheiten",
+      "primary": "Primäre Zuordnung",
+      "primaryShort": "primär",
+      "note": "Bemerkung",
+      "confirmHint": "Die Zuordnung wird als offen gespeichert. Bestätigung und technische Prüfung beim Anbieter erfolgen im Objektreiter mit Angabe der Prüfgrundlage.",
+      "save": "Zuordnung speichern",
+      "remoteConfirmed": "remote geprüft"
+    },
+    "table": {
+      "search": "Suche (Objekt, externe Nummer)",
+      "status": "Prüfstatus",
+      "allStatus": "Alle Status",
+      "scope": "Leistungsbereich",
+      "allScopes": "Alle Leistungsbereiche",
+      "connection": "Verbindung",
+      "allConnections": "Alle Verbindungen",
+      "includeArchived": "Archivierte anzeigen",
+      "hvmNumber": "HVM-Nr.",
+      "address": "Objektadresse",
+      "provider": "Anbieter",
+      "externalNumber": "Externe Nummer",
+      "validity": "Gültigkeit",
+      "units": "Einheiten (zugeordnet/erwartet)",
+      "lastFetch": "Letzter Abruf",
+      "errorHint": "Hinweis",
+      "open": "Öffnen",
+      "empty": "Keine Zuordnungen gefunden.",
+      "pagination": "Seitennavigation",
+      "total": "{total} Zuordnungen",
+      "page": "Seite {page} von {pages}",
+      "prev": "Zurück",
+      "next": "Weiter"
+    },
+    "release": {
+      "button": "Ausgewählte freigeben ({count})",
+      "hint": "Nur Zuordnungen im Status vorgeschlagen werden bestätigt. Konflikte bleiben gesperrt.",
+      "previewTitle": "Sammelfreigabe prüfen",
+      "willConfirm": "wird bestätigt",
+      "skipped": "übersprungen ({status})",
+      "apply": "Freigabe ausführen",
+      "select": "Auswählen",
+      "rowOk": "Objekt {number}: bestätigt.",
+      "rowFailed": "Objekt {number}: nicht bestätigt ({message})"
+    },
+    "csv": {
+      "title": "CSV-Import und -Export",
+      "intro": "Vorlage herunterladen, ausfüllen, prüfen und erst danach bewusst übernehmen. Nummern bleiben Text, Dubletten werden gemeldet, das Hochladen allein ändert nichts.",
+      "template": "Vorlage herunterladen",
+      "export": "Zuordnungen exportieren",
+      "file": "CSV-Datei",
+      "preview": "Prüfen",
+      "apply": "Übernehmen",
+      "applyHint": "Übernommen werden nur Zeilen mit Status in Ordnung. Fehlerzeilen und Dubletten werden übersprungen.",
+      "previewSummary": "Prüfung: {ok} in Ordnung, {errors} Fehler, {duplicates} Dubletten. Es wurde nichts gespeichert.",
+      "appliedSummary": "{count} Zuordnungen übernommen.",
+      "line": "Zeile",
+      "status": "Status",
+      "values": "Werte",
+      "messages": "Meldungen",
+      "rowStatus": {
+        "ok": "in Ordnung",
+        "error": "Fehler",
+        "duplicate": "Dublette"
+      }
+    },
+    "tab": {
+      "title": "Messdienstleister",
+      "toSettings": "Verbindungen verwalten"
+    },
+    "detail": {
+      "title": "Zuordnung",
+      "account": "Kundenkonto",
+      "basis": "Prüfgrundlage",
+      "basisPlaceholder": "Prüfgrundlage, zum Beispiel geprüfte Abrechnung 2025 oder Anbieterantwort vom TT.MM.JJJJ",
+      "confirmLocal": "Lokal bestätigen",
+      "confirmRemote": "Technische Bestätigung beim Anbieter erfassen",
+      "archive": "Archivieren",
+      "confirmHint": "Eine lokale Bestätigung ist keine technische Prüfung beim Anbieter. Beide werden getrennt mit Prüfgrundlage gespeichert."
+    },
+    "fetch": {
+      "title": "Jetzt abrufen",
+      "button": "Jetzt abrufen",
+      "refresh": "Status aktualisieren",
+      "noConnection": "Verbindung nicht gefunden.",
+      "connectionPaused": "Verbindung ist pausiert.",
+      "conflict": "Zuordnung im Konflikt, Abruf gesperrt.",
+      "unknownFunction": "Funktion nicht im Katalog.",
+      "noPermission": "Zum Abrufen fehlt das Recht Messdienstleister-Abruf ausführen."
+    },
+    "unit": {
+      "title": "Einheitenzuordnung",
+      "internalNumber": "Interne Einheit",
+      "externalNumber": "Externe Nutzeinheit",
+      "floor": "Etage",
+      "area": "Fläche (m²)",
+      "occupancy": "Belegung",
+      "currentOccupants": "Aktuelle Nutzer (aus Verträgen)",
+      "tenant": "Mieter",
+      "owner": "Eigentümer",
+      "empty": "Noch keine Einheit zugeordnet.",
+      "missing": "{count} Einheiten des Objekts sind noch nicht zugeordnet. Übertragungen bleiben bis zur vollständigen Zuordnung gesperrt.",
+      "add": "Einheit zuordnen",
+      "hint": "Die Nutzeinheitsnummer ist weder Gerätenummer noch Mietername. Ein Nutzerwechsel ändert die Einheitenzuordnung nicht."
+    },
+    "data": {
+      "title": "Verbrauchsdaten und Abrechnungsergebnisse",
+      "periodFrom": "Zeitraum von",
+      "periodTo": "Zeitraum bis",
+      "consumption": "Verbrauchswerte",
+      "billing": "Abrechnungsergebnisse",
+      "billingHint": "Fremddaten zur Prüfung. Es wird nichts gebucht.",
+      "empty": "Keine Daten im gewählten Zeitraum.",
+      "period": "Zeitraum",
+      "kind": "Art",
+      "value": "Wert",
+      "valueKind": "Wertart",
+      "source": "Quelle",
+      "version": "Version",
+      "missing": "fehlt",
+      "amount": "Betrag",
+      "documentRef": "Belegnummer",
+      "review": "Prüfung"
+    },
+    "clearing": {
+      "title": "Klärungsbereich",
+      "intro": "Unbekannte Kennungen aus Abrufen dieser Verbindung. Zuordnen oder verwerfen, nie stillschweigend verteilen.",
+      "empty": "Keine offenen Klärungsfälle.",
+      "assignHere": "Dieser Zuordnung zuweisen",
+      "dismiss": "Verwerfen"
+    }
+  },
+  "Common": {
+    "links": {
+      "title": "Verknüpfungen",
+      "contact": "Kontakt",
+      "property": "Objekt",
+      "building": "Gebäude",
+      "unit": "Einheit",
+      "contract": "Vertrag",
+      "document": "Dokument",
+      "ticket": "Ticket",
+      "posting": "Buchung",
+      "ledger": "Buchhaltung",
+      "meeting": "Versammlung",
+      "resolution": "Beschluss"
+    }
+  },
+  "Audit": {
+    "title": "Ereignisprotokoll",
+    "loading": "Protokoll wird geladen.",
+    "empty": "Noch keine Änderungen protokolliert.",
+    "noAccess": "Für das Ereignisprotokoll fehlt die Berechtigung.",
+    "error": "Das Ereignisprotokoll konnte nicht geladen werden.",
+    "time": "Zeitpunkt",
+    "field": "Feld",
+    "old": "Vorher",
+    "new": "Nachher",
+    "actor": "Benutzer",
+    "system": "System",
+    "export": "CSV exportieren",
+    "more": "Weitere laden"
+  },
+  "Calendar": {
+    "kind": {
+      "appointment": "Termin",
+      "contract_end": "Vertragsende",
+      "contract_end_date": "Vertragsende",
+      "contract_termination": "Kündigung",
+      "contract_termination_date": "Kündigung",
+      "meter_calibration": "Eichfrist Zähler",
+      "bank_consent": "Ablauf Bankzustimmung",
+      "document_retention_end": "Ende Aufbewahrung",
+      "service_contract_notice": "Kündigungsfrist Dienstleistervertrag",
+      "meeting_resolution_deadline": "Beschlussfrist virtuelle Versammlung",
+      "energy_certificate": "Energieausweis läuft ab",
+      "move_in": "Einzug",
+      "move_out": "Auszug",
+      "maintenance": "Sanierung und Wartung",
+      "note_follow_up": "Wiedervorlage",
+      "meeting": "Eigentümerversammlung",
+      "ticket_due": "Ticketfrist"
+    },
+    "openSource": "Zur Quelle",
+    "generatedHint": "Automatisch aus den Stammdaten erzeugt, zu prüfen.",
+    "reminders": "Erinnerung",
+    "reminder": {
+      "0": "zu Beginn",
+      "5min": "5 Minuten vorher",
+      "10min": "10 Minuten vorher",
+      "15min": "15 Minuten vorher",
+      "30min": "30 Minuten vorher",
+      "1h": "1 Stunde vorher",
+      "2h": "2 Stunden vorher",
+      "4h": "4 Stunden vorher",
+      "1d": "1 Tag vorher",
+      "7d": "7 Tage vorher",
+      "14d": "14 Tage vorher",
+      "1m": "1 Monat vorher",
+      "3m": "3 Monate vorher",
+      "6m": "6 Monate vorher"
+    }
+  },
+  "contracts": {
+    "allocation": {
+      "title": "Eigenschaften (Umlagewerte)",
+      "help": "Vertragsbezogene Umlagewerte wie Personen mit Zeitraum. Ein neuer Wert schließt den offenen Vorwert am Vortag, die Historie bleibt erhalten.",
+      "none": "Keine Umlagewerte am Vertrag erfasst.",
+      "noKeys": "Im Objekt sind keine Umlageschlüssel angelegt.",
+      "key": "Umlageschlüssel",
+      "value": "Wert",
+      "validFrom": "Gültig ab",
+      "validTo": "Gültig bis",
+      "open": "offen",
+      "add": "Wert erfassen",
+      "errors": {
+        "required": "Umlageschlüssel, Wert und Gültig ab sind Pflicht."
+      }
+    },
+    "mandates": {
+      "title": "SEPA-Mandate",
+      "directDebitOn": "Lastschrift ist am Vertrag aktiviert. Der Einzug bleibt bis zur Freigabe G2 gesperrt.",
+      "directDebitOff": "Lastschrift ist am Vertrag nicht aktiviert.",
+      "none": "Für die Vertragspartei ist kein Mandat erfasst.",
+      "reference": "Referenz und Gläubiger-ID",
+      "role": "Rolle",
+      "default": "Standardmandat",
+      "additional": "Zusatzmandat",
+      "iban": "IBAN",
+      "signedAt": "Unterschrift",
+      "validUntil": "Gültig bis",
+      "openEnd": "unbefristet",
+      "paymentTypes": "Ertragsarten",
+      "allTypes": "alle Ertragsarten",
+      "excludeSpecialLevy": "ohne Sonderumlage",
+      "status": "Status",
+      "statuses": {
+        "active": "aktiv",
+        "revoked": "widerrufen",
+        "expired": "abgelaufen"
+      }
+    },
+    "debtor": {
+      "title": "Debitorenkonto",
+      "number": "Kontonummer",
+      "name": "Kontoname",
+      "openItems": "Saldo und offene Posten",
+      "openItemsLink": "Zum Buchungskreis",
+      "noLedger": "Für den Gläubiger ist noch kein Buchungskreis angelegt."
+    },
+    "dates": {
+      "moveInOn": "Einzug",
+      "moveOutOn": "Auszug",
+      "none": "nicht erfasst"
+    },
+    "termination": {
+      "moveOutOn": "Auszug (Kalendertermin)",
+      "meterReadings": "Zählerstände zur Beendigung",
+      "meterReadingsHelp": "Optional je Zähler der Einheit. Der Stand wird als Zählerstand zum Vertragsende gespeichert."
+    }
   }
 }

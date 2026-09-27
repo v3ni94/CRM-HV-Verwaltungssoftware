@@ -33,7 +33,7 @@ export default async function EditContractPage({ params }: { params: Promise<{ i
           {t("page.noRight")}
         </p>
       ) : (
-        <ContractEditForm contract={ctx.contract} partyName={ctx.partyName} unitLabel={ctx.unitLabel} propertyLabel={ctx.propertyLabel} />
+        <ContractEditForm contract={ctx.contract} partyName={ctx.partyName} unitLabel={ctx.unitLabel} propertyLabel={ctx.propertyLabel} meters={ctx.meters} />
       )}
     </div>
   );
