@@ -19,7 +19,7 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication.models import Mailbox, MailboxUser, Message
@@ -197,3 +197,432 @@ async def _tenant_extra_catalogue(
         )
     )
     return list(row or [])
+
+
+# Zuordnungsprüfung Kontakt, Objekt, Einheit (Betreiber 27.09.2026) ---------------------------
+#
+# Regeln sind deterministisch und begründet; jede Dimension endet als "sure" (automatisch
+# zuordenbar), "unsure" (Rückfrage nötig, Vorschläge mit Konfidenz) oder "none" (kein
+# Treffer). Der KI-Vorschlagspfad (``suggest.py``) liefert nur Namen und Objektnummern als
+# zusätzliche Vorschläge, nie eine sichere Zuordnung (Regel 0.1.6). Konfidenzen sind keine
+# Geldwerte; sie werden als Gleitkommazahl zwischen 0 und 1 geführt.
+
+SURE_THRESHOLD = 0.9
+UNSURE_THRESHOLD = 0.4
+UNSURE_CAP = 0.85  # Obergrenze ohne Absendertreffer bei Mails
+_SENDER_REASON = "Absenderadresse stimmt überein"
+MAX_CANDIDATES = 5
+_CUSTOMER_NUMBER_RE = re.compile(
+    r"(?:kunden|kd\.?|debitoren)\s*-?\s*(?:nummer|nr\.?)\s*[:#]?\s*([A-Za-z0-9\-/]{3,20})",
+    re.IGNORECASE,
+)
+_PHONE_RE = re.compile(r"(?:\+49|0049|0)[\d\s/().\-]{6,20}\d")
+_UNIT_RE = re.compile(
+    r"\b(?:einheit|we|whg\.?|wohnung|wohneinheit|nr\.?|stellplatz|tg)\s*(?:nr\.?\s*)?"
+    r"([A-Za-z]?\d{1,4}[A-Za-z]?)\b",
+    re.IGNORECASE,
+)
+_NAME_WORD_RE = re.compile(r"[A-ZÄÖÜ][\wäöüß\-]{2,}")
+_NAME_STOP = {
+    "sehr",
+    "geehrte",
+    "geehrter",
+    "hallo",
+    "liebe",
+    "lieber",
+    "guten",
+    "tag",
+    "herr",
+    "frau",
+    "mit",
+    "freundlichen",
+    "grüßen",
+    "gruß",
+    "viele",
+    "beste",
+    "grüße",
+    "danke",
+    "vielen",
+    "dank",
+    "objekt",
+    "einheit",
+    "wohnung",
+    "mieter",
+    "eigentümer",
+    "hausverwaltung",
+    "gmbh",
+    "telefon",
+    "mobil",
+    "mail",
+    "betreff",
+    "gesendet",
+    "von",
+    "an",
+    "the",
+}
+
+
+@dataclass
+class Candidate:
+    id: uuid.UUID
+    label: str
+    detail: str | None
+    confidence: float
+    reasons: list[str]
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "id": str(self.id),
+            "label": self.label,
+            "detail": self.detail,
+            "confidence": round(min(self.confidence, 1.0), 2),
+            "reasons": list(self.reasons),
+        }
+
+
+@dataclass
+class DimensionResult:
+    status: str  # sure, unsure, none
+    candidates: list[Candidate]
+
+    @property
+    def best(self) -> Candidate | None:
+        return self.candidates[0] if self.candidates else None
+
+
+def _finish(scores: dict[uuid.UUID, Candidate]) -> DimensionResult:
+    ranked = sorted(scores.values(), key=lambda c: c.confidence, reverse=True)
+    ranked = [c for c in ranked if c.confidence >= UNSURE_THRESHOLD][:MAX_CANDIDATES]
+    if not ranked:
+        return DimensionResult("none", [])
+    top = ranked[0]
+    second = ranked[1].confidence if len(ranked) > 1 else 0.0
+    # Sicher nur bei eindeutigem Spitzenkandidaten: ein zweiter Kandidat mit ähnlicher
+    # Konfidenz macht die Zuordnung zur Rückfrage.
+    if top.confidence >= SURE_THRESHOLD and second < SURE_THRESHOLD:
+        return DimensionResult("sure", ranked)
+    return DimensionResult("unsure", ranked)
+
+
+def _bump(
+    scores: dict[uuid.UUID, Candidate],
+    key: uuid.UUID,
+    label: str,
+    detail: str | None,
+    score: float,
+    reason: str,
+) -> None:
+    row = scores.get(key)
+    if row is None:
+        scores[key] = Candidate(key, label, detail, score, [reason])
+        return
+    row.confidence = min(1.0, row.confidence + score)
+    if reason not in row.reasons:
+        row.reasons.append(reason)
+
+
+def name_tokens(text: str) -> set[str]:
+    """Großgeschriebene Wörter aus Anrede und Signaturblock (letzte Zeilen), ohne Floskeln."""
+    if not text:
+        return set()
+    lines = [line for line in text.splitlines() if line.strip()]
+    window = "\n".join(lines[:2] + lines[-_SIGNATURE_WINDOW:])
+    tokens = {_norm(w) for w in _NAME_WORD_RE.findall(window)}
+    salutation = _SALUTATION_RE.search(text)
+    if salutation:
+        tokens.add(_norm(salutation.group(1)))
+    return {t for t in tokens if t not in _NAME_STOP and len(t) >= 3}
+
+
+def customer_numbers(text: str) -> set[str]:
+    return {m.group(1).strip().lower() for m in _CUSTOMER_NUMBER_RE.finditer(text or "")}
+
+
+def phone_numbers(text: str) -> set[str]:
+    """Telefonnummern aus dem Text in E.164; unparsbare Kandidaten werden übergangen."""
+    from mhvp.contacts.validation import InvalidValueError, normalise_phone
+
+    out: set[str] = set()
+    for match in _PHONE_RE.finditer(text or ""):
+        raw = match.group(0)
+        if sum(ch.isdigit() for ch in raw) < 7:
+            continue
+        try:
+            out.add(normalise_phone(raw))
+        except InvalidValueError:
+            continue
+    return out
+
+
+def unit_tokens(text: str) -> set[str]:
+    return {m.group(1).lower() for m in _UNIT_RE.finditer(text or "")}
+
+
+def _contact_label(contact: Any) -> tuple[str, str | None]:
+    roles = [r for r in (contact.roles or []) if isinstance(r, str)]
+    return contact.display_name, ", ".join(roles) or None
+
+
+async def evaluate_contact(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    from_address: str | None,
+    text: str,
+    ai_contact_name: str | None = None,
+) -> DimensionResult:
+    from sqlalchemy import func
+
+    from mhvp.contacts.models import (
+        Contact,
+        ContactEmail,
+        ContactIdentifier,
+        ContactPhone,
+        IdentifierKind,
+    )
+
+    scores: dict[uuid.UUID, Candidate] = {}
+    contacts: dict[uuid.UUID, Any] = {}
+
+    async def _load(ids: set[uuid.UUID]) -> None:
+        missing = [i for i in ids if i not in contacts]
+        if missing:
+            rows = await session.scalars(
+                select(Contact).where(
+                    Contact.tenant_id == tenant_id,
+                    Contact.id.in_(missing),
+                    Contact.deleted_at.is_(None),
+                )
+            )
+            for row in rows:
+                contacts[row.id] = row
+
+    if from_address:
+        email_ids = set(
+            await session.scalars(
+                select(ContactEmail.contact_id).where(
+                    func.lower(ContactEmail.email) == from_address.strip().lower()
+                )
+            )
+        )
+        await _load(email_ids)
+        hit = [i for i in email_ids if i in contacts]
+        score = 1.0 if len(hit) == 1 else 0.6
+        for cid in hit:
+            label, detail = _contact_label(contacts[cid])
+            _bump(scores, cid, label, detail, score, _SENDER_REASON)
+
+    numbers = customer_numbers(text)
+    if numbers:
+        rows = await session.execute(
+            select(ContactIdentifier.contact_id, ContactIdentifier.value).where(
+                ContactIdentifier.kind == IdentifierKind.CUSTOMER_NUMBER,
+                func.lower(ContactIdentifier.value).in_(numbers),
+            )
+        )
+        pairs = rows.all()
+        await _load({p.contact_id for p in pairs})
+        for pair in pairs:
+            if pair.contact_id in contacts:
+                label, detail = _contact_label(contacts[pair.contact_id])
+                _bump(
+                    scores,
+                    pair.contact_id,
+                    label,
+                    detail,
+                    0.95,
+                    f"Kundennummer {pair.value} im Text",
+                )
+
+    phones = phone_numbers(text)
+    if phones:
+        phone_ids = set(
+            await session.scalars(
+                select(ContactPhone.contact_id).where(ContactPhone.number.in_(phones))
+            )
+        )
+        await _load(phone_ids)
+        for cid in phone_ids:
+            if cid in contacts:
+                label, detail = _contact_label(contacts[cid])
+                _bump(scores, cid, label, detail, 0.7, "Telefonnummer aus der Signatur")
+
+    tokens = name_tokens(text)
+    if ai_contact_name:
+        tokens |= {_norm(w) for w in ai_contact_name.split() if len(w) >= 3}
+    if tokens:
+        name_rows = await session.scalars(
+            select(Contact).where(
+                Contact.tenant_id == tenant_id,
+                Contact.deleted_at.is_(None),
+                func.lower(Contact.last_name).in_(tokens),
+            )
+        )
+        for row in name_rows:
+            contacts[row.id] = row
+            label, detail = _contact_label(row)
+            first = _norm(row.first_name or "")
+            if first and first in tokens:
+                _bump(scores, row.id, label, detail, 0.7, "Vor- und Nachname im Text")
+            else:
+                _bump(scores, row.id, label, detail, 0.5, "Nachname in Anrede oder Signatur")
+    if ai_contact_name:
+        for cid, cand in scores.items():
+            if _norm(ai_contact_name) == _norm(contacts[cid].display_name):
+                cand.reasons.append("KI-Vorschlag (nur Hinweis)")
+    if from_address:
+        # Unbekannte Absenderadresse: Name, Telefon oder Kundennummer im Text reichen bei einer
+        # Mail nicht für eine automatische Zuordnung (Weiterleitungen, Anrufnotizen, Dritte
+        # schreiben über einen Kontakt); höchstens Rückfrage.
+        for cand in scores.values():
+            if _SENDER_REASON not in cand.reasons and cand.confidence > UNSURE_CAP:
+                cand.confidence = UNSURE_CAP
+                cand.reasons.append("Absenderadresse unbekannt")
+    return _finish(scores)
+
+
+async def contact_property_units(
+    session: AsyncSession, tenant_id: uuid.UUID, contact_id: uuid.UUID
+) -> list[tuple[uuid.UUID, uuid.UUID | None, str]]:
+    """Objekte (und Einheiten) aus Verträgen und Objektbeziehungen des Kontakts:
+    ``(property_id, unit_id | None, Grund)``. Beendete Verträge und abgelaufene Beziehungen
+    zählen nicht."""
+    from mhvp.contacts.models import PartyMember
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import PropertyContact
+    from mhvp.workspace.services import local_today
+
+    today = local_today()
+    out: list[tuple[uuid.UUID, uuid.UUID | None, str]] = []
+    contracts = await session.execute(
+        select(Contract.property_id, Contract.unit_id, Contract.kind)
+        .join(PartyMember, PartyMember.party_id == Contract.party_id)
+        .where(
+            Contract.tenant_id == tenant_id,
+            PartyMember.contact_id == contact_id,
+            or_(Contract.end_date.is_(None), Contract.end_date >= today),
+        )
+    )
+    for row in contracts.all():
+        out.append((row.property_id, row.unit_id, f"Vertrag ({row.kind.value}) des Kontakts"))
+    relations = await session.execute(
+        select(PropertyContact.property_id, PropertyContact.category_code).where(
+            PropertyContact.tenant_id == tenant_id,
+            PropertyContact.contact_id == contact_id,
+            or_(PropertyContact.valid_to.is_(None), PropertyContact.valid_to >= today),
+        )
+    )
+    for rel in relations.all():
+        out.append((rel.property_id, None, f"Objektbeziehung ({rel.category_code}) des Kontakts"))
+    return out
+
+
+def _property_label(prop: Any) -> tuple[str, str | None]:
+    address = " ".join(p for p in (prop.street, prop.house_number) if p)
+    city = " ".join(p for p in (prop.postal_code, prop.city) if p)
+    return f"{prop.number} {prop.name}", ", ".join(p for p in (address, city) if p) or None
+
+
+async def evaluate_property(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    text: str,
+    contact_id: uuid.UUID | None,
+    ai_property_number: str | None = None,
+) -> DimensionResult:
+    from mhvp.communication import mail
+    from mhvp.properties.models import Property
+
+    scores: dict[uuid.UUID, Candidate] = {}
+    props = {
+        p.id: p
+        for p in await session.scalars(select(Property).where(Property.tenant_id == tenant_id))
+    }
+    number = mail.property_number(text, None)
+    if number:
+        for prop in props.values():
+            if prop.number == number:
+                label, detail = _property_label(prop)
+                _bump(scores, prop.id, label, detail, 1.0, f"Objektnummer {number} im Text")
+    if ai_property_number and ai_property_number != number:
+        for prop in props.values():
+            if prop.number == ai_property_number:
+                label, detail = _property_label(prop)
+                _bump(scores, prop.id, label, detail, 0.5, "KI-Vorschlag Objektnummer")
+    haystack = " ".join((text or "").lower().split())
+    for prop in props.values():
+        street = (prop.street or "").strip().lower()
+        if len(street) < 4 or street not in haystack:
+            continue
+        label, detail = _property_label(prop)
+        house = (prop.house_number or "").strip().lower()
+        if house and re.search(rf"{re.escape(street)}\s*{re.escape(house)}\b", haystack):
+            _bump(scores, prop.id, label, detail, 0.85, f"Adresse {prop.street} {house} im Text")
+        else:
+            _bump(scores, prop.id, label, detail, 0.6, f"Straße {prop.street} im Text")
+    if contact_id is not None:
+        links = await contact_property_units(session, tenant_id, contact_id)
+        by_property: dict[uuid.UUID, str] = {}
+        for pid, _unit, reason in links:
+            by_property.setdefault(pid, reason)
+        score = 0.8 if len(by_property) == 1 else 0.5
+        for pid, reason in by_property.items():
+            if pid not in props:
+                continue
+            label, detail = _property_label(props[pid])
+            _bump(scores, pid, label, detail, score, reason)
+    return _finish(scores)
+
+
+def _unit_label(unit: Any) -> tuple[str, str | None]:
+    parts = [p for p in (unit.label, unit.location, unit.floor) if p]
+    return f"Einheit {unit.number}", ", ".join(parts) or None
+
+
+async def evaluate_unit(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    text: str,
+    contact_id: uuid.UUID | None,
+    property_id: uuid.UUID | None,
+) -> DimensionResult:
+    from mhvp.properties.models import Unit
+
+    scores: dict[uuid.UUID, Candidate] = {}
+    units: dict[uuid.UUID, Any] = {}
+    if property_id is not None:
+        for unit in await session.scalars(
+            select(Unit).where(Unit.tenant_id == tenant_id, Unit.property_id == property_id)
+        ):
+            units[unit.id] = unit
+        tokens = unit_tokens(text)
+        haystack = " ".join((text or "").lower().split())
+        for unit in units.values():
+            label, detail = _unit_label(unit)
+            if unit.number.lower() in tokens:
+                _bump(scores, unit.id, label, detail, 0.9, f"Einheitennummer {unit.number} im Text")
+            location = (unit.location or "").strip().lower()
+            if len(location) >= 4 and location in haystack:
+                _bump(scores, unit.id, label, detail, 0.6, f"Wohnungslage {unit.location} im Text")
+    if contact_id is not None:
+        links = [
+            (pid, uid, reason)
+            for pid, uid, reason in await contact_property_units(session, tenant_id, contact_id)
+            if uid is not None and (property_id is None or pid == property_id)
+        ]
+        unit_ids = {uid for _p, uid, _r in links if uid is not None}
+        missing = [u for u in unit_ids if u not in units]
+        if missing:
+            for unit in await session.scalars(select(Unit).where(Unit.id.in_(missing))):
+                units[unit.id] = unit
+        score = 0.85 if len(unit_ids) == 1 else 0.5
+        seen: set[uuid.UUID] = set()
+        for _pid, uid, reason in links:
+            if uid is None or uid in seen or uid not in units:
+                continue
+            seen.add(uid)
+            label, detail = _unit_label(units[uid])
+            _bump(scores, uid, label, detail, score, reason)
+    return _finish(scores)

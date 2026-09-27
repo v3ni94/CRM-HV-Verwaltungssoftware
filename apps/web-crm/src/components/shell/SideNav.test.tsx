@@ -23,6 +23,15 @@ describe("SideNav", () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
   });
 
+  it("ignores the object format stored by 1.34.x instead of crashing (incident 27.09.2026)", () => {
+    window.localStorage.setItem("mhvp.nav.collapsed", JSON.stringify({ Makler: true, Übersicht: false }));
+    window.localStorage.setItem("mhvp.nav.rail.collapsed", JSON.stringify("yes"));
+    render(
+      <SideNav groups={groups} label="Hauptnavigation" logoSrc="/logo.png" productName="MHVP" area="HVM" collapseLabel="Einklappen" expandLabel="Ausklappen" />,
+    );
+    expect(screen.getByRole("button", { name: "Übersicht" })).toHaveAttribute("aria-expanded", "false");
+  });
+
   it("starts every group collapsed by default", () => {
     render(
       <SideNav groups={groups} label="Hauptnavigation" logoSrc="/logo.png" productName="MHVP" area="HVM" collapseLabel="Einklappen" expandLabel="Ausklappen" />,

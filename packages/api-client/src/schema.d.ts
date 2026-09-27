@@ -3189,6 +3189,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/fints/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** FinTS-Einrichtungsstatus (Produktregistrierung vorhanden) */
+        get: operations["config_api_v1_banking_fints_config_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/fints/connections": {
         parameters: {
             query?: never;
@@ -9685,6 +9702,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/assignment-reviews/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Offene Rückfragen zur Zuordnung (Mail) */
+        get: operations["open_mail_reviews_api_v1_mail_assignment_reviews_open_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/call-assistant": {
         parameters: {
             query?: never;
@@ -9900,6 +9934,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/maintenance/link-duplicates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Wartung: vorhandene Duplikate über mehrere Postfächer verknüpfen
+         * @description Rückwirkende Duplikaterkennung (Betreiber 27.09.2026) für Mails, die vor dieser Regel
+         *     in mehrere eigene Postfächer gelangt sind: gleiche Message-ID oder gleicher Absender,
+         *     Betreff, Zeitstempel und Text-Hash in verschiedenen Postfächern werden verknüpft, die
+         *     Kopie im persönlichen Postfach führt, Ticket und Thread werden geteilt. Nichts wird
+         *     gelöscht; Kopien mit verschiedenen Tickets bleiben unverändert (``ticket_conflicts``).
+         *     Idempotent, mehrfach ausführbar.
+         */
+        post: operations["link_duplicates_api_v1_mail_maintenance_link_duplicates_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages": {
         parameters: {
             query?: never;
@@ -10063,6 +10122,101 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/messages/{message_id}/assignment-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zuordnungsprüfung einer Mail (Kontakt, Objekt) */
+        get: operations["get_message_review_api_v1_mail_messages__message_id__assignment_review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/assignment-review/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rückfrage zur Zuordnung beantworten (Mail) */
+        post: operations["decide_message_review_api_v1_mail_messages__message_id__assignment_review_decide_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/attachment-candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dokumente des Mandanten als Anhang suchen (DMS)
+         * @description Suche nach Titel oder Dateiname, höchstens 20 Treffer, nur Metadaten; der
+         *     Rechtsträgerbereich der Mitgliedschaft (A37) gilt unverändert.
+         */
+        get: operations["attachment_candidates_api_v1_mail_messages__message_id__attachment_candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anhänge einer Nachricht */
+        get: operations["list_attachments_api_v1_mail_messages__message_id__attachments_get"];
+        put?: never;
+        /** DMS-Dokument als Anhang des Entwurfs verknüpfen */
+        post: operations["add_attachment_api_v1_mail_messages__message_id__attachments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/attachments/upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Datei vom lokalen Rechner als Anhang hochladen
+         * @description Gleiche Prüfungen wie ``POST /documents`` (Größe, zulässiger Typ, Inhalt passt zum
+         *     Typ, Virenscan in ``store_document``); die Datei wird als Dokument des Mandanten abgelegt
+         *     und mit dem Vorgang des Entwurfs verknüpft, falls vorhanden.
+         */
+        post: operations["upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/{message_id}/attachments/{attachment_id}/invoice-extraction": {
         parameters: {
             query?: never;
@@ -10079,6 +10233,23 @@ export interface paths {
          */
         post: operations["invoice_extraction_from_attachment_api_v1_mail_messages__message_id__attachments__attachment_id__invoice_extraction_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/attachments/{document_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Anhang vom Entwurf entfernen (Dokument bleibt erhalten) */
+        delete: operations["remove_attachment_api_v1_mail_messages__message_id__attachments__document_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -10338,6 +10509,41 @@ export interface paths {
         head?: never;
         /** Playbook ändern oder freigeben */
         patch: operations["patch_playbook_api_v1_mail_playbooks__playbook_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/mail/signature/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorschau der E-Mail-Signatur (Text und HTML) */
+        get: operations["preview_signature_api_v1_mail_signature_preview_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/signature/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigene Position und Durchwahl für die Signatur */
+        get: operations["get_signature_profile_api_v1_mail_signature_profile_get"];
+        /** Eigene Position und Durchwahl setzen */
+        put: operations["put_signature_profile_api_v1_mail_signature_profile_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/metering/assignments": {
@@ -15555,6 +15761,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/members/{membership_id}/position": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Position und Durchwahl eines Mitglieds setzen (E-Mail-Signatur) */
+        put: operations["put_member_position_api_v1_tenant_members__membership_id__position_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/members/{membership_id}/reply-approval": {
         parameters: {
             query?: never;
@@ -15656,6 +15879,23 @@ export interface paths {
          *     set). Operator decision 25.09.2026 (M2-08 entschieden).
          */
         post: operations["resync_portal_role_permissions_api_v1_tenant_portal_role_permissions_resync_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/position-catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Positionen für die E-Mail-Signatur */
+        get: operations["get_position_catalogue_api_v1_tenant_position_catalogue_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -15900,6 +16140,23 @@ export interface paths {
         put?: never;
         /** Ticket anlegen (Vorlage, Routing, SLA) */
         post: operations["create_ticket_api_v1_tickets_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/assignment-reviews/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Offene Rückfragen zur Zuordnung (Tickets) */
+        get: operations["open_ticket_reviews_api_v1_tickets_assignment_reviews_open_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16158,6 +16415,40 @@ export interface paths {
         post?: never;
         /** Zuweiser entfernen */
         delete: operations["remove_assignee_api_v1_tickets__ticket_id__assignees__user_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/assignment-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zuordnungsprüfung eines Tickets (Kontakt, Objekt, Einheit) */
+        get: operations["get_ticket_review_api_v1_tickets__ticket_id__assignment_review_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/assignment-review/decide": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Rückfrage zur Zuordnung beantworten (Ticket) */
+        post: operations["decide_ticket_review_api_v1_tickets__ticket_id__assignment_review_decide_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -17720,6 +18011,24 @@ export interface components {
              */
             user_id: string;
         };
+        /** AssignmentDecideIn */
+        AssignmentDecideIn: {
+            /**
+             * Candidate Id
+             * @description Kandidat (aus der Liste oder manuell gewählt); ohne Angabe bei accept der erste Vorschlag.
+             */
+            candidate_id?: string | null;
+            /**
+             * Decision
+             * @enum {string}
+             */
+            decision: "accept" | "reject";
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "contact" | "property" | "unit";
+        };
         /** AssignmentIn */
         AssignmentIn: {
             /**
@@ -18527,6 +18836,13 @@ export interface components {
         Body_upload_api_v1_portal_uploads_post: {
             /** File */
             file: string;
+        };
+        /** Body_upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post */
+        Body_upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post: {
+            /** File */
+            file: string;
+            /** Title */
+            title?: string | null;
         };
         /** Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post */
         Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post: {
@@ -22132,6 +22448,14 @@ export interface components {
          * @enum {string}
          */
         DocumentSource: "upload" | "generated" | "email" | "scan" | "portal" | "import";
+        /** DraftAttachmentIn */
+        DraftAttachmentIn: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
         /**
          * DueDayRule
          * @enum {string}
@@ -22792,6 +23116,15 @@ export interface components {
             last_transactions_fetch_at: string | null;
             /** Property Bank Account Id */
             property_bank_account_id: string | null;
+        };
+        /**
+         * FinTsConfigOut
+         * @description Whether the FinTS product registration (``MHVP_FINTS_PRODUCT_ID``) is set. Without it
+         *     the UI shows the hint of ``MHVP-BANK-0007`` instead of the connect button.
+         */
+        FinTsConfigOut: {
+            /** Configured */
+            configured: boolean;
         };
         /**
          * FinTsConnectionIn
@@ -25353,6 +25686,8 @@ export interface components {
         MailDraftPatchIn: {
             /** Body */
             body?: string | null;
+            /** Cc Addresses */
+            cc_addresses?: string[] | null;
             /** Subject */
             subject?: string | null;
             /** To Addresses */
@@ -25396,6 +25731,8 @@ export interface components {
             imap_host?: string | null;
             /** Imap Port */
             imap_port?: number | null;
+            /** Is Collective */
+            is_collective?: boolean | null;
             /**
              * Kind
              * @default imap
@@ -25420,6 +25757,8 @@ export interface components {
             calendar_id?: string | null;
             /** Enabled */
             enabled?: boolean | null;
+            /** Is Collective */
+            is_collective?: boolean | null;
             /** Is Default */
             is_default?: boolean | null;
             /** Kind */
@@ -26012,10 +26351,14 @@ export interface components {
             membership_id: string;
             /** Mobile Phone */
             mobile_phone?: string | null;
+            /** Phone */
+            phone?: string | null;
             /** Portal Access */
             portal_access?: string | null;
             /** Portal Access Reason */
             portal_access_reason?: string | null;
+            /** Position */
+            position?: string | null;
             /** Reply Approval Reason */
             reply_approval_reason?: string | null;
             /**
@@ -26034,6 +26377,18 @@ export interface components {
              * Format: uuid
              */
             user_id: string;
+        };
+        /**
+         * MemberPosition
+         * @description Position und Durchwahl für die E-Mail-Signatur (operator 27.09.2026). Die Position ist
+         *     Freitext; Katalogwerte (``mhvp.communication.signatures.POSITION_CATALOGUE`` plus die
+         *     Mandantenliste) sind Vorschläge. ``None`` löscht den jeweiligen Wert.
+         */
+        MemberPosition: {
+            /** Phone */
+            phone?: string | null;
+            /** Position */
+            position?: string | null;
         };
         /**
          * MemberReplyApproval
@@ -30394,6 +30749,52 @@ export interface components {
             /** Signer Role */
             signer_role?: string | null;
         };
+        /** SignaturePreviewOut */
+        SignaturePreviewOut: {
+            /** Html */
+            html: string;
+            /**
+             * Membership Id
+             * Format: uuid
+             */
+            membership_id: string;
+            /** Text */
+            text: string;
+        };
+        /**
+         * SignatureProfileOut
+         * @description Eigene Signaturdaten und der Positionskatalog für das Dropdown mit Freitext.
+         */
+        SignatureProfileOut: {
+            /** Catalogue */
+            catalogue?: string[];
+            /**
+             * Membership Id
+             * Format: uuid
+             */
+            membership_id: string;
+            /** Mobile Phone */
+            mobile_phone: string | null;
+            /** Phone */
+            phone: string | null;
+            /** Position */
+            position: string | null;
+        };
+        /**
+         * SignatureTemplate
+         * @description E-Mail-Signaturvorlage des Mandanten (operator 27.09.2026). Platzhalter ``{name}``,
+         *     ``{position}``, ``{phone}``, ``{mobile}``, ``{email}``, ``{company}``, ``{street}``,
+         *     ``{postal_code}``, ``{city}``, ``{register}``, ``{website}``. ``None`` bedeutet Standard
+         *     aus den Firmendaten (``mhvp.communication.signatures``).
+         */
+        SignatureTemplate: {
+            /** Html */
+            html?: string | null;
+            /** Logo Url */
+            logo_url?: string | null;
+            /** Text */
+            text?: string | null;
+        };
         /**
          * SlaApprovalIn
          * @description Freigabe durch die Geschäftsführung (M19-01): Bestätigung ist Pflicht, Vermerk optional.
@@ -31075,8 +31476,11 @@ export interface components {
              * @default false
              */
             metering_module_enabled: boolean;
+            /** Position Catalogue Extra */
+            position_catalogue_extra?: string[];
             receivable_rules?: components["schemas"]["ReceivableRulesConfig"];
             resolution_kinds?: components["schemas"]["ResolutionKindsConfig"];
+            signature_template?: components["schemas"]["SignatureTemplate"];
             /** Sources */
             sources: {
                 [key: string]: string;
@@ -31106,8 +31510,11 @@ export interface components {
             mail_approval_mode?: string | null;
             /** Metering Module Enabled */
             metering_module_enabled?: boolean | null;
+            /** Position Catalogue Extra */
+            position_catalogue_extra?: string[] | null;
             receivable_rules?: components["schemas"]["ReceivableRulesConfig"] | null;
             resolution_kinds?: components["schemas"]["ResolutionKindsConfig"] | null;
+            signature_template?: components["schemas"]["SignatureTemplate"] | null;
             /** Ticket Reply Approval All */
             ticket_reply_approval_all?: boolean | null;
         };
@@ -39504,6 +39911,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    config_api_v1_banking_fints_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinTsConfigOut"];
                 };
             };
         };
@@ -53782,6 +54209,39 @@ export interface operations {
             };
         };
     };
+    open_mail_reviews_api_v1_mail_assignment_reviews_open_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_call_assistant_api_v1_mail_call_assistant_get: {
         parameters: {
             query?: never;
@@ -54270,6 +54730,28 @@ export interface operations {
             };
         };
     };
+    link_duplicates_api_v1_mail_maintenance_link_duplicates_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
     messages_api_v1_mail_messages_get: {
         parameters: {
             query?: {
@@ -54281,6 +54763,8 @@ export interface operations {
                 q?: string | null;
                 /** @description Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed, rejected); gilt nur ohne status-Filter */
                 include_closed?: boolean;
+                /** @description Duplikate derselben Mail aus weiteren eigenen Postfächern zeigen (sonst nur die führende Kopie, außer bei Filter nach mailbox_id) */
+                include_duplicates?: boolean;
                 limit?: number;
                 /** @description Seite (ab 1), zusammen mit page_size */
                 page?: number;
@@ -54604,6 +55088,218 @@ export interface operations {
             };
         };
     };
+    get_message_review_api_v1_mail_messages__message_id__assignment_review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_message_review_api_v1_mail_messages__message_id__assignment_review_decide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentDecideIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    attachment_candidates_api_v1_mail_messages__message_id__attachment_candidates_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_attachments_api_v1_mail_messages__message_id__attachments_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_attachment_api_v1_mail_messages__message_id__attachments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DraftAttachmentIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     invoice_extraction_from_attachment_api_v1_mail_messages__message_id__attachments__attachment_id__invoice_extraction_post: {
         parameters: {
             query?: never;
@@ -54625,6 +55321,40 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    remove_attachment_api_v1_mail_messages__message_id__attachments__document_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */
@@ -55231,6 +55961,90 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    preview_signature_api_v1_mail_signature_preview_get: {
+        parameters: {
+            query?: {
+                membership_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignaturePreviewOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_signature_profile_api_v1_mail_signature_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignatureProfileOut"];
+                };
+            };
+        };
+    };
+    put_signature_profile_api_v1_mail_signature_profile_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberPosition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SignatureProfileOut"];
                 };
             };
             /** @description Validation Error */
@@ -66626,6 +67440,39 @@ export interface operations {
             };
         };
     };
+    put_member_position_api_v1_tenant_members__membership_id__position_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                membership_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MemberPosition"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     put_member_reply_approval_api_v1_tenant_members__membership_id__reply_approval_put: {
         parameters: {
             query?: never;
@@ -66804,6 +67651,26 @@ export interface operations {
                     "application/json": {
                         [key: string]: number;
                     };
+                };
+            };
+        };
+    };
+    get_position_catalogue_api_v1_tenant_position_catalogue_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": string[];
                 };
             };
         };
@@ -67395,6 +68262,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_ticket_reviews_api_v1_tickets_assignment_reviews_open_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */
@@ -68115,6 +69015,76 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ticket_review_api_v1_tickets__ticket_id__assignment_review_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_ticket_review_api_v1_tickets__ticket_id__assignment_review_decide_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AssignmentDecideIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
             };
             /** @description Validation Error */
             422: {

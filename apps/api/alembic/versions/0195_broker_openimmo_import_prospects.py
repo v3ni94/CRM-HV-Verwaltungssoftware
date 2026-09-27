@@ -152,8 +152,12 @@ def downgrade() -> None:
         op.drop_column("prospect", "rejection_template_id")
     if _has_column("prospect", "source"):
         op.drop_column("prospect", "source")
-    for table in ("self_disclosure_link", "prospect_viewing", "broker_tenant_config",
-                  "openimmo_import_run"):
+    for table in (
+        "self_disclosure_link",
+        "prospect_viewing",
+        "broker_tenant_config",
+        "openimmo_import_run",
+    ):
         if _has_table(table):
             for statement in drop_tenant_rls_statements(table):
                 op.execute(statement)

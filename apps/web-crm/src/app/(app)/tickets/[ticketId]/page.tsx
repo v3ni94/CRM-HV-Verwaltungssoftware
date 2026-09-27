@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { AssignmentPrompt } from "@/components/assignment/AssignmentPrompt";
 import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
@@ -83,6 +84,9 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           { type: "ticket", id: data.parent_ticket_id ? String(data.parent_ticket_id) : null, label: t("links.parent") },
         ]}
       />
+      {mergedInto ? null : (
+        <AssignmentPrompt entityType="ticket" entityId={ticketId} canDecide={me.data?.permissions.includes("tickets:update") ?? false} />
+      )}
       {data.public_description ? (
         <SafeText className="max-w-3xl text-sm text-muted" testId="ticket-description">
           {String(data.public_description)}

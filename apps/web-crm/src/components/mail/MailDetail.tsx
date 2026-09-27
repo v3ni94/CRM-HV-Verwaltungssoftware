@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
+import { AssignmentPrompt } from "@/components/assignment/AssignmentPrompt";
 import { AttachmentReceiptAction } from "@/components/receipts/AttachmentReceiptAction";
 import { SafeText } from "@/components/ui/SafeText";
 import { ui } from "@/lib/ui";
@@ -118,10 +119,16 @@ export function MailDetail({
   const [reauthPassword, setReauthPassword] = useState("");
   const [reauthTotp, setReauthTotp] = useState("");
   const [reauthError, setReauthError] = useState<string | null>(null);
+  // Antwortentwurf zur ausgewählten Eingangsmail (operator 27.09.2026): "Vorbereiten" oder
+  // "Antworten" legen ihn an, er wird direkt unter der Nachricht bearbeitet, statt nur still
+  // im Reiter Entwürfe zu landen.
+  const [replyDraft, setReplyDraft] = useState<Message | null>(null);
+  const replyRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     setThread(null);
     setError(null);
+    setReplyDraft(null);
     setShowReject(false);
     setRejectNote("");
     setShowReauth(false);
@@ -162,9 +169,35 @@ export function MailDetail({
     return null;
   };
 
+  const showReplyDraft = (draft: Message) => {
+    setReplyDraft(draft);
+    // Der Editor steht unter der Nachricht; bei langen Mails dorthin springen.
+    window.setTimeout(() => replyRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" }), 0);
+  };
   const reply = async () => {
+    if (replyDraft && replyDraft.status === "draft") {
+      showReplyDraft(replyDraft);
+      return;
+    }
+    // Ein bereits vorhandener Entwurf des Verlaufs wird geöffnet, kein zweiter angelegt.
+    const existing = thread?.find((m) => m.direction === "out" && m.status === "draft");
+    if (existing) {
+      showReplyDraft(existing);
+      return;
+    }
     const next = await act("/reply-draft", "POST", {});
-    if (next) onCreated(next);
+    if (next) {
+      showReplyDraft(next);
+      onCreated(next);
+    }
+  };
+  const onDraftCreated = (next: Message) => {
+    showReplyDraft(next);
+    onCreated(next);
+  };
+  const onReplyDraftUpdated = (next: Message) => {
+    setReplyDraft(next);
+    onUpdated(next);
   };
   const markDone = async () => {
     const next = await act("", "PATCH", { status: "done" });
@@ -333,8 +366,20 @@ export function MailDetail({
           </Link>
         </p>
       ) : null}
-      {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onCreated} /> : null}
-      {message.direction === "in" ? <PreparationCard message={message} onDraftCreated={onCreated} /> : null}
+      {message.direction === "in" ? (
+        <AssignmentPrompt
+          entityType="message"
+          entityId={message.id}
+          canDecide
+          onDecided={() => {
+            void bff<Message>(`/api/bff/mail/messages/${message.id}`).then((res) => {
+              if (res.ok) onUpdated(res.data);
+            });
+          }}
+        />
+      ) : null}
+      {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onDraftCreated} /> : null}
+      {message.direction === "in" ? <PreparationCard message={message} onDraftCreated={onDraftCreated} /> : null}
 
       {message.direction === "in" && invoiceForward?.decision === "suggest" && !forwarded ? (
         <div className={`${ui.card} flex flex-wrap items-center justify-between gap-2`}>
@@ -422,6 +467,22 @@ export function MailDetail({
         <p role="alert" className={ui.alert}>
           {error}
         </p>
+      ) : null}
+
+      {message.direction === "in" && replyDraft ? (
+        <section ref={replyRef} className="flex flex-col gap-2 border-t border-border-soft pt-3" data-testid="mail-reply-draft">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold">{t("replyDraftTitle")}</h3>
+            <span className={ui.badge}>{t(`status.${replyDraft.status}`)}</span>
+          </div>
+          {replyDraft.status === "draft" ? (
+            <DraftEditor key={replyDraft.id} message={replyDraft} onUpdated={onReplyDraftUpdated} />
+          ) : (
+            <p className={ui.notice} data-testid="mail-reply-draft-status">
+              {replyDraft.status === "pending" ? t("replyDraftSubmitted") : t("replyDraftClosed")}
+            </p>
+          )}
+        </section>
       ) : null}
 
       {showReauth ? (

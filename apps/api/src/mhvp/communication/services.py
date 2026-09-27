@@ -13,7 +13,7 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.communication import mail
+from mhvp.communication import duplicates, mail
 from mhvp.communication.html import sanitize_html
 from mhvp.communication.models import Message
 from mhvp.core.config import Settings
@@ -51,14 +51,28 @@ async def ingest_parsed(
     from mhvp.properties.models import Property
     from mhvp.tickets.models import TicketTemplate
 
-    if parsed["message_id"]:
-        known = await session.scalar(
-            select(Message).where(
-                Message.header_message_id == parsed["message_id"], Message.direction == "in"
-            )
+    known = await duplicates.find_known(session, parsed)
+    if known:
+        # Same mail already stored: the same mailbox (or no mailbox binding) is a re-import
+        # and returns the stored copy; another own mailbox gets a linked duplicate copy
+        # (operator 27.09.2026): the personal mailbox leads, the collective one is hidden.
+        for member in known:
+            if mailbox_id is None or member.mailbox_id == mailbox_id:
+                return member, False
+        primary = known[0]
+        copy = duplicates.copy_of(
+            primary,
+            mailbox_id=mailbox_id,
+            document_id=document_id,
+            received_at=parsed["received_at"],
+            gmail_message_id=gmail_message_id,
+            gmail_thread_id=gmail_thread_id,
+            actor_user_id=actor_user_id,
         )
-        if known is not None:
-            return known, False
+        session.add(copy)
+        await session.flush()
+        await duplicates.link(session, primary, copy)
+        return copy, True
     contact_id = None
     if parsed["from"]:
         contact_id = await session.scalar(
@@ -165,6 +179,12 @@ async def ingest_parsed(
         actor_user_id=actor_user_id,
         payload={"urgency": row.classification["urgency"]},
     )
+    # Zuordnungsprüfung Kontakt/Objekt (Betreiber 27.09.2026): sichere Treffer werden
+    # übernommen, unsichere bleiben als Rückfrage stehen (assignment_review).
+    from mhvp.communication.assignment_review import review_message
+
+    await review_message(session, row, actor_user_id)
+    contact_id, property_id = row.contact_id, row.property_id
     tnr_ticket = await ticket_by_tnr(session, tenant_id, parsed["subject"])
     if parent is not None and parent.ticket_id:
         await attach_to_ticket(session, row, parent.ticket_id, actor_user_id)
@@ -407,14 +427,9 @@ async def ingest_raw(
     from mhvp.documents.services import store_document
 
     parsed = mail.parse(raw)
-    if parsed["message_id"]:
-        known = await session.scalar(
-            select(Message).where(
-                Message.header_message_id == parsed["message_id"], Message.direction == "in"
-            )
-        )
-        if known is not None:
-            return known, False
+    for member in await duplicates.find_known(session, parsed):
+        if mailbox_id is None or member.mailbox_id == mailbox_id:
+            return member, False
     document = await store_document(
         session,
         blobs,
@@ -789,6 +804,7 @@ async def attach_to_ticket(
     row.ticket_id = ticket_id
     if row.status == "new":
         row.status = "assigned"
+    await duplicates.share_case(session, row)  # every copy of the mail joins the ticket
     session.add(
         TicketEvent(
             tenant_id=row.tenant_id,
@@ -898,8 +914,12 @@ async def create_ticket(
     from mhvp.communication.assignment import auto_assign_new_ticket
 
     await auto_assign_new_ticket(session, row.tenant_id, row, ticket)
+    from mhvp.communication.assignment_review import review_ticket
+
+    await review_ticket(session, ticket, actor_user_id)
     row.ticket_id, row.status = ticket.id, "assigned"
     await session.flush()
+    await duplicates.share_case(session, row)  # every copy of the mail joins the ticket
     return ticket
 
 

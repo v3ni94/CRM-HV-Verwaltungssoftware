@@ -57,6 +57,13 @@ class _In(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class FinTsConfigOut(BaseModel):
+    """Whether the FinTS product registration (``MHVP_FINTS_PRODUCT_ID``) is set. Without it
+    the UI shows the hint of ``MHVP-BANK-0007`` instead of the connect button."""
+
+    configured: bool
+
+
 class InstituteOut(BaseModel):
     blz: str
     name: str
@@ -347,6 +354,11 @@ async def _new_session(
         payload={"purpose": purpose, "bank_connection_id": str(conn.id)},
     )
     return fs
+
+
+@router.get("/config", summary="FinTS-Einrichtungsstatus (Produktregistrierung vorhanden)")
+async def config(request: Request, principal: TenantPrincipal = Depends(READ)) -> FinTsConfigOut:
+    return FinTsConfigOut(configured=bool(request.app.state.settings.fints_product_id))
 
 
 @router.get("/institutes", summary="Institutssuche (BLZ, BIC, IBAN oder Name)")

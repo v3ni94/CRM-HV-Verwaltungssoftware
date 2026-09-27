@@ -151,7 +151,7 @@ export function DmsConnectionSettings({
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={save} className={`${ui.card} flex flex-col gap-4`} aria-label={t("paperlessTitle")}>
-        <h2 className={ui.h2}>{t("paperlessTitle")}</h2>
+        <h2 id="dms-paperless-title" className={ui.h2}>{t("paperlessTitle")}</h2>
 
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={enabled} onChange={(e) => setEnabled(e.target.checked)} />
@@ -276,7 +276,7 @@ export function DmsConnectionSettings({
         className={`${ui.card} flex flex-col gap-4`}
         aria-label={t("googleDriveTitle")}
       >
-        <h2 className={ui.h2}>{t("googleDriveTitle")}</h2>
+        <h2 id="dms-google-drive-title" className={ui.h2}>{t("googleDriveTitle")}</h2>
         <p className="text-sm text-muted">{t("googleDriveHint")}</p>
 
         <div>

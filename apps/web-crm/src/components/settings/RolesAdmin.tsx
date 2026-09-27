@@ -133,7 +133,7 @@ function CreateRoleForm({ allPermissions, onCreated }: { allPermissions: string[
 
   return (
     <form onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3`}>
-      <h2 className="text-sm font-semibold">{t("createTitle")}</h2>
+      <h2 id="roles-create-title" className="text-sm font-semibold">{t("createTitle")}</h2>
       <label className="flex flex-col gap-1 sm:max-w-xs">
         <span className={ui.label}>{t("code")}</span>
         <input required className={ui.input} value={code} onChange={(e) => setCode(e.target.value)} />

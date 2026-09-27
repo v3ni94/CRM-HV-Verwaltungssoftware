@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
@@ -20,7 +20,12 @@ export function StatementWorkbench({ id, status, keys }: { id: string; status: s
   const [key, setKey] = useState(keys[0]?.id ?? "");
   const [basis, setBasis] = useState("");
   const [delivered, setDelivered] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [posting, setBusy] = useState(false);
+  // The refresh after a post runs as a transition and keeps the buttons disabled until the
+  // server component has re-rendered (overlapping router.refresh calls are coalesced by
+  // Next.js and would drop the newer state, see InvoiceActions).
+  const [refreshing, startTransition] = useTransition();
+  const busy = posting || refreshing;
   const [error, setError] = useState<string | null>(null);
 
   const call = async (path: string, body?: unknown) => {
@@ -31,7 +36,7 @@ export function StatementWorkbench({ id, status, keys }: { id: string; status: s
       body: body === undefined ? undefined : JSON.stringify(body),
     });
     setBusy(false);
-    if (res.ok) router.refresh();
+    if (res.ok) startTransition(() => router.refresh());
     else setError(res.message);
     return res.ok;
   };

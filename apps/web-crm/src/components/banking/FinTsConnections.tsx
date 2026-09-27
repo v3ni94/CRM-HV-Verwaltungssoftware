@@ -560,6 +560,8 @@ function FinTsAccountTable({ connection, onChanged }: { connection: FinTsConnect
 export function FinTsConnections() {
   const t = useTranslations("FinTs");
   const [connections, setConnections] = useState<FinTsConnection[] | null>(null);
+  // null: unknown or endpoint unavailable (button stays); false: MHVP_FINTS_PRODUCT_ID missing.
+  const [configured, setConfigured] = useState<boolean | null>(null);
   const [dialog, setDialog] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -582,6 +584,9 @@ export function FinTsConnections() {
 
   useEffect(() => {
     load();
+    bff<{ configured: boolean }>("/api/bff/banking/fints/config").then((result) => {
+      if (result.ok && typeof result.data?.configured === "boolean") setConfigured(result.data.configured);
+    });
   }, [load]);
 
   async function act<T>(path: string, init?: RequestInit, okMessage?: string): Promise<T | null> {
@@ -626,11 +631,18 @@ export function FinTsConnections() {
     <section className={ui.card}>
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className={ui.h2}>{t("title")}</h2>
-        <button type="button" className={ui.primary} onClick={() => setDialog(true)}>
-          {t("connect")}
-        </button>
+        {configured !== false ? (
+          <button type="button" className={ui.primary} onClick={() => setDialog(true)}>
+            {t("connect")}
+          </button>
+        ) : null}
       </div>
       <p className="mt-1 text-sm text-muted">{t("intro")}</p>
+      {configured === false ? (
+        <p role="status" data-testid="fints-not-configured" className={`${ui.notice} mt-2`}>
+          {t("notConfigured")}
+        </p>
+      ) : null}
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
       {message ? <p className={ui.notice}>{message}</p> : null}
       {connections === null ? (

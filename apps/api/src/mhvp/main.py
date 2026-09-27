@@ -37,10 +37,13 @@ from mhvp.billing.heating_routers import router as heating_router
 from mhvp.billing.letter_routers import router as statement_letters_router
 from mhvp.billing.owner_statement_routers import router as owner_statement_router
 from mhvp.billing.routers import router as billing_router
+from mhvp.communication.assignment_review import router as assignment_review_router
 from mhvp.communication.dispatch import router as dispatch_router
+from mhvp.communication.draft_attachments import router as mail_draft_attachments_router
 from mhvp.communication.gmail_push import router as gmail_push_router
 from mhvp.communication.postal import router as postal_router
 from mhvp.communication.routers import router as mail_router
+from mhvp.communication.signatures import router as mail_signature_router
 from mhvp.communication.telephony import router as telephony_router
 from mhvp.contacts.routers import router as contacts_router
 from mhvp.contracts.deposit_settlement_routers import router as deposit_settlements_router
@@ -282,6 +285,7 @@ def create_app(
     app.include_router(licensing_router, prefix=API_PREFIX)
     app.include_router(market_readiness_router, prefix=API_PREFIX)
     app.include_router(platform_overview_router, prefix=API_PREFIX)
+    app.include_router(assignment_review_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
     app.include_router(work_order_proposal_router, prefix=API_PREFIX)
     app.include_router(sla_router, prefix=API_PREFIX)
@@ -304,6 +308,8 @@ def create_app(
     app.include_router(objektakte_reconciliation_router, prefix=API_PREFIX)
     app.include_router(objektakte_webhook_router, prefix=API_PREFIX)
     app.include_router(mail_router, prefix=API_PREFIX)
+    app.include_router(mail_signature_router, prefix=API_PREFIX)
+    app.include_router(mail_draft_attachments_router, prefix=API_PREFIX)
     app.include_router(dispatch_router, prefix=API_PREFIX)
     app.include_router(postal_router, prefix=API_PREFIX)
     app.include_router(telephony_router, prefix=API_PREFIX)

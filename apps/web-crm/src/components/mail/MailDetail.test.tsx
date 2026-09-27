@@ -142,4 +142,60 @@ describe("MailDetail", () => {
     const body = screen.getByTestId("mail-body");
     expect(top.compareDocumentPosition(body) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  it("opens the reply draft inline below the message after Antworten (operator 27.09.2026)", async () => {
+    const draft = makeMessage({ id: "d1", direction: "out", status: "draft", to_addresses: ["mieter@example.com"], subject: "AW: Heizung defekt", body: "Sehr geehrte Damen und Herren," });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/messages/m1/reply-draft") && init?.method === "POST") return jsonResponse(draft, 201);
+      return jsonResponse([], 200);
+    });
+    const onCreated = vi.fn();
+    renderIntl(<MailDetail message={makeMessage({})} canApprove={false} canReadMembers={false} onUpdated={() => {}} onCreated={onCreated} />);
+    expect(screen.queryByTestId("mail-reply-draft")).not.toBeInTheDocument();
+    await userEvent.click(within(screen.getByTestId("mail-actions-top")).getByRole("button", { name: "Antworten" }));
+    const section = await screen.findByTestId("mail-reply-draft");
+    expect(within(section).getByText("Antwortentwurf")).toBeInTheDocument();
+    expect(within(section).getByLabelText("Text")).toHaveValue("Sehr geehrte Damen und Herren,");
+    expect(within(section).getByLabelText("An (kommagetrennt)")).toHaveValue("mieter@example.com");
+    expect(onCreated).toHaveBeenCalledWith(expect.objectContaining({ id: "d1" }));
+    // The original message stays visible above the editor.
+    expect(screen.getByTestId("mail-body")).toHaveTextContent("Voller Text");
+
+    // A second click reopens the same draft instead of creating another one.
+    await userEvent.click(within(screen.getByTestId("mail-actions-top")).getByRole("button", { name: "Antworten" }));
+    expect(fetchMock.mock.calls.filter(([input, init]) => String(input).endsWith("/reply-draft") && init?.method === "POST")).toHaveLength(1);
+  });
+
+  it("reuses an existing draft of the thread and shows the submitted state", async () => {
+    const draft = makeMessage({ id: "d1", direction: "out", status: "draft", to_addresses: ["mieter@example.com"], body: "Entwurf aus Vorbereitung" });
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/messages/m1/thread")) return jsonResponse([makeMessage({}), draft], 200);
+      if (url.endsWith("/messages/d1/draft") && init?.method === "PATCH") return jsonResponse(draft, 200);
+      if (url.endsWith("/messages/d1/submit") && init?.method === "POST") return jsonResponse({ ...draft, status: "pending" }, 200);
+      return jsonResponse([], 200);
+    });
+    renderIntl(<MailDetail message={makeMessage({})} canApprove={false} canReadMembers={false} onUpdated={() => {}} onCreated={() => {}} />);
+    await screen.findByText("Verlauf");
+    await userEvent.click(within(screen.getByTestId("mail-actions-top")).getByRole("button", { name: "Antworten" }));
+    const section = await screen.findByTestId("mail-reply-draft");
+    expect(within(section).getByLabelText("Text")).toHaveValue("Entwurf aus Vorbereitung");
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith("/reply-draft") && init?.method === "POST")).toBe(false);
+    await userEvent.click(within(section).getByRole("button", { name: "Zur Freigabe" }));
+    expect(await screen.findByTestId("mail-reply-draft-status")).toHaveTextContent("zur Freigabe eingereicht");
+  });
+
+  it("shows the server's reason when Antworten is refused", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/messages/m1/reply-draft") && init?.method === "POST") {
+        return jsonResponse({ title: "Nicht gefunden", status: 404, detail: "Keine Berechtigung für das Postfach dieser Nachricht." }, 404);
+      }
+      return jsonResponse([], 200);
+    });
+    renderIntl(<MailDetail message={makeMessage({})} canApprove={false} canReadMembers={false} onUpdated={() => {}} onCreated={() => {}} />);
+    await userEvent.click(within(screen.getByTestId("mail-actions-top")).getByRole("button", { name: "Antworten" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Keine Berechtigung für das Postfach dieser Nachricht.");
+    expect(screen.queryByTestId("mail-reply-draft")).not.toBeInTheDocument();
+  });
 });

@@ -78,7 +78,7 @@ export function CompanySettings({ initial, branding, canUpdate }: { initial: Com
         )}
       </form>
       <section className={ui.card}>
-        <h2 className="text-sm font-semibold">{t("brandingTitle")}</h2>
+        <h2 id="company-branding-title" className="text-sm font-semibold">{t("brandingTitle")}</h2>
         <p className="mt-1 text-xs text-muted">{t("brandingHint")}</p>
         <div className="mt-2 flex flex-wrap gap-3 text-sm">
           <span className="flex items-center gap-2">

@@ -49,7 +49,33 @@
       "createTicket": "Create ticket",
       "createContact": "Create contact",
       "startDunning": "Start dunning run",
-      "ticketAnalytics": "Ticket analytics"
+      "ticketAnalytics": "Ticket analytics",
+      "settingsBenutzer": "Settings, members and roles",
+      "settingsRollen": "Settings, roles and permissions",
+      "settingsMandant": "Settings, company and letterhead",
+      "settingsKi": "Settings, AI",
+      "settingsWissen": "Settings, knowledge base",
+      "settingsPostfaecher": "Settings, mailboxes",
+      "settingsDms": "Settings, DMS connection",
+      "settingsAufbewahrung": "Settings, retention",
+      "settingsBank": "Settings, bank",
+      "settingsTelefonie": "Settings, telephony",
+      "settingsMessdienstleister": "Settings, metering providers",
+      "settingsWebhooks": "Settings, webhooks",
+      "settingsWeg": "Settings, HOA",
+      "settingsKataloge": "Settings, catalogues",
+      "settingsFelder": "Settings, custom fields",
+      "settingsKautionszinsen": "Settings, deposit interest rates",
+      "settingsSla": "Settings, SLA and on call",
+      "settingsTicketvorlagen": "Settings, ticket templates",
+      "settingsPortalformulare": "Settings, portal forms",
+      "settingsAutomatisierung": "Settings, automation",
+      "settingsAntwortvorlagen": "Settings, reply templates",
+      "settingsDatev": "Settings, DATEV account mapping",
+      "settingsKontenrahmen": "Settings, chart of accounts",
+      "settingsSteuern": "Settings, accounting, taxes",
+      "settingsImmoware": "Settings, Immoware24 connection",
+      "settingsObjektakte": "Settings, classification rules"
     },
     "skip": "Skip to content",
     "nav": "Main navigation",
@@ -108,9 +134,9 @@
     "sev": "SEV",
     "settings": "Settings",
     "myData": "My data",
-    "navCollapse": "Collapse sidebar",
-    "navExpand": "Expand sidebar",
-    "navCollapseAll": "Collapse all",
+    "navCollapse": "Collapse menu",
+    "navExpand": "Expand menu",
+    "navCollapseAll": "Collapse all sections",
     "dms": "DMS",
     "documents": "Documents",
     "openNav": "Open navigation",
@@ -3365,6 +3391,26 @@
     "save": "Save",
     "submitForApproval": "Submit for approval",
     "reply": "Reply",
+    "cc": "Cc (comma separated)",
+    "invalidAddresses": "Please check the recipient addresses (To and Cc).",
+    "replyDraftTitle": "Reply draft",
+    "replyDraftSubmitted": "The reply draft has been submitted for approval. It is approved and sent from the Approvals tab.",
+    "replyDraftClosed": "The reply draft is closed. The thread shows the sent message.",
+    "draftAttachments": {
+      "title": "Attachments",
+      "loading": "Loading attachments...",
+      "empty": "No attachments.",
+      "remove": "Remove",
+      "removeLabel": "Remove attachment {name}",
+      "upload": "Upload file",
+      "uploadInput": "Choose a file from your computer",
+      "fromDms": "Add from DMS",
+      "searchPlaceholder": "Title or file name (at least 2 characters)",
+      "search": "Search",
+      "noHits": "No documents found.",
+      "add": "Attach",
+      "added": "Attached"
+    },
     "createTicket": "Create ticket",
     "markDone": "Mark done",
     "openTicket": "Open ticket",
@@ -3491,7 +3537,11 @@
       "skipped": "Not archived (mailbox without archiving or no Gmail message)",
       "failed": "Archiving in Gmail failed on {at}, retried every 15 minutes",
       "scope_missing": "Archiving not possible, permission missing, reconnect the mailbox under Settings, Mailboxes"
-    }
+    },
+    "inProgressBy": "In progress by {name}",
+    "inProgress": "In progress",
+    "duplicateBadge": "Duplicate",
+    "duplicateHint": "Copy of the same mail from another mailbox, linked to the leading copy"
   },
   "PlatformOverview": {
     "title": "Tenant overview",
@@ -4396,6 +4446,37 @@
     "name": "Name",
     "createSubmit": "Create role"
   },
+  "Signature": {
+    "title": "E-mail signature",
+    "hint": "Position and extension appear in your e-mail signature. The signature is appended automatically to reply drafts and on sending unless the draft already contains a signature marker.",
+    "position": "Position",
+    "noPosition": "No position",
+    "customPosition": "Other position (enter manually)",
+    "customPositionLabel": "Position title",
+    "customPositionPlaceholder": "e.g. Empfang",
+    "phone": "Phone (extension)",
+    "phoneHint": "Shown in the signature only when set. Leave empty to delete.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "saved": "Saved.",
+    "previewText": "Text preview",
+    "previewHtml": "HTML preview",
+    "editPosition": "Set position",
+    "positionShow": "Position: {position}"
+  },
+  "SignatureTemplate": {
+    "title": "E-mail signature template",
+    "hint": "Empty fields use the default built from the company data (name, position, company, address, phone and e-mail only when set, register line, website). Tax numbers and bank details never belong in the signature.",
+    "placeholders": "Placeholders",
+    "text": "Text template",
+    "textPlaceholder": "{name}\n{position}\n{company}\n...",
+    "html": "HTML template",
+    "htmlPlaceholder": "<p>{name}<br>{position}</p>",
+    "logoUrl": "Logo URL (https)",
+    "logoHint": "Rendered at most 180 pixels wide in the HTML signature. Without a URL no image is shown.",
+    "save": "Save",
+    "saved": "Saved."
+  },
   "CompanySettings": {
     "title": "Tenant and letterhead",
     "loadError": "The tenant settings could not be loaded.",
@@ -5120,6 +5201,8 @@
     "saved": "Saved.",
     "autoFetch": "Daily automatic fetch",
     "autoFetchHint": "Fetches transactions of assigned accounts once a day automatically (default: off). A manual \"Fetch transactions\" click is independent of this."
+,
+    "setupFinTsLink": "Set up bank connection (FinTS, PIN/TAN)"
   },
   "BankAccounts": {
     "title": "Bank accounts",
@@ -5253,6 +5336,7 @@
     "intro": "Direct bank access via FinTS/HBCI with login name, PIN and TAN. Read only: accounts, balances and transactions; no transfers, no automatic posting. After 90 days at the latest the bank requires a new authorisation (PSD2).",
     "connect": "Connect bank",
     "connectTitle": "Connect bank",
+    "notConfigured": "FinTS is not set up: the product registration (MHVP_FINTS_PRODUCT_ID, error code MHVP-BANK-0007) is missing. Enter the Deutsche Kreditwirtschaft registration number, then a bank can be connected.",
     "close": "Close",
     "finish": "Done",
     "loading": "Loading bank connections.",
@@ -9295,5 +9379,39 @@
       "standing": "Standing invoice",
       "credit_note": "Credit note"
     }
+  },
+  "AssignmentPrompt": {
+    "title": "Check assignment",
+    "question": {
+      "contact": "Is this the contact {label}{detail}?",
+      "property": "Is this the property {label}{detail}?",
+      "unit": "Is this {label}{detail}?"
+    },
+    "questionMany": {
+      "contact": "Several contacts match. Which one is meant?",
+      "property": "Several properties match. Which one is meant?",
+      "unit": "Several units match. Which one is meant?"
+    },
+    "confidence": "Confidence {percent} %",
+    "yes": "Yes",
+    "no": "No",
+    "choose": "Apply",
+    "readOnly": "You lack the permission to decide.",
+    "search": {
+      "contact": "Suggestion discarded. Search and assign a contact:",
+      "property": "Suggestion discarded. Search and assign a property:",
+      "unit": "Suggestion discarded. Choose a unit of the property:"
+    },
+    "searchLabel": "Search term",
+    "searchButton": "Search",
+    "close": "Close",
+    "unitPrefix": "Unit {number}",
+    "unitNeedsProperty": "The property must be assigned before a unit can be chosen.",
+    "error": "The decision could not be saved."
+  },
+  "SettingsSearch": {
+    "placeholder": "Search settings",
+    "resultsLabel": "Results",
+    "noResults": "No results."
   }
 }

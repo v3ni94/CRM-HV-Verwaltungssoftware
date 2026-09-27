@@ -199,7 +199,7 @@ export function KnowledgeSettings({
 
   return (
     <section className={`${ui.card} flex flex-col gap-4`} aria-label={t("knowledge.title")}>
-      <h2 className="text-sm font-semibold">{t("knowledge.title")}</h2>
+      <h2 id="ai-knowledge-title" className="text-sm font-semibold">{t("knowledge.title")}</h2>
       <p className="text-xs text-muted">{t("knowledge.intro")}</p>
 
       <div className="flex flex-col gap-2 sm:flex-row">

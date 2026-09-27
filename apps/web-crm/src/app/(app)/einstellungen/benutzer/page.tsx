@@ -19,12 +19,14 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("members:read")) notFound();
-  const [members, roles, competenceCatalogue, legalEntities] = await Promise.all([
+  const [members, roles, competenceCatalogue, legalEntities, positionCatalogue] = await Promise.all([
     api.GET("/api/v1/tenant/members"),
     api.GET("/api/v1/tenant/roles"),
     api.GET("/api/v1/tenant/competence-catalogue"),
     // Zugriffsbereich je Rechtsträger für Steuerberater (A37); Liste ist nur eine Auswahlhilfe.
     serverFetch("/api/v1/tenant/legal-entities").then(async (r) => (r.ok ? ((await r.json()) as LegalEntityOption[]) : [])),
+    // Positionen für die E-Mail-Signatur (operator 27.09.2026), Katalog plus Mandantenliste.
+    serverFetch("/api/v1/tenant/position-catalogue").then(async (r) => (r.ok ? ((await r.json()) as string[]) : [])),
   ]);
   return (
     <div className="flex flex-col gap-4">
@@ -35,6 +37,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         roles={roles.data ?? []}
         competenceCatalogue={(competenceCatalogue.data ?? []) as { code: string; label: string }[]}
         legalEntityOptions={legalEntities}
+        positionCatalogue={positionCatalogue}
         canCreate={can("members:create")}
         canUpdate={can("members:update")}
         canUpdateScope={can("tenant_settings:update")}

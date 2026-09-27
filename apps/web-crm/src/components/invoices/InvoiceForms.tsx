@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
@@ -127,7 +127,12 @@ export function InvoiceActions({ id, reviewStatus, postingStatus, released, iban
   const [step, setStep] = useState("completeness");
   const [result, setResult] = useState("ok");
   const [reason, setReason] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [posting, setBusy] = useState(false);
+  // The refresh after a post runs as a transition; the buttons stay disabled until the server
+  // component has re-rendered, so a second post cannot start while a refresh is still in flight
+  // (Next.js coalesces overlapping router.refresh calls and would drop the newer state).
+  const [refreshing, startTransition] = useTransition();
+  const busy = posting || refreshing;
   const [error, setError] = useState<string | null>(null);
   const post = async (path: string, body?: unknown, confirmText?: string) => {
     if (confirmText && !window.confirm(confirmText)) return false;
@@ -135,7 +140,7 @@ export function InvoiceActions({ id, reviewStatus, postingStatus, released, iban
     setError(null);
     const res = await bff(`/api/bff/accounting/invoices/${id}/${path}`, { method: "POST", body: body === undefined ? undefined : JSON.stringify(body) });
     setBusy(false);
-    if (res.ok) router.refresh();
+    if (res.ok) startTransition(() => router.refresh());
     else setError(res.message);
     return res.ok;
   };

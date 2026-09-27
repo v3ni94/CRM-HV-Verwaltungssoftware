@@ -43,7 +43,7 @@ export function MeteringSettings({
     <div className="flex flex-col gap-6" data-testid="metering-settings">
       {moduleEnabled ? null : <MeteringDisabledNotice />}
       <section className="flex flex-col gap-3">
-        <h2 className={ui.h2}>{t("connection.title")}</h2>
+        <h2 id="metering-connection-title" className={ui.h2}>{t("connection.title")}</h2>
         <ConnectionsAdmin
           initial={connections}
           providers={providers}

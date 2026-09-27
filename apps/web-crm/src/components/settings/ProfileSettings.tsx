@@ -8,6 +8,8 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { SignatureProfile, type SignaturePreviewData, type SignatureProfileData } from "./SignatureProfile";
+
 type SessionRow = components["schemas"]["SessionOut"];
 type TrustedDeviceRow = components["schemas"]["TrustedDeviceOut"];
 
@@ -275,6 +277,8 @@ export function ProfileSettings({
   initialSessions,
   initialDevices,
   totpEnabled,
+  signatureProfile = null,
+  signaturePreview = null,
 }: {
   displayName: string;
   email: string;
@@ -283,6 +287,8 @@ export function ProfileSettings({
   initialSessions: SessionRow[];
   initialDevices: TrustedDeviceRow[];
   totpEnabled: boolean;
+  signatureProfile?: SignatureProfileData | null;
+  signaturePreview?: SignaturePreviewData | null;
 }) {
   const t = useTranslations("Profile");
   return (
@@ -307,6 +313,7 @@ export function ProfileSettings({
           </div>
         </dl>
       </section>
+      <SignatureProfile initialProfile={signatureProfile} initialPreview={signaturePreview} />
       <PasswordForm />
       <SecondFactor initialEnabled={totpEnabled} />
       <Sessions initial={initialSessions} />

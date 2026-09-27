@@ -776,3 +776,36 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Überprüfung spätestens bei Meilenstein | vor G2 (Zahlungsauslösung), wenn Kautionsvorschläge häufiger automatisiert bestätigt werden |
 | Datum | 27.09.2026 |
 
+
+## A-067
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | E-Mail-Signatur je Nutzer (Betreiberwunsch 27.09.2026, Migration 0215, `mhvp.communication.signatures`): Die Standardsignatur wird aus den Firmendaten des Mandanten-Seeds gerendert (HVM: Name, Position, Firma, Anschrift, Telefon und E-Mail nur wenn hinterlegt, Registerzeile "Amtsgericht Düsseldorf HRB 104762, Geschäftsführer Timo Müller", Website; Einzelunternehmen Timo Müller: Wortmarke, kurze Akzentlinie, c/o-Anschrift, ohne Funktionsbezeichnung und Registerangaben). Das Einzelunternehmen wird über `legal_form` (enthält "Einzelunternehm") erkannt. Ein Logo erscheint nur, wenn in der Signaturvorlage eine öffentliche https-URL hinterlegt ist; das als Dokument hochgeladene Briefbogenlogo wird nicht automatisch eingebettet (kein öffentlicher Abruf, kein CID-Anhang). Steuernummern und Bankverbindungen sind nie Teil der Signatur. |
+| Begründung | Vollständigkeit der Pflichtangaben in Geschäfts-E-Mails ist Gegenstand der Freigabe V14 (Firmendaten des Seeds, Telefon und E-Mail dort nicht hinterlegt); die Signatur ist eine Textvorlage, keine Rechtsprüfung. |
+| Kennzeichnung | unkritisch (kein Geldfluss); Freigabe der Standardtexte und der Pflichtangaben durch die Geschäftsführung vor produktivem Versand (V14) |
+| Betroffene Bereiche | `mhvp.communication.signatures`, `membership.position`/`phone`, `tenant_settings.signature_template`/`position_catalogue_extra`, Einstellungen Profil, Benutzer, Mandant |
+| Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) und mit V14 |
+| Datum | 27.09.2026 |
+
+## A-068
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Zuordnungsprüfung mit Rückfrage (Betreiberwunsch 27.09.2026, Migration 0216, `mhvp.communication.assignment` und `assignment_review`): Deterministische Regeln bewerten je Mail und Ticket Kontakt, Verwaltungsobjekt und Einheit mit festen Konfidenzen (Absenderadresse eindeutig 1,0, geteilt 0,6; Kundennummer 0,95; Telefonnummer 0,7; Vor- und Nachname 0,7, nur Nachname 0,5; Objektnummer 1,0; Straße mit Hausnummer 0,85, nur Straße 0,6; einziges Objekt aus Vertrag oder Objektbeziehung des Kontakts 0,8, mehrere 0,5; Einheitennummer 0,9; Wohnungslage 0,6; einzige Einheit aus Vertrag 0,85; bei Mails ohne Treffer der Absenderadresse ist der Kontakt auf 0,85 begrenzt, also stets Rückfrage). Ab 0,9 mit eindeutigem Spitzenkandidaten wird automatisch zugeordnet, zwischen 0,4 und 0,9 erfolgt die Rückfrage (Ja oder Nein), darunter kein Treffer. Ein KI-Vorschlag ergänzt nur Hinweise. Entscheidungen werden protokolliert und nur bei eingeschaltetem Schalter `ai_learning_examples_enabled` als Lernbeispiel gespeichert (ADR 0010). |
+| Begründung | Produktschutz: Schwellen sind Startwerte ohne Rechtsbezug; sie sollen Fehlzuordnungen (Datenschutz, falsche Empfänger) vermeiden und werden anhand der protokollierten Entscheidungen nachjustiert. |
+| Kennzeichnung | unkritisch (kein Geldfluss); Schwellenwerte und Regelgewichte vom Betreiber nach Erfahrungswerten zu bestätigen |
+| Betroffene Bereiche | `assignment_review`, `POST /mail/ingest`, Gmail-Abruf, `POST /tickets`, `PATCH /tickets/{id}`, Komponente `AssignmentPrompt` |
+| Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
+| Datum | 27.09.2026 |
+
+## A-069
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Postfach-Übersicht (Betreiberwünsche 27.09.2026, Migration 0213, `mhvp.communication.duplicates` und `progress`): (1) Ein Postfach gilt als Sammelpostfach, wenn der lokale Teil der Adresse (vor dem @, bis zum ersten Punkt, Plus oder Bindestrich) info, post, buchhaltung, office, kontakt, verwaltung, rechnung, rechnungen, mail, service, zentrale, hausverwaltung, support, kundenservice, bewerbung oder team lautet; alle anderen Postfächer gelten als persönlich. Das Kennzeichen `mailbox.is_collective` wird beim Anlegen nach dieser Regel vorbelegt (bestehende Postfächer per Migration) und ist je Postfach änderbar. (2) Dieselbe Mail in mehreren eigenen Postfächern wird an der Message-ID erkannt, ersatzweise an Absender, Betreff, Zeitstempel und Text-Hash; die Kopie im persönlichen Postfach führt, bei zwei gleichartigen Postfächern die zuerst gespeicherte. Die Kopie im Sammelpostfach bleibt erhalten (Archivierung, Nachweis), erscheint nicht in der Übersicht und teilt Ticket und Thread. Kopien mit bereits verschiedenen Tickets werden im Wartungslauf nicht zusammengeführt, sondern gezählt. (3) "In Bearbeitung" gilt ab zugewiesenem Bearbeiter am Ticket, internem Ticketkommentar oder eingereichter Antwort (Status pending, sending, sent); ein nicht eingereichter Entwurf zählt nicht. Bearbeiter ist der zugewiesene Nutzer, sonst der Nutzer des jüngeren Ereignisses aus Antwort und Kommentar; angezeigt wird `User.display_name`. |
+| Begründung | Betreiberwunsch vom 27.09.2026 ohne Vorgabe zur Adressregel und zur Definition des Bearbeitungsbeginns; Regeln sind rein organisatorisch und ohne Geldwirkung. |
+| Kennzeichnung | unkritisch; Bestätigung der Adressliste und der Bearbeitungsdefinition durch den Betreiber |
+| Betroffene Bereiche | `mailbox.is_collective`, `message.duplicate_of_id`, `GET /mail/messages` (Felder `in_progress`, `handler_user_id`, `handler_display_name`, Parameter `include_duplicates`), `POST /mail/maintenance/link-duplicates`, CRM Postfachliste |
+| Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
+| Datum | 27.09.2026 |

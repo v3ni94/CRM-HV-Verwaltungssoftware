@@ -141,7 +141,7 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
   return (
     <form onSubmit={save} className={`${ui.card} flex flex-col gap-4`} aria-label={t("providerTitle", { provider: t(`provider.${name}`) })}>
       <div className="flex flex-wrap items-center gap-2">
-        <h2 className="text-sm font-semibold">{t("providerTitle", { provider: t(`provider.${name}`) })}</h2>
+        <h2 id={`ai-provider-${name}-title`} className="text-sm font-semibold">{t("providerTitle", { provider: t(`provider.${name}`) })}</h2>
         <span className="rounded border border-border px-1.5 py-0.5 text-xs" data-testid="release-state">
           {saved?.released_at ? t("releasedAt", { at: formatDateTime(saved.released_at) }) : t("notReleased")}
         </span>

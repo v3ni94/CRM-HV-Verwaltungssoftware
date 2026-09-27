@@ -65,6 +65,42 @@ describe("MailList", () => {
     expect(onSelect).toHaveBeenCalledWith("m2");
   });
 
+  it("marks mails in progress yellow with the handler's name under the timestamp", () => {
+    const messages = [
+      makeMessage({ id: "m1", subject: "Offen" }),
+      makeMessage({
+        id: "m2",
+        subject: "In Arbeit",
+        in_progress: true,
+        handler_display_name: "Ina Brink",
+      }),
+      makeMessage({ id: "m3", subject: "Ohne Namen", in_progress: true, handler_display_name: null }),
+    ];
+    renderIntl(<MailList messages={messages} selectedId={null} onSelect={() => {}} loading={false} />);
+    const label = screen.getByText("Ina Brink");
+    expect(label).toHaveAttribute("title", "In Bearbeitung von Ina Brink");
+    const row = screen.getByText("In Arbeit").closest("button");
+    expect(row?.className).toContain("bg-warning-bg");
+    expect(screen.getByText("Offen").closest("button")?.className).not.toContain("bg-warning-bg");
+    expect(screen.getByText("Offen").closest("li")).not.toHaveAttribute("data-in-progress");
+    expect(screen.getByText("In Arbeit").closest("li")).toHaveAttribute("data-in-progress", "true");
+    // Ohne Bearbeiternamen bleibt die Kennzeichnung mit neutralem Text.
+    expect(screen.getAllByTestId("mail-handler")).toHaveLength(2);
+    expect(screen.getByText("In Bearbeitung")).toBeInTheDocument();
+  });
+
+  it("shows a duplicate badge for a linked copy from another mailbox", () => {
+    renderIntl(
+      <MailList
+        messages={[makeMessage({ id: "m1", duplicate_of_id: "m0" })]}
+        selectedId={null}
+        onSelect={() => {}}
+        loading={false}
+      />,
+    );
+    expect(screen.getByText("Duplikat")).toBeInTheDocument();
+  });
+
   const three = () => [
     makeMessage({ id: "m1", subject: "Erste" }),
     makeMessage({ id: "m2", subject: "Zweite" }),

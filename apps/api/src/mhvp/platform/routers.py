@@ -79,6 +79,7 @@ from mhvp.platform.schemas import (
     MemberLegalEntities,
     MemberMobilePhone,
     MemberOut,
+    MemberPosition,
     MemberReplyApproval,
     MemberRoles,
     MemberStatusIn,
@@ -89,6 +90,7 @@ from mhvp.platform.schemas import (
     RoleCreate,
     RoleOut,
     RolePermissions,
+    SignatureTemplate,
     SuperadminOut,
     TenantBillingSettingsOut,
     TenantBillingSettingsPatch,
@@ -389,6 +391,8 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         resolution_kinds=ResolutionKindsConfig.model_validate(row.resolution_kinds or {}),
         receivable_rules=ReceivableRulesConfig.model_validate(row.receivable_rules or {}),
         mail_approval_mode=row.mail_approval_mode,
+        signature_template=SignatureTemplate.model_validate(row.signature_template or {}),
+        position_catalogue_extra=[str(p) for p in (row.position_catalogue_extra or [])],
         version=row.version,
     )
 
@@ -431,6 +435,8 @@ async def patch_settings(
             "resolution_kinds": row.resolution_kinds,
             "receivable_rules": row.receivable_rules,
             "mail_approval_mode": row.mail_approval_mode,
+            "signature_template": row.signature_template,
+            "position_catalogue_extra": row.position_catalogue_extra,
         }
         if body.company is not None:
             row.company = body.company.model_dump(mode="json")
@@ -457,6 +463,11 @@ async def patch_settings(
         if body.mail_approval_mode is not None:
             # M20-04 Vier-Augen-Prinzip beim Mailversand, Änderung protokolliert.
             row.mail_approval_mode = body.mail_approval_mode
+        if body.signature_template is not None:
+            # E-Mail-Signaturvorlage (operator 27.09.2026), Änderung protokolliert.
+            row.signature_template = body.signature_template.model_dump(mode="json")
+        if body.position_catalogue_extra is not None:
+            row.position_catalogue_extra = list(body.position_catalogue_extra)
         after = {
             "company": row.company,
             "branding": row.branding,
@@ -467,6 +478,8 @@ async def patch_settings(
             "resolution_kinds": row.resolution_kinds,
             "receivable_rules": row.receivable_rules,
             "mail_approval_mode": row.mail_approval_mode,
+            "signature_template": row.signature_template,
+            "position_catalogue_extra": row.position_catalogue_extra,
         }
         changes = diff(before, after)
         if changes:
@@ -867,6 +880,8 @@ async def list_members(
                     Membership.reply_approval_required,
                     Membership.reply_approval_reason,
                     Membership.reply_approval_until,
+                    Membership.position,
+                    Membership.phone,
                     User.email,
                     User.display_name,
                     User.last_login_at,
@@ -903,6 +918,8 @@ async def list_members(
             reply_approval_required=r.reply_approval_required,
             reply_approval_reason=r.reply_approval_reason,
             reply_approval_until=r.reply_approval_until,
+            position=r.position,
+            phone=r.phone,
         )
         for r in rows
     ]
@@ -1498,6 +1515,59 @@ async def put_member_mobile_phone(
                 entity_id=membership_id,
                 actor_user_id=principal.user_id,
                 changes={"mobile_phone": {"set": body.mobile_phone is not None}},
+            )
+    return Response(status_code=204)
+
+
+@tenant_router.get("/position-catalogue", summary="Positionen für die E-Mail-Signatur")
+async def get_position_catalogue(
+    request: Request, principal: TenantPrincipal = Depends(require_permission("members:read"))
+) -> list[str]:
+    from mhvp.communication.signatures import position_catalogue
+
+    async with tenant_tx(request, principal) as session:
+        extra = await session.scalar(
+            select(TenantSettings.position_catalogue_extra).where(
+                TenantSettings.tenant_id == principal.tenant_id
+            )
+        )
+    return position_catalogue(list(extra or []))
+
+
+@tenant_router.put(
+    "/members/{membership_id}/position",
+    status_code=204,
+    summary="Position und Durchwahl eines Mitglieds setzen (E-Mail-Signatur)",
+)
+async def put_member_position(
+    membership_id: uuid.UUID,
+    body: MemberPosition,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("members:update")),
+) -> Response:
+    from mhvp.communication.signatures import remember_position
+
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+        before = {"position": membership.position, "phone_set": membership.phone is not None}
+        membership.position = body.position
+        membership.phone = body.phone
+        membership.updated_by = principal.user_id
+    after = {"position": body.position, "phone_set": body.phone is not None}
+    if before != after:
+        async with tenant_tx(request, principal) as session:
+            await remember_position(session, principal.tenant_id, body.position)
+            # Die Durchwahl selbst wird nicht ins Ereignisprotokoll geschrieben.
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="membership.position_changed",
+                entity_type="membership",
+                entity_id=membership_id,
+                actor_user_id=principal.user_id,
+                changes=diff(before, after),
             )
     return Response(status_code=204)
 

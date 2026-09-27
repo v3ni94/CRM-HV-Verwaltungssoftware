@@ -49,7 +49,33 @@
       "createTicket": "Ticket anlegen",
       "createContact": "Kontakt anlegen",
       "startDunning": "Mahnlauf starten",
-      "ticketAnalytics": "Zur Auswertung Tickets"
+      "ticketAnalytics": "Zur Auswertung Tickets",
+      "settingsBenutzer": "Einstellungen, Benutzer und Rollen",
+      "settingsRollen": "Einstellungen, Rollen und Rechte",
+      "settingsMandant": "Einstellungen, Mandant und Briefbogen",
+      "settingsKi": "Einstellungen, KI",
+      "settingsWissen": "Einstellungen, Wissensdatenbank",
+      "settingsPostfaecher": "Einstellungen, Postfächer",
+      "settingsDms": "Einstellungen, DMS-Anbindung",
+      "settingsAufbewahrung": "Einstellungen, Aufbewahrung",
+      "settingsBank": "Einstellungen, Bank",
+      "settingsTelefonie": "Einstellungen, Telefonie",
+      "settingsMessdienstleister": "Einstellungen, Messdienstleister",
+      "settingsWebhooks": "Einstellungen, Webhooks",
+      "settingsWeg": "Einstellungen, WEG",
+      "settingsKataloge": "Einstellungen, Kataloge",
+      "settingsFelder": "Einstellungen, Benutzerdefinierte Felder",
+      "settingsKautionszinsen": "Einstellungen, Kautionszinsen",
+      "settingsSla": "Einstellungen, SLA und Bereitschaft",
+      "settingsTicketvorlagen": "Einstellungen, Ticketvorlagen",
+      "settingsPortalformulare": "Einstellungen, Portalformulare",
+      "settingsAutomatisierung": "Einstellungen, Automatisierung",
+      "settingsAntwortvorlagen": "Einstellungen, Antwortvorlagen",
+      "settingsDatev": "Einstellungen, DATEV-Kontenzuordnung",
+      "settingsKontenrahmen": "Einstellungen, Kontenrahmen",
+      "settingsSteuern": "Einstellungen, Buchhaltung, Steuern",
+      "settingsImmoware": "Einstellungen, Immoware24-Anbindung",
+      "settingsObjektakte": "Einstellungen, Klassifikationsregeln"
     },
     "skip": "Zum Inhalt springen",
     "nav": "Hauptnavigation",
@@ -108,9 +134,9 @@
     "sev": "SEV",
     "settings": "Einstellungen",
     "myData": "Meine Daten",
-    "navCollapse": "Leiste einklappen",
-    "navExpand": "Leiste ausklappen",
-    "navCollapseAll": "Alle einklappen",
+    "navCollapse": "Menü einklappen",
+    "navExpand": "Menü ausklappen",
+    "navCollapseAll": "Alle Bereiche einklappen",
     "dms": "DMS",
     "documents": "Dokumente",
     "openNav": "Navigation öffnen",
@@ -3365,6 +3391,26 @@
     "save": "Speichern",
     "submitForApproval": "Zur Freigabe",
     "reply": "Antworten",
+    "cc": "Kopie (Cc, kommagetrennt)",
+    "invalidAddresses": "Bitte die Empfängeradressen prüfen (An und Kopie).",
+    "replyDraftTitle": "Antwortentwurf",
+    "replyDraftSubmitted": "Der Antwortentwurf ist zur Freigabe eingereicht. Er wird im Reiter Freigaben freigegeben und gesendet.",
+    "replyDraftClosed": "Der Antwortentwurf ist abgeschlossen. Der Verlauf zeigt die gesendete Nachricht.",
+    "draftAttachments": {
+      "title": "Anhänge",
+      "loading": "Anhänge werden geladen...",
+      "empty": "Keine Anhänge.",
+      "remove": "Entfernen",
+      "removeLabel": "Anhang {name} entfernen",
+      "upload": "Datei hochladen",
+      "uploadInput": "Datei vom Rechner auswählen",
+      "fromDms": "Aus dem DMS hinzufügen",
+      "searchPlaceholder": "Titel oder Dateiname (mindestens 2 Zeichen)",
+      "search": "Suchen",
+      "noHits": "Keine Dokumente gefunden.",
+      "add": "Anhängen",
+      "added": "Angehängt"
+    },
     "createTicket": "Ticket anlegen",
     "markDone": "Erledigt",
     "openTicket": "Ticket öffnen",
@@ -3491,7 +3537,11 @@
       "skipped": "Nicht archiviert (Postfach ohne Archivierung oder keine Gmail-Nachricht)",
       "failed": "Archivierung in Gmail fehlgeschlagen am {at}, wird alle 15 Minuten erneut versucht",
       "scope_missing": "Archivierung nicht möglich, Berechtigung fehlt, Postfach unter Einstellungen, Postfächer neu verbinden"
-    }
+    },
+    "inProgressBy": "In Bearbeitung von {name}",
+    "inProgress": "In Bearbeitung",
+    "duplicateBadge": "Duplikat",
+    "duplicateHint": "Kopie derselben Mail aus einem weiteren Postfach, verknüpft mit der führenden Kopie"
   },
   "PlatformOverview": {
     "title": "Mandantenübersicht",
@@ -4396,6 +4446,37 @@
     "name": "Name",
     "createSubmit": "Rolle anlegen"
   },
+  "Signature": {
+    "title": "E-Mail-Signatur",
+    "hint": "Position und Durchwahl erscheinen in Ihrer E-Mail-Signatur. Die Signatur wird beim Erstellen von Antwortentwürfen und beim Versand automatisch angehängt, sofern der Entwurf noch keine Signaturmarke enthält.",
+    "position": "Position",
+    "noPosition": "Keine Position",
+    "customPosition": "Andere Position (manuell anlegen)",
+    "customPositionLabel": "Positionsbezeichnung",
+    "customPositionPlaceholder": "z. B. Empfang",
+    "phone": "Telefon (Durchwahl)",
+    "phoneHint": "Nur wenn hinterlegt wird die Nummer in der Signatur angezeigt. Leer lassen löscht sie.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "saved": "Gespeichert.",
+    "previewText": "Vorschau Text",
+    "previewHtml": "Vorschau HTML",
+    "editPosition": "Position pflegen",
+    "positionShow": "Position: {position}"
+  },
+  "SignatureTemplate": {
+    "title": "E-Mail-Signaturvorlage",
+    "hint": "Leere Felder verwenden den Standard aus den Firmendaten (Name, Position, Firma, Anschrift, Telefon und E-Mail nur wenn hinterlegt, Registerzeile, Website). Steuernummern und Bankverbindungen gehören nicht in die Signatur.",
+    "placeholders": "Platzhalter",
+    "text": "Textvorlage",
+    "textPlaceholder": "{name}\n{position}\n{company}\n...",
+    "html": "HTML-Vorlage",
+    "htmlPlaceholder": "<p>{name}<br>{position}</p>",
+    "logoUrl": "Logo-URL (https)",
+    "logoHint": "Wird in der HTML-Signatur höchstens 180 Pixel breit dargestellt. Ohne URL erscheint kein Bild.",
+    "save": "Speichern",
+    "saved": "Gespeichert."
+  },
   "CompanySettings": {
     "title": "Mandant und Briefbogen",
     "loadError": "Die Mandanteneinstellungen konnten nicht geladen werden.",
@@ -5119,7 +5200,8 @@
     "save": "Speichern",
     "saved": "Gespeichert.",
     "autoFetch": "Täglicher automatischer Abruf",
-    "autoFetchHint": "Ruft Umsätze zugeordneter Konten einmal täglich automatisch ab (Standard: aus). Ein manueller Klick auf „Umsätze abrufen“ ist davon unabhängig."
+    "autoFetchHint": "Ruft Umsätze zugeordneter Konten einmal täglich automatisch ab (Standard: aus). Ein manueller Klick auf „Umsätze abrufen“ ist davon unabhängig.",
+    "setupFinTsLink": "Bankverbindung einrichten (FinTS, PIN/TAN)"
   },
   "BankAccounts": {
     "title": "Bankkonten",
@@ -5253,6 +5335,7 @@
     "intro": "Direkter Zugang zur Bank per FinTS/HBCI mit Anmeldename, PIN und TAN. Lesend: Konten, Salden und Umsätze; keine Überweisungen, keine automatische Verbuchung. Nach spätestens 90 Tagen verlangt die Bank eine erneute Freigabe (PSD2).",
     "connect": "Bank verbinden",
     "connectTitle": "Bank verbinden",
+    "notConfigured": "FinTS ist nicht eingerichtet: Die Produktregistrierung (MHVP_FINTS_PRODUCT_ID, Fehlercode MHVP-BANK-0007) fehlt. Bitte die Registrierungsnummer der Deutschen Kreditwirtschaft hinterlegen, danach kann eine Bank verbunden werden.",
     "close": "Schließen",
     "finish": "Fertig",
     "loading": "Lade Bankverbindungen.",
@@ -9295,5 +9378,39 @@
       "standing": "Dauermietrechnung",
       "credit_note": "Gutschrift"
     }
+  },
+  "AssignmentPrompt": {
+    "title": "Zuordnung prüfen",
+    "question": {
+      "contact": "Handelt es sich um den Kontakt {label}{detail}?",
+      "property": "Handelt es sich um das Verwaltungsobjekt {label}{detail}?",
+      "unit": "Handelt es sich um die {label}{detail}?"
+    },
+    "questionMany": {
+      "contact": "Mehrere Kontakte kommen in Frage. Welcher ist gemeint?",
+      "property": "Mehrere Verwaltungsobjekte kommen in Frage. Welches ist gemeint?",
+      "unit": "Mehrere Einheiten kommen in Frage. Welche ist gemeint?"
+    },
+    "confidence": "Konfidenz {percent} %",
+    "yes": "Ja",
+    "no": "Nein",
+    "choose": "Übernehmen",
+    "readOnly": "Zur Entscheidung fehlt die Berechtigung.",
+    "search": {
+      "contact": "Vorschlag verworfen. Kontakt suchen und zuordnen:",
+      "property": "Vorschlag verworfen. Verwaltungsobjekt suchen und zuordnen:",
+      "unit": "Vorschlag verworfen. Einheit des Objekts wählen:"
+    },
+    "searchLabel": "Suchbegriff",
+    "searchButton": "Suchen",
+    "close": "Schließen",
+    "unitPrefix": "Einheit {number}",
+    "unitNeedsProperty": "Für die Einheit muss zuerst das Verwaltungsobjekt zugeordnet sein.",
+    "error": "Die Entscheidung konnte nicht gespeichert werden."
+  },
+  "SettingsSearch": {
+    "placeholder": "Einstellungen durchsuchen",
+    "resultsLabel": "Treffer",
+    "noResults": "Keine Treffer."
   }
 }

@@ -5,6 +5,14 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.36.0 (27.09.2026) Postfach: Antworten mit Anhängen, Bearbeitungsmarkierung, Duplikate, Signatur je Nutzer, Zuordnungsrückfrage
+
+- Mail: "Antworten" öffnet den Antwortentwurf direkt unter der Nachricht (ein Entwurf je Eingangsmail, Vorbereiten und Antworten nutzen denselben); Empfänger, Kopie, Betreff und Text frei bearbeitbar; Anhänge am Entwurf aus dem DMS verknüpfen, vom lokalen Rechner hochladen oder entfernen, Versand mit allen Anhängen; verständliche Fehlermeldungen zu Postfach, Empfängern und Freigabe (Betreibermeldung 27.09.2026, Ursache: der neue Entwurf wurde still im Reiter Entwürfe abgelegt, Migration 0214 No-op).
+- E-Mail-Signatur je angemeldetem Nutzer: Position (Dropdown mit Standardkatalog Geschäftsführer, Prokurist, Assistenz, Objektbetreuung, Immobilienkaufmann, Buchhaltung, Leitung Buchhaltung, Asset Management, sowie manuell anlegen) und Durchwahl im Profil und in der Benutzerverwaltung, Signaturvorlage je Mandant mit Platzhaltern unter Einstellungen, Vorschau Text und HTML nach HVM-CI bzw. als Wortmarke für das Einzelunternehmen; Signatur wird beim Antwortentwurf und beim Versand automatisch angefügt (Migration 0215).
+- Postfach: neueste Nachrichten oben in allen Ansichten; Mails in Bearbeitung (Antwort eingereicht, interner Kommentar oder Bearbeiter) werden gelb hinterlegt und tragen den Namen des Bearbeiters unter Datum und Uhrzeit; dieselbe Mail an Sammel- und persönliches Postfach erscheint nur einmal beim persönlichen Postfach, die Kopie wird verknüpft und teilt das Ticket (Kennzeichen Sammelpostfach je Postfach, Wartungsendpunkt für vorhandene Mails, Migration 0213).
+- Zuordnungsprüfung mit Rückfrage: jede eingehende Mail und jedes Ticket wird auf Kontakt, Verwaltungsobjekt und Einheit geprüft; sichere Treffer werden begründet übernommen, unsichere als Frage "Handelt es sich um ...?" mit Ja und Nein (und Suche bei Nein) in Mail- und Ticketansicht angezeigt, Entscheidungen werden protokolliert (Migration 0216, Annahme A-068 zu Schwellenwerten).
+- CI: Formatierung der Migration 0195, eindeutige Schemanamen (AssignmentDecideIn), Dublettenerkennung ohne Message-ID nur noch für Mails ohne Kopfzeile, damit getrennte Anrufnotizen nicht zusammengeführt werden.
+
 ## 1.35.0 (27.09.2026) Bankanbindung FinTS, Heizkosten, Steuern, Aufbewahrung, WEG-Einladung, Vollimport Verträge und 40 weitere Module
 
 - Betrieb: Restore-Übung (infra/scripts/restore-drill.sh) mit Protokoll unter docs/reviews, SSH-Härtungsvorschlag (infra/hardening), GoBD-Verfahrensdokumentation als Entwurf und Parallelbetriebsplan Immoware24 (Migration 0179 No-op).

@@ -145,8 +145,19 @@ export function MailList({
         {messages.map((message) => {
           const category = typeof message.classification.category === "string" ? message.classification.category : null;
           const isChecked = checked.has(message.id);
+          const inProgress = message.in_progress === true;
+          const handler = message.handler_display_name ?? null;
+          // Gelbe Kennzeichnung "in Bearbeitung" (Betreiber 27.09.2026): dezenter
+          // Warnhintergrund, Auswahl und Markierung behalten den goldenen Rahmen.
+          const rowClass = isChecked
+            ? `border-gold ${inProgress ? "bg-warning-bg" : "bg-gold/10"}`
+            : message.id === selectedId
+              ? `border-gold ${inProgress ? "bg-warning-bg" : "bg-surface"}`
+              : inProgress
+                ? "border-warning-line bg-warning-bg hover:border-gold/60"
+                : "border-border bg-bg hover:border-gold/60";
           return (
-            <li key={message.id} className="flex min-w-0 items-start gap-2">
+            <li key={message.id} className="flex min-w-0 items-start gap-2" data-in-progress={inProgress || undefined}>
               <input
                 type="checkbox"
                 className="mt-3 shrink-0"
@@ -158,24 +169,32 @@ export function MailList({
                 type="button"
                 onClick={(event) => onRowClick(event, message.id)}
                 aria-pressed={isChecked || undefined}
-                className={`block w-full min-w-0 rounded-lg border px-3 py-2.5 text-left transition ${
-                  isChecked
-                    ? "border-gold bg-gold/10"
-                    : message.id === selectedId
-                      ? "border-gold bg-surface"
-                      : "border-border bg-bg hover:border-gold/60"
-                }`}
+                className={`block w-full min-w-0 rounded-lg border px-3 py-2.5 text-left transition ${rowClass}`}
               >
-                <div className="flex min-w-0 items-center justify-between gap-2">
+                <div className="flex min-w-0 items-start justify-between gap-2">
                   <span className="min-w-0 truncate text-sm font-medium">{counterpart(message) || t("noAddress")}</span>
-                  <span className="shrink-0 text-xs text-subtle">
-                    {formatDateTime(message.direction === "in" ? message.received_at : message.sent_at)}
+                  <span className="flex shrink-0 flex-col items-end gap-0.5 text-xs text-subtle">
+                    <span>{formatDateTime(message.direction === "in" ? message.received_at : message.sent_at)}</span>
+                    {inProgress ? (
+                      <span
+                        className={ui.badgeWarning}
+                        title={handler ? t("inProgressBy", { name: handler }) : t("inProgress")}
+                        data-testid="mail-handler"
+                      >
+                        {handler ?? t("inProgress")}
+                      </span>
+                    ) : null}
                   </span>
                 </div>
                 <p className="min-w-0 truncate text-sm text-muted">{message.subject || t("noSubject")}</p>
                 <div className="mt-1 flex flex-wrap items-center gap-1.5">
                   <StatusChip domain="mail" status={message.status} label={t(`status.${message.status}`)} />
                   {message.ticket_id ? <span className={ui.badge}>{t("ticketBadge")}</span> : null}
+                  {message.duplicate_of_id ? (
+                    <span className={ui.badge} title={t("duplicateHint")}>
+                      {t("duplicateBadge")}
+                    </span>
+                  ) : null}
                   {category ? <span className={ui.badge}>{category}</span> : null}
                 </div>
               </button>

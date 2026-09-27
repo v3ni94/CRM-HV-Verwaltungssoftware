@@ -40,12 +40,14 @@ export function PreparationCard({
   const apply = async () => {
     if (!preparation?.draft) return;
     setBusy(true);
+    setError(null);
     const res = await bff<Message>(`/api/bff/mail/messages/${message.id}/reply-draft`, {
       method: "POST",
       body: JSON.stringify({ body: preparation.draft }),
     });
     setBusy(false);
     if (res.ok) onDraftCreated(res.data);
+    else setError(res.message);
   };
 
   const correct = async () => {

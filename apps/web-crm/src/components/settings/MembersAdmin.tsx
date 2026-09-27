@@ -10,7 +10,13 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-type Member = components["schemas"]["MemberOut"] & { legal_entity_ids?: string[] };
+import { MemberPositionEditor } from "./SignatureProfile";
+
+type Member = components["schemas"]["MemberOut"] & {
+  legal_entity_ids?: string[];
+  position?: string | null;
+  phone?: string | null;
+};
 type Role = components["schemas"]["RoleOut"];
 /** Rechtsträger des Mandanten zur Auswahl des Zugriffsbereichs (A37, GET /tenant/legal-entities). */
 export type LegalEntityOption = { id: string; name: string; kind: string; property_id?: string | null };
@@ -512,6 +518,7 @@ export function MembersAdmin({
   initialMembers,
   roles,
   competenceCatalogue,
+  positionCatalogue = [],
   legalEntityOptions,
   canCreate,
   canUpdate,
@@ -521,6 +528,7 @@ export function MembersAdmin({
   initialMembers: Member[];
   roles: Role[];
   competenceCatalogue: { code: string; label: string }[];
+  positionCatalogue?: string[];
   legalEntityOptions?: LegalEntityOption[];
   canCreate: boolean;
   canUpdate: boolean;
@@ -571,6 +579,7 @@ export function MembersAdmin({
                   <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
                   <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
                   <MobilePhoneEditor member={m} onSaved={(mobile_phone) => updateMember(m.membership_id, { mobile_phone })} />
+                  <MemberPositionEditor membershipId={m.membership_id} position={m.position} phone={m.phone} catalogue={positionCatalogue} onSaved={(patch) => updateMember(m.membership_id, patch)} />
                   {canUpdateScope ? <ReplyApprovalEditor member={m} onSaved={(patch) => updateMember(m.membership_id, patch)} /> : null}
                   {canUpdateScope ? (
                     <LegalEntitiesEditor member={m} options={legalEntityOptions ?? []} onSaved={(legal_entity_ids) => updateMember(m.membership_id, { legal_entity_ids })} />
@@ -626,6 +635,7 @@ export function MembersAdmin({
                       <RolesEditor member={m} roles={roles} onSaved={(roleCodes) => updateMember(m.membership_id, { roles: roleCodes })} />
                       <CompetencesEditor member={m} catalogue={competenceCatalogue} onSaved={(competences) => updateMember(m.membership_id, { competences })} />
                   <MobilePhoneEditor member={m} onSaved={(mobile_phone) => updateMember(m.membership_id, { mobile_phone })} />
+                  <MemberPositionEditor membershipId={m.membership_id} position={m.position} phone={m.phone} catalogue={positionCatalogue} onSaved={(patch) => updateMember(m.membership_id, patch)} />
                   {canUpdateScope ? <ReplyApprovalEditor member={m} onSaved={(patch) => updateMember(m.membership_id, patch)} /> : null}
                       {canUpdateScope ? (
                         <LegalEntitiesEditor member={m} options={legalEntityOptions ?? []} onSaved={(legal_entity_ids) => updateMember(m.membership_id, { legal_entity_ids })} />

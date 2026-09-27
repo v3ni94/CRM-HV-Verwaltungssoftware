@@ -191,3 +191,93 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * `preparation.py`: mail preparation: sender to contact, role, unit, documents per property, reply draft (M34, rule M20-05)
 * `transport.py`: shared mail transport of a mailbox: Gmail `send_raw` or SMTP; used after four eyes approval and by system mails
 * `postal_providers.py`, `postal.py`, `postal_tasks.py`: Brief- und Postversand mit Statusrückmeldung (M23-01, rule M23-01, `docs/integrations/postdienst.md`): provider neutral `PostalProvider`, manual outgoing mail list, LetterXpress adapter (LXP API v3), tenant settings with encrypted credentials and release flag (default off), postal job per dispatch with status history, dunning case delivery evidence, beat job `communication-postal-status-poll`
+
+## Antworten mit Anhängen (operator 27.09.2026)
+
+- `POST /mail/messages/{id}/reply-draft` legt je Eingangsmail genau einen offenen Entwurf an:
+  "Vorbereiten" (Vorschlag übernehmen) und "Antworten" liefern denselben Entwurf, ein
+  übergebener Text ersetzt den Text des offenen Entwurfs. Antworten auf Ausgänge: 409.
+- `PATCH /mail/messages/{id}/draft` nimmt zusätzlich `cc_addresses`; `submit` weist Entwürfe
+  ohne Empfänger oder ohne Text mit verständlicher Meldung ab (422).
+- Anhänge am Entwurf (`draft_attachments.py`, nur `direction = out`, `status = draft`):
+  `GET /attachments` (Liste), `POST /attachments` (`document_id`, DMS-Verweis, keine Kopie),
+  `POST /attachments/upload` (Multipart, Prüfungen und Virenscan wie `POST /documents`, Ablage
+  als Dokument des Mandanten, Verknüpfung mit dem Vorgang), `DELETE /attachments/{document_id}`
+  (Verweis entfernen, Dokument bleibt), `GET /attachment-candidates?q=` (Suche nach Titel oder
+  Dateiname, höchstens 20 Treffer, Rechtsträgerbereich A37). Höchstens 20 Anhänge je Entwurf.
+  Beim Versand fügt `attachments.attach_documents` alle Verweise bei.
+- Postfachfehler bei der Freigabe nennen die Ursache (kein Postfach, deaktiviert, nicht mit
+  Google verbunden) statt einer Sammelmeldung.
+
+## E-Mail-Signatur je Nutzer (`signatures.py`, operator 27.09.2026, migration 0215)
+
+`render_signature(...)` liefert Text und HTML aus Nutzer (`app_user`), Mitgliedschaft
+(`membership.position`, `membership.phone`, `membership.mobile_phone`) und Mandant
+(Firmendaten, Branding, `tenant_settings.signature_template` mit Platzhaltern `{name}`,
+`{position}`, `{phone}`, `{mobile}`, `{email}`, `{company}`, `{street}`, `{postal_code}`,
+`{city}`, `{register}`, `{website}`; leer bedeutet Standard). HVM: Kennlinie 3 px, Position,
+Registerzeile; Einzelunternehmen: Wortmarke, kurze Akzentlinie, ohne Funktion und Register.
+Positionskatalog `POSITION_CATALOGUE` plus `tenant_settings.position_catalogue_extra` (frei
+eingegebene Positionen werden dort gemerkt, `remember_position`).
+
+Einbindung in den Versandpfad: `signature = await signature_for_user(session, tenant_id,
+principal.user_id)`, dann `with_signature(body, signature)` für den Klartext und
+`with_signature_html(body_html, signature)` für HTML. Beide sind idempotent über die
+Signaturmarke (`TEXT_MARKER` = `-- ` als eigene Zeile, `HTML_MARKER` als Kommentar): enthält der
+Entwurf die Marke, wird nichts angehängt. Aufrufstellen: `reply_draft` (Entwurfstext) und der
+Versand (`msg.set_content`) in `routers.py`.
+
+Endpunkte: `GET /mail/signature/preview` (eigene Signatur; `?membership_id=` mit
+`members:read`), `GET`/`PUT /mail/signature/profile` (eigene Position und Durchwahl),
+`GET /tenant/position-catalogue`, `PUT /tenant/members/{id}/position` (`members:update`),
+`PATCH /tenant/settings` mit `signature_template` und `position_catalogue_extra`
+(`tenant_settings:update`). Ereignis `membership.position_changed` (Durchwahl nur als
+gesetzt/nicht gesetzt).
+
+## Zuordnungsprüfung mit Rückfrage (Betreiber 27.09.2026)
+
+`assignment.py` (Regeln `evaluate_contact`, `evaluate_property`, `evaluate_unit`) und
+`assignment_review.py` (Tabelle `assignment_review`, Migration 0216, Endpunkte) prüfen jede
+eingehende Mail (`services.ingest_parsed`) und jedes Ticket (Anlage aus Mail, `POST /tickets`,
+`PATCH /tickets/{id}` bei Kontakt, Objekt, Einheit oder Beschreibung) auf Kontakt,
+Verwaltungsobjekt und Einheit. Ergebnis je Dimension: `auto` (sicher, übernommen, begründet),
+`open` (Rückfrage mit Kandidaten, Konfidenz und Begründung), `none`, `preset` (schon gesetzt).
+Konfidenzen und Schwellen: `docs/ASSUMPTIONS.md` A-068. Der KI-Vorschlag (`Message.suggestion`)
+liefert nur Hinweise (Regel 0.1.6).
+
+Endpunkte: `GET /mail/messages/{id}/assignment-review`, `POST .../assignment-review/decide`
+(`dimension`, `decision` accept oder reject, optional `candidate_id`, auch außerhalb der Liste
+als `manual`), `GET /mail/assignment-reviews/open`; gleich für `/tickets/{id}/...` und
+`GET /tickets/assignment-reviews/open` (Dashboard-Widget). Rechte: `communication:read` und
+`communication:update` mit Postfachzugriff je Nachricht, `tickets:read` und `tickets:update`.
+Jede Entscheidung: Ereignis `assignment_review.decided` (Vorschlag, Entscheidung, Person),
+Ticketereignis `assignment_review`, Lernbeispiel (`ai_example`, Aufgabe `classify_email`,
+`kind = assignment_review`) nur bei `ai_learning_examples_enabled` (ADR 0010). Oberfläche:
+`apps/web-crm/src/components/assignment/AssignmentPrompt.tsx` (Ticketseite; Mailansicht).
+
+## Sortierung, "in Bearbeitung" und Duplikate über Postfächer (operator 27.09.2026, migration 0213)
+
+- `GET /mail/messages` sortiert in jeder Ansicht (Posteingang, Filter, Suche) neueste zuerst
+  (`coalesce(received_at, sent_at, created_at) desc, id desc`), Paginierung über
+  `page`/`page_size` bleibt stabil. Tickets behalten ihre Sortierung nach Priorität.
+- `progress.py`: je Listenzeile und im Detail die additiven Felder `in_progress`,
+  `handler_user_id` und `handler_display_name`. In Bearbeitung ab Ticket-Bearbeiter, internem
+  Ticketkommentar oder eingereichter Antwort im Thread (Status pending, sending, sent);
+  Bearbeiter ist der zugewiesene Nutzer, sonst der Nutzer des jüngsten Ereignisses. Berechnet
+  je Seite, nie gespeichert. Die CRM-Liste (`MailList.tsx`) hinterlegt solche Zeilen gelb
+  (`bg-warning-bg`) und zeigt den Namen unter Datum und Uhrzeit.
+- `duplicates.py`: `Mailbox.is_collective` (Sammelpostfach, Vorbelegung nach Adressregel
+  `is_collective_address`, per `POST/PATCH /mail/mailboxes` änderbar) und
+  `Message.duplicate_of_id`. Beim Ingest (`/mail/ingest`, Gmail-Abruf, Backfill) wird dieselbe
+  Mail in einem weiteren eigenen Postfach als verknüpfte Kopie gespeichert (Message-ID,
+  ersatzweise Absender, Betreff, Zeitstempel und Text-Hash); die Kopie im persönlichen
+  Postfach führt, die im Sammelpostfach ist Duplikat, beide teilen Ticket und Thread
+  (`share_case`, auch bei späterer Ticketanlage oder Zuordnung). Die Übersicht zeigt nur die
+  führende Kopie; `include_duplicates=true` oder ein `mailbox_id`-Filter zeigen die Kopien.
+  Mitglieder ohne Zugriff auf das persönliche Postfach sehen weiter die Kopie des
+  Sammelpostfachs. Der eindeutige Index `uq_message_inbound_header_id` gilt seit 0213 je
+  Postfach (`coalesce(mailbox_id, nil)`), nichts wird gelöscht.
+- `POST /mail/maintenance/link-duplicates` (Administrator): rückwirkende Verknüpfung
+  vorhandener Kopien, idempotent; Kopien mit verschiedenen Tickets werden nur gezählt
+  (`ticket_conflicts`), nicht zusammengeführt.
+- Annahmen: docs/ASSUMPTIONS.md A-069.

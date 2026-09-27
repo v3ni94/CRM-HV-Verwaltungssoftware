@@ -189,7 +189,7 @@ export function TaxSettingsAdmin({
       {message ? <p className={ui.success}>{message}</p> : null}
 
       <form onSubmit={saveSettings} className={ui.card}>
-        <h2 className={ui.h2}>{t("switches.title")}</h2>
+        <h2 id="tax-switches-title" className={ui.h2}>{t("switches.title")}</h2>
         <p className={ui.help}>{t("switches.help")}</p>
         <div className="mt-3 grid gap-3 sm:grid-cols-2">
           <label className="flex items-center gap-2 text-sm">
@@ -252,7 +252,7 @@ export function TaxSettingsAdmin({
           </label>
         </div>
 
-        <h3 className={`${ui.h3} mt-4`}>{t("limits.title")}</h3>
+        <h3 id="tax-limits-title" className={`${ui.h3} mt-4`}>{t("limits.title")}</h3>
         <p className={ui.help}>{t("limits.help")}</p>
         <table className={`${ui.table} mt-2`}>
           <thead>
@@ -334,7 +334,7 @@ export function TaxSettingsAdmin({
       </form>
 
       <section className={ui.card}>
-        <h2 className={ui.h2}>{t("property.title")}</h2>
+        <h2 id="tax-property-title" className={ui.h2}>{t("property.title")}</h2>
         <p className={ui.help}>{t("property.help")}</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <select
@@ -398,7 +398,7 @@ export function TaxSettingsAdmin({
       </section>
 
       <section className={ui.card}>
-        <h2 className={ui.h2}>{t("supplier.title")}</h2>
+        <h2 id="tax-supplier-title" className={ui.h2}>{t("supplier.title")}</h2>
         <p className={ui.help}>{t("supplier.help")}</p>
         <div className="mt-3 flex flex-col gap-2 sm:flex-row">
           <select

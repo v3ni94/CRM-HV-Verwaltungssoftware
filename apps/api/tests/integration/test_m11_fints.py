@@ -155,10 +155,12 @@ def test_not_connectable_institute_and_missing_product_id(
     )
     assert r.status_code == 422
     assert r.json()["code"] == "MHVP-BANK-0008"
+    assert client.get(f"{B}/config", headers=h).json() == {"configured": True}
     # Without the DK registration number no connection is possible (501 with a hint).
     with TestClient(
         create_app(_settings(database, redis_url, fints_product_id=None))
     ) as bare_client:
+        assert bare_client.get(f"{B}/config", headers=h).json() == {"configured": False}
         r = bare_client.post(
             f"{B}/connections",
             json={"institute": BLZ_CONNECTABLE, "login": "x", "pin": "y"},

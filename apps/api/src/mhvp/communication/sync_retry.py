@@ -10,7 +10,7 @@ module is being changed in parallel (ticket mail thread work); they attach to th
 
 import uuid
 
-from sqlalchemy import ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
+from sqlalchemy import ForeignKey, Index, Integer, String, Text, UniqueConstraint, func, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -44,13 +44,17 @@ Index(
     Message.__table__.c.mailbox_id,
     Message.__table__.c.status,
 )
-# Deduplication of inbound mails (M2): one inbound message per Message-ID and tenant. The
-# ingest still checks first (returns the known row); the index only closes the race between
-# two syncs or a parallel .eml upload.
+# Deduplication of inbound mails (M2): one inbound message per Message-ID, tenant and
+# mailbox (since migration 0213 a copy per own mailbox is allowed and linked as duplicate,
+# operator 27.09.2026). The ingest still checks first (returns the known row); the index only
+# closes the race between two syncs or a parallel .eml upload.
 Index(
     "uq_message_inbound_header_id",
     Message.__table__.c.tenant_id,
     Message.__table__.c.header_message_id,
+    func.coalesce(
+        Message.__table__.c.mailbox_id, text("'00000000-0000-0000-0000-000000000000'::uuid")
+    ),
     unique=True,
     postgresql_where=text("direction = 'in' AND header_message_id IS NOT NULL"),
 )

@@ -102,7 +102,7 @@ export function DepositInterestRatesAdmin({ rates, canManage }: { rates: Referen
       </section>
       {canManage ? (
         <section className={ui.card}>
-          <h2 className={ui.h2}>{t("form.title")}</h2>
+          <h2 id="deposit-rates-form-title" className={ui.h2}>{t("form.title")}</h2>
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="flex flex-col gap-1">
               <span className={ui.label}>{t("year")}</span>

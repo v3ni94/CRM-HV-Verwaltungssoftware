@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { FinApiSettingsCard, type FinApiConfig } from "@/components/banking/FinApiSettingsCard";
@@ -27,6 +28,11 @@ export default async function BankSettingsPage() {
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} description={t("intro")} />
+      <p className="text-sm">
+        <Link href="/bank" className="font-medium hover:underline">
+          {t("setupFinTsLink")}
+        </Link>
+      </p>
       <FinApiSettingsCard initial={initial} />
     </div>
   );

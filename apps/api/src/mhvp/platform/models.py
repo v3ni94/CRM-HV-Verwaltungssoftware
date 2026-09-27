@@ -183,6 +183,11 @@ class Membership(IdMixin, TimestampMixin, Base):
     )
     reply_approval_reason: Mapped[str | None] = mapped_column(String(32))
     reply_approval_until: Mapped[date | None] = mapped_column(Date)
+    # Position und Durchwahl für die E-Mail-Signatur (operator 27.09.2026, migration 0215,
+    # ``mhvp.communication.signatures``): Freitext, Vorschläge aus dem Katalog
+    # ``POSITION_CATALOGUE`` plus ``TenantSettings.position_catalogue_extra``.
+    position: Mapped[str | None] = mapped_column(String(120))
+    phone: Mapped[str | None] = mapped_column(String(40))
 
 
 class RefreshToken(IdMixin, Base):
@@ -326,6 +331,16 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # aufzunehmen; siehe ``mhvp.tickets.competences``.
     competence_catalogue_extra: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    # E-Mail-Signatur (operator 27.09.2026, migration 0215): manuell angelegte Positionen des
+    # Mandanten (Liste von Strings) und die Signaturvorlage ``{"text": str|None, "html":
+    # str|None, "logo_url": str|None}`` mit Platzhaltern; leer bedeutet Standard aus den
+    # Firmendaten (``mhvp.communication.signatures``).
+    position_catalogue_extra: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    signature_template: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
     # Rechnungs-Weiterleitung (M20, operator 25.09.2026): Zieladresse, Absender-Positivliste und
     # Lernliste bestätigter Absender (siehe ``mhvp.communication.forwarding``). Shape:

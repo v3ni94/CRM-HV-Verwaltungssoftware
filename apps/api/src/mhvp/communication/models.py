@@ -96,6 +96,16 @@ class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
     backfill_started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     backfill_finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     backfill_page_token: Mapped[str | None] = mapped_column(Text)
+    # Sammelpostfach (operator 27.09.2026, Duplikate über mehrere eigene Postfächer): eine
+    # Mail, die an ein persönliches Postfach und an ein Sammelpostfach ging, wird nur beim
+    # persönlichen Postfach gezeigt; die Kopie im Sammelpostfach wird als Duplikat verknüpft
+    # (``Message.duplicate_of_id``). Standardregel beim Anlegen: lokaler Teil info, post,
+    # buchhaltung, office, kontakt, verwaltung, rechnung(en), mail, service, zentrale
+    # (``mhvp.communication.duplicates.is_collective_address``), sonst persönlich; änderbar
+    # in den Postfacheinstellungen. Annahme, siehe docs/ASSUMPTIONS.md.
+    is_collective: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
 
 class MailboxUser(IdMixin, TenantMixin, Base):
@@ -127,6 +137,13 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
             "tenant_id",
             "archive_status",
             postgresql_where=text("archive_status IN ('pending', 'failed', 'scope_missing')"),
+        ),
+        # Duplicate copies across own mailboxes (migration 0213, operator 27.09.2026).
+        Index(
+            "ix_message_duplicate_of",
+            "tenant_id",
+            "duplicate_of_id",
+            postgresql_where=text("duplicate_of_id IS NOT NULL"),
         ),
     )
 
@@ -208,6 +225,14 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     suggestion_status: Mapped[str] = mapped_column(
         String(16), nullable=False, default="none", server_default="none"
     )  # none, pending, ready, failed, skipped
+    # Duplikat über mehrere eigene Postfächer (operator 27.09.2026): zeigt auf die führende
+    # Kopie derselben Mail (gleiche Message-ID oder gleicher Absender, Betreff, Zeitstempel
+    # und Text-Hash) in einem anderen Postfach. Duplikate bleiben erhalten (Archivierung,
+    # Nachweis), erscheinen aber nicht in der Übersicht und teilen Ticket und Thread mit
+    # der führenden Kopie (``mhvp.communication.duplicates``).
+    duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("message.id", ondelete="SET NULL"), nullable=True
+    )
 
 
 class Playbook(IdMixin, TimestampMixin, TenantMixin, Base):

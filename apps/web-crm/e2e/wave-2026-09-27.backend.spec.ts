@@ -22,20 +22,20 @@ test.describe("Wave 27.09.2026 core paths @backend", () => {
   test("main menu: collapses to icon rail and stays collapsed after reload @backend", async ({ page }) => {
     test.setTimeout(60_000);
     await uiLogin(page, "/start");
-    const toggle = page.getByRole("button", { name: "Einklappen" });
+    const toggle = page.getByRole("button", { name: "Menü einklappen", exact: true });
     await expect(toggle).toBeVisible();
     await expect(toggle).toHaveAttribute("aria-pressed", "false");
     await toggle.click();
-    const expandToggle = page.getByRole("button", { name: "Ausklappen" });
+    const expandToggle = page.getByRole("button", { name: "Menü ausklappen", exact: true });
     await expect(expandToggle).toBeVisible();
     await expect(expandToggle).toHaveAttribute("aria-pressed", "true");
 
     await page.reload();
-    await expect(page.getByRole("button", { name: "Ausklappen" })).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByRole("button", { name: "Menü ausklappen", exact: true })).toHaveAttribute("aria-pressed", "true");
 
     // Leave the browser state clean for later specs in the same worker.
-    await page.getByRole("button", { name: "Ausklappen" }).click();
-    await expect(page.getByRole("button", { name: "Einklappen" })).toHaveAttribute("aria-pressed", "false");
+    await page.getByRole("button", { name: "Menü ausklappen", exact: true }).click();
+    await expect(page.getByRole("button", { name: "Menü einklappen", exact: true })).toHaveAttribute("aria-pressed", "false");
   });
 
   test("tickets: page 2 shows different tickets @backend", async ({ page }) => {
@@ -90,9 +90,20 @@ test.describe("Wave 27.09.2026 core paths @backend", () => {
 
   test("bank: connect dialog reaches institute search (BLZ 37050198) @backend", async ({ page }) => {
     test.setTimeout(60_000);
+    // The FinTS card (components/banking/FinTsConnections) lives on /bank; /einstellungen/bank
+    // holds the finAPI credentials and links to it.
     await uiLogin(page, "/einstellungen/bank");
-    const connect = page.getByRole("button", { name: "Bank verbinden" });
-    await expect(connect).toBeVisible();
+    await page.getByRole("link", { name: "Bankverbindung einrichten (FinTS, PIN/TAN)" }).click();
+    await expect(page).toHaveURL(/\/bank$/);
+    const connect = page.getByRole("button", { name: "Bank verbinden", exact: true });
+    const notConfigured = page.getByTestId("fints-not-configured");
+    await expect(connect.or(notConfigured)).toBeVisible({ timeout: 15_000 });
+    if ((await notConfigured.count()) > 0) {
+      // Without MHVP_FINTS_PRODUCT_ID the card shows the MHVP-BANK-0007 hint instead of the button.
+      await expect(notConfigured).toContainText("MHVP-BANK-0007");
+      await expect(connect).toHaveCount(0);
+      return;
+    }
     await connect.click();
     const dialog = page.getByRole("dialog", { name: "Bank verbinden" });
     await expect(dialog).toBeVisible();
@@ -143,7 +154,8 @@ test.describe("Wave 27.09.2026 core paths @backend", () => {
     // Default tenant flag hoa_circular_lower_majority_enabled is off (Betreiberentscheidung,
     // ADR 0003: per tenant, default closed): the option stays visible but disabled, and the
     // explanatory hint is shown.
-    await expect(simpleOption).toBeDisabled();
+    // toBeDisabled() does not evaluate <option disabled> reliably; check the DOM property.
+    await expect(simpleOption).toHaveJSProperty("disabled", true);
     await expect(page.getByText(/Umlaufbeschluss mit einfacher Mehrheit ist für diesen Mandanten nicht freigeschaltet/)).toBeVisible();
   });
 

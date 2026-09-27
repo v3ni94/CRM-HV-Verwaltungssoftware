@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { CircularLowerMajoritySwitch } from "@/components/settings/CircularLowerMajoritySwitch";
 import { CompanySettings } from "@/components/settings/CompanySettings";
+import { SignatureTemplateSettings, type SignatureTemplate } from "@/components/settings/SignatureTemplateSettings";
 import { BillingSettingsForm, type BillingSettings } from "@/components/settings/BillingSettings";
 import { ManagerEntitySetup, type ManagerEntityStatus } from "@/components/settings/ManagerEntitySetup";
 import { AiLearningExamples } from "@/components/settings/AiLearningExamples";
@@ -37,6 +38,10 @@ export default async function CompanySettingsPage() {
       <PageHeader title={t("title")} />
       <CompanySettings initial={settings.data.company} branding={settings.data.branding} canUpdate={can("tenant_settings:update")} />
       <ManagerEntitySetup initial={managerData} canUpdate={can("tenant_settings:update")} />
+      <SignatureTemplateSettings
+        initial={((settings.data as { signature_template?: SignatureTemplate }).signature_template ?? { text: null, html: null, logo_url: null })}
+        canUpdate={can("tenant_settings:update")}
+      />
       <TicketReplyApprovalAll initial={settings.data.ticket_reply_approval_all} canUpdate={can("tenant_settings:update")} />
       <MeteringModuleSwitch initial={settings.data.metering_module_enabled ?? false} canUpdate={can("tenant_settings:update")} />
       <AiLearningExamples
@@ -53,7 +58,7 @@ export default async function CompanySettingsPage() {
       />
       <CircularLowerMajoritySwitch initial={circularData?.enabled ?? false} canUpdate={can("tenant_settings:update")} />
       <section className="flex flex-col gap-2">
-        <h2 className="text-lg font-semibold">{tb("title")}</h2>
+        <h2 id="billing-settings-title" className="text-lg font-semibold">{tb("title")}</h2>
         {billingData ? (
           <BillingSettingsForm initial={billingData} canUpdate={can("tenant_settings:update")} />
         ) : (

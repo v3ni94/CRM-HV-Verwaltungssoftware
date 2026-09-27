@@ -1424,6 +1424,9 @@ async def create_ticket(
             actor_user_id=principal.user_id,
             payload={"number": ticket.number, "source": ticket.source.value},
         )
+        from mhvp.communication.assignment_review import review_ticket
+
+        await review_ticket(session, ticket, principal.user_id)
         await session.flush()
         return _ticket_out(ticket)
 
@@ -2053,6 +2056,14 @@ async def patch_ticket(
             ticket.unit_id = body.unit_id
         if "due_on" in body.model_fields_set:
             ticket.due_on = body.due_on
+        if any(
+            v is not None
+            for v in (body.contact_id, body.property_id, body.unit_id, body.internal_description)
+        ):
+            # Zuordnungsprüfung nach Änderung (Betreiber 27.09.2026), nur bei relevanten Feldern.
+            from mhvp.communication.assignment_review import review_ticket
+
+            await review_ticket(session, ticket, principal.user_id)
         await session.flush()
         return _ticket_out(ticket)
 

@@ -39,13 +39,15 @@ test.describe("Inline editing against the API @backend", () => {
     await propertySection.getByRole("button", { name: "Bearbeiten", exact: true }).click();
     await propertySection.getByLabel("Ort").fill("Monheim am Rhein");
     await propertySection.getByLabel("Ort").press("Tab");
-    await expect(propertySection.getByText("Gespeichert").first()).toBeVisible();
+    // exact: the section description ("... einzeln gespeichert.") would match the substring too.
+    await expect(propertySection.getByText("Gespeichert", { exact: true }).first()).toBeVisible();
     const saved = await call<{ city: string; version: number }>("GET", `/properties/${prop.id}`);
     expect(saved.city).toBe("Monheim am Rhein");
 
     // Inline validation: a negative area is not sent.
-    await propertySection.getByLabel("Bebaute Fläche in m²").fill("-1");
-    await propertySection.getByLabel("Bebaute Fläche in m²").press("Enter");
+    // exact: "Unbebaute Fläche in m²" contains the same substring.
+    await propertySection.getByLabel("Bebaute Fläche in m²", { exact: true }).fill("-1");
+    await propertySection.getByLabel("Bebaute Fläche in m²", { exact: true }).press("Enter");
     await expect(propertySection.getByRole("alert")).toHaveText("Fläche darf nicht negativ sein.");
     await propertySection.getByRole("button", { name: "Fertig" }).click();
 
@@ -56,11 +58,15 @@ test.describe("Inline editing against the API @backend", () => {
     await buildingSection.getByRole("button", { name: "Bearbeiten", exact: true }).click();
     await buildingSection.getByLabel("Adresszusatz").fill("Hinterhaus");
     await buildingSection.getByLabel("Adresszusatz").press("Enter");
-    await expect(buildingSection.getByText("Gespeichert").first()).toBeVisible();
+    await expect(buildingSection.getByText("Gespeichert", { exact: true }).first()).toBeVisible();
+    // The inline save bumped the version; the energy certificate form takes it over after the
+    // router refresh (data-version), otherwise its PATCH would answer 412.
+    await expect(page.getByTestId("energy-certificate")).toHaveAttribute("data-version", String(building.version + 1), { timeout: 15_000 });
     await page.getByTestId("energy-certificate").getByLabel("Art des Ausweises").selectOption("bedarf");
     await page.getByTestId("energy-certificate").getByLabel("Effizienzklasse").fill("c");
     await page.getByRole("button", { name: "Energieausweis speichern" }).click();
-    await expect(page.getByText("Gespeichert.")).toBeVisible();
+    // exact and scoped: the master data description also contains "gespeichert.".
+    await expect(page.getByTestId("energy-certificate").getByText("Gespeichert.", { exact: true })).toBeVisible();
     const b = await call<{ address_addition: string; energy_certificate_class: string }>("GET", `/buildings/${building.id}`);
     expect(b.address_addition).toBe("Hinterhaus");
     expect(b.energy_certificate_class).toBe("C");
@@ -78,7 +84,7 @@ test.describe("Inline editing against the API @backend", () => {
     await unitSection.getByRole("button", { name: "Bearbeiten", exact: true }).click();
     await unitSection.getByLabel("Kaution in EUR").fill("1500");
     await unitSection.getByLabel("Kaution in EUR").press("Tab");
-    await expect(unitSection.getByText("Gespeichert").first()).toBeVisible();
+    await expect(unitSection.getByText("Gespeichert", { exact: true }).first()).toBeVisible();
     const u = await call<{ deposit_amount: string }>("GET", `/units/${unit.id}`);
     expect(u.deposit_amount).toBe("1500.00");
     await expect(page.getByRole("heading", { name: "Ereignisprotokoll" })).toBeVisible();

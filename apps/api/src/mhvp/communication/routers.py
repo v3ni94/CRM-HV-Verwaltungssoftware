@@ -12,11 +12,21 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from mhvp.ai import schemas as ai_s
-from mhvp.communication import attachments, mail, mail_approval, services, transport
+from mhvp.communication import (
+    attachments,
+    duplicates,
+    mail,
+    mail_approval,
+    progress,
+    services,
+    signatures,
+    transport,
+)
 from mhvp.communication.models import MailApprovalDeputy, Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.db.tenancy import after_commit, platform_transaction, tenant_transaction
@@ -51,6 +61,9 @@ class MailboxIn(_In):
     username: str | None = Field(default=None, max_length=320)
     secret: str | None = Field(default=None, max_length=4000)
     enabled: bool = False
+    # Sammelpostfach (info@, post@ ...) oder persönliches Postfach; ohne Angabe nach der
+    # Adressregel (``mhvp.communication.duplicates.is_collective_address``).
+    is_collective: bool | None = None
 
 
 class MailIngestIn(_In):
@@ -79,6 +92,8 @@ class MailDraftPatchIn(_In):
     subject: str | None = Field(default=None, max_length=998)
     body: str | None = None
     to_addresses: list[EmailStr] | None = Field(default=None, max_length=20)
+    # Kopie-Empfänger des Antwortformulars (operator 27.09.2026, Antworten mit An/Cc).
+    cc_addresses: list[EmailStr] | None = Field(default=None, max_length=20)
 
 
 class MailRejectIn(_In):
@@ -129,6 +144,7 @@ def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[st
         "calendar_id": m.calendar_id,
         "archive_on_ticket_done": m.archive_on_ticket_done,
         "archive_scope_missing": m.archive_scope_missing,
+        "is_collective": m.is_collective,
         "user_ids": user_ids or [],
         # Push status (read only): watch expiry and last accepted notification.
         "push_watch_expires_at": m.gmail_watch_expiration,
@@ -183,6 +199,7 @@ _LIST_FIELDS = (
     "archived_at",
     "suggestion",
     "suggestion_status",
+    "duplicate_of_id",
 )
 
 
@@ -193,17 +210,25 @@ def _preview(body: str | None) -> str | None:
     return text[:PREVIEW_CHARS] + ("…" if len(text) > PREVIEW_CHARS else "")
 
 
-def _list_out(m: Message) -> dict[str, Any]:
+def _list_out(m: Message, state: progress.Progress | None = None) -> dict[str, Any]:
     """List row (Review 26.09.2026, M3): every field of the detail except ``body`` and
     ``body_html``; ``body_preview`` holds the first 200 characters. The detail endpoint
-    (``GET /mail/messages/{id}``) and the thread deliver the full text."""
+    (``GET /mail/messages/{id}``) and the thread deliver the full text.
+
+    ``in_progress``, ``handler_user_id`` and ``handler_display_name`` (operator 27.09.2026)
+    come from ``mhvp.communication.progress``; callers without a computed state get
+    ``False``/``None`` (additive fields, older clients ignore them)."""
     out = {k: getattr(m, k) for k in _LIST_FIELDS}
     out["body_preview"] = _preview(m.body)
+    state = state or progress.NONE
+    out["in_progress"] = state.in_progress
+    out["handler_user_id"] = state.handler_user_id
+    out["handler_display_name"] = state.handler_display_name
     return out
 
 
-def _out(m: Message) -> dict[str, Any]:
-    out = _list_out(m)
+def _out(m: Message, state: progress.Progress | None = None) -> dict[str, Any]:
+    out = _list_out(m, state)
     out["body"], out["body_html"] = m.body, m.body_html
     return out
 
@@ -261,9 +286,10 @@ async def create_mailbox(
     body: MailboxIn, request: Request, principal: TenantPrincipal = Depends(ADMIN)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        row = Mailbox(
-            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
-        )
+        data = body.model_dump()
+        if data.get("is_collective") is None:
+            data["is_collective"] = duplicates.is_collective_address(body.address)
+        row = Mailbox(tenant_id=principal.tenant_id, created_by=principal.user_id, **data)
         session.add(row)
         await session.flush()
         return _mailbox_out(row)
@@ -277,6 +303,7 @@ class MailboxPatchIn(_In):
     calendar_enabled: bool | None = None
     calendar_id: str | None = Field(default=None, min_length=1, max_length=320)
     archive_on_ticket_done: bool | None = None
+    is_collective: bool | None = None
 
 
 class MailboxUsersIn(_In):
@@ -545,7 +572,12 @@ async def oauth_callback(
                     select(Mailbox).where(Mailbox.address == address).with_for_update()
                 )
                 if box is None:
-                    box = Mailbox(tenant_id=tenant_id, created_by=user_id, address=address)
+                    box = Mailbox(
+                        tenant_id=tenant_id,
+                        created_by=user_id,
+                        address=address,
+                        is_collective=duplicates.is_collective_address(address),
+                    )
                     session.add(box)
                 box.kind, box.secret, box.enabled, box.last_error = "gmail", refresh, True, None
                 box.gmail_history_id = None
@@ -773,16 +805,34 @@ def _messages_query(
     mailbox_id: uuid.UUID | None,
     q: str | None,
     include_closed: bool = True,
+    include_duplicates: bool = False,
 ) -> Any:
     """Filter of the mail list and its count. Members see messages without mailbox, of the
-    default mailboxes and of mailboxes shared with them; administrators every message."""
+    default mailboxes and of mailboxes shared with them; administrators every message.
+
+    Duplicates across own mailboxes (operator 27.09.2026, ``Message.duplicate_of_id``) stay
+    hidden unless ``include_duplicates`` or a ``mailbox_id`` filter asks for that mailbox's
+    own copies. A member who cannot read the leading copy (personal mailbox of a colleague)
+    still sees the copy of the collective mailbox, so nothing disappears for them."""
     query = select(Message)
-    if not principal.has("tenant_settings:update"):  # admins see every mailbox
+    admin = principal.has("tenant_settings:update")  # admins see every mailbox
+    allowed: Any = None
+    if not admin:
         granted = select(MailboxUser.mailbox_id).where(MailboxUser.user_id == principal.user_id)
         allowed = select(Mailbox.id).where(
             or_(Mailbox.is_default.is_(True), Mailbox.id.in_(granted))
         )
         query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
+    if not include_duplicates and mailbox_id is None:
+        if admin:
+            query = query.where(Message.duplicate_of_id.is_(None))
+        else:
+            leading = aliased(Message)
+            visible_lead = select(leading.id).where(
+                leading.id == Message.duplicate_of_id,
+                or_(leading.mailbox_id.is_(None), leading.mailbox_id.in_(allowed)),
+            )
+            query = query.where(or_(Message.duplicate_of_id.is_(None), ~exists(visible_lead)))
     if status:
         query = query.where(Message.status == status)
     elif not include_closed and ticket_id is None:
@@ -847,6 +897,13 @@ async def messages(
             " rejected); gilt nur ohne status-Filter"
         ),
     ),
+    include_duplicates: bool = Query(
+        default=False,
+        description=(
+            "Duplikate derselben Mail aus weiteren eigenen Postfächern zeigen (sonst nur die"
+            " führende Kopie, außer bei Filter nach mailbox_id)"
+        ),
+    ),
     limit: int = Query(default=100, ge=1, le=500),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
@@ -874,6 +931,7 @@ async def messages(
             mailbox_id=mailbox_id,
             q=q,
             include_closed=include_closed,
+            include_duplicates=include_duplicates,
         )
         size = page_size or limit
         total = (
@@ -884,11 +942,12 @@ async def messages(
             func.coalesce(Message.received_at, Message.sent_at, Message.created_at).desc(),
             Message.id.desc(),
         )
-        rows = (await session.scalars(query.offset((page - 1) * size).limit(size))).all()
+        rows = list((await session.scalars(query.offset((page - 1) * size).limit(size))).all())
+        states = await progress.progress_for(session, rows)
         response.headers["X-Total-Count"] = str(total)
         response.headers["X-Page"] = str(page)
         response.headers["X-Page-Size"] = str(size)
-        return [_list_out(m) for m in rows]
+        return [_list_out(m, states.get(m.id)) for m in rows]
 
 
 @router.get("/messages/count", summary="Anzahl der Nachrichten je Filter")
@@ -926,7 +985,8 @@ async def get_message(
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await assert_message_accessible(session, principal, row)
-        return _out(row)
+        states = await progress.progress_for(session, [row])
+        return _out(row, states.get(row.id))
 
 
 @router.get("/messages/{message_id}/thread", summary="Alle Nachrichten des Vorgangs")
@@ -992,6 +1052,23 @@ async def archive_now(
         counts = await _archive_messages(request.app.state.settings, session, [row])
         await session.flush()
         return {**_out(row), "result": counts}
+
+
+@router.post(
+    "/maintenance/link-duplicates",
+    summary="Wartung: vorhandene Duplikate über mehrere Postfächer verknüpfen",
+)
+async def link_duplicates(
+    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, int]:
+    """Rückwirkende Duplikaterkennung (Betreiber 27.09.2026) für Mails, die vor dieser Regel
+    in mehrere eigene Postfächer gelangt sind: gleiche Message-ID oder gleicher Absender,
+    Betreff, Zeitstempel und Text-Hash in verschiedenen Postfächern werden verknüpft, die
+    Kopie im persönlichen Postfach führt, Ticket und Thread werden geteilt. Nichts wird
+    gelöscht; Kopien mit verschiedenen Tickets bleiben unverändert (``ticket_conflicts``).
+    Idempotent, mehrfach ausführbar."""
+    async with tenant_tx(request, principal) as session:
+        return await duplicates.link_existing(session)
 
 
 @router.post("/messages/bulk", summary="Sammelaktion: mehrere Nachrichten erledigen")
@@ -1277,6 +1354,32 @@ async def reply_draft(
 
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id, principal)
+        if row.direction != "in":
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Antworten ist nur auf eingegangene Nachrichten möglich.",
+            )
+        # Ein offener Entwurf je Eingangsmail (operator 27.09.2026): "Vorbereiten" legt ihn
+        # an, "Antworten" öffnet ihn wieder, statt bei jedem Klick einen weiteren Entwurf im
+        # Reiter Entwürfe zu erzeugen. Ein übergebener Text (Vorschlag übernehmen) ersetzt
+        # den Text des offenen Entwurfs.
+        existing = await session.scalar(
+            select(Message)
+            .where(
+                Message.direction == "out",
+                Message.status == "draft",
+                Message.thread_id == (row.thread_id or row.id),
+                Message.in_reply_to == row.header_message_id,
+            )
+            .order_by(Message.created_at.desc())
+            .limit(1)
+        )
+        if existing is not None:
+            if body is not None and body.body is not None:
+                existing.body = body.body
+                existing.updated_by = principal.user_id
+                await session.flush()
+            return _out(existing)
         contact = await session.get(Contact, row.contact_id) if row.contact_id else None
         salutation = "Sehr geehrte Damen und Herren"
         if contact is not None and contact.salutation and contact.last_name:
@@ -1295,9 +1398,14 @@ async def reply_draft(
                 if ticket is not None
                 else f"AW: {row.subject or ''}"[:998]
             ),
-            body=body.body
-            if body is not None and body.body is not None
-            else mail.draft_reply(salutation, row.subject, ticket.number if ticket else None),
+            body=signatures.with_signature(
+                body.body
+                if body is not None and body.body is not None
+                else mail.draft_reply(salutation, row.subject, ticket.number if ticket else None),
+                await signatures.signature_for_user(
+                    session, principal.tenant_id, principal.user_id
+                ),
+            ),
             in_reply_to=row.header_message_id,
             references_header=tnr_references(row),
             thread_id=row.thread_id or row.id,
@@ -1517,6 +1625,12 @@ async def submit(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nur Entwürfe können eingereicht werden."
             )
+        # Verständliche Rückmeldung vor der Freigabe (operator 27.09.2026): ohne Empfänger
+        # oder ohne Text scheitert der Versand ohnehin.
+        if not row.to_addresses:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Der Entwurf hat keinen Empfänger.")
+        if not (row.body or "").strip():
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Der Entwurf hat keinen Text.")
         row.status = "pending"
         row.submitted_by, row.submitted_at = principal.user_id, datetime.now(UTC)
         row.rejection_note = None
@@ -1615,9 +1729,23 @@ async def _record_sent(
 
 
 def _assert_sendable_box(box: Mailbox | None) -> Mailbox:
-    if box is None or box.deleted_at is not None or not box.enabled or not box.secret:
+    if box is None or box.deleted_at is not None:
         raise ProblemError(
-            ErrorCodes.CONFLICT, detail="Kein eingerichtetes Postfach für den Versand (M20-01)."
+            ErrorCodes.CONFLICT,
+            detail="Dem Entwurf ist kein Postfach zugeordnet. Bitte unter Einstellungen, "
+            "Postfächer ein Postfach einrichten und mit Google verbinden (M20-01).",
+        )
+    if not box.enabled:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail=f"Das Postfach {box.address} ist deaktiviert. Bitte unter Einstellungen, "
+            "Postfächer aktivieren (M20-01).",
+        )
+    if not box.secret:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail=f"Das Postfach {box.address} ist nicht mit Google verbunden. Bitte unter "
+            "Einstellungen, Postfächer den Zugriff erteilen (M20-01).",
         )
     return box
 
@@ -1808,7 +1936,11 @@ async def approve_and_send(
             if row.in_reply_to:
                 msg["In-Reply-To"] = row.in_reply_to
                 msg["References"] = row.references_header or row.in_reply_to
-            msg.set_content(row.body or "")
+            # Signatur des Verfassers (operator 27.09.2026), no-op wenn die Marke schon steht.
+            signature = await signatures.signature_for_user(
+                session, principal.tenant_id, row.created_by or principal.user_id
+            )
+            msg.set_content(signatures.with_signature(row.body, signature))
             # Standardanhänge aus Antwortvorlagen (operator 26.09.2026): Dokumentverweise der
             # ausgehenden Nachricht werden beim Versand beigefügt.
             await attachments.attach_documents(session, request, msg, row.attachment_document_ids)

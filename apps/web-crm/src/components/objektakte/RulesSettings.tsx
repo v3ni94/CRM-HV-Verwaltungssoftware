@@ -140,7 +140,7 @@ export function RulesSettings({
 
   return (
     <section className={`${ui.card} flex flex-col gap-4`} aria-label={t("rules.title")}>
-      <h2 className="text-sm font-semibold">{t("rules.title")}</h2>
+      <h2 id="objektakte-rules-title" className="text-sm font-semibold">{t("rules.title")}</h2>
       <p className="text-xs text-muted">{t("rules.intro")}</p>
 
       <ul className="flex flex-col gap-2">

@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -59,6 +59,11 @@ export function EnergyCertificateForm({ building, canEdit = true }: { building: 
   const router = useRouter();
   const [form, setForm] = useState<Form>(toForm(building));
   const [version, setVersion] = useState(building.version);
+  // Other sections of the same page (inline master data, ADR 0012) bump the version and refresh
+  // the server component; without taking over the new prop the next save would hit 412.
+  useEffect(() => {
+    setVersion(building.version);
+  }, [building.version]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -123,7 +128,7 @@ export function EnergyCertificateForm({ building, canEdit = true }: { building: 
 
   const ro = !canEdit;
   return (
-    <section className={ui.card} data-testid="energy-certificate">
+    <section className={ui.card} data-testid="energy-certificate" data-version={version}>
       <h2 className={ui.subtitle}>{t("title")}</h2>
       <p className="mt-1 text-sm text-muted">{building.name ? t("buildingHint", { name: building.name }) : t("help")}</p>
       <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

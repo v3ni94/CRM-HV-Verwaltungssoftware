@@ -29,7 +29,7 @@ export function RoutingSettings({ initial }: { initial: Strategy }) {
   };
   return (
     <section className={`${ui.card} flex flex-col gap-2`}>
-      <h2 className="text-sm font-semibold">{t("routingTitle")}</h2>
+      <h2 id="ai-routing-title" className="text-sm font-semibold">{t("routingTitle")}</h2>
       <label className="flex flex-col gap-1 sm:max-w-md">
         <span className={ui.label}>{t("routingLabel")}</span>
         <select className={ui.input} value={value} disabled={busy} onChange={(e) => void change(e.target.value as Strategy)}>

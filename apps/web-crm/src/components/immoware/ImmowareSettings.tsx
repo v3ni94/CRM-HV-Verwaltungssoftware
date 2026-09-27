@@ -164,7 +164,7 @@ export function ImmowareSettings({
   return (
     <div className="flex flex-col gap-4">
       <form onSubmit={save} className={`${ui.card} flex flex-col gap-4`} aria-label={t("connectionTitle")}>
-        <h2 className={ui.h2}>{t("connectionTitle")}</h2>
+        <h2 id="immoware-connection-title" className={ui.h2}>{t("connectionTitle")}</h2>
         <p className="text-sm text-muted">{t("hint")}</p>
 
         <label className="flex items-center gap-2 text-sm">
@@ -402,7 +402,7 @@ export function ImmowareSettings({
 
       {canManage ? (
         <section className={`${ui.card} flex flex-col gap-3`} aria-label={t("syncTitle")}>
-          <h2 className={ui.h2}>{t("syncTitle")}</h2>
+          <h2 id="immoware-sync-title" className={ui.h2}>{t("syncTitle")}</h2>
           <div className="flex flex-wrap gap-2">
             {SYNC_KINDS.map((kind) => (
               <button

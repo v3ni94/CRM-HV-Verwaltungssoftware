@@ -35,6 +35,10 @@ export MHVP_REDIS_URL="${MHVP_REDIS_URL:-redis://127.0.0.1:6379/0}"
 export MHVP_CELERY_BROKER_URL="${MHVP_CELERY_BROKER_URL:-redis://127.0.0.1:6379/1}"
 export MHVP_CELERY_RESULT_BACKEND="${MHVP_CELERY_RESULT_BACKEND:-redis://127.0.0.1:6379/2}"
 export MHVP_LOG_FORMAT="${MHVP_LOG_FORMAT:-console}"
+# All specs run as one seeded admin (workers: 1) and fire hundreds of API calls per minute
+# (page loads, 55 seeded tickets in the wave spec); the production default of 600/min per user
+# would answer 429 in later specs. Operator configuration, not a legal rule (core/ratelimit.py).
+export MHVP_RATE_LIMIT_PER_MINUTE_USER="${MHVP_RATE_LIMIT_PER_MINUTE_USER:-6000}"
 
 cd "$API_DIR"
 

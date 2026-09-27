@@ -88,12 +88,14 @@ test.describe("money paths against the API @backend", () => {
     await page.getByLabel("Grundlage").fill("Mietvertrag Anlage Betriebskosten");
     await page.getByRole("button", { name: "Position hinzufügen" }).click();
     await expect(page.getByRole("cell", { name: "Hausmeister" })).toBeVisible();
-    await page.getByRole("button", { name: "Berechnen" }).click();
+    // exact: the heating panel on the statement page also offers "Vorschau berechnen".
+    await page.getByRole("button", { name: "Berechnen", exact: true }).click();
     await expect(page.getByRole("heading", { name: "Ergebnis je Einheit" })).toBeVisible();
     await expect(page.getByRole("cell", { name: /1\.200,00/ }).first()).toBeVisible();
     // Four eyes: the creator cannot approve internally.
     await page.getByRole("button", { name: "Intern freigeben" }).click();
-    await expect(page.getByRole("alert")).toBeVisible();
+    // Scoped: after a client navigation Next.js keeps an empty role=alert route announcer.
+    await expect(page.getByRole("alert").filter({ hasText: /andere Person/ })).toBeVisible();
 
     // 5. HOA economic plan: 1.200,00 by MEA on one unit -> 100,00 per month.
     const hoaProp = await property<{ id: string; legal_entities: { id: string; kind: string }[] }>(`E2E WEG ${run}`, "hoa");
@@ -113,7 +115,8 @@ test.describe("money paths against the API @backend", () => {
     await page.getByLabel("Schlüssel").selectOption(mea);
     await page.getByRole("button", { name: "Position hinzufügen" }).click();
     await expect(page.getByRole("cell", { name: "Bewirtschaftung" })).toBeVisible();
-    await page.getByRole("button", { name: "Berechnen" }).click();
+    // exact: the heating panel on the statement page also offers "Vorschau berechnen".
+    await page.getByRole("button", { name: "Berechnen", exact: true }).click();
     await expect(page.getByRole("cell", { name: /100,00/ }).first()).toBeVisible();
   });
 });

@@ -150,7 +150,9 @@ test.describe("CRM core paths against the API @backend", () => {
     }
     const response = await newPage.goto("/auswertung/tickets");
     expect(response?.status()).toBe(404);
-    await expect(newPage.getByText(/404|nicht gefunden|could not be found/i)).toBeVisible({ timeout: 15_000 });
+    // Next.js renders "404" (h1) and "This page could not be found." (h2): both match, so
+    // take the first hit instead of a strict single locator.
+    await expect(newPage.getByText(/404|nicht gefunden|could not be found/i).first()).toBeVisible({ timeout: 15_000 });
     await newPage.close();
   });
 });

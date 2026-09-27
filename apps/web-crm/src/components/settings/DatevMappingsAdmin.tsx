@@ -228,7 +228,7 @@ export function DatevMappingsAdmin({
       ) : null}
 
       <section className={ui.card}>
-        <h2 className={ui.h2}>{t("table.title")}</h2>
+        <h2 id="datev-mappings-title" className={ui.h2}>{t("table.title")}</h2>
         {rows.length === 0 ? (
           <p className={ui.help}>{t("table.empty")}</p>
         ) : (
@@ -326,7 +326,7 @@ export function DatevMappingsAdmin({
 
       {canManage ? (
         <section className={`${ui.card} ${ui.sectionGap}`}>
-          <h2 className={ui.h2}>{t("import.title")}</h2>
+          <h2 id="datev-import-title" className={ui.h2}>{t("import.title")}</h2>
           <p className={ui.help}>{t("import.hint")}</p>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="flex flex-col gap-1">
@@ -417,7 +417,7 @@ export function DatevMappingsAdmin({
       ) : null}
 
       <section className={`${ui.card} ${ui.sectionGap}`}>
-        <h2 className={ui.h2}>{t("report.title")}</h2>
+        <h2 id="datev-report-title" className={ui.h2}>{t("report.title")}</h2>
         <p className={ui.help}>{t("report.hint")}</p>
         <form onSubmit={(e) => void loadReport(e)} className="grid gap-3 sm:grid-cols-4">
           <label className="flex flex-col gap-1">

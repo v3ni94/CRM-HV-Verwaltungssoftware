@@ -89,6 +89,20 @@ class ReceivableRulesConfig(BaseModel):
     payment_interval: Literal["monthly", "quarterly", "semiannual", "annual"] | None = None
 
 
+class SignatureTemplate(BaseModel):
+    """E-Mail-Signaturvorlage des Mandanten (operator 27.09.2026). Platzhalter ``{name}``,
+    ``{position}``, ``{phone}``, ``{mobile}``, ``{email}``, ``{company}``, ``{street}``,
+    ``{postal_code}``, ``{city}``, ``{register}``, ``{website}``. ``None`` bedeutet Standard
+    aus den Firmendaten (``mhvp.communication.signatures``)."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    text: str | None = Field(default=None, max_length=4000)
+    html: str | None = Field(default=None, max_length=20000)
+    # Öffentlich erreichbare Logo-URL für die HTML-Signatur (höchstens 180 px breit gerendert).
+    logo_url: str | None = Field(default=None, max_length=500, pattern=r"^https://")
+
+
 class TenantSettingsOut(BaseModel):
     tenant_id: uuid.UUID
     company: CompanyData
@@ -109,6 +123,9 @@ class TenantSettingsOut(BaseModel):
     mail_approval_mode: str = "external_only"
     # M13-01 to M13-03: Sollstellungsregeln je Mandant (Standard aus).
     receivable_rules: ReceivableRulesConfig = Field(default_factory=ReceivableRulesConfig)
+    # E-Mail-Signatur (operator 27.09.2026): Vorlage und manuell angelegte Positionen.
+    signature_template: SignatureTemplate = Field(default_factory=SignatureTemplate)
+    position_catalogue_extra: list[str] = Field(default_factory=list)
     version: int
 
 
@@ -124,6 +141,18 @@ class TenantSettingsPatch(BaseModel):
     resolution_kinds: ResolutionKindsConfig | None = None
     mail_approval_mode: str | None = Field(default=None, pattern="^(all|external_only|off)$")
     receivable_rules: ReceivableRulesConfig | None = None
+    signature_template: SignatureTemplate | None = None
+    position_catalogue_extra: list[str] | None = Field(default=None, max_length=100)
+
+    @field_validator("position_catalogue_extra")
+    @classmethod
+    def _positions(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        cleaned = [" ".join(v.split()) for v in value]
+        if any(not v or len(v) > 120 for v in cleaned):
+            raise ValueError("Positionen müssen 1 bis 120 Zeichen lang sein.")
+        return list(dict.fromkeys(cleaned))
 
 
 def _mask(value: str | None) -> str | None:
@@ -238,6 +267,9 @@ class MemberOut(BaseModel):
     contact_id: uuid.UUID | None = None
     last_login_at: datetime | None = None
     mobile_phone: str | None = None
+    # E-Mail-Signatur (operator 27.09.2026): Position (Freitext, Katalog) und Durchwahl.
+    position: str | None = None
+    phone: str | None = None
     portal_access: str | None = None
     portal_access_reason: str | None = None
     # M20-03: Ticketantworten dieses Mitglieds brauchen die Freigabe einer zweiten Person.
@@ -271,6 +303,27 @@ class MemberMobilePhone(BaseModel):
     mobile_phone: str | None = Field(
         default=None, min_length=3, max_length=40, pattern=r"^\+?[0-9 ()/-]+$"
     )
+
+
+class MemberPosition(BaseModel):
+    """Position und Durchwahl für die E-Mail-Signatur (operator 27.09.2026). Die Position ist
+    Freitext; Katalogwerte (``mhvp.communication.signatures.POSITION_CATALOGUE`` plus die
+    Mandantenliste) sind Vorschläge. ``None`` löscht den jeweiligen Wert."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    position: str | None = Field(default=None, max_length=120)
+    phone: str | None = Field(
+        default=None, min_length=3, max_length=40, pattern=r"^\+?[0-9 ()/-]+$"
+    )
+
+    @field_validator("position")
+    @classmethod
+    def _trim(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = " ".join(value.split())
+        return cleaned or None
 
 
 class MemberReplyApproval(BaseModel):

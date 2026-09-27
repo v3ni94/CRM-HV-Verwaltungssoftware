@@ -23,9 +23,22 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^mail\/messages\/count$/ },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/thread$`) },
+  // Zuordnungsprüfung mit Rückfrage (Betreiber 27.09.2026): Kontakt, Objekt, Einheit je Mail und Ticket.
+  { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/assignment-review$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/assignment-review/decide$`) },
+  { method: "GET", pattern: /^mail\/assignment-reviews\/open$/ },
+  { method: "GET", pattern: new RegExp(`^tickets/${ID}/assignment-review$`) },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/assignment-review/decide$`) },
+  { method: "GET", pattern: /^tickets\/assignment-reviews\/open$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}$`) },
   { method: "POST", pattern: /^mail\/messages\/bulk$/ },
   { method: "PATCH", pattern: new RegExp(`^mail/messages/${ID}/draft$`) },
+  // Anhänge am Antwortentwurf (operator 27.09.2026): Liste, DMS-Verweis, Upload, Entfernen, Suche.
+  { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/attachments$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/attachments$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/attachments/upload$`) },
+  { method: "DELETE", pattern: new RegExp(`^mail/messages/${ID}/attachments/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/attachment-candidates$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/(reply-draft|submit|approve|reject|ticket|forward-invoice)$`) },
   // Rechnung aus E-Mail-Anhang erfassen (M14 KI-Extraktion).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/attachments/${ID}/invoice-extraction$`) },
@@ -680,7 +693,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
 const MULTIPART = new RegExp(
-  `^(documents|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|imports/immoware24/vollimport(/vorpruefung)?|letting/listings/${ID}/images|metering/assignments-import/(preview|apply)|metering/connections/${ID}/heiwako-import/preview)$`,
+  `^(documents|mail/messages/${ID}/attachments/upload|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|imports/immoware24/vollimport(/vorpruefung)?|letting/listings/${ID}/images|metering/assignments-import/(preview|apply)|metering/connections/${ID}/heiwako-import/preview)$`,
 );
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;

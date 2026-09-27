@@ -70,7 +70,7 @@ export function PortalRolePermissions({
 
   return (
     <section className={ui.card}>
-      <h2 className={ui.h2}>Portalrechte je Rolle</h2>
+      <h2 id="portal-role-permissions-title" className={ui.h2}>Portalrechte je Rolle</h2>
       <p className="mt-1 text-sm text-muted">
         Jede Mitarbeiterin und jeder Mitarbeiter erhält einen Portalzugang für den gesamten
         Mandanten. Diese Matrix legt fest, welche Portalfunktionen die jeweilige CRM-Rolle dort

@@ -20,34 +20,41 @@ export function SuggestionCard({
 }) {
   const t = useTranslations("Mail.suggestion");
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const recompute = async () => {
     setBusy(true);
+    setError(null);
     const res = await bff<Message>(`/api/bff/mail/messages/${message.id}/suggest`, { method: "POST" });
     setBusy(false);
     if (res.ok) onUpdated(res.data);
+    else setError(res.message);
   };
 
   const sendReplyDraft = async () => {
     if (!message.suggestion.reply_draft) return;
     setBusy(true);
+    setError(null);
     const res = await bff<Message>(`/api/bff/mail/messages/${message.id}/reply-draft`, {
       method: "POST",
       body: JSON.stringify({ body: message.suggestion.reply_draft }),
     });
     setBusy(false);
     if (res.ok) onDraftCreated(res.data);
+    else setError(res.message);
   };
 
   const applyPlaybook = async () => {
     if (!message.suggestion.playbook_id) return;
     setBusy(true);
+    setError(null);
     const res = await bff<Message>(`/api/bff/mail/messages/${message.id}/apply-playbook`, {
       method: "POST",
       body: JSON.stringify({ playbook_id: message.suggestion.playbook_id }),
     });
     setBusy(false);
     if (res.ok) onDraftCreated(res.data);
+    else setError(res.message);
   };
 
   const status = message.suggestion_status;
@@ -61,6 +68,11 @@ export function SuggestionCard({
         </button>
       </div>
 
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
       {status === "none" || status === "pending" ? <p className="text-xs text-muted">{t(`status.${status}`)}</p> : null}
       {status === "failed" || status === "skipped" ? (
         <p className="text-xs text-muted">{t(`status.${status}`, { reason: message.suggestion.reason || "" })}</p>

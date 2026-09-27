@@ -49,7 +49,7 @@ export function TelephonySettings({ initial, canManage }: { initial: TelephonySe
 
   return (
     <form onSubmit={submit} className={`${ui.card} flex flex-col gap-3`}>
-      <h2 className={ui.h2}>{t("title")}</h2>
+      <h2 id="telephony-settings-title" className={ui.h2}>{t("title")}</h2>
       <p className={ui.help}>{t("intro")}</p>
       <p className="text-sm">
         <span className="text-muted">{t("endpoint")}</span>{" "}

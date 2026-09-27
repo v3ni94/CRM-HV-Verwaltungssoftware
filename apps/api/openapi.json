@@ -1954,6 +1954,47 @@
         "title": "AssigneeIn",
         "type": "object"
       },
+      "AssignmentDecideIn": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Kandidat (aus der Liste oder manuell gewählt); ohne Angabe bei accept der erste Vorschlag.",
+            "title": "Candidate Id"
+          },
+          "decision": {
+            "enum": [
+              "accept",
+              "reject"
+            ],
+            "title": "Decision",
+            "type": "string"
+          },
+          "dimension": {
+            "enum": [
+              "contact",
+              "property",
+              "unit"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension",
+          "decision"
+        ],
+        "title": "AssignmentDecideIn",
+        "type": "object"
+      },
       "AssignmentIn": {
         "additionalProperties": false,
         "properties": {
@@ -4300,6 +4341,32 @@
           "file"
         ],
         "title": "Body_upload_api_v1_portal_uploads_post",
+        "type": "object"
+      },
+      "Body_upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "required": [
+          "file"
+        ],
+        "title": "Body_upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post",
         "type": "object"
       },
       "Body_upload_document_api_v1_handover_protocols__protocol_id__documents_post": {
@@ -15804,6 +15871,21 @@
         "title": "DocumentSource",
         "type": "string"
       },
+      "DraftAttachmentIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id"
+        ],
+        "title": "DraftAttachmentIn",
+        "type": "object"
+      },
       "DueDayRule": {
         "enum": [
           "day",
@@ -17924,6 +18006,20 @@
           "last_synced_booking_date"
         ],
         "title": "FinTsAccountOut",
+        "type": "object"
+      },
+      "FinTsConfigOut": {
+        "description": "Whether the FinTS product registration (``MHVP_FINTS_PRODUCT_ID``) is set. Without it\nthe UI shows the hint of ``MHVP-BANK-0007`` instead of the connect button.",
+        "properties": {
+          "configured": {
+            "title": "Configured",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "configured"
+        ],
+        "title": "FinTsConfigOut",
         "type": "object"
       },
       "FinTsConnectionIn": {
@@ -26270,6 +26366,22 @@
             ],
             "title": "Body"
           },
+          "cc_addresses": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "email",
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cc Addresses"
+          },
           "subject": {
             "anyOf": [
               {
@@ -26407,6 +26519,17 @@
             ],
             "title": "Imap Port"
           },
+          "is_collective": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Collective"
+          },
           "kind": {
             "default": "imap",
             "pattern": "^(imap|gmail)$",
@@ -26517,6 +26640,17 @@
               }
             ],
             "title": "Enabled"
+          },
+          "is_collective": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Collective"
           },
           "is_default": {
             "anyOf": [
@@ -28158,6 +28292,17 @@
             ],
             "title": "Mobile Phone"
           },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
           "portal_access": {
             "anyOf": [
               {
@@ -28179,6 +28324,17 @@
               }
             ],
             "title": "Portal Access Reason"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
           },
           "reply_approval_reason": {
             "anyOf": [
@@ -28234,6 +28390,40 @@
           "roles"
         ],
         "title": "MemberOut",
+        "type": "object"
+      },
+      "MemberPosition": {
+        "additionalProperties": false,
+        "description": "Position und Durchwahl für die E-Mail-Signatur (operator 27.09.2026). Die Position ist\nFreitext; Katalogwerte (``mhvp.communication.signatures.POSITION_CATALOGUE`` plus die\nMandantenliste) sind Vorschläge. ``None`` löscht den jeweiligen Wert.",
+        "properties": {
+          "phone": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "minLength": 3,
+                "pattern": "^\\+?[0-9 ()/-]+$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "title": "MemberPosition",
         "type": "object"
       },
       "MemberReplyApproval": {
@@ -41477,6 +41667,133 @@
         "title": "SignatureIn",
         "type": "object"
       },
+      "SignaturePreviewOut": {
+        "properties": {
+          "html": {
+            "title": "Html",
+            "type": "string"
+          },
+          "membership_id": {
+            "format": "uuid",
+            "title": "Membership Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "required": [
+          "membership_id",
+          "text",
+          "html"
+        ],
+        "title": "SignaturePreviewOut",
+        "type": "object"
+      },
+      "SignatureProfileOut": {
+        "description": "Eigene Signaturdaten und der Positionskatalog für das Dropdown mit Freitext.",
+        "properties": {
+          "catalogue": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Catalogue",
+            "type": "array"
+          },
+          "membership_id": {
+            "format": "uuid",
+            "title": "Membership Id",
+            "type": "string"
+          },
+          "mobile_phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mobile Phone"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "position": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position"
+          }
+        },
+        "required": [
+          "membership_id",
+          "position",
+          "phone",
+          "mobile_phone"
+        ],
+        "title": "SignatureProfileOut",
+        "type": "object"
+      },
+      "SignatureTemplate": {
+        "additionalProperties": false,
+        "description": "E-Mail-Signaturvorlage des Mandanten (operator 27.09.2026). Platzhalter ``{name}``,\n``{position}``, ``{phone}``, ``{mobile}``, ``{email}``, ``{company}``, ``{street}``,\n``{postal_code}``, ``{city}``, ``{register}``, ``{website}``. ``None`` bedeutet Standard\naus den Firmendaten (``mhvp.communication.signatures``).",
+        "properties": {
+          "html": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Html"
+          },
+          "logo_url": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "pattern": "^https://",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Logo Url"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "SignatureTemplate",
+        "type": "object"
+      },
       "SlaApprovalIn": {
         "additionalProperties": false,
         "description": "Freigabe durch die Geschäftsführung (M19-01): Bestätigung ist Pflicht, Vermerk optional.",
@@ -43459,11 +43776,21 @@
             "title": "Metering Module Enabled",
             "type": "boolean"
           },
+          "position_catalogue_extra": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Position Catalogue Extra",
+            "type": "array"
+          },
           "receivable_rules": {
             "$ref": "#/components/schemas/ReceivableRulesConfig"
           },
           "resolution_kinds": {
             "$ref": "#/components/schemas/ResolutionKindsConfig"
+          },
+          "signature_template": {
+            "$ref": "#/components/schemas/SignatureTemplate"
           },
           "sources": {
             "additionalProperties": {
@@ -43568,6 +43895,21 @@
             ],
             "title": "Metering Module Enabled"
           },
+          "position_catalogue_extra": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Position Catalogue Extra"
+          },
           "receivable_rules": {
             "anyOf": [
               {
@@ -43582,6 +43924,16 @@
             "anyOf": [
               {
                 "$ref": "#/components/schemas/ResolutionKindsConfig"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "signature_template": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SignatureTemplate"
               },
               {
                 "type": "null"
@@ -59130,6 +59482,27 @@
           }
         },
         "summary": "Konto einem Objekt/Rechtsträger zuordnen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/fints/config": {
+      "get": {
+        "operationId": "config_api_v1_banking_fints_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FinTsConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "FinTS-Einrichtungsstatus (Produktregistrierung vorhanden)",
         "tags": [
           "Bank"
         ]
@@ -80662,6 +81035,56 @@
         ]
       }
     },
+    "/api/v1/mail/assignment-reviews/open": {
+      "get": {
+        "operationId": "open_mail_reviews_api_v1_mail_assignment_reviews_open_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Open Mail Reviews Api V1 Mail Assignment Reviews Open Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Offene Rückfragen zur Zuordnung (Mail)",
+        "tags": [
+          "Zuordnungsprüfung"
+        ]
+      }
+    },
     "/api/v1/mail/call-assistant": {
       "get": {
         "operationId": "get_call_assistant_api_v1_mail_call_assistant_get",
@@ -81278,6 +81701,32 @@
         ]
       }
     },
+    "/api/v1/mail/maintenance/link-duplicates": {
+      "post": {
+        "description": "Rückwirkende Duplikaterkennung (Betreiber 27.09.2026) für Mails, die vor dieser Regel\nin mehrere eigene Postfächer gelangt sind: gleiche Message-ID oder gleicher Absender,\nBetreff, Zeitstempel und Text-Hash in verschiedenen Postfächern werden verknüpft, die\nKopie im persönlichen Postfach führt, Ticket und Thread werden geteilt. Nichts wird\ngelöscht; Kopien mit verschiedenen Tickets bleiben unverändert (``ticket_conflicts``).\nIdempotent, mehrfach ausführbar.",
+        "operationId": "link_duplicates_api_v1_mail_maintenance_link_duplicates_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Link Duplicates Api V1 Mail Maintenance Link Duplicates Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Wartung: vorhandene Duplikate über mehrere Postfächer verknüpfen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/messages": {
       "get": {
         "description": "Rows carry ``body_preview`` (200 characters) instead of ``body`` and ``body_html``\n(Review 26.09.2026, M3); ``GET /mail/messages/{id}`` delivers the full text.\n\nPaginierung (Betreibermeldung 27.09.2026): die Antwort bleibt eine Liste (bestehende\nAufrufer, ``limit`` weiter unterstützt); Gesamtzahl und Seite stehen in den Kopfzeilen\n``X-Total-Count``, ``X-Page`` und ``X-Page-Size``. Stabile Sortierung\n``received_at desc, id`` (Seitenwechsel liefert keine Duplikate/Lücken).",
@@ -81392,6 +81841,18 @@
               "default": false,
               "description": "Erledigte Nachrichten zeigen (Status done oder verknüpftes Ticket done, closed, rejected); gilt nur ohne status-Filter",
               "title": "Include Closed",
+              "type": "boolean"
+            }
+          },
+          {
+            "description": "Duplikate derselben Mail aus weiteren eigenen Postfächern zeigen (sonst nur die führende Kopie, außer bei Filter nach mailbox_id)",
+            "in": "query",
+            "name": "include_duplicates",
+            "required": false,
+            "schema": {
+              "default": false,
+              "description": "Duplikate derselben Mail aus weiteren eigenen Postfächern zeigen (sonst nur die führende Kopie, außer bei Filter nach mailbox_id)",
+              "title": "Include Duplicates",
               "type": "boolean"
             }
           },
@@ -81976,6 +82437,335 @@
         ]
       }
     },
+    "/api/v1/mail/messages/{message_id}/assignment-review": {
+      "get": {
+        "operationId": "get_message_review_api_v1_mail_messages__message_id__assignment_review_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Get Message Review Api V1 Mail Messages  Message Id  Assignment Review Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuordnungsprüfung einer Mail (Kontakt, Objekt)",
+        "tags": [
+          "Zuordnungsprüfung"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/assignment-review/decide": {
+      "post": {
+        "operationId": "decide_message_review_api_v1_mail_messages__message_id__assignment_review_decide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentDecideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Decide Message Review Api V1 Mail Messages  Message Id  Assignment Review Decide Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rückfrage zur Zuordnung beantworten (Mail)",
+        "tags": [
+          "Zuordnungsprüfung"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/attachment-candidates": {
+      "get": {
+        "description": "Suche nach Titel oder Dateiname, höchstens 20 Treffer, nur Metadaten; der\nRechtsträgerbereich der Mitgliedschaft (A37) gilt unverändert.",
+        "operationId": "attachment_candidates_api_v1_mail_messages__message_id__attachment_candidates_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": true,
+            "schema": {
+              "maxLength": 200,
+              "minLength": 2,
+              "title": "Q",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Attachment Candidates Api V1 Mail Messages  Message Id  Attachment Candidates Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dokumente des Mandanten als Anhang suchen (DMS)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/attachments": {
+      "get": {
+        "operationId": "list_attachments_api_v1_mail_messages__message_id__attachments_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Attachments Api V1 Mail Messages  Message Id  Attachments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anhänge einer Nachricht",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "post": {
+        "operationId": "add_attachment_api_v1_mail_messages__message_id__attachments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DraftAttachmentIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Add Attachment Api V1 Mail Messages  Message Id  Attachments Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "DMS-Dokument als Anhang des Entwurfs verknüpfen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/attachments/upload": {
+      "post": {
+        "description": "Gleiche Prüfungen wie ``POST /documents`` (Größe, zulässiger Typ, Inhalt passt zum\nTyp, Virenscan in ``store_document``); die Datei wird als Dokument des Mandanten abgelegt\nund mit dem Vorgang des Entwurfs verknüpft, falls vorhanden.",
+        "operationId": "upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_upload_attachment_api_v1_mail_messages__message_id__attachments_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Upload Attachment Api V1 Mail Messages  Message Id  Attachments Upload Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Datei vom lokalen Rechner als Anhang hochladen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/messages/{message_id}/attachments/{attachment_id}/invoice-extraction": {
       "post": {
         "description": "Starts extract_invoice on an existing mail attachment document (rule 0.1.6: proposal\nonly, the invoice itself is created only after a confirmed review, see mhvp.ai.imports).",
@@ -82027,6 +82817,64 @@
           }
         },
         "summary": "Anhang als Rechnung erfassen (KI-Vorschlag)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/attachments/{document_id}": {
+      "delete": {
+        "operationId": "remove_attachment_api_v1_mail_messages__message_id__attachments__document_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Remove Attachment Api V1 Mail Messages  Message Id  Attachments  Document Id  Delete",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anhang vom Entwurf entfernen (Dokument bleibt erhalten)",
         "tags": [
           "Postfach"
         ]
@@ -82889,6 +83737,116 @@
           }
         },
         "summary": "Playbook ändern oder freigeben",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/signature/preview": {
+      "get": {
+        "operationId": "preview_signature_api_v1_mail_signature_preview_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "membership_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Membership Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignaturePreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschau der E-Mail-Signatur (Text und HTML)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/signature/profile": {
+      "get": {
+        "operationId": "get_signature_profile_api_v1_mail_signature_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Position und Durchwahl für die Signatur",
+        "tags": [
+          "Postfach"
+        ]
+      },
+      "put": {
+        "operationId": "put_signature_profile_api_v1_mail_signature_profile_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberPosition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SignatureProfileOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigene Position und Durchwahl setzen",
         "tags": [
           "Postfach"
         ]
@@ -100103,6 +101061,52 @@
         ]
       }
     },
+    "/api/v1/tenant/members/{membership_id}/position": {
+      "put": {
+        "operationId": "put_member_position_api_v1_tenant_members__membership_id__position_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "membership_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Membership Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MemberPosition"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Position und Durchwahl eines Mitglieds setzen (E-Mail-Signatur)",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/members/{membership_id}/reply-approval": {
       "put": {
         "description": "Betreiberentscheidung 26.09.2026: Ticketantworten von Mitgliedern mit Kennzeichen\n(Azubi, neuer Mitarbeiter, optional befristet) gehen als Vorlage an die Freigabeberechtigten;\nalle anderen Mitglieder mit ``communication:approve`` senden direkt. Jede Änderung wird als\n``membership.reply_approval_changed`` protokolliert.",
@@ -100343,6 +101347,31 @@
           }
         },
         "summary": "Portalrechte auf bestehende Zugänge anwenden",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/position-catalogue": {
+      "get": {
+        "operationId": "get_position_catalogue_api_v1_tenant_position_catalogue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Position Catalogue Api V1 Tenant Position Catalogue Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Positionen für die E-Mail-Signatur",
         "tags": [
           "Mandant"
         ]
@@ -101500,6 +102529,56 @@
         ]
       }
     },
+    "/api/v1/tickets/assignment-reviews/open": {
+      "get": {
+        "operationId": "open_ticket_reviews_api_v1_tickets_assignment_reviews_open_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Open Ticket Reviews Api V1 Tickets Assignment Reviews Open Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Offene Rückfragen zur Zuordnung (Tickets)",
+        "tags": [
+          "Zuordnungsprüfung"
+        ]
+      }
+    },
     "/api/v1/tickets/board/policy": {
       "get": {
         "operationId": "read_policy_api_v1_tickets_board_policy_get",
@@ -102493,6 +103572,112 @@
         "summary": "Zuweiser entfernen",
         "tags": [
           "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/assignment-review": {
+      "get": {
+        "operationId": "get_ticket_review_api_v1_tickets__ticket_id__assignment_review_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Get Ticket Review Api V1 Tickets  Ticket Id  Assignment Review Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zuordnungsprüfung eines Tickets (Kontakt, Objekt, Einheit)",
+        "tags": [
+          "Zuordnungsprüfung"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/assignment-review/decide": {
+      "post": {
+        "operationId": "decide_ticket_review_api_v1_tickets__ticket_id__assignment_review_decide_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AssignmentDecideIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Decide Ticket Review Api V1 Tickets  Ticket Id  Assignment Review Decide Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rückfrage zur Zuordnung beantworten (Ticket)",
+        "tags": [
+          "Zuordnungsprüfung"
         ]
       }
     },

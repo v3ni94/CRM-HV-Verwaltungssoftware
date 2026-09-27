@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
+import { SettingsSearch } from "@/components/settings/SettingsSearch";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -90,9 +91,12 @@ export default async function SettingsPage() {
     { href: "/plattform", title: t("platform.title"), description: t("platform.description"), show: Boolean(me.data?.is_platform_admin) },
   ].filter((c) => c.show);
 
+  const permissions = me.data?.permissions ?? [];
+
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
+      <SettingsSearch permissions={permissions} />
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {cards.map((c) => (
           <Link key={c.href} href={c.href} className={ui.cardLink}>

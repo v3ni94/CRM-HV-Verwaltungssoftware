@@ -66,6 +66,13 @@ export type Message = {
   archive_error?: string | null;
   archive_attempted_at?: string | null;
   archived_at?: string | null;
+  // "In Bearbeitung" (operator 27.09.2026): answered, commented or assigned; the handler is
+  // the ticket assignee, otherwise the user of the latest reply or comment.
+  in_progress?: boolean;
+  handler_user_id?: string | null;
+  handler_display_name?: string | null;
+  // Copy of the same mail from another own mailbox, linked to the leading copy.
+  duplicate_of_id?: string | null;
 };
 
 export type Mailbox = { id: string; address: string; archive_scope_missing?: boolean };

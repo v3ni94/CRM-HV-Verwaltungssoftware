@@ -10,6 +10,7 @@ from mhvp.banking import models as banking_models
 from mhvp.billing import advance_rule as billing_advance_rule
 from mhvp.billing import models as billing_models
 from mhvp.billing import owner_statement as billing_owner_statement
+from mhvp.communication import assignment_review as communication_assignment_review
 from mhvp.communication import models as communication_models
 from mhvp.communication import sync_retry as communication_sync_retry
 from mhvp.communication import telephony as communication_telephony
@@ -54,6 +55,7 @@ __all__ = [
     "billing_advance_rule",
     "billing_models",
     "billing_owner_statement",
+    "communication_assignment_review",
     "communication_models",
     "communication_sync_retry",
     "communication_telephony",

@@ -164,7 +164,7 @@ export function WebhookSubscriptionsAdmin({
       )}
       {created ? (
         <div className={`${ui.card} flex flex-col gap-2`} data-testid="webhook-secret">
-          <h2 className={ui.h2}>{t("secret.title")}</h2>
+          <h2 id="webhook-secret-title" className={ui.h2}>{t("secret.title")}</h2>
           <p className={ui.help}>{t("secret.hint")}</p>
           <code className="break-all rounded bg-surface px-2 py-1 text-xs">{created.secret}</code>
           <div className={ui.formActions}>
@@ -407,7 +407,7 @@ function CreateForm({
 
   return (
     <form onSubmit={submit} className={`${ui.card} flex flex-col gap-3`} data-testid="webhook-create">
-      <h2 className={ui.h2}>{t("newSubscription")}</h2>
+      <h2 id="webhook-new-title" className={ui.h2}>{t("newSubscription")}</h2>
       <div>
         <label htmlFor="webhook-url" className={ui.label}>
           {t("form.url")}

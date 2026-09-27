@@ -292,7 +292,7 @@ export function RetentionSettings({
         </table>
       </section>
       <section className={`${ui.card} flex flex-col gap-3`}>
-        <h2 className="text-sm font-semibold">{t("mappingTitle")}</h2>
+        <h2 id="retention-mapping-title" className="text-sm font-semibold">{t("mappingTitle")}</h2>
         <p className={ui.help}>{t("mappingHint")}</p>
         <table className={ui.table} data-testid="retention-mapping">
           <thead>
