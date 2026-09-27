@@ -119,7 +119,7 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         Index("ix_message_header_id", "tenant_id", "header_message_id"),
         Index("ix_message_gmail_thread", "tenant_id", "gmail_thread_id"),
-        # Open Gmail archive jobs for the retry beat (migration 0158).
+        # Open Gmail archive jobs for the retry beat (migration 0160).
         Index(
             "ix_message_archive_open",
             "tenant_id",

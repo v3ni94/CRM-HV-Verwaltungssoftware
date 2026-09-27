@@ -5,7 +5,7 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
-## 1.31.0 (27.09.2026) Betreiberentscheidungen vom 27.09.2026: Gmail-Archivierung repariert, Objektdeaktivierung, Kalender, Messdienstleister Abgleich, Design, Statusseite, Virenscan
+## 1.34.0 (27.09.2026) Betreiberentscheidungen vom 27.09.2026: Gmail-Archivierung repariert, Objektdeaktivierung, Kalender, Messdienstleister Abgleich, Design, Statusseite, Virenscan
 
 - Tickets und Objekte: Serverfehler auf /tickets behoben (Helfer asAttention lag in einem Client-Modul und wurde auf dem Server aufgerufen), API-Ausfälle erscheinen auf der Ticketliste als Hinweis statt als Absturz, Übersetzungskonflikt in der Objektliste bereinigt, neue Prüfung gegen Aufrufe von Client-Exporten aus Server-Komponenten in make lint (Betreibermeldung 27.09.2026).
 - Kontakte: Rollenfilter (Eigentümer, Mieter, Verwalter usw.) lieferte einen internen Fehler und keine Kontakte, Abfrage korrigiert (Betreibermeldung 27.09.2026).
@@ -14,18 +14,47 @@ unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge ob
 - Befehlspalette (Strg+K, Cmd+K, Schaltfläche in der Kopfzeile) ersetzt die globale Suche: Datensätze, Aktionen und Navigation in einem Eingabefeld, gefiltert nach Berechtigungen, mit zuletzt geöffneten Datensätzen je Benutzer; neuer Statuschip mit Symbol, Klartext und Erklärung in Ticketliste, Postfach, Mahn- und Lastschriftläufen, Freigabestufen und Zählerzuordnungen.
 - Startseite als persönlicher Arbeitsplatz (Designvorschlag 2): Spalten Heute, Meine Tickets und Freigaben, Kennzahlen des Mandanten als kompakte Leiste; Benachrichtigungen springen direkt ins Ticket oder in den Kalender.
 - Anmeldung: Ziel nach der Anmeldung bleibt erhalten (auch über Zwei-Faktor-Schritt und Mandantenwahl).
-- KI: HNSW-Index für Einbettungen, Einbettungsstand im CRM sichtbar, Aufbewahrung der Lernbeispiele 24 Monate mit Mandantenschalter (Migration 0154).
+- KI: HNSW-Index für Einbettungen, Einbettungsstand im CRM sichtbar, Aufbewahrung der Lernbeispiele 24 Monate mit Mandantenschalter (Migration 0156).
 - Betrieb: WAL-Archivierung und Basissicherung nach Hetzner S3 mit age-Verschlüsselung, Playwright-Kernpfade gegen das Backend erweitert.
 - Stammdaten: Objektart als Katalog-Auswahl (aktive Einträge, inaktiver Bestandswert bleibt sichtbar); Zusatzfelder werden beim Speichern geprüft (Gültigkeit je Verwaltungsart, Pflicht, Standardwert bei Anlage, Min/Max, Auswahl, Eindeutigkeit je Mandant) mit Feldfehlern; Vertragsliste filtert per URL nach Objekt und Einheit, Ticketliste nach Vertrag.
 - Zustellregel für Bevollmächtigte gilt jetzt auch für Mahnschreiben, Betriebskostenabrechnungsschreiben, Einzelbriefe und Einzelzustellungen (Vorgabe beide Empfänger, Zeile "für <Vollmachtgeber>" beim Bevollmächtigten); Mahnlauf-Vorschau warnt, wenn eine Mahnung nur den Bevollmächtigten erreicht (M23-07, mit Rechtsvorbehalt).
-- Kalender: Versammlungstermine verlinken auf die Versammlung im WEG-Bereich, Erinnerungscodes erzeugen je Code und Termin genau eine Benachrichtigung mit Sprung zur Quelle, manuelle Termine können sich wöchentlich, monatlich oder jährlich bis zu einem Enddatum wiederholen (Anzeige in Kalender und Fristenliste ohne Speicherung der Einzeltermine), Tickets erhalten eine optionale Fälligkeit im Formular, im Detail und in der Liste (Migration 0155).
-- Messdienstleister: Ordnungsbegriffsabgleich als eigener Ablauf (Vorschau intern/extern, bewusste Übermittlung, Bearbeitungsstatus beim Anbieter, Ergebnisabruf als Verifikationsbasis der Zuordnung; ista sendSetup, Migration 0156); Audit-Änderungsprotokoll für Vertragsversionen und Gebäude.
+- Kalender: Versammlungstermine verlinken auf die Versammlung im WEG-Bereich, Erinnerungscodes erzeugen je Code und Termin genau eine Benachrichtigung mit Sprung zur Quelle, manuelle Termine können sich wöchentlich, monatlich oder jährlich bis zu einem Enddatum wiederholen (Anzeige in Kalender und Fristenliste ohne Speicherung der Einzeltermine), Tickets erhalten eine optionale Fälligkeit im Formular, im Detail und in der Liste (Migration 0159).
+- Messdienstleister: Ordnungsbegriffsabgleich als eigener Ablauf (Vorschau intern/extern, bewusste Übermittlung, Bearbeitungsstatus beim Anbieter, Ergebnisabruf als Verifikationsbasis der Zuordnung; ista sendSetup, Migration 0158); Audit-Änderungsprotokoll für Vertragsversionen und Gebäude.
 - Startseite leitet direkt weiter (angemeldet zum Dashboard, sonst zur Anmeldung), Loginseite optisch überarbeitet mit Claim und Hilfetext, Dashboard begrüßt persönlich mit Vornamen und tageszeitabhängigem, täglich wechselndem Text.
 - Ruhiges Typografie- und Farbsystem (Designvorschlag 4): Schrift Inter über next/font, feste Schriftskala, 8-Punkt-Abstandsraster, Karten mit Haarlinien statt Schatten, Farbe nur als Bedeutung mit kalibriertem Dunkelmodus, einheitlicher Fokusring, Tabellenziffern; gemeinsame Tokens in packages/ui, Dokumentation mit Kontrasttabelle in docs/design/tokens.md (neutrale Werte bis zur Freigabe der Unternehmensfarben M1-08).
 - Postfach: Reiter und Filterleiste (Status, Erledigte, Postfach, Suche, Aktualisieren) sauber in zwei Zeilen angeordnet, Filterfelder mit fester Breite.
 - CRM lädt die Schrift Inter über next/font im Grundlayout.
-- Objekte: Verwaltung beenden mit Kündigendem, Kündigungsdatum, Verwaltungsende, Nachfolgern und Kündigungsschreiben; deaktivierte Objekte verschwinden aus der Objektliste, der Superadmin kann sie einblenden und wieder aktivieren (Regel M4-05, Migration 0157).
+- Objekte: Verwaltung beenden mit Kündigendem, Kündigungsdatum, Verwaltungsende, Nachfolgern und Kündigungsschreiben; deaktivierte Objekte verschwinden aus der Objektliste, der Superadmin kann sie einblenden und wieder aktivieren (Regel M4-05, Migration 0159).
 - Überwachung: Uptime Kuma mit Embedded MariaDB, neuer Dienst Beszel (Hub und Agent) zeigt Auslastung von Server und Containern (CPU, RAM, Platte, Netzwerk), Statusseite und Runbook verknüpft.
+## 1.33.1 (27.09.2026) Bildpipeline für alle Uploads, Entscheidungen zu den Übergabeprotokollen
+
+- Dokumente: Jeder Upload über POST /documents läuft durch die Bildpipeline der Übergabeprotokolle (Metadaten wie EXIF und GPS entfernt, Ausrichtung angewendet, höchstens 2.000 Pixel Kantenlänge); bisher galt sie nur für Übergabe- und Portal-Uploads. Nicht dekodierbare Bilder werden unverändert gespeichert
+- Übergabeprotokolle: offene Fragen M30-02 bis M30-05 entschieden (Rechtsprüfung der Unterschriften angestoßen, keine Übernahme der U-Protokoll-Altdaten, Altanwendung bis 31.12.2026 lesend, zweiter Faktor freiwillig nach M2-01)
+## 1.33.0 (27.09.2026) Eigentümer und Mieter an die Objektübernahme übergeben
+
+- DMS und Objektübernahme: Knopf "Liste übergeben" auf der DMS-Seite eines Objekts überträgt die Einheiten mit den Namen der laufenden Eigentums- und Mietverträge als Importvorschlag an objektakte (Format Immoware24-Einheitenliste, keine Kontaktdaten, keine Beträge). Übernommen wird erst nach Prüfung im Importassistenten von objektakte; danach tragen die Eigentümer- und Mieterakten dort die Namen und Uploads aus dem CRM landen in der richtigen Akte. Neuer Endpunkt POST /integrations/objektakte/objects/{nummer}/persons-export.
+
+## 1.32.0 (27.09.2026) Upload im CRM mit Ablage über objektakte in Drive und Paperless
+
+- Dokumente: Ein im CRM hochgeladenes oder gescanntes Dokument, das genau einem Objekt zugeordnet ist (direkt, über eine Einheit oder über ein Ticket), geht an objektakte und wird dort verarbeitet und abgelegt: Drive-Struktur des Objekts mit Eigentümer- und Mieterakten und Paperless. Das CRM spiegelt solche Dokumente nicht mehr selbst nach Paperless oder Drive, damit jedes System das Dokument genau einmal hält; Original und Index bleiben im CRM. Schalter OBJEKTAKTE_UPLOAD_ENABLED (Vorgabe aus), in objektakte zusätzlich Token mit documents:write und Schalter sync.crm_uploads_enabled.
+- Dokumente: Job mhvp.objektakte.upload (jede Minute) mit den Zuständen pending, submitted, done und failed, Abfrage des Ablagestands alle 5 Minuten, Dublette in objektakte wird mit der Ablage des Originals verknüpft, 503 verschiebt ohne Fehlerzählung, "Spiegelung erneut anstoßen" setzt einen fehlgeschlagenen Upload zurück (Migration 0159).
+- DMS und Objektübernahme: Webhook document.filed mit crm_document_id verknüpft das vorhandene CRM-Dokument statt ein neues anzulegen; Drive-Datei und Paperless-ID stehen im Vermerk objektakte des Dokuments. Neuer Endpunkt GET /integrations/objektakte/documents/{id}/filing, Status meldet upload_enabled.
+- DMS: neue Seite Dokumentsuche (/dms/suche) mit Suche im Paperless-Archiv nach Volltext, Objekt und Gesellschaft, Vorschaubildern, Vorschau und Download über den Proxy der API sowie Upload mit Objekt und Einheit; die Dokumentansicht zeigt den Ablagestand über objektakte mit Sprung nach Drive und in die Paperless-Vorschau. Die Oberfläche von Paperless (dms.muellerhv.de) wird damit nur noch für die Administration gebraucht.
+- Hinweise an objektakte tragen nur Kennungen und Bezeichnungen (Titel, Einheit, Kontakt-ID, Ticketnummer, Kategorie), keine Namen und keine Kontaktdaten.
+
+## 1.31.0 (27.09.2026) DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter
+
+- DMS und Objektübernahme (M29 Stufe 4): Anbindung an die Lese-API von objektakte über die neuen Einstellungen OBJEKTAKTE_API_URL, OBJEKTAKTE_API_TOKEN, OBJEKTAKTE_WEBHOOK_SECRET und OBJEKTAKTE_TENANT (auch mit Präfix MHVP_, leer bedeutet aus). Die Seite /dms zeigt je Objekt eine Kachel mit Übernahmestatus, offenen Prüffällen, Vollständigkeit und fehlenden Dokumenten; /dms/{Nummer} zeigt fehlende Dokumente, die Dokumentliste mit Sprung nach Google Drive und in das CRM sowie das Nachholen der Dokumentverknüpfung. Neue Endpunkte unter /integrations/objektakte.
+- DMS und Objektübernahme: Webhook POST /integrations/objektakte/webhook mit HMAC-Prüfung und Idempotenz; abgelegte Dokumente werden als Dokument am Objekt angelegt und über objektakte-Kennung, Drive-Datei und Prüfsumme abgeglichen.
+- DMS und Objektübernahme: Eigentümer- und Mieterlisten aus objektakte werden als Importvorschlag mit Testlauf, Abgleich und Freigabe geführt und nie ungeprüft in die Stammdaten geschrieben (Migration 0156).
+- Dokumente (Übernahme aus dem Immoware Hub, 7.2): Paperless-Suche nach Objektnummer (genau die Nummer oder "Nummer, Zusatz", nie Teiltreffer), Gesellschaftsfilter über ein konfigurierbares Auswahlfeld in Paperless, neue Endpunkte GET /dms-documents und GET /dms-documents/companies, Filter company an den Dokumentlisten von Objekt und Ticket. Im CRM Auswahl und Spalte Gesellschaft im Dokumentbereich sowie Zuordnung der Gesellschaftsoptionen in den DMS-Einstellungen. Nur lesend, Annahme A-048.
+- Dokumente: vertauschte Fehlertexte für 502 und 503 im Dokumentbereich korrigiert.
+- Technik: Zusammenführung der Zweige claude/m29-dms-daten und claude/hub-paperless-suche auf den Stand 1.30.0, Migration der DMS-Anbindung als 0154_objektakte_dms hinter 0153 (überspringt bereits vorhandene Tabellen) eingereiht (Migrationskette linear), fehlende Typangabe in einem Gmail-Unit-Test ergänzt (mypy strict).
+
+## 1.30.1 (27.09.2026) Betrieb: Migrationssperre, Objektspeicher lokal als Standard
+
+- CI-Prüfung und Skript `scripts/check-migrations.sh`: bereits gemergte Alembic-Migrationen dürfen nicht mehr umbenannt, gelöscht oder in Revision und down_revision geändert werden. Neue Migrationen fortlaufend ab dem bisherigen Head. Runbook `docs/runbooks/migrationen.md`.
+- Objektspeicher: SeaweedFS-Container ohne Profil dauerhaft aktiv, Migrationsjob wartet auf den Dienst, S3-Variablen standardmäßig lokal. Backup des Volumes `mhvp_objectstore-data` als Vorgabe in `env.backup.example`. Runbooks und ADR 0005 ergänzt (Entscheidung 27.09.2026).
 
 ## 1.30.0 (27.09.2026) Masterprompt-Ergänzung Welle B: Inline-Bearbeitung, Objekt- und Gebäudeseiten, Kataloge, Messdienstleister Stufe 3
 

@@ -38,10 +38,15 @@ from mhvp.documents.models import (
     StorageKind,
 )
 from mhvp.documents.paperless_search import (
+    COMPANY_OPTIONS_KEY,
     PaperlessDocument,
     PaperlessSearch,
     PaperlessSearchError,
+    format_company_options,
+    parse_company_options,
+    parse_field_id,
 )
+from mhvp.handover import images
 
 router = APIRouter(tags=["Dokumente"])
 READ = require_permission("documents:read")
@@ -170,6 +175,17 @@ async def upload(
     data = await file.read(limit + 1)
     mime = (file.content_type or "application/octet-stream").split(";")[0].strip().lower()
     svc.check_upload(mime, data, limit)
+    if images.supports(mime):
+        # Photos lose metadata (EXIF, GPS, camera) and are scaled before they are stored, for
+        # every module that uploads through this endpoint (M30-04, operator 27.09.2026). An
+        # undecodable pseudo image carries no readable metadata and is stored as uploaded.
+        try:
+            data = images.sanitize_image(
+                data, mime, max_edge=request.app.state.settings.handover_image_max_edge
+            )
+            mime = images.output_mime_type(mime)
+        except images.ImageSanitizeError:
+            pass
     try:
         link_items = _LINKS.validate_json(links) if links else []
     except ValidationError as exc:
@@ -190,6 +206,7 @@ async def upload(
             category_id=category_id,
             links=[(x.entity_type, x.entity_id, x.role) for x in link_items],
             created_by=principal.user_id,
+            settings=request.app.state.settings,
         )
         await _event(session, principal, "document.created", document.id, size=document.size)
         return await _out(session, document)
@@ -573,6 +590,9 @@ async def remirror(
 ) -> s.DocumentOut:
     async with tenant_tx(request, principal) as session:
         document = await _get(session, Document, document_id)
+        from mhvp.objektakte import upload as objektakte_upload  # local: avoids an import cycle
+
+        await objektakte_upload.reset_failed(session, document.id)
         await svc.queue_mirrors(session, principal.tenant_id, document.id)
         for m in (
             await session.scalars(
@@ -698,6 +718,29 @@ def _connection_out(row: DmsConnection) -> s.DmsConnectionOut:
     )
 
 
+def _paperless_options(options: dict[str, str]) -> dict[str, str]:
+    """Validates the Paperless field ids and the company option mapping (Hub 7.2) before they
+    are stored; the mapping is kept in its normalised text form, an empty one is dropped."""
+    try:
+        for key, label in (
+            ("object_field_id", "Feld-ID Objektnummer"),
+            ("company_field_id", "Feld-ID Gesellschaft"),
+        ):
+            field_id = parse_field_id(options.get(key), label)
+            if field_id is None:
+                options.pop(key, None)
+            else:
+                options[key] = str(field_id)
+        company_options = parse_company_options(options.get(COMPANY_OPTIONS_KEY))
+    except ValueError as exc:
+        raise svc.invalid(str(exc)) from None
+    if company_options:
+        options[COMPANY_OPTIONS_KEY] = format_company_options(company_options)
+    else:
+        options.pop(COMPANY_OPTIONS_KEY, None)
+    return options
+
+
 @router.get("/dms-connections", summary="DMS-Anbindungen")
 async def list_connections(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS)
@@ -722,6 +765,9 @@ async def put_connection(
         and request.app.state.settings.env in ("staging", "prod")
     ):
         raise svc.invalid("Paperless muss per HTTPS angebunden werden.")
+    options = dict(body.options)
+    if kind is StorageKind.PAPERLESS:
+        options = _paperless_options(options)
     if kind is StorageKind.GOOGLE_DRIVE and body.enabled:
         missing = [k for k in ("root_folder_id", "client_id") if not body.options.get(k)]
         if missing:
@@ -740,7 +786,7 @@ async def put_connection(
         if row is None:
             row = DmsConnection(tenant_id=principal.tenant_id, kind=kind)
             session.add(row)
-        row.enabled, row.base_url, row.options = body.enabled, body.base_url, body.options
+        row.enabled, row.base_url, row.options = body.enabled, body.base_url, options
         if body.secret is not None:
             row.secret = body.secret
         if kind is StorageKind.PAPERLESS:
@@ -1017,14 +1063,41 @@ async def _paperless_client(session: Any) -> PaperlessSearch:
     if connection is None or not connection.base_url or not connection.secret:
         raise ProblemError(ErrorCodes.DMS_NOT_CONFIGURED)
     options = connection.options or {}
-    object_field_id = options.get("object_field_id")
-    company_field_id = options.get("company_field_id")
+    try:
+        object_field_id = parse_field_id(options.get("object_field_id"), "Feld-ID Objektnummer")
+        company_field_id = parse_field_id(options.get("company_field_id"), "Feld-ID Gesellschaft")
+        company_options = parse_company_options(options.get(COMPANY_OPTIONS_KEY))
+    except ValueError as exc:
+        # Stored before validation existed; never guess, ask for the settings to be fixed.
+        raise ProblemError(ErrorCodes.DMS_NOT_CONFIGURED, detail=str(exc)) from None
     return PaperlessSearch(
         base_url=connection.base_url,
         token=connection.secret,
-        object_field_id=int(object_field_id) if object_field_id else None,
-        company_field_id=int(company_field_id) if company_field_id else None,
+        object_field_id=object_field_id,
+        company_field_id=company_field_id,
+        company_options=company_options,
     )
+
+
+def _check_company(client: PaperlessSearch, company: str | None) -> None:
+    """A requested company option must be configured; otherwise 422 instead of an unfiltered
+    or silently empty list."""
+    if company is None:
+        return
+    if not client.company_filter_available or company not in client.company_options:
+        raise svc.invalid("Diese Gesellschaft ist für Paperless nicht eingerichtet.")
+
+
+Company = Annotated[
+    str | None,
+    Query(
+        min_length=1,
+        max_length=64,
+        description="Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies)",
+    ),
+]
+ObjectNumber = Annotated[str | None, Query(pattern=r"^[0-9]{3}$", description="Objektnummer")]
+FullText = Annotated[str | None, Query(min_length=2, max_length=200, description="Volltext")]
 
 
 def _document_out(request: Request, doc: PaperlessDocument) -> s.DmsDocumentOut:
@@ -1039,6 +1112,7 @@ def _document_out(request: Request, doc: PaperlessDocument) -> s.DmsDocumentOut:
         tags=doc.tags,
         page_count=doc.page_count,
         original_file_name=doc.original_file_name,
+        company=doc.company,
         preview_url=f"{base}?kind=preview",
         download_url=f"{base}?kind=download",
     )
@@ -1050,6 +1124,7 @@ async def property_dms_documents(
     request: Request,
     page: Page = 1,
     page_size: PageSize = 25,
+    company: Company = None,
     principal: TenantPrincipal = Depends(READ),
 ) -> s.DmsDocumentPage:
     from mhvp.properties.models import Property
@@ -1058,7 +1133,10 @@ async def property_dms_documents(
         prop = await _get(session, Property, property_id)
         client = await _paperless_client(session)
         try:
-            found = await client.list_by_object_number(prop.number, page=page, page_size=page_size)
+            _check_company(client, company)
+            found = await client.list_by_object_number(
+                prop.number, page=page, page_size=page_size, company_option_id=company
+            )
         except PaperlessSearchError as exc:
             raise ProblemError(ErrorCodes.DMS_UNAVAILABLE, detail=str(exc)) from None
         finally:
@@ -1075,6 +1153,7 @@ async def ticket_dms_documents(
     request: Request,
     page: Page = 1,
     page_size: PageSize = 25,
+    company: Company = None,
     principal: TenantPrincipal = Depends(READ),
 ) -> s.DmsDocumentPage:
     from mhvp.properties.models import Property
@@ -1084,16 +1163,21 @@ async def ticket_dms_documents(
         ticket = await _get(session, Ticket, ticket_id)
         client = await _paperless_client(session)
         try:
+            _check_company(client, company)
             by_number: dict[int, PaperlessDocument] = {}
             if ticket.property_id is not None:
                 prop = await session.get(Property, ticket.property_id)
                 if prop is not None:
                     for d in (
-                        await client.list_by_object_number(prop.number, page=1, page_size=page_size)
+                        await client.list_by_object_number(
+                            prop.number, page=1, page_size=page_size, company_option_id=company
+                        )
                     ).items:
                         by_number[d.id] = d
             for d in (
-                await client.list_by_ticket(ticket.number, page=1, page_size=page_size)
+                await client.list_by_ticket(
+                    ticket.number, page=1, page_size=page_size, company_option_id=company
+                )
             ).items:
                 by_number.setdefault(d.id, d)
         except PaperlessSearchError as exc:
@@ -1107,6 +1191,68 @@ async def ticket_dms_documents(
         return s.DmsDocumentPage(
             data=[_document_out(request, d) for d in page_items],
             meta=s.DmsDocumentPageMeta(page=page, per_page=page_size, total=total),
+        )
+
+
+@router.get(
+    "/dms-documents/companies",
+    summary="Gesellschaften des Paperless-Gesellschaftsfilters",
+)
+async def dms_document_companies(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[s.DmsCompanyOptionOut]:
+    """Configured option id to company mapping (Hub 7.2) for the filter selection; empty when
+    the company field or the mapping is not configured. Does not call Paperless."""
+    async with tenant_tx(request, principal) as session:
+        client = await _paperless_client(session)
+        await client.aclose()
+        if not client.company_filter_available:
+            return []
+        return [
+            s.DmsCompanyOptionOut(option_id=option_id, label=label)
+            for option_id, label in client.company_options.items()
+        ]
+
+
+@router.get("/dms-documents", summary="Paperless-Dokumente suchen (Objekt, Gesellschaft, Text)")
+async def search_dms_documents(
+    request: Request,
+    object_number: ObjectNumber = None,
+    company: Company = None,
+    q: FullText = None,
+    page: Page = 1,
+    page_size: PageSize = 25,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.DmsDocumentPage:
+    """Read-only search in Paperless (Hub 7.2): object number with the Hub rule (exactly
+    ``<Nummer>`` or ``<Nummer>, ...``), company option and full text, combined with AND. At
+    least one criterion is required so the endpoint never lists the whole archive."""
+    if object_number is None and company is None and q is None:
+        raise svc.invalid("Mindestens Objektnummer, Gesellschaft oder Suchbegriff angeben.")
+    async with tenant_tx(request, principal) as session:
+        if session_allowed_legal_entity_ids(session) is not None:
+            # Produktschutz: a scoped membership (tax advisor, A37) sees only documents of its
+            # legal entities; the Paperless archive has no such link, so no free search.
+            raise ProblemError(ErrorCodes.FORBIDDEN)
+        client = await _paperless_client(session)
+        try:
+            _check_company(client, company)
+            if object_number is not None and not client.object_field_id:
+                raise svc.invalid("Die Feld-ID Objektnummer ist für Paperless nicht eingerichtet.")
+            found = await client.search(
+                object_number=object_number,
+                company_option_id=company,
+                query=q,
+                page=page,
+                page_size=page_size,
+            )
+        except PaperlessSearchError as exc:
+            raise ProblemError(ErrorCodes.DMS_UNAVAILABLE, detail=str(exc)) from None
+        finally:
+            await client.aclose()
+        return s.DmsDocumentPage(
+            data=[_document_out(request, d) for d in found.items],
+            meta=s.DmsDocumentPageMeta(page=page, per_page=page_size, total=found.total),
         )
 
 

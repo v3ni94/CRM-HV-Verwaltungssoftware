@@ -452,7 +452,7 @@ def test_budget_stop_and_provider_error(
 
 
 def test_hnsw_index_on_embedding(database: Database) -> None:
-    """Migration 0154: ANN index for the cosine search (``vector_cosine_ops``)."""
+    """Migration 0156: ANN index for the cosine search (``vector_cosine_ops``)."""
     from sqlalchemy import create_engine, text
 
     engine = create_engine(database.migrator_url)

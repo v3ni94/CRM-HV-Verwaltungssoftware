@@ -376,7 +376,7 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ai_learning_examples_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
-    # Aufbewahrung der Lernbeispiele in Monaten (ADR 0010 Nachtrag 27.09.2026, Migration 0154):
+    # Aufbewahrung der Lernbeispiele in Monaten (ADR 0010 Nachtrag 27.09.2026, Migration 0156):
     # der tägliche Lauf ``mhvp.ai.examples_retention`` löscht Beispiele, die älter sind.
     # Standard 24 Monate; Änderung wird als ``tenant_settings.updated`` protokolliert.
     ai_learning_examples_retention_months: Mapped[int] = mapped_column(

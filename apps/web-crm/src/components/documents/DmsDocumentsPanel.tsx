@@ -17,6 +17,7 @@ type DmsDocument = {
   tags: string[];
   page_count: number | null;
   original_file_name: string | null;
+  company?: string | null;
   preview_url: string;
   download_url: string;
 };
@@ -26,6 +27,8 @@ type DmsDocumentPage = {
   meta: { page: number; per_page: number; total: number };
 };
 
+type CompanyOption = { option_id: string; label: string };
+
 const PAGE_SIZE = 20;
 
 export function DmsDocumentsPanel({ entity, id }: { entity: "ticket" | "property"; id: string }) {
@@ -34,23 +37,41 @@ export function DmsDocumentsPanel({ entity, id }: { entity: "ticket" | "property
   const [result, setResult] = useState<DmsDocumentPage | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Gesellschaftsfilter (Immoware Hub 7.2): Optionen aus der DMS-Anbindung, leer = kein Filter.
+  const [companies, setCompanies] = useState<CompanyOption[]>([]);
+  const [company, setCompany] = useState("");
 
   const basePath = entity === "ticket" ? `tickets/${id}/dms-documents` : `properties/${id}/dms-documents`;
+
+  useEffect(() => {
+    let active = true;
+    void (async () => {
+      const res = await bff<CompanyOption[]>("/api/bff/dms-documents/companies");
+      if (active && res.ok) setCompanies(res.data);
+    })();
+    return () => {
+      active = false;
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
     setLoaded(false);
     setError(null);
     void (async () => {
-      const res = await bff<DmsDocumentPage>(`/api/bff/${basePath}?page=${String(page)}&page_size=${String(PAGE_SIZE)}`);
+      const params = new URLSearchParams({ page: String(page), page_size: String(PAGE_SIZE) });
+      if (company) params.set("company", company);
+      const res = await bff<DmsDocumentPage>(`/api/bff/${basePath}?${params.toString()}`);
       if (!active) return;
       setLoaded(true);
       if (res.ok) {
         setResult(res.data);
       } else if (res.status === 502) {
-        setError(t("errors.unreachable"));
-      } else if (res.status === 503) {
+        // MHVP-DOC-0005: keine aktive Paperless-Anbindung.
         setError(t("errors.notConfigured"));
+      } else if (res.status === 503) {
+        // MHVP-DOC-0006: Paperless nicht erreichbar oder Fehlerantwort.
+        setError(t("errors.unreachable"));
       } else {
         setError(res.message);
       }
@@ -59,7 +80,9 @@ export function DmsDocumentsPanel({ entity, id }: { entity: "ticket" | "property
       active = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [basePath, page]);
+  }, [basePath, page, company]);
+
+  const showCompany = companies.length > 0;
 
   const rows = result?.data ?? [];
   const total = result?.meta.total ?? 0;
@@ -69,6 +92,29 @@ export function DmsDocumentsPanel({ entity, id }: { entity: "ticket" | "property
   return (
     <section className="flex flex-col gap-2">
       <h2 className={ui.h2}>{t("title")}</h2>
+      {showCompany ? (
+        <div className="flex flex-wrap items-center gap-2">
+          <label htmlFor={`dms-company-${entity}-${id}`} className="text-sm text-muted">
+            {t("company.label")}
+          </label>
+          <select
+            id={`dms-company-${entity}-${id}`}
+            className={`${ui.input} w-auto`}
+            value={company}
+            onChange={(e) => {
+              setCompany(e.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">{t("company.all")}</option>
+            {companies.map((c) => (
+              <option key={c.option_id} value={c.option_id}>
+                {c.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      ) : null}
       {!loaded ? (
         <p className="text-sm text-muted">{t("loading")}</p>
       ) : error ? (
@@ -87,6 +133,7 @@ export function DmsDocumentsPanel({ entity, id }: { entity: "ticket" | "property
                   <th>{t("columns.date")}</th>
                   <th>{t("columns.correspondent")}</th>
                   <th>{t("columns.documentType")}</th>
+                  {showCompany ? <th>{t("columns.company")}</th> : null}
                   <th>{t("columns.tags")}</th>
                   <th>{t("columns.actions")}</th>
                 </tr>
@@ -98,6 +145,7 @@ export function DmsDocumentsPanel({ entity, id }: { entity: "ticket" | "property
                     <td className="tabular-nums text-muted">{formatDate(doc.created ?? doc.added)}</td>
                     <td>{doc.correspondent ?? ""}</td>
                     <td>{doc.document_type ?? ""}</td>
+                    {showCompany ? <td>{doc.company ?? ""}</td> : null}
                     <td className="text-xs text-muted">{doc.tags.join(", ")}</td>
                     <td>
                       <div className="flex flex-wrap gap-2">

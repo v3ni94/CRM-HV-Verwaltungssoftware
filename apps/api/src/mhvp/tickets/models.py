@@ -165,7 +165,7 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
     sla_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    # Optional working due date (spec 4.9, migration 0154): read by the calendar source
+    # Optional working due date (spec 4.9, migration 0157): read by the calendar source
     # ``ticket_due``; separate from the SLA due time and its escalation.
     due_on: Mapped[date | None] = mapped_column(Date)
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -8,7 +8,7 @@ Je Bestandstool und Fremdsystem entsteht hier ein Dossier nach Anhang B des Mast
 | Immoware Hub Integrationsplattform | `docs/integrations/immoware-hub.md` | erstellt 25.09.2026, Empfehlung ablösen |
 | Mail optimierung | `docs/integrations/mail-optimierung.md` | erstellt 25.09.2026, Empfehlung übernehmen als Reiter Mail |
 | Übergabeprotokoll | `docs/integrations/uebergabeprotokoll.md` | offen |
-| Objektakte | `docs/integrations/objektakte.md` | offen |
+| Objektakte | `docs/integrations/objektakte.md` | Schnittstellenvertrag M29 Stufe 3/4 erstellt 26.09.2026 (lesende API, Webhooks); Dossier nach Anhang B offen |
 | smart-einzug | `docs/integrations/smart-einzug.md` | offen |
 | Paperless-ngx (Spiegel-DMS, Schlagwort "gelöscht" bei Löschung) | `docs/integrations/paperless.md` | erstellt 26.09.2026 (M6-01, M6-03) |
 | Google Drive (Spiegelablage, Löschung mit Papierkorb-Ersatz) | `docs/integrations/google-drive.md` | erstellt 26.09.2026 (M6-02, M6-03) |

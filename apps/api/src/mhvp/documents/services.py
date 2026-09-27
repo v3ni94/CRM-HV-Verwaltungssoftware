@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact, ContactAddress
 from mhvp.contracts.models import Contract
+from mhvp.core.config import Settings
 from mhvp.core.ids import uuid7
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters, scan
@@ -121,8 +122,11 @@ async def store_document(
     created_by: uuid.UUID | None,
     visibility: list[str] | None = None,
     scan_for_malware: bool = True,
+    settings: Settings | None = None,
 ) -> Document:
     """Index row, links and mirror jobs in this transaction; the original goes to S3 first.
+    ``settings`` (the app settings) decide the upload to objektakte; without them the
+    environment is read (``mhvp.objektakte.upload.plan``).
 
     Every file is scanned with ClamAV before the blob is written (``mhvp.documents.scan``,
     operator decision 27.09.2026): uploads, portal files, mail attachments, metering and
@@ -179,15 +183,24 @@ async def store_document(
                 role=role,
             )
         )
+    from mhvp.objektakte import upload as objektakte_upload  # local: avoids an import cycle
+
+    await objektakte_upload.plan(session, tenant_id, document.id, settings)
     await queue_mirrors(session, tenant_id, document.id)
     await session.flush()
     return document
 
 
 async def queue_mirrors(session: AsyncSession, tenant_id: uuid.UUID, document_id: uuid.UUID) -> int:
+    """Mirror jobs for every enabled DMS connection. A document handed to objektakte
+    (``mhvp.objektakte.upload``) gets no Paperless or Drive mirror: objektakte files it there."""
+    from mhvp.objektakte import upload as objektakte_upload  # local: avoids an import cycle
+
     kinds = (
         await session.scalars(select(DmsConnection.kind).where(DmsConnection.enabled.is_(True)))
     ).all()
+    if await objektakte_upload.is_routed(session, document_id):
+        kinds = [k for k in kinds if k not in (StorageKind.PAPERLESS, StorageKind.GOOGLE_DRIVE)]
     for kind in kinds:
         exists = await session.scalar(
             select(DocumentMirror.id).where(

@@ -6,7 +6,7 @@ default 24 months, daily job ``mhvp.ai.examples_retention``).
 The index is created CONCURRENTLY in an autocommit block (no table lock on a running system);
 the column change runs in the migration transaction before it.
 
-Revision ID: 0154
+Revision ID: 0156
 Revises: 0153
 """
 
@@ -15,8 +15,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0154"
-down_revision: str | None = "0153"
+revision: str = "0156"
+down_revision: str | None = "0155"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

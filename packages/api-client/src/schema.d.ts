@@ -4185,6 +4185,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/dms-documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Paperless-Dokumente suchen (Objekt, Gesellschaft, Text)
+         * @description Read-only search in Paperless (Hub 7.2): object number with the Hub rule (exactly
+         *     ``<Nummer>`` or ``<Nummer>, ...``), company option and full text, combined with AND. At
+         *     least one criterion is required so the endpoint never lists the whole archive.
+         */
+        get: operations["search_dms_documents_api_v1_dms_documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/dms-documents/companies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Gesellschaften des Paperless-Gesellschaftsfilters
+         * @description Configured option id to company mapping (Hub 7.2) for the filter selection; empty when
+         *     the company field or the mapping is not configured. Does not call Paperless.
+         */
+        get: operations["dms_document_companies_api_v1_dms_documents_companies_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/dms-documents/{paperless_id}/file": {
         parameters: {
             query?: never;
@@ -7044,6 +7087,270 @@ export interface paths {
         put?: never;
         /** Gmail-Push (Pub/Sub) entgegennehmen */
         post: operations["receive_push_api_v1_integrations_gmail_push_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/documents/{document_id}/filing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ablage eines CRM-Dokuments über objektakte (Drive und Paperless)
+         * @description State of the upload to objektakte; ``routed`` is false when the document goes the CRM's
+         *     own mirror way (no single property, upload off, other tenant).
+         */
+        get: operations["document_filing_api_v1_integrations_objektakte_documents__document_id__filing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/objects": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Objekte aus objektakte (Kacheln der DMS-Seite) */
+        get: operations["objects_api_v1_integrations_objektakte_objects_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/objects/{number}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Objekt aus objektakte mit fehlenden Unterlagen */
+        get: operations["object_detail_api_v1_integrations_objektakte_objects__number__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/objects/{number}/documents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dokumentliste eines Objekts aus objektakte */
+        get: operations["object_documents_api_v1_integrations_objektakte_objects__number__documents_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/objects/{number}/documents/link": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Alle Dokumente eines Objekts als CRM-Dokumente verknüpfen (Nachholen) */
+        post: operations["link_object_documents_api_v1_integrations_objektakte_objects__number__documents_link_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/objects/{number}/person-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Eigentümer- oder Mieterliste als Importvorschlag abrufen (Testlauf mit Abgleich) */
+        post: operations["create_proposal_api_v1_integrations_objektakte_objects__number__person_proposals_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/objects/{number}/persons-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Einheiten, Eigentümer und Mieter als Importvorschlag an objektakte übergeben
+         * @description Sends the unit list of the property (names only, mhvp.objektakte.person_export) to
+         *     objektakte, where it becomes an import proposal; objektakte takes nothing over before its
+         *     import assistant releases the rows.
+         */
+        post: operations["export_persons_api_v1_integrations_objektakte_objects__number__persons_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/objects/{number}/{kind}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigentümer- oder Mieterliste aus objektakte */
+        get: operations["object_persons_api_v1_integrations_objektakte_objects__number___kind__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/person-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Importvorschläge der Eigentümer- und Mieterlisten */
+        get: operations["list_proposals_api_v1_integrations_objektakte_person_proposals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/person-proposals/{proposal_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Importvorschlag mit Abgleich */
+        get: operations["get_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/person-proposals/{proposal_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Importvorschlag freigeben (Abgleich als Arbeitsgrundlage, schreibt keine Stammdaten) */
+        post: operations["approve_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/person-proposals/{proposal_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Importvorschlag verwerfen */
+        post: operations["reject_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/person-proposals/{proposal_id}/test-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Testlauf wiederholen (neu abrufen und abgleichen) */
+        post: operations["rerun_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__test_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anbindung objektakte: eingerichtet für diesen Mandanten? */
+        get: operations["status_api_v1_integrations_objektakte_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/objektakte/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Webhook objektakte (HMAC, idempotent) */
+        post: operations["receive_api_v1_integrations_objektakte_webhook_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -17926,6 +18233,16 @@ export interface components {
              */
             resolved: boolean;
         };
+        /**
+         * DmsCompanyOptionOut
+         * @description Eine Option des Paperless-Gesellschaftsfelds mit ihrer Gesellschaft (Hub 7.2).
+         */
+        DmsCompanyOptionOut: {
+            /** Label */
+            label: string;
+            /** Option Id */
+            option_id: string;
+        };
         /** DmsConnectionIn */
         DmsConnectionIn: {
             /**
@@ -17986,6 +18303,8 @@ export interface components {
         DmsDocumentOut: {
             /** Added */
             added: string | null;
+            /** Company */
+            company?: string | null;
             /** Correspondent */
             correspondent: string | null;
             /** Created */
@@ -22402,6 +22721,19 @@ export interface components {
             unit_id: string;
             /** Unit Number */
             unit_number: string;
+        };
+        /** PersonProposalDecisionIn */
+        PersonProposalDecisionIn: {
+            /** Note */
+            note?: string | null;
+        };
+        /** PersonProposalIn */
+        PersonProposalIn: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "owners" | "tenants";
         };
         /** PhoneIn */
         PhoneIn: {
@@ -36126,6 +36458,64 @@ export interface operations {
             };
         };
     };
+    search_dms_documents_api_v1_dms_documents_get: {
+        parameters: {
+            query?: {
+                /** @description Objektnummer */
+                object_number?: string | null;
+                /** @description Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies) */
+                company?: string | null;
+                /** @description Volltext */
+                q?: string | null;
+                page?: number;
+                page_size?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmsDocumentPage"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dms_document_companies_api_v1_dms_documents_companies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DmsCompanyOptionOut"][];
+                };
+            };
+        };
+    };
     dms_document_file_api_v1_dms_documents__paperless_id__file_get: {
         parameters: {
             query?: {
@@ -42487,6 +42877,486 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    document_filing_api_v1_integrations_objektakte_documents__document_id__filing_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    objects_api_v1_integrations_objektakte_objects_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    object_detail_api_v1_integrations_objektakte_objects__number__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    object_documents_api_v1_integrations_objektakte_objects__number__documents_get: {
+        parameters: {
+            query?: {
+                page?: number;
+                page_size?: number;
+                folder?: string | null;
+            };
+            header?: never;
+            path: {
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    link_object_documents_api_v1_integrations_objektakte_objects__number__documents_link_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_proposal_api_v1_integrations_objektakte_objects__number__person_proposals_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PersonProposalIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    export_persons_api_v1_integrations_objektakte_objects__number__persons_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    object_persons_api_v1_integrations_objektakte_objects__number___kind__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                number: string;
+                kind: "owners" | "tenants";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_proposals_api_v1_integrations_objektakte_person_proposals_get: {
+        parameters: {
+            query?: {
+                object_number?: string | null;
+                status?: ("tested" | "approved" | "rejected") | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PersonProposalDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PersonProposalDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    rerun_proposal_api_v1_integrations_objektakte_person_proposals__proposal_id__test_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_api_v1_integrations_objektakte_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    receive_api_v1_integrations_objektakte_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
             };
         };
     };
@@ -50901,6 +51771,8 @@ export interface operations {
             query?: {
                 page?: number;
                 page_size?: number;
+                /** @description Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies) */
+                company?: string | null;
             };
             header?: never;
             path: {
@@ -55764,6 +56636,8 @@ export interface operations {
             query?: {
                 page?: number;
                 page_size?: number;
+                /** @description Options-ID des Paperless-Gesellschaftsfelds (siehe /dms-documents/companies) */
+                company?: string | null;
             };
             header?: never;
             path: {

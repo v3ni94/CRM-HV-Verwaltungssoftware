@@ -177,6 +177,24 @@ mit `documents:create`; Liste der Löschmarkierungen mit Filter offen/aufgelöst
 den betroffenen Datensatz (Objekt, Kontakt; andere Zieltabellen ohne eigene Seite nur als Text).
 Test: `SyncStatus.test.tsx`.
 
+## M29 Stufe 4, objektakte als angebundener Dienst (lesende API, Webhook)
+
+Contract and configuration: `docs/integrations/objektakte.md`, plan `docs/plans/M29-dms.md`.
+Independent of the dump based takeover above; both meet on `Document.source_system =
+"objektakte"` and `source_id = <objektakte document id>`.
+
+| Datei | Inhalt |
+| --- | --- |
+| `remote.py` | `ObjektakteClient` for contract endpoints 1 to 5 (httpx, timeout, pagination, errors as `ObjektakteUnavailableError`/`ObjektakteNotFoundError`, never token or body in messages) |
+| `dms_service.py` | `link_filed_document` (M6 document plus property link, matching over objektakte id, `drive_file_id`, `sha256`), `reconcile_persons` (test run of an owner/tenant list against `lists.persons_list`, read only) |
+| `dms_routers.py` | `/api/v1/integrations/objektakte/...` for the DMS page and the import proposals; only for the tenant in `OBJEKTAKTE_TENANT` |
+| `webhook.py` | `POST /api/v1/integrations/objektakte/webhook`, HMAC (`OBJEKTAKTE_WEBHOOK_SECRET`), idempotent via `objektakte_webhook_receipt` |
+| `dms_models.py` | `ObjektakteWebhookReceipt`, `ObjektaktePersonProposal` (migration `0154_objektakte_dms`), `ObjektakteUpload` (migration `0155_objektakte_upload`) |
+| `upload.py` | Upload of CRM documents to objektakte (26.09.2026): routing in `store_document` (upload or scan, one property, switch `OBJEKTAKTE_UPLOAD_ENABLED`), job `mhvp.objektakte.upload` (pending, submitted, done, failed), CRM mirrors skipped for routed documents |
+| `person_export.py` | Units with current owner and tenant names as an Immoware24 unit list for objektakte (27.09.2026), endpoint `persons-export`; names only, no contact data or amounts |
+
+Tests: `tests/unit/test_m29_objektakte_remote.py`, `tests/integration/test_m29_dms_objektakte.py`.
+
 ## Weitere Dateien (Nachtrag 26.09.2026)
 
 Im Abgleich mit dem Ordnerinhalt am 26.09.2026 fehlten oben:

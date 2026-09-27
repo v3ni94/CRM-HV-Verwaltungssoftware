@@ -4,7 +4,7 @@ scope_missing), ``archive_error``, ``archive_attempted_at`` and ``archived_at`` 
 archive attempt is visible in the CRM, the job is idempotent and the beat job
 ``communication-archive-retry`` can catch up on completed mails that were never archived.
 
-Revision ID: 0158
+Revision ID: 0160
 Revises: 0157
 Create Date: 2026-09-27
 """
@@ -16,8 +16,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0158"
-down_revision: str | None = "0157"
+revision: str = "0160"
+down_revision: str | None = "0159"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

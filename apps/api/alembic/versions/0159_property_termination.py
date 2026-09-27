@@ -3,7 +3,7 @@ the management relationship (who gave notice, notice date, end of management, su
 manager and owner contacts, notice letter, note) and the reactivation by the superadmin.
 Tenant table with RLS (ADR 0002); one open termination per property.
 
-Revision ID: 0157
+Revision ID: 0159
 Revises: 0156
 Create Date: 2026-09-27
 """
@@ -18,8 +18,8 @@ from sqlalchemy.dialects import postgresql
 
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
-revision: str = "0157"
-down_revision: str | None = "0156"
+revision: str = "0159"
+down_revision: str | None = "0158"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

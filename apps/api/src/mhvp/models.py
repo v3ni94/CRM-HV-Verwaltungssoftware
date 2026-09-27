@@ -24,6 +24,7 @@ from mhvp.imports import models as import_models
 from mhvp.letting import models as letting_models
 from mhvp.letting import rentlaw as rentlaw_models
 from mhvp.metering import models as metering_models
+from mhvp.objektakte import dms_models as objektakte_dms_models
 from mhvp.objektakte import models as objektakte_models
 from mhvp.platform import licensing as licensing_models
 from mhvp.platform import models as platform_models
@@ -62,6 +63,7 @@ __all__ = [
     "licensing_models",
     "metering_models",
     "numbering",
+    "objektakte_dms_models",
     "objektakte_models",
     "platform_models",
     "portal_board_models",

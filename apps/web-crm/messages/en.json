@@ -4344,7 +4344,7 @@
     "openApp": "Open property takeover",
     "openSearch": "Search in the property takeover",
     "stage": "Status of the integration",
-    "stageText": "Stage 1: jump per property via the property number. Stage 2: central sign in via the CRM. Stage 3: takeover status, open review cases and document list in the CRM as soon as the interface of the property takeover is available (plan M29).",
+    "stageText": "Stage 1: jump per property via the property number. Stage 2: central sign in via the CRM. Stage 4: takeover status, open review cases, completeness and document list in the CRM through the interface of the property takeover (plan M29).",
     "structure": "Folder structure per property",
     "folders": "01 Identification documents, 02 Master file, 03 Accounting, 04 Tenant file, 05 Owner file (per unit and owner with eleven subfolders), 06 Other (Unclear, Manual review, Duplicates, Not property related).",
     "objects": "Properties",
@@ -4354,7 +4354,90 @@
     "colAction": "Property file",
     "searchObject": "Search file {number}",
     "empty": "No properties available.",
-    "hint": "The jump opens the search of the property takeover with the property number. A direct link per file follows with stage 3."
+    "hint": "The jump opens the search of the property takeover with the property number. A direct link per file follows with stage 3.",
+    "webhookOff": "The webhook of the property takeover is not set up. Newly filed documents appear as CRM documents only after the catch up per property.",
+    "notConfigured": {
+      "not_configured": "The connection to the property takeover is not set up. As long as address, access key and tenant of the interface are missing, this page only shows the jump per property.",
+      "other_tenant": "The property takeover is connected for another tenant. For this tenant only the jumps per property are available.",
+      "forbidden": "The permission for the data of the property takeover is missing. Only the jumps per property are available."
+    },
+    "tile": {
+      "openCases": "Open cases",
+      "completeness": "Complete",
+      "missing": "Missing",
+      "complete": "Documents complete",
+      "present": "{present} of {required} documents",
+      "noProperty": "Not created in the CRM"
+    },
+    "detail": {
+      "title": "Property {number}",
+      "openDrive": "Open property file in Drive",
+      "openProperty": "Open property in the CRM",
+      "noProperty": "There is no CRM property with this number. Documents are linked without property, a reconciliation of the person lists is not possible.",
+      "status": "Takeover status",
+      "crmDocuments": "{count, plural, =0 {No CRM documents on the property} one {# CRM document on the property} other {# CRM documents on the property}}",
+      "completeness": "Completeness",
+      "openCases": "Open review cases",
+      "missing": "Missing documents",
+      "noneMissing": "No mandatory documents are missing."
+    },
+    "documents": {
+      "title": "Documents",
+      "link": "Link as CRM documents",
+      "linkHint": "Links every document of this property as a CRM document. Matching uses the Drive file and the checksum; the original stays in Google Drive.",
+      "linkResult": "Linking finished: {created} created, {linked} assigned to existing documents, {unchanged} already linked, {invalid} skipped without valid checksum.",
+      "empty": "No documents available.",
+      "colTitle": "Title",
+      "colFolder": "Folder",
+      "colType": "Document type",
+      "colFiled": "Filed",
+      "colLinks": "Open",
+      "openDrive": "Open in Drive",
+      "openCrm": "CRM document",
+      "notLinked": "Not linked",
+      "previous": "Back",
+      "next": "Next",
+      "pageOf": "Page {page} of {pages}"
+    },
+    "proposal": {
+      "title": "Owner and tenant list as import proposal",
+      "hint": "The list of the property takeover is fetched and reconciled with the current contracts in the CRM. The release confirms the reconciliation as working basis; contacts, contracts and units are not changed.",
+      "kind": "List",
+      "owners": "Owner list",
+      "tenants": "Tenant list",
+      "start": "Fetch and test run",
+      "state": "Status: {status}. Fetched on {fetched}, reference date {date}.",
+      "rerun": "Repeat test run",
+      "approve": "Release",
+      "reject": "Discard",
+      "decided": "The proposal is decided. Changes to the master data are made in the master data screens.",
+      "colName": "Name",
+      "colUnits": "Units",
+      "colResult": "Reconciliation",
+      "colCrm": "Recorded in the CRM",
+      "status": {
+        "tested": "test run",
+        "approved": "released",
+        "rejected": "discarded"
+      },
+      "row": {
+        "unchanged": "matching",
+        "conflict": "different",
+        "new": "new",
+        "unit_unknown": "unit unknown",
+        "no_unit": "without unit",
+        "crm_only": "only in the CRM"
+      }
+    },
+    "searchDocuments": "Document search",
+    "personExport": {
+      "title": "Owners and tenants to the takeover system",
+      "intro": "Sends units with the current owners and tenants (names only, no contact data) as an import proposal. Nothing is taken over before the review in the import assistant of the takeover system; afterwards the owner and tenant files carry the names.",
+      "send": "Send list",
+      "done": "Sent: {units} units, {owners} with owner, {tenants} with tenant.",
+      "already": "This list is already there ({units} units).",
+      "review": "Review import"
+    }
   },
   "MailPlaybooks": {
     "title": "Playbooks",
@@ -4579,7 +4662,8 @@
       "correspondent": "Correspondent",
       "documentType": "Document type",
       "tags": "Tags",
-      "actions": "Actions"
+      "actions": "Actions",
+      "company": "Company"
     },
     "actions": {
       "preview": "Preview",
@@ -4593,6 +4677,10 @@
     "errors": {
       "unreachable": "Paperless unreachable",
       "notConfigured": "Paperless not configured"
+    },
+    "company": {
+      "label": "Company",
+      "all": "All companies"
     }
   },
   "BankSettings": {
@@ -4760,7 +4848,11 @@
     "webhookSecretHint": "At least 16 characters. Write only, never shown again. Leave empty to keep the stored secret. Without a secret every delivery is refused.",
     "autoIntake": "Automatic receipt intake from Paperless",
     "autoIntakeHint": "Default off. When active, a receipt draft for review is queued for every reported document. A draft is neither an invoice nor a posting.",
-    "rootFolderIdBeforeConnectHint": "Save this before connecting so the connection can activate right after the OAuth flow."
+    "rootFolderIdBeforeConnectHint": "Save this before connecting so the connection can activate right after the OAuth flow.",
+    "fieldIdsHint": "Paperless shows the field IDs in its custom field administration and in the response of /api/custom_fields/ (key id). The property search only matches values that equal the property number or start with the number, a comma and a space, e.g. 523 or 523, Musterstraße 1, but not 5230.",
+    "companyOptions": "Company options",
+    "companyOptionsPlaceholder": "Option-ID=Company",
+    "companyOptionsHint": "One line per option of the company select field as Option-ID=Company. The option IDs are shown in Paperless on the select field (via /api/custom_fields/ under extra_data, select_options). Leave empty if no company filter is wanted. The filter only works together with the company field ID."
   },
   "Handover": {
     "title": "Handover protocols",
@@ -6221,7 +6313,18 @@
     },
     "links": "Links",
     "linksNone": "none",
-    "receiptsUnavailable": "Read receipts could not be loaded."
+    "receiptsUnavailable": "Read receipts could not be loaded.",
+    "filing": {
+      "title": "Filing through the object takeover system",
+      "status": {
+        "pending": "waiting for transfer",
+        "submitted": "in processing",
+        "done": "filed",
+        "failed": "failed"
+      },
+      "drive": "Open in Drive",
+      "paperless": "Paperless preview"
+    }
   },
   "Notices": {
     "title": "Notice board",
@@ -7793,5 +7896,52 @@
     "reactivateHint": "Only the superadmin can reactivate.",
     "showTerminated": "Show deactivated",
     "hideTerminated": "Hide deactivated"
+  },
+  "DmsSearch": {
+    "area": "DMS",
+    "pageTitle": "Document search",
+    "intro": "Paperless archive in the CRM: full text, property and company, preview and download. Upload new documents here and assign them to the property; filing in Drive and Paperless is done by the object takeover system.",
+    "title": "Archive search",
+    "fields": {
+      "q": "Search term",
+      "qPlaceholder": "for example budget 2025",
+      "objectNumber": "Property",
+      "company": "Company",
+      "companyAll": "All companies"
+    },
+    "search": "Search",
+    "empty": "No documents found.",
+    "total": "{total} results",
+    "actions": {
+      "preview": "Preview",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Previous",
+      "next": "Next",
+      "page": "Page {page}"
+    },
+    "errors": {
+      "criterion": "Please enter a search term, property or company.",
+      "notConfigured": "Paperless not configured",
+      "unreachable": "Paperless unreachable"
+    },
+    "upload": {
+      "title": "Upload document",
+      "intro": "The document is assigned to the property or unit and filed in Drive (owner and tenant files) and Paperless once filing through the object takeover system is switched on.",
+      "file": "File",
+      "property": "Property",
+      "unit": "Unit",
+      "choose": "Please choose",
+      "wholeProperty": "whole property",
+      "titleField": "Title (optional)",
+      "submit": "Upload",
+      "routed": "Uploaded, filing in Drive and Paperless runs through the object takeover system.",
+      "notRouted": "Uploaded, filing follows the CRM mirrors.",
+      "open": "Open document",
+      "errors": {
+        "missing": "Please choose a file and a property."
+      }
+    }
   }
 }

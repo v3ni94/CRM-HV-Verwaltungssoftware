@@ -9,6 +9,11 @@
   (101, 102, 103), da 101 und 102 auch über das Objekt gefunden werden.
 * Ohne gepflegte ``object_field_id`` liefert die Objektsuche laut Plan (M31) eine leere Liste
   statt zu raten: 0 Treffer, 0 total.
+* Gesellschaftsfilter (Hub 7.2): Feld 5, Option ``opt-hvm`` an Dokument 101, ``opt-mhag`` an
+  Dokument 102, Dokument 103 ohne Gesellschaft. Filter ``opt-hvm`` auf das Objekt ergibt nur 101
+  mit Gesellschaft "Hausverwaltung", ohne Filter tragen 101 und 102 ihre Bezeichnung.
+* Grenzfall der Objektnummer: Dokument 104 trägt ``<Nummer>0`` (etwa 7670 zu 767) und wird nie
+  dem Objekt zugeordnet.
 """
 
 import json
@@ -52,7 +57,10 @@ class FakePaperless:
                 "tags": [{"name": "hausgeld"}],
                 "page_count": 2,
                 "original_file_name": "rechnung-101.pdf",
-                "custom_fields": [{"field": 7, "value": object_number}],
+                "custom_fields": [
+                    {"field": 7, "value": object_number},
+                    {"field": 5, "value": "opt-hvm"},
+                ],
             },
             {
                 "id": 102,
@@ -64,7 +72,10 @@ class FakePaperless:
                 "tags": [],
                 "page_count": 5,
                 "original_file_name": "protokoll-102.pdf",
-                "custom_fields": [{"field": 7, "value": f"{object_number}, Musterstraße 1"}],
+                "custom_fields": [
+                    {"field": 7, "value": f"{object_number}, Musterstraße 1"},
+                    {"field": 5, "value": "opt-mhag"},
+                ],
             },
             {
                 "id": 103,
@@ -79,6 +90,22 @@ class FakePaperless:
                 # anderes Objekt, nur über die Ticket-Volltextsuche zu finden.
                 "custom_fields": [{"field": 7, "value": "999"}],
             },
+            {
+                "id": 104,
+                "title": "Anderes Objekt mit längerer Nummer",
+                "created": "2025-12-31T09:00:00Z",
+                "added": "2025-12-31T09:05:00Z",
+                "correspondent": None,
+                "document_type": None,
+                "tags": [],
+                "page_count": 1,
+                "original_file_name": "fremd-104.pdf",
+                # Grenzfall der Hub-Regel: "<Nummer>0" gehört nicht zum Objekt <Nummer>.
+                "custom_fields": [
+                    {"field": 7, "value": f"{object_number}0"},
+                    {"field": 5, "value": "opt-hvm"},
+                ],
+            },
         ]
 
     def _auth_ok(self, request: httpx.Request) -> bool:
@@ -92,40 +119,24 @@ class FakePaperless:
         if path == "/api/documents/":
             query = request.url.params.get("custom_field_query")
             full_text = request.url.params.get("query")
+            results = list(self.docs)
             if query:
+                # e.g. ["AND", [["OR", [[7, "exact", "761"], [7, "istartswith", "761, "]]],
+                # [5, "exact", "opt-hvm"]]], evaluated like Paperless' custom_field_query.
                 condition = json.loads(query)
-                # condition == ["OR", [[7, "exact", "761"], [7, "istartswith", "761, "]]]
-                _, (exact, _prefix) = condition
-                number = exact[2]
-                results = [
-                    d
-                    for d in self.docs
-                    if any(
-                        cf["field"] == exact[0]
-                        and (cf["value"] == number or cf["value"].startswith(f"{number}, "))
-                        for cf in d["custom_fields"]
-                    )
-                ]
-            elif full_text:
-                results = [d for d in self.docs if full_text in d["title"]]
+                results = [d for d in results if _matches(condition, d)]
+            if full_text:
+                hits = [d for d in results if full_text in d["title"]]
                 # Ticketnummer landet nicht im Titel; die Fake-Suche hängt für den Test
                 # Dokument 103 an jede Ticketnummer-Suche, wie eine echte Volltextsuche es für
                 # ein im Dokument erwähntes Aktenzeichen täte.
                 doc_103 = self.docs[2]
-                if full_text.isdigit() and doc_103 not in results:
-                    results.append(doc_103)
-            else:
-                results = list(self.docs)
+                if full_text.isdigit() and doc_103 in results and doc_103 not in hits:
+                    hits.append(doc_103)
+                results = hits
             results = sorted(results, key=lambda d: d["created"] or "", reverse=True)
-            return httpx.Response(
-                200,
-                json={
-                    "count": len(results),
-                    "results": [
-                        {k: v for k, v in d.items() if k != "custom_fields"} for d in results
-                    ],
-                },
-            )
+            # Paperless liefert die Zusatzfelder in der Liste mit (custom_fields).
+            return httpx.Response(200, json={"count": len(results), "results": results})
         if path.startswith("/api/documents/") and path.endswith("/download/"):
             doc_id = int(path.split("/")[3])
             if doc_id not in {d["id"] for d in self.docs}:
@@ -139,6 +150,20 @@ class FakePaperless:
                 },
             )
         return httpx.Response(404)
+
+
+def _matches(condition: list[Any], doc: dict[str, Any]) -> bool:
+    if condition[0] in ("AND", "OR"):
+        op, parts = condition
+        checks = [_matches(part, doc) for part in parts]
+        return all(checks) if op == "AND" else any(checks)
+    field, op, expected = condition
+    values = [cf["value"] for cf in doc["custom_fields"] if cf["field"] == field]
+    if op == "exact":
+        return any(str(v) == str(expected) for v in values)
+    if op == "istartswith":
+        return any(str(v).lower().startswith(str(expected).lower()) for v in values)
+    raise AssertionError(f"unexpected operator {op}")
 
 
 async def _world(settings: Any) -> World:
@@ -233,11 +258,21 @@ def _property(client: TestClient, h: dict[str, str], number: str) -> str:
     return str(created["id"])
 
 
+COMPANY_OPTIONS = "opt-hvm=Hausverwaltung\nopt-mhag=Holding"
+
+
 def _configure_paperless(
-    client: TestClient, h: dict[str, str], fake: FakePaperless, *, object_field_id: str | None = "7"
-) -> None:
+    client: TestClient,
+    h: dict[str, str],
+    fake: FakePaperless,
+    *,
+    object_field_id: str | None = "7",
+    company: bool = False,
+) -> Any:
     options = {"object_field_id": object_field_id} if object_field_id else {}
-    _ok(
+    if company:
+        options |= {"company_field_id": "5", "company_options": COMPANY_OPTIONS}
+    return _ok(
         client.put(
             "/api/v1/dms-connections/paperless",
             json={
@@ -369,3 +404,142 @@ def test_validation_bad_file_kind_is_422(
 def test_validation_bad_property_id_is_422(client: TestClient, world: World) -> None:
     h = bearer(login(client, world, "m31admin"))
     assert client.get("/api/v1/properties/not-a-uuid/dms-documents", headers=h).status_code == 422
+
+
+# Hub 7.2: Objektsuche und Gesellschaftsfilter ---------------------------------------------
+
+
+@pytest.mark.parametrize("fake", ["767"], indirect=True)
+def test_company_filter_on_property_documents_and_company_list(
+    client: TestClient, world: World, fake: FakePaperless
+) -> None:
+    h = bearer(login(client, world, "m31admin"))
+    connection = _configure_paperless(client, h, fake, company=True)
+    assert connection["options"]["company_options"] == COMPANY_OPTIONS
+    prop_id = _property(client, h, "767")
+
+    companies = _ok(client.get("/api/v1/dms-documents/companies", headers=h))
+    assert companies == [
+        {"option_id": "opt-hvm", "label": "Hausverwaltung"},
+        {"option_id": "opt-mhag", "label": "Holding"},
+    ]
+
+    # Ohne Filter: 101 und 102, nicht 104 ("7670"), jeweils mit Gesellschaft.
+    page = _ok(client.get(f"/api/v1/properties/{prop_id}/dms-documents", headers=h))
+    assert [(d["id"], d["company"]) for d in page["data"]] == [
+        (102, "Holding"),
+        (101, "Hausverwaltung"),
+    ]
+
+    filtered = _ok(
+        client.get(f"/api/v1/properties/{prop_id}/dms-documents?company=opt-hvm", headers=h)
+    )
+    assert [d["id"] for d in filtered["data"]] == [101]
+    assert filtered["meta"]["total"] == 1
+    sent = json.loads(fake.requests[-1].url.params["custom_field_query"])
+    assert sent == [
+        "AND",
+        [["OR", [[7, "exact", "767"], [7, "istartswith", "767, "]]], [5, "exact", "opt-hvm"]],
+    ]
+
+    unknown = client.get(f"/api/v1/properties/{prop_id}/dms-documents?company=opt-x", headers=h)
+    assert unknown.status_code == 422
+    assert "MHVP-CORE-0004" in unknown.text
+
+
+@pytest.mark.parametrize("fake", ["768"], indirect=True)
+def test_ticket_documents_with_company_filter(
+    client: TestClient, world: World, fake: FakePaperless
+) -> None:
+    h = bearer(login(client, world, "m31admin"))
+    _configure_paperless(client, h, fake, company=True)
+    prop_id = _property(client, h, "768")
+    ticket = _ok(
+        client.post(
+            "/api/v1/tickets", json={"title": "Heizung", "property_id": prop_id}, headers=h
+        ),
+        201,
+    )
+    page = _ok(
+        client.get(f"/api/v1/tickets/{ticket['id']}/dms-documents?company=opt-mhag", headers=h)
+    )
+    # Objekt und Gesellschaft: nur 102; die Volltexttreffer (103 ohne Gesellschaft) fallen weg.
+    assert [d["id"] for d in page["data"]] == [102]
+
+
+@pytest.mark.parametrize("fake", ["769"], indirect=True)
+def test_search_endpoint_object_company_and_validation(
+    client: TestClient, world: World, fake: FakePaperless
+) -> None:
+    h = bearer(login(client, world, "m31admin"))
+    _configure_paperless(client, h, fake, company=True)
+
+    page = _ok(client.get("/api/v1/dms-documents?object_number=769", headers=h))
+    assert [d["id"] for d in page["data"]] == [102, 101]
+
+    by_company = _ok(client.get("/api/v1/dms-documents?company=opt-hvm", headers=h))
+    # Nur Gesellschaft: 101 (769) und 104 (7690), beide mit opt-hvm.
+    assert [d["id"] for d in by_company["data"]] == [101, 104]
+
+    combined = _ok(client.get("/api/v1/dms-documents?object_number=769&company=opt-hvm", headers=h))
+    assert [d["id"] for d in combined["data"]] == [101]
+
+    # Ohne Kriterium, mit unzulässiger Nummer oder unbekannter Gesellschaft: 422.
+    for query in ("", "?object_number=76", "?object_number=7690", "?company=opt-x"):
+        response = client.get(f"/api/v1/dms-documents{query}", headers=h)
+        assert response.status_code == 422, query
+
+    caretaker = bearer(login(client, world, "m31caretaker"))
+    assert (
+        client.get("/api/v1/dms-documents?object_number=769", headers=caretaker).status_code == 403
+    )
+    assert client.get("/api/v1/dms-documents/companies", headers=caretaker).status_code == 403
+
+
+def test_search_endpoint_needs_object_field_for_object_number(
+    client: TestClient, world: World, fake: FakePaperless
+) -> None:
+    h = bearer(login(client, world, "m31admin"))
+    _configure_paperless(client, h, fake, object_field_id=None)
+    response = client.get("/api/v1/dms-documents?object_number=761", headers=h)
+    assert response.status_code == 422
+    assert _ok(client.get("/api/v1/dms-documents/companies", headers=h)) == []
+
+
+def test_put_connection_validates_paperless_field_ids_and_company_options(
+    client: TestClient, world: World, fake: FakePaperless
+) -> None:
+    h = bearer(login(client, world, "m31admin"))
+    base = {"enabled": True, "base_url": "https://paperless.example.internal", "secret": "x"}
+    for options in (
+        {"object_field_id": "sieben"},
+        {"company_field_id": "0"},
+        {"company_options": "opt-hvm"},
+        {"company_options": "opt-hvm=A\nopt-hvm=B"},
+    ):
+        response = client.put(
+            "/api/v1/dms-connections/paperless", json={**base, "options": options}, headers=h
+        )
+        assert response.status_code == 422, options
+
+    saved = _ok(
+        client.put(
+            "/api/v1/dms-connections/paperless",
+            json={
+                **base,
+                "options": {
+                    "object_field_id": " 7 ",
+                    "company_field_id": "",
+                    "company_options": " opt-hvm = Hausverwaltung ; ",
+                },
+            },
+            headers=h,
+        )
+    )
+    # Normalisiert gespeichert, leere Feld-ID entfällt statt eines geratenen Werts.
+    assert saved["options"] == {
+        "object_field_id": "7",
+        "company_options": "opt-hvm=Hausverwaltung",
+    }
+    # Ohne Feld-ID Gesellschaft ist der Filter nicht verfügbar, auch mit Zuordnung.
+    assert _ok(client.get("/api/v1/dms-documents/companies", headers=h)) == []

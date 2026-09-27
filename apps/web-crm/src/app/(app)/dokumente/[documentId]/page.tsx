@@ -9,6 +9,16 @@ import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
+type Filing = {
+  routed: boolean;
+  status?: "pending" | "submitted" | "done" | "failed";
+  category?: string | null;
+  subfolder?: string | null;
+  drive_url?: string | null;
+  paperless_id?: number | null;
+  last_error?: string | null;
+};
+
 /** Document detail (metadata, links, portal read receipts as an indication, A53). Document
  *  reads stay outside the BFF allowlist, therefore everything is read server side. */
 export default async function DocumentPage({ params }: { params: Promise<{ documentId: string }> }) {
@@ -26,6 +36,9 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
       </p>
     );
   }
+  // Ablage über objektakte (Upload 26.09.2026): Stand, Drive-Link und Paperless-ID, falls geroutet.
+  const filingResponse = await serverFetch(`/api/v1/integrations/objektakte/documents/${documentId}/filing`);
+  const filing: Filing | null = filingResponse.ok ? ((await filingResponse.json()) as Filing) : null;
   const receiptsResponse = await serverFetch(`/api/v1/documents/${documentId}/portal-read-receipts`);
   const receipts: PortalReadReceiptsOut | null = receiptsResponse.ok ? ((await receiptsResponse.json()) as PortalReadReceiptsOut) : null;
   const contactNames: Record<string, string> = {};
@@ -58,6 +71,28 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
           <p className="mt-1 text-sm">{(data.links ?? []).length ? (data.links ?? []).map((l) => `${l.entity_type} (${l.role})`).join(", ") : t("linksNone")}</p>
         </div>
       </div>
+      {filing?.routed ? (
+        <div className={ui.card} data-testid="document-filing">
+          <p className={ui.subtitle}>{t("filing.title")}</p>
+          <p className="mt-1 text-sm">
+            {t(`filing.status.${filing.status ?? "pending"}`)}
+            {filing.category ? ` · ${filing.category}${filing.subfolder ? ` / ${filing.subfolder}` : ""}` : ""}
+          </p>
+          {filing.last_error ? <p className="mt-1 text-xs text-danger-fg">{filing.last_error}</p> : null}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {filing.drive_url ? (
+              <a href={filing.drive_url} target="_blank" rel="noreferrer" className={ui.buttonSm}>
+                {t("filing.drive")}
+              </a>
+            ) : null}
+            {filing.paperless_id ? (
+              <a href={`/api/bff/dms-documents/${String(filing.paperless_id)}/file?kind=preview`} target="_blank" rel="noreferrer" className={ui.buttonSm}>
+                {t("filing.paperless")}
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
       {receipts ? (
         <PortalReadReceipts data={receipts} contactNames={contactNames} />
       ) : (

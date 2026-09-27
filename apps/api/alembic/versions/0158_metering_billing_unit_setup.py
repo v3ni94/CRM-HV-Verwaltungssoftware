@@ -1,7 +1,7 @@
 """Metering transmissions: kind billing_unit_setup (Ordnungsbegriffsabgleich, Q8) and the
 asynchronous statuses waiting_provider and completed.
 
-Revision ID: 0156
+Revision ID: 0158
 Revises: 0155
 Create Date: 2026-09-27
 """
@@ -12,8 +12,8 @@ from collections.abc import Sequence
 
 from alembic import op
 
-revision: str = "0156"
-down_revision: str | None = "0155"
+revision: str = "0158"
+down_revision: str | None = "0157"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

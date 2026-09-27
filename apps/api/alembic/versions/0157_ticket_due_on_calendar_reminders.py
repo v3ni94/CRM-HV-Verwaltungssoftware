@@ -6,7 +6,7 @@ the SLA due time whose escalation has its own notifications); the calendar sourc
 deadline job has already turned into a notification (``"<code>@<occurrence date>"``), so a
 rerun never notifies twice and recurring entries are reminded per occurrence.
 
-Revision ID: 0155
+Revision ID: 0157
 Revises: 0154
 """
 
@@ -16,8 +16,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0155"
-down_revision: str | None = "0154"
+revision: str = "0157"
+down_revision: str | None = "0156"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

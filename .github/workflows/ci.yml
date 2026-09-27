@@ -28,6 +28,27 @@ jobs:
           persist-credentials: false
       - run: python3 scripts/sync_agent_docs.py --check
 
+  migrations-guard:
+    # Sperre gegen Umnummerierung oder Loeschung gemergter Alembic-Migrationen (scripts/check-migrations.sh).
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+      - name: Migrationen gegen Basis pruefen
+        env:
+          PR_BASE: ${{ github.base_ref }}
+        run: |
+          if [ -n "$PR_BASE" ]; then
+            BASE="origin/$PR_BASE"
+          else
+            BASE="origin/claude/funny-cerf-ppg9in"
+          fi
+          git fetch --no-tags origin "${BASE#origin/}" || true
+          scripts/check-migrations.sh "$BASE"
+
   api:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

@@ -96,7 +96,7 @@ class CalendarEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     reminders: Mapped[list[Any]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
-    # Codes already notified as "<code>@<occurrence date>" (migration 0154): idempotency of
+    # Codes already notified as "<code>@<occurrence date>" (migration 0157): idempotency of
     # the reminder notifications, per occurrence for recurring entries.
     reminders_sent: Mapped[list[Any]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")

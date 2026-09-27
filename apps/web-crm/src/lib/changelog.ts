@@ -17,7 +17,7 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
-    version: "1.31.0",
+    version: "1.34.0",
     date: "27.09.2026",
     title:
       "Betreiberentscheidungen vom 27.09.2026: Gmail-Archivierung repariert, Objektdeaktivierung, Kalender, Messdienstleister Abgleich, Design, Statusseite, Virenscan",
@@ -29,18 +29,69 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Befehlspalette (Strg+K, Cmd+K, Schaltfläche in der Kopfzeile) ersetzt die globale Suche: Datensätze, Aktionen und Navigation in einem Eingabefeld, gefiltert nach Berechtigungen, mit zuletzt geöffneten Datensätzen je Benutzer; neuer Statuschip mit Symbol, Klartext und Erklärung in Ticketliste, Postfach, Mahn- und Lastschriftläufen, Freigabestufen und Zählerzuordnungen.",
       "Startseite als persönlicher Arbeitsplatz (Designvorschlag 2): Spalten Heute, Meine Tickets und Freigaben, Kennzahlen des Mandanten als kompakte Leiste; Benachrichtigungen springen direkt ins Ticket oder in den Kalender.",
       "Anmeldung: Ziel nach der Anmeldung bleibt erhalten (auch über Zwei-Faktor-Schritt und Mandantenwahl).",
-      "KI: HNSW-Index für Einbettungen, Einbettungsstand im CRM sichtbar, Aufbewahrung der Lernbeispiele 24 Monate mit Mandantenschalter (Migration 0154).",
+      "KI: HNSW-Index für Einbettungen, Einbettungsstand im CRM sichtbar, Aufbewahrung der Lernbeispiele 24 Monate mit Mandantenschalter (Migration 0156).",
       "Betrieb: WAL-Archivierung und Basissicherung nach Hetzner S3 mit age-Verschlüsselung, Playwright-Kernpfade gegen das Backend erweitert.",
       "Stammdaten: Objektart als Katalog-Auswahl (aktive Einträge, inaktiver Bestandswert bleibt sichtbar); Zusatzfelder werden beim Speichern geprüft (Gültigkeit je Verwaltungsart, Pflicht, Standardwert bei Anlage, Min/Max, Auswahl, Eindeutigkeit je Mandant) mit Feldfehlern; Vertragsliste filtert per URL nach Objekt und Einheit, Ticketliste nach Vertrag.",
       'Zustellregel für Bevollmächtigte gilt jetzt auch für Mahnschreiben, Betriebskostenabrechnungsschreiben, Einzelbriefe und Einzelzustellungen (Vorgabe beide Empfänger, Zeile "für <Vollmachtgeber>" beim Bevollmächtigten); Mahnlauf-Vorschau warnt, wenn eine Mahnung nur den Bevollmächtigten erreicht (M23-07, mit Rechtsvorbehalt).',
-      "Kalender: Versammlungstermine verlinken auf die Versammlung im WEG-Bereich, Erinnerungscodes erzeugen je Code und Termin genau eine Benachrichtigung mit Sprung zur Quelle, manuelle Termine können sich wöchentlich, monatlich oder jährlich bis zu einem Enddatum wiederholen (Anzeige in Kalender und Fristenliste ohne Speicherung der Einzeltermine), Tickets erhalten eine optionale Fälligkeit im Formular, im Detail und in der Liste (Migration 0155).",
-      "Messdienstleister: Ordnungsbegriffsabgleich als eigener Ablauf (Vorschau intern/extern, bewusste Übermittlung, Bearbeitungsstatus beim Anbieter, Ergebnisabruf als Verifikationsbasis der Zuordnung; ista sendSetup, Migration 0156); Audit-Änderungsprotokoll für Vertragsversionen und Gebäude.",
+      "Kalender: Versammlungstermine verlinken auf die Versammlung im WEG-Bereich, Erinnerungscodes erzeugen je Code und Termin genau eine Benachrichtigung mit Sprung zur Quelle, manuelle Termine können sich wöchentlich, monatlich oder jährlich bis zu einem Enddatum wiederholen (Anzeige in Kalender und Fristenliste ohne Speicherung der Einzeltermine), Tickets erhalten eine optionale Fälligkeit im Formular, im Detail und in der Liste (Migration 0159).",
+      "Messdienstleister: Ordnungsbegriffsabgleich als eigener Ablauf (Vorschau intern/extern, bewusste Übermittlung, Bearbeitungsstatus beim Anbieter, Ergebnisabruf als Verifikationsbasis der Zuordnung; ista sendSetup, Migration 0158); Audit-Änderungsprotokoll für Vertragsversionen und Gebäude.",
       "Startseite leitet direkt weiter (angemeldet zum Dashboard, sonst zur Anmeldung), Loginseite optisch überarbeitet mit Claim und Hilfetext, Dashboard begrüßt persönlich mit Vornamen und tageszeitabhängigem, täglich wechselndem Text.",
       "Ruhiges Typografie- und Farbsystem (Designvorschlag 4): Schrift Inter über next/font, feste Schriftskala, 8-Punkt-Abstandsraster, Karten mit Haarlinien statt Schatten, Farbe nur als Bedeutung mit kalibriertem Dunkelmodus, einheitlicher Fokusring, Tabellenziffern; gemeinsame Tokens in packages/ui, Dokumentation mit Kontrasttabelle in docs/design/tokens.md (neutrale Werte bis zur Freigabe der Unternehmensfarben M1-08).",
       "Postfach: Reiter und Filterleiste (Status, Erledigte, Postfach, Suche, Aktualisieren) sauber in zwei Zeilen angeordnet, Filterfelder mit fester Breite.",
       "CRM lädt die Schrift Inter über next/font im Grundlayout.",
-      "Objekte: Verwaltung beenden mit Kündigendem, Kündigungsdatum, Verwaltungsende, Nachfolgern und Kündigungsschreiben; deaktivierte Objekte verschwinden aus der Objektliste, der Superadmin kann sie einblenden und wieder aktivieren (Regel M4-05, Migration 0157).",
+      "Objekte: Verwaltung beenden mit Kündigendem, Kündigungsdatum, Verwaltungsende, Nachfolgern und Kündigungsschreiben; deaktivierte Objekte verschwinden aus der Objektliste, der Superadmin kann sie einblenden und wieder aktivieren (Regel M4-05, Migration 0159).",
       "Überwachung: Uptime Kuma mit Embedded MariaDB, neuer Dienst Beszel (Hub und Agent) zeigt Auslastung von Server und Containern (CPU, RAM, Platte, Netzwerk), Statusseite und Runbook verknüpft.",
+    ],
+  },
+  {
+    version: "1.33.1",
+    date: "27.09.2026",
+    title:
+      "Bildpipeline für alle Uploads, Entscheidungen zu den Übergabeprotokollen",
+    changes: [
+      "Dokumente: Jeder Upload läuft durch die Bildpipeline (Metadaten wie EXIF und GPS entfernt, höchstens 2.000 Pixel Kantenlänge), bisher nur Übergabe- und Portal-Uploads",
+      "Übergabeprotokolle: offene Fragen M30-02 bis M30-05 entschieden, zweiter Faktor freiwillig nach M2-01",
+    ],
+  },
+  {
+    version: "1.33.0",
+    date: "27.09.2026",
+    title: "Eigentümer und Mieter an die Objektübernahme übergeben",
+    changes: [
+      "DMS: Einheiten mit Eigentümern und Mietern (nur Namen) als Importvorschlag an die Objektübernahme übergeben, Übernahme erst nach Prüfung dort",
+    ],
+  },
+  {
+    version: "1.32.0",
+    date: "27.09.2026",
+    title: "Upload im CRM mit Ablage über objektakte in Drive und Paperless",
+    changes: [
+      "Dokumente: hochgeladene Dokumente mit genau einem Objekt werden über objektakte in Drive (mit Eigentümer- und Mieterakten) und in Paperless abgelegt, ohne doppelte Spiegelung",
+      "Dokumente: Ablagestand je Dokument abrufbar, fehlgeschlagene Uploads lassen sich erneut anstoßen",
+      "DMS: Meldungen von objektakte verknüpfen das vorhandene CRM-Dokument statt ein zweites anzulegen",
+      "DMS: neue Dokumentsuche im Paperless-Archiv mit Vorschau, Download und Upload direkt im CRM",
+    ],
+  },
+  {
+    version: "1.31.0",
+    date: "27.09.2026",
+    title:
+      "DMS-Seite mit Daten der Objektübernahme, Paperless-Objektsuche und Gesellschaftsfilter",
+    changes: [
+      "DMS: Kachel je Objekt mit Übernahmestatus, Prüffällen, Vollständigkeit und fehlenden Dokumenten, Detailseite mit Dokumentliste, Sprung nach Google Drive und Nachholen der Verknüpfung",
+      "DMS: neue Dokumente aus der Objektübernahme werden über einen gesicherten Webhook automatisch am Objekt abgelegt",
+      "DMS: Eigentümer- und Mieterlisten aus der Objektübernahme als Importvorschlag mit Testlauf und Freigabe",
+      "Dokumente: Paperless-Suche nach Objektnummer ohne Teiltreffer und Filter nach Gesellschaft, Gesellschaftsoptionen in den DMS-Einstellungen",
+      "Dokumente: vertauschte Fehlertexte bei nicht erreichbarem oder nicht eingerichtetem Paperless korrigiert",
+    ],
+  },
+  {
+    version: "1.30.1",
+    date: "27.09.2026",
+    title: "Betrieb: Migrationssperre, Objektspeicher lokal als Standard",
+    changes: [
+      "Migrationssperre: bereits gemergte Datenbankmigrationen dürfen nicht mehr umbenannt oder gelöscht werden, Prüfung per Skript und in der CI (Runbook Migrationen)",
+      "Objektspeicher: lokaler Dienst dauerhaft aktiv, Migrationsjob wartet auf den Speicher, Volume im Backup enthalten, Runbooks und ADR 0005 ergänzt",
     ],
   },
   {

@@ -4344,7 +4344,7 @@
     "openApp": "Objektübernahme öffnen",
     "openSearch": "In der Objektübernahme suchen",
     "stage": "Stand der Anbindung",
-    "stageText": "Stufe 1: Absprung je Objekt über die Objektnummer. Stufe 2: zentrale Anmeldung über das CRM. Stufe 3: Übernahmestatus, offene Prüffälle und Dokumentliste im CRM, sobald die Schnittstelle der Objektübernahme vorliegt (Plan M29).",
+    "stageText": "Stufe 1: Absprung je Objekt über die Objektnummer. Stufe 2: zentrale Anmeldung über das CRM. Stufe 4: Übernahmestatus, offene Prüffälle, Vollständigkeit und Dokumentliste im CRM über die Schnittstelle der Objektübernahme (Plan M29).",
     "structure": "Ordnerstruktur je Objekt",
     "folders": "01 Legitimationsunterlagen, 02 Stammakte, 03 Buchhaltung, 04 Mieterakte, 05 Eigentümerakte (je Einheit und Eigentümer mit elf Unterordnern), 06 Sonstiges (Unklar, Manuelle Prüfung, Dubletten, Nicht objektbezogen).",
     "objects": "Objekte",
@@ -4354,7 +4354,90 @@
     "colAction": "Objektakte",
     "searchObject": "Akte {number} suchen",
     "empty": "Keine Objekte vorhanden.",
-    "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3."
+    "hint": "Der Absprung öffnet die Suche der Objektübernahme mit der Objektnummer. Eine direkte Verknüpfung je Akte folgt mit Stufe 3.",
+    "webhookOff": "Der Webhook der Objektübernahme ist nicht eingerichtet. Neu abgelegte Dokumente erscheinen erst nach dem Nachholen je Objekt als CRM-Dokumente.",
+    "notConfigured": {
+      "not_configured": "Die Anbindung an die Objektübernahme ist nicht eingerichtet. Solange Adresse, Zugangsschlüssel und Mandant der Schnittstelle fehlen, zeigt diese Seite nur den Absprung je Objekt.",
+      "other_tenant": "Die Objektübernahme ist für einen anderen Mandanten angebunden. Für diesen Mandanten stehen nur die Absprünge je Objekt zur Verfügung.",
+      "forbidden": "Für die Daten der Objektübernahme fehlt die Berechtigung. Es stehen nur die Absprünge je Objekt zur Verfügung."
+    },
+    "tile": {
+      "openCases": "Offene Fälle",
+      "completeness": "Vollständig",
+      "missing": "Fehlend",
+      "complete": "Unterlagen vollständig",
+      "present": "{present} von {required} Unterlagen",
+      "noProperty": "Nicht im CRM angelegt"
+    },
+    "detail": {
+      "title": "Objekt {number}",
+      "openDrive": "Objektakte in Drive öffnen",
+      "openProperty": "Objekt im CRM öffnen",
+      "noProperty": "Zu dieser Objektnummer gibt es im CRM kein Objekt. Dokumente werden ohne Objektbezug verknüpft, ein Abgleich der Personenlisten ist nicht möglich.",
+      "status": "Übernahmestatus",
+      "crmDocuments": "{count, plural, =0 {Keine CRM-Dokumente am Objekt} one {# CRM-Dokument am Objekt} other {# CRM-Dokumente am Objekt}}",
+      "completeness": "Vollständigkeit",
+      "openCases": "Offene Prüffälle",
+      "missing": "Fehlende Unterlagen",
+      "noneMissing": "Es fehlen keine Pflichtunterlagen."
+    },
+    "documents": {
+      "title": "Dokumente",
+      "link": "Als CRM-Dokumente verknüpfen",
+      "linkHint": "Verknüpft alle Dokumente dieses Objekts als CRM-Dokumente. Der Abgleich erfolgt über die Drive-Datei und die Prüfsumme; das Original bleibt in Google Drive.",
+      "linkResult": "Verknüpfung abgeschlossen: {created} neu angelegt, {linked} vorhandenen Dokumenten zugeordnet, {unchanged} bereits verknüpft, {invalid} ohne gültige Prüfsumme übersprungen.",
+      "empty": "Keine Dokumente vorhanden.",
+      "colTitle": "Titel",
+      "colFolder": "Ordner",
+      "colType": "Dokumentart",
+      "colFiled": "Abgelegt",
+      "colLinks": "Öffnen",
+      "openDrive": "In Drive öffnen",
+      "openCrm": "CRM-Dokument",
+      "notLinked": "Nicht verknüpft",
+      "previous": "Zurück",
+      "next": "Weiter",
+      "pageOf": "Seite {page} von {pages}"
+    },
+    "proposal": {
+      "title": "Eigentümer- und Mieterliste als Importvorschlag",
+      "hint": "Die Liste der Objektübernahme wird abgerufen und mit den laufenden Verträgen im CRM abgeglichen. Die Freigabe bestätigt den Abgleich als Arbeitsgrundlage; Kontakte, Verträge und Einheiten werden dabei nicht geändert.",
+      "kind": "Liste",
+      "owners": "Eigentümerliste",
+      "tenants": "Mieterliste",
+      "start": "Abrufen und Testlauf",
+      "state": "Status: {status}. Abgerufen am {fetched}, Stichtag {date}.",
+      "rerun": "Testlauf wiederholen",
+      "approve": "Freigeben",
+      "reject": "Verwerfen",
+      "decided": "Der Vorschlag ist entschieden. Änderungen an den Stammdaten erfolgen in den Stammdatenmasken.",
+      "colName": "Name",
+      "colUnits": "Einheiten",
+      "colResult": "Abgleich",
+      "colCrm": "Im CRM erfasst",
+      "status": {
+        "tested": "Testlauf",
+        "approved": "freigegeben",
+        "rejected": "verworfen"
+      },
+      "row": {
+        "unchanged": "übereinstimmend",
+        "conflict": "abweichend",
+        "new": "neu",
+        "unit_unknown": "Einheit unbekannt",
+        "no_unit": "ohne Einheit",
+        "crm_only": "nur im CRM"
+      }
+    },
+    "searchDocuments": "Dokumentsuche",
+    "personExport": {
+      "title": "Eigentümer und Mieter an die Objektübernahme",
+      "intro": "Überträgt Einheiten mit den aktuellen Eigentümern und Mietern (nur Namen, keine Kontaktdaten) als Importvorschlag. Übernommen wird erst nach Prüfung im Importassistenten der Objektübernahme; danach tragen die Eigentümer- und Mieterakten die Namen.",
+      "send": "Liste übergeben",
+      "done": "Übergeben: {units} Einheiten, {owners} mit Eigentümer, {tenants} mit Mieter.",
+      "already": "Diese Liste liegt dort bereits vor ({units} Einheiten).",
+      "review": "Import prüfen"
+    }
   },
   "MailPlaybooks": {
     "title": "Playbooks",
@@ -4579,7 +4662,8 @@
       "correspondent": "Korrespondent",
       "documentType": "Dokumenttyp",
       "tags": "Tags",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "company": "Gesellschaft"
     },
     "actions": {
       "preview": "Vorschau",
@@ -4593,6 +4677,10 @@
     "errors": {
       "unreachable": "Paperless nicht erreichbar",
       "notConfigured": "Paperless nicht eingerichtet"
+    },
+    "company": {
+      "label": "Gesellschaft",
+      "all": "Alle Gesellschaften"
     }
   },
   "BankSettings": {
@@ -4760,7 +4848,11 @@
     "webhookSecretHint": "Mindestens 16 Zeichen. Wird nur geschrieben und nie wieder angezeigt. Leer lassen, um das hinterlegte Geheimnis zu behalten. Ohne Geheimnis werden alle Meldungen abgewiesen.",
     "autoIntake": "Belegeingang aus Paperless automatisch",
     "autoIntakeHint": "Standard aus. Wenn aktiv, wird für jedes gemeldete Dokument ein Belegentwurf zur Prüfung erzeugt (Warteschlange). Ein Entwurf ist keine Rechnung und keine Buchung.",
-    "rootFolderIdBeforeConnectHint": "Vor dem Verbinden speichern, damit die Anbindung nach dem OAuth-Vorgang sofort aktiv werden kann."
+    "rootFolderIdBeforeConnectHint": "Vor dem Verbinden speichern, damit die Anbindung nach dem OAuth-Vorgang sofort aktiv werden kann.",
+    "fieldIdsHint": "Die Feld-IDs zeigt Paperless in der Verwaltung der benutzerdefinierten Felder und in der Antwort von /api/custom_fields/ (Angabe id). Die Objektsuche trifft nur Werte, die genau der Objektnummer entsprechen oder mit Objektnummer, Komma und Leerzeichen beginnen, zum Beispiel 523 oder 523, Musterstraße 1, nicht aber 5230.",
+    "companyOptions": "Gesellschaftsoptionen",
+    "companyOptionsPlaceholder": "Options-ID=Gesellschaft",
+    "companyOptionsHint": "Eine Zeile je Option des Auswahlfelds Gesellschaft in der Form Options-ID=Gesellschaft. Die Options-IDs stehen in Paperless am Auswahlfeld (über /api/custom_fields/ unter extra_data, select_options). Leer lassen, wenn kein Gesellschaftsfilter gewünscht ist. Der Filter wirkt nur mit Feld-ID Gesellschaft."
   },
   "Handover": {
     "title": "Übergabeprotokolle",
@@ -6221,7 +6313,18 @@
     },
     "links": "Verknüpfungen",
     "linksNone": "keine",
-    "receiptsUnavailable": "Lesebestätigungen konnten nicht geladen werden."
+    "receiptsUnavailable": "Lesebestätigungen konnten nicht geladen werden.",
+    "filing": {
+      "title": "Ablage über die Objektübernahme",
+      "status": {
+        "pending": "wartet auf Übertragung",
+        "submitted": "in Verarbeitung",
+        "done": "abgelegt",
+        "failed": "fehlgeschlagen"
+      },
+      "drive": "In Drive öffnen",
+      "paperless": "Paperless-Vorschau"
+    }
   },
   "Notices": {
     "title": "Schwarzes Brett",
@@ -7793,5 +7896,52 @@
     "reactivateHint": "Wieder aktivieren kann nur der Superadmin.",
     "showTerminated": "Deaktivierte anzeigen",
     "hideTerminated": "Deaktivierte ausblenden"
+  },
+  "DmsSearch": {
+    "area": "DMS",
+    "pageTitle": "Dokumentsuche",
+    "intro": "Paperless-Archiv im CRM: Volltext, Objekt und Gesellschaft, Vorschau und Download. Neue Dokumente hier hochladen und dem Objekt zuordnen; die Ablage in Drive und Paperless übernimmt die Objektübernahme.",
+    "title": "Suche im Archiv",
+    "fields": {
+      "q": "Suchbegriff",
+      "qPlaceholder": "zum Beispiel Wirtschaftsplan 2025",
+      "objectNumber": "Objekt",
+      "company": "Gesellschaft",
+      "companyAll": "Alle Gesellschaften"
+    },
+    "search": "Suchen",
+    "empty": "Keine Dokumente gefunden.",
+    "total": "{total} Treffer",
+    "actions": {
+      "preview": "Vorschau",
+      "download": "Download"
+    },
+    "pagination": {
+      "previous": "Zurück",
+      "next": "Weiter",
+      "page": "Seite {page}"
+    },
+    "errors": {
+      "criterion": "Bitte Suchbegriff, Objekt oder Gesellschaft angeben.",
+      "notConfigured": "Paperless nicht eingerichtet",
+      "unreachable": "Paperless nicht erreichbar"
+    },
+    "upload": {
+      "title": "Dokument hochladen",
+      "intro": "Das Dokument wird dem Objekt oder der Einheit zugeordnet und in Drive (Eigentümer- und Mieterakten) und Paperless abgelegt, sobald die Ablage über die Objektübernahme eingeschaltet ist.",
+      "file": "Datei",
+      "property": "Objekt",
+      "unit": "Einheit",
+      "choose": "Bitte wählen",
+      "wholeProperty": "ganzes Objekt",
+      "titleField": "Titel (optional)",
+      "submit": "Hochladen",
+      "routed": "Hochgeladen, die Ablage in Drive und Paperless läuft über die Objektübernahme.",
+      "notRouted": "Hochgeladen, die Ablage folgt der Spiegelung des CRM.",
+      "open": "Dokument öffnen",
+      "errors": {
+        "missing": "Bitte Datei und Objekt wählen."
+      }
+    }
   }
 }

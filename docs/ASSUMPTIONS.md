@@ -543,6 +543,17 @@ Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Kein
 | Überprüfung spätestens bei Meilenstein | Abnahme M8 mit echten Exporten (M8-01), spätestens G1 |
 | Datum | 26.09.2026 |
 
+## A-050
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Paperless-Gesellschaftsfilter (Immoware Hub 7.2, `mhvp.documents.paperless_search`): Ein Paperless-Auswahlfeld wird über `custom_field_query` mit `[<Feld-ID>, "exact", "<Options-ID>"]` gefiltert, verglichen wird der Wert, den Paperless im Auswahlfeld eines Dokuments speichert. Liefert Paperless die Zusatzfelder in der Trefferliste mit, prüft das CRM Objektnummer und Gesellschaft dort nach und verwirft abweichende Treffer; die Gesamtzahl wird dabei nur um die auf der aktuellen Seite verworfenen Treffer gekürzt. Ohne `custom_fields` in der Antwort gilt allein der Filter von Paperless. |
+| Begründung | Die Filtersyntax ist laut Dossier aus der öffentlichen Paperless-Dokumentation abgeleitet und am Hub-Server nur für die Objektsuche geprüft (Abschnitt 6). Die Nachprüfung verhindert, dass ein anders auslegender Server fremde Dokumente an ein Objekt oder eine Gesellschaft hängt; lieber zu wenig als falsch zugeordnet. Feld-ID und Zuordnung sind Einstellungen mit leerem Standard, keine ID ist im Code hinterlegt. |
+| Kennzeichnung | unkritisch, nur lesend; am Paperless-Server `dms.muellerhv.de` mit echten Feld- und Options-IDs zu bestätigen |
+| Betroffene Bereiche | `GET /api/v1/dms-documents`, `GET /api/v1/dms-documents/companies`, Parameter `company` an `/properties/{id}/dms-documents` und `/tickets/{id}/dms-documents`, Paperless-Ansicht an Objekt und Ticket |
+| Überprüfung spätestens bei Meilenstein | Abschaltung des Immoware Hub (Dossier 7, Schritt 4) |
+| Datum | 26.09.2026 |
+
 ## Ausdrücklich nicht angenommen
 
 Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als stillschweigende Annahme in Code oder Dokumentation eingehen:
