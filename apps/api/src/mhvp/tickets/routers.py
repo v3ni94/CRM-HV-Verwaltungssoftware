@@ -855,13 +855,28 @@ async def _reply_context(
                     )
                 )
             )
+            own_lower = {a.strip().lower() for a in own_addresses if a}
+            # H5 also for Reply-To (review 1.40.2): the From of a mail is easily forged, so a
+            # Reply-To becomes the automatic recipient only when it is itself a participant;
+            # otherwise the verified sender stays To and the Reply-To is only offered for an
+            # explicit choice.
+            reply_to = (inbound.reply_to or "").strip() or None
+            if reply_to and reply_to.lower() not in participants:
+                if reply_to.lower() not in own_lower:
+                    unverified_sender = reply_to
+                reply_to = None
             to_addresses, cc_addresses = mail.build_reply_all(
                 from_address=sender,
-                reply_to=inbound.reply_to,
+                reply_to=reply_to,
                 to_addresses=inbound.to_addresses,
                 cc_addresses=inbound.cc_addresses,
                 own_addresses=own_addresses,
             )
+            # The fallback for an own sender (first foreign To recipient) is no participant
+            # by itself either: the prefilled To stays within the participants.
+            if to_addresses and to_addresses[0].lower() not in participants:
+                unverified_sender = unverified_sender or to_addresses[0]
+                to_addresses = []
         else:
             unverified_sender = sender
     if not to_addresses and contact is not None:
@@ -1574,13 +1589,14 @@ async def merge_tickets(
                     events=counts[TicketEvent],
                 ),
             )
-            await _event(
-                session,
-                t,
-                "merged_into",
-                principal.user_id,
-                {"ticket_id": str(target.id), "number": target.number},
-            )
+            merged_into: dict[str, Any] = {"ticket_id": str(target.id), "number": target.number}
+            if t.follow_up_of_ticket_id == target.id:
+                # A follow-up merged back into its predecessor (rule M19-10, review 1.40.2):
+                # both are one case again, the link is cleared so the predecessor may get a
+                # new follow-up later; the entry keeps the former relation.
+                t.follow_up_of_ticket_id = None
+                merged_into["released_follow_up_of"] = str(target.id)
+            await _event(session, t, "merged_into", principal.user_id, merged_into)
             # Same recording as transition_status (M19-07): status event with the resolution
             # and a learning example, also for the default "zusammengefuehrt" resolution, so
             # the audit trail of a merged source reads like any other closed ticket.

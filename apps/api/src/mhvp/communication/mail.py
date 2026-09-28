@@ -132,11 +132,29 @@ def build_reply_all(
     ursprünglichen To- und Cc-Empfänger ohne die eigenen Postfachadressen des Mandanten
     (``own_addresses``, alle Adressen, Groß-/Kleinschreibung ignoriert) und ohne Duplikate von
     ``To`` oder untereinander. Reihenfolge bleibt stabil, die erste Nennung einer Adresse
-    gewinnt."""
+    gewinnt.
+
+    ``To`` ist nie eine eigene Postfachadresse (Review 1.40.2): ist ``Reply-To`` eine eigene
+    Adresse, gilt der Absender, ist auch dieser eigen (Mail zwischen eigenen Postfächern oder
+    eigene gesendete Mail), der erste fremde ursprüngliche To-Empfänger; ohne fremde Adresse
+    bleibt ``To`` leer. Weicht ``Reply-To`` vom Absender ab, wird der Absender nicht zusätzlich
+    in ``Cc`` gesetzt: nach RFC 5322 Abschnitt 3.6.2 nennt ``Reply-To`` die Adresse, an die der
+    Verfasser Antworten erbittet (wie beim Antworten an alle üblicher Mailprogramme); steht der
+    Absender selbst in To oder Cc der Ursprungsmail, bleibt er in ``Cc``."""
     # Hotfix 27.09.2026: stored arrays may hold NULL or blank entries (rows from older imports
     # or maintenance); they are skipped instead of raising on ``.lower()``.
     own_lower = {a.strip().lower() for a in own_addresses if a}
     to = (reply_to or "").strip() or (from_address or "").strip() or None
+    if to and to.lower() in own_lower:
+        candidates = [from_address, *(to_addresses or [])]
+        to = next(
+            (
+                a
+                for a in ((c or "").strip() for c in candidates)
+                if a and a.lower() not in own_lower
+            ),
+            None,
+        )
     to_list = [to] if to else []
     to_lower = {to.lower()} if to else set()
     seen = set(to_lower)

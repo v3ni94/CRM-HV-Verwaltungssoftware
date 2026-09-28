@@ -111,3 +111,80 @@ def test_build_reply_all_skips_null_and_blank_entries() -> None:
     )
     assert to == ["mieter@example.com"]
     assert cc == ["A@B.DE"]
+
+
+# Review 1.40.2: To is never an own mailbox address ------------------------------------------
+
+OWN = {"info@hv.example", "Post@HV.example"}
+
+
+def test_own_reply_to_falls_back_to_foreign_sender() -> None:
+    to, cc = mail.build_reply_all(
+        from_address="mieter@example.com",
+        reply_to="INFO@hv.example",
+        to_addresses=["post@hv.example"],
+        cc_addresses=["nachbar@example.com"],
+        own_addresses=OWN,
+    )
+    assert to == ["mieter@example.com"]
+    assert cc == ["nachbar@example.com"]
+
+
+def test_mail_between_own_mailboxes_has_no_own_to() -> None:
+    to, cc = mail.build_reply_all(
+        from_address="info@hv.example",
+        reply_to=None,
+        to_addresses=["post@hv.example"],
+        cc_addresses=["info@hv.example"],
+        own_addresses=OWN,
+    )
+    assert to == []
+    assert cc == []
+
+
+def test_own_sender_replies_to_first_foreign_to_recipient() -> None:
+    """Own sent mail (or a mail of an own mailbox) replied to: To is the first foreign
+    original To recipient, the other foreign recipients stay in Cc."""
+    to, cc = mail.build_reply_all(
+        from_address="Post@hv.example",
+        reply_to="info@hv.example",
+        to_addresses=["post@hv.example", "mieter@example.com", "zweite@example.com"],
+        cc_addresses=["anwalt@example.com", "MIETER@example.com"],
+        own_addresses=OWN,
+    )
+    assert to == ["mieter@example.com"]
+    assert cc == ["zweite@example.com", "anwalt@example.com"]
+
+
+def test_own_sender_with_foreign_cc_only_leaves_to_empty() -> None:
+    to, cc = mail.build_reply_all(
+        from_address="info@hv.example",
+        reply_to=None,
+        to_addresses=["post@hv.example"],
+        cc_addresses=["mieter@example.com"],
+        own_addresses=OWN,
+    )
+    assert to == []
+    assert cc == ["mieter@example.com"]
+
+
+def test_foreign_reply_to_does_not_add_sender_to_cc() -> None:
+    """RFC 5322 3.6.2: Reply-To names where the author wants replies; the sender is not added
+    to Cc, unless he was an original recipient himself."""
+    to, cc = mail.build_reply_all(
+        from_address="mieter@example.com",
+        reply_to="anwalt@example.com",
+        to_addresses=["info@hv.example", "nachbar@example.com"],
+        cc_addresses=[],
+        own_addresses=OWN,
+    )
+    assert to == ["anwalt@example.com"]
+    assert cc == ["nachbar@example.com"]
+    _to, cc_self = mail.build_reply_all(
+        from_address="mieter@example.com",
+        reply_to="anwalt@example.com",
+        to_addresses=["info@hv.example"],
+        cc_addresses=["mieter@example.com"],
+        own_addresses=OWN,
+    )
+    assert cc_self == ["mieter@example.com"]

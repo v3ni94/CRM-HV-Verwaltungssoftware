@@ -2864,7 +2864,7 @@
       "replyingTo": "Antwort auf die Mail vom {at}",
       "replyingToLatest": "Antwort auf die letzte eingehende Mail",
       "tnrHint": "Der Betreff erhält automatisch die Kennung {tnr}, damit Antworten dem Ticket zugeordnet werden.",
-      "unverifiedSender": "Der Absender {address} ist nicht am Ticket beteiligt und wurde nicht als Empfänger übernommen.",
+      "unverifiedSender": "Die Adresse {address} (Absender oder Antwortadresse der Mail) ist nicht am Ticket beteiligt und wurde nicht als Empfänger übernommen.",
       "useSender": "Als Empfänger übernehmen",
       "addAttachment": "Anhang hinzufügen",
       "upload": "Datei hochladen",

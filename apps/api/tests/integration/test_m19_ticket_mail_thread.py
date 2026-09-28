@@ -45,18 +45,22 @@ def _eml(
     *,
     cc: str | None = None,
     in_reply_to: str | None = None,
+    reply_to: str | None = None,
+    to: str = "info@example.com",
     html: str | None = None,
     attachment: tuple[str, bytes, str] | None = None,
 ) -> bytes:
     msg = EmailMessage()
     msg["From"], msg["To"], msg["Subject"], msg["Message-ID"] = (
         f"Mieter <{sender}>",
-        "info@example.com",
+        to,
         subject,
         msg_id,
     )
     if cc:
         msg["Cc"] = cc
+    if reply_to:
+        msg["Reply-To"] = reply_to
     if in_reply_to:
         msg["In-Reply-To"] = in_reply_to
     msg["Date"] = "Thu, 24 Sep 2026 09:00:00 +0200"
@@ -491,3 +495,109 @@ def test_reply_to_closed_ticket_reopens_and_notifies(client: TestClient, world: 
     detail = _ok(client.get(f"{T}/{ticket_id}", headers=admin))
     assert [e["kind"] for e in detail["events"]].count("reopened") == 1
     assert [e["kind"] for e in detail["events"]].count("mail_received") == 2
+
+
+def test_reply_context_uses_reply_to_only_when_it_is_a_participant(
+    client: TestClient, world: World
+) -> None:
+    """H5 for Reply-To (review 1.40.2): the From of a mail is easily forged. A mail with the
+    participant's From and a foreign Reply-To never makes the Reply-To the automatic
+    recipient: To stays the verified sender, the Reply-To is only offered as
+    ``unverified_sender``. A Reply-To that is itself a participant (contact address) is used;
+    an own mailbox address as Reply-To is never To and never offered."""
+    admin = bearer(login(client, world, "tmtadmin"))
+    box = _mailbox(client, admin, f"info-tm-h5{RUN}@example.com")
+    sender = f"greta-tm{RUN}@example.com"
+    first_id = f"<tm-h5-1-{RUN}@x>"
+    msg = _ingest(client, admin, _eml(sender, f"Balkon {RUN}", first_id), box["id"], "h51.eml")
+    ticket_id = _ok(client.post(f"{M}/messages/{msg['id']}/ticket", headers=admin), 201)[
+        "ticket_id"
+    ]
+
+    def _context(message_id: str) -> Any:
+        return _ok(
+            client.get(
+                f"{T}/{ticket_id}/reply-context",
+                params={"reply_to_message_id": message_id},
+                headers=admin,
+            )
+        )
+
+    # Gefälschter Absender (Adresse der Beteiligten) mit fremder Reply-To-Adresse.
+    attacker = f"fremd-h5-tm{RUN}@example.com"
+    neighbour = f"nachbar-h5-tm{RUN}@example.com"
+    forged = _ingest(
+        client,
+        admin,
+        _eml(
+            sender,
+            f"Re: Balkon {RUN}",
+            f"<tm-h5-2-{RUN}@x>",
+            in_reply_to=first_id,
+            to=box["address"],
+            reply_to=attacker,
+            cc=neighbour,
+        ),
+        box["id"],
+        "h52.eml",
+    )
+    assert forged["ticket_id"] == ticket_id
+    ctx = _context(forged["id"])
+    assert ctx["to_addresses"] == [sender]
+    assert ctx["unverified_sender"] == attacker
+    assert attacker not in ctx["cc_addresses"]
+    # Antworten an alle (Betreiberentscheidung 27.09.2026): ursprüngliche Kopie bleibt Cc.
+    assert ctx["cc_addresses"] == [neighbour]
+
+    # Reply-To ist eine Adresse des Ticketkontakts: beteiligt, wird Empfänger.
+    contact_mail = f"greta-privat-tm{RUN}@example.com"
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "first_name": "Greta",
+                "last_name": f"H5{RUN}",
+                "emails": [{"email": contact_mail}],
+            },
+            headers=admin,
+        ),
+        201,
+    )
+    _ok(client.patch(f"{T}/{ticket_id}", json={"contact_id": contact["id"]}, headers=admin))
+    known = _ingest(
+        client,
+        admin,
+        _eml(
+            sender,
+            f"Re: Balkon {RUN}",
+            f"<tm-h5-3-{RUN}@x>",
+            in_reply_to=first_id,
+            to=box["address"],
+            reply_to=contact_mail.upper(),
+        ),
+        box["id"],
+        "h53.eml",
+    )
+    ctx = _context(known["id"])
+    assert [a.lower() for a in ctx["to_addresses"]] == [contact_mail]
+    assert ctx["unverified_sender"] is None
+
+    # Eigene Postfachadresse als Reply-To: nie Empfänger, kein Hinweis, Absender bleibt To.
+    own = _ingest(
+        client,
+        admin,
+        _eml(
+            sender,
+            f"Re: Balkon {RUN}",
+            f"<tm-h5-4-{RUN}@x>",
+            in_reply_to=first_id,
+            to=box["address"],
+            reply_to=box["address"],
+        ),
+        box["id"],
+        "h54.eml",
+    )
+    ctx = _context(own["id"])
+    assert ctx["to_addresses"] == [sender]
+    assert ctx["unverified_sender"] is None

@@ -844,41 +844,44 @@ async def attach_to_ticket(
     SLA-Uhr läuft weiter), wenn der Abschluss höchstens ``ticket_reopen_window_days``
     Kalendertage zurückliegt; sonst entsteht ein Folgeticket. Eine automatische Antwort
     (Abwesenheitsnotiz) öffnet nie wieder und legt kein Folgeticket an. Bearbeiter und
-    Zuweiser erhalten eine interne Benachrichtigung (Review 26.09.2026, H4)."""
+    Zuweiser erhalten eine interne Benachrichtigung (Review 26.09.2026, H4). Ein Folgeticket,
+    das in seinen Vorgang zurückgeführt wurde, ist kein Nachfolger mehr und blockiert kein
+    neues Folgeticket (Review 1.40.2, ``follow_up.mail_target``)."""
     from mhvp.sla.models import SlaClock
     from mhvp.sla.service import reopen_clock
     from mhvp.tickets import follow_up
     from mhvp.tickets.models import TicketAssignee, TicketEvent, TicketStatus
     from mhvp.workspace.services import notify
 
-    ticket = await follow_up.current_ticket(session, ticket_id)
-    closed = ticket is not None and ticket.status.value in follow_up.CLOSED_STATES
     auto_reply = bool((row.classification or {}).get("auto_submitted"))
-    if ticket is not None and closed and not auto_reply:
-        window = await follow_up.reopen_window_days(session, row.tenant_id)
-        if not follow_up.within_reopen_window(
-            follow_up.closed_at(ticket), datetime.now(UTC), window
-        ):
-            successor = await create_ticket(session, row, actor_user_id, follow_up_of=ticket)
-            await follow_up.record_follow_up(
-                session,
-                predecessor=ticket,
-                follow_up=successor,
-                message_id=row.id,
-                window_days=window,
-                actor_user_id=actor_user_id,
+    # Current end of the case without cycling; a follow-up merged back into the case never
+    # blocks a new follow-up (review 1.40.2, uq_ticket_follow_up_of).
+    target = await follow_up.mail_target(
+        session, row.tenant_id, ticket_id, auto_reply=auto_reply, now=datetime.now(UTC)
+    )
+    ticket = target.ticket
+    if ticket is not None and target.follow_up:
+        successor = await create_ticket(session, row, actor_user_id, follow_up_of=ticket)
+        await follow_up.record_follow_up(
+            session,
+            predecessor=ticket,
+            follow_up=successor,
+            message_id=row.id,
+            window_days=target.window_days or 0,
+            actor_user_id=actor_user_id,
+            released=target.released,
+        )
+        session.add(
+            TicketEvent(
+                tenant_id=row.tenant_id,
+                ticket_id=successor.id,
+                kind="mail_received",
+                data={"message_id": str(row.id), "from": row.from_address},
+                user_id=actor_user_id,
             )
-            session.add(
-                TicketEvent(
-                    tenant_id=row.tenant_id,
-                    ticket_id=successor.id,
-                    kind="mail_received",
-                    data={"message_id": str(row.id), "from": row.from_address},
-                    user_id=actor_user_id,
-                )
-            )
-            await session.flush()
-            return
+        )
+        await session.flush()
+        return
     if ticket is not None:
         ticket_id = ticket.id
     row.ticket_id = ticket_id
@@ -898,7 +901,7 @@ async def attach_to_ticket(
         )
     )
     reopened = False
-    if ticket is not None and closed and not auto_reply:
+    if ticket is not None and target.reopen:
         previous = ticket.status.value
         ticket.status = TicketStatus.IN_PROGRESS
         ticket.resolved_at = None

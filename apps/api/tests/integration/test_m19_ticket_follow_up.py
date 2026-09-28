@@ -440,3 +440,165 @@ def test_tenant_separation(client: TestClient, settings: Any, world: World) -> N
         assert client.get(f"{T}/{msg_a['ticket_id']}", headers=admin_b).status_code == 404
     finally:
         _ok(client.patch(SETTINGS, json={"ticket_reopen_window_days": 30}, headers=admin_b))
+
+
+# Review 1.40.2: follow-up merged back into its case -----------------------------------------
+
+
+def _set_follow_up_of(
+    settings: Any, tenant_id: uuid.UUID, ticket_id: str, predecessor_id: str
+) -> None:
+    """Link state of a merge made before the fix (the merge kept the link of the follow-up);
+    through the RLS tenant scope like a request."""
+    from sqlalchemy import update
+
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.tickets.models import Ticket
+
+    async def _run() -> None:
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            async with tenant_transaction(factory, tenant_id) as session:
+                result = await session.execute(
+                    update(Ticket)
+                    .where(Ticket.id == uuid.UUID(ticket_id))
+                    .values(follow_up_of_ticket_id=uuid.UUID(predecessor_id))
+                )
+                assert result.rowcount == 1  # type: ignore[attr-defined]
+        finally:
+            await engine.dispose()
+
+    asyncio.run(_run())
+
+
+def _merge(case: Case, source: str, target: str) -> Any:
+    return _ok(
+        case.client.post(
+            f"{T}/merge",
+            json={"ticket_ids": [source], "target_ticket_id": target},
+            headers=case.h,
+        ),
+        201,
+    )
+
+
+def _finish(case: Case, ticket_id: str, world: World) -> None:
+    _ok(
+        case.client.patch(
+            f"{T}/{ticket_id}",
+            json={
+                "assignee_user_id": str(world.users["tfuadmin"]),
+                "status": "done",
+                "resolution": {"kind": "auskunft_erteilt"},
+            },
+            headers=case.h,
+        )
+    )
+
+
+def test_follow_up_merged_back_into_predecessor_next_mails_are_ingested(
+    client: TestClient, settings: Any, world: World
+) -> None:
+    """Probe of review 1.40.2: follow-up F merged back into its finished predecessor P, then
+    further mails of the thread. Before the fix the resolution walked P, F, P and tried a
+    second follow-up of P (uq_ticket_follow_up_of, HTTP 500, Gmail sync retried forever)."""
+    case = Case(client, settings, world, "mb", 40)
+    first = str(case.reply()["ticket_id"])
+    assert first != case.ticket_id
+    _merge(case, first, case.ticket_id)
+
+    merged = case.detail(first)
+    assert merged["merged_into_ticket_id"] == case.ticket_id
+    # Zurückgeführt: die Verknüpfung ist gelöst, der Verlauf behält sie.
+    assert merged["follow_up_of_ticket_id"] is None
+    into = next(e for e in merged["events"] if e["kind"] == "merged_into")
+    assert into["data"]["released_follow_up_of"] == case.ticket_id
+    predecessor = case.detail()
+    assert predecessor["status"] == "done"
+    assert predecessor["follow_ups"] == []
+
+    # Nächste Mail: eingelesen (kein 500), neuer Folgevorgang des weiterhin alten Vorgängers.
+    new_id = str(case.reply()["ticket_id"])
+    assert new_id not in {case.ticket_id, first}
+    assert case.detail(new_id)["follow_up_of_ticket_id"] == case.ticket_id
+    assert [f["id"] for f in case.detail()["follow_ups"]] == [new_id]
+    assert case.detail()["status"] == "done"
+
+    # Übernächste Mail: am offenen neuen Folgevorgang, kein weiteres Ticket.
+    assert str(case.reply()["ticket_id"]) == new_id
+    assert [f["id"] for f in case.detail()["follow_ups"]] == [new_id]
+    assert _kinds(case.detail(new_id)).count("mail_received") == 2
+
+
+def test_merged_back_link_of_older_merge_is_released_on_next_mail(
+    client: TestClient, settings: Any, world: World
+) -> None:
+    """Rows merged before the fix still carry the link of the merged back follow-up: the next
+    mail releases it and creates the new follow-up instead of failing on the unique index."""
+    case = Case(client, settings, world, "mbl", 40)
+    first = str(case.reply()["ticket_id"])
+    _merge(case, first, case.ticket_id)
+    _set_follow_up_of(settings, world.tenant_a, first, case.ticket_id)
+    assert [f["id"] for f in case.detail()["follow_ups"]] == [first]
+
+    new_id = str(case.reply()["ticket_id"])
+    assert new_id not in {case.ticket_id, first}
+    assert case.detail(first)["follow_up_of_ticket_id"] is None
+    assert [f["id"] for f in case.detail()["follow_ups"]] == [new_id]
+    created = next(
+        e
+        for e in case.detail()["events"]
+        if e["kind"] == "follow_up_created" and e["data"]["ticket_id"] == new_id
+    )
+    assert created["data"]["released_follow_up"]["ticket_id"] == first
+    assert str(case.reply()["ticket_id"]) == new_id
+
+
+def test_predecessor_merged_into_follow_up_keeps_link_and_ingests(
+    client: TestClient, settings: Any, world: World
+) -> None:
+    """Other direction: the finished predecessor P merged into its follow-up F. The link stays
+    (F remains the follow-up of P), every mail of the case lands on F; once F is finished
+    long ago, the next mail creates a follow-up of F."""
+    case = Case(client, settings, world, "mbr", 40)
+    follow = str(case.reply()["ticket_id"])
+    _merge(case, case.ticket_id, follow)
+    assert case.detail()["merged_into_ticket_id"] == follow
+    assert case.detail(follow)["follow_up_of_ticket_id"] == case.ticket_id
+
+    assert str(case.reply()["ticket_id"]) == follow
+    assert str(case.reply()["ticket_id"]) == follow
+    assert case.detail(follow)["status"] not in {"done", "closed", "rejected"}
+
+    _finish(case, follow, world)
+    _backdate(settings, world.tenant_a, follow, 40)
+    later = str(case.reply()["ticket_id"])
+    assert later not in {case.ticket_id, follow}
+    assert case.detail(later)["follow_up_of_ticket_id"] == follow
+    assert case.detail(follow)["status"] == "done"
+    assert str(case.reply()["ticket_id"]) == later
+
+
+def test_follow_up_of_follow_up_merged_back_into_first_ticket(
+    client: TestClient, settings: Any, world: World
+) -> None:
+    """Chain P, F1, F2 with F2 merged back into P: the resolution stops at F1 (F2 is no
+    successor any more), releases F2 and creates the follow-up of F1; nothing cycles."""
+    case = Case(client, settings, world, "mbc", 40)
+    f1 = str(case.reply()["ticket_id"])
+    _finish(case, f1, world)
+    _backdate(settings, world.tenant_a, f1, 40)
+    f2 = str(case.reply()["ticket_id"])
+    assert f2 not in {case.ticket_id, f1}
+    assert case.detail(f2)["follow_up_of_ticket_id"] == f1
+    _merge(case, f2, case.ticket_id)
+    # Nicht der direkte Vorgänger: die Verknüpfung bleibt beim Zusammenführen bestehen.
+    assert case.detail(f2)["follow_up_of_ticket_id"] == f1
+
+    f3 = str(case.reply()["ticket_id"])
+    assert f3 not in {case.ticket_id, f1, f2}
+    assert case.detail(f3)["follow_up_of_ticket_id"] == f1
+    assert case.detail(f2)["follow_up_of_ticket_id"] is None
+    assert str(case.reply()["ticket_id"]) == f3

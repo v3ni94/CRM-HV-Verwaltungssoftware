@@ -2864,7 +2864,7 @@
       "replyingTo": "Reply to the mail of {at}",
       "replyingToLatest": "Reply to the latest inbound mail",
       "tnrHint": "The subject automatically carries the tag {tnr} so replies are assigned to the ticket.",
-      "unverifiedSender": "The sender {address} is not a participant of this ticket and was not taken over as recipient.",
+      "unverifiedSender": "The address {address} (sender or reply-to address of the mail) is not a participant of this ticket and was not taken over as recipient.",
       "useSender": "Use as recipient",
       "addAttachment": "Add attachment",
       "upload": "Upload file",
