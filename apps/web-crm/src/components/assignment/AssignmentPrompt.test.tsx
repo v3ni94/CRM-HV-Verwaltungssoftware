@@ -1,8 +1,7 @@
 import { act, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider } from "next-intl";
 
-import { jsonResponse, messages, renderIntl } from "@/test/intl";
+import { IntlTestProvider, jsonResponse, renderIntl } from "@/test/intl";
 
 import { AssignmentPrompt, type AssignmentReview } from "./AssignmentPrompt";
 
@@ -14,9 +13,9 @@ const ERIKA = "0192abcd-0000-7000-8000-000000000003";
 
 function withIntl(ui: React.ReactElement) {
   return (
-    <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+    <IntlTestProvider>
       {ui}
-    </NextIntlClientProvider>
+    </IntlTestProvider>
   );
 }
 

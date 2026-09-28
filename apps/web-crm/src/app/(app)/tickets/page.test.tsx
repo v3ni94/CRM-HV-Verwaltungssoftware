@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
 
-import messages from "../../../../messages/de.json";
+import { IntlTestProvider } from "@/test/intl";
 
 // Renders the server component /tickets (page.tsx) end to end with a mocked API. Incident
 // 27.09.2026: the production build failed with "Attempted to call asAttention() from the
@@ -68,9 +67,9 @@ async function renderPage(body: unknown, init: ResponseInit = {}) {
   const { default: TicketsPage } = await import("./page");
   const element = await TicketsPage({ searchParams: Promise.resolve({}) });
   return render(
-    <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+    <IntlTestProvider>
       {element}
-    </NextIntlClientProvider>,
+    </IntlTestProvider>,
   );
 }
 
@@ -103,9 +102,9 @@ describe("TicketsPage", () => {
     serverFetch.mockRejectedValue(new TypeError("fetch failed"));
     const element = await (await import("./page")).default({ searchParams: Promise.resolve({}) });
     render(
-      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+      <IntlTestProvider>
         {element}
-      </NextIntlClientProvider>,
+      </IntlTestProvider>,
     );
     expect(screen.getByRole("alert")).toHaveTextContent("nicht erreichbar");
   });

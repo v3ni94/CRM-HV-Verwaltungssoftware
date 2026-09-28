@@ -1,8 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider } from "next-intl";
 
-import { jsonResponse, messages, renderIntl } from "@/test/intl";
+import { IntlTestProvider, jsonResponse, renderIntl } from "@/test/intl";
 
 import { TicketsList } from "./TicketsList";
 
@@ -67,9 +66,9 @@ describe("TicketsList page change (Betreiberfehler 27.09.2026)", () => {
     expect(screen.queryByText("Drittes Ticket")).not.toBeInTheDocument();
 
     rerender(
-      <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+      <IntlTestProvider>
         <TicketsList initialTickets={page2} canApprove={false} />
-      </NextIntlClientProvider>,
+      </IntlTestProvider>,
     );
     expect(screen.getByText("Drittes Ticket")).toBeInTheDocument();
     expect(screen.queryByText("Erstes Ticket")).not.toBeInTheDocument();

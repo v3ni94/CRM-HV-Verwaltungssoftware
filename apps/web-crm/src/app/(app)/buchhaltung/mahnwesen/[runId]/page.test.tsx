@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
 
-import messages from "../../../../../../messages/de.json";
+import { IntlTestProvider } from "@/test/intl";
 
 // M16-15: the case in the run detail names ledger, legal entity and property so a missing
 // default account links straight to the property's bank account section, and an existing
@@ -48,9 +47,9 @@ async function renderPage(cases: unknown[]) {
   const { default: DunningRunPage } = await import("./page");
   const element = await DunningRunPage({ params: Promise.resolve({ runId: "run1" }) });
   return render(
-    <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+    <IntlTestProvider>
       {element}
-    </NextIntlClientProvider>,
+    </IntlTestProvider>,
   );
 }
 

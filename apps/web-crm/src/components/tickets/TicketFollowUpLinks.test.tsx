@@ -1,7 +1,6 @@
 import { render, screen } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
 
-import { renderIntl } from "@/test/intl";
+import { IntlTestProvider, renderIntl } from "@/test/intl";
 
 import en from "../../../messages/en.json";
 
@@ -39,9 +38,9 @@ describe("TicketFollowUpLinks", () => {
 
   it("shows one follow up in the singular and uses the English texts", () => {
     render(
-      <NextIntlClientProvider locale="en" messages={en} timeZone="Europe/Berlin">
+      <IntlTestProvider locale="en" catalogue={en}>
         <TicketFollowUpLinks predecessor={null} successors={[{ id: "t-2", number: 500, title: "Neu" }]} />
-      </NextIntlClientProvider>,
+      </IntlTestProvider>,
     );
     expect(screen.getByTestId("ticket-follow-ups")).toHaveTextContent("Follow up ticket #500 Neu");
   });

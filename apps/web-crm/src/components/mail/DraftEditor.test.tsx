@@ -1,9 +1,8 @@
 import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { NextIntlClientProvider } from "next-intl";
 import { useState } from "react";
 
-import { jsonResponse, messages, renderIntl } from "@/test/intl";
+import { IntlTestProvider, jsonResponse, renderIntl } from "@/test/intl";
 
 import { DraftEditor } from "./DraftEditor";
 import type { Message } from "./MailWorkspace";
@@ -43,9 +42,9 @@ function makeDraft(overrides: Partial<Message> = {}): Message {
 
 function withIntl(ui: React.ReactElement) {
   return (
-    <NextIntlClientProvider locale="de" messages={messages} timeZone="Europe/Berlin">
+    <IntlTestProvider>
       {ui}
-    </NextIntlClientProvider>
+    </IntlTestProvider>
   );
 }
 

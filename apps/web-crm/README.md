@@ -25,6 +25,10 @@ In the Compose dev stack the app is served at `http://crm.localhost`.
   `@mhvp/api-client` against `MHVP_API_INTERNAL_URL` + `/api/v1/health/ready`.
 - i18n with next-intl, default `de-DE`. No invented CI colours or logos: neutral tokens from
   `@mhvp/ui` until the CI values are released (V14, OPEN_QUESTIONS M1-08).
+- i18n is strict in tests: `renderIntl` and `IntlTestProvider` (`src/test/intl.tsx`) throw on
+  MISSING_MESSAGE, INSUFFICIENT_PATH, FORMATTING_ERROR and INVALID_MESSAGE, and
+  `vitest.setup.ts` fails a test whose IntlError reached the console. Statically,
+  `scripts/check_i18n_usage.py` resolves `t("...")` calls per file against `messages/de.json`.
 - All data access goes through the documented API (rule 0.1.4).
 
 ## Authentication (backend for frontend)
