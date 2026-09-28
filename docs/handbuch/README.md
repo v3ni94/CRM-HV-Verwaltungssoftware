@@ -71,6 +71,57 @@ System
 - [Verfahrensdokumentation (GoBD-orientierter Entwurf für den Steuerberater)](verfahrensdokumentation.md)
 - [Plattform (Mandanten, Preisstruktur, Freigabe G5, Onboarding Drittmandanten, Export)](plattform.md)
 
+## Handlungsanweisungen
+
+Schritt für Schritt Anleitungen für wiederkehrende Vorgänge (Stand 28.09.2026). Jede Anleitung
+nennt Zweck, Voraussetzungen, Menüpfade, zu verknüpfende Datensätze, Ablage, Fristen,
+Freigaben, Checkliste und häufige Fehler. Rechtliche Voraussetzungen sind dort, wo keine
+freigegebene Regel in `docs/rules/` besteht, als "rechtlich zu prüfen durch Rechtsanwalt"
+gekennzeichnet. Schreibweisen und Pflichtfelder: [Erfassungsstandards](erfassungsstandards.md).
+
+- [Verwalterwechsel und Objektübernahme](anleitung-verwalterwechsel.md)
+- [Stammdaten anlegen und pflegen](anleitung-stammdaten.md)
+- [Eigentümerwechsel](anleitung-eigentuemerwechsel.md)
+- [Mieterwechsel und Wohnungsübergabe](anleitung-mieterwechsel.md)
+- [Mieterhöhung](anleitung-mieterhoehung.md)
+- [Bankverbindung neu anlegen oder ändern (Vier-Augen-Freigabe)](anleitung-bankverbindung.md)
+- [Objektordner, Mieterakte und Objektdaten](anleitung-objektordner.md)
+- [Aufgabenverteilung Mail und Tickets (Vorschlag zur Entscheidung durch die Geschäftsführung)](aufgabenverteilung-vorschlag.md)
+
+### Lücken in der Software
+
+Stellen, an denen die Anleitungen einen manuellen Schritt oder die Schnittstelle verlangen.
+Gesammelt aus den Anleitungen, Stand 28.09.2026:
+
+| Bereich | Lücke | Folge im Ablauf |
+| --- | --- | --- |
+| Stammdaten | Kein Anlageformular für Gebäude, Einheiten und Umlageschlüsselwerte | Anlage nur per Import oder Schnittstelle |
+| Stammdaten | Objekteigentümer (Mietverwaltung), Ansprechpartner, Zähler, Wartungen, Zusatzfelder nicht in der Oberfläche pflegbar | Import oder Schnittstelle |
+| Stammdaten | Kein Rückschreiben nach Immoware24 | Doppelpflege im Parallelbetrieb |
+| Verwalterwechsel | Kein Fristtyp und keine Checkliste Verwalterwechsel | Ticket mit Fälligkeit und Kalender |
+| Verwalterwechsel | Pflichtunterlagen der Vollständigkeitsprüfung nur über die Schnittstelle | Pflege durch Administrator |
+| Verwalterwechsel | Nachforderungsschreiben nur als Textentwurf ohne Briefbogen und Versandnachweis | Brief manuell erstellen und ablegen |
+| Verwalterwechsel | Kein Export der Objektakte bei Abgabe an einen Nachfolger | manuelle Zusammenstellung |
+| Verwalterwechsel | Eröffnungsbestände der Vorverwaltung wegen G1 nicht produktiv übernehmbar | Führung im bisherigen System |
+| Eigentümerwechsel | Keine Schaltfläche Eigentümerwechsel | nur `POST /api/v1/contracts/{id}/ownership-transfer` |
+| Eigentümerwechsel | Sollbeträge werden nicht auf den neuen Vertrag übertragen | Nacherfassung über WEG, Vorschüsse übernehmen oder Schnittstelle |
+| Eigentümerwechsel | Regel W07 fachlich nicht freigegeben, Freigabepunkt P01 offen | keine Aufteilung nach eigener Annahme |
+| Mieterwechsel | Übergabeprotokoll ohne Verknüpfung zum Vertrag in der Oberfläche | Protokollnummer im Ticket vermerken |
+| Mieterwechsel | Zählerstände aus dem Protokoll nicht in die Zählerstände der Einheit übernommen | zusätzlich unter Zählerstände zur Beendigung erfassen |
+| Mieterwechsel | Keine Prüfung der Kündigungsfrist, kein Fristtyp Kautionsabrechnung | Ticket mit Fälligkeit |
+| Verträge | Sollbeträge (Miete, Vorauszahlungen) nicht in der Oberfläche erfassbar | Import oder Schnittstelle |
+| Mieterhöhung | Versand erfassen bis G3 gesperrt, damit Zustimmung und Übernahme nicht erreichbar | neue Miete im führenden System pflegen |
+| Mieterhöhung | Zugangsdatum nur über die Schnittstelle | Frist von Hand im Ticket |
+| Mieterhöhung | Kein Fristtyp Mieterhöhung, Musterschreiben ohne Briefbogen-PDF | Ticket mit Fälligkeit, Brief manuell |
+| Mieterhöhung | Keine automatische Prüfung für Modernisierung, Index, Staffel | rechtliche Prüfung im Einzelfall |
+| Bankverbindung | Keine Oberfläche, um an einem bestehenden Kontakt eine Bankverbindung hinzuzufügen, zu ändern oder zu beenden | Portalvorschlag oder Schnittstelle |
+| Bankverbindung | Keine Vier-Augen-Freigabe für Bankkonten der Rechtsträger | organisatorische Freigabe |
+| Bankverbindung | `contacts:approve` nur in Administratorrollen | eigene Rolle Freigabe anlegen |
+| Objektordner | Keine Standardkategorie für 04_Mieterakte und 05_Eigentümerakte | Ablage über die Objektübernahme oder Ordner von Hand prüfen |
+| Objektordner | Elf Unterordner der Mieter- und Eigentümerakte im CRM nicht beschrieben | Bezeichnungen der Objektübernahme verwenden |
+| Objektordner | Upload in der Dokumentsuche nur mit Objekt und Einheit, ohne Kategorie, Vertrag oder Kontakt | Verknüpfung über den Vorgang |
+| Objektordner | Aufbewahrungsprofile noch Entwürfe | keine Löschung |
+
 ## Neu in der Welle vom 27.09.2026
 
 Kurzüberblick je Modul, alle Punkte als Entwurf und teils fachlich noch offen (Einzelheiten

@@ -1,0 +1,146 @@
+# Handlungsanweisung: Stammdaten anlegen und pflegen
+
+Stand: 28.09.2026. Betrifft Objekte, Gebäude, Einheiten und Kontakte. Schreibweisen,
+Pflichtfelder und Titelmuster regeln die [Erfassungsstandards](erfassungsstandards.md).
+Bedienung der Direktbearbeitung (Stift am Feld, Konflikthinweis) im Kapitel
+[Stammdaten direkt bearbeiten](bearbeiten.md).
+
+## Zweck
+
+Stammdaten sind die Grundlage für Verträge, Sollstellungen, Abrechnungen, Serienbriefe und das
+Portal. Jede Angabe wird einmal am richtigen Datensatz geführt und nicht in Freitexten
+wiederholt. Änderungen stehen im Ereignisprotokoll des Datensatzes.
+
+## Wann anwenden
+
+- Neues Objekt, neuer Kontakt, neue Einheit.
+- Änderungsmitteilung (Anschrift, Telefon, E-Mail, Name) per Mail, Brief, Telefon oder Portal.
+- Korrektur fehlerhafter Angaben.
+
+## Voraussetzungen
+
+- Lesen: `properties:read`, `contacts:read`. Ändern: `properties:update`, `contacts:update`.
+  Anlegen: `properties:create`, `contacts:create`.
+- Löschen (`*:delete`) hat in der Vorbelegung nur der Mandantenadministrator (Regel
+  `docs/rules/M2-07.md`). Kontakte werden grundsätzlich gesperrt statt gelöscht.
+- Solange Immoware24 führend ist, sind Änderungen auch dort nachzuziehen; die Plattform
+  schreibt nicht nach Immoware24 zurück.
+
+## Objekt
+
+### Anlegen
+
+Übersicht, Objekte, Objekt anlegen: Objektnummer (3 Ziffern, je Mandant eindeutig), Name,
+Verwaltungsart, Straße, Hausnummer, PLZ, Ort, Bundesland, Anlegen. Die Verwaltungsart legt die
+Rechtsträger fest und ist danach nicht mehr änderbar.
+
+### Pflegen
+
+Objektseite (Klick auf das Objekt in der Objektliste):
+
+1. Abschnitt Stammdaten: Name, Anschrift, Grundbuchangaben, Flächen, Garten, Sanierung,
+   Umlageausfallwagnis, Verwaltungsbeginn, Verwaltungsende, Bemerkungen.
+2. Abschnitt Gebäude: Klick auf den Gebäudenamen öffnet die Gebäudeseite mit Stammdaten des
+   Gebäudes und Energieausweis (Schaltfläche Energieausweis speichern). Werte nur aus dem
+   Ausweis übernehmen; der Ablauf des Energieausweises erscheint in der Fristenliste.
+3. Abschnitt Abrechnungszeiträume, Bankkonten des Objekts (Als Standard setzen), Objektmappe
+   und Schwarzes Brett nach Bedarf.
+4. Der Eigentümer einer Mietverwaltung (Abschnitt Eigentümer) sowie Verrechnungskonto,
+   Vollmacht und Steuerberater werden über die Schnittstelle gepflegt, nicht in der Oberfläche.
+
+## Gebäude und Einheiten
+
+- Neuanlage nur über den Import ([Objekte und Einheiten aus der Immoware24-Objektliste](import-objektdaten.md))
+  oder die Schnittstelle. Die Oberfläche hat dafür kein Formular.
+- Einheit ändern: Objektseite, Tabelle Einheiten, Klick auf die Einheit. Im Abschnitt
+  Stammdaten der Einheit Nummer, Bezeichnung, Art, Lage, Etage, Flächen, Zimmer, Ausstattung,
+  Anschrift, Untergemeinschaft, Umsatzsteuer bei Leerstand, Provision, Kaution direkt ändern.
+- Flächen und Schlüsselwerte wirken auf Abrechnungen. Schlüsselwerte werden mit
+  Gültigkeitszeitraum geführt; eine Änderung nie rückwirkend eintragen, ohne dass die Grundlage
+  (zum Beispiel Aufmaß, Beschluss) als Dokument an der Einheit abgelegt ist.
+- Umlagewerte bei Leerstand: Abschnitt Umlagewerte bei Leerstand der Einheitenseite.
+
+## Kontakte
+
+### Anlegen
+
+Übersicht, Kontakte, Kontakt anlegen (Seite Neuer Kontakt, auch über `Strg+K`, Aktion Kontakt
+anlegen).
+
+1. Art Person oder Firma. Bei Person Vor- oder Nachname Pflicht, bei Firma der Firmenname.
+2. Anrede, Briefanrede, Titel, Sprache, bevorzugter Kanal.
+3. Adressen, Telefonnummern, E-Mail-Adressen; je Art genau ein Eintrag als primär. Genau eine
+   E-Mail-Adresse darf als Portalzugang markiert sein.
+4. Rollen (Klassifizierung: Eigentümer, Mieter, Verwalter, Dienstleister, Bank, Sonstiges) und
+   Schlagworte.
+5. Bankverbindungen nur hier bei der Neuanlage und nur mit Nachweis erfassen; jede IBAN wartet
+   danach auf Freigabe durch eine zweite Person, siehe
+   [Bankverbindung](anleitung-bankverbindung.md).
+6. Speichern. Meldet die Dublettenprüfung einen ähnlichen Kontakt, zuerst die Trefferliste
+   prüfen. Trotzdem speichern nur, wenn es wirklich eine andere Person ist.
+
+### Ändern
+
+- Kontaktseite, Reiter Stammdaten: Anrede, Briefanrede, Titel, Name, Firma, Rechtsform,
+  Position, Geburtsdatum, Sprache, bevorzugter Kanal, Notizen direkt ändern.
+- Adressen, Telefonnummern, E-Mail-Adressen, Rollen und Schlagworte: Schaltfläche Bearbeiten
+  (Seite Kontakt bearbeiten).
+- Vorschläge aus dem Portal: Reiter Kommunikation beziehungsweise Abschnitt Vorschläge aus dem
+  Portal, je Vorschlag Übernehmen oder Ablehnen.
+- Die Mitteilung selbst (Mail, Brief, Telefonnotiz) als Dokument am Kontakt ablegen oder im
+  Ticket belassen und im Ticket die Erledigungsart Stammdaten ergänzt wählen.
+
+### Beziehungen
+
+Die Zeilen im Abschnitt Beziehungen zu Objekten und Einheiten entstehen aus Verträgen und
+Eigentümerzuordnungen und werden nicht von Hand gepflegt. Wer einen Kontakt einer Einheit
+zuordnen will, legt den Vertrag an (Verwaltung, Verträge, Vertrag anlegen).
+
+### Sperren statt löschen
+
+Kontaktseite, Bearbeiten, Kennzeichen Kontakt gesperrt setzen und speichern; das Sperrdatum
+wird automatisch gesetzt. Die Kontaktliste zeigt mit dem Filter Nur gesperrte Kontakte die
+Sperrliste. Löschen nur im Vier-Augen-Prinzip und nur mit
+freigegebenem Aufbewahrungsprofil; siehe [Kontakte](kontakte.md), Abschnitt Sperre und
+Löschdatum.
+
+## Fristen
+
+Aus den Stammdaten entstehen automatisch Einträge in der Fristenliste (Übersicht, Fristen), zum
+Beispiel Eichfrist Zähler, Energieausweis läuft ab, Vertragsende. Eigene Wiedervorlagen für
+Stammdaten: Kontaktseite, Reiter Notizen, Notiz hinzufügen mit Wiedervorlage; der Eintrag
+erscheint als Typ Wiedervorlage in der Fristenliste.
+
+## Freigaben
+
+| Schritt | Wer | Durch die Software erzwungen |
+| --- | --- | --- |
+| Neue oder geänderte IBAN | zweite Person mit `contacts:approve` | ja |
+| Löschen eines Kontakts | Vier-Augen-Prinzip, Mandantenadministrator | ja |
+| Übrige Stammdatenänderungen | keine Freigabe | nein, Ereignisprotokoll |
+
+## Checkliste
+
+- [ ] Dublettenprüfung beachtet
+- [ ] Pflichtfelder nach Erfassungsstandards vollständig
+- [ ] Rollen gesetzt
+- [ ] Nachweis der Änderung abgelegt
+- [ ] Änderung in Immoware24 nachgezogen, solange Immoware24 führt
+- [ ] Bei Flächen oder Schlüsselwerten: Gültigkeitsbeginn und Grundlage dokumentiert
+
+## Häufige Fehler
+
+- Zweiter Kontakt für dieselbe Person über Trotzdem speichern.
+- Anschrift im Notizfeld statt im Adressfeld.
+- Rolle Mieter oder Eigentümer von Hand gesetzt, ohne Vertrag: Beziehung fehlt trotzdem.
+- IBAN im Notizfeld oder in einer Ticketnotiz erfasst.
+- Speicherkonflikt ignoriert: bei Hinweis auf eine zwischenzeitliche Änderung Seite neu laden.
+
+## Lücken in der Software
+
+- Gebäude, Einheiten und Schlüsselwerte ohne Anlageformular.
+- Objekteigentümer (Mietverwaltung), Ansprechpartner, Zähler, Wartungen und Zusatzfelder nur
+  über Import oder Schnittstelle pflegbar.
+- Neue Bankverbindung an einem bestehenden Kontakt nicht in der Oberfläche erfassbar (siehe
+  [Bankverbindung](anleitung-bankverbindung.md)).
+- Kein Rückschreiben nach Immoware24; Doppelpflege im Parallelbetrieb.
