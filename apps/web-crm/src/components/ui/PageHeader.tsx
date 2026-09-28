@@ -18,7 +18,7 @@ export function PageHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 max-w-full flex-col gap-3 border-b border-border-soft pb-5">
+    <div className="flex min-w-0 max-w-full flex-col gap-3 pb-1">
       {breadcrumb && breadcrumb.length > 0 ? (
         <nav aria-label="Breadcrumb" className="mhvp-caption flex flex-wrap items-center gap-1 text-subtle">
           {breadcrumb.map((crumb, index) => (

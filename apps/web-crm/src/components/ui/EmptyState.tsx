@@ -14,9 +14,9 @@ export function EmptyState({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border bg-surface/50 px-6 py-10 text-center">
+    <div className="flex flex-col items-center gap-2 rounded-lg border border-dashed border-border bg-surface px-6 py-10 text-center">
       {icon ? (
-        <span className="text-subtle" aria-hidden="true">
+        <span className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-2 text-subtle" aria-hidden="true">
           {icon}
         </span>
       ) : null}

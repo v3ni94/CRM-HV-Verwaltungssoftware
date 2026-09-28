@@ -63,16 +63,16 @@ export function MobileNav({
         aria-expanded={open}
         aria-controls="mobile-nav-drawer"
         onClick={() => setOpen(true)}
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-fg transition duration-150 hover:bg-surface-2 md:hidden"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md text-fg transition duration-150 hover:bg-surface-3 md:hidden"
       >
         <MenuIcon className="h-5 w-5" />
       </button>
       {open && typeof document !== "undefined"
         ? // Portal: the sticky header uses backdrop blur, which would trap a fixed drawer inside it.
           createPortal(
-            <div className="fixed inset-0 md:hidden">
+            <div className="fixed inset-0 z-[99] md:hidden">
               <div
-                className="fixed inset-0 z-[99] bg-black/40"
+                className="fixed inset-0 z-[99] bg-scrim"
                 aria-hidden="true"
                 onClick={() => setOpen(false)}
               />
@@ -119,8 +119,8 @@ export function MobileNav({
                           aria-current={active(item.href) ? "page" : undefined}
                           className={`flex min-h-11 items-center gap-2.5 rounded-md px-3 py-2 text-sm transition duration-150 ${
                             active(item.href)
-                              ? "bg-rail-active font-medium text-rail-fg"
-                              : "text-rail-muted hover:bg-rail-hover hover:text-rail-fg"
+                              ? "bg-rail-active font-semibold text-rail-active-fg"
+                              : "text-rail-fg hover:bg-rail-hover hover:text-fg"
                           }`}
                         >
                           {item.label}

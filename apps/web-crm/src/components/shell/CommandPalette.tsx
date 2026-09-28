@@ -214,7 +214,7 @@ export function CommandPalette({
     <>
       <button
         type="button"
-        className="inline-flex min-w-56 items-center justify-between gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-muted transition duration-150 hover:border-gold hover:bg-bg focus:outline-none focus:ring-2 focus:ring-gold/40"
+        className="inline-flex min-w-56 items-center justify-between gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-muted shadow-xs transition duration-150 hover:border-accent hover:text-fg focus:outline-none focus:ring-2 focus:ring-focus"
         onClick={(e) => show(e.currentTarget)}
         aria-keyshortcuts="Control+K Meta+K"
         aria-label={t("palette.open")}
@@ -226,16 +226,16 @@ export function CommandPalette({
           </svg>
           {t("search")}
         </span>
-        <kbd className="rounded border border-border bg-bg px-1.5 py-0.5 text-xs text-subtle">{t("searchShortcut")}</kbd>
+        <kbd className="rounded border border-border bg-surface-2 px-1.5 py-0.5 text-xs text-subtle">{t("searchShortcut")}</kbd>
       </button>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-fg/40 p-4 pt-24" onMouseDown={close}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-scrim p-4 pt-24" onMouseDown={close}>
           <div
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label={t("palette.title")}
-            className="w-full max-w-xl overflow-hidden rounded-2xl border border-border bg-bg shadow-lg"
+            className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-raised shadow-lg"
             onMouseDown={(e) => e.stopPropagation()}
             onKeyDown={onKeyDown}
           >
@@ -264,7 +264,7 @@ export function CommandPalette({
                       id={item.id}
                       role="option"
                       aria-selected={index === active}
-                      className={`flex cursor-pointer items-center gap-2 px-4 py-2 text-sm ${index === active ? "bg-surface" : ""}`}
+                      className={`flex cursor-pointer items-center gap-2 px-4 py-2 text-sm ${index === active ? "bg-surface-2" : ""}`}
                       onMouseEnter={() => setActive(index)}
                       onClick={() => run(item)}
                     >

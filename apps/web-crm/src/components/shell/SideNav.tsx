@@ -49,8 +49,9 @@ function ItemIcon({ name }: { name?: string }) {
 }
 
 /** The full sidebar rail: logo, grouped navigation and a collapse toggle. Renders as a calm
- *  dark anthracite rail on desktop (CI "Goldpunkt" gold active indicator) and as a horizontal
- *  scroller on small screens. Group expand state is server side per user (operator 27.09.2026:
+ *  rail on desktop (day: white with a soft accent tint on the active item; evening: near black
+ *  with the active item in accent gold, 1.37 redesign) and as a horizontal scroller on small
+ *  screens. Group expand state is server side per user (operator 27.09.2026:
  *  all groups start collapsed, an opened group stays open until closed again, on every device)
  *  and mirrored into localStorage only to avoid a flash while the save round trip is in flight.
  *  The icon-only rail mode stays a per-browser preference (localStorage). Neither changes the
@@ -156,7 +157,7 @@ export function SideNav({
         href="/start"
         className="flex items-center gap-3 border-b border-rail-border px-4 py-3 md:py-4"
       >
-        <Image src={logoSrc} alt="" width={36} height={31} unoptimized priority className="h-8 w-auto shrink-0" />
+        <Image src={logoSrc} alt="" width={36} height={31} unoptimized priority className="mhvp-logo h-8 w-auto shrink-0" />
         {railCollapsed ? null : (
           <span className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-sm font-semibold">{productName}</span>
@@ -200,8 +201,8 @@ export function SideNav({
                         railCollapsed ? "md:justify-center md:px-2" : ""
                       } ${
                         active(item.href)
-                          ? "bg-rail-active font-medium text-rail-fg md:before:absolute md:before:bottom-2 md:before:left-0 md:before:top-2 md:before:w-0.5 md:before:rounded-full md:before:bg-gold"
-                          : "text-rail-muted hover:bg-rail-hover hover:text-rail-fg"
+                          ? "bg-rail-active font-semibold text-rail-active-fg"
+                          : "text-rail-fg hover:bg-rail-hover hover:text-fg"
                       }`}
                     >
                       <span className="hidden md:inline-flex">

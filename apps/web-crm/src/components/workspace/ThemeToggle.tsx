@@ -51,7 +51,7 @@ export function ThemeSwitch({ className = "" }: { className?: string }) {
     <div
       role="radiogroup"
       aria-label={t("themeGroup")}
-      className={`inline-flex items-center gap-0.5 rounded-full border border-border bg-surface p-0.5 ${className}`}
+      className={`inline-flex items-center gap-0.5 rounded-full border border-border bg-surface-2 p-0.5 ${className}`}
     >
       {THEME_PREFERENCES.map((value) => {
         const checked = preference === value;
@@ -63,7 +63,7 @@ export function ThemeSwitch({ className = "" }: { className?: string }) {
             aria-checked={checked}
             onClick={() => setThemePreference(value)}
             className={`min-h-8 rounded-full px-3 text-xs font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
-              checked ? "bg-accent-soft text-fg shadow-xs" : "text-muted hover:text-fg"
+              checked ? "bg-accent-soft text-fg shadow-xs ring-1 ring-inset ring-accent" : "text-muted hover:text-fg"
             }`}
           >
             {t(`theme.${value}`)}

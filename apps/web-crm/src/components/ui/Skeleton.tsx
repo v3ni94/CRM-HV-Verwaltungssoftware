@@ -5,7 +5,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
     <div
       role="presentation"
       aria-hidden="true"
-      className={`animate-pulse rounded-md bg-surface-2 ${className}`}
+      className={`animate-pulse rounded-md bg-surface-3 ${className}`}
     />
   );
 }
@@ -13,7 +13,7 @@ export function Skeleton({ className = "" }: { className?: string }) {
 /** A dashboard-tile shaped skeleton, matching the KPI tile layout. */
 export function TileSkeleton() {
   return (
-    <div className="rounded-xl border border-border bg-bg p-5 shadow-card">
+    <div className="rounded-lg border border-card-line bg-surface p-5 shadow-card">
       <Skeleton className="h-3 w-20" />
       <Skeleton className="mt-3 h-8 w-16" />
       <Skeleton className="mt-3 h-3 w-12" />

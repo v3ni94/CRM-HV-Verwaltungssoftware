@@ -21,7 +21,7 @@ export function TenantSwitcher({
 
   if (tenants.length < 2) {
     return (
-      <span className="inline-flex items-center rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium text-fg">
+      <span className="inline-flex items-center rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium text-fg shadow-xs">
         {active?.name ?? ""}
       </span>
     );
@@ -47,11 +47,7 @@ export function TenantSwitcher({
       </label>
       <select
         id="tenant-switcher"
-        className="w-auto appearance-none rounded-full border border-border bg-surface bg-[length:14px] bg-[right_0.6rem_center] bg-no-repeat py-1.5 pl-3.5 pr-7 text-sm font-medium text-fg transition hover:border-gold focus:border-gold focus:outline-none focus:ring-2 focus:ring-gold/40"
-        style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%23808080' stroke-width='1.5'%3E%3Cpath d='M5.5 7.5 10 12l4.5-4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E\")",
-        }}
+        className="mhvp-select w-auto rounded-full border border-border bg-surface py-1.5 pl-3.5 pr-7 text-sm font-medium text-fg shadow-xs transition hover:border-accent focus:border-accent-strong focus:outline-none focus:ring-2 focus:ring-focus"
         value={current ?? ""}
         disabled={busy}
         onChange={(e) => void onChange(e)}

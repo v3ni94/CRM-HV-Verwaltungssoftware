@@ -99,7 +99,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const themePreference = (me as { ui_preferences?: { theme?: unknown } } | null | undefined)?.ui_preferences
     ?.theme;
   return (
-    <div className="flex min-h-screen flex-col bg-surface md:flex-row">
+    <div className="flex min-h-screen flex-col bg-bg md:flex-row">
       {themePreference !== undefined ? (
         <script dangerouslySetInnerHTML={{ __html: serverThemeScript(themePreference) }} />
       ) : null}
@@ -124,7 +124,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
       </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border bg-bg px-4 py-2.5 md:px-6">
+        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border-soft bg-bg px-4 py-3 md:px-8">
           <MobileNav
             groups={groups}
             label={t("nav")}

@@ -8,9 +8,9 @@ export async function PageLoading() {
     <div className="flex flex-col gap-4" role="status" aria-live="polite" data-testid="page-loading">
       <span className="sr-only">{t("loading")}</span>
       <div aria-hidden="true" className="flex flex-col gap-4">
-        <div className="h-8 w-56 max-w-full animate-pulse rounded-md bg-surface" />
-        <div className="h-12 w-full animate-pulse rounded-md bg-surface" />
-        <div className="h-40 w-full animate-pulse rounded-xl bg-surface" />
+        <div className="h-8 w-56 max-w-full animate-pulse rounded-md bg-surface-2" />
+        <div className="h-12 w-full animate-pulse rounded-md bg-surface-2" />
+        <div className="h-40 w-full animate-pulse rounded-xl bg-surface-2" />
       </div>
     </div>
   );

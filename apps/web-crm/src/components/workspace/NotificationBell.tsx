@@ -53,7 +53,7 @@ export function NotificationBell() {
     void bff<null>("/api/bff/workspace/notifications/read", { method: "POST", body: JSON.stringify([id]) });
   }
 
-  const entryClass = "block rounded-lg px-2 py-1.5 text-sm transition duration-150 hover:bg-surface";
+  const entryClass = "block rounded-lg px-2 py-1.5 text-sm transition duration-150 hover:bg-surface-2";
   const content = (n: Notice) => (
     <>
       <p className="font-medium">{n.title}</p>
@@ -66,7 +66,7 @@ export function NotificationBell() {
     <div className="relative">
       <button
         type="button"
-        className="relative inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-bg px-3 text-sm font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface focus:outline-none focus:ring-2 focus:ring-gold/40"
+        className="relative inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus"
         aria-expanded={open}
         aria-controls="notifications"
         onClick={() => setOpen((v) => !v)}
@@ -86,7 +86,7 @@ export function NotificationBell() {
         ) : null}
       </button>
       {open ? (
-        <div id="notifications" className="absolute right-0 z-40 mt-2 w-80 rounded-xl border border-border bg-bg p-2 shadow-lg">
+        <div id="notifications" className="absolute right-0 z-40 mt-2 w-80 rounded-xl border border-border bg-raised p-2 shadow-lg">
           {items.length === 0 ? (
             <p className="p-2 text-sm text-muted">{t("noNotifications")}</p>
           ) : (
@@ -95,7 +95,7 @@ export function NotificationBell() {
                 {items.map((n) => (
                   <li key={n.id}>
                     {n.href ? (
-                      <Link href={n.href} className={`${entryClass} focus:outline-none focus:ring-2 focus:ring-gold/40`} onClick={() => readOne(n.id)} data-testid="notification-link">
+                      <Link href={n.href} className={`${entryClass} focus:outline-none focus:ring-2 focus:ring-focus`} onClick={() => readOne(n.id)} data-testid="notification-link">
                         {content(n)}
                       </Link>
                     ) : (
