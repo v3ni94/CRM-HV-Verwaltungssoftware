@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { MailWorkspace } from "@/components/mail/MailWorkspace";
+import { RuleProposalsBadge } from "@/components/settings/RuleProposals";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
 
@@ -20,12 +21,19 @@ export default async function MailPage() {
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("communication:read")) notFound();
+  // Lern-Workflow (Regel M9-11): Hinweis auf offene Regelvorschläge, nur mit Leserecht.
+  let proposals = 0;
+  if (permissions.includes("tenant_settings:read")) {
+    const res = await serverFetch("/api/v1/automation/rule-proposals?status=proposed&limit=500");
+    if (res.ok) proposals = ((await res.json()) as unknown[]).length;
+  }
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
         title={t("title")}
         action={
           <div className="flex flex-wrap gap-2">
+            <RuleProposalsBadge count={proposals} />
             <Link href="/mail/postausgang" className={ui.button}>
               {tPostal("title")}
             </Link>

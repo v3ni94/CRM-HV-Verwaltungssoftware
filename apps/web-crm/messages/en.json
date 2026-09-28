@@ -3055,7 +3055,8 @@
       "webhook": "Send webhook",
       "mail_draft": "E-mail draft from reply template",
       "letter_draft": "Letter draft from letter template",
-      "ai_task": "Start AI task"
+      "ai_task": "Start AI task",
+      "assign_record": "Assign (learned rule)"
     },
     "actionValue": "Action value",
     "ticketField": "Ticket field",
@@ -3063,7 +3064,8 @@
       "priority": "Priority",
       "team_id": "Team",
       "category": "Category",
-      "assignee_user_id": "Assignee"
+      "assignee_user_id": "Assignee",
+      "topic": "Topic"
     },
     "priorities": {
       "low": "Low",
@@ -3113,7 +3115,8 @@
       "webhook": "Webhook to {url}",
       "mailDraft": "E-mail draft from {template}",
       "letterDraft": "Letter draft from {template}",
-      "aiTask": "AI task {task}"
+      "aiTask": "AI task {task}",
+      "assignRecord": "Assign: {dimension} {value}"
     },
     "log": "Log",
     "filterRule": "Filter rule",
@@ -4403,6 +4406,10 @@
         "service_provider": "Service provider",
         "service_provider_relation": "Provider contract"
       }
+    },
+    "ruleProposals": {
+      "title": "Rule proposals",
+      "description": "Proposals from repeated manual assignments per sender. Active only once accepted."
     }
   },
   "Members": {
@@ -9455,5 +9462,42 @@
     "placeholder": "Search settings",
     "resultsLabel": "Results",
     "noResults": "No results."
+  },
+  "RuleProposals": {
+    "title": "Rule proposals",
+    "intro": "When the same manual decision was made several times for the same sender, the platform proposes a rule. A rule only becomes active once you accept the proposal. Accepting checks the evidence again against the decision log. Rejected proposals only come back once the number of equal decisions has doubled. Payees, IBANs, resolutions, fees and tax classification are never learned.",
+    "empty": "There are no open rule proposals.",
+    "entity": {
+      "message": "Mail",
+      "ticket": "Ticket"
+    },
+    "fields": {
+      "contact": "Contact",
+      "property": "Property",
+      "unit": "Unit",
+      "topic": "Topic",
+      "assignee_user_id": "Assignee"
+    },
+    "scope": {
+      "address": "Sender {sender}",
+      "domain": "Sender domain {sender}"
+    },
+    "evidence": "{count} equal manual decisions without contradiction (threshold {threshold}), from {first} to {last}",
+    "addresses": "Sender addresses: {addresses}",
+    "accept": "Accept and activate rule",
+    "reject": "Reject",
+    "reason": "Reason for rejection (optional)",
+    "confirmReject": "Confirm rejection",
+    "cancel": "Cancel",
+    "accepted": "Rule created and active.",
+    "toRules": "Go to automation",
+    "rejected": "Proposal rejected.",
+    "readOnly": "Accepting and rejecting require the permission to change tenant settings.",
+    "thresholdLabel": "Threshold (equal decisions)",
+    "thresholdSave": "Save threshold",
+    "thresholdSaved": "Threshold saved.",
+    "thresholdInvalid": "Please enter a whole number between 2 and 50.",
+    "thresholdHint": "Default 5. A contradicting decision resets the count. Every change is logged.",
+    "badgeHint": "{count} open rule proposals"
   }
 }

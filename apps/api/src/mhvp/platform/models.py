@@ -425,6 +425,12 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ai_learning_examples_retention_months: Mapped[int] = mapped_column(
         Integer, nullable=False, default=24, server_default=text("24")
     )
+    # Lern-Workflow (rule M9-11, migration 0218): number of consistent manual decisions of the
+    # same sender without a contradicting decision after which a rule is proposed. Standard 5
+    # (assumption A-071, docs/ASSUMPTIONS.md); a proposal never activates itself.
+    rule_proposal_threshold: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=5, server_default=text("5")
+    )
     # Erledigungsarten der Erledigungsnotiz je Mandant (Regel M19-07, Entscheidung M19-04 vom
     # 26.09.2026, ``mhvp.tickets.resolution_kinds``). Shape:
     # {"disabled": ["<code eingebauter Art>", ...], "custom": [{"code": str, "label": str}, ...]}.

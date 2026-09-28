@@ -731,6 +731,26 @@ class ErrorCodes:
             "the review and decide again."
         ),
     )
+    # Lern-Workflow, rule proposals (rule M9-11, mhvp.automation.learning).
+    RULE_PROPOSAL_NOT_OPEN = ErrorCode(
+        "MHVP-AUTO-0001",
+        409,
+        "Regelvorschlag bereits entschieden",
+        (
+            "The rule proposal is no longer in status proposed (accepted, rejected or withdrawn "
+            "meanwhile). Nothing was written; reload the proposals."
+        ),
+    )
+    RULE_PROPOSAL_STALE = ErrorCode(
+        "MHVP-AUTO-0002",
+        409,
+        "Regelvorschlag nicht mehr belegt",
+        (
+            "Recomputing the evidence from the decision log no longer confirms the proposal "
+            "(contradicting decision, threshold not reached, or the target record is gone). "
+            "No rule was created."
+        ),
+    )
     # WEG circular resolution with a lowered majority (M25-02).
     HOA_CIRCULAR_LOWER_MAJORITY_DISABLED = ErrorCode(
         "MHVP-HOA-0001",

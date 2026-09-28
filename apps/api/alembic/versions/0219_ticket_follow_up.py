@@ -9,7 +9,7 @@ Folgetickets bei parallelem Eingang). Idempotent: Spalten und Index werden nur a
 sie fehlen.
 
 Revision ID: 0219
-Revises: 0217
+Revises: 0218
 Create Date: 2026-09-28
 """
 
@@ -21,7 +21,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0219"
-down_revision: str | None = "0217"
+down_revision: str | None = "0218"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

@@ -24,6 +24,7 @@ from mhvp.accounting.routers import router as accounting_router
 from mhvp.accounting.tax_routers import router as accounting_tax_router
 from mhvp.accounting.xrechnung import router as accounting_xrechnung_router
 from mhvp.ai.routers import router as ai_router
+from mhvp.automation.learning import router as rule_proposal_router
 from mhvp.automation.routers import router as automation_router
 from mhvp.banking.fints_routers import router as fints_router
 from mhvp.banking.routers import finapi_router
@@ -286,6 +287,7 @@ def create_app(
     app.include_router(market_readiness_router, prefix=API_PREFIX)
     app.include_router(platform_overview_router, prefix=API_PREFIX)
     app.include_router(assignment_review_router, prefix=API_PREFIX)
+    app.include_router(rule_proposal_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)
     app.include_router(work_order_proposal_router, prefix=API_PREFIX)
     app.include_router(sla_router, prefix=API_PREFIX)

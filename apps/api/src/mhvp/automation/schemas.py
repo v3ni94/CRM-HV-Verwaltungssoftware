@@ -103,6 +103,29 @@ class SetTicketFieldAction(_In):
             return self
         if self.field == "category" and not isinstance(self.value, str | dict):
             raise ValueError("Kategorie muss Text sein.")
+        if self.field == "topic" and not (
+            (isinstance(self.value, str) and re.fullmatch(r"[a-z0-9_]{1,32}", self.value))
+            or (isinstance(self.value, dict) and set(self.value) == {"$field"})
+        ):
+            raise ValueError("Thema muss ein Themencode sein.")
+        return self
+
+
+class AssignRecordAction(_In):
+    """Lern-Workflow (rule M9-11): assigns a contact, property or unit to the mail of the
+    event (``target`` message) or to the ticket the mail belongs to (``target`` ticket). Fills
+    only an empty field that no member decided on; the assignment review row records the rule
+    as reason. Never a payee, IBAN, resolution, fee or tax field (closed list)."""
+
+    type: Literal["assign_record"]
+    target: Literal["message", "ticket"]
+    dimension: Literal["contact", "property", "unit"]
+    value: uuid.UUID
+
+    @model_validator(mode="after")
+    def _dimension(self) -> "AssignRecordAction":
+        if self.target == "message" and self.dimension == "unit":
+            raise ValueError("Eine Mail hat keine Einheit; Einheit nur für Tickets.")
         return self
 
 
@@ -200,6 +223,7 @@ Action = (
     | LetterDraftAction
     | AiTaskAction
     | CreateTaskAction
+    | AssignRecordAction
 )
 _ACTION_MODELS: dict[str, type[Action]] = {
     "create_ticket": CreateTicketAction,
@@ -210,6 +234,7 @@ _ACTION_MODELS: dict[str, type[Action]] = {
     "letter_draft": LetterDraftAction,
     "ai_task": AiTaskAction,
     "create_task": CreateTaskAction,
+    "assign_record": AssignRecordAction,
 }
 
 

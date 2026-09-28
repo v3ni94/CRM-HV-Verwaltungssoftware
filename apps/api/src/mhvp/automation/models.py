@@ -36,6 +36,7 @@ ACTION_TYPES: tuple[str, ...] = (
     "letter_draft",
     "ai_task",
     "create_task",
+    "assign_record",
 )
 # Trigger kinds: a domain event type or a schedule (stage 2, A39).
 TRIGGER_KINDS: tuple[str, ...] = ("event", "schedule")
@@ -44,11 +45,18 @@ TRIGGER_SCHEDULE = "schedule"
 # Synthetic event type of schedule runs (never emitted by the event system).
 SCHEDULE_EVENT_TYPE = "schedule.due"
 # Actions that need a ticket entity and are therefore not available on a schedule.
-TICKET_ONLY_ACTIONS: tuple[str, ...] = ("set_ticket_field", "mail_draft")
+TICKET_ONLY_ACTIONS: tuple[str, ...] = ("set_ticket_field", "mail_draft", "assign_record")
 CONDITION_OPS: tuple[str, ...] = ("eq", "ne", "contains", "gt", "lt")
 GROUP_OPS: tuple[str, ...] = ("and", "or")
 # Fields a rule may set on the ticket the event belongs to (stage 1).
-SETTABLE_TICKET_FIELDS: tuple[str, ...] = ("priority", "team_id", "category", "assignee_user_id")
+# ``topic`` (Thema, competence code) since the learning workflow (rule M9-11).
+SETTABLE_TICKET_FIELDS: tuple[str, ...] = (
+    "priority",
+    "team_id",
+    "category",
+    "assignee_user_id",
+    "topic",
+)
 # Run results: a run is only written for rules whose conditions matched.
 RUN_STATUS_EXECUTED = "executed"
 RUN_STATUS_FAILED = "failed"
@@ -192,4 +200,68 @@ class AutomationWebhookDelivery(IdMixin, TimestampMixin, TenantMixin, Base):
     # on a beat pass that finds several dead deliveries at once).
     owner_notified: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+
+# Rule proposals from repeated manual decisions (Lern-Workflow, rule M9-11) ----------------
+PROPOSAL_PROPOSED = "proposed"
+PROPOSAL_ACCEPTED = "accepted"
+PROPOSAL_REJECTED = "rejected"
+# Evidence no longer consistent (contradicting decision after the proposal); proposed again
+# once the threshold is reached again, no doubling needed (not a human rejection).
+PROPOSAL_WITHDRAWN = "withdrawn"
+PROPOSAL_STATUSES: tuple[str, ...] = (
+    PROPOSAL_PROPOSED,
+    PROPOSAL_ACCEPTED,
+    PROPOSAL_REJECTED,
+    PROPOSAL_WITHDRAWN,
+)
+
+
+class AutomationRuleProposal(IdMixin, TimestampMixin, TenantMixin, Base):
+    """A rule proposed from repeated consistent manual decisions (rule M9-11). One row per
+    pattern: entity type, field, sender scope (``address`` or ``domain``), sender key and the
+    chosen value. The proposal never acts by itself; only an explicit accept by a member with
+    ``tenant_settings:update`` creates an active ``automation_rule`` (``rule_id``). A rejected
+    pattern is proposed again only when the evidence reaches twice
+    ``rejected_evidence_count``."""
+
+    __tablename__ = "automation_rule_proposal"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id",
+            "entity_type",
+            "field",
+            "scope",
+            "sender_key",
+            "value",
+            name="uq_automation_rule_proposal_pattern",
+        ),
+        Index("ix_automation_rule_proposal_tenant_status", "tenant_id", "status"),
+    )
+
+    entity_type: Mapped[str] = mapped_column(String(16), nullable=False)  # message, ticket
+    # contact, property, unit (assignment) or topic, assignee_user_id (ticket field)
+    field: Mapped[str] = mapped_column(String(32), nullable=False)
+    scope: Mapped[str] = mapped_column(String(16), nullable=False)  # address, domain
+    sender_key: Mapped[str] = mapped_column(String(320), nullable=False)
+    value: Mapped[str] = mapped_column(String(100), nullable=False)
+    value_label: Mapped[str | None] = mapped_column(String(300))
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=PROPOSAL_PROPOSED, server_default=text("'proposed'")
+    )
+    # {"decision_ids": [...], "addresses": [...], "first_at": iso, "last_at": iso}
+    evidence: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    evidence_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    threshold: Mapped[int] = mapped_column(Integer, nullable=False)
+    rejected_evidence_count: Mapped[int | None] = mapped_column(Integer)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_reason: Mapped[str | None] = mapped_column(Text)
+    rule_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("automation_rule.id", ondelete="SET NULL")
     )

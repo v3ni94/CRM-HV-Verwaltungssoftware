@@ -58,6 +58,7 @@ _READ_ANY = ("tenant_settings:read", "tickets:read")
 # Event types offered by the form (free text stays allowed; the list is a help, not a limit).
 KNOWN_EVENT_TYPES: tuple[str, ...] = (
     "ticket.created",
+    "message.received",
     "ticket.merged",
     "ticket.status_changed",
     "sla.escalated",

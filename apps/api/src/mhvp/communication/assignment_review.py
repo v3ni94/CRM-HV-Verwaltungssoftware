@@ -581,10 +581,105 @@ async def decide(
         candidate_id=chosen,
         actor_user_id=actor_user_id,
     )
+    # Lern-Workflow (rule M9-11): the decision may complete a pattern of the same sender; this
+    # only proposes a rule, it never activates one.
+    from mhvp.automation.learning import observe
+
+    await observe(
+        session,
+        tenant_id=entity.tenant_id,
+        entity_type=entity_type,
+        entity_id=entity_id,
+        field=dimension,
+        actor_user_id=actor_user_id,
+    )
     # Nachgelagerte Dimensionen erneut prüfen (Objekt und Einheit folgen dem Kontakt).
     if entity_type == "message":
         return await review_message(session, entity, actor_user_id)  # type: ignore[arg-type]
     return await review_ticket(session, entity, actor_user_id)  # type: ignore[arg-type]
+
+
+RULE_DECISION = "rule"
+
+
+async def apply_rule_assignment(
+    session: AsyncSession,
+    *,
+    entity_type: str,
+    entity_id: uuid.UUID,
+    dimension: str,
+    value: uuid.UUID,
+    rule_id: uuid.UUID,
+    rule_name: str,
+    marker: dict[str, Any],
+) -> str:
+    """Assignment by an accepted learned rule (rule M9-11, action ``assign_record``). Only an
+    empty field is filled, and only when no member decided on this dimension yet; a member's
+    decision always wins. The review row is stored as ``auto`` with decision ``rule`` and the
+    rule as reason, so a later check keeps it and a member can still correct it with a Ja.
+    The domain event carries the automation marker (depth 1). Returns a short German result
+    text; raises ``LookupError`` when the target record is gone."""
+    field = ENTITY_FIELDS[entity_type].get(dimension)
+    if field is None:
+        raise LookupError(f"Dimension {dimension} für {entity_type} unbekannt.")
+    try:
+        entity = await _load_entity(session, entity_type, entity_id)
+    except ProblemError as exc:
+        raise LookupError("Vorgang nicht gefunden.") from exc
+    if getattr(entity, field) is not None:
+        return "Feld bereits gesetzt; nichts geändert."
+    review = await _get_review(session, entity_type, entity_id, dimension)
+    if review is not None and review.decision is not None:
+        return "Bereits von einem Mitglied entschieden; nichts geändert."
+    try:
+        label = await _assert_candidate_exists(session, dimension, value)
+    except ProblemError as exc:
+        raise LookupError("Ziel der Regel nicht gefunden.") from exc
+    if review is None:
+        review = AssignmentReview(
+            tenant_id=entity.tenant_id,
+            entity_type=entity_type,
+            entity_id=entity_id,
+            dimension=dimension,
+            candidates=[],
+        )
+        session.add(review)
+    setattr(entity, field, value)
+    if isinstance(entity, Message) and dimension == "contact" and entity.status == "new":
+        entity.status = "assigned"
+    review.status = "auto"
+    review.chosen_id = review.basis_id = value
+    review.decision = RULE_DECISION
+    review.reason = f"Regel {rule_name}"[:500]
+    review.decided_at = datetime.now(UTC)
+    await session.flush()
+    data = {
+        "dimension": dimension,
+        "decision": RULE_DECISION,
+        "chosen_id": str(value),
+        "reason": review.reason,
+        "rule_id": str(rule_id),
+    }
+    await emit(
+        session,
+        tenant_id=entity.tenant_id,
+        type="assignment_review.auto",
+        entity_type=entity_type,
+        entity_id=entity_id,
+        actor_user_id=None,
+        payload=data | marker,
+    )
+    if isinstance(entity, Ticket):
+        session.add(
+            TicketEvent(
+                tenant_id=entity.tenant_id,
+                ticket_id=entity.id,
+                kind="assignment_review",
+                user_id=None,
+                data=data,
+            )
+        )
+    return f"Zugeordnet: {label}"
 
 
 def review_out(row: AssignmentReview, entity: Message | Ticket | None = None) -> dict[str, Any]:

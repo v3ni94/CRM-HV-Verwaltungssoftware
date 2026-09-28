@@ -21,6 +21,7 @@ run, proposal only), plus the trigger kind `schedule` (daily, weekly, monthly).
 | `services.py` | Evaluation context per event (event fields plus the current ticket fields), action execution (stage 1 and 2), webhook secret sealing (`seal_actions`, `carry_secrets`, `public_actions`), dry run, `process_schedules` and `process_tenant` (beat loop), webhook outbox (`deliver_due_webhooks`, `attempt_webhook_delivery`, `schedule_after_attempt`, `redeliver_webhook`; A82). |
 | `tasks.py` | Celery task `mhvp.automation.process_events` (beat every 60 seconds, queue `default`). |
 | `routers.py` | `/api/v1/automation/meta`, `/rules` (CRUD, `/activate`, `/test`), `/runs` (with `webhook_deliveries` per run), `/webhook-deliveries/{id}/redeliver`. |
+| `learning.py` | Lern-Workflow (rule M9-11, `docs/rules/M9-11-lern-workflow.md`): pattern detection over the decision log (`trailing_streak`, `qualifies`, `next_status`, `sender_keys`), `observe` hook after manual decisions, `accept` (re-verifies the evidence, then creates an active `automation_rule`) and `reject`, API `/api/v1/automation/rule-proposals` (list, `/{id}/accept`, `/{id}/reject`). Table `automation_rule_proposal` (migration 0218, tenant RLS). |
 
 ## Processing
 
@@ -95,3 +96,27 @@ are history, not triggers.
 `components/settings/AutomationAdmin.tsx`: list, structured form (trigger kind, event type or
 schedule, condition rows with select fields, seven action editors, rule sentence preview,
 JSON expert view), test run, log.
+
+## Lern-Workflow (rule M9-11)
+
+Repeated consistent manual decisions of the same sender (default 5, tenant setting
+`rule_proposal_threshold`, 2 to 50) create a rule proposal; nothing becomes active without an
+explicit accept by a member with `tenant_settings:update`.
+
+* Evidence: the domain events `assignment_review.decided` (Ja, manual choice, Nein),
+  `ticket.assigned` (reason `manuell`) and `ticket.topic_changed`, joined to the sender (mail
+  `from_address`, ticket: first inbound mail). Events with the automation marker never count.
+* Patterns per entity type, field (`contact`, `property`, `unit`, `topic`,
+  `assignee_user_id`; closed list) and sender address, plus sender domain for non shared
+  domains with at least two addresses. A contradicting decision resets the streak and
+  withdraws an open proposal; a rejected pattern returns only once the evidence doubled.
+* Accept creates an ordinary rule: trigger `message.received`, condition
+  `entity.from_address`/`entity.from_domain` (mail context, `build_context`), action
+  `assign_record` (fills an empty assignment field through
+  `assignment_review.apply_rule_assignment`, decision `rule`) or `set_ticket_field`
+  (`topic`, `assignee_user_id`, on the ticket the mail opened, `entity.opens_ticket`).
+* Errors: `MHVP-AUTO-0001` (proposal already decided), `MHVP-AUTO-0002` (evidence no longer
+  holds on accept).
+* Tests: `tests/unit/test_rule_proposal_learning.py`, `tests/integration/test_m9_rule_proposals.py`,
+  CRM `RuleProposals.test.tsx`.
+

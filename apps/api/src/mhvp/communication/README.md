@@ -301,6 +301,13 @@ Ticketereignis `assignment_review`, Lernbeispiel (`ai_example`, Aufgabe `classif
 `kind = assignment_review`) nur bei `ai_learning_examples_enabled` (ADR 0010). Oberfläche:
 `apps/web-crm/src/components/assignment/AssignmentPrompt.tsx` (Ticketseite; Mailansicht).
 
+Lern-Workflow (Regel M9-11): Nach jeder Entscheidung prüft `mhvp.automation.learning.observe`
+im Savepoint, ob dieselbe Entscheidung für denselben Absender die Schwelle erreicht, und legt
+höchstens einen Regelvorschlag an. Eine angenommene Regel ordnet über
+`apply_rule_assignment` zu: nur leere, von keinem Mitglied entschiedene Felder, Zeile `auto`
+mit Entscheidung `rule` und Regelname als Grund; eine spätere Prüfung lässt sie stehen, ein Ja
+korrigiert sie.
+
 Stand Review 1.36.0: Die GET-Endpunkte rechnen nur und speichern nichts; nicht gespeicherte
 Zeilen tragen eine feste, aus Vorgang und Dimension abgeleitete Kennung. Gespeichert wird beim
 Eingang, bei Anlage und Änderung eines Tickets und bei der Entscheidung. Jede Zeile führt den

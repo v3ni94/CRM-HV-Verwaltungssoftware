@@ -57,6 +57,12 @@ export default async function SettingsPage() {
       show: can("tenant_settings:read") || can("tickets:read"),
     },
     {
+      href: "/einstellungen/regelvorschlaege",
+      title: t("ruleProposals.title"),
+      description: t("ruleProposals.description"),
+      show: can("tenant_settings:read"),
+    },
+    {
       href: "/einstellungen/antwortvorlagen",
       title: t("replyTemplates.title"),
       description: t("replyTemplates.description"),

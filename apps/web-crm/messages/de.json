@@ -3055,7 +3055,8 @@
       "webhook": "Webhook senden",
       "mail_draft": "E-Mail-Entwurf aus Antwortvorlage",
       "letter_draft": "Brief-Entwurf aus Briefvorlage",
-      "ai_task": "KI-Aufgabe starten"
+      "ai_task": "KI-Aufgabe starten",
+      "assign_record": "Zuordnen (Lernregel)"
     },
     "actionValue": "Wert der Aktion",
     "ticketField": "Ticketfeld",
@@ -3063,7 +3064,8 @@
       "priority": "Priorität",
       "team_id": "Team",
       "category": "Kategorie",
-      "assignee_user_id": "Bearbeiter"
+      "assignee_user_id": "Bearbeiter",
+      "topic": "Thema"
     },
     "priorities": {
       "low": "Niedrig",
@@ -3113,7 +3115,8 @@
       "webhook": "Webhook an {url}",
       "mailDraft": "E-Mail-Entwurf aus {template}",
       "letterDraft": "Brief-Entwurf aus {template}",
-      "aiTask": "KI-Aufgabe {task}"
+      "aiTask": "KI-Aufgabe {task}",
+      "assignRecord": "Zuordnen: {dimension} {value}"
     },
     "log": "Protokoll",
     "filterRule": "Regel filtern",
@@ -4403,6 +4406,10 @@
         "service_provider": "Dienstleister",
         "service_provider_relation": "Dienstleistervertrag"
       }
+    },
+    "ruleProposals": {
+      "title": "Regelvorschläge",
+      "description": "Vorschläge aus wiederholten manuellen Zuordnungen je Absender. Aktiv erst nach Annahme."
     }
   },
   "Members": {
@@ -9455,5 +9462,42 @@
     "placeholder": "Einstellungen durchsuchen",
     "resultsLabel": "Treffer",
     "noResults": "Keine Treffer."
+  },
+  "RuleProposals": {
+    "title": "Regelvorschläge",
+    "intro": "Wenn für denselben Absender mehrfach dieselbe manuelle Entscheidung getroffen wurde, schlägt die Plattform eine Regel vor. Eine Regel wird erst aktiv, wenn Sie den Vorschlag annehmen. Beim Annehmen wird die Grundlage erneut aus dem Entscheidungsprotokoll geprüft. Abgelehnte Vorschläge erscheinen erst wieder, wenn sich die Zahl gleicher Entscheidungen verdoppelt hat. Zahlungsempfänger, IBAN, Beschlüsse, Gebühren und steuerliche Einordnung werden nie gelernt.",
+    "empty": "Derzeit gibt es keine offenen Regelvorschläge.",
+    "entity": {
+      "message": "Mail",
+      "ticket": "Ticket"
+    },
+    "fields": {
+      "contact": "Kontakt",
+      "property": "Objekt",
+      "unit": "Einheit",
+      "topic": "Thema",
+      "assignee_user_id": "Bearbeiter"
+    },
+    "scope": {
+      "address": "Absender {sender}",
+      "domain": "Absenderdomain {sender}"
+    },
+    "evidence": "{count} gleiche manuelle Entscheidungen ohne Widerspruch (Schwelle {threshold}), vom {first} bis {last}",
+    "addresses": "Absenderadressen: {addresses}",
+    "accept": "Annehmen und Regel aktivieren",
+    "reject": "Ablehnen",
+    "reason": "Grund der Ablehnung (optional)",
+    "confirmReject": "Ablehnung bestätigen",
+    "cancel": "Abbrechen",
+    "accepted": "Regel angelegt und aktiv.",
+    "toRules": "Zur Automatisierung",
+    "rejected": "Vorschlag abgelehnt.",
+    "readOnly": "Annehmen und Ablehnen erfordern das Recht Mandanteneinstellungen ändern.",
+    "thresholdLabel": "Schwelle (gleiche Entscheidungen)",
+    "thresholdSave": "Schwelle speichern",
+    "thresholdSaved": "Schwelle gespeichert.",
+    "thresholdInvalid": "Bitte eine ganze Zahl zwischen 2 und 50 eingeben.",
+    "thresholdHint": "Standard 5. Eine widersprechende Entscheidung setzt die Zählung zurück. Jede Änderung wird protokolliert.",
+    "badgeHint": "{count} offene Regelvorschläge"
   }
 }

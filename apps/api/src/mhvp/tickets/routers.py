@@ -2040,8 +2040,11 @@ async def patch_ticket(
                 skip_flow=_may_skip_flow(principal),
                 resolution=body.resolution,
             )
-        if body.assignee_user_id:
-            await assign_ticket(session, ticket, body.assignee_user_id, principal.user_id)
+        learned: list[str] = []  # manual decisions for the Lern-Workflow (rule M9-11)
+        if body.assignee_user_id and await assign_ticket(
+            session, ticket, body.assignee_user_id, principal.user_id
+        ):
+            learned.append("assignee_user_id")
         if body.priority:
             ticket.priority = body.priority
         if body.team_id:
@@ -2050,6 +2053,19 @@ async def patch_ticket(
             ticket.time_spent_minutes = body.time_spent_minutes
         if body.topic is not None:
             await _assert_known_topic(session, principal.tenant_id, body.topic)
+            if body.topic != ticket.topic:
+                # Logged since the Lern-Workflow (rule M9-11): the topic choice is evidence.
+                await emit(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    type="ticket.topic_changed",
+                    entity_type="ticket",
+                    entity_id=ticket.id,
+                    actor_user_id=principal.user_id,
+                    payload={"from": ticket.topic, "to": body.topic, "number": ticket.number},
+                    changes={"topic": {"old": ticket.topic, "new": body.topic}},
+                )
+                learned.append("topic")
             ticket.topic = body.topic
         await _assert_references_exist(
             session,
@@ -2076,6 +2092,18 @@ async def patch_ticket(
 
             await review_ticket(session, ticket, principal.user_id)
         await session.flush()
+        if learned:
+            from mhvp.automation.learning import observe
+
+            for learned_field in learned:
+                await observe(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    entity_type="ticket",
+                    entity_id=ticket.id,
+                    field=learned_field,
+                    actor_user_id=principal.user_id,
+                )
         return _ticket_out(ticket)
 
 

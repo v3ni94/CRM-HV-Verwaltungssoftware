@@ -2723,6 +2723,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/automation/rule-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Regelvorschläge aus wiederholten Entscheidungen */
+        get: operations["list_proposals_api_v1_automation_rule_proposals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/automation/rule-proposals/{proposal_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Regelvorschlag annehmen (legt eine aktive Regel an) */
+        post: operations["accept_proposal_api_v1_automation_rule_proposals__proposal_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/automation/rule-proposals/{proposal_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Regelvorschlag ablehnen */
+        post: operations["reject_proposal_api_v1_automation_rule_proposals__proposal_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/automation/rules": {
         parameters: {
             query?: never;
@@ -30251,6 +30302,75 @@ export interface components {
             /** Target Document Type */
             target_document_type?: string | null;
         };
+        /** RuleProposalEvidence */
+        RuleProposalEvidence: {
+            /** Addresses */
+            addresses?: string[];
+            /** Decision Ids */
+            decision_ids?: string[];
+            /** First At */
+            first_at?: string | null;
+            /** Last At */
+            last_at?: string | null;
+        };
+        /** RuleProposalOut */
+        RuleProposalOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /** Decision Reason */
+            decision_reason: string | null;
+            /**
+             * Entity Type
+             * @enum {string}
+             */
+            entity_type: "message" | "ticket";
+            evidence: components["schemas"]["RuleProposalEvidence"];
+            /** Evidence Count */
+            evidence_count: number;
+            /** Field */
+            field: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Rejected Evidence Count */
+            rejected_evidence_count: number | null;
+            /** Rule Id */
+            rule_id: string | null;
+            /**
+             * Scope
+             * @enum {string}
+             */
+            scope: "address" | "domain";
+            /** Sender Key */
+            sender_key: string;
+            /** Status */
+            status: string;
+            /** Threshold */
+            threshold: number;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+            /** Value */
+            value: string;
+            /** Value Label */
+            value_label: string | null;
+        };
+        /** RuleProposalRejectIn */
+        RuleProposalRejectIn: {
+            /** Reason */
+            reason?: string | null;
+        };
         /** RuleTableIn */
         RuleTableIn: {
             kind: components["schemas"]["HeatingRuleTableKind"];
@@ -31497,6 +31617,11 @@ export interface components {
             position_catalogue_extra?: string[];
             receivable_rules?: components["schemas"]["ReceivableRulesConfig"];
             resolution_kinds?: components["schemas"]["ResolutionKindsConfig"];
+            /**
+             * Rule Proposal Threshold
+             * @default 5
+             */
+            rule_proposal_threshold: number;
             signature_template?: components["schemas"]["SignatureTemplate"];
             /** Sources */
             sources: {
@@ -31536,6 +31661,8 @@ export interface components {
             position_catalogue_extra?: string[] | null;
             receivable_rules?: components["schemas"]["ReceivableRulesConfig"] | null;
             resolution_kinds?: components["schemas"]["ResolutionKindsConfig"] | null;
+            /** Rule Proposal Threshold */
+            rule_proposal_threshold?: number | null;
             signature_template?: components["schemas"]["SignatureTemplate"] | null;
             /** Ticket Reopen Window Days */
             ticket_reopen_window_days?: number | null;
@@ -38925,6 +39052,104 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    list_proposals_api_v1_automation_rule_proposals_get: {
+        parameters: {
+            query?: {
+                status?: "proposed" | "accepted" | "rejected" | "withdrawn" | "all";
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleProposalOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_proposal_api_v1_automation_rule_proposals__proposal_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_proposal_api_v1_automation_rule_proposals__proposal_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleProposalRejectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleProposalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

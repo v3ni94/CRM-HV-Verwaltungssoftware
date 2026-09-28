@@ -20,7 +20,11 @@ from mhvp.core.db.columns import IdMixin, TenantMixin
 
 class DomainEvent(IdMixin, TenantMixin, Base):
     __tablename__ = "domain_event"
-    __table_args__ = (Index("ix_domain_event_tenant_id_occurred_at", "tenant_id", "occurred_at"),)
+    __table_args__ = (
+        Index("ix_domain_event_tenant_id_occurred_at", "tenant_id", "occurred_at"),
+        # Evidence lookup of the learning workflow (rule M9-11, migration 0218).
+        Index("ix_domain_event_tenant_id_type_occurred_at", "tenant_id", "type", "occurred_at"),
+    )
 
     type: Mapped[str] = mapped_column(String(100), nullable=False)
     entity_type: Mapped[str] = mapped_column(String(63), nullable=False)

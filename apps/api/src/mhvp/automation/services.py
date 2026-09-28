@@ -56,6 +56,7 @@ from mhvp.automation.schedule import SCHEDULE_TZ, previous_due, window_event_id
 from mhvp.automation.schemas import (
     Action,
     AiTaskAction,
+    AssignRecordAction,
     CreateTaskAction,
     CreateTicketAction,
     LetterDraftAction,
@@ -137,6 +138,37 @@ def ticket_context(ticket: Ticket, *, now: datetime | None = None) -> dict[str, 
     return context
 
 
+async def message_context(session: AsyncSession, message: Any) -> dict[str, Any]:
+    """Fields of a mail for rule conditions (Lern-Workflow, rule M9-11): sender address and
+    domain in lower case, assignment fields, the ticket of the mail and ``opens_ticket`` (the
+    mail is the first inbound mail of its ticket, i.e. the ticket was opened by it; a reply
+    joining an existing ticket is not)."""
+    from mhvp.communication.models import Message
+
+    address = (message.from_address or "").strip().lower() or None
+    opens_ticket = False
+    if message.ticket_id is not None and message.direction == "in":
+        first = await session.scalar(
+            select(Message.id)
+            .where(Message.ticket_id == message.ticket_id, Message.direction == "in")
+            .order_by(Message.created_at, Message.id)
+            .limit(1)
+        )
+        opens_ticket = first == message.id
+    return {
+        "id": str(message.id),
+        "direction": message.direction,
+        "from_address": address,
+        "from_domain": address.rsplit("@", 1)[1] if address and "@" in address else None,
+        "mailbox_id": normalise(message.mailbox_id),
+        "contact_id": normalise(message.contact_id),
+        "property_id": normalise(message.property_id),
+        "ticket_id": normalise(message.ticket_id),
+        "opens_ticket": opens_ticket,
+        "subject": message.subject,
+    }
+
+
 async def build_context(
     session: AsyncSession,
     *,
@@ -156,6 +188,12 @@ async def build_context(
         ticket = await session.get(Ticket, entity_id)
         if ticket is not None:
             entity = ticket_context(ticket)
+    elif entity_type == "message" and entity_id is not None and not entity_override:
+        from mhvp.communication.models import Message
+
+        message = await session.get(Message, entity_id)
+        if message is not None:
+            entity = await message_context(session, message)
     context = {
         "type": type,
         "entity_type": entity_type,
@@ -564,15 +602,25 @@ async def _set_ticket_field(
     context: dict[str, Any],
     dry_run: bool,
 ) -> dict[str, Any]:
-    if context.get("entity_type") != "ticket":
+    message_event = context.get("entity_type") == "message"
+    if context.get("entity_type") != "ticket" and not message_event:
         raise ActionError("Feld setzen braucht ein Ereignis zu einem Ticket.")
     if not context.get("entity_id") and not dry_run:
         raise ActionError("Feld setzen braucht ein Ereignis zu einem Ticket.")
     value = resolve_value(action.value, context)
-    ticket_id = uuid.UUID(str(context["entity_id"])) if context.get("entity_id") else None
+    # A mail event (rule M9-11) sets the field on the ticket of the mail, if it has one.
+    raw_ticket = (context.get("entity") or {}).get("ticket_id") if message_event else None
+    if message_event:
+        ticket_id = uuid.UUID(str(raw_ticket)) if raw_ticket else None
+    else:
+        ticket_id = uuid.UUID(str(context["entity_id"])) if context.get("entity_id") else None
     new_value: Any
     if action.field == "priority":
         new_value = Priority(str(value))
+    elif action.field == "topic":
+        new_value = None if value in (None, "") else str(value)[:32]
+        if new_value is not None and not await _known_topic(session, tenant_id, new_value):
+            raise ActionError(f"Unbekanntes Thema: {new_value}")
     elif action.field in ("team_id", "assignee_user_id"):
         new_value = _uuid_or_none(value, action.field)
         if action.field == "team_id":
@@ -588,7 +636,11 @@ async def _set_ticket_field(
         "entity_type": "ticket",
         "entity_id": str(ticket_id) if ticket_id else None,
     }
-    if dry_run or ticket_id is None:
+    if dry_run:
+        return preview | {"ok": True, "detail": "Testlauf: Feld würde gesetzt."}
+    if ticket_id is None:
+        if message_event:
+            return preview | {"ok": True, "detail": "Mail ohne Ticket; nichts gesetzt."}
         return preview | {"ok": True, "detail": "Testlauf: Feld würde gesetzt."}
     ticket = await session.get(Ticket, ticket_id)
     if ticket is None:
@@ -636,6 +688,65 @@ async def _set_ticket_field(
         changes={action.field: {"old": old_value, "new": normalise(new_value)}},
     )
     return preview | {"ok": True, "detail": f"{action.field} gesetzt."}
+
+
+async def _known_topic(session: AsyncSession, tenant_id: uuid.UUID, code: str) -> bool:
+    from mhvp.communication.assignment import _tenant_extra_catalogue
+    from mhvp.tickets.competences import is_known_code
+
+    return is_known_code(code, await _tenant_extra_catalogue(session, tenant_id))
+
+
+async def _assign_record(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event_id: uuid.UUID,
+    action: AssignRecordAction,
+    context: dict[str, Any],
+    dry_run: bool,
+) -> dict[str, Any]:
+    """Lern-Workflow (rule M9-11): assignment of a contact, property or unit to the mail of the
+    event or to its ticket, through the assignment review (``apply_rule_assignment``)."""
+    from mhvp.communication.assignment_review import apply_rule_assignment
+
+    entity_type = context.get("entity_type")
+    if entity_type not in ("message", "ticket"):
+        raise ActionError("Zuordnen braucht ein Ereignis zu einer Mail oder einem Ticket.")
+    target_id: uuid.UUID | None
+    if action.target == entity_type:
+        target_id = uuid.UUID(str(context["entity_id"])) if context.get("entity_id") else None
+    elif action.target == "ticket" and entity_type == "message":
+        raw = (context.get("entity") or {}).get("ticket_id")
+        target_id = uuid.UUID(str(raw)) if raw else None
+    else:
+        raise ActionError("Zuordnen an eine Mail braucht ein Mailereignis.")
+    preview = {
+        "type": "assign_record",
+        "dimension": action.dimension,
+        "value": str(action.value),
+        "entity_type": action.target,
+        "entity_id": str(target_id) if target_id else None,
+    }
+    if dry_run:
+        return preview | {"ok": True, "detail": "Testlauf: Zuordnung würde gesetzt."}
+    if target_id is None:
+        return preview | {"ok": True, "detail": "Kein Ticket zur Mail; nichts zugeordnet."}
+    try:
+        outcome = await apply_rule_assignment(
+            session,
+            entity_type=action.target,
+            entity_id=target_id,
+            dimension=action.dimension,
+            value=action.value,
+            rule_id=rule.id,
+            rule_name=rule.name,
+            marker=automation_marker(rule.id, event_id),
+        )
+    except LookupError as exc:
+        raise ActionError(str(exc)) from exc
+    return preview | {"ok": True, "detail": outcome}
 
 
 TASK_CATEGORY = "task"
@@ -1391,6 +1502,16 @@ async def _execute_one(
             context=context,
             dry_run=dry_run,
             settings=settings,
+        )
+    if isinstance(action, AssignRecordAction):
+        return await _assign_record(
+            session,
+            tenant_id=tenant_id,
+            rule=rule,
+            event_id=event_id,
+            action=action,
+            context=context,
+            dry_run=dry_run,
         )
     if isinstance(action, CreateTaskAction):
         return await _create_task(

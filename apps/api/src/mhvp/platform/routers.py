@@ -388,6 +388,7 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         ticket_reopen_window_days=row.ticket_reopen_window_days,
         ai_learning_examples_enabled=row.ai_learning_examples_enabled,
         ai_learning_examples_retention_months=row.ai_learning_examples_retention_months,
+        rule_proposal_threshold=row.rule_proposal_threshold,
         metering_module_enabled=row.metering_module_enabled,
         resolution_kinds=ResolutionKindsConfig.model_validate(row.resolution_kinds or {}),
         receivable_rules=ReceivableRulesConfig.model_validate(row.receivable_rules or {}),
@@ -433,6 +434,7 @@ async def patch_settings(
             "ticket_reopen_window_days": row.ticket_reopen_window_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
+            "rule_proposal_threshold": row.rule_proposal_threshold,
             "metering_module_enabled": row.metering_module_enabled,
             "resolution_kinds": row.resolution_kinds,
             "receivable_rules": row.receivable_rules,
@@ -456,6 +458,9 @@ async def patch_settings(
         if body.ai_learning_examples_retention_months is not None:
             # ADR 0010 Nachtrag 27.09.2026: Aufbewahrung in Monaten, Löschlauf täglich.
             row.ai_learning_examples_retention_months = body.ai_learning_examples_retention_months
+        if body.rule_proposal_threshold is not None:
+            # Lern-Workflow (rule M9-11): threshold of the rule proposals, change recorded.
+            row.rule_proposal_threshold = body.rule_proposal_threshold
         if body.metering_module_enabled is not None:
             # Messdienstleister module switch per tenant, change recorded in the event.
             row.metering_module_enabled = body.metering_module_enabled
@@ -484,6 +489,7 @@ async def patch_settings(
             "ticket_reopen_window_days": row.ticket_reopen_window_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
+            "rule_proposal_threshold": row.rule_proposal_threshold,
             "metering_module_enabled": row.metering_module_enabled,
             "resolution_kinds": row.resolution_kinds,
             "receivable_rules": row.receivable_rules,

@@ -24,7 +24,9 @@ export type ActionType =
   | "mail_draft"
   | "letter_draft"
   | "ai_task"
-  | "create_task";
+  | "create_task"
+  // Lern-Workflow (Regel M9-11): only created by accepting a rule proposal, not offered here.
+  | "assign_record";
 export type Action = Record<string, unknown> & { type: ActionType };
 export type TriggerKind = "event" | "schedule";
 export type Schedule = {
@@ -248,6 +250,8 @@ export function defaultAction(type: ActionType, pickers: Pickers): Action {
         priority: null,
         due_in_days: null,
       };
+    case "assign_record":
+      return { type, target: "message", dimension: "property", value: "" };
   }
 }
 
@@ -294,6 +298,11 @@ export function summariseAction(a: Action, t: T, pickers: Pickers): string {
     });
   if (a.type === "create_task")
     return t("summary.createTask", { title: String(a.title ?? "") });
+  if (a.type === "assign_record")
+    return t("summary.assignRecord", {
+      dimension: String(a.dimension ?? ""),
+      value: String(a.value ?? ""),
+    });
   return t("summary.aiTask", { task: t(`aiTasks.${String(a.task)}`) });
 }
 

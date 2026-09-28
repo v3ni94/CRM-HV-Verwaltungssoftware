@@ -118,6 +118,8 @@ class TenantSettingsOut(BaseModel):
     ai_learning_examples_enabled: bool = False
     # ADR 0010 Nachtrag 27.09.2026: Aufbewahrung der Lernbeispiele in Monaten (Standard 24).
     ai_learning_examples_retention_months: int = 24
+    # Lern-Workflow (rule M9-11): consistent manual decisions before a rule is proposed.
+    rule_proposal_threshold: int = 5
     # Messdienstleister module switch (default off).
     metering_module_enabled: bool = False
     # Regel M19-07, M19-04: deaktivierte eingebaute und eigene Erledigungsarten.
@@ -141,6 +143,7 @@ class TenantSettingsPatch(BaseModel):
     ticket_reopen_window_days: int | None = Field(default=None, ge=0, le=3650)
     ai_learning_examples_enabled: bool | None = None
     ai_learning_examples_retention_months: int | None = Field(default=None, ge=1, le=120)
+    rule_proposal_threshold: int | None = Field(default=None, ge=2, le=50)
     metering_module_enabled: bool | None = None
     resolution_kinds: ResolutionKindsConfig | None = None
     mail_approval_mode: str | None = Field(default=None, pattern="^(all|external_only|off)$")

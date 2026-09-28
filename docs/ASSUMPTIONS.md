@@ -820,3 +820,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `POST /mail/ingest`, Gmail-Abruf, `GET /tickets/{id}` (`follow_up_of`, `follow_ups`, `follow_up_of_ticket_id`), `GET`/`PATCH /tenant/settings` (`ticket_reopen_window_days`), CRM Ticketdetail und Einstellungen Mandant |
 | Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
 | Datum | 28.09.2026 |
+
+## A-071
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Lern-Workflow (Regel M9-11, Migration 0218): (1) Ein Regelvorschlag entsteht nach 5 gleichen manuellen Entscheidungen für denselben Absender ohne widersprechende Entscheidung dazwischen (Mandanteneinstellung `rule_proposal_threshold`, zulässig 2 bis 50). (2) Absender eines Tickets ist die Adresse seiner ersten eingehenden Mail. (3) Ein Domainmuster gilt nur für Domains, die kein öffentlicher Maildienst sind (gmail.com, gmx.de, web.de, t-online.de, outlook.com und weitere, Liste `SHARED_MAIL_DOMAINS` in `mhvp.automation.learning`) und keinem eigenen Postfach gehören, und nur mit Entscheidungen von mindestens zwei Adressen. (4) Als Ticketkategorie im Sinne des Betreiberwunsches gilt das Ticketthema (`topic`), weil nur dieses per PATCH manuell gewählt wird; die Vorlagenkategorie bleibt unberührt. (5) Abgelehnte Vorschläge erscheinen erst bei doppelter Anzahl gleicher Entscheidungen wieder. |
+| Begründung | Betreiberwunsch vom 27.09.2026 ("etwa fünfmal"); ohne Vorgabe zu Domainregel und Wiedervorlage. Der Vorschlag wirkt nie selbst, erst die Annahme durch ein Mitglied legt eine Regel an; kein Geldfluss, keine Freigabestufe betroffen. |
+| Kennzeichnung | unkritisch; Schwelle, Domainliste und Wiedervorlage vom Betreiber zu bestätigen |
+| Betroffene Bereiche | `automation_rule_proposal`, `tenant_settings.rule_proposal_threshold`, `GET /automation/rule-proposals`, `POST /automation/rule-proposals/{id}/accept`, `POST /automation/rule-proposals/{id}/reject`, Aktion `assign_record`, Ereignis `ticket.topic_changed`, CRM `/einstellungen/regelvorschlaege` |
+| Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
+| Datum | 27.09.2026 |

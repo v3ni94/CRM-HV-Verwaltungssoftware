@@ -492,6 +492,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^automation/rules/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^automation/rules/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^automation/rules/${ID}/(activate|test)$`) },
+  // Lern-Workflow (Regel M9-11): Regelvorschläge aus wiederholten manuellen Entscheidungen.
+  { method: "GET", pattern: /^automation\/rule-proposals$/ },
+  { method: "POST", pattern: new RegExp(`^automation/rule-proposals/${ID}/(accept|reject)$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/templates/${ID}$`) },
   // Antwortvorlagen (operator 26.09.2026): CRUD, Platzhalter, Vorschau je Ticket und Antwort
   // aus dem Ticket (nur nach Bestätigung, über den bestehenden Freigabeweg).
