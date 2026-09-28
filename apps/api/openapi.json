@@ -40338,6 +40338,13 @@
             "title": "Status",
             "type": "string"
           },
+          "superseded_rules": {
+            "items": {
+              "$ref": "#/components/schemas/SupersededRuleOut"
+            },
+            "title": "Superseded Rules",
+            "type": "array"
+          },
           "threshold": {
             "title": "Threshold",
             "type": "integer"
@@ -42615,6 +42622,61 @@
           "email"
         ],
         "title": "SuperadminOut",
+        "type": "object"
+      },
+      "SupersededRuleOut": {
+        "description": "A learned rule of the same pattern group that the accept deactivated.",
+        "properties": {
+          "deactivated_at": {
+            "format": "date-time",
+            "title": "Deactivated At",
+            "type": "string"
+          },
+          "deactivated_by": {
+            "format": "uuid",
+            "title": "Deactivated By",
+            "type": "string"
+          },
+          "proposal_id": {
+            "format": "uuid",
+            "title": "Proposal Id",
+            "type": "string"
+          },
+          "rule_id": {
+            "format": "uuid",
+            "title": "Rule Id",
+            "type": "string"
+          },
+          "rule_name": {
+            "title": "Rule Name",
+            "type": "string"
+          },
+          "value": {
+            "title": "Value",
+            "type": "string"
+          },
+          "value_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Value Label"
+          }
+        },
+        "required": [
+          "rule_id",
+          "rule_name",
+          "proposal_id",
+          "value",
+          "value_label",
+          "deactivated_by",
+          "deactivated_at"
+        ],
+        "title": "SupersededRuleOut",
         "type": "object"
       },
       "SupplierProfileIn": {

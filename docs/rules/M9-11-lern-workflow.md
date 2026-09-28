@@ -8,7 +8,7 @@
 | Quellenstatus | Produktschutz (strengerer interner Standard nach Regel 0.1.6, keine Rechtsgrundlage); Betreiberwunsch vom 27.09.2026. Keine Norm aus Anhang C einschlägig |
 | Akzeptanzfall | Kein Fall aus Anhang D; interne Testfälle (siehe Tests unten). Abnahme durch den Betreiber offen |
 | Umsetzung | `mhvp.automation.learning` (Erkennung, Annahme, Ablehnung, API), `mhvp.automation.models.AutomationRuleProposal`, Aktion `assign_record` und Ticketfeld `topic` in `mhvp.automation.schemas` und `services`, `mhvp.communication.assignment_review.apply_rule_assignment` mit sicherer Kette `_rule_contact_chain` (A80-01 Regel 6), Ereignis `ticket.topic_changed` in `PATCH /tickets/{id}`, Mandanteneinstellung `rule_proposal_threshold`, Migrationen 0218 und 0220 (Absenderspalte `message.from_address_norm` mit Index); CRM `/einstellungen/regelvorschlaege` (`RuleProposals.tsx`) und Hinweis im Mailbereich |
-| Änderungsgrund | Betreiber: Wiederholt ein Nutzer etwa fünfmal dieselbe manuelle Entscheidung, soll das System eine Regel vorschlagen (27.09.2026). Nacharbeit 28.09.2026: eine angenommene Kontaktregel ergänzt Objekt und Einheit über die sichere Kette der Zuordnungsprüfung; die Nachweissuche je Absender läuft über einen Index statt über alle Mails des Mandanten |
+| Änderungsgrund | Betreiber: Wiederholt ein Nutzer etwa fünfmal dieselbe manuelle Entscheidung, soll das System eine Regel vorschlagen (27.09.2026). Nacharbeit 28.09.2026: eine angenommene Kontaktregel ergänzt Objekt und Einheit über die sichere Kette der Zuordnungsprüfung; die Nachweissuche je Absender läuft über einen Index statt über alle Mails des Mandanten. Nacharbeit 28.09.2026 (Prüfung der Version 1.40.2): eine angenommene Lernregel für Thema oder Bearbeiter überschrieb, was ein Mitglied vor dem zeitversetzten Regellauf von Hand gesetzt hatte (samt Benachrichtigung); konkurrierende Lernregeln derselben Mustergruppe liefen nebeneinander; eine von einer Regel gesetzte Zuordnung ließ sich nicht direkt mit Ja korrigieren (409) |
 
 ## Regel
 
@@ -45,13 +45,37 @@
   `entity.from_domain`, Aktion `assign_record` oder `set_ticket_field`). Sonst 409
   `MHVP-AUTO-0002`, nichts wird geschrieben. Wer und wann angenommen hat, steht am Vorschlag
   (`decided_by`, `decided_at`, `rule_id`) und im Ereignis `rule_proposal.accepted`.
+- Je Mustergruppe (Vorgangsart, Feld, Bereich, Absender) ist höchstens eine Lernregel aktiv
+  (seit 28.09.2026). Die Annahme eines Vorschlags deaktiviert die aktiven Regeln früher
+  angenommener Vorschläge derselben Gruppe mit anderem Wert. Die Deaktivierung steht mit
+  Mitglied, Zeitpunkt, Regel und ablösendem Vorschlag im Ereignis `automation_rule.updated`
+  (Grund `superseded`), die Regel-IDs zusätzlich in `rule_proposal.accepted`; die Antwort der
+  Annahme nennt sie in `superseded_rules`. Von Hand angelegte Regeln der Verwaltung und
+  Lernregeln anderer Gruppen (etwa Adresse statt Domain) bleiben unberührt.
+- Eine Entscheidung eines Mitglieds gewinnt immer, auch wenn der Regellauf erst Minuten oder
+  Stunden nach der Mail stattfindet (seit 28.09.2026). Eine Lernregel ist eine Regel mit
+  angenommenem Vorschlag (`automation_rule_proposal.rule_id`), keine neue Spalte.
 - `assign_record` füllt nur ein leeres Feld und nur, wenn kein Mitglied über diese Dimension
   entschieden hat; die Zuordnungsprüfung vermerkt `auto` mit Entscheidung `rule` und dem
-  Regelnamen als Grund, ein Mitglied kann mit Ja korrigieren. Setzt die Regel den Kontakt,
+  Regelnamen als Grund. Kandidaten der Zeile sind der Wert der Regel (zuerst, Konfidenz 1,
+  Grund Regelname) und die Vorschläge der Prüfung für diese Dimension (seit 28.09.2026, vorher
+  leer); ein Mitglied bestätigt oder korrigiert daher direkt mit Ja, ein Datensatz außerhalb der
+  Liste bleibt Nein und dann manuelle Wahl. Ein Nein widerspricht dem Wert der Regel und zählt
+  als Widerspruch zum Muster. Setzt die Regel den Kontakt,
   ergänzt dieselbe Aktion Objekt und Einheit über die sichere Kette der Zuordnungsprüfung
   (A80-01 Regel 6, seit 28.09.2026), ohne zweiten Regelschritt. Themen und Bearbeiter setzt die
   Regel nur am Ticket, das die Mail eröffnet hat (`entity.opens_ticket`), nie an einem
   bestehenden Ticket, dem eine Antwort zugeordnet wird.
+- `set_ticket_field` einer Lernregel (Thema, Bearbeiter) sperrt das Ticket wie
+  `PATCH /tickets/{id}` (`FOR UPDATE`) und füllt wie `assign_record` nur ein leeres Feld, für
+  das kein Mitglied entschieden hat (`ticket.topic_changed`; `ticket.assigned` mit einem
+  Mitglied als Handelndem, gleich mit welchem Grund). Ein Thema der automatischen Erkennung und
+  ein Bearbeiter aus Vorlage, Postfach, Signatur oder Verlauf bleiben: ob ein Mitglied einen
+  solchen Wert gesehen und behalten hat, ist nicht nachweisbar, weil ein PATCH mit demselben
+  Wert kein Ereignis schreibt. Bleibt das Feld, entsteht keine Benachrichtigung; das
+  Regelprotokoll nennt den Grund („Feld bereits gesetzt …“ oder „Von einem Mitglied
+  entschieden …“). Von Hand angelegte Regeln der Verwaltung behalten ihre bisherige Wirkung
+  und setzen das Feld auch über einen vorhandenen Wert (Kompatibilität, Regel M9-02).
 - Ablehnen (`POST .../reject`, optionaler Grund) speichert die Anzahl der Entscheidungen zum
   Zeitpunkt der Ablehnung; derselbe Vorschlag erscheint erst wieder, wenn die Folge das
   Doppelte erreicht.
@@ -68,7 +92,13 @@
   fünfte mit Vorschlag; Widerspruch setzt zurück und zieht zurück; Ablehnung mit Grund und
   Wiedervorlage erst bei doppeltem Nachweis; Annahme legt aktive Regel an und ordnet die
   nächste Mail zu; Ticketthema und Bearbeiter je Domain; erneute Prüfung beim Annehmen (409);
-  Rechte und Mandantentrennung.
+  Rechte und Mandantentrennung. Seit 28.09.2026 zusätzlich: Lernregel für Thema und Bearbeiter
+  lässt die Werte eines Mitglieds vor dem Regellauf stehen und benachrichtigt niemanden, füllt
+  ein leeres Feld, lässt ein erkanntes Thema stehen und ein nach einer Entscheidung geleertes
+  Feld leer; von Hand angelegte Regel überschreibt weiterhin; Annahme eines zweiten Werts
+  deaktiviert die Lernregel derselben Gruppe (Antwort `superseded_rules`, andere Gruppe und
+  Verwaltungsregel bleiben aktiv, der neue Wert wirkt); Ja bestätigt den Wert der Regel oder
+  korrigiert direkt auf einen anderen Vorschlag, ein Datensatz außerhalb der Liste bleibt 409.
 - `apps/api/tests/integration/test_a80_rule_assignment_chain.py` (28.09.2026): Kontaktregel
   am Ticket ergänzt Objekt und Einheit (`auto`, Grund, Ereignis mit Regel und Kennzeichen
   `automation`, keine zweite Meldung bei späterer Prüfung); Kontaktregel an der Mail ergänzt
@@ -85,3 +115,11 @@
   Kette nach (A80-01 Regel 6); die Tiefe 1 der Regel-Engine bleibt unverändert.
 - Die Nachweissuche für Domainmuster und die Verknüpfung mit `domain_event` (kein Index auf
   `entity_id`) laufen weiterhin ohne passenden Index; bei großem Ereignisbestand prüfen.
+- Abnahme durch den Betreiber (28.09.2026): Lernregeln für Thema und Bearbeiter füllen nur leere
+  Felder, ersetzen also weder ein automatisch erkanntes Thema noch einen Bearbeiter aus Vorlage
+  oder Postfach. Wer eine solche Vorbelegung ändern will, passt Vorlage, Postfach oder
+  Kompetenzkatalog an oder legt eine Regel von Hand an.
+- Adress- und Domainmuster desselben Absenders sind verschiedene Gruppen und können beide aktiv
+  sein; es wirkt die zuerst laufende Regel, die zweite findet das Feld gesetzt.
+- Die CRM-Seite `RuleProposals.tsx` zeigt `superseded_rules` nach der Annahme noch nicht an;
+  die Deaktivierung ist in der Regelliste und im Ereignisprotokoll sichtbar.

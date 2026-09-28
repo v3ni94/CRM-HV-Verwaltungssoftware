@@ -21,8 +21,11 @@ tax classification are never learnable, nothing here touches money or a release 
 Accepting a proposal (``tenant_settings:update``) recomputes the evidence, and only when it
 still holds creates an active ``automation_rule`` of the existing rule engine (trigger
 ``message.received``, condition on the sender, action ``assign_record`` or
-``set_ticket_field``); the rule is visible, testable and switchable in the rule admin. A
-rejected pattern is proposed again only when its evidence doubles.
+``set_ticket_field``); the rule is visible, testable and switchable in the rule admin. The
+accept deactivates the learned rules of earlier accepted proposals of the same pattern group
+(``supersede_learned_rules``), so a group has one learned value at a time. A learned rule
+never overrides a member's decision (``services.learned_field_kept``). A rejected pattern is
+proposed again only when its evidence doubles.
 """
 
 from __future__ import annotations
@@ -619,7 +622,8 @@ def rule_definition(row: AutomationRuleProposal, label: str) -> dict[str, Any]:
         "description": (
             f"Aus Regelvorschlag {row.id}: {row.evidence_count} gleiche manuelle "
             f"Entscheidungen ohne Widerspruch (Schwelle {row.threshold}). Füllt nur leere "
-            "Felder bei Zuordnungen; die Regel kann hier jederzeit deaktiviert werden."
+            "Felder, beim Thema auch eine automatische Erkennung; eine Entscheidung eines "
+            "Mitglieds gewinnt immer. Die Regel kann hier jederzeit deaktiviert werden."
         ),
         "active": True,
         "trigger_kind": TRIGGER_EVENT,
@@ -640,11 +644,85 @@ async def _locked(session: AsyncSession, proposal_id: uuid.UUID) -> AutomationRu
     return row
 
 
+SUPERSEDED_REASON = "superseded"
+
+
+async def supersede_learned_rules(
+    session: AsyncSession,
+    row: AutomationRuleProposal,
+    rule: AutomationRule,
+    *,
+    actor_user_id: uuid.UUID,
+) -> list[dict[str, Any]]:
+    """Deactivates the active rules created from other accepted proposals of the same pattern
+    group (entity type, field, scope, sender key) as ``row``: the group has one learned value
+    at a time. Without this two learned rules would compete, for ``set_ticket_field`` both ran
+    (duplicate notifications), for ``assign_record`` the older one kept winning and the new
+    one never took effect. Hand written rules of the admin (no proposal) are never touched.
+    Each deactivation is logged as ``automation_rule.updated`` with the acceptor as actor and
+    the superseding proposal and rule; returns what was deactivated for the response."""
+    rows = (
+        await session.execute(
+            select(AutomationRule, AutomationRuleProposal)
+            .join(AutomationRuleProposal, AutomationRuleProposal.rule_id == AutomationRule.id)
+            .where(
+                AutomationRuleProposal.entity_type == row.entity_type,
+                AutomationRuleProposal.field == row.field,
+                AutomationRuleProposal.scope == row.scope,
+                AutomationRuleProposal.sender_key == row.sender_key,
+                AutomationRuleProposal.status == PROPOSAL_ACCEPTED,
+                AutomationRuleProposal.id != row.id,
+                AutomationRule.id != rule.id,
+                AutomationRule.active.is_(True),
+            )
+            .order_by(AutomationRule.created_at, AutomationRule.id)
+            .with_for_update(of=AutomationRule)
+        )
+    ).all()
+    now = datetime.now(UTC)
+    out: list[dict[str, Any]] = []
+    for old_rule, old_row in rows:
+        old_rule.active = False
+        old_rule.updated_by = actor_user_id
+        await emit(
+            session,
+            tenant_id=row.tenant_id,
+            type="automation_rule.updated",
+            entity_type="automation_rule",
+            entity_id=old_rule.id,
+            actor_user_id=actor_user_id,
+            payload={
+                "fields": ["active"],
+                "reason": SUPERSEDED_REASON,
+                "proposal_id": str(old_row.id),
+                "superseded_by_proposal_id": str(row.id),
+                "superseded_by_rule_id": str(rule.id),
+            },
+            changes={"active": {"old": True, "new": False}},
+        )
+        out.append(
+            {
+                "rule_id": old_rule.id,
+                "rule_name": old_rule.name,
+                "proposal_id": old_row.id,
+                "value": old_row.value,
+                "value_label": old_row.value_label,
+                "deactivated_by": actor_user_id,
+                "deactivated_at": now,
+            }
+        )
+    if out:
+        await session.flush()
+    return out
+
+
 async def accept(
     session: AsyncSession, proposal_id: uuid.UUID, *, actor_user_id: uuid.UUID
-) -> AutomationRuleProposal:
+) -> tuple[AutomationRuleProposal, list[dict[str, Any]]]:
     """Deterministic check of the evidence at the moment of the accept, then an active rule of
-    the rule engine; the proposal records who accepted when and which rule was created."""
+    the rule engine; the proposal records who accepted when and which rule was created. Active
+    rules of earlier accepted proposals of the same pattern group are deactivated
+    (``supersede_learned_rules``) and returned as the second element."""
     from mhvp.automation.schemas import AutomationRuleIn
     from mhvp.automation.services import seal_actions
 
@@ -692,15 +770,23 @@ async def accept(
         actor_user_id=actor_user_id,
         payload={"name": rule.name, "active": rule.active, "proposal_id": str(row.id)},
     )
+    superseded = await supersede_learned_rules(session, row, rule, actor_user_id=actor_user_id)
     row.status = PROPOSAL_ACCEPTED
     row.rule_id = rule.id
     row.value_label = label[:300]
     row.decided_by = row.updated_by = actor_user_id
     row.decided_at = datetime.now(UTC)
     await session.flush()
-    await _emit(session, row, "accepted", actor_user_id, rule_id=str(rule.id))
+    await _emit(
+        session,
+        row,
+        "accepted",
+        actor_user_id,
+        rule_id=str(rule.id),
+        superseded_rule_ids=[str(s["rule_id"]) for s in superseded],
+    )
     await session.refresh(row, ["updated_at"])
-    return row
+    return row, superseded
 
 
 async def reject(
@@ -737,6 +823,18 @@ class RuleProposalEvidence(BaseModel):
     last_at: str | None = None
 
 
+class SupersededRuleOut(BaseModel):
+    """A learned rule of the same pattern group that the accept deactivated."""
+
+    rule_id: uuid.UUID
+    rule_name: str
+    proposal_id: uuid.UUID
+    value: str
+    value_label: str | None
+    deactivated_by: uuid.UUID
+    deactivated_at: datetime
+
+
 class RuleProposalOut(BaseModel):
     id: uuid.UUID
     entity_type: Literal["message", "ticket"]
@@ -756,6 +854,9 @@ class RuleProposalOut(BaseModel):
     rule_id: uuid.UUID | None
     created_at: datetime
     updated_at: datetime
+    # Only in the answer of the accept: learned rules of the same pattern group deactivated by
+    # it (also logged as ``automation_rule.updated`` with reason ``superseded``).
+    superseded_rules: list[SupersededRuleOut] = Field(default_factory=list)
 
 
 class RuleProposalRejectIn(BaseModel):
@@ -764,8 +865,11 @@ class RuleProposalRejectIn(BaseModel):
     reason: str | None = Field(default=None, max_length=500)
 
 
-def proposal_out(row: AutomationRuleProposal) -> RuleProposalOut:
+def proposal_out(
+    row: AutomationRuleProposal, superseded: Sequence[dict[str, Any]] = ()
+) -> RuleProposalOut:
     return RuleProposalOut(
+        superseded_rules=[SupersededRuleOut.model_validate(s) for s in superseded],
         id=row.id,
         entity_type=row.entity_type,
         field=row.field,
@@ -825,8 +929,8 @@ async def accept_proposal(
     proposal_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> RuleProposalOut:
     async with tenant_tx(request, principal) as session:
-        row = await accept(session, proposal_id, actor_user_id=_human(principal))
-        return proposal_out(row)
+        row, superseded = await accept(session, proposal_id, actor_user_id=_human(principal))
+        return proposal_out(row, superseded)
 
 
 @router.post("/rule-proposals/{proposal_id}/reject", summary="Regelvorschlag ablehnen")

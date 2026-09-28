@@ -622,7 +622,8 @@ async def apply_rule_assignment(
     """Assignment by an accepted learned rule (rule M9-11, action ``assign_record``). Only an
     empty field is filled, and only when no member decided on this dimension yet; a member's
     decision always wins. The review row is stored as ``auto`` with decision ``rule`` and the
-    rule as reason, so a later check keeps it and a member can still correct it with a Ja.
+    rule as reason, so a later check keeps it; its candidates are the rule's value and the
+    check's proposals (``_rule_candidates``), so a member can confirm or correct it with a Ja.
     The domain event carries the automation marker (depth 1). A contact set by the rule feeds
     the sure chain of the review (``_rule_contact_chain``), which fills property and unit
     without a second rule step. Returns a short German result text; raises ``LookupError``
@@ -643,15 +644,19 @@ async def apply_rule_assignment(
         label = await _assert_candidate_exists(session, dimension, value)
     except ProblemError as exc:
         raise LookupError("Ziel der Regel nicht gefunden.") from exc
+    # Computed before the field is set, as the question would have read without the rule.
+    candidates = await _rule_candidates(
+        session, entity_type, entity, dimension, value, label, f"Regel {rule_name}"[:500]
+    )
     if review is None:
         review = AssignmentReview(
             tenant_id=entity.tenant_id,
             entity_type=entity_type,
             entity_id=entity_id,
             dimension=dimension,
-            candidates=[],
         )
         session.add(review)
+    review.candidates = candidates
     setattr(entity, field, value)
     if isinstance(entity, Message) and dimension == "contact" and entity.status == "new":
         entity.status = "assigned"
@@ -695,6 +700,37 @@ async def apply_rule_assignment(
         if chained:
             result += f"; über die sichere Kette ergänzt: {', '.join(chained)}"
     return result
+
+
+async def _rule_candidates(
+    session: AsyncSession,
+    entity_type: str,
+    entity: Message | Ticket,
+    dimension: str,
+    value: uuid.UUID,
+    label: str,
+    reason: str,
+) -> list[dict[str, Any]]:
+    """Candidates of a row set by a learned rule (fix 28.09.2026): the rule's value first, then
+    the proposals the check has for this dimension (stored row, or a read only preview), so a
+    member can confirm the rule's value or correct it to another proposal directly with a Ja
+    (``decide`` accepts a Ja only for a listed candidate); any other record stays Nein, then
+    the manual choice. Nothing is written here."""
+    if isinstance(entity, Message):
+        rows = await review_message(session, entity, None, mode="preview")
+    else:
+        rows = await review_ticket(session, entity, None, mode="preview")
+    others = next((r.candidates for r in rows if r.dimension == dimension), None) or []
+    same: dict[str, Any] = next((c for c in others if c.get("id") == str(value)), {})
+    first = assignment.Candidate(
+        id=value,
+        label=str(same.get("label") or label),
+        detail=same.get("detail"),
+        confidence=1.0,
+        reasons=[reason, *(same.get("reasons") or [])],
+    ).as_dict()
+    rest = [c for c in others if c.get("id") != str(value)]
+    return [first, *rest][: assignment.MAX_CANDIDATES]
 
 
 CHAIN_LABELS = {"property": "Objekt", "unit": "Einheit"}

@@ -121,6 +121,25 @@ explicit accept by a member with `tenant_settings:update`.
   `assign_record` (fills an empty assignment field through
   `assignment_review.apply_rule_assignment`, decision `rule`) or `set_ticket_field`
   (`topic`, `assignee_user_id`, on the ticket the mail opened, `entity.opens_ticket`).
+* A member's decision always wins (fix 28.09.2026). A learned rule is a rule referenced by an
+  accepted proposal (`automation_rule_proposal.rule_id`, no new column). Its
+  `set_ticket_field` locks the ticket `FOR UPDATE` (like `PATCH /tickets/{id}`) and, like
+  `assign_record`, fills only an empty field without a member's decision on it
+  (`services.learned_field_kept`: `ticket.topic_changed`, or `ticket.assigned` with a user as
+  actor, any reason). A classified topic and a template, mailbox, signature or history
+  assignee stay, because a member who kept such a value leaves no event; no notification is
+  sent and the run records the reason. Hand written admin rules keep the old overwrite
+  semantics (backward compatibility, rule M9-02).
+* One learned value per pattern group (fix 28.09.2026): accepting a proposal deactivates the
+  active rules of earlier accepted proposals of the same entity type, field, scope and sender
+  key (`learning.supersede_learned_rules`), logged as `automation_rule.updated` with reason
+  `superseded`, the acceptor as actor and the superseding proposal and rule, listed in
+  `rule_proposal.accepted` and returned as `superseded_rules` in the accept response (the list
+  endpoint returns it empty). Hand written rules and other groups are not touched.
+* A row set by `assign_record` lists the rule's value first and the check's proposals after it
+  (`assignment_review._rule_candidates`, fix 28.09.2026, formerly empty), so a member confirms
+  or corrects it directly with a Ja; a record outside the list needs Nein, then the manual
+  choice (409 otherwise).
 * A contact set by `assign_record` feeds the sure chain of the assignment review in the same
   action (rule A80-01 no. 6, 28.09.2026): exactly one active tenancy contract or ownership
   unit of the contact fills property and unit, only into empty fields without a member's

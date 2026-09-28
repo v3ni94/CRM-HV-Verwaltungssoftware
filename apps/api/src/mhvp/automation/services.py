@@ -38,6 +38,7 @@ from mhvp.automation.models import (
     WEBHOOK_MAX_ATTEMPTS,
     WEBHOOK_RETRY_SCHEDULE_SECONDS,
     AutomationRule,
+    AutomationRuleProposal,
     AutomationRun,
     AutomationWatermark,
     AutomationWebhookDelivery,
@@ -642,7 +643,8 @@ async def _set_ticket_field(
         if message_event:
             return preview | {"ok": True, "detail": "Mail ohne Ticket; nichts gesetzt."}
         return preview | {"ok": True, "detail": "Testlauf: Feld würde gesetzt."}
-    ticket = await session.get(Ticket, ticket_id)
+    # Locked like PATCH /tickets/{id}: a member's change committed meanwhile is read below.
+    ticket = await session.get(Ticket, ticket_id, with_for_update=True, populate_existing=True)
     if ticket is None:
         raise ActionError("Ticket nicht gefunden.")
     if ticket.merged_into_ticket_id is not None:
@@ -650,6 +652,10 @@ async def _set_ticket_field(
     old_value = normalise(getattr(ticket, action.field))
     if old_value == normalise(new_value):
         return preview | {"ok": True, "detail": "Wert bereits gesetzt."}
+    if await is_learned_rule(session, rule.id):
+        kept = await learned_field_kept(session, tenant_id, ticket, action.field)
+        if kept is not None:
+            return preview | {"ok": True, "detail": kept}
     setattr(ticket, action.field, new_value)
     ticket.updated_by = None
     session.add(
@@ -688,6 +694,60 @@ async def _set_ticket_field(
         changes={action.field: {"old": old_value, "new": normalise(new_value)}},
     )
     return preview | {"ok": True, "detail": f"{action.field} gesetzt."}
+
+
+LEARNED_MEMBER_DECIDED = "Von einem Mitglied entschieden; die Lernregel ändert nichts."
+LEARNED_FIELD_SET = "Feld bereits gesetzt; die Lernregel füllt nur ein leeres Feld."
+# Event of a member's choice per learnable ticket field (rule M9-11).
+LEARNED_DECISION_EVENTS: dict[str, str] = {
+    "topic": "ticket.topic_changed",
+    "assignee_user_id": "ticket.assigned",
+}
+
+
+async def is_learned_rule(session: AsyncSession, rule_id: uuid.UUID) -> bool:
+    """The rule was created by accepting a rule proposal (Lern-Workflow, rule M9-11). Its
+    origin is the proposal's ``rule_id``; a hand written rule of the admin has none."""
+    found = await session.scalar(
+        select(AutomationRuleProposal.id).where(AutomationRuleProposal.rule_id == rule_id).limit(1)
+    )
+    return found is not None
+
+
+async def learned_field_kept(
+    session: AsyncSession, tenant_id: uuid.UUID, ticket: Ticket, field: str
+) -> str | None:
+    """Why a learned rule (rule M9-11) leaves a ticket field alone, or ``None`` when it may set
+    it. A member's decision always wins, also when the asynchronous rule job runs only minutes
+    or hours after the mail; ``ticket`` is locked ``FOR UPDATE`` by the caller, like
+    ``PATCH /tickets/{id}``, so a change committed meanwhile is seen here.
+
+    Like ``assign_record`` the rule fills only an empty field: a topic of the automatic
+    classification and an assignee from the template, the mailbox, the signature or the
+    history stay, because a member who saw and kept such a value leaves no trace (a PATCH with
+    the same value writes no event). An empty field is filled only when no member decided on
+    it for this ticket (``ticket.topic_changed``; ``ticket.assigned`` with a user as actor,
+    whatever the reason). Hand written rules of the admin keep their overwrite semantics
+    (compatibility, rule M9-02); they never reach this check."""
+    event_type = LEARNED_DECISION_EVENTS.get(field)
+    if event_type is None:
+        return None
+    if getattr(ticket, field) is not None:
+        return LEARNED_FIELD_SET
+    rows = await session.execute(
+        select(DomainEvent.actor_user_id, DomainEvent.payload).where(
+            # Index ix_domain_event_tenant_id_type_occurred_at; nothing precedes the ticket.
+            DomainEvent.tenant_id == tenant_id,
+            DomainEvent.type == event_type,
+            DomainEvent.occurred_at >= ticket.created_at,
+            DomainEvent.entity_type == "ticket",
+            DomainEvent.entity_id == ticket.id,
+        )
+    )
+    for actor_user_id, payload in rows:
+        if field == "topic" or (actor_user_id is not None and not is_automation_event(payload)):
+            return LEARNED_MEMBER_DECIDED
+    return None
 
 
 async def _known_topic(session: AsyncSession, tenant_id: uuid.UUID, code: str) -> bool:

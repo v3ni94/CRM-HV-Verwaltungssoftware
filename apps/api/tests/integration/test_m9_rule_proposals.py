@@ -15,6 +15,7 @@ import boto3
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
+from sqlalchemy import create_engine, text
 
 from mhvp.automation.tasks import process_events_once
 from mhvp.main import create_app
@@ -428,3 +429,270 @@ def test_permissions_and_tenant_separation(client: TestClient, world: World) -> 
     assert client.post(f"{P}/{target}/reject", json={}, headers=other).status_code == 404
     assert client.post(f"{P}/{target}/reject", json={"x": 1}, headers=h).status_code == 422
     assert client.get(P, params={"status": "unknown"}, headers=h).status_code == 422
+
+
+# Fix 28.09.2026 (review of 1.40.2): a member's decision always wins over a learned rule, the
+# rule job runs asynchronously; one learned value per pattern group; Ja on a rule's value.
+D5 = f"lernvorrang{RUN}.example"  # learned topic and assignee against manual decisions
+D6 = f"adminregel{RUN}.example"  # hand written admin rule keeps its overwrite semantics
+NEUTRAL = "Bitte um Rückmeldung zu meinem Anliegen."
+R = "/api/v1/automation/rules"
+FIELD_SET = "Feld bereits gesetzt; die Lernregel füllt nur ein leeres Feld."
+MEMBER_DECIDED = "Von einem Mitglied entschieden; die Lernregel ändert nichts."
+
+
+def _ticket(client: TestClient, h: dict[str, str], ticket_id: str) -> dict[str, Any]:
+    ticket: dict[str, Any] = _ok(client.get(f"{T}/{ticket_id}", headers=h))
+    return ticket
+
+
+def _assigned_notes(client: TestClient, h: dict[str, str], ticket_id: str) -> list[Any]:
+    rows = _ok(client.get("/api/v1/workspace/notifications", params={"limit": 200}, headers=h))
+    return [n for n in rows if n["kind"] == "ticket_assigned" and n["entity_id"] == ticket_id]
+
+
+def _run_details(client: TestClient, h: dict[str, str], rule_ids: set[str]) -> dict[Any, str]:
+    """``(rule id, ticket id)``: detail of the rule's action for that ticket."""
+    runs = _ok(client.get("/api/v1/automation/runs", params={"limit": 200}, headers=h))["items"]
+    return {
+        (r["rule_id"], a.get("entity_id")): a["detail"]
+        for r in runs
+        if r["rule_id"] in rule_ids
+        for a in r["actions"]
+    }
+
+
+def _clear_ticket_field(database: Database, tenant_id: Any, ticket_id: str, column: str) -> None:
+    """Empties a field behind the API (no endpoint clears topic or assignee today) so that the
+    event check of the guard is reached: the member's decision is in the log only."""
+    engine = create_engine(database.migrator_url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(tenant_id)}
+            )
+            conn.execute(
+                text(f"UPDATE ticket SET {column} = NULL WHERE id = :id"), {"id": ticket_id}
+            )
+    finally:
+        engine.dispose()
+
+
+def test_learned_rule_never_overrides_a_member(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """The probe of the review: a mail opens a ticket, a member sets topic and assignee, only
+    then the rule job runs. The learned rules keep the member's values and send no
+    notification; an empty field without a decision is still filled; a topic of the automatic
+    classification stays (a member who kept it leaves no trace); a field emptied after a
+    member's decision stays empty."""
+    settings = _settings(database, redis_url)
+    h = bearer(login(client, world, "lwadmin"))
+    std = bearer(login(client, world, "lwstd"))
+    member, care = str(world.users["lwstd"]), str(world.users["lwcare"])
+    for sender in [f"a@{D5}", f"b@{D5}", f"a@{D5}", f"b@{D5}", f"a@{D5}"]:
+        msg = _ingest(client, h, sender, NEUTRAL, auto_ticket=True)
+        body = {"topic": "vertrag", "assignee_user_id": member}
+        _ok(client.patch(f"{T}/{msg['ticket_id']}", json=body, headers=h))
+    rows = _proposals(client, h)
+    rules: dict[str, str] = {}
+    for field in ("topic", "assignee_user_id"):
+        row = _pattern(rows, D5, field=field, scope="domain")
+        assert row is not None, field
+        accepted = _ok(client.post(f"{P}/{row['id']}/accept", headers=h))
+        assert accepted["superseded_rules"] == []
+        rules[field] = accepted["rule_id"]
+
+    asyncio.run(process_events_once(settings, now=_later()))
+    empty = _ingest(client, h, f"c@{D5}", NEUTRAL, auto_ticket=True)
+    manual = _ingest(client, h, f"d@{D5}", NEUTRAL, auto_ticket=True)
+    classified = _ingest(client, h, f"e@{D5}", "Neue Frage zum Verkauf.", auto_ticket=True)
+    emptied = _ingest(client, h, f"g@{D5}", NEUTRAL, auto_ticket=True)
+    assert _ticket(client, h, classified["ticket_id"])["topic"] == "verkauf"
+    # Members decide on two tickets before the rule job runs.
+    body = {"topic": "verkauf", "assignee_user_id": care}
+    _ok(client.patch(f"{T}/{manual['ticket_id']}", json=body, headers=h))
+    _ok(client.patch(f"{T}/{emptied['ticket_id']}", json=body, headers=h))
+    _clear_ticket_field(database, world.tenant_a, emptied["ticket_id"], "topic")
+    asyncio.run(process_events_once(settings, now=_later()))
+
+    filled = _ticket(client, h, empty["ticket_id"])
+    assert (filled["topic"], filled["assignee_user_id"]) == ("vertrag", member)
+    assert len(_assigned_notes(client, std, empty["ticket_id"])) == 1
+    kept = _ticket(client, h, manual["ticket_id"])
+    assert (kept["topic"], kept["assignee_user_id"]) == ("verkauf", care)
+    assert _assigned_notes(client, std, manual["ticket_id"]) == []
+    auto = _ticket(client, h, classified["ticket_id"])
+    assert (auto["topic"], auto["assignee_user_id"]) == ("verkauf", member)
+    assert _ticket(client, h, emptied["ticket_id"])["topic"] is None
+
+    details = _run_details(client, h, set(rules.values()))
+    assert details[(rules["topic"], empty["ticket_id"])] == "topic gesetzt."
+    assert details[(rules["topic"], manual["ticket_id"])] == FIELD_SET
+    assert details[(rules["assignee_user_id"], manual["ticket_id"])] == FIELD_SET
+    assert details[(rules["topic"], classified["ticket_id"])] == FIELD_SET
+    assert details[(rules["topic"], emptied["ticket_id"])] == MEMBER_DECIDED
+
+
+def test_admin_rule_keeps_overwrite_semantics(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """A hand written rule (no proposal) still sets the field when the job runs, also over a
+    member's value (compatibility, rule M9-02); only learned rules fill empty fields."""
+    settings = _settings(database, redis_url)
+    h = bearer(login(client, world, "lwadmin"))
+    conditions = [
+        {"field": "entity.from_domain", "op": "eq", "value": D6},
+        {"field": "entity.opens_ticket", "op": "eq", "value": True},
+    ]
+    rule = _ok(
+        client.post(
+            R,
+            json={
+                "name": f"Adminregel Thema {RUN}",
+                "active": True,
+                "trigger_event_type": "message.received",
+                "conditions": {"op": "and", "conditions": conditions},
+                "actions": [{"type": "set_ticket_field", "field": "topic", "value": "verkauf"}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    try:
+        asyncio.run(process_events_once(settings, now=_later()))
+        msg = _ingest(client, h, f"x@{D6}", NEUTRAL, auto_ticket=True)
+        _ok(client.patch(f"{T}/{msg['ticket_id']}", json={"topic": "vertrag"}, headers=h))
+        asyncio.run(process_events_once(settings, now=_later()))
+        assert _ticket(client, h, msg["ticket_id"])["topic"] == "verkauf"
+    finally:
+        _ok(client.post(f"{R}/{rule['id']}/activate", json={"active": False}, headers=h))
+
+
+def test_accept_supersedes_learned_rule_of_same_group(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """Members now choose another topic for D5: accepting the new proposal deactivates the
+    learned rule of the same group (who and when in the answer and the rule log), leaves the
+    learned rule of another group and a hand written rule on the same sender alone, and the
+    new value takes effect (with both active the older rule would fill the field first)."""
+    settings = _settings(database, redis_url)
+    h = bearer(login(client, world, "lwadmin"))
+    old = _pattern(_proposals(client, h, "accepted"), D5, field="topic", scope="domain")
+    assert old is not None
+    assert old["value"] == "vertrag"
+    # Two "verkauf" decisions exist already (the members' tickets of the previous test).
+    for sender in [f"a@{D5}", f"b@{D5}", f"a@{D5}"]:
+        msg = _ingest(client, h, sender, NEUTRAL, auto_ticket=True)
+        _ok(client.patch(f"{T}/{msg['ticket_id']}", json={"topic": "verkauf"}, headers=h))
+    new = _pattern(_proposals(client, h), D5, field="topic", scope="domain")
+    assert new is not None
+    assert new["value"] == "verkauf"
+    admin = _ok(
+        client.post(
+            R,
+            json={
+                "name": f"Adminregel Priorität {RUN}",
+                "active": True,
+                "trigger_event_type": "message.received",
+                "conditions": {"field": "entity.from_domain", "op": "eq", "value": D5},
+                "actions": [{"type": "set_ticket_field", "field": "priority", "value": "high"}],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    try:
+        accepted = _ok(client.post(f"{P}/{new['id']}/accept", headers=h))
+        assert [s["rule_id"] for s in accepted["superseded_rules"]] == [old["rule_id"]]
+        superseded = accepted["superseded_rules"][0]
+        assert superseded["proposal_id"] == old["id"]
+        assert superseded["value"] == "vertrag"
+        assert superseded["rule_name"].startswith("Lernregel Ticket")
+        assert superseded["deactivated_by"] == str(world.users["lwadmin"])
+        assert superseded["deactivated_at"]
+        assert _ok(client.get(f"{R}/{old['rule_id']}", headers=h))["active"] is False
+        assert _ok(client.get(f"{R}/{accepted['rule_id']}", headers=h))["active"] is True
+        assert _ok(client.get(f"{R}/{admin['id']}", headers=h))["active"] is True
+        assignee = _pattern(_proposals(client, h, "accepted"), D5, "assignee_user_id", "domain")
+        assert assignee is not None
+        assert _ok(client.get(f"{R}/{assignee['rule_id']}", headers=h))["active"] is True
+        # The list keeps the answer lean; the deactivation stays in the rule's history.
+        listed = _pattern(_proposals(client, h, "accepted"), D5, field="topic", scope="domain")
+        assert listed is not None
+        assert listed["superseded_rules"] == []
+
+        asyncio.run(process_events_once(settings, now=_later()))
+        nxt = _ingest(client, h, f"f@{D5}", NEUTRAL, auto_ticket=True)
+        asyncio.run(process_events_once(settings, now=_later()))
+        assert _ticket(client, h, nxt["ticket_id"])["topic"] == "verkauf"
+        details = _run_details(client, h, {old["rule_id"]})
+        assert (old["rule_id"], nxt["ticket_id"]) not in details
+        # An accepted proposal is final.
+        again = _ok(client.post(f"{P}/{new['id']}/accept", headers=h), 409)
+        assert again["code"] == "MHVP-AUTO-0001"
+    finally:
+        _ok(client.post(f"{R}/{admin['id']}/activate", json={"active": False}, headers=h))
+
+
+def test_ja_confirms_or_corrects_a_rule_assignment(
+    client: TestClient, world: World, data: dict[str, Any], database: Database, redis_url: str
+) -> None:
+    """A field set by a learned rule lists the rule's value first and the check's proposals
+    after it: a Ja confirms the rule's value or corrects it to another proposal directly,
+    without Nein first (formerly 409, the row had no candidates). A record outside the list
+    still needs Nein first (manual choice)."""
+    settings = _settings(database, redis_url)
+    h = bearer(login(client, world, "lwadmin"))
+    prop = data["property"]
+    other = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={
+                "number": "872",
+                "name": "Zweithaus",
+                "management_type": "rental",
+                "street": "Lernweg",
+                "postal_code": "12345",
+                "city": "Musterstadt",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    asyncio.run(process_events_once(settings, now=_later()))
+    plain = _ingest(client, h, S1, "Kurze Nachricht ohne Adresse.")
+    hinted = _ingest(client, h, S1, "Guten Tag, im Lernweg klemmt die Haustür.")
+    third = _ingest(client, h, S1, "Kurze Nachricht ohne Adresse.")
+    question = _property_review(client, h, hinted["id"])
+    assert question["status"] == "open"
+    assert [c["id"] for c in question["candidates"]] == [other]
+    asyncio.run(process_events_once(settings, now=_later()))
+
+    for msg, expected in ((plain, [prop]), (hinted, [prop, other]), (third, [prop])):
+        review = _property_review(client, h, msg["id"])
+        assert (review["status"], review["decision"]) == ("auto", "rule")
+        assert [c["id"] for c in review["candidates"]] == expected
+        assert review["candidates"][0]["reasons"][0].startswith("Regel Lernregel Mail")
+
+    def decide(message_id: str, candidate: str) -> Any:
+        body = {
+            "dimension": "property",
+            "decision": "accept",
+            "candidate_id": candidate,
+            "seen_value": prop,
+        }
+        return client.post(
+            f"{M}/messages/{message_id}/assignment-review/decide", json=body, headers=h
+        )
+
+    _ok(decide(plain["id"], prop))  # Ja on the rule's value confirms it
+    confirmed = _property_review(client, h, plain["id"])
+    assert (confirmed["status"], confirmed["decision"]) == ("accepted", "accept")
+    _ok(decide(hinted["id"], other))  # Ja on the other proposal corrects it directly
+    assert _ok(client.get(f"{M}/messages/{hinted['id']}", headers=h))["property_id"] == other
+    corrected = _property_review(client, h, hinted["id"])
+    assert (corrected["status"], corrected["decision"]) == ("accepted", "accept")
+    stale = decide(third["id"], other)
+    assert stale.status_code == 409, stale.text
+    assert _ok(client.get(f"{M}/messages/{third['id']}", headers=h))["property_id"] == prop

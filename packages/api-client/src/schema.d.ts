@@ -30372,6 +30372,8 @@ export interface components {
             sender_key: string;
             /** Status */
             status: string;
+            /** Superseded Rules */
+            superseded_rules?: components["schemas"]["SupersededRuleOut"][];
             /** Threshold */
             threshold: number;
             /**
@@ -31166,6 +31168,38 @@ export interface components {
             email: string | null;
             /** User Id */
             user_id: string | null;
+        };
+        /**
+         * SupersededRuleOut
+         * @description A learned rule of the same pattern group that the accept deactivated.
+         */
+        SupersededRuleOut: {
+            /**
+             * Deactivated At
+             * Format: date-time
+             */
+            deactivated_at: string;
+            /**
+             * Deactivated By
+             * Format: uuid
+             */
+            deactivated_by: string;
+            /**
+             * Proposal Id
+             * Format: uuid
+             */
+            proposal_id: string;
+            /**
+             * Rule Id
+             * Format: uuid
+             */
+            rule_id: string;
+            /** Rule Name */
+            rule_name: string;
+            /** Value */
+            value: string;
+            /** Value Label */
+            value_label: string | null;
         };
         /** SupplierProfileIn */
         SupplierProfileIn: {
