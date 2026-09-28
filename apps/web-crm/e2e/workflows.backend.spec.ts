@@ -65,7 +65,7 @@ test.describe("workflows against the API @backend", () => {
     await expect(page.getByText("Keine rechnerischen Hinweise.")).toBeVisible();
     await expect(page.getByText(/15,00 %/)).toBeVisible();
     await page.getByRole("button", { name: "Freigeben (zweite Person)" }).click();
-    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: /\S/ })).toBeVisible();
 
     // 2. Incoming invoice: hints, three review steps, release refused for the creator.
     await page.goto("/rechnungen");
@@ -90,7 +90,7 @@ test.describe("workflows against the API @backend", () => {
     }
     await expect(page.getByText(/ohne Beanstandung abgeschlossen/).first()).toBeVisible();
     await page.getByRole("button", { name: "Rechnung freigeben (zweite Person)" }).click();
-    await expect(page.getByRole("alert")).toBeVisible();
+    await expect(page.getByRole("alert").filter({ hasText: /\S/ })).toBeVisible();
 
     // 3. Meeting: attendance, votes, tally 2 : 0 (head principle), announcement.
     await page.goto(`/weg/${hoaProp.id}/versammlung/${meeting.id}`);
