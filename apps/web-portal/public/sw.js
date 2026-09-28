@@ -4,7 +4,7 @@
  * to the network first; only when the network fails is the static offline page returned.
  * API responses, documents, pages with personal data and everything under /api are never
  * cached and never read from the cache. */
-const CACHE = "mhvp-portal-shell-v1";
+const CACHE = "mhvp-portal-shell-v2";
 const SHELL = ["/offline.html", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {

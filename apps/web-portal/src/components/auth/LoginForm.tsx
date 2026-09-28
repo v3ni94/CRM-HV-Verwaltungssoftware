@@ -20,7 +20,7 @@ export function LoginForm({ next }: { next?: string }) {
         <MagicLinkForm />
         <button
           type="button"
-          className="text-xs text-accent underline underline-offset-2 hover:no-underline"
+          className="text-xs text-accent-strong underline underline-offset-2 hover:no-underline"
           onClick={() => setMode("password")}
         >
           {t("magicLink.backToPassword")}
@@ -111,7 +111,7 @@ function PasswordLoginForm({ next, onMagicLink }: { next?: string; onMagicLink: 
       <button type="submit" className={ui.primary} disabled={busy}>
         {busy ? t("submitting") : t("submit")}
       </button>
-      <button type="button" className="text-xs text-accent underline underline-offset-2 hover:no-underline" onClick={onMagicLink}>
+      <button type="button" className="text-xs text-accent-strong underline underline-offset-2 hover:no-underline" onClick={onMagicLink}>
         {t("magicLink.useInstead")}
       </button>
     </form>

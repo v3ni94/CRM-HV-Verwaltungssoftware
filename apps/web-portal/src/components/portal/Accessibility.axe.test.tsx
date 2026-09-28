@@ -10,13 +10,18 @@ import { StartTiles } from "./StartTiles";
 import type { HoaAccount, Me } from "./types";
 
 import { PortalNav } from "@/components/shell/PortalNav";
+import { ThemeSwitch } from "@/components/shell/ThemeToggle";
+import { portalThemeStore } from "@/lib/theme";
 
 /** V13 (Barrierefreiheit): axe-core checks the rendered DOM of the portal's core pages for
  *  WCAG 2.1 AA violations (structure, forms, contrast where computable in jsdom, tables).
  *  Server components (RSC pages under app/(portal)) cannot be rendered directly in Vitest, so
  *  this covers the client components that carry their markup: navigation, start tiles, notice
  *  board (Übersicht), the new ticket form (Meldungen) and the account table (Kontoauszug /
- *  Hausgeldkonto), plus the accessibility statement's static markup. */
+ *  Hausgeldkonto), plus the accessibility statement's static markup and the theme switch.
+ *  Every case runs in both modes (data-theme day and evening). jsdom loads no stylesheet, so
+ *  colour contrast per mode is covered by scripts/token_contrast.py and the axe run in the
+ *  browser (Playwright), not here. */
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/start",
@@ -71,7 +76,23 @@ function hoaAccount(): HoaAccount {
   };
 }
 
-describe("Barrierefreiheit (axe)", () => {
+describe.each(["day", "evening"] as const)("Barrierefreiheit (axe), Modus %s", (mode) => {
+  beforeEach(() => {
+    localStorage.clear();
+    portalThemeStore.reset();
+    document.documentElement.setAttribute("data-theme", mode);
+  });
+
+  afterEach(() => {
+    document.documentElement.removeAttribute("data-theme");
+  });
+
+  it("ThemeSwitch (Darstellung) has no violations", async () => {
+    portalThemeStore.set(mode);
+    const { container } = renderIntl(<ThemeSwitch />);
+    await expectNoViolations(container);
+  });
+
   it("PortalNav has no violations", async () => {
     const { container } = render(
       <PortalNav

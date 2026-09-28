@@ -4,6 +4,8 @@ import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 
 import { PwaRegister } from "@/components/shell/PwaRegister";
+import { ThemeController } from "@/components/shell/ThemeToggle";
+import { PORTAL_THEME_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
 
@@ -24,18 +26,24 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Browser chrome follows the header surface (surface-2 of tokens.css) of the matching mode.
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
-    { media: "(prefers-color-scheme: dark)", color: "#141417" },
+    { media: "(prefers-color-scheme: light)", color: "#faf9f7" },
+    { media: "(prefers-color-scheme: dark)", color: "#1c2028" },
   ],
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const locale = await getLocale();
   return (
-    <html lang={locale} className={inter.variable}>
+    // data-theme is set by the inline script before the first paint, hence suppressHydrationWarning.
+    <html lang={locale} className={inter.variable} suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: PORTAL_THEME_SCRIPT }} />
+      </head>
       <body className="min-h-screen antialiased">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <ThemeController />
         <PwaRegister />
       </body>
     </html>

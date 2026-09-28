@@ -4,22 +4,33 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>MH Portal</title>
+    <script>
+      /* Same mode as the portal (src/lib/theme.ts): stored choice, else the system preference. */
+      try {
+        var p = (localStorage.getItem("mhvp-portal-theme") || "").trim().toLowerCase();
+        var e = p === "evening" || p === "dark" || (p !== "day" && p !== "light" && matchMedia("(prefers-color-scheme: dark)").matches);
+        document.documentElement.setAttribute("data-theme", e ? "evening" : "day");
+      } catch (err) {}
+    </script>
     <style>
+      /* Static copy of the @mhvp/ui tokens (bg, fg, muted, border, accent); the offline page
+       * loads no stylesheet from the app. */
       :root {
-        color-scheme: light dark;
-        --bg: #ffffff;
-        --fg: #2e2d2e;
-        --muted: #6b6a6c;
-        --border: #e4e2df;
-        --gold: #e3ac48;
+        color-scheme: light;
+        --bg: #f6f5f2;
+        --surface: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #6b6c6f;
+        --border: #ecebe7;
+        --gold: #e6a83c;
       }
-      @media (prefers-color-scheme: dark) {
-        :root {
-          --bg: #17161a;
-          --fg: #efece6;
-          --muted: #b3b0aa;
-          --border: #2f2d33;
-        }
+      :root[data-theme="evening"] {
+        color-scheme: dark;
+        --bg: #0f1115;
+        --surface: #171a21;
+        --fg: #e8eaf0;
+        --muted: #9aa3b2;
+        --border: #262b35;
       }
       body {
         margin: 0;
@@ -34,6 +45,7 @@
       }
       main {
         max-width: 24rem;
+        background: var(--surface);
         border: 1px solid var(--border);
         border-left: 3px solid var(--gold);
         border-radius: 12px;
@@ -50,7 +62,7 @@
       }
       button {
         border: 1px solid var(--border);
-        background: transparent;
+        background: var(--surface);
         color: var(--fg);
         border-radius: 8px;
         padding: 10px 14px;

@@ -46,6 +46,12 @@
     "title": "Portal",
     "handover": "Übergabeprotokolle",
     "logout": "Abmelden",
+    "theme": {
+      "group": "Darstellung",
+      "day": "Hell",
+      "evening": "Dunkel",
+      "auto": "Automatisch"
+    },
     "footer": "Alle Angaben werden bei der Hausverwaltung gespeichert. Interne Vermerke der Verwaltung sind hier nicht sichtbar.",
     "skipToContent": "Zum Inhalt springen",
     "accessibilityLink": "Erklärung zur Barrierefreiheit",

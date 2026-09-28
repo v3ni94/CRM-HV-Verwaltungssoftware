@@ -46,6 +46,12 @@
     "title": "Portal",
     "handover": "Handover protocols",
     "logout": "Sign out",
+    "theme": {
+      "group": "Appearance",
+      "day": "Light",
+      "evening": "Dark",
+      "auto": "Automatic"
+    },
     "footer": "All entries are stored by the property management. Internal notes of the management are not visible here.",
     "skipToContent": "Skip to content",
     "accessibilityLink": "Accessibility statement",

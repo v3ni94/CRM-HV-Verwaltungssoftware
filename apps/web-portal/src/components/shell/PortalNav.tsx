@@ -47,7 +47,7 @@ export function PortalNav({
         aria-expanded={open}
         aria-controls={menuId}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-fg transition duration-150 hover:border-gold focus:outline-none focus:ring-2 focus:ring-gold/40 md:hidden"
+        className="inline-flex min-h-11 w-full items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 text-sm font-medium text-fg transition duration-150 hover:border-gold focus:outline-none focus-visible:ring-2 focus-visible:ring-focus md:hidden"
       >
         <span>{open ? closeLabel : openLabel}</span>
         <span aria-hidden="true" className="text-xs text-muted">
@@ -67,7 +67,7 @@ export function PortalNav({
                 href={link.href}
                 aria-current={current ? "page" : undefined}
                 onClick={() => setOpen(false)}
-                className={`inline-flex min-h-11 w-full items-center rounded-md px-2 hover:text-fg hover:underline focus:outline-none focus:ring-2 focus:ring-gold/40 md:min-h-9 md:w-auto md:px-0 ${
+                className={`inline-flex min-h-11 w-full items-center rounded-md px-2 hover:text-fg hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-focus md:min-h-9 md:w-auto md:px-0 ${
                   current ? "bg-surface-2 font-medium text-fg md:bg-transparent md:border-b-2 md:border-gold md:rounded-none" : "text-muted"
                 }`}
               >

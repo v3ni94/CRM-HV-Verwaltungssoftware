@@ -26,4 +26,9 @@ In the Compose dev stack the app is served at `http://portal.localhost`.
   `@mhvp/api-client` against `MHVP_API_INTERNAL_URL` + `/api/v1/health/ready`.
 - i18n with next-intl, default `de-DE`. No invented CI colours or logos: neutral tokens from
   `@mhvp/ui` until the CI values are released (V14, OPEN_QUESTIONS M1-08).
+- Appearance: day and evening mode on the shared tokens (`docs/design/tokens.md`). Default is
+  automatic (operating system preference, followed live); the header switch Hell, Dunkel,
+  Automatisch stores the choice in localStorage (`mhvp-portal-theme`) only, portal accounts
+  have no preference endpoint. The inline script in `src/app/layout.tsx` sets `data-theme`
+  before the first paint; `public/offline.html` reads the same key.
 - All data access goes through the documented API (rule 0.1.4).

@@ -313,7 +313,7 @@ export function HandoverFill({ initial }: { initial: Full }) {
                 <img
                   src={`${files}/documents/${s.document_id}/content`}
                   alt={s.signer_name ?? t("signature.noName")}
-                  className="h-12 w-auto rounded border border-border bg-white"
+                  className="h-12 w-auto rounded border border-border bg-paper"
                 />
                 <span className="text-sm">
                   {s.signer_name ?? t("signature.noName")}

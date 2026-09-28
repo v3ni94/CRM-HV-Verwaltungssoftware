@@ -4,8 +4,13 @@ Stand 27.09.2026, Betreiberentscheidung: Tagmodus ist Entwurf A "Klar und ruhig"
 Entwurf B "Dunkel und präzise" (Version 1.37). Quelle im Code: `packages/ui/src/tokens.css`
 (Werte je Modus), `packages/ui/src/theme.css` (Tailwind Zuordnung), `packages/ui/src/base.css`
 (Basisklassen), Klassenvorgaben in `apps/*/src/lib/ui.ts`. Beide Web Apps binden dieselben
-Dateien ein. Der Modus steht als `data-theme="day"` oder `data-theme="evening"` auf `html`
-(Steuerung `apps/web-crm/src/lib/theme.ts`), nie über `prefers-color-scheme`.
+Dateien ein. Der Modus steht als `data-theme="day"` oder `data-theme="evening"` auf `html`,
+gesetzt vom gemeinsamen Kern `packages/ui/src/theme-mode.ts` (Skript vor dem ersten Rendern,
+Speicher, Umschalter `packages/ui/src/ThemeSwitch.tsx`), nie über eine `prefers-color-scheme`
+Regel im CSS. Was Automatisch bedeutet, legt jede App fest: im CRM Abend von 19 bis 7 Uhr
+(`apps/web-crm/src/lib/theme.ts`, Wahl je Benutzer auf dem Server), im Kundenportal die
+Einstellung des Betriebssystems (`apps/web-portal/src/lib/theme.ts`, Wahl Hell, Dunkel oder
+Automatisch nur im Browser gespeichert).
 
 ## Grundsätze
 
@@ -137,5 +142,5 @@ Bedienelemente: `focus-visible:ring-2 focus-visible:ring-focus`.
 
 - Freigabe der Unternehmensfarben (M1-08): danach `accent` und die Aliasse `gold*` mit den
   freigegebenen Werten belegen und die Kontrasttabelle neu berechnen.
-- Das Kundenportal (`apps/web-portal`) hat noch keinen Abendmodus; es nutzt die Flächenrollen im
-  Tagmodus.
+- Die Farbe der Browserleiste im Kundenportal (`themeColor`) folgt der Einstellung des
+  Betriebssystems, nicht einer manuellen Wahl Hell oder Dunkel.

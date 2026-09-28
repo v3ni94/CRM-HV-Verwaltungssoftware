@@ -3,7 +3,7 @@
  *  cards use hairlines without shadows, numbers use tabular figures. */
 export const ui = {
   input:
-    "w-full min-h-11 rounded-md border border-border bg-surface px-3 py-2 text-sm text-fg placeholder:text-subtle transition-shadow duration-150 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-10",
+    "w-full min-h-11 rounded-md border border-field-line bg-field-bg px-3 py-2 text-sm text-fg placeholder:text-subtle transition-shadow duration-150 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-10",
   label: "block text-xs font-medium text-muted",
   help: "text-xs text-subtle",
   error: "text-xs text-danger-fg",
