@@ -538,8 +538,13 @@ async def _book(
 async def book(
     tx_id: uuid.UUID, body: BookIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
+    """A recognised transfer pair is booked once, from either half, against the partner bank
+    account; that posting settles both halves. Booking the other half afterwards is refused
+    with 409 ``MHVP-BANK-0019`` until the posting is reversed (D04, B08)."""
     async with tenant_tx(request, principal) as session:
-        entry = await _book(session, principal, await _tx(session, tx_id), body)
+        entry = await _book(
+            session, principal, await matching.lock_for_booking(session, tx_id), body
+        )
         return {"journal_entry_id": entry.id, "number": f"{entry.fiscal_year}-{entry.number}"}
 
 
@@ -579,7 +584,7 @@ async def bulk_confirm(
     async with tenant_tx(request, principal) as session:
         rows = []
         for item in body.items:
-            rows.append((item, await _tx(session, item.transaction_id)))
+            rows.append((item, await matching.lock_for_booking(session, item.transaction_id)))
         summary = {
             "count": len(rows),
             "total": str(sum((abs(r.amount) for _, r in rows), Decimal("0.00"))),

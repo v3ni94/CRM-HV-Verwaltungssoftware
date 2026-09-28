@@ -61719,6 +61719,7 @@
     },
     "/api/v1/banking/transactions/{tx_id}/book": {
       "post": {
+        "description": "A recognised transfer pair is booked once, from either half, against the partner bank\naccount; that posting settles both halves. Booking the other half afterwards is refused\nwith 409 ``MHVP-BANK-0019`` until the posting is reversed (D04, B08).",
         "operationId": "book_api_v1_banking_transactions__tx_id__book_post",
         "parameters": [
           {

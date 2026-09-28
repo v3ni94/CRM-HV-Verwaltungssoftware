@@ -3853,7 +3853,12 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Umsatz buchen (bestätigt) */
+        /**
+         * Umsatz buchen (bestätigt)
+         * @description A recognised transfer pair is booked once, from either half, against the partner bank
+         *     account; that posting settles both halves. Booking the other half afterwards is refused
+         *     with 409 ``MHVP-BANK-0019`` until the posting is reversed (D04, B08).
+         */
         post: operations["book_api_v1_banking_transactions__tx_id__book_post"];
         delete?: never;
         options?: never;

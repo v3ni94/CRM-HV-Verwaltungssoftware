@@ -455,6 +455,16 @@ class ErrorCodes:
         "Zahlungsdatei im falschen Zustand",
         "The batch has no stored file, was already submitted or its checksum does not match.",
     )
+    BANK_TRANSFER_PAIR_SETTLED = ErrorCode(
+        "MHVP-BANK-0019",
+        409,
+        "Umbuchung bereits über die Partnerseite gebucht",
+        (
+            "The other half of this recognised transfer pair (transfer_pair_id) is already "
+            "posted; one posting moves both bank accounts, the second half has no second "
+            "effect (D04, B08). Reverse that posting first to book the pair again."
+        ),
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,

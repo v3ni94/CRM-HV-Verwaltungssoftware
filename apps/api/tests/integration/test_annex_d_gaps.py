@@ -9,6 +9,7 @@ and the locks. The productive gates stay closed: every client here uses the pers
 resolver, so G1 and G3 are closed and no ledger becomes leading."""
 
 import asyncio
+import uuid
 from collections.abc import Iterator
 from decimal import Decimal
 from typing import Any
@@ -37,6 +38,12 @@ D04_BANK_A = "DE02120300000000202051"
 D04_BANK_B = "DE89370400440532013000"
 D04_PAIR_A = "DE16100100101111111111"
 D04_PAIR_B = "DE66100100102222222222"
+D04_CODE_A = "DE19100100103333333333"
+D04_CODE_B = "DE69100100104444444444"
+D04_REV_A = "DE22100100105555555555"
+D04_REV_B = "DE72100100106666666666"
+D04_PAR_A = "DE25100100107777777777"
+D04_PAR_B = "DE75100100108888888888"
 D05_BANK = "DE02500105170137075030"
 D05_PAYER = "DE27100777770209299700"
 D07_BANK = "DE91100000000123456789"
@@ -54,14 +61,22 @@ async def _world(settings: Any) -> World:
         a, _ = await services.provision_tenant(
             factory, slug=f"annexd-gaps-{RUN}", name=f"Anhang D Lücken {RUN}"
         )
-        world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
-        for name, role in [("gapadmin", "tenant_admin"), ("gapacc", "accountant_no_banking")]:
+        # Second tenant only for the tenant separation check of the D04 pair guard.
+        b, _ = await services.provision_tenant(
+            factory, slug=f"annexd-gaps-b-{RUN}", name=f"Anhang D Lücken B {RUN}"
+        )
+        world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        for name, role, tenant in [
+            ("gapadmin", "tenant_admin", a),
+            ("gapacc", "accountant_no_banking", a),
+            ("gapother", "tenant_admin", b),
+        ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
             world.users[name] = uid
             await services.add_member(
-                factory, tenant_id=a, user_id=uid, role_codes=[role], actor_user_id=None
+                factory, tenant_id=tenant, user_id=uid, role_codes=[role], actor_user_id=None
             )
         return world
     finally:
@@ -328,16 +343,6 @@ def test_d04_transfer_between_own_accounts_is_booked_once_and_is_no_income(
     _assert_g1_closed(client, h, w["ledger"])
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason=(
-        "Defekt D04 (Anhang D: keine zweite Wirkung des Transfers): nach der Buchung der "
-        "Abgangsseite lässt POST /banking/transactions/{id}/book die Partnerseite desselben "
-        "Transferpaars erneut gegen Bank A buchen; mhvp.banking.matching.book_payment prüft "
-        "nicht, ob der Partner über transfer_pair_id schon gebucht ist. Ergebnis A 8.000,00, "
-        "B 22.000,00 statt 9.000,00 und 21.000,00."
-    ),
-)
 def test_d04_second_half_of_the_transfer_pair_has_no_second_effect(
     client: TestClient, world: World
 ) -> None:
@@ -360,6 +365,210 @@ def test_d04_second_half_of_the_transfer_pair_has_no_second_effect(
         headers=h,
     )
     assert second.status_code in (409, 422), second.text
+    _assert_d04_balances(client, h, w)
+
+
+def _book_half(
+    c: TestClient, h: dict[str, str], tx: dict[str, Any], counter: str, key: str | None = None
+) -> Any:
+    headers = {**h, "Idempotency-Key": key} if key else h
+    return c.post(
+        f"{B}/transactions/{tx['id']}/book", json={"counter_account_id": counter}, headers=headers
+    )
+
+
+def _half(c: TestClient, h: dict[str, str], w: dict[str, Any], half: str) -> dict[str, Any]:
+    iban = w["ibans"][0 if half == "out" else 1]
+    (row,) = _txs(c, h, w["bank_ids"][iban])
+    assert row["id"] == w[half]["id"]
+    return row
+
+
+def test_d04_pair_guard_error_code_retry_and_tenant_separation(
+    client: TestClient, world: World
+) -> None:
+    """D04 guard (B08): the posting of the outgoing half marks the incoming half as settled by
+    the pair (status booked, same journal entry). Booking that half again is refused with 409
+    MHVP-BANK-0019, also inside a bulk confirmation; a retry of the same request replays the
+    stored answer with the same Idempotency-Key and is refused without one. Wrong counter
+    accounts are refused before any posting; another tenant sees neither half. Balances stay
+    A 9.000,00 and B 21.000,00 throughout (10.000 - 1.000; 20.000 + 1.000)."""
+    h = bearer(login(client, world, "gapadmin"))
+    acc_user = bearer(login(client, world, "gapacc"))
+    other = bearer(login(client, world, "gapother"))
+    w = _d04_world(client, h, acc_user, "454", D04_CODE_A, D04_CODE_B)
+    # Tenant separation: the other tenant neither sees nor books the pair (RLS, 404).
+    assert _book_half(client, other, w["into"], w["bank_a"]).status_code == 404
+    assert _ok(client.get(f"{B}/transactions", headers=other)) == []
+    # A transfer is booked against the partner bank account only, never the own bank account
+    # or with settlements of open items; the refused attempts post nothing.
+    own = _book_half(client, h, w["into"], w["bank_b"])
+    assert own.status_code == 422, own.text
+    settle = client.post(
+        f"{B}/transactions/{w['into']['id']}/book",
+        json={
+            "counter_account_id": w["bank_a"],
+            "settlements": [{"open_item_id": w["out"]["id"], "amount": "1000.00"}],
+        },
+        headers=h,
+    )
+    assert settle.status_code == 422, settle.text
+    assert [e["kind"] for e in _entries(client, h, w["ledger"])] == ["opening_balance"]
+
+    first = _book_half(client, h, w["out"], w["bank_b"], key=f"d04-{RUN}")
+    booked = _ok(first, 201)
+    out, into = _half(client, h, w, "out"), _half(client, h, w, "into")
+    assert (out["status"], into["status"]) == ("booked", "booked")
+    assert out["journal_entry_id"] == into["journal_entry_id"] == booked["journal_entry_id"]
+
+    second = _book_half(client, h, w["into"], w["bank_a"])
+    assert second.status_code == 409, second.text
+    assert second.json()["code"] == "MHVP-BANK-0019"
+    # Retry of the same request: the same Idempotency-Key replays the first answer.
+    replay = _book_half(client, h, w["out"], w["bank_b"], key=f"d04-{RUN}")
+    assert replay.status_code == 201, replay.text
+    assert replay.json() == booked
+    # Retry without key: the half is already booked (unchanged answer of the booking).
+    again = _book_half(client, h, w["out"], w["bank_b"])
+    assert again.status_code == 409, again.text
+    assert again.json()["code"] == "MHVP-PLAT-0002"
+    bulk = _ok(
+        client.post(
+            f"{B}/bulk-confirm",
+            json={
+                "preview": False,
+                "items": [{"transaction_id": w["into"]["id"], "counter_account_id": w["bank_a"]}],
+            },
+            headers=h,
+        )
+    )
+    assert [r["ok"] for r in bulk["results"]] == [False]
+    assert "Partnerseite" in bulk["results"][0]["error"]
+    ignore = client.post(
+        f"{B}/transactions/{w['into']['id']}/ignore",
+        json={"decision": "ignore", "reason": "Gegenseite der Umbuchung"},
+        headers=h,
+    )
+    assert ignore.status_code == 409, ignore.text
+    kinds = [e["kind"] for e in _entries(client, h, w["ledger"]) if e["status"] == "posted"]
+    assert sorted(kinds) == ["bank_transfer", "opening_balance"]
+    _assert_d04_balances(client, h, w)
+    _assert_g1_closed(client, h, w["ledger"])
+
+
+def test_d04_reversal_reopens_the_pair_once_from_either_half(
+    client: TestClient, world: World
+) -> None:
+    """Rule 0.1.7, B03: the posting of the outgoing half is reversed, not edited. Then the pair
+    is bookable again, once and from either half: after the reversal A 10.000,00 and B
+    20.000,00 (transfer undone); booking the incoming half against bank A gives again A
+    9.000,00 and B 21.000,00; the outgoing half is then refused with MHVP-BANK-0019. The
+    journal keeps original, reversal and new posting."""
+    h = bearer(login(client, world, "gapadmin"))
+    acc_user = bearer(login(client, world, "gapacc"))
+    w = _d04_world(client, h, acc_user, "464", D04_REV_A, D04_REV_B)
+    first = _ok(_book_half(client, h, w["out"], w["bank_b"]), 201)
+    _ok(
+        client.post(
+            f"{A}/ledgers/{w['ledger']}/entries/{first['journal_entry_id']}/reverse",
+            json={"reason": "Umbuchung falsch erfasst", "booking_date": "2026-01-10"},
+            headers=h,
+        ),
+        201,
+    )
+    tb = _trial_balance(client, h, w["ledger"])
+    by = {a["number"]: Decimal(a["balance"]) for a in tb["accounts"]}
+    assert (by["001210"], by["001211"]) == (Decimal("10000.00"), Decimal("20000.00"))
+
+    second = _ok(_book_half(client, h, w["into"], w["bank_a"]), 201)
+    assert second["journal_entry_id"] != first["journal_entry_id"]
+    out, into = _half(client, h, w, "out"), _half(client, h, w, "into")
+    assert out["journal_entry_id"] == into["journal_entry_id"] == second["journal_entry_id"]
+    refused = _book_half(client, h, w["out"], w["bank_b"])
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "MHVP-BANK-0019"
+    again = _book_half(client, h, w["into"], w["bank_a"])
+    assert again.status_code == 409, again.text
+    assert again.json()["code"] == "MHVP-PLAT-0002"
+    kinds = sorted(e["kind"] for e in _entries(client, h, w["ledger"]) if e["status"] == "posted")
+    assert kinds == ["bank_transfer", "bank_transfer", "opening_balance", "reversal"]
+    _assert_d04_balances(client, h, w)
+    _assert_g1_closed(client, h, w["ledger"])
+
+
+def test_d04_parallel_bookings_of_both_halves_post_once(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """Concurrency (rule 0.1.9): the two halves are booked in two parallel transactions. The
+    pair is locked as a whole in id order, so the second transaction waits for the first and
+    is then refused with MHVP-BANK-0019 (no deadlock, no second posting). First run: the
+    outgoing half holds its uncommitted posting while the incoming half starts; second run on
+    the reversed pair: both start at once. Balances A 9.000,00 and B 21.000,00 after each."""
+    from mhvp.accounting.models import EntrySource
+    from mhvp.banking import matching
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.core.problems import ProblemError
+
+    h = bearer(login(client, world, "gapadmin"))
+    acc_user = bearer(login(client, world, "gapacc"))
+    w = _d04_world(client, h, acc_user, "474", D04_PAR_A, D04_PAR_B)
+    halves = [
+        (uuid.UUID(w["out"]["id"]), uuid.UUID(w["bank_b"])),
+        (uuid.UUID(w["into"]["id"]), uuid.UUID(w["bank_a"])),
+    ]
+
+    async def run(staggered: bool) -> list[str]:
+        engine = create_app_engine(_settings(database, redis_url))
+        factory = create_session_factory(engine)
+        started = asyncio.Event()
+
+        async def one(index: int) -> str:
+            tx_id, counter = halves[index]
+            if staggered and index == 1:
+                await started.wait()
+            try:
+                async with tenant_transaction(factory, world.tenant_a) as session:
+                    tx = await matching.lock_for_booking(session, tx_id)
+                    await matching.book_payment(
+                        session,
+                        tx,
+                        settlements=[],
+                        counter_account_id=counter,
+                        user_id=None,
+                        source=EntrySource.BANK_IMPORT,
+                    )
+                    if staggered:
+                        started.set()
+                        await asyncio.sleep(0.5)  # commit only while the other one waits
+                return "ok"
+            except ProblemError as exc:
+                return exc.error.code
+
+        try:
+            return list(await asyncio.gather(one(0), one(1)))
+        finally:
+            await engine.dispose()
+
+    assert asyncio.run(run(staggered=True)) == ["ok", "MHVP-BANK-0019"]
+    _assert_d04_balances(client, h, w)
+    entry = _half(client, h, w, "out")["journal_entry_id"]
+    _ok(
+        client.post(
+            f"{A}/ledgers/{w['ledger']}/entries/{entry}/reverse",
+            json={"reason": "Parallelprüfung", "booking_date": "2026-01-10"},
+            headers=h,
+        ),
+        201,
+    )
+    assert sorted(asyncio.run(run(staggered=False))) == ["MHVP-BANK-0019", "ok"]
+    posted = [e for e in _entries(client, h, w["ledger"]) if e["status"] == "posted"]
+    assert sorted(e["kind"] for e in posted) == [
+        "bank_transfer",
+        "bank_transfer",
+        "opening_balance",
+        "reversal",
+    ]
     _assert_d04_balances(client, h, w)
 
 

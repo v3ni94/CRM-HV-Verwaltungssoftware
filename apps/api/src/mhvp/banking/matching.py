@@ -21,6 +21,7 @@ from mhvp.accounting.models import (
     AccountCategory,
     EntryKind,
     EntrySource,
+    EntryStatus,
     JournalEntry,
     Ledger,
     LedgerAccount,
@@ -191,6 +192,82 @@ def rule_matches(rule: BankRule, tx: BankTransaction) -> bool:
     return not (m.get("amount_max") is not None and tx.amount > Decimal(str(m["amount_max"])))
 
 
+async def lock_for_booking(session: AsyncSession, tx_id: uuid.UUID) -> BankTransaction:
+    """Row lock for a booking. A recognised transfer pair is locked as a whole in a stable
+    order (by id), so parallel requests for the two halves serialise instead of both posting
+    or deadlocking (D04, B08). Unpaired transactions: one ``SELECT ... FOR UPDATE`` as before."""
+    pair_id = await session.scalar(
+        select(BankTransaction.transfer_pair_id).where(BankTransaction.id == tx_id)
+    )
+    ids = [tx_id] if pair_id is None else [tx_id, pair_id]
+    rows = (
+        await session.scalars(
+            select(BankTransaction)
+            .where(BankTransaction.id.in_(ids))
+            .order_by(BankTransaction.id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+    ).all()
+    tx = next((r for r in rows if r.id == tx_id), None)
+    if tx is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    if tx.transfer_pair_id is not None and tx.transfer_pair_id not in ids:  # paired meanwhile
+        await session.get(BankTransaction, tx.transfer_pair_id, with_for_update=True)
+    return tx
+
+
+async def _effective_entry(
+    session: AsyncSession, entry_id: uuid.UUID | None
+) -> JournalEntry | None:
+    """The posting still in force: posted and not reversed (B03)."""
+    if entry_id is None:
+        return None
+    entry = await session.get(JournalEntry, entry_id)
+    if entry is None or entry.status is not EntryStatus.POSTED or entry.reversed_by_id:
+        return None
+    return entry
+
+
+async def _transfer_partner(session: AsyncSession, tx: BankTransaction) -> BankTransaction:
+    """The other half of a recognised transfer pair, locked; refuses a second effect (D04).
+
+    One posting of either half moves both bank accounts, so the pair is settled as soon as one
+    half carries a posting in force. After that posting is reversed, the pair is bookable
+    again, once, from either half."""
+    assert tx.transfer_pair_id is not None  # noqa: S101 - caller checks
+    partner = await session.get(BankTransaction, tx.transfer_pair_id, with_for_update=True)
+    if (
+        partner is None
+        or partner.transfer_pair_id != tx.id
+        or partner.tenant_id != tx.tenant_id
+        or partner.legal_entity_id != tx.legal_entity_id
+    ):
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Das Transferpaar ist unvollständig oder betrifft einen anderen Rechtsträger.",
+        )
+    own = await _effective_entry(session, tx.journal_entry_id)
+    if own is not None and own.bank_transaction_id == tx.id:
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Der Umsatz ist bereits gebucht oder ignoriert."
+        )
+    if own is not None or await _effective_entry(session, partner.journal_entry_id) is not None:
+        raise ProblemError(
+            ErrorCodes.BANK_TRANSFER_PAIR_SETTLED,
+            detail=(
+                "Die Umbuchung ist über die Partnerseite bereits gebucht; der Transfer hat "
+                "keine zweite Wirkung. Zum erneuten Buchen zuerst diese Buchung stornieren."
+            ),
+        )
+    if partner.status is TransactionStatus.NEEDS_REVIEW:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Die Partnerseite muss zuerst als möglicher Doppelumsatz geklärt werden.",
+        )
+    return partner
+
+
 async def book_payment(
     session: AsyncSession,
     tx: BankTransaction,
@@ -203,8 +280,17 @@ async def book_payment(
     discount: Decimal = Decimal("0.00"),
 ) -> JournalEntry:
     """Post a bank transaction: bank against debtor(s) with explicit settlement, or against one
-    counter account. Complete or not at all (B02); a booked transaction cannot be booked twice."""
-    if tx.status in (TransactionStatus.BOOKED, TransactionStatus.IGNORED) or tx.journal_entry_id:
+    counter account. Complete or not at all (B02); a booked transaction cannot be booked twice.
+
+    A recognised transfer pair (``transfer_pair_id``) is posted once, bank against the partner
+    bank account, and that posting settles both halves (D04, B08). Callers lock with
+    :func:`lock_for_booking`."""
+    partner = await _transfer_partner(session, tx) if tx.transfer_pair_id is not None else None
+    # A pair half whose posting was reversed is bookable again; everything else unchanged.
+    reopened = partner is not None and tx.journal_entry_id is not None
+    if not reopened and (
+        tx.status in (TransactionStatus.BOOKED, TransactionStatus.IGNORED) or tx.journal_entry_id
+    ):
         raise ProblemError(
             ErrorCodes.CONFLICT, detail="Der Umsatz ist bereits gebucht oder ignoriert."
         )
@@ -218,6 +304,16 @@ async def book_payment(
             ErrorCodes.VALIDATION,
             detail="Umbuchungen werden gegen das Bankkonto des Partners gebucht.",
         )
+    if partner is not None:
+        _, partner_bank = await ledger_for(session, partner)
+        if settlements or discount or counter_account_id != partner_bank.id:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=(
+                    "Umbuchungen werden ohne Postenausgleich und ohne Skonto gegen das "
+                    "Bankkonto des Partners gebucht."
+                ),
+            )
     ledger, bank = await ledger_for(session, tx)
     amount = abs(tx.amount)
     lines: list[acc.LineIn] = []
@@ -309,6 +405,10 @@ async def book_payment(
     await acc.write_draft(session, ledger, entry, lines, plan)
     await acc.post(session, ledger, entry, user_id)
     tx.status, tx.journal_entry_id = TransactionStatus.BOOKED, entry.id
+    if partner is not None and partner.status is not TransactionStatus.IGNORED:
+        # The same posting moved the partner bank account: the other half is settled by the
+        # pair and carries this entry; the entry keeps ``bank_transaction_id`` of this half.
+        partner.status, partner.journal_entry_id = TransactionStatus.BOOKED, entry.id
     await session.flush()
     return entry
 

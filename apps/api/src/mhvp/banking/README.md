@@ -48,6 +48,20 @@ Bank connectors (EBICS, aggregator, FinTS fallback, file import), transactions, 
 Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`, tests under
 `apps/api/tests/banking/`. Register models in `mhvp/models.py` for Alembic autogenerate.
 
+## Transferpaare buchen (D04, Regel B08)
+
+Der Import verknüpft Umbuchungen zwischen eigenen Konten desselben Rechtsträgers über
+`transfer_pair_id` (`services.pair_transfer`). `POST /banking/transactions/{id}/book` bucht ein
+Paar genau einmal, von einer beliebigen Seite, gegen das Sachkonto des Partnerbankkontos (ohne
+Postenausgleich, ohne Skonto, sonst 422). Die Buchung bewegt beide Bankkonten; die Partnerseite
+erhält Status `booked` und dieselbe `journal_entry_id`. Ein weiterer Buchungsversuch auf die
+Partnerseite, auch in `/bulk-confirm`, endet mit 409 `MHVP-BANK-0019`, solange eine nicht
+stornierte Buchung auf einer Seite liegt. `matching.lock_for_booking` sperrt beide Seiten in
+stabiler Reihenfolge (`ORDER BY id ... FOR UPDATE`), damit parallele Buchungen der beiden Seiten
+nacheinander laufen. Nach dem Storno der Paarbuchung (`/accounting/.../entries/{id}/reverse`) ist
+das Paar wieder genau einmal buchbar. Umsätze ohne Paar sind unverändert. Tests:
+`tests/integration/test_annex_d_gaps.py::test_d04_*`.
+
 ## Bankkontenauswahl (Konten je Objekt und Rechtsträger)
 
 Modul `account_selection.py`, Tabelle `bank_account_assignment` (Migration 0079). Nur lesend

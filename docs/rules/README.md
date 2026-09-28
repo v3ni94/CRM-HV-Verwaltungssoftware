@@ -98,7 +98,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | B05 | Belegkette | 7.1 | specified, not implemented |
 | [B06](D08-rest-cents.md) | Präzision | 7.1 | implemented, not accepted (M17, D08 tested) |
 | [B07](B07.md) | Stichtagswahrheit | 7.1 | implemented, not accepted |
-| [B08](B08.md) | Keine doppelte wirtschaftliche Wirkung | 7.1 | implemented, not accepted |
+| [B08](B08.md) | Keine doppelte wirtschaftliche Wirkung (Transferpaar D04 seit 28.09.2026) | 7.1 | implemented, not accepted |
 | [B09](B09.md) | Abstimmung | 7.1 | implemented, not accepted |
 | A01 | Ergebnisstand | 7.6 | implemented, not accepted (M17, rule version by period start in `statement_snapshot.rule_version`, D28 tested; document version and difference report open) |
 | A02 | Betriebskosten Miete | 7.6 | implemented, not accepted (M17, `test_m17_operating_costs.py`; D22: account allocation category and posted split are checked, cost type schema stays M17-01) |
