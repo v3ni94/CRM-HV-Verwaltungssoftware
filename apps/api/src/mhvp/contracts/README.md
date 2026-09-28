@@ -122,3 +122,22 @@ option a); a block needs a reason (422). Payments, terms and parties keep the ve
 * CRM `/vertraege`: Suchfeld (GET-Formular, Filter Objekt und Einheit bleiben erhalten),
   Spalten Objekt (Link `/objekte/{id}`, Anschrift), Einheit (Link `/vermietung/einheit/{id}`)
   und Mieter oder Eigentümer (Links `/kontakte/{id}`).
+
+## Eigentümerwechsel mit Übernahme der Sollbeträge (operator 28.09.2026)
+
+`GET /contracts/{id}/ownership-transfer/preview?title_transfer_date=` (`contracts:read`, read
+only) shows what the transfer would do: the current ownership ends the day before, the new one
+starts on the date, and the standing amounts valid on the date (`services.standing_amounts`:
+payments, payment schedule, contract allocation values) are listed. `POST
+/contracts/{id}/ownership-transfer` takes the acquirer as `new_party_id` or `new_contact_id`
+(`mhvp.contacts.services.party_for_contact`: the contact's own single member party, created
+when missing), `carry_over_amounts` (default true: `services.carry_over_standing_amounts`
+copies the rows with `valid_from` = title transfer date and the original `valid_to`), `notes`
+and `document_id` (linked as `evidence` to the new contract). Allocation values of the old
+contract end the day before (`services.close_allocation_values`). Error code `MHVP-CONTR-0001`
+for a contract that cannot be transferred. The carry over is a factual copy: no split of the
+annual statement between seller and acquirer (rule W07 not released, release point P01 open),
+no posting, open receivables stay with the seller (6.9.2, D15). Rule
+`docs/rules/M5-03-eigentuemerwechsel-sollbetraege.md`, tests
+`tests/integration/test_ownership_transfer.py`, web `OwnershipTransfer.tsx` on the contract
+and the unit page.

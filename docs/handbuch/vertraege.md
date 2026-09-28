@@ -59,9 +59,12 @@ Eigentümerwechsel. Kündigungen sind vorher durch die Geschäftsführung freizu
   Historie bleibt lesbar.
 - Vertrag beenden: Enddatum, Datum der Kündigungserklärung und Grund. Das Ende erscheint
   im Kalender und auf der Startseite.
-- Eigentümerwechsel: Der neue Eigentümer wird mit Eigentumsübergang, Nutzen und Lasten,
-  Erwerbsart und gegebenenfalls Sonderrechtsnachfolgehaftung und SEV erfasst; das bisherige
-  Eigentumsverhältnis endet zum Übergang.
+- Eigentümerwechsel: Abschnitt Eigentümerwechsel auf der Vertragsseite eines offenen
+  Eigentums (auch auf der Einheitenseite). Der neue Eigentümer wird mit Eigentumsübergang,
+  Nutzen und Lasten, Erwerbsart, Nachweis und gegebenenfalls Sonderrechtsnachfolgehaftung und
+  SEV erfasst; das bisherige Eigentumsverhältnis endet am Vortag, die am Übergang gültigen
+  Sollbeträge, der Zahlungsplan und die Umlagewerte werden auf Wunsch übernommen. Ablauf in
+  der [Anleitung Eigentümerwechsel](anleitung-eigentuemerwechsel.md).
 
 ## Sollbeträge und Zahlungsplan
 

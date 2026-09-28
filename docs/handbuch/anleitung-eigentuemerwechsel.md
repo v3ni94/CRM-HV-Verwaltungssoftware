@@ -59,36 +59,48 @@ Zustellregel des Kontakts hinterlegen.
 
 ### 3. Eigentümerwechsel erfassen
 
-Der Eigentümerwechsel hat in der Oberfläche keine eigene Schaltfläche. Die Vertragsseite
-verweist auf die Detailseite beziehungsweise die Schnittstelle; ein Eigentumsverhältnis lässt
-sich über Vertrag beenden nicht beenden. Die Erfassung erfolgt über die Schnittstelle
-`POST /api/v1/contracts/{id}/ownership-transfer` mit folgenden Angaben:
+Auf der Vertragsseite des bisherigen Eigentums (Verträge, Vertrag öffnen) oder auf der
+Einheitenseite (Vermietung, Einheit) im Abschnitt Eigentümerwechsel auf Eigentümerwechsel
+erfassen klicken. Der Abschnitt erscheint nur bei offenen Eigentumsverhältnissen und nur mit
+dem Recht `contracts:update`. Der Dialog fragt ab:
 
 | Feld | Bedeutung |
 | --- | --- |
-| `new_party_id` | Partei des Erwerbers |
-| `title_transfer_date` | Eigentumsübergang (Grundbuch), Pflicht |
-| `benefit_burden_date` | Nutzen- und Lastenwechsel laut Kaufvertrag, optional |
-| `acquisition_kind` | Erwerbsart: Kauf, Ersterwerb, Erbfolge, Zwangsversteigerung, Schenkung, Sonstiges |
-| `special_succession_liability` | Sonderrechtsnachfolge mit Haftung für Rückstände |
-| `sev_enabled` | Sondereigentumsverwaltung aktiv (nur Verwaltungsart WEG mit SEV) |
+| Erwerber | Kontakt suchen oder über Neuen Kontakt anlegen als Person oder Unternehmen anlegen; die Vertragspartei wird automatisch ermittelt oder angelegt |
+| Eigentumsübergang (Grundbuch) | Pflicht; muss nach dem Beginn des bisherigen Eigentums liegen |
+| Nutzen und Lasten | optional, laut Kaufvertrag, nicht nach dem Eigentumsübergang |
+| Erwerbsart | Kauf, Ersterwerb, Erbfolge, Zwangsversteigerung, Schenkung, Sonstiges |
+| Sollbeträge übernehmen | Standard an: die am Übergang gültigen Zahlungen (Hausgeld, Rücklage), der Zahlungsplan und die Umlagewerte werden ab dem Übergang unverändert auf den neuen Vertrag kopiert |
+| Sonderrechtsnachfolge | Kennzeichen, rechtlich zu prüfen |
+| SEV | nur bei Verwaltungsart WEG mit SEV wählbar, vorbelegt aus dem bisherigen Eigentum |
+| Nachweis | Datei (Grundbuchauszug, Notarmitteilung, Erbschein); wird mit Einheit und neuem Vertrag verknüpft |
+| Notiz | Text zum neuen Vertrag, zum Beispiel Urkundennummer |
 
-Wirkung: Das bisherige Eigentum endet am Tag vor dem Eigentumsübergang, das neue Eigentum
-beginnt am Eigentumsübergang. Wer die Schnittstelle nicht bedienen kann, gibt den Vorgang als
-Ticket an eine Person mit Schnittstellenzugang (Administrator) mit allen Angaben der Tabelle.
+Vorschau zeigt vor der Bestätigung: das bisherige Eigentum endet am Vortag, das neue beginnt
+am Übergang, offene Posten bleiben beim Veräußerer, und welche Beträge ab dem Übergang
+übernommen werden. Die Vorschau ändert nichts. Eigentümerwechsel erfassen führt den Wechsel
+aus und öffnet den neuen Vertrag.
+
+Die Schnittstelle `POST /api/v1/contracts/{id}/ownership-transfer` (Felder `new_party_id`
+oder `new_contact_id`, `title_transfer_date`, `benefit_burden_date`, `acquisition_kind`,
+`special_succession_liability`, `sev_enabled`, `carry_over_amounts`, `notes`, `document_id`)
+und die Vorschau `GET /api/v1/contracts/{id}/ownership-transfer/preview` bleiben für
+Integrationen verfügbar.
 
 Kein Ersatzweg über Vertrag anlegen: Ein zweites Eigentum für dieselbe Einheit, solange das
 bisherige offen ist, lehnt die Plattform ab (überlappende Eigentumszeiträume sind durch die
 Datenbank ausgeschlossen, Master-Prompt 6.9.2). Den Wechsel deshalb nicht über ein neues
 Vertragsformular nachbilden.
 
-### 4. Hausgeld und Zahlungsplan am neuen Vertrag
+### 4. Hausgeld und Zahlungsplan am neuen Vertrag prüfen
 
-Der neue Eigentumsvertrag übernimmt keine Sollbeträge. Hausgeld und Erhaltungsrücklage aus dem
-beschlossenen Wirtschaftsplan sind am neuen Vertrag zu erfassen (Kapitel [WEG](weg.md),
-Vorschüsse übernehmen, oder Schnittstelle). Einen Zahlungsplan legt man auf der Seite Vertrag
-bearbeiten über Zahlungsplan hinzufügen an. Solange G1 geschlossen ist, entstehen daraus keine
-produktiven Buchungen.
+Mit Sollbeträge übernehmen trägt der neue Vertrag Hausgeld, Erhaltungsrücklage, Zahlungsplan
+und Umlagewerte in der am Übergang gültigen Höhe. Das ist eine Datenübernahme, keine
+Aussage darüber, wer welche Vorschüsse schuldet (siehe Rechtliche Voraussetzungen). Sieht der
+beschlossene Wirtschaftsplan andere Beträge vor, diese am neuen Vertrag erfassen (Kapitel
+[WEG](weg.md), Vorschüsse übernehmen, oder Schnittstelle). Wurde die Übernahme abgewählt,
+sind die Beträge am neuen Vertrag anzulegen. Solange G1 geschlossen ist, entstehen daraus
+keine produktiven Buchungen.
 
 ### 5. SEPA-Mandat und Bankverbindung
 
@@ -117,7 +129,7 @@ Nachbearbeitung der Abrechnung. Fristen mit Rechtsbezug: rechtlich zu prüfen du
 | --- | --- |
 | Einheit | Grundbuchauszug, Kaufvertragsauszug, Erbschein |
 | Vertrag (alt) | endet automatisch; keine Änderung der offenen Posten |
-| Vertrag (neu) | Erwerber, Erwerbsart, Stichtage |
+| Vertrag (neu) | Erwerber, Erwerbsart, Stichtage, übernommene Sollbeträge, Nachweis, Notiz |
 | Kontakt Erwerber | Legitimation, Mandat, Vollmacht |
 | Kontakt Veräußerer | bleibt erhalten; nicht löschen, offene Posten bleiben dort |
 
@@ -135,7 +147,7 @@ Nachbearbeitung der Abrechnung. Fristen mit Rechtsbezug: rechtlich zu prüfen du
 - [ ] Erwerber angelegt, Dublettenprüfung beachtet
 - [ ] Eigentümerwechsel mit Eigentumsübergang, Nutzen und Lasten, Erwerbsart erfasst
 - [ ] Sonderrechtsnachfolge geprüft und gekennzeichnet
-- [ ] Hausgeld und Zahlungsplan am neuen Vertrag erfasst
+- [ ] Sollbeträge übernommen oder am neuen Vertrag erfasst und gegen den Wirtschaftsplan geprüft
 - [ ] Mandat und Bankverbindung des Erwerbers erfasst und freigegeben
 - [ ] Portalzugang Veräußerer geprüft, Erwerber eingeladen
 - [ ] Ticket mit Fälligkeit für Nacharbeiten angelegt
@@ -152,9 +164,8 @@ Nachbearbeitung der Abrechnung. Fristen mit Rechtsbezug: rechtlich zu prüfen du
 
 ## Lücken in der Software
 
-- Keine Schaltfläche Eigentümerwechsel in der Oberfläche; nur Schnittstelle.
-- Sollbeträge (Hausgeld, Rücklage) werden nicht auf den neuen Vertrag übertragen und sind in der
-  Oberfläche nicht direkt erfassbar.
+- Sollbeträge sind am Vertrag in der Oberfläche nicht direkt änderbar; abweichende Beträge nach
+  dem Wechsel über WEG, Vorschüsse übernehmen oder die Schnittstelle erfassen.
 - Regel W07 (Adressierung der Abrechnungsspitze, Schuldner) nicht freigegeben, P01 offen.
 - Kein Fristtyp Eigentümerwechsel, keine Checkliste.
 - Keine automatische Information von Beirat, Messdienstleister oder Mietern.

@@ -864,3 +864,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `mhvp.communication.gmail_state`, `mhvp.communication.gmail_done`, `PATCH /tenant/settings`, `/mail/messages`, `/mail/mailboxes`, CRM Mailübersicht, Maildetail, Einstellungen Mandant und Postfächer |
 | Überprüfung spätestens bei Meilenstein | vor dem Umschalten auf `done` beim Mandanten HVM (Spike, Abschnitt 13 der Regel) |
 | Datum | 28.09.2026 |
+
+## A-075
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Beim Eigentümerwechsel werden die am Eigentumsübergang gültigen Sollbeträge (Zahlungen), der Zahlungsplan und die vertragsbezogenen Umlagewerte des Veräußerers als unveränderte Kopie ab dem Übergang auf den Vertrag des Erwerbers übernommen (abwählbar). Das ist eine Datenübernahme: Der Erwerber setzt die laufenden Vorschüsse in bisheriger Höhe fort, bis der Wirtschaftsplan etwas anderes vorsieht. Vertragsbezogene Umlagewerte des Veräußerers enden am Vortag; Werte mit Beginn nach dem Ende bleiben unverändert. |
+| Begründung | Ohne Übernahme mussten Hausgeld und Rücklage nach jedem Wechsel von Hand nacherfasst werden (Lücke laut Anleitung Eigentümerwechsel). Die Kopie trifft keine Aussage über Vorschussschuldner oder Abrechnungsspitze (Regel W07 nicht freigegeben, P01 offen, M24-01); Rückstände werden nicht umgebucht. |
+| Kennzeichnung | unkritisch (kein Geldfluss, keine Buchung, G1 und G4 geschlossen; Übernahme in der Vorschau sichtbar und abwählbar) |
+| Betroffene Bereiche | `POST /contracts/{id}/ownership-transfer`, `GET /contracts/{id}/ownership-transfer/preview`, CRM Vertrags- und Einheitenseite (`OwnershipTransfer`), `docs/rules/M5-03-eigentuemerwechsel-sollbetraege.md` |
+| Überprüfung spätestens bei Meilenstein | vor G4 (WEG-Abrechnung), zusammen mit W07 und P01 |
+| Datum | 28.09.2026 |
