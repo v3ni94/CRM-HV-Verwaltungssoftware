@@ -103,11 +103,14 @@ body {
   background-size: 14px;
 }
 
-/* Data tables: airy rows, quiet header, no vertical rules, sticky head. The head stays below
- * the app header (z-30, opaque) and never above menus or dialogs. On the page ground a table
- * is its own card (surface, line, soft shadow by day); inside a card (mhvp-surface-card, set
- * by ui.card and mhvp-card) it stays flat. Separate borders with zero spacing keep the single
- * bottom rule per row and allow rounded corners. */
+/* Data tables: airy rows, quiet header, no vertical rules. The head is sticky at the header
+ * height (--mhvp-header-h) only when the table scrolls with the page itself; inside a
+ * horizontal scroll wrapper (ui.tableScroll, ui.tableCard, ResponsiveList) the wrapper is the
+ * scroll container, so the head scrolls with it (no sticky effect, no overlap with the app
+ * header). z-index 1 keeps it below the app header (z-30), menus and dialogs. On the page
+ * ground a table is its own card (surface, line, soft shadow by day); inside a card
+ * (mhvp-surface-card, set by ui.card and mhvp-card) it stays flat. Separate borders with zero
+ * spacing keep the single bottom rule per row and allow rounded corners. */
 .mhvp-table {
   width: 100%;
   border-collapse: separate;
@@ -139,7 +142,7 @@ body {
 }
 .mhvp-table thead th {
   position: sticky;
-  top: 0;
+  top: var(--mhvp-header-h, 0);
   z-index: 1;
   text-align: left;
   font-weight: 500;
@@ -159,8 +162,12 @@ body {
 .mhvp-table tbody tr {
   transition: background var(--mhvp-motion-fast) var(--mhvp-motion-ease);
 }
-.mhvp-table tbody tr:hover {
-  background: var(--mhvp-color-surface-2);
+/* Hover only for devices that hover (M31): after a tap on a touch screen no row would stay
+ * highlighted. Keyboard and pointer feedback on links and buttons is unaffected. */
+@media (hover: hover) {
+  .mhvp-table tbody tr:hover {
+    background: var(--mhvp-color-surface-2);
+  }
 }
 .mhvp-table .num,
 .mhvp-table th.num,
@@ -177,8 +184,10 @@ body {
   z-index: 2;
   background: var(--mhvp-color-surface);
 }
-.mhvp-table--sticky-col tbody tr:hover td:first-child {
-  background: var(--mhvp-color-surface-2);
+@media (hover: hover) {
+  .mhvp-table--sticky-col tbody tr:hover td:first-child {
+    background: var(--mhvp-color-surface-2);
+  }
 }
 .mhvp-table--sticky-col thead th:first-child {
   z-index: 3;
@@ -206,6 +215,20 @@ body {
   transition: border-color var(--mhvp-motion) var(--mhvp-motion-ease),
     background var(--mhvp-motion) var(--mhvp-motion-ease);
 }
-.mhvp-lift:hover {
-  border-color: var(--mhvp-color-accent);
+@media (hover: hover) {
+  .mhvp-lift:hover {
+    border-color: var(--mhvp-color-accent);
+  }
+}
+
+/* Viewport fixed bottom bar (apps/web-crm BottomBar): its left edge follows the rail. The
+ * automatic rail mode is pure CSS in the component (lg 4.5rem, xl 16rem); a manual mode is
+ * announced by SideNav as data-rail on <html> and moves the edge accordingly. */
+@media (min-width: 64rem) {
+  :root[data-rail="expanded"] .mhvp-bottom-bar {
+    left: 16rem;
+  }
+  :root[data-rail="collapsed"] .mhvp-bottom-bar {
+    left: 4.5rem;
+  }
 }
