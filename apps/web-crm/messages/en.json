@@ -7573,7 +7573,15 @@
       "toDetail": "Open",
       "notice": "Notice",
       "schedules": "Payment schedules",
-      "noRight": "Permission to create is missing."
+      "noRight": "Permission to create is missing.",
+      "search": "Search",
+      "searchPlaceholder": "Name, property, address or unit",
+      "searchSubmit": "Search",
+      "searchNoHits": "No contracts found for “{q}”.",
+      "property": "Property",
+      "persons": "Tenants or owners",
+      "toProperty": "Open property",
+      "toUnit": "Open unit"
     },
     "paymentModes": {
       "advance": "in advance",

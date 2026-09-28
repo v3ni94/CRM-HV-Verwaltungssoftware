@@ -260,6 +260,14 @@ class DebtorAccountOut(_Out):
     name: str
 
 
+class ContractMemberOut(_Out):
+    """Contact behind the contract party (tenant or owner), for the list display."""
+
+    contact_id: uuid.UUID
+    name: str
+    role: str
+
+
 class ContractOut(_Out):
     id: uuid.UUID
     kind: ContractKind
@@ -299,6 +307,15 @@ class ContractOut(_Out):
     approved_at: datetime | None = None
     payments: list[PaymentOut] = Field(default_factory=list)
     schedules: list[ScheduleOut] = Field(default_factory=list)
+    # Display context (operator feedback 28.09.2026): which property, unit and persons the
+    # contract belongs to; read only, derived from the master data.
+    property_number: str | None = None
+    property_name: str | None = None
+    property_address: str | None = None
+    unit_number: str | None = None
+    unit_label: str | None = None
+    party_name: str | None = None
+    members: list[ContractMemberOut] = Field(default_factory=list)
 
 
 class MandateIn(_In):

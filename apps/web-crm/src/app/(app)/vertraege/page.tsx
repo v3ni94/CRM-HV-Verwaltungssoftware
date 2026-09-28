@@ -2,10 +2,10 @@ import Link from "next/link";
 import { getTranslations } from "next-intl/server";
 
 import type { ContractOut } from "@/components/contracts/ContractForm";
+import { ContractList, ContractSearch } from "@/components/contracts/ContractList";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
-import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -20,14 +20,20 @@ export default async function ContractsPage({ searchParams }: { searchParams?: P
   const params = (await searchParams) ?? {};
   const query = new URLSearchParams({ limit: "500" });
   const filters: string[] = [];
+  const hidden: Record<string, string> = {};
   for (const key of ["property_id", "unit_id"] as const) {
     const raw = params[key];
     const id = Array.isArray(raw) ? raw[0] : raw;
     if (id && /^[0-9a-f-]{36}$/i.test(id)) {
       query.set(key, id);
       filters.push(key);
+      hidden[key] = id;
     }
   }
+  // Free text search by name, property or unit (operator feedback 28.09.2026), server side.
+  const rawQ = Array.isArray(params.q) ? params.q[0] : params.q;
+  const q = (rawQ ?? "").trim().slice(0, 200);
+  if (q) query.set("q", q);
   const [me, response] = await Promise.all([getMe(), serverFetch(`/api/v1/contracts?${query.toString()}`)]);
   redirectIfUnauthenticated(response);
   const rows = response.ok ? ((await response.json()) as ContractOut[]) : null;
@@ -61,52 +67,15 @@ export default async function ContractsPage({ searchParams }: { searchParams?: P
           </Link>
         </p>
       ) : null}
+      <ContractSearch q={q} hidden={hidden} />
       {rows === null ? (
         <p role="alert" className={ui.alert}>
           {t("page.listError")}
         </p>
       ) : rows.length === 0 ? (
-        <p className={ui.help}>{t("page.empty")}</p>
+        <p className={ui.help}>{q ? t("page.searchNoHits", { q }) : t("page.empty")}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className={ui.table}>
-            <thead>
-              <tr>
-                <th>{t("page.number")}</th>
-                <th>{t("page.kind")}</th>
-                <th>{t("page.term")}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((c) => (
-                <tr key={c.id}>
-                  <td>
-                    {c.number} ({t("edit.version", { n: c.version })})
-                  </td>
-                  <td>
-                    {t(`kinds.${c.kind}`)}
-                    {c.approval_status === "pending" ? (
-                      <>
-                        {" "}
-                        <span className={ui.badgeWarning}>{ta("pendingBadge")}</span>
-                      </>
-                    ) : null}
-                  </td>
-                  <td>
-                    {formatDate(c.start_date)}
-                    {c.end_date ? ` bis ${formatDate(c.end_date)}` : ""}
-                  </td>
-                  <td>
-                    <Link href={`/vertraege/${c.id}`} className="hover:underline">
-                      {t("page.toDetail")}
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ContractList rows={rows} />
       )}
     </div>
   );

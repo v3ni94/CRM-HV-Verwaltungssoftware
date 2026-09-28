@@ -7,10 +7,10 @@ from decimal import Decimal
 from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
-from sqlalchemy import or_, select
+from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 
-from mhvp.contacts.models import ContactBankAccount, Party, PartyMember
+from mhvp.contacts.models import Contact, ContactBankAccount, Party, PartyMember
 from mhvp.contacts.services import approval_block_reason, recompute_for_party
 from mhvp.contacts.validation import mask_iban
 from mhvp.contracts import schemas as s
@@ -67,6 +67,59 @@ async def _out(session: Any, contract: Contract) -> s.ContractOut:
     return (await _outs(session, [contract]))[0]
 
 
+def _address(prop: Property) -> str | None:
+    street = " ".join(p for p in (prop.street, prop.house_number) if p)
+    place = " ".join(p for p in (prop.postal_code, prop.city) if p)
+    return ", ".join(p for p in (street, place) if p) or None
+
+
+async def _context(session: Any, contracts: Sequence[Contract]) -> dict[uuid.UUID, dict[str, Any]]:
+    """Property, unit, party and member names per contract (four batched queries)."""
+    props = {
+        p.id: p
+        for p in (
+            await session.scalars(
+                select(Property).where(Property.id.in_({c.property_id for c in contracts}))
+            )
+        ).all()
+    }
+    units = {
+        u.id: u
+        for u in (
+            await session.scalars(select(Unit).where(Unit.id.in_({c.unit_id for c in contracts})))
+        ).all()
+    }
+    party_ids = {c.party_id for c in contracts}
+    parties = {
+        p.id: p for p in (await session.scalars(select(Party).where(Party.id.in_(party_ids)))).all()
+    }
+    members: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for party_id, contact_id, name, role in (
+        await session.execute(
+            select(PartyMember.party_id, Contact.id, Contact.display_name, PartyMember.role)
+            .join(Contact, Contact.id == PartyMember.contact_id)
+            .where(PartyMember.party_id.in_(party_ids))
+            .order_by(PartyMember.party_id, PartyMember.role, Contact.display_name)
+        )
+    ).all():
+        members.setdefault(party_id, []).append(
+            {"contact_id": contact_id, "name": name or "", "role": str(role)}
+        )
+    out: dict[uuid.UUID, dict[str, Any]] = {}
+    for c in contracts:
+        prop, unit, party = props.get(c.property_id), units.get(c.unit_id), parties.get(c.party_id)
+        out[c.id] = {
+            "property_number": prop.number if prop else None,
+            "property_name": prop.name if prop else None,
+            "property_address": _address(prop) if prop else None,
+            "unit_number": unit.number if unit else None,
+            "unit_label": unit.label if unit else None,
+            "party_name": party.name if party else None,
+            "members": members.get(c.party_id, []),
+        }
+    return out
+
+
 async def _outs(session: Any, contracts: Sequence[Contract]) -> list[s.ContractOut]:
     """Output of several contracts with three batched queries (debtor accounts, payments,
     schedules) instead of three per row (performance review 26.09.2026)."""
@@ -101,6 +154,7 @@ async def _outs(session: Any, contracts: Sequence[Contract]) -> list[s.ContractO
         )
     ).all():
         schedules.setdefault(x.contract_id, []).append(x)
+    ctx = await _context(session, contracts)
     out = []
     for contract in contracts:
         data = {c.key: getattr(contract, c.key) for c in Contract.__table__.columns}
@@ -117,6 +171,7 @@ async def _outs(session: Any, contracts: Sequence[Contract]) -> list[s.ContractO
                     "schedules": [
                         s.ScheduleOut.model_validate(x) for x in schedules.get(contract.id, [])
                     ],
+                    **ctx.get(contract.id, {}),
                 }
             )
         )
@@ -196,6 +251,52 @@ async def _create(
 # Contracts -----------------------------------------------------------------------------
 
 
+def _like(term: str) -> str:
+    escaped = term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+    return f"%{escaped}%"
+
+
+def _search_condition(q: str) -> Any:
+    """Every word of ``q`` must match one of the searchable columns (ILIKE on plain columns;
+    each subquery is itself under the tenant RLS policy, so no foreign rows can match)."""
+    conditions = []
+    for word in q.split()[:5]:
+        like = _like(word)
+        conditions.append(
+            or_(
+                Contract.number.ilike(like),
+                Contract.party_id.in_(select(Party.id).where(Party.name.ilike(like))),
+                Contract.party_id.in_(
+                    select(PartyMember.party_id)
+                    .join(Contact, Contact.id == PartyMember.contact_id)
+                    .where(
+                        or_(
+                            Contact.display_name.ilike(like),
+                            Contact.company_name.ilike(like),
+                            Contact.first_name.ilike(like),
+                            Contact.last_name.ilike(like),
+                        )
+                    )
+                ),
+                Contract.property_id.in_(
+                    select(Property.id).where(
+                        or_(
+                            Property.number.ilike(like),
+                            Property.name.ilike(like),
+                            Property.street.ilike(like),
+                            Property.city.ilike(like),
+                            Property.postal_code.ilike(like),
+                        )
+                    )
+                ),
+                Contract.unit_id.in_(
+                    select(Unit.id).where(or_(Unit.number.ilike(like), Unit.label.ilike(like)))
+                ),
+            )
+        )
+    return and_(*conditions)
+
+
 @router.get("/contracts", summary="Verträge", responses=PAGE_HEADERS)
 async def list_contracts(
     request: Request,
@@ -211,6 +312,12 @@ async def list_contracts(
         "upcoming (Beginn nach dem Stichtag)",
     ),
     as_of: date | None = Query(default=None, description="Stichtag für status, Standard heute"),
+    q: str | None = Query(
+        default=None,
+        max_length=200,
+        description="Freitextsuche: Vertragsnummer, Name der Vertragspartei oder eines "
+        "Mitglieds (Mieter, Eigentümer), Objektnummer, Objektname, Objektanschrift, Einheit",
+    ),
     limit: int = Query(default=200, ge=1, le=1000),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
@@ -250,6 +357,8 @@ async def list_contracts(
                 Contract.start_date <= active_on,
                 or_(Contract.end_date.is_(None), Contract.end_date >= active_on),
             )
+        if q and q.strip():
+            query = query.where(_search_condition(q))
         rows = await paginate(
             session,
             query.order_by(Contract.number, Contract.version),

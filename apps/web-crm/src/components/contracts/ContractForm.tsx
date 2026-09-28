@@ -81,6 +81,14 @@ export type ContractOut = {
   approved_by?: string | null;
   approved_at?: string | null;
   schedules: ScheduleOut[];
+  /** Anzeigekontext für die Vertragsliste (Rückmeldung 28.09.2026). */
+  property_number?: string | null;
+  property_name?: string | null;
+  property_address?: string | null;
+  unit_number?: string | null;
+  unit_label?: string | null;
+  party_name?: string | null;
+  members?: { contact_id: string; name: string; role: string }[];
 };
 
 export type PropertyOption = { id: string; label: string; management_type: ManagementType };

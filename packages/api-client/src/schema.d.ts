@@ -21276,6 +21276,21 @@ export interface components {
          */
         ContractKind: "tenancy" | "ownership";
         /**
+         * ContractMemberOut
+         * @description Contact behind the contract party (tenant or owner), for the list display.
+         */
+        ContractMemberOut: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Name */
+            name: string;
+            /** Role */
+            role: string;
+        };
+        /**
          * ContractNotesPatch
          * @description Inline editing of a contract (AP8, operator decision (c) 4): only remarks and the
          *     dunning block change in place; payments and terms stay versioned (7.4).
@@ -21324,6 +21339,8 @@ export interface components {
              * Format: uuid
              */
             legal_entity_id: string;
+            /** Members */
+            members?: components["schemas"]["ContractMemberOut"][];
             /** Move In On */
             move_in_on?: string | null;
             /** Move Out On */
@@ -21337,13 +21354,21 @@ export interface components {
              * Format: uuid
              */
             party_id: string;
+            /** Party Name */
+            party_name?: string | null;
             /** Payments */
             payments?: components["schemas"]["PaymentOut"][];
+            /** Property Address */
+            property_address?: string | null;
             /**
              * Property Id
              * Format: uuid
              */
             property_id: string;
+            /** Property Name */
+            property_name?: string | null;
+            /** Property Number */
+            property_number?: string | null;
             proration_method?: components["schemas"]["ProrationMethod"] | null;
             /** Rent Increase Block Until */
             rent_increase_block_until: string | null;
@@ -21377,6 +21402,10 @@ export interface components {
              * Format: uuid
              */
             unit_id: string;
+            /** Unit Label */
+            unit_label?: string | null;
+            /** Unit Number */
+            unit_number?: string | null;
             /** User Change Fee */
             user_change_fee: boolean;
             vat_option: components["schemas"]["ContractVatOption"];
@@ -43982,6 +44011,8 @@ export interface operations {
                 status?: ("active" | "ended" | "upcoming") | null;
                 /** @description Stichtag für status, Standard heute */
                 as_of?: string | null;
+                /** @description Freitextsuche: Vertragsnummer, Name der Vertragspartei oder eines Mitglieds (Mieter, Eigentümer), Objektnummer, Objektname, Objektanschrift, Einheit */
+                q?: string | null;
                 limit?: number;
                 /** @description Seite (ab 1), zusammen mit page_size */
                 page?: number;

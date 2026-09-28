@@ -7573,7 +7573,15 @@
       "toDetail": "Öffnen",
       "notice": "Hinweis",
       "schedules": "Zahlungspläne",
-      "noRight": "Für das Anlegen fehlt die Berechtigung."
+      "noRight": "Für das Anlegen fehlt die Berechtigung.",
+      "search": "Suche",
+      "searchPlaceholder": "Name, Objekt, Anschrift oder Einheit",
+      "searchSubmit": "Suchen",
+      "searchNoHits": "Keine Verträge zur Suche „{q}“ gefunden.",
+      "property": "Objekt",
+      "persons": "Mieter oder Eigentümer",
+      "toProperty": "Objekt öffnen",
+      "toUnit": "Einheit öffnen"
     },
     "paymentModes": {
       "advance": "im Voraus",

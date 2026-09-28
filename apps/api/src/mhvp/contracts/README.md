@@ -106,3 +106,19 @@ Datensätze und Anzeige, keine Buchungen; G1 bis G3 bleiben geschlossen.
 `PATCH /contracts/{id}/notes` (`ContractNotesPatch`) changes `notes`, `dunning_block` and
 `dunning_block_reason` in place without a new contract version (operator decision (c) 4,
 option a); a block needs a reason (422). Payments, terms and parties keep the version path.
+
+## Vertragsliste mit Zuordnung und Suche (Rückmeldung 28.09.2026)
+
+* `GET /contracts` liefert je Zeile zusätzlich `property_number`, `property_name`,
+  `property_address`, `unit_number`, `unit_label`, `party_name` und `members` (Kontakte der
+  Vertragspartei mit `contact_id`, Name, Rolle), in vier gebündelten Abfragen je Seite.
+* `q` (max. 200 Zeichen): Freitextsuche, jedes Wort muss treffen in Vertragsnummer,
+  Parteiname, Kontaktname (Anzeigename, Vorname, Nachname, Firma), Objektnummer, Objektname,
+  Straße, PLZ, Ort, Einheitsnummer oder Einheitsbezeichnung. `ILIKE` auf einfachen Spalten in
+  Unterabfragen, jede unter der Mandanten-RLS; `%` und `_` werden maskiert. Kein zusätzlicher
+  Index: EXPLAIN als `mhvp_app` zeigt je Tabelle den Mandantenindex als Index Cond und das
+  `ILIKE` als Filter (Teilwortsuche ist ohne Trigramm-Index nicht indexierbar, der Bestand je
+  Mandant ist klein). Bestehende Filter und Paginierung bleiben unverändert.
+* CRM `/vertraege`: Suchfeld (GET-Formular, Filter Objekt und Einheit bleiben erhalten),
+  Spalten Objekt (Link `/objekte/{id}`, Anschrift), Einheit (Link `/vermietung/einheit/{id}`)
+  und Mieter oder Eigentümer (Links `/kontakte/{id}`).

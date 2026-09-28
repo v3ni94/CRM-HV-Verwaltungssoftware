@@ -11636,6 +11636,31 @@
         "title": "ContractKind",
         "type": "string"
       },
+      "ContractMemberOut": {
+        "description": "Contact behind the contract party (tenant or owner), for the list display.",
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id",
+          "name",
+          "role"
+        ],
+        "title": "ContractMemberOut",
+        "type": "object"
+      },
       "ContractNotesPatch": {
         "additionalProperties": false,
         "description": "Inline editing of a contract (AP8, operator decision (c) 4): only remarks and the\ndunning block change in place; payments and terms stay versioned (7.4).",
@@ -11781,6 +11806,13 @@
             "title": "Legal Entity Id",
             "type": "string"
           },
+          "members": {
+            "items": {
+              "$ref": "#/components/schemas/ContractMemberOut"
+            },
+            "title": "Members",
+            "type": "array"
+          },
           "move_in_on": {
             "anyOf": [
               {
@@ -11825,6 +11857,17 @@
             "title": "Party Id",
             "type": "string"
           },
+          "party_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Party Name"
+          },
           "payments": {
             "items": {
               "$ref": "#/components/schemas/PaymentOut"
@@ -11832,10 +11875,43 @@
             "title": "Payments",
             "type": "array"
           },
+          "property_address": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Address"
+          },
           "property_id": {
             "format": "uuid",
             "title": "Property Id",
             "type": "string"
+          },
+          "property_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Name"
+          },
+          "property_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Number"
           },
           "proration_method": {
             "anyOf": [
@@ -11965,6 +12041,28 @@
             "format": "uuid",
             "title": "Unit Id",
             "type": "string"
+          },
+          "unit_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Label"
+          },
+          "unit_number": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Number"
           },
           "user_change_fee": {
             "title": "User Change Fee",
@@ -66158,6 +66256,25 @@
               ],
               "description": "Stichtag für status, Standard heute",
               "title": "As Of"
+            }
+          },
+          {
+            "description": "Freitextsuche: Vertragsnummer, Name der Vertragspartei oder eines Mitglieds (Mieter, Eigentümer), Objektnummer, Objektname, Objektanschrift, Einheit",
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 200,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Freitextsuche: Vertragsnummer, Name der Vertragspartei oder eines Mitglieds (Mieter, Eigentümer), Objektnummer, Objektname, Objektanschrift, Einheit",
+              "title": "Q"
             }
           },
           {
