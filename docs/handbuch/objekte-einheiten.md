@@ -59,7 +59,8 @@ Weitere Abschnitte der Detailseite:
   Verwalter) und Name.
 - Eigentümer: bei Mietverwaltung der Objekteigentümer mit Beginn und Anteil sowie
   Verrechnungskonto, Vollmacht (Verweis auf das Dokument) und Steuerberater (Verweis auf den
-  Kontakt). Die drei Angaben werden über die Schnittstelle gepflegt.
+  Kontakt). Die drei Angaben werden über Details für [Name] bearbeiten gepflegt
+  (Handlungsanweisung Stammdaten).
 - Gebäude: alle Gebäude des Objekts mit Anschrift, Adresszusatz, Baujahr, Geschossen und dem
   Stand des Energieausweises; der Name führt auf die Gebäudeseite.
 - Einheiten: Tabelle mit Nr., Bezeichnung, Art, Wohnfläche und Schlüsselwerten (zum Beispiel
@@ -69,9 +70,16 @@ Weitere Abschnitte der Detailseite:
 - Abrechnungszeiträume je Art (Hausgeldabrechnung, Betriebskostenabrechnung,
   Heizkostenabrechnung, Wirtschaftsplan, Eigentümerabrechnung) mit Von, Bis und dem Kennzeichen
   für die Online-Belegprüfung durch den Beirat.
-- Ansprechpartner: zugeordnete Kontakte mit ihrer Rolle, verlinkt in die Kontakte.
-- Offene Wartungen und Prüfpflichten mit Fälligkeitsdatum. Fällige Wartungen erscheinen
-  auch im Kalender und in den Benachrichtigungen (Kapitel Kalender).
+- Ansprechpartner: zugeordnete Kontakte mit Kategorie, Gültigkeit und Portalsichtbarkeit,
+  verlinkt in die Kontakte; Zuordnen, Bearbeiten und Beenden direkt im Abschnitt.
+- Zähler: Nummer, Zählerart, Einheit, Standort, Gültigkeit und Eichfrist; Anlegen,
+  Bearbeiten und Zählerwechsel direkt im Abschnitt.
+- Wartungen und Prüfpflichten mit Art, Intervall, nächster Fälligkeit, Dienstleister,
+  letzter Erledigung und Status; Anlegen, Bearbeiten und Erledigt direkt im Abschnitt.
+  Fällige Wartungen erscheinen auch im Kalender und in den Benachrichtigungen (Kapitel
+  Kalender).
+- Zusatzfelder des Objekts mit Werten je definiertem Feld; Werte bearbeiten und Neues
+  Zusatzfeld direkt im Abschnitt.
 - Dienstleister: Dienstleisterverhältnisse mit Kontakt, Vertragsart, Laufzeit, Kundennummer,
   Stand und Gültigkeit der Freistellungsbescheinigung und Kreditorenkonto.
 - Bankkonten des Objekts: Konten der Rechtsträger und zugeordnete Bankverbindungen, ein Konto
@@ -166,11 +174,13 @@ Anlage des Objekts.
 
 ## Zähler, Dienstleister, Wartungen, Katalog, Zusatzfelder
 
-Über die Schnittstelle stehen je Objekt außerdem bereit: Zähler mit Zählerständen,
-Dienstleisterverhältnisse, Wartungen und Prüfpflichten mit Vorlaufzeit, ein Katalog für
-Ausstattungsmerkmale und frei definierbare Zusatzfelder. In der Oberfläche sichtbar sind
-davon die offenen Wartungen (Objektdetail, Kalender, Benachrichtigungen), die
-Dienstleisterverhältnisse (Objektdetail) und die Zählerwechsel (Einheitenseite).
+Zähler, Wartungen und Prüfpflichten sowie Zusatzfelder werden seit dem 28.09.2026 auf der
+Objektseite gepflegt (Handlungsanweisung Stammdaten, Abschnitte Zähler, Wartungen und
+Zusatzfelder). Über die Schnittstelle stehen je Objekt außerdem bereit: Zählerstände
+(Ablesungen), Dienstleisterverhältnisse (Anlage), ein Katalog für Ausstattungsmerkmale und
+Zusatzfelder vom Typ Verknüpfung. In der Oberfläche sichtbar sind davon die
+Dienstleisterverhältnisse (Objektdetail) und die Zählerwechsel (Objektseite und
+Einheitenseite).
 
 ## Verweise
 

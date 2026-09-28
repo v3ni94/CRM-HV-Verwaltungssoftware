@@ -115,3 +115,31 @@ changed fields, merge them into the current record, validate with the `PUT` sche
   `docs/handbuch/anleitung-stammdaten.md`.
 * Tests: `tests/integration/test_c1_allocation_summary.py` (fixed sums 750 and 1000 against
   an expected total of 1000, PATCH validation, 403 caretaker, second tenant 404, 401).
+## Master data in the CRM (package C2, 28.09.2026)
+
+`routers_masterdata.py` closes the second Stammdaten gap of the handbook (contact persons,
+meters, maintenance items and custom field values only via import or API):
+
+* `PATCH /properties/{id}/contacts/{assignment_id}`: category, period and portal audience of
+  a contact person assignment; the contact itself is immutable (end and reassign).
+  `GET|POST /properties/{id}/contacts` now return `contact_name`; both write routes emit
+  `property.contact_added` or `property.contact_updated` with an audit diff.
+* `PATCH /meters/{id}`: every meter field except `number` (unit link checked against the
+  property, catalogue `meter_type`, period order); a replaced device stays a Zählerwechsel
+  (`POST /meters/{id}/changes`). `MeterOut` carries `property_id`.
+* `PATCH /maintenance/{id}`: kind, title, interval, due date, reminder, unit and provider
+  relation (both checked against the property). `POST /maintenance/{id}/done` records
+  `done_on` (stored as `done_at`, noon Europe/Berlin): with `interval_months` the due date
+  becomes `done_on` plus the interval (day clamped to the month end, `services.add_months`)
+  and the item stays open; without an interval the item is closed and a second completion
+  is refused with 409 `MHVP-PROP-0005`. `MaintenanceOut` carries `done_at` and
+  `last_done_on`. Rule `docs/rules/C2-01-wartungszyklus.md`; inspection cycles are operator
+  entries (open point STAMM-01).
+* Custom field values of a property are written with `PATCH /properties/{id}` and
+  `If-Match` (existing, `services.check_custom_fields`); nothing new on the API.
+* Permissions: `properties:update` for every write route above, `properties:create` for
+  creating meters and maintenance items (unchanged). Tests:
+  `tests/integration/test_property_masterdata_c2.py`.
+* Web: `apps/web-crm/src/components/properties/ContactPersonsPanel.tsx`, `MetersPanel.tsx`,
+  `MaintenancePanel.tsx`, `CustomFieldsPanel.tsx`, `OwnersDetails.tsx` on the property page;
+  handbook `docs/handbuch/anleitung-stammdaten.md`.

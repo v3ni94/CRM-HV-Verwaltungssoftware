@@ -45,8 +45,34 @@ Objektseite (Klick auf das Objekt in der Objektliste):
    Ausweis übernehmen; der Ablauf des Energieausweises erscheint in der Fristenliste.
 3. Abschnitt Abrechnungszeiträume, Bankkonten des Objekts (Als Standard setzen), Objektmappe
    und Schwarzes Brett nach Bedarf.
-4. Der Eigentümer einer Mietverwaltung (Abschnitt Eigentümer) sowie Verrechnungskonto,
-   Vollmacht und Steuerberater werden über die Schnittstelle gepflegt, nicht in der Oberfläche.
+4. Eigentümer einer Mietverwaltung: Abschnitt Eigentümer, Eigentümer festlegen oder ersetzen.
+   Verrechnungskonto, Verwaltervollmacht und Steuerberater: darunter Schaltfläche Details für
+   [Name] bearbeiten. Das Verrechnungskonto ist ein Sachkonto eines Buchungskreises des
+   Objekts, die Vollmacht ein bereits am Objekt abgelegtes Dokument, der Steuerberater ein
+   Kontakt aus der Kontaktsuche. Alle drei sind Verweise ohne Buchungswirkung.
+5. Abschnitt Ansprechpartner: Ansprechpartner zuordnen (Kontaktsuche, Kategorie aus dem
+   Katalog Ansprechpartnerkategorien, Gültig ab, Sichtbarkeit im Portal für Mieter,
+   Eigentümer oder Dienstleister). Bearbeiten ändert Kategorie, Zeitraum und Sichtbarkeit;
+   Beenden setzt das Ende auf den heutigen Tag. Eine falsche Person wird beendet und neu
+   zugeordnet, der Kontakt einer Zuordnung ist nicht änderbar.
+6. Abschnitt Zähler: Zähler anlegen mit Zählernummer, Zählerart (Katalog Zählerarten),
+   Einheit oder gesamtes Objekt, Standort, Anschluss (Haupt- oder Unterzähler), Gültig ab,
+   Eichfrist und Fernauslesbarkeit. Bearbeiten ändert alles außer der Nummer. Ein
+   ausgetauschtes Gerät wird über Zählerwechsel erfasst: Wechseldatum, Endstand alt,
+   Anfangsstand neu, optional neue Zählernummer. Die Eichfrist erscheint in der Fristenliste.
+7. Abschnitt Wartungen und Prüfpflichten: Wartung anlegen mit Bezeichnung, Art (Wartung,
+   Prüfung, Modernisierung, Gewährleistung), Intervall in Monaten, nächster Fälligkeit,
+   Erinnerung, Dienstleister (aus den Dienstleisterverhältnissen des Objekts) und Einheit.
+   Erledigt erfasst das Erledigungsdatum: mit Intervall rückt die Fälligkeit um das Intervall
+   nach dem Erledigungsdatum vor und der Eintrag bleibt offen, ohne Intervall wird er
+   geschlossen. Das Intervall ist eine Betreibereingabe; die Plattform hinterlegt keine
+   Prüfzyklen (zu verifizieren, offener Punkt STAMM-01).
+8. Abschnitt Zusatzfelder: Werte bearbeiten zeigt je definiertes Feld ein Eingabefeld
+   passend zum Typ; Speichern prüft die Version des Objekts (Hinweis bei zwischenzeitlicher
+   Änderung, dann Seite neu laden). Neues Zusatzfeld (nur mit dem Recht
+   `tenant_settings:update`) legt ein Feld für alle Objekte des Mandanten mit Bezeichnung,
+   Schlüssel, Typ und bei Einzelauswahl den Auswahlwerten an; weitere Eigenschaften unter
+   Einstellungen, Zusatzfelder. Felder vom Typ Verknüpfung werden nur angezeigt.
 
 ## Gebäude und Einheiten
 
@@ -183,8 +209,10 @@ erscheint als Typ Wiedervorlage in der Fristenliste.
 - Umlageschlüssel: Kürzel, Bezeichnung, Maßeinheit und Art bestehender Schlüssel nur über die
   Schnittstelle änderbar (`PATCH /properties/{id}/allocation-keys/{kid}`); in der Oberfläche
   nur die Sollsumme. Löschen von Schlüsseln und Werten nicht vorgesehen.
-- Objekteigentümer (Mietverwaltung), Ansprechpartner, Zähler, Wartungen und Zusatzfelder nur
-  über Import oder Schnittstelle pflegbar.
+- Zählerstände (Ablesungen) werden nicht auf der Objektseite erfasst, nur Zähler und
+  Zählerwechsel; Ablesungen weiter über die Einheitenseite, das Übergabeprotokoll oder die
+  Schnittstelle.
+- Zusatzfelder vom Typ Verknüpfung (Kontakt, Dokument, Objekt) nur über die Schnittstelle.
 - Neue Bankverbindung an einem bestehenden Kontakt nicht in der Oberfläche erfassbar (siehe
   [Bankverbindung](anleitung-bankverbindung.md)).
 - Kein Rückschreiben nach Immoware24; Doppelpflege im Parallelbetrieb.
