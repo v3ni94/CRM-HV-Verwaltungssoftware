@@ -32,6 +32,7 @@ from mhvp.contacts.models import (
     ContactTypeCode,
     Party,
     PartyMember,
+    PartyRole,
 )
 from mhvp.contacts.validation import mask_iban, normalise_iban, normalise_phone
 from mhvp.contracts.models import Contract
@@ -860,6 +861,47 @@ async def recompute_for_contacts(
             changed += int(await recompute_derived_roles(session, contact))
     await session.flush()
     return changed
+
+
+async def party_for_contact(
+    session: AsyncSession, tenant_id: uuid.UUID, user_id: uuid.UUID | None, contact_id: uuid.UUID
+) -> Party:
+    """The own party of a contact: the oldest party whose only member is this contact in role
+    primary; created when missing. Contracts reference parties, never contacts (6.1), so
+    screens that pick a contact (e.g. the acquirer of an ownership transfer) resolve it here.
+    Joint parties (several members) are never returned or created."""
+    contact: Contact | None = await session.get(Contact, contact_id)
+    if contact is None or contact.deleted_at is not None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Kontakt nicht gefunden.")
+    single = (
+        select(PartyMember.party_id)
+        .group_by(PartyMember.party_id)
+        .having(func.count(PartyMember.id) == 1)
+    )
+    party: Party | None = await session.scalar(
+        select(Party)
+        .join(PartyMember, PartyMember.party_id == Party.id)
+        .where(
+            PartyMember.contact_id == contact.id,
+            PartyMember.role == PartyRole.PRIMARY,
+            Party.id.in_(single),
+        )
+        .order_by(Party.created_at, Party.id)
+        .limit(1)
+    )
+    if party is not None:
+        return party
+    party = Party(tenant_id=tenant_id, name=contact.display_name[:400], created_by=user_id)
+    session.add(party)
+    await session.flush()
+    session.add(
+        PartyMember(
+            tenant_id=tenant_id, party_id=party.id, contact_id=contact.id, role=PartyRole.PRIMARY
+        )
+    )
+    await session.flush()
+    await recompute_for_party(session, party.id)
+    return party
 
 
 async def recompute_for_party(session: AsyncSession, party_id: uuid.UUID) -> int:

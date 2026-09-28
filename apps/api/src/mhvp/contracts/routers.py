@@ -11,7 +11,7 @@ from sqlalchemy import and_, or_, select
 from sqlalchemy.exc import IntegrityError
 
 from mhvp.contacts.models import Contact, ContactBankAccount, Party, PartyMember
-from mhvp.contacts.services import approval_block_reason, recompute_for_party
+from mhvp.contacts.services import approval_block_reason, party_for_contact, recompute_for_party
 from mhvp.contacts.validation import mask_iban
 from mhvp.contracts import schemas as s
 from mhvp.contracts import services as svc
@@ -32,6 +32,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import diff, emit
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
+from mhvp.documents.models import Document, DocumentLink, LinkRole
 from mhvp.properties.models import AllocationKey, ManagementType, Property, Unit
 from mhvp.properties.services import check_catalog
 
@@ -832,6 +833,51 @@ async def add_allocation_value(
         return (await _allocation_values_out(session, [row]))[0]
 
 
+def _transfer_invalid(detail: str) -> ProblemError:
+    return ProblemError(ErrorCodes.CONTRACT_OWNERSHIP_TRANSFER_INVALID, detail=detail)
+
+
+def _check_transferable(old: Contract, title_transfer_date: date) -> None:
+    if old.kind is not ContractKind.OWNERSHIP:
+        raise _transfer_invalid("Nur Eigentumsverhältnisse können übertragen werden.")
+    if old.end_date is not None:
+        raise _transfer_invalid("Das Eigentumsverhältnis ist bereits beendet.")
+    if title_transfer_date <= old.start_date:
+        raise _transfer_invalid("Der Eigentumsübergang muss nach dem Beginn des Eigentums liegen.")
+
+
+@router.get(
+    "/contracts/{contract_id}/ownership-transfer/preview",
+    summary="Eigentümerwechsel: Vorschau",
+)
+async def ownership_transfer_preview(
+    contract_id: uuid.UUID,
+    title_transfer_date: date,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.OwnershipTransferPreviewOut:
+    """Shows what the transfer on the date would do: the current ownership ends the day before,
+    the new one starts on the date, and the listed standing amounts (payments, payment schedule,
+    allocation values valid on the date) are carried over from the date on. Read only. The
+    annual statement is not split between seller and acquirer (rule W07, release point P01)."""
+    async with tenant_tx(request, principal) as session:
+        old = await _get(session, Contract, contract_id)
+        _check_transferable(old, title_transfer_date)
+        amounts = await svc.standing_amounts(session, old, title_transfer_date)
+        party = await session.get(Party, old.party_id)
+        return s.OwnershipTransferPreviewOut(
+            contract_id=old.id,
+            party_id=old.party_id,
+            party_name=party.name if party else None,
+            title_transfer_date=title_transfer_date,
+            old_end_date=title_transfer_date - timedelta(days=1),
+            new_start_date=title_transfer_date,
+            payments=[s.PaymentOut.model_validate(p) for p in amounts.payments],
+            schedules=[s.ScheduleOut.model_validate(x) for x in amounts.schedules],
+            allocation_values=await _allocation_values_out(session, amounts.allocation_values),
+        )
+
+
 @router.post(
     "/contracts/{contract_id}/ownership-transfer", status_code=201, summary="Eigentümerwechsel"
 )
@@ -841,16 +887,34 @@ async def ownership_transfer(
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> s.ContractOut:
-    """Ends the current ownership the day before the title transfer (D16, D17)."""
+    """Ends the current ownership the day before the title transfer (D16, D17), creates the
+    new ownership and, with ``carry_over_amounts``, copies the standing amounts valid on the
+    title transfer date to the new contract from that date on (factual carry over, no split of
+    the annual statement: rule W07 and release point P01 stay open). Open receivables stay with
+    the seller (6.9.2, D15)."""
     async with tenant_tx(request, principal) as session:
         old = await _get(session, Contract, contract_id)
-        if old.kind is not ContractKind.OWNERSHIP:
-            raise svc.invalid("Nur Eigentumsverhältnisse können übertragen werden.")
-        if old.end_date is not None:
-            raise svc.invalid("Das Eigentumsverhältnis ist bereits beendet.")
-        if body.new_party_id == old.party_id:
-            raise svc.invalid("Der neue Eigentümer ist identisch mit dem bisherigen.")
-        await svc.end_contract(session, old, body.title_transfer_date - timedelta(days=1))
+        _check_transferable(old, body.title_transfer_date)
+        new_party_id = body.new_party_id
+        if body.new_contact_id is not None:
+            new_party_id = (
+                await party_for_contact(
+                    session, principal.tenant_id, principal.user_id, body.new_contact_id
+                )
+            ).id
+        if new_party_id is None:  # pragma: no cover - the schema requires one of the two
+            raise _transfer_invalid("Erwerber fehlt.")
+        if new_party_id == old.party_id:
+            raise _transfer_invalid("Der neue Eigentümer ist identisch mit dem bisherigen.")
+        document = None
+        if body.document_id is not None:
+            document = await session.get(Document, body.document_id)
+            if document is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Dokument nicht gefunden.")
+        end = body.title_transfer_date - timedelta(days=1)
+        amounts = await svc.standing_amounts(session, old, body.title_transfer_date)
+        await svc.end_contract(session, old, end)
+        await svc.close_allocation_values(session, old, end, principal.user_id)
         old.updated_by = principal.user_id
         new = await _create(
             session,
@@ -858,15 +922,33 @@ async def ownership_transfer(
             s.ContractIn(
                 kind=ContractKind.OWNERSHIP,
                 unit_id=old.unit_id,
-                party_id=body.new_party_id,
+                party_id=new_party_id,
                 start_date=body.title_transfer_date,
                 title_transfer_date=body.title_transfer_date,
                 benefit_burden_date=body.benefit_burden_date,
                 acquisition_kind=body.acquisition_kind,
                 special_succession_liability=body.special_succession_liability,
                 sev_enabled=body.sev_enabled,
+                notes=body.notes,
             ),
         )
+        carried = {"payments": 0, "schedules": 0, "allocation_values": 0}
+        if body.carry_over_amounts:
+            carried = await svc.carry_over_standing_amounts(
+                session, amounts, new, body.title_transfer_date, principal.user_id
+            )
+            await _flush(session, "Die übernommenen Sollbeträge überschneiden sich.")
+        if document is not None:
+            session.add(
+                DocumentLink(
+                    tenant_id=principal.tenant_id,
+                    document_id=document.id,
+                    entity_type="contract",
+                    entity_id=new.id,
+                    role=LinkRole.EVIDENCE,
+                )
+            )
+            await _flush(session, "Die Verknüpfung des Dokuments besteht bereits.")
         await _event(
             session,
             principal,
@@ -874,6 +956,10 @@ async def ownership_transfer(
             new.id,
             previous=old.id,
             title_transfer_date=body.title_transfer_date,
+            carried_payments=carried["payments"],
+            carried_schedules=carried["schedules"],
+            carried_allocation_values=carried["allocation_values"],
+            document_id=body.document_id,
         )
         return await _out(session, new)
 

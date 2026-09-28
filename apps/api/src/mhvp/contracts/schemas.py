@@ -204,12 +204,37 @@ class ContractAllocationValueOut(_Out):
 
 
 class OwnershipTransferIn(_In):
-    new_party_id: uuid.UUID
+    """Eigentümerwechsel (D16, D17): either the party of the acquirer or a contact whose own
+    party (single member, role primary) is looked up or created. The standing amounts of the
+    current ownership (payments, payment schedule, allocation values valid on the title
+    transfer date) are carried over to the new ownership as a factual copy from that date on
+    when ``carry_over_amounts`` is set. Nothing here splits an annual statement between
+    seller and acquirer (rule W07, release point P01 stay open)."""
+
+    new_party_id: uuid.UUID | None = None
+    new_contact_id: uuid.UUID | None = Field(
+        default=None, description="Erwerber als Kontakt; die Vertragspartei wird ermittelt"
+    )
     title_transfer_date: date
     benefit_burden_date: date | None = None
     acquisition_kind: AcquisitionKind
     special_succession_liability: bool = False
     sev_enabled: bool = False
+    carry_over_amounts: bool = Field(
+        default=True,
+        description="Sollbeträge, Zahlungsplan und Umlagewerte ab dem Eigentumsübergang übernehmen",
+    )
+    notes: str | None = Field(default=None, max_length=10_000)
+    document_id: uuid.UUID | None = Field(
+        default=None,
+        description="Nachweis (z. B. Grundbuchauszug), wird mit dem neuen Vertrag verknüpft",
+    )
+
+    @model_validator(mode="after")
+    def _one_acquirer(self) -> Self:
+        if (self.new_party_id is None) == (self.new_contact_id is None):
+            raise ValueError("Genau eine Angabe: new_party_id oder new_contact_id")
+        return self
 
 
 class PaymentIn(_In):
@@ -251,6 +276,22 @@ class ScheduleIn(_In):
 class ScheduleOut(ScheduleIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
+
+
+class OwnershipTransferPreviewOut(_Out):
+    """What ``POST /contracts/{id}/ownership-transfer`` would do on the given date."""
+
+    contract_id: uuid.UUID
+    party_id: uuid.UUID
+    party_name: str | None
+    title_transfer_date: date
+    old_end_date: date
+    new_start_date: date
+    payments: list[PaymentOut]
+    schedules: list[ScheduleOut]
+    allocation_values: list[ContractAllocationValueOut]
+    # Rule W07 (statement split between seller and acquirer) is not released; P01 is open.
+    statement_split: Literal["not_implemented"] = "not_implemented"
 
 
 class DebtorAccountOut(_Out):

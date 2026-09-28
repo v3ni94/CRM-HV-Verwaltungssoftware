@@ -315,6 +315,125 @@ async def end_contract(session: AsyncSession, contract: Contract, end: date) -> 
     await session.flush()
 
 
+class StandingAmounts:
+    """Payments, payment schedule and allocation values of a contract valid on a date
+    (Eigentümerwechsel, D16, D17): what a new ownership carries over from that date on."""
+
+    def __init__(
+        self,
+        payments: list[ContractPayment],
+        schedules: list[PaymentSchedule],
+        allocation_values: list[ContractAllocationValue],
+    ) -> None:
+        self.payments = payments
+        self.schedules = schedules
+        self.allocation_values = allocation_values
+        # Original ends, taken before the old contract is ended (which closes these rows).
+        rows: list[Any] = [*payments, *schedules, *allocation_values]
+        self.valid_to: dict[uuid.UUID, date | None] = {r.id: r.valid_to for r in rows}
+
+
+async def standing_amounts(
+    session: AsyncSession, contract: Contract, as_of: date
+) -> StandingAmounts:
+    """Rows of the contract valid on ``as_of`` (period contains the date), ordered stably."""
+
+    async def rows(model: Any, *order: Any) -> list[Any]:
+        return list(
+            (
+                await session.scalars(
+                    select(model)
+                    .where(
+                        model.contract_id == contract.id,
+                        model.valid_from <= as_of,
+                        or_(model.valid_to.is_(None), model.valid_to >= as_of),
+                    )
+                    .order_by(*order, model.valid_from)
+                )
+            ).all()
+        )
+
+    return StandingAmounts(
+        payments=await rows(ContractPayment, ContractPayment.payment_type_code),
+        schedules=await rows(PaymentSchedule),
+        allocation_values=await rows(
+            ContractAllocationValue, ContractAllocationValue.allocation_key_id
+        ),
+    )
+
+
+def _carried_copy(
+    row: Any,
+    model: Any,
+    new: Contract,
+    as_of: date,
+    valid_to: date | None,
+    actor: uuid.UUID | None,
+) -> Any:
+    copy = model(
+        **{
+            c.key: getattr(row, c.key)
+            for c in model.__table__.columns
+            if c.key not in ("id", "created_at", "updated_at", "created_by", "updated_by")
+        }
+    )
+    copy.contract_id = new.id
+    copy.valid_from = as_of
+    copy.valid_to = valid_to
+    copy.created_by = actor
+    return copy
+
+
+async def carry_over_standing_amounts(
+    session: AsyncSession,
+    amounts: StandingAmounts,
+    new: Contract,
+    as_of: date,
+    actor: uuid.UUID | None,
+) -> dict[str, int]:
+    """Factual carry over of the standing amounts to the new ownership from ``as_of`` on:
+    each row is copied with ``valid_from = as_of`` and its original ``valid_to`` (open rows stay
+    open). Amounts, allocation keys and schedule settings are taken over unchanged; no legal
+    statement about who owes what (rule W07, release point P01 stay open), no posting."""
+    groups: tuple[tuple[Any, list[Any]], ...] = (
+        (ContractPayment, amounts.payments),
+        (PaymentSchedule, amounts.schedules),
+        (ContractAllocationValue, amounts.allocation_values),
+    )
+    for model, rows in groups:
+        for row in rows:
+            session.add(_carried_copy(row, model, new, as_of, amounts.valid_to[row.id], actor))
+    await session.flush()
+    return {
+        "payments": len(amounts.payments),
+        "schedules": len(amounts.schedules),
+        "allocation_values": len(amounts.allocation_values),
+    }
+
+
+async def close_allocation_values(
+    session: AsyncSession, contract: Contract, end: date, actor: uuid.UUID | None
+) -> None:
+    """Allocation values of an ended contract stop at its end (values starting after the end
+    are left untouched, as before)."""
+    rows = (
+        await session.scalars(
+            select(ContractAllocationValue).where(
+                ContractAllocationValue.contract_id == contract.id,
+                ContractAllocationValue.valid_from <= end,
+                or_(
+                    ContractAllocationValue.valid_to.is_(None),
+                    ContractAllocationValue.valid_to > end,
+                ),
+            )
+        )
+    ).all()
+    for r in rows:
+        r.valid_to = end
+        r.updated_by = actor
+    await session.flush()
+
+
 async def move_open_rows(
     session: AsyncSession, old: Contract, new: Contract, effective: date
 ) -> None:

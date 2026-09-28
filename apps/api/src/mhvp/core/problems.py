@@ -671,6 +671,13 @@ class ErrorCodes:
         "Verwaltungsende liegt vor dem Kündigungsdatum",
         "effective_date must not be before notice_date.",
     )
+    # Verträge: Eigentümerwechsel in der Oberfläche (operator 28.09.2026, D16, D17).
+    CONTRACT_OWNERSHIP_TRANSFER_INVALID = ErrorCode(
+        "MHVP-CONTR-0001",
+        422,
+        "Eigentümerwechsel nicht möglich",
+        "Only an open ownership can be transferred, and not to its current owner.",
+    )
     # lexoffice (M13-lexoffice, docs/integrations/lexoffice.md).
     LEXOFFICE_NOT_CONFIGURED = ErrorCode(
         "MHVP-LEXO-0001",
