@@ -26,6 +26,7 @@ from mhvp.hoa import models as hoa_models
 from mhvp.immoware import models as immoware_models
 from mhvp.imports import models as import_models
 from mhvp.integrations import models as integrations_models
+from mhvp.integrations.schadenstool import models as schadenstool_models
 from mhvp.letting import models as letting_models
 from mhvp.letting import rentlaw as rentlaw_models
 from mhvp.metering import models as metering_models
@@ -71,6 +72,7 @@ __all__ = [
     "immoware_models",
     "import_models",
     "integrations_models",
+    "schadenstool_models",
     "letting_models",
     "licensing_models",
     "market_readiness_models",
