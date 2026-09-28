@@ -103,7 +103,7 @@ describe("ImmowareSettings diagnose", () => {
 
     expect(screen.getByText(/CardDAV-URL gefunden/)).toBeInTheDocument();
     await act(async () => {
-      await userEvent.click(screen.getByRole("button", { name: "Uebernehmen" }));
+      await userEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
     });
     expect(screen.getByLabelText("CardDAV-URL")).toHaveValue(
       "https://x.dav.immoware24.de/dav/addressbooks/hvm/default/",

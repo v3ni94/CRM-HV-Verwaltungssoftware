@@ -13,4 +13,10 @@ describe("SignatureTemplateSettings", () => {
     );
     expect(screen.getByText(/nur in der HTML-Vorschau/)).toBeInTheDocument();
   });
+
+  it("shows the placeholder examples literally instead of formatting them as ICU arguments", () => {
+    renderIntl(<SignatureTemplateSettings initial={{ text: null, html: null, logo_url: null }} canUpdate={true} />);
+    expect(screen.getByLabelText("Textvorlage")).toHaveAttribute("placeholder", "{name}\n{position}\n{company}\n...");
+    expect(screen.getByLabelText("HTML-Vorlage (derzeit nicht im Versand verwendet)")).toHaveAttribute("placeholder", "<p>{name}<br>{position}</p>");
+  });
 });

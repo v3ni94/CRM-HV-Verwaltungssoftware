@@ -1332,7 +1332,7 @@ export function SlaSettings({
   const [tab, setTab] = useState<Tab>("rules");
   return (
     <div className="flex flex-col gap-4">
-      <div role="tablist" aria-label={t("tabs")} className="flex flex-wrap gap-2 border-b border-border pb-2">
+      <div role="tablist" aria-label={t("tabsLabel")} className="flex flex-wrap gap-2 border-b border-border pb-2">
         {TABS.map((key) => (
           <button
             key={key}

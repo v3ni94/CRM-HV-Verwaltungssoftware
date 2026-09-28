@@ -104,10 +104,21 @@ describe("ContractCreateForm", () => {
     await user.click(screen.getByLabelText("Mahnsperre"));
     await user.type(screen.getByLabelText("Begründung der Mahnsperre"), "Ratenvereinbarung");
     // M13-01/M13-02: pro rata rule of the contract and payment mode of the schedule.
+    // The option labels come from the catalogue (the next-intl fallback showed raw keys here).
+    expect(within(screen.getByLabelText("Zeitanteilsregel")).getAllByRole("option").map((o) => o.textContent)).toEqual([
+      "Standard des Mandanten",
+      "Kalendertage",
+      "30/360",
+      "voller Monat",
+    ]);
     await user.selectOptions(screen.getByLabelText("Zeitanteilsregel"), "thirty_360");
     await user.click(screen.getByLabelText("Zahlungsplan gleich anlegen"));
+    expect(within(screen.getByLabelText("Zahlweise")).getAllByRole("option").map((o) => o.textContent)).toEqual(["im Voraus", "nachschüssig"]);
     await user.selectOptions(screen.getByLabelText("Zahlweise"), "arrears");
-    expect(screen.queryByLabelText("Betrag gilt")).not.toBeInTheDocument(); // monthly: amount is per month
+    expect(screen.queryByLabelText("Betragsbasis")).not.toBeInTheDocument(); // monthly: amount is per month
+    await user.selectOptions(screen.getByLabelText("Intervall"), "quarterly");
+    expect(within(screen.getByLabelText("Betragsbasis")).getAllByRole("option").map((o) => o.textContent)).toEqual(["je Monat", "je Rate"]);
+    await user.selectOptions(screen.getByLabelText("Intervall"), "monthly");
     await user.clear(screen.getByLabelText("Fälligkeitstag"));
     await user.type(screen.getByLabelText("Fälligkeitstag"), "5");
     await user.clear(screen.getByLabelText("Gültig ab"));

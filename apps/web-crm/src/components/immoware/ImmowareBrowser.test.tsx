@@ -41,10 +41,10 @@ describe("ImmowareBrowser bulk actions", () => {
     expect(await screen.findByText("Erika Musterfrau")).toBeInTheDocument();
 
     await act(async () => {
-      await userEvent.click(screen.getByRole("button", { name: "Alle uebernehmen" }));
+      await userEvent.click(screen.getByRole("button", { name: "Alle übernehmen" }));
     });
 
-    expect(screen.getByText("1 neu angelegt, 0 verknuepft, 0 uebersprungen (von 1).")).toBeInTheDocument();
+    expect(screen.getByText("1 neu angelegt, 0 verknüpft, 0 übersprungen (von 1).")).toBeInTheDocument();
   });
 
   it("takes over a document folder and shows the result summary", async () => {
@@ -76,9 +76,9 @@ describe("ImmowareBrowser bulk actions", () => {
     expect(await screen.findByText("rechnung.pdf")).toBeInTheDocument();
 
     await act(async () => {
-      await userEvent.click(screen.getByRole("button", { name: "Ordner uebernehmen" }));
+      await userEvent.click(screen.getByRole("button", { name: "Ordner übernehmen" }));
     });
 
-    expect(screen.getByText("1 neu angelegt, 0 bereits uebernommen, 0 fehlgeschlagen (von 1).")).toBeInTheDocument();
+    expect(screen.getByText("1 neu angelegt, 0 bereits übernommen, 0 fehlgeschlagen (von 1).")).toBeInTheDocument();
   });
 });

@@ -48,11 +48,11 @@ export function SignatureTemplateSettings({ initial, canUpdate }: { initial: Sig
       </p>
       <label className="flex flex-col gap-1 text-xs">
         <span className={ui.label}>{t("text")}</span>
-        <textarea className={`${ui.input} min-h-32 font-mono`} value={text} disabled={!canUpdate} onChange={(e) => setText(e.target.value)} placeholder={t("textPlaceholder")} />
+        <textarea className={`${ui.input} min-h-32 font-mono`} value={text} disabled={!canUpdate} onChange={(e) => setText(e.target.value)} placeholder={t.raw("textPlaceholder") as string} />
       </label>
       <label className="flex flex-col gap-1 text-xs">
         <span className={ui.label}>{t("html")}</span>
-        <textarea className={`${ui.input} min-h-32 font-mono`} value={html} disabled={!canUpdate} onChange={(e) => setHtml(e.target.value)} placeholder={t("htmlPlaceholder")} />
+        <textarea className={`${ui.input} min-h-32 font-mono`} value={html} disabled={!canUpdate} onChange={(e) => setHtml(e.target.value)} placeholder={t.raw("htmlPlaceholder") as string} />
       </label>
       <p className="text-xs text-muted" data-testid="signature-template-html-hint">
         {t("htmlHint")}

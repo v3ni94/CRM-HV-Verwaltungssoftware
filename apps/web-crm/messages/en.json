@@ -3185,7 +3185,9 @@
         "title": "Ticket title",
         "team_id": "Ticket team",
         "source": "Ticket source",
-        "status": "Ticket status"
+        "status": "Ticket status",
+        "age_days": "Ticket age in days",
+        "due_in_days": "Ticket days until deadline"
       },
       "payload": {
         "source": "Event source",
@@ -3309,7 +3311,13 @@
     "resend": "Resend",
     "taskTitle": "Task title",
     "taskDescription": "Task description",
-    "taskDueInDays": "Due in days"
+    "taskDueInDays": "Due in days",
+    "deliveryStatuses": {
+      "pending": "pending",
+      "succeeded": "delivered",
+      "failed": "failed",
+      "dead": "failed permanently"
+    }
   },
   "TicketTemplates": {
     "title": "Ticket templates",
@@ -5191,7 +5199,8 @@
       "smsHint": "SMS is only delivered when the SMS gateway is active and the recipient has a mobile number.",
       "save": "Save channels",
       "saved": "Saved"
-    }
+    },
+    "tabsLabel": "SLA settings sections"
   },
   "Version": {
     "title": "Version history",
@@ -7474,8 +7483,8 @@
       "from": "from",
       "to": "to",
       "none": "No payment schedule recorded yet.",
-      "paymentMode": "Payment interval",
-      "paymentModeHelp": "Monthly, quarterly, half yearly or yearly. Without a value the tenant default applies.",
+      "paymentMode": "Payment timing",
+      "paymentModeHelp": "Whether the instalment falls due at the start of the period (in advance) or at its end (in arrears).",
       "amountBasis": "Amount basis",
       "amountBasisHelp": "Whether the amount applies per month or per payment interval."
     },
@@ -7558,6 +7567,20 @@
       "notice": "Notice",
       "schedules": "Payment schedules",
       "noRight": "Permission to create is missing."
+    },
+    "paymentModes": {
+      "advance": "in advance",
+      "arrears": "in arrears"
+    },
+    "amountBases": {
+      "per_month": "per month",
+      "per_instalment": "per instalment"
+    },
+    "prorationMethods": {
+      "default": "Tenant default",
+      "calendar_days": "Calendar days",
+      "thirty_360": "30/360",
+      "full_month": "Full month"
     }
   },
   "DirectDebits": {

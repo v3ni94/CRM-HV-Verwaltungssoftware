@@ -67,7 +67,7 @@ const ACCOUNT = {
   legal_entity_id: "le-1",
   legal_entity_name: "GdWE Testweg",
   legal_entity_kind: "hoa",
-  kind: "current",
+  kind: "hoa",
   iban_masked: "DE02 **** **** 2051",
   bic: null,
   bank_name: "Sparkasse",

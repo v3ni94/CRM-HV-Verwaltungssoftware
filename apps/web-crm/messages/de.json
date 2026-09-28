@@ -3185,7 +3185,9 @@
         "title": "Ticket Titel",
         "team_id": "Ticket Team",
         "source": "Ticket Quelle",
-        "status": "Ticket Status"
+        "status": "Ticket Status",
+        "age_days": "Ticket Alter in Tagen",
+        "due_in_days": "Ticket Tage bis Frist"
       },
       "payload": {
         "source": "Ereignis Quelle",
@@ -3309,7 +3311,13 @@
     "resend": "Erneut senden",
     "taskTitle": "Aufgabentitel",
     "taskDescription": "Aufgabenbeschreibung",
-    "taskDueInDays": "Fällig in Tagen"
+    "taskDueInDays": "Fällig in Tagen",
+    "deliveryStatuses": {
+      "pending": "ausstehend",
+      "succeeded": "zugestellt",
+      "failed": "fehlgeschlagen",
+      "dead": "endgültig fehlgeschlagen"
+    }
   },
   "TicketTemplates": {
     "title": "Ticketvorlagen",
@@ -5191,7 +5199,8 @@
       "smsHint": "SMS wird nur zugestellt, wenn das SMS-Gateway aktiv ist und für den Empfänger eine Mobilnummer hinterlegt ist.",
       "save": "Kanäle speichern",
       "saved": "Gespeichert"
-    }
+    },
+    "tabsLabel": "Bereiche der SLA-Einstellungen"
   },
   "Version": {
     "title": "Versionsverlauf",
@@ -5906,7 +5915,7 @@
     "title": "Immoware24-Anbindung",
     "intro": "Immoware24 bleibt Master. Der Hub liest ausschliesslich per WebDAV, CardDAV und CalDAV, es gibt keinen Schreibpfad Richtung Immoware24.",
     "connectionTitle": "Verbindung",
-    "hint": "Zugangsdaten des Immoware24-Mandanten fuer den Lesezugriff per DAV.",
+    "hint": "Zugangsdaten des Immoware24-Mandanten für den Lesezugriff per DAV.",
     "enabled": "Aktiv",
     "baseUrl": "Basis-URL (WebDAV)",
     "carddavUrl": "CardDAV-URL",
@@ -5915,23 +5924,23 @@
     "password": "Passwort",
     "passwordStored": "Passwort hinterlegt",
     "passwordMissing": "Kein Passwort hinterlegt",
-    "verifyTls": "TLS pruefen",
+    "verifyTls": "TLS prüfen",
     "pollMinutes": "Abrufintervall (Minuten)",
     "save": "Speichern",
-    "check": "Verbindung pruefen",
+    "check": "Verbindung prüfen",
     "saved": "Gespeichert.",
-    "lastCheck": "Letzte Pruefung: {at}",
+    "lastCheck": "Letzte Prüfung: {at}",
     "checkOk": "Erfolgreich",
     "checkFailed": "Fehlgeschlagen",
-    "noCheckYet": "Noch nicht geprueft.",
+    "noCheckYet": "Noch nicht geprüft.",
     "syncTitle": "Abholung",
     "fetchNow": {
       "webdav": "Dokumente jetzt abrufen",
       "carddav": "Kontakte jetzt abrufen",
       "caldav": "Termine jetzt abrufen"
     },
-    "runsTitle": "Letzte Laeufe",
-    "runsEmpty": "Noch keine Laeufe.",
+    "runsTitle": "Letzte Läufe",
+    "runsEmpty": "Noch keine Läufe.",
     "columns": {
       "kind": "Art",
       "started": "Start",
@@ -5939,19 +5948,19 @@
       "status": "Status",
       "seen": "Gesehen",
       "added": "Neu",
-      "changed": "Geaendert",
+      "changed": "Geändert",
       "removed": "Entfernt",
       "error": "Fehler"
     },
     "status": {
       "success": "Erfolgreich",
       "error": "Fehler",
-      "running": "Laeuft"
+      "running": "Läuft"
     },
     "diagnose": {
       "title": "Verbindung diagnostizieren",
       "button": "Verbindung diagnostizieren",
-      "running": "Wird geprueft...",
+      "running": "Wird geprüft...",
       "notBooked": "Alle Schritte liefern 404. Das DAV-Modul ist bei Immoware24 vermutlich nicht gebucht. Bitte beim Immoware24-Support nachfragen.",
       "empty": "Noch nicht diagnostiziert.",
       "columns": {
@@ -5964,7 +5973,7 @@
         "carddav": "CardDAV-URL gefunden: {url}",
         "caldav": "CalDAV-URL gefunden: {url}",
         "webdav": "WebDAV-Wurzel gefunden: {url}",
-        "apply": "Uebernehmen"
+        "apply": "Übernehmen"
       }
     },
     "openWorkspace": "Immoware24 Übernahme öffnen",
@@ -5990,15 +5999,15 @@
       "columns": {
         "name": "Name",
         "size": "Groesse",
-        "modified": "Geaendert",
+        "modified": "Geändert",
         "actions": "Aktionen"
       },
       "download": "Herunterladen",
-      "takeOver": "Uebernehmen",
-      "takenOver": "Uebernommen",
-      "takeOverFolder": "Ordner uebernehmen",
-      "takeOverFolderRunning": "Wird uebernommen...",
-      "takeOverFolderResult": "{created} neu angelegt, {linked} bereits uebernommen, {failed} fehlgeschlagen (von {total})."
+      "takeOver": "Übernehmen",
+      "takenOver": "Übernommen",
+      "takeOverFolder": "Ordner übernehmen",
+      "takeOverFolderRunning": "Wird übernommen...",
+      "takeOverFolderResult": "{created} neu angelegt, {linked} bereits übernommen, {failed} fehlgeschlagen (von {total})."
     },
     "contacts": {
       "searchPlaceholder": "Kontakte durchsuchen",
@@ -6018,9 +6027,9 @@
       "createContact": "Als Kontakt anlegen",
       "matchPlaceholder": "Kontakt suchen",
       "search": "Suchen",
-      "takeOverAll": "Alle uebernehmen",
-      "takeOverAllRunning": "Wird uebernommen...",
-      "takeOverAllResult": "{created} neu angelegt, {linked} verknuepft, {skipped} uebersprungen (von {total})."
+      "takeOverAll": "Alle übernehmen",
+      "takeOverAllRunning": "Wird übernommen...",
+      "takeOverAllResult": "{created} neu angelegt, {linked} verknüpft, {skipped} übersprungen (von {total})."
     },
     "events": {
       "from": "Von",
@@ -6028,7 +6037,7 @@
       "empty": "Keine Termine im Zeitraum."
     },
     "pagination": {
-      "previous": "Zurueck",
+      "previous": "Zurück",
       "next": "Weiter",
       "page": "Seite {page}"
     },
@@ -6043,28 +6052,28 @@
       },
       "start": "Analyse starten",
       "starting": "Wird gestartet...",
-      "empty": "Noch keine Lernlaeufe vorhanden.",
+      "empty": "Noch keine Lernläufe vorhanden.",
       "list": {
         "columns": {
           "kind": "Art",
           "status": "Status",
           "started": "Gestartet",
           "finished": "Beendet",
-          "changed": "Aenderung"
+          "changed": "Änderung"
         }
       },
       "status": {
         "pending": "Wartend",
-        "running": "Laeuft",
+        "running": "Läuft",
         "done": "Fertig",
         "failed": "Fehlgeschlagen"
       },
       "detail": {
         "title": "Lauf {kind}",
-        "back": "Zurueck zur Liste",
+        "back": "Zurück zur Liste",
         "error": "Fehler: {error}",
-        "changedYes": "Aenderungen zum Vorlauf",
-        "changedNo": "Keine Aenderungen zum Vorlauf",
+        "changedYes": "Änderungen zum Vorlauf",
+        "changedNo": "Keine Änderungen zum Vorlauf",
         "firstRun": "Erster Lauf dieser Art, kein Vorlauf zum Vergleich.",
         "rawFacts": "Rohdaten (JSON)",
         "webdav": {
@@ -6093,18 +6102,18 @@
         },
         "caldav": {
           "mirroredEvents": "Gespiegelte Termine",
-          "allDayShare": "Anteil ganztaegig",
+          "allDayShare": "Anteil ganztägig",
           "fieldUsage": "Feldnutzung",
           "eventsPerMonth": "Termine je Monat",
-          "topPrefixes": "Haeufigste Praefixe",
+          "topPrefixes": "Häufigste Präfixe",
           "columns": {
             "field": "Feld",
             "count": "Anzahl",
             "month": "Monat",
-            "prefix": "Praefix"
+            "prefix": "Präfix"
           }
         },
-        "changes": "Aenderungen"
+        "changes": "Änderungen"
       },
       "errors": {
         "notFound": "Lernlauf nicht gefunden."
@@ -7475,7 +7484,7 @@
       "to": "bis",
       "none": "Noch kein Zahlungsplan erfasst.",
       "paymentMode": "Zahlweise",
-      "paymentModeHelp": "Monatlich, vierteljährlich, halbjährlich oder jährlich. Ohne Angabe gilt der Standard des Mandanten.",
+      "paymentModeHelp": "Ob die Rate zu Beginn des Zeitraums (im Voraus) oder an seinem Ende (nachschüssig) fällig wird.",
       "amountBasis": "Betragsbasis",
       "amountBasisHelp": "Ob der Betrag je Monat oder je Zahlungsintervall gilt."
     },
@@ -7558,6 +7567,20 @@
       "notice": "Hinweis",
       "schedules": "Zahlungspläne",
       "noRight": "Für das Anlegen fehlt die Berechtigung."
+    },
+    "paymentModes": {
+      "advance": "im Voraus",
+      "arrears": "nachschüssig"
+    },
+    "amountBases": {
+      "per_month": "je Monat",
+      "per_instalment": "je Rate"
+    },
+    "prorationMethods": {
+      "default": "Standard des Mandanten",
+      "calendar_days": "Kalendertage",
+      "thirty_360": "30/360",
+      "full_month": "voller Monat"
     }
   },
   "DirectDebits": {

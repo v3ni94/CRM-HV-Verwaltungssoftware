@@ -15,7 +15,8 @@ function share(spent: string, budget: string): number | null {
 
 export function UsagePanel({ usage }: { usage: Usage }) {
   const t = useTranslations("AiSettings");
-  const tt = useTranslations("Ai");
+  // Task labels live in Knowledge.tasks (shared with the knowledge settings); unknown tasks show their code.
+  const tk = useTranslations("Knowledge");
   const pct = share(usage.spent_eur, usage.budget_eur);
   const tasks = Object.entries(usage.by_task);
   return (
@@ -45,9 +46,7 @@ export function UsagePanel({ usage }: { usage: Usage }) {
         <ul className="text-xs text-muted">
           {tasks.map(([task, cost]) => (
             <li key={task}>
-              {(["extract_contacts", "extract_property", "answer_question", "summarize"] as string[]).includes(task)
-                ? tt(`tasks.${task}`)
-                : task}
+              {tk.has(`tasks.${task}`) ? tk(`tasks.${task}`) : task}
               : {formatEur(cost)}
             </li>
           ))}

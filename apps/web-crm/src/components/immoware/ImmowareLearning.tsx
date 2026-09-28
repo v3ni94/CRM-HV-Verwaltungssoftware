@@ -177,11 +177,11 @@ function LearningRunDetail({ runId, onBack }: { runId: string; onBack: () => voi
     <div className="flex flex-col gap-4">
       <div>
         <button type="button" className={ui.buttonSm} onClick={onBack}>
-          {t("back")}
+          {t("detail.back")}
         </button>
       </div>
       <div className="flex items-center gap-2">
-        <h2 className={ui.h2}>{t("title", { kind: t(`kinds.${run.kind}`) })}</h2>
+        <h2 className={ui.h2}>{t("detail.title", { kind: t(`kinds.${run.kind}`) })}</h2>
         <span className={statusBadge(run.status)}>{t(`status.${run.status}`)}</span>
       </div>
       {run.error ? <p className={ui.alert}>{t("detail.error", { error: run.error })}</p> : null}
