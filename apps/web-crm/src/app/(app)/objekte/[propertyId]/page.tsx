@@ -9,7 +9,12 @@ import { PropertyMeteringTab } from "@/components/metering/PropertyMeteringTab";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
 import { AllocationKeysPanel } from "@/components/properties/AllocationKeysPanel";
 import { BuildingsCreate } from "@/components/properties/BuildingsCreate";
+import { ContactPersonsPanel, type ContactPersonRow } from "@/components/properties/ContactPersonsPanel";
+import { CustomFieldsPanel } from "@/components/properties/CustomFieldsPanel";
 import { LegalEntityBankAccounts } from "@/components/properties/LegalEntityBankAccounts";
+import { MaintenancePanel, type MaintenanceRow } from "@/components/properties/MaintenancePanel";
+import { MetersPanel, type MeterRow } from "@/components/properties/MetersPanel";
+import { OwnersDetails } from "@/components/properties/OwnersDetails";
 import { PropertyMasterData, type PropertyMaster } from "@/components/properties/PropertyMasterData";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
 import { PropertyTermination, type Termination } from "@/components/properties/PropertyTermination";
@@ -89,7 +94,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
     getMe(),
   ]);
   const base = `/api/v1/properties/${propertyId}`;
-  const [owners, buildings, periods, subCommunities, portalDocuments, providers, bankAccounts, accounts, termination] = await Promise.all([
+  const [owners, buildings, periods, subCommunities, portalDocuments, providers, bankAccounts, accounts, termination, meters, propertyDocuments] = await Promise.all([
     load<CurrentOwner[]>(`${base}/owners`, []),
     load<BuildingRow[]>(`${base}/buildings`, []),
     load<BillingPeriodRow[]>(`${base}/billing-periods`, []),
@@ -99,6 +104,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
     load<BankAccountRow[]>(`${base}/bank-accounts`, []),
     accountLabels(propertyId),
     load<Termination | null>(`${base}/termination`, null),
+    load<MeterRow[]>(`${base}/meters`, []),
+    // Verwaltervollmacht (C2): Dokumente des Objekts als Auswahl; Dokumentlesen bleibt außerhalb der BFF-Allowlist.
+    load<{ items: { id: string; title: string }[] }>(`/api/v1/documents?entity_type=property&entity_id=${propertyId}&page_size=100`, { items: [] }),
   ]);
   const names = await contactNames([...providers.map((p) => p.contact_id), ...owners.map((o) => o.tax_advisor_contact_id)]);
   if (!data) {
@@ -113,9 +121,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
     .join(", ");
   const unitRows = units.data ?? [];
   const isHoa = data.management_type !== "rental";
-  const openMaintenance = (maintenance.data ?? []).filter((m) => m.status === "open");
   const canEdit = me.data?.permissions.includes("properties:update") ?? false;
   const canCreate = me.data?.permissions.includes("properties:create") ?? false;
+  const canDefineFields = me.data?.permissions.includes("tenant_settings:update") ?? false;
+  const unitOptions = unitRows.map((u) => ({ id: u.id, number: u.number, label: u.label ?? null }));
+  const accountOptions = [...accounts.labels].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label, "de"));
   const isSuperadmin = me.data?.is_superadmin ?? false;
   // Stammdaten in der Oberfläche (C1): Anlage von Gebäuden, Einheiten und Schlüsselwerten nur
   // bei laufender Verwaltung; ein beendetes Objekt bleibt lesbar.
@@ -153,7 +163,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         links={[
           { type: "unit", href: "#einheiten", count: unitRows.length, label: t("units") },
           { type: "contract", href: `/vertraege?property_id=${propertyId}` },
-          { type: "contact", href: "#kontakte", count: (contacts.data ?? []).length, label: t("contacts") },
+          { type: "contact", href: "#ansprechpartner", count: (contacts.data ?? []).length, label: t("contacts") },
           { type: "ticket", href: `/tickets?property_id=${propertyId}`, count: ticketRows.length },
           { type: "ledger", id: accounts.ledgerId },
         ]}
@@ -198,6 +208,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       ) : null}
 
       <PropertyOwnerPanel propertyId={propertyId} managementType={data.management_type} owners={ownerRows} canEdit={canEdit} />
+      {!isHoa ? (
+        <OwnersDetails
+          propertyId={propertyId}
+          owners={ownerRows}
+          accounts={accountOptions}
+          documents={propertyDocuments.items.map((d) => ({ id: d.id, label: d.title }))}
+          canEdit={canEdit}
+        />
+      ) : null}
 
       <BuildingsPanel buildings={buildings} />
       <BuildingsCreate propertyId={propertyId} canCreate={canCreate && canAdd} />
@@ -222,39 +241,24 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       {isHoa ? <SubCommunitiesPanel rows={subCommunities} /> : null}
       <BillingPeriodsPanel periods={periods} />
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <section id="kontakte" className={ui.card}>
-          <h2 className={ui.subtitle}>{t("contacts")}</h2>
-          {(contacts.data ?? []).length === 0 ? (
-            <p className="mt-2 text-sm text-muted">{t("noContacts")}</p>
-          ) : (
-            <ul className="mt-2 flex flex-col gap-1 text-sm">
-              {(contacts.data ?? []).map((c) => (
-                <li key={c.id}>
-                  <Link href={`/kontakte/${c.contact_id}`} className="hover:underline">
-                    {c.category_code}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-        <section className={ui.card}>
-          <h2 className={ui.subtitle}>{t("maintenanceOpen")}</h2>
-          {openMaintenance.length === 0 ? (
-            <p className="mt-2 text-sm text-muted">{t("noMaintenance")}</p>
-          ) : (
-            <ul className="mt-2 flex flex-col gap-1 text-sm">
-              {openMaintenance.map((m) => (
-                <li key={m.id} className="flex justify-between gap-2">
-                  <span>{m.title}</span>
-                  <span className="tabular-nums text-muted">{m.due_date ?? ""}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      </div>
+      <ContactPersonsPanel propertyId={propertyId} rows={(contacts.data ?? []) as ContactPersonRow[]} canEdit={canEdit} />
+      <MetersPanel propertyId={propertyId} rows={meters} units={unitOptions} canEdit={canEdit} canCreate={canCreate} />
+      <MaintenancePanel
+        propertyId={propertyId}
+        rows={(maintenance.data ?? []) as MaintenanceRow[]}
+        providers={providerRows.map((p) => ({ id: p.id, contact_id: p.contact_id, contact_name: p.contact_name, contract_type_code: p.contract_type_code }))}
+        units={unitOptions}
+        canEdit={canEdit}
+        canCreate={canCreate}
+      />
+      <CustomFieldsPanel
+        propertyId={propertyId}
+        version={data.version}
+        values={(data.custom_fields ?? {}) as Record<string, unknown>}
+        managementType={data.management_type}
+        canEdit={canEdit && data.status !== "terminated"}
+        canDefine={canDefineFields}
+      />
 
       <ServiceProvidersPanel rows={providerRows} />
 

@@ -338,6 +338,21 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Eigentümer festlegen (operator 26.09.2026): Objekteigentümer der Mietverwaltung.
   { method: "GET", pattern: new RegExp(`^properties/${ID}/owners$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/owner$`) },
+  // Stammdaten in der Oberfläche (C2, 28.09.2026): Eigentümerdetails, Ansprechpartner, Zähler
+  // mit Zählerwechsel, Wartungen mit Erledigung; Zusatzfeldwerte über PATCH properties/{id}.
+  { method: "PUT", pattern: new RegExp(`^properties/${ID}/owners/${ID}/details$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/contacts$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/contacts$`) },
+  { method: "PATCH", pattern: new RegExp(`^properties/${ID}/contacts/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/meters$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/meters$`) },
+  { method: "PATCH", pattern: new RegExp(`^meters/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^meters/${ID}/changes$`) },
+  { method: "POST", pattern: new RegExp(`^meters/${ID}/changes$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/maintenance$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/maintenance$`) },
+  { method: "PATCH", pattern: new RegExp(`^maintenance/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^maintenance/${ID}/done$`) },
   // Rechnung zu Bankumsatz abgleichen und Zahlungsvorschlag (M11-finapi Stage 3, G2 gesperrt).
   { method: "GET", pattern: new RegExp(`^banking/invoice-matching/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^banking/invoice-matching/${ID}/match$`) },
