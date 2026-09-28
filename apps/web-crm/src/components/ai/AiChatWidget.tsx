@@ -12,22 +12,26 @@ import {
   type ContactChoice,
   type Conversation,
   type DocumentOut,
+  type ChatLink,
   type ImportRun,
+  type Message,
   type Proposal,
   type Run,
 } from "@/lib/ai";
 import { bff } from "@/lib/bff";
+import { chatPageContext, suggestionsFor, type ChatArea, type ChatPageContext } from "@/lib/chat-suggestions";
 import { ui } from "@/lib/ui";
 
+import { ChatActionProposal } from "./ChatActionProposal";
+import { ChatLinks } from "./ChatLinks";
 import { ContactProposal } from "./ContactProposal";
 import { ImportResult } from "./ImportResult";
 import { PropertyProposal } from "./PropertyProposal";
 
-/** Where the user is; derived from the route so the assistant knows the page (M7, 10.1). */
-type Area = "contacts" | "properties" | "hoa" | "letting" | "bank" | "invoices" | "tickets" | "other";
-type PageContext = { area: Area; contextType: "global" | "property" | "contact"; contextId: string | null };
-
-const UUID = /[0-9a-fA-F-]{36}/;
+/** Where the user is; derived from the route so the assistant knows the page and the record
+ *  open on it (M7, 10.1, rule AI-LOOKUP-01). */
+type Area = ChatArea;
+type PageContext = ChatPageContext;
 /** Polling stops after this; a run that stays queued or running longer is reported as unresponsive. */
 export const RUN_TIMEOUT_MS = 10 * 60 * 1000;
 
@@ -55,22 +59,15 @@ export function looksLikeImportIntent(text: string): boolean {
 }
 
 export function pageContext(pathname: string): PageContext {
-  const id = pathname.match(UUID)?.[0] ?? null;
-  if (pathname.startsWith("/kontakte")) return { area: "contacts", contextType: id ? "contact" : "global", contextId: id };
-  if (pathname.startsWith("/objekte")) return { area: "properties", contextType: id ? "property" : "global", contextId: id };
-  if (pathname.startsWith("/weg")) return { area: "hoa", contextType: id ? "property" : "global", contextId: id };
-  if (pathname.startsWith("/vermietung")) return { area: "letting", contextType: "global", contextId: null };
-  if (pathname.startsWith("/bank")) return { area: "bank", contextType: "global", contextId: null };
-  if (pathname.startsWith("/rechnungen")) return { area: "invoices", contextType: "global", contextId: null };
-  if (pathname.startsWith("/tickets")) return { area: "tickets", contextType: "global", contextId: null };
-  return { area: "other", contextType: "global", contextId: null };
+  return chatPageContext(pathname);
 }
 
 type Chip = { id: string; label: string };
 type Entry =
-  | { kind: "assistant"; text: string; chips?: Chip[] }
+  | { kind: "assistant"; text: string; chips?: Chip[]; links?: ChatLink[] }
   | { kind: "user"; text: string }
   | { kind: "proposal"; proposal: Proposal }
+  | { kind: "chat_action"; proposal: Proposal }
   | { kind: "result"; importRun: ImportRun };
 
 type Stage = "idle" | "uploading" | "queued" | "processing" | "done";
@@ -103,26 +100,29 @@ export function AiChatWidget() {
   const bottom = useRef<HTMLDivElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const greetedFor = useRef<string | null>(null);
+  const conversationRef = useRef<string | null>(null);
 
-  const say = (text: string, chips?: Chip[]) => setEntries((p) => [...p, { kind: "assistant", text, chips }]);
+  const say = (text: string, chips?: Chip[], links?: ChatLink[]) => setEntries((p) => [...p, { kind: "assistant", text, chips, links }]);
   const push = (e: Entry) => setEntries((p) => [...p, e]);
 
   const startChips = (area: Area): Chip[] => {
-    const chips: Chip[] = [];
+    // Suggestions for the page and the record open on it: buttons that send the question.
+    const chips: Chip[] = suggestionsFor(ctx).map((key) => ({ id: `suggest:${key}`, label: t(`suggestions.${key}`) }));
     if (area === "contacts" || area === "other") chips.push({ id: "import_contacts", label: t("chips.importContacts") });
     if (area === "properties" || area === "hoa") chips.push({ id: "import_property", label: t("chips.importProperty") });
     chips.push({ id: "ask", label: t("chips.ask") }, { id: "summarize", label: t("chips.summarize") });
     return chips;
   };
 
-  // Greeting once per page area; the page is named so the user sees the context.
+  // Greeting once per page area and record; the page is named so the user sees the context.
+  const greetKey = `${ctx.area}:${ctx.entityId ?? ""}`;
   useEffect(() => {
-    if (!open || greetedFor.current === ctx.area) return;
-    greetedFor.current = ctx.area;
+    if (!open || greetedFor.current === greetKey) return;
+    greetedFor.current = greetKey;
     setFlow({ step: "idle" });
-    say(t("greeting", { page: t(`area.${ctx.area}`) }), startChips(ctx.area));
+    say(t(ctx.entityType ? "greetingRecord" : "greeting", { page: t(`area.${ctx.area}`) }), startChips(ctx.area));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, ctx.area]);
+  }, [open, greetKey]);
 
   useEffect(() => {
     bottom.current?.scrollIntoView?.({ block: "end" });
@@ -136,6 +136,7 @@ export function AiChatWidget() {
     });
     if (!res.ok) throw new Error(stepError(t("stepConversation"), res.status, res.message));
     setConversation(res.data);
+    conversationRef.current = res.data.id;
     return res.data;
   };
 
@@ -172,10 +173,26 @@ export function AiChatWidget() {
     const conv = await ensureConversation();
     const res = await bff<Run>(`/api/bff/ai/conversations/${conv.id}/messages`, {
       method: "POST",
-      body: JSON.stringify({ content, task, document_ids: documentIds }),
+      body: JSON.stringify({
+        content,
+        task,
+        document_ids: documentIds,
+        // Page context for questions: the lookup starts from the record open on the page.
+        ...(task === "answer_question"
+          ? { page: t(`area.${ctx.area}`), context_entity_type: ctx.entityType, context_entity_id: ctx.entityId }
+          : {}),
+      }),
     });
     if (!res.ok) throw new Error(stepError(t("stepMessage"), res.status, res.message));
     return waitForRun(res.data);
+  };
+
+  /** The stored chat answer of a run (text with hit list, links, proposal), as in the log. */
+  const answerOf = async (run: Run): Promise<Message | null> => {
+    if (!conversationRef.current) return null;
+    const res = await bff<Conversation>(`/api/bff/ai/conversations/${conversationRef.current}`);
+    if (!res.ok) return null;
+    return [...(res.data.messages ?? [])].reverse().find((m) => m.role === "assistant" && m.task_run_id === run.id) ?? null;
   };
 
   const proposalOf = async (run: Run): Promise<Proposal | null> => {
@@ -387,6 +404,11 @@ export function AiChatWidget() {
         }
         return;
       default:
+        if (chip.id.startsWith("suggest:")) {
+          // Suggestion button: sends the prefilled question (the label) with the page context.
+          setFlow({ step: "idle" });
+          void askQuestion(chip.label, []);
+        }
         return;
     }
   };
@@ -479,9 +501,18 @@ export function AiChatWidget() {
       const ids = list.length ? await upload(list) : [];
       say(t("working"));
       const run = await runTask("answer_question", [t("pageHint", { page: t(`area.${ctx.area}`) }), content].join(" "), ids);
-      const problem = describeRun(run);
-      const out = run.output as { answer?: string; answerable?: boolean } | null;
-      say(problem ?? (out?.answerable === false ? t("notAnswerable") : (out?.answer ?? "")), startChips(ctx.area));
+      // Prefer the stored answer: it carries the platform hit list, the links and, without a
+      // released provider, the deterministic fallback (rule AI-LOOKUP-01).
+      const stored = await answerOf(run);
+      if (stored) {
+        say(stored.content, startChips(ctx.area), stored.links ?? []);
+        const proposal = stored.proposal_id ? await proposalOf({ ...run, proposal_id: stored.proposal_id }) : null;
+        if (proposal?.entity_type === "chat_action") push({ kind: "chat_action", proposal });
+      } else {
+        const problem = describeRun(run);
+        const out = run.output as { answer?: string; answerable?: boolean } | null;
+        say(problem ?? (out?.answerable === false ? t("notAnswerable") : (out?.answer ?? "")), startChips(ctx.area), run.links ?? []);
+      }
       setFlow({ step: "idle" });
     });
 
@@ -548,6 +579,13 @@ export function AiChatWidget() {
                   </li>
                 );
               }
+              if (e.kind === "chat_action") {
+                return (
+                  <li key={i} className="rounded-lg border border-border p-2">
+                    <ChatActionProposal proposal={e.proposal} />
+                  </li>
+                );
+              }
               if (e.kind === "result") {
                 return (
                   <li key={i} className="rounded-lg border border-border p-2">
@@ -559,6 +597,7 @@ export function AiChatWidget() {
               return (
                 <li key={i} className="max-w-[92%] self-start rounded-2xl rounded-bl-md bg-gold-soft px-3.5 py-2 text-fg">
                   <p className="whitespace-pre-wrap">{e.text}</p>
+                  <ChatLinks links={e.links} />
                   {last && e.chips?.length && !busy ? (
                     <div className="mt-2 flex flex-wrap gap-1.5">
                       {e.chips.map((c) => (

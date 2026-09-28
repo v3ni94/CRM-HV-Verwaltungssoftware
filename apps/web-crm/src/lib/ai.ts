@@ -5,6 +5,8 @@ type S = components["schemas"];
 
 export type Conversation = S["ConversationOut"];
 export type Message = S["MessageOut"];
+/** Record or page link of a platform lookup answer (rule AI-LOOKUP-01). */
+export type ChatLink = S["ChatLink"];
 export type Run = S["RunOut"];
 export type Proposal = S["ProposalOut"];
 export type ImportRun = S["ImportOut"];

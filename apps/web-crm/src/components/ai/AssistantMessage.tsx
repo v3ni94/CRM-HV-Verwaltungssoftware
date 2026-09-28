@@ -9,6 +9,8 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { ChatActionProposal } from "./ChatActionProposal";
+import { ChatLinks } from "./ChatLinks";
 import { ContactProposal } from "./ContactProposal";
 import { PropertyProposal } from "./PropertyProposal";
 import { ProposalBadge } from "./ProposalBadge";
@@ -58,6 +60,7 @@ export function AssistantMessage({ message }: { message: Message }) {
     <li className={`${ui.card} flex flex-col gap-2 text-sm`} data-testid="message-assistant">
       {failed ? null : <ProposalBadge confidence={run?.confidence} reasoning={reasoningOf(run?.output ?? null)} />}
       <p className="whitespace-pre-wrap">{message.content}</p>
+      <ChatLinks links={message.links} />
       <p className="text-xs text-muted">{formatDateTime(message.created_at)}</p>
       {error ? (
         <p role="alert" className={ui.alert}>
@@ -72,6 +75,8 @@ export function AssistantMessage({ message }: { message: Message }) {
               {t("toImport")}
             </Link>
           </p>
+        ) : proposal.entity_type === "chat_action" ? (
+          <ChatActionProposal proposal={proposal} />
         ) : proposal.entity_type === "contacts" ? (
           <ContactProposal proposal={proposal} />
         ) : (

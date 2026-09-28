@@ -39,6 +39,8 @@ describe("pageContext", () => {
       area: "contacts",
       contextType: "global",
       contextId: null,
+      entityType: null,
+      entityId: null,
     });
     expect(
       pageContext("/objekte/01920000-0000-7000-8000-00000000e001"),
@@ -46,6 +48,8 @@ describe("pageContext", () => {
       area: "properties",
       contextType: "property",
       contextId: "01920000-0000-7000-8000-00000000e001",
+      entityType: "property",
+      entityId: "01920000-0000-7000-8000-00000000e001",
     });
     expect(pageContext("/start").area).toBe("other");
   });
@@ -395,5 +399,66 @@ describe("AiChatWidget free text contacts", () => {
     expect(body).toMatchObject({ task: "extract_contacts", document_ids: [] });
     expect(body.content).toContain("ausschließlich um Mieter");
     expect(body.content).toContain("max@example.org");
+  });
+});
+
+
+describe("AiChatWidget page context", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("offers record suggestions, sends the open record and renders the answer links", async () => {
+    const CONTACT = "01920000-0000-7000-8000-00000000e777";
+    pathname = `/kontakte/${CONTACT}`;
+    let sent: Record<string, unknown> | null = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/bff/ai/conversations") && method === "POST")
+        return jsonResponse({ id: CONV, title: "x", context_type: "contact", context_id: CONTACT, created_at: "2026-09-28T10:00:00Z", messages: [] }, 201);
+      if (url.endsWith(`/api/bff/ai/conversations/${CONV}/messages`)) {
+        sent = JSON.parse(String(init?.body));
+        return jsonResponse({ id: RUN, status: "queued", task: "answer_question" }, 202);
+      }
+      if (url.endsWith(`/api/bff/ai/runs/${RUN}`))
+        return jsonResponse({ id: RUN, status: "succeeded", task: "answer_question", proposal_id: null, output: { answer: "x" }, links: [] });
+      if (url.endsWith(`/api/bff/ai/conversations/${CONV}`) && method === "GET")
+        return jsonResponse({
+          id: CONV,
+          title: "x",
+          context_type: "contact",
+          context_id: CONTACT,
+          created_at: "2026-09-28T10:00:00Z",
+          messages: [
+            {
+              id: "m1",
+              role: "assistant",
+              content: "Offen ist ein Ticket.",
+              document_ids: [],
+              task_run_id: RUN,
+              proposal_id: null,
+              created_at: "2026-09-28T10:00:01Z",
+              links: [{ type: "ticket", id: "t1", label: "#12 Heizung defekt", href: "/tickets/t1", detail: "neu" }],
+            },
+          ],
+        });
+      return jsonResponse({}, 404);
+    });
+
+    renderIntl(<AiChatWidget />);
+    await userEvent.click(screen.getByRole("button", { name: "KI-Assistent öffnen" }));
+    expect(await screen.findByText(/ich beziehe mich auf den geöffneten Datensatz/)).toBeInTheDocument();
+    for (const label of ["Verträge und Einheiten dieses Kontakts", "Letzte Mails und Tickets", "Kontaktdaten prüfen"])
+      expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Was ist offen bei diesem Kontakt?" }));
+    const link = await screen.findByRole("link", { name: "#12 Heizung defekt" });
+    expect(link).toHaveAttribute("href", "/tickets/t1");
+    expect(screen.getByText("Offen ist ein Ticket.")).toBeInTheDocument();
+    expect(sent).toMatchObject({
+      task: "answer_question",
+      context_entity_type: "contact",
+      context_entity_id: CONTACT,
+      page: "Kontakte",
+    });
+    expect(String((sent as unknown as { content: string }).content)).toContain("Was ist offen bei diesem Kontakt?");
   });
 });
