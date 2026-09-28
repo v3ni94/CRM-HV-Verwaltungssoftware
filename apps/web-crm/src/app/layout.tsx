@@ -36,8 +36,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </head>
       <body
         className="min-h-screen antialiased"
+        /* Top safe area is handled by the sticky app header itself (M31); left and right stay. */
         style={{
-          paddingTop: "env(safe-area-inset-top)",
           paddingLeft: "env(safe-area-inset-left)",
           paddingRight: "env(safe-area-inset-right)",
         }}

@@ -99,7 +99,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const themePreference = (me as { ui_preferences?: { theme?: unknown } } | null | undefined)?.ui_preferences
     ?.theme;
   return (
-    <div className="flex min-h-screen flex-col bg-bg md:flex-row">
+    <div className="flex min-h-screen flex-col bg-bg lg:flex-row">
       {themePreference !== undefined ? (
         <script dangerouslySetInnerHTML={{ __html: serverThemeScript(themePreference) }} />
       ) : null}
@@ -116,6 +116,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           area={tHome("area")}
           collapseLabel={t("navCollapse")}
           expandLabel={t("navExpand")}
+          autoLabel={t("navAuto")}
+          openNavLabel={t("openNav")}
           initialExpandedGroups={
             (me as { ui_preferences?: { nav_expanded_groups?: string[] } } | null | undefined)
               ?.ui_preferences?.nav_expanded_groups
@@ -124,15 +126,28 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         />
       </Suspense>
       <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-30 flex flex-wrap items-center gap-2 border-b border-border-soft bg-bg px-4 py-3 md:px-8">
-          <MobileNav
-            groups={groups}
-            label={t("nav")}
-            openLabel={t("openNav")}
-            closeLabel={t("close")}
-            productName={tHome("productName")}
-            area={tHome("area")}
-          />
+        {/* One row of 56 px (64 px from sm), see --mhvp-header-h; the safe area of a notch is
+            added on top (M31). */}
+        <header
+          className="sticky top-0 z-30 flex min-h-14 items-center gap-2 border-b border-border-soft bg-bg px-4 sm:min-h-16 sm:px-6 lg:px-8"
+          style={{ paddingTop: "env(safe-area-inset-top)" }}
+        >
+          <Suspense fallback={<span className="h-11 w-11 shrink-0 lg:hidden" aria-hidden="true" />}>
+            <MobileNav
+              groups={groups}
+              label={t("nav")}
+              openLabel={t("openNav")}
+              closeLabel={t("close")}
+              productName={tHome("productName")}
+              area={tHome("area")}
+              initialExpandedGroups={
+                (me as { ui_preferences?: { nav_expanded_groups?: string[] } } | null | undefined)?.ui_preferences
+                  ?.nav_expanded_groups
+              }
+              tenants={ctx.tenants}
+              currentTenant={ctx.tenantId}
+            />
+          </Suspense>
           <CommandPalette
             nav={groups.map((g) => ({ label: g.label, items: g.items.map((i) => ({ href: i.href, label: i.label })) }))}
             permissions={me?.permissions ?? []}
@@ -146,11 +161,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             <UserMenu name={me?.display_name || me?.email || ""} email={me?.email ?? undefined} />
           </div>
         </header>
-        <main id="inhalt" className="mx-auto w-full min-w-0 max-w-6xl flex-1 overflow-x-hidden px-4 py-8 md:px-8 md:py-10">
+        <main id="inhalt" className="mx-auto w-full min-w-0 max-w-6xl flex-1 overflow-x-clip px-4 py-6 sm:px-6 sm:py-8 lg:px-8 lg:py-10">
           {children}
         </main>
         <footer
-          className="border-t border-border-soft px-4 py-4 text-xs text-subtle md:px-8"
+          className="border-t border-border-soft px-4 py-4 text-xs text-subtle lg:px-8"
           style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
         >
           <span>{tHome("footer")}</span>
