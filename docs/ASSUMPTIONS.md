@@ -930,3 +930,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `mhvp.banking.history`, `mhvp.banking.posting_proposal`, `mhvp.banking.features`, `GET /banking/transactions/{id}/posting-proposals`, `GET /receipts/drafts/{id}` mit `ledger_id` und `provider_contact_id`, `POST /receipts/drafts/{id}/confirm`, CRM Belegeingang (Quelle Verlauf) |
 | Überprüfung spätestens bei Meilenstein | S5 (Regelvorschläge) und Testbestand M12-02 |
 | Datum | 29.09.2026 |
+
+## A-081
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Bankoberfläche BK-2 (Regel UI-BANK-01): (1) Die Umsatzliste lädt 50 Umsätze je Seite über `limit` und `offset`; die Schnittstelle liefert keine Gesamtzahl, deshalb gilt eine Seite als letzte, sobald weniger als 50 Zeilen kommen. (2) Der Richtungsfilter (Eingang, Ausgang) wirkt auf die geladene Seite, weil `GET /banking/transactions` keinen Richtungsparameter kennt. (3) Die Massenbestätigung nimmt höchstens 200 Umsätze je Auswahl (Schnittstelle erlaubt 1.000) und nur Vorschläge der Stufe 1 mit `unambiguous` oder Quelle `rule`; Historie- und KI-Vorschläge werden nie vorausgewählt. (4) Als Gegenkonto werden aktive Konten ohne `is_system`, ohne `property_bank_account_id` und ohne Kategorie `bank` angeboten; bei Transferpaaren nur fremde Bankkonten desselben Buchungskreises. (5) Offene Posten werden zum heutigen Stichtag geladen. (6) MT940-Dateien werden beim Upload mit dem Typ `text/plain`, CSV mit `text/csv` an den Dokumentenspeicher übergeben, weil Browser für `.sta` keinen zulässigen Typ senden; der Dateiname bleibt erhalten und steuert die Formaterkennung. (7) Namen der Rechtsträger für Summen und Regelanlage stammen aus `GET /banking/accounts` (Recht `accounting:read`), nicht aus `GET /tenant/legal-entities` (Recht `members:read`). |
+| Begründung | Die Oberfläche ändert die Schnittstelle nicht (Auftrag BK-2); die Werte sind Bedienstandards ohne Geldwirkung und lassen sich später serverseitig ersetzen (Richtungsfilter, Gesamtzahl). |
+| Kennzeichnung | unkritisch (keine Buchung ohne Bestätigung einer Person, kein Gate, keine Frist) |
+| Betroffene Bereiche | `apps/web-crm/src/components/banking/*`, `/bank`, `/bank/regeln`, `/bank/abstimmung`, BFF-Allowlist |
+| Überprüfung spätestens bei Meilenstein | Plan M12 Schritt S4 (Klassenrouter und Ein-Klick-Übernahme) |
+| Datum | 28.09.2026 |

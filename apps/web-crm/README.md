@@ -74,6 +74,8 @@ All cookies are `httpOnly`, `SameSite=Strict`, `Path=/`, and `Secure` on every h
 | --- | --- |
 | `/anmelden`, `/anmelden/zweiter-faktor` | e-mail and password, then TOTP (first login: QR code and secret) |
 | `/mandant` | tenant selection when the account has several tenants |
+| `/bank` | statement upload (CAMT.053, MT940, bank CSV with column mapping), accounts, connections, work list with filters and pagination, booking dialog (open items, partial amounts, splits, contra account, outgoing payments, transfer pairs), duplicate clarification, bulk confirmation with preview (`src/components/banking/README.md`) |
+| `/bank/regeln`, `/bank/abstimmung` | bank rules with the four eyes life cycle and the read only automation switch; bank reconciliation B09 |
 | `/kontakte` | server rendered list with search `q`, filters `kind` and `tag`, pagination (25 per page) |
 | `/kontakte/neu` | form for person or company with repeatable addresses, phones, e-mails, bank accounts; duplicate check before saving |
 | `/kontakte/[id]` | tabs Stammdaten, Kommunikation, Bankverbindungen (masked IBAN only), Notizen, Einwilligungen; actions Bearbeiten, DSGVO-Auskunft, Löschen |

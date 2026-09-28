@@ -2,16 +2,115 @@
 
 ## Zweck
 
-Der Bereich Bank zeigt Kontoauszüge (Dateiupload oder finAPI) und schlägt Zuordnungen zu
-offenen Posten vor. Die Anbindung ist lesend: keine Überweisung, keine automatische
+Der Bereich Bank zeigt Kontoauszüge (Dateiupload, finAPI oder FinTS) und schlägt Zuordnungen
+zu offenen Posten vor. Die Anbindung ist lesend: keine Überweisung, keine automatische
 Verbuchung. Die IBAN allein beweist keinen Schuldner; gebucht wird nur nach Bestätigung
-und, bis zur Freigabestufe G1, nicht in der führenden Buchhaltung.
+und, bis zur Freigabestufe G1, nicht in der führenden Buchhaltung. Stand 28.09.2026 ist die
+tägliche Bankarbeit vollständig in der Oberfläche: Buchen mit Gegenkonto, Teilbeträgen und
+Splits, Ausgänge, Umbuchungen, Dublettenklärung, Massenbestätigung, Bankregeln und
+Bankabstimmung (Regel UI-BANK-01).
 
 ## Datei-Upload
 
-Über Kontoauszug (CAMT.053) und Importieren lässt sich ein Auszug hochladen. Die Liste
-zeigt Buchungstag, Gegenpartei, Verwendungszweck und Betrag je Umsatz, mit Kennzahlen zu
-neuen, bereits vorhandenen und möglichen doppelten Umsätzen sowie Umbuchungen.
+Über Kontoauszug und Importieren lässt sich ein Auszug hochladen. Zulässig sind CAMT.053
+(.xml), MT940 (.sta, .mt940, .940, .swi) und Bank-CSV (.csv). CAMT und MT940 werden direkt
+importiert; die Ergebniszeile zeigt neue, bereits vorhandene und mögliche doppelte Umsätze
+sowie Umbuchungen.
+
+Eine CSV wird zuerst geprüft (CSV prüfen): Die Vorschau zeigt das erkannte Bankformat mit
+Sicherheit, Zeichensatz, Trennzeichen, Zeilenzahl, die ersten Zeilen und Lesefehler je Zeile.
+Ist das Format unbekannt, öffnet sich die Spaltenzuordnung: je Feld (Buchungstag, Betrag oder
+Soll und Haben getrennt, Valuta, Gegenpartei, IBAN, Verwendungszweck, Referenzen) wird die
+passende Spalte gewählt, Vorschau mit Zuordnung prüfen wiederholt die Prüfung. Eine Zuordnung
+lässt sich je Bankkonto unter einem Namen speichern und beim nächsten Upload auswählen. CSV
+importieren läuft erst, wenn die Vorschau keine Fehler meldet. Welche Bankformate verifiziert
+sind, steht in `docs/integrations/bank-csv.md` (offener Punkt M11-02).
+
+## Umsatzliste
+
+Die Liste filtert nach Konto, Status (neu, prüfen, gebucht, ignoriert), Richtung (Eingänge,
+Ausgänge) und Zeitraum und blättert in Seiten zu 50 Umsätzen (Zurück, Weiter). Je Zeile
+stehen Buchungstag, Konto, Gegenpartei mit IBAN-Endung, Verwendungszweck, Betrag, Status und
+die Aktionen: Buchen (öffnet den Buchungsdialog), Ignorieren mit Begründung (mindestens 3
+Zeichen), Dublette klären, Regel lernen. Umbuchungen zwischen eigenen Konten tragen die
+Kennzeichnung Umbuchung.
+
+## Buchungsdialog
+
+Buchen öffnet den Dialog zum Umsatz. Oben stehen die Vorschläge mit Quelle (Regel, Abgleich,
+KI), Konfidenz und Begründung; Übernehmen füllt die Zuordnung mit den Splits des Vorschlags.
+Nichts ist vorausgewählt. Darunter:
+
+- Offene Posten: Suche nach Konto, Art oder Vertrag; Hinzufügen übernimmt den Posten mit
+  dem Restbetrag, begrenzt auf den noch nicht zugeordneten Zahlbetrag. Der Teilbetrag je
+  Posten lässt sich ändern; mehrere Posten sind möglich (Split).
+- Gegenkonto: Suche nach Nummer oder Name. Bank-, System- und inaktive Konten werden nicht
+  angeboten. Ein Ausgang ohne offenen Posten wird gegen das Gegenkonto gebucht (zum Beispiel
+  Bankgebühr gegen Kostenkonto).
+- Buchungstext, optional. Skonto ist sichtbar, aber gesperrt, bis die Schnittstelle das Feld
+  annimmt (offener Punkt BK2-01).
+- Zahlbetrag, Zugeordnet und Rest: Eine Zuordnung über dem Zahlbetrag wird abgelehnt. Bleibt
+  ein Rest, braucht er ein Gegenkonto; nur wenn alle Posten auf demselben Personenkonto
+  liegen, darf der Rest als Guthaben stehen bleiben (D07).
+
+Buchen zeigt eine Zusammenfassung mit Betrag und Zeilen; erst Buchung bestätigen bucht. Nach
+der Buchung ist der Satz unveränderlich, Korrektur nur durch Storno und Neubuchung (B03).
+
+Umbuchungen: Bei einem erkannten Transferpaar bietet der Dialog nur die anderen Bankkonten
+des Buchungskreises an; das Konto der Gegenseite ist vorbelegt, wenn die Gegenseite auf
+derselben Seite geladen ist. Die Buchung erledigt beide Hälften (D04, B08). Ist die
+Gegenseite bereits anders gebucht (zum Beispiel Geldtransit), lässt sich die Hälfte über das
+Kästchen gegen ein Gegenkonto buchen.
+
+Ablehnen mit Grund gibt es für KI-Vorschläge; für deterministische Vorschläge folgt es mit dem
+Entscheidungsprotokoll (Plan M12, Schritt S1; offener Punkt BK2-01).
+
+## Dublettenklärung
+
+Ein Umsatz im Status prüfen (Dublette?) wurde beim Import als möglicher Doppelumsatz erkannt.
+Dublette klären verlangt eine Begründung und bietet Als echten Umsatz behalten (Status neu)
+oder Als Dublette ignorieren. Nichts wird gelöscht (B08). Ignorierte Umsätze sind derzeit
+endgültig; ein Wiedereröffnen folgt mit Schritt S1 (BK2-01).
+
+## Massenbestätigung
+
+Neue Umsätze der Seite auswählen oder einzelne Kästchen markieren, dann Massenbestätigung.
+Der Dialog lädt die Vorschläge der gewählten Umsätze und bereitet nur deterministisch geprüfte
+Fälle vor (eindeutiger Vollausgleich oder Treffer einer freigegebenen Regel); alle anderen
+erscheinen als Ausnahme und bleiben manuell. Die Vorschau zeigt Anzahl, Summe, Summen je
+Rechtsträger und die von der Schnittstelle gemeldeten Ausnahmen (Status, Umbuchung). Erst die
+Bestätigung bucht, je Umsatz ganz oder gar nicht; das Ergebnis nennt gebuchte und nicht
+gebuchte Umsätze mit Grund. Jede Buchung ist eine manuelle Buchung der angemeldeten Person.
+
+## Regel lernen
+
+Bei einem gebuchten Eingang legt Regel lernen einen Regelvorschlag aus IBAN-Fingerabdruck und
+gebuchtem Konto an (Zustand vorgeschlagen). Der Vorschlag bucht nichts; Freigabe und
+Aktivierung laufen unter Bankregeln.
+
+## Bankregeln
+
+Menü Bank, Bankregeln. Die Seite zeigt oben den Automatikschalter des Mandanten nur lesend
+(Standard ausgeschaltet); das Einschalten setzt die offene Betreiberentscheidung zur Automatik
+vor G1 (ADR 0013) und den Automatiklauf mit Nachkontrolle voraus (BK2-03).
+
+Regel vorschlagen: Name, Rechtsträger, IBAN der Gegenpartei (gespeichert als Fingerabdruck),
+Name enthält, Verwendungszweck als regulärer Ausdruck, Betragsspanne, Priorität und das Konto
+der Buchung (Debitorenkonto; leer, wenn der eindeutige offene Posten das Konto bestimmt).
+Bankkonto, Betrag und Zweck gelten zusammen; die IBAN allein beweist keinen Schuldner (7.4).
+
+Lebenszyklus mit vier Augen: Freigeben ist für die vorschlagende Person gesperrt und
+verlangt eine andere Person. Aktivieren verlangt eine Betragsgrenze und ein hochgeladenes
+Testnachweis-Dokument (unabhängiger Testsatz nach D51, ein Backtest allein genügt nicht;
+BK2-04). Abschalten beendet die Regel. Aktive und freigegebene Regeln liefern Vorschläge mit
+Konfidenz im Buchungsdialog; gebucht wird weiterhin nur durch eine Person.
+
+## Bankabstimmung
+
+Menü Bank, Bankabstimmung: je Auszug Anfangsbestand, Bewegungen, Endbestand, Differenz des
+Auszugs sowie Saldo des Sachkontos zum Stichtag und dessen Differenz (B09). Differenzen sind
+rot hervorgehoben und ein Befund zur Klärung; die Ansicht korrigiert nichts. Ohne Salden im
+Auszug oder ohne verknüpftes Sachkonto bleibt die Spalte leer.
 
 ## finAPI Bankanlage
 
@@ -96,9 +195,11 @@ in keinem Fall als ausgeführte Zahlung.
 
 ## Was ist Vorschlag, was verbindlich
 
-Vorschläge zur Zuordnung eines Umsatzes zu einem offenen Posten sind stets zu prüfen;
-Zuordnen und buchen ist die verbindliche Handlung. Eine Zahlungsauslösung bleibt bis zur
-Freigabestufe G2 vollständig gesperrt.
+Vorschläge zur Zuordnung eines Umsatzes sind stets zu prüfen; Buchung bestätigen im
+Buchungsdialog und die Bestätigung der Massenbestätigung sind die verbindlichen Handlungen.
+Ein Regelvorschlag, eine freigegebene oder aktive Regel bucht nichts; der Automatiklauf ist
+nicht Teil der Oberfläche. Eine Zahlungsauslösung bleibt bis zur Freigabestufe G2 vollständig
+gesperrt.
 
 ## Häufige Fehler
 
@@ -108,6 +209,11 @@ Freigabestufe G2 vollständig gesperrt.
   neues WebForm öffnen und die Bankfreigabe wiederholen.
 - **Umsätze abrufen bleibt ohne Ergebnis**: Verbindung steht nicht auf Verbunden; Prüfen
   auslösen und Status abwarten.
-- **Kein passender offener Posten**: Zuordnung ist nicht möglich, bis der zugehörige
-  Vorgang (Rechnung, Sollstellung) im System angelegt ist; bis dahin mit Begründung
-  ignorieren.
+- **Kein passender offener Posten**: Den Umsatz gegen ein Gegenkonto buchen oder, wenn der
+  Vorgang (Rechnung, Sollstellung) noch fehlt, mit Begründung ignorieren.
+- **Der Restbetrag braucht ein Gegenkonto**: Die Zuordnung deckt den Zahlbetrag nicht; einen
+  weiteren offenen Posten hinzufügen oder ein Gegenkonto wählen.
+- **Das Bankkonto ist keinem Sachkonto zugeordnet**: Im Buchungskreis des Rechtsträgers fehlt
+  das Sachkonto mit Verweis auf das Bankkonto; unter Buchhaltung anlegen.
+- **Die Freigabe muss eine andere Person erteilen**: Regeln werden nie von der vorschlagenden
+  Person freigegeben (Vier Augen).

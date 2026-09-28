@@ -59,6 +59,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M27-01](M27-01.md) | Preisstruktur ohne Beträge (Stufen, Zusatzmodule, Testphase), Angebot nur als PDF-Entwurf | M27, 18, 6.8 | implemented, not accepted (Offene Entscheidung M27-01) |
 | [M27-02](M27-02.md) | Freigabe G5: Nachweisliste je Mandant, Gate nur mit allen Nachweisen und Superadmin | M27, 18.0, ADR 0003 | implemented, not accepted |
 | [M27-03](M27-03.md) | Onboarding Drittmandanten (Rechtsträger, Administrator, CI, Flags aus, E-Mail-Entwurf) und Mandanten-Export im Vier-Augen-Prinzip | M27, 18, 5.3 | implemented, not accepted |
+| [UI-BANK-01](UI-BANK-01-bankoberflaeche.md) | Bankoberfläche im CRM: Buchungsdialog (freie Posten, Teilbeträge, Splits, Gegenkonto ohne Bank-, System- und inaktive Konten, Ausgänge, Transferpaare), Dublettenklärung, Massenbestätigung nur mit Vorschau und geprüften Vorschlägen, MT940- und CSV-Upload, Bankabstimmung B09, Bankregeln im Vier-Augen-Lebenszyklus, Automatikschalter nur lesend | 7.4, 7.1 B02/B03/B08/B09, 6.9.4, D04, D07, D51 | implemented, not accepted (BK-2, Plan M12 S2, 28.09.2026) |
 | [M28-01](M28-01.md) | Makler: Anzeigen, keine FLOWFACT-Anbindung | M28 | implemented, not accepted |
 | [M26-02](M26-02.md) | OpenImmo-Export: Format-Mapping, nur lesend, kein Portal-Upload | M26 | implemented, not accepted |
 | [M30-01](M30-01.md) | Übergabeprotokoll: Festschreibung, Versionen, Zustellung | M30 | implemented, not accepted |
