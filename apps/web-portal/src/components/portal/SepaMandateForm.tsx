@@ -156,7 +156,7 @@ export function SepaMandateForm({ contracts, proposals }: { contracts: Contract[
               <dt className={ui.label}>{t("sequence")}</dt>
               <dd>{t("recurrent")}</dd>
             </dl>
-            <pre className="whitespace-pre-wrap rounded-md border border-hairline bg-surface p-3 text-xs text-fg" data-testid="mandate-text">
+            <pre className="whitespace-pre-wrap rounded-md border border-hairline bg-surface-2 p-3 text-xs text-fg" data-testid="mandate-text">
               {preview.text}
             </pre>
             <div>

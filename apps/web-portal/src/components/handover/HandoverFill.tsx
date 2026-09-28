@@ -660,7 +660,7 @@ function Photos({
           {!disabled ? (
             <button
               type="button"
-              className="absolute -right-1 -top-1 rounded-full bg-bg px-1 text-xs shadow-card"
+              className="absolute -right-1 -top-1 rounded-full bg-surface px-1 text-xs shadow-card"
               aria-label={t("photos.remove")}
               onClick={async () => {
                 const res = await bff(`${base}/documents/${d.id}`, { method: "DELETE" });

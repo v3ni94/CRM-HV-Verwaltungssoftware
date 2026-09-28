@@ -43,7 +43,7 @@ export function PortalNotifications() {
   }
 
   if (items.length === 0) return null;
-  const entryClass = "block rounded-md px-3 py-2 text-sm transition duration-150 hover:bg-surface";
+  const entryClass = "block rounded-md px-3 py-2 text-sm transition duration-150 hover:bg-surface-2";
   const content = (n: PortalNotice) => (
     <>
       <span className="block font-medium">{n.title}</span>

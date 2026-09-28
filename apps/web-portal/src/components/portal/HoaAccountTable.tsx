@@ -50,7 +50,7 @@ export function HoaAccountTable({ account }: { account: HoaAccount }) {
                 return contract.entries.map((entry, i) => (
                   <li
                     key={i}
-                    className={`rounded-md border border-border bg-surface px-3 py-2 ${entry.reversed ? "text-subtle" : ""}`}
+                    className={`rounded-md border border-border bg-surface-2 px-3 py-2 ${entry.reversed ? "text-subtle" : ""}`}
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex min-w-0 flex-col gap-0.5">

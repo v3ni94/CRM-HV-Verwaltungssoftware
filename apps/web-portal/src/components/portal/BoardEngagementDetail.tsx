@@ -420,7 +420,7 @@ function ReportCard({ report, engagementId }: { report: BoardReport; engagementI
       <div className="flex flex-col gap-1 border-t border-border pt-2">
         <span className="text-sm font-medium">{t("reports.statement")}</span>
         {report.board_statement ? (
-          <blockquote className="whitespace-pre-line rounded-md bg-surface px-3 py-2 text-sm">{report.board_statement.text}</blockquote>
+          <blockquote className="whitespace-pre-line rounded-md bg-surface-2 px-3 py-2 text-sm">{report.board_statement.text}</blockquote>
         ) : (
           <span className={ui.help}>{t("reports.noStatement")}</span>
         )}

@@ -9,7 +9,7 @@ export async function AuthCard({ title, children }: { title: string; children: R
         <p className="mhvp-label">{t("productName")}</p>
         <h1 className="mhvp-title text-2xl font-semibold tracking-tight">{title}</h1>
       </div>
-      <div className="rounded-xl border border-border bg-bg p-6 shadow-card">{children}</div>
+      <div className="rounded-xl border border-border bg-surface p-6 shadow-card">{children}</div>
       <p className="text-xs text-subtle">{t("intro")}</p>
     </main>
   );

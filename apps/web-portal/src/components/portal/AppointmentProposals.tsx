@@ -60,7 +60,7 @@ export function AppointmentProposals({ proposals }: { proposals: AppointmentProp
           <p className={ui.help}>{t("appointmentsHint")}</p>
           <ul className="flex flex-col gap-2">
             {open.map((p) => (
-              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface px-3 py-2 text-sm">
+              <li key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border bg-surface-2 px-3 py-2 text-sm">
                 <span id={`proposal-${p.id}`}>
                   <span className="font-medium">{formatDateTime(p.starts_at)}</span>
                   {p.note ? <span className="text-muted"> ({p.note})</span> : null}

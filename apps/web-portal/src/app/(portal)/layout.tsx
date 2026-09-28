@@ -63,11 +63,11 @@ export default async function PortalLayout({ children }: { children: React.React
       {/* V13: skip link, only visible on keyboard focus, jumps past header and navigation. */}
       <a
         href="#main-content"
-        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-bg focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-fg focus:ring-2 focus:ring-gold/40"
+        className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50 focus:rounded-md focus:bg-surface focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-fg focus:ring-2 focus:ring-gold/40"
       >
         {t("skipToContent")}
       </a>
-      <header className="border-b border-border bg-surface">
+      <header className="border-b border-border bg-surface-2">
         <div className="mx-auto flex w-full max-w-4xl flex-col gap-2 px-4 py-3">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-baseline gap-3">
