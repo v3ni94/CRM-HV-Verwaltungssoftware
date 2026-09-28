@@ -88,6 +88,8 @@ from mhvp.imports.reconciliation_routers import router as reconciliation_router
 from mhvp.imports.routers import router as imports_router
 from mhvp.imports.vollimport_routers import router as vollimport_router
 from mhvp.integrations.routers import router as lexoffice_router
+from mhvp.integrations.schadenstool.routers import router as schadenstool_router
+from mhvp.integrations.schadenstool.webhook import router as schadenstool_webhook_router
 from mhvp.letting.rentlaw import platform_router as rentlaw_platform_router
 from mhvp.letting.rentlaw import tenant_router as rentlaw_router
 from mhvp.letting.routers import router as letting_router
@@ -260,6 +262,7 @@ def create_app(
     app.include_router(direct_debit_router, prefix=API_PREFIX)
     app.include_router(finapi_router, prefix=API_PREFIX)
     app.include_router(lexoffice_router, prefix=API_PREFIX)
+    app.include_router(schadenstool_router, prefix=API_PREFIX)
     app.include_router(fints_router, prefix=API_PREFIX)
     app.include_router(billing_router, prefix=API_PREFIX)
     app.include_router(heating_router, prefix=API_PREFIX)
@@ -295,6 +298,7 @@ def create_app(
     app.include_router(automation_router, prefix=API_PREFIX)
     app.include_router(whatsapp_webhook_router, prefix=API_PREFIX)
     app.include_router(gmail_push_router, prefix=API_PREFIX)
+    app.include_router(schadenstool_webhook_router, prefix=API_PREFIX)
     app.include_router(immoware_router, prefix=API_PREFIX)
     app.include_router(objektakte_router, prefix=API_PREFIX)
     app.include_router(objektakte_sync_router, prefix=API_PREFIX)

@@ -266,6 +266,11 @@ async def transition_status(
         actor_user_id=actor_user_id,
         payload={"from": previous.value, "to": new_status.value, "number": ticket.number},
     )
+    # Claims adjuster link (INT-SDT-01): a mapped status of a linked ticket is queued for
+    # PATCH; the call itself runs in the outbound job, never in this request.
+    from mhvp.integrations.schadenstool.services import queue_status_if_linked
+
+    await queue_status_if_linked(session, ticket, new_status, actor_user_id)
     if closing:
         await record_resolution_example(session, ticket)
     if new_status in (TicketStatus.DONE, TicketStatus.CLOSED):

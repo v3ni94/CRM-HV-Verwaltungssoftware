@@ -49,6 +49,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.immoware.tasks",
             "mhvp.objektakte.tasks",
             "mhvp.automation.tasks",
+            "mhvp.integrations.schadenstool.tasks",
             "mhvp.imports.tasks",
             "mhvp.metering.tasks",
         ],
@@ -74,6 +75,18 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "webhooks-dispatch": {
                 "task": "mhvp.core.webhooks.dispatch",
                 "schedule": 60.0,
+                "options": {"queue": "io"},
+            },
+            # Claims adjuster link (INT-SDT-01): outbound queue and webhook events every minute,
+            # reconciliation pull every 15 minutes; only tenants with the link enabled.
+            "schadenstool-process": {
+                "task": "mhvp.integrations.schadenstool.process",
+                "schedule": 60.0,
+                "options": {"queue": "io"},
+            },
+            "schadenstool-pull": {
+                "task": "mhvp.integrations.schadenstool.pull",
+                "schedule": 900.0,
                 "options": {"queue": "io"},
             },
             # Mirror copies to Paperless/Drive; only tenants with an enabled connection (11.1).

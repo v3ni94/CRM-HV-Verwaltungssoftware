@@ -37,16 +37,25 @@ def _audit(table: str) -> list[sa.SchemaItem]:
     return [
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column(
-            "created_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "created_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column(
-            "updated_at", sa.DateTime(timezone=True), server_default=sa.text("now()"), nullable=False
+            "updated_at",
+            sa.DateTime(timezone=True),
+            server_default=sa.text("now()"),
+            nullable=False,
         ),
         sa.Column("created_by", sa.UUID(), nullable=True),
         sa.Column("updated_by", sa.UUID(), nullable=True),
         sa.Column("tenant_id", sa.UUID(), nullable=False),
         sa.ForeignKeyConstraint(
-            ["tenant_id"], ["tenant.id"], name=op.f(f"fk_{table}_tenant_id_tenant"), ondelete="RESTRICT"
+            ["tenant_id"],
+            ["tenant.id"],
+            name=op.f(f"fk_{table}_tenant_id_tenant"),
+            ondelete="RESTRICT",
         ),
         sa.PrimaryKeyConstraint("id", name=op.f(f"pk_{table}")),
     ]

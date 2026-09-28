@@ -705,6 +705,46 @@ class ErrorCodes:
             "lexoffice feature flag enabled for the tenant; both default closed/off."
         ),
     )
+    # Claims adjuster (Schadenstool, rule INT-SDT-01, docs/integrations/schadenstool.md).
+    SCHADENSTOOL_NOT_ENABLED = ErrorCode(
+        "MHVP-SDT-0001",
+        409,
+        "Anbindung an den Schadenbearbeiter ist nicht aktiv",
+        "No SchadenstoolTenantConfig with base URL and token, or the feature flag is off.",
+    )
+    SCHADENSTOOL_UNAVAILABLE = ErrorCode(
+        "MHVP-SDT-0002",
+        503,
+        "Schadenbearbeiter nicht erreichbar",
+        "Request to the claims adjuster API timed out, failed or answered 5xx.",
+    )
+    SCHADENSTOOL_AUTH = ErrorCode(
+        "MHVP-SDT-0003",
+        502,
+        "Token ungültig",
+        "The claims adjuster answered 401/403: the stored integration token was rejected.",
+    )
+    SCHADENSTOOL_RATE_LIMITED = ErrorCode(
+        "MHVP-SDT-0004",
+        503,
+        "Anfragelimit des Schadenbearbeiters erreicht",
+        "The claims adjuster answered 429; Retry-After is honoured by the outbound queue.",
+    )
+    SCHADENSTOOL_AVV_MISSING = ErrorCode(
+        "MHVP-SDT-0005",
+        422,
+        "Auftragsverarbeitungsvertrag nicht bestätigt",
+        (
+            "Enabling the claims adjuster link requires the AVV confirmation (date and "
+            "confirming member) to be recorded first (rule 0.1.13, INT-SDT-01)."
+        ),
+    )
+    SCHADENSTOOL_REJECTED = ErrorCode(
+        "MHVP-SDT-0006",
+        502,
+        "Schadenbearbeiter hat die Anfrage abgelehnt",
+        "The claims adjuster answered with a 4xx other than 401/403/429.",
+    )
     # BrokerProvider (M28-01 stage 3, mhvp.letting.broker_provider).
     BROKER_NOT_CONFIGURED = ErrorCode(
         "MHVP-BRKR-0001",
