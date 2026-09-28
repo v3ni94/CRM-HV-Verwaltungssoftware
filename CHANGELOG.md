@@ -5,6 +5,12 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.40.4 (28.09.2026) Lernregeln respektieren Entscheidungen der Mitglieder
+
+- Angenommene Lernregeln für Thema und Bearbeiter füllen nur noch leere Felder und überschreiben keine Entscheidung eines Mitglieds mehr, auch wenn der Regellauf erst später stattfindet; es entsteht dann keine Benachrichtigung. Von Hand angelegte Regeln der Verwaltung setzen Ticketfelder weiterhin wie bisher.
+- Die Annahme eines Regelvorschlags deaktiviert ältere Lernregeln derselben Mustergruppe, protokolliert dies mit Mitglied und Zeitpunkt und nennt die abgelösten Regeln in der Antwort.
+- Eine von einer Lernregel gesetzte Zuordnung lässt sich direkt mit Ja bestätigen oder auf einen anderen Vorschlag korrigieren.
+
 ## 1.40.3 (28.09.2026) Korrekturen aus der Prüfung vom 28.09.2026
 
 - Folgevorgänge, die in ihren abgeschlossenen Vorgänger zurückgeführt wurden, blockieren keine weiteren Mails mehr; jede weitere Mail des Vorgangs wird eingelesen, statt den Mailabruf mit einem Fehler anzuhalten. Beim Zusammenführen eines Folgetickets in seinen Vorgänger wird die Folgeverknüpfung gelöst und im Verlauf festgehalten.

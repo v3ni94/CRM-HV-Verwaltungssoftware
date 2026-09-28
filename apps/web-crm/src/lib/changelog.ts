@@ -17,6 +17,16 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.40.4",
+    date: "28.09.2026",
+    title: "Lernregeln respektieren Entscheidungen der Mitglieder",
+    changes: [
+      "Angenommene Lernregeln für Thema und Bearbeiter füllen nur noch leere Felder und überschreiben keine Entscheidung eines Mitglieds mehr, auch wenn der Regellauf erst später stattfindet; es entsteht dann keine Benachrichtigung. Von Hand angelegte Regeln der Verwaltung setzen Ticketfelder weiterhin wie bisher.",
+      "Die Annahme eines Regelvorschlags deaktiviert ältere Lernregeln derselben Mustergruppe, protokolliert dies mit Mitglied und Zeitpunkt und nennt die abgelösten Regeln in der Antwort.",
+      "Eine von einer Lernregel gesetzte Zuordnung lässt sich direkt mit Ja bestätigen oder auf einen anderen Vorschlag korrigieren.",
+    ],
+  },
+  {
     version: "1.40.3",
     date: "28.09.2026",
     title: "Korrekturen aus der Prüfung vom 28.09.2026",
