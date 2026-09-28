@@ -341,21 +341,46 @@ async def queue_comment(
     return item
 
 
+async def ticket_documents(session: AsyncSession, ticket: Ticket) -> list[dict[str, Any]]:
+    """Documents a member may choose to send: linked to the ticket, attached to one of its
+    comments or to one of its mails. Nothing is sent without an explicit choice."""
+    from mhvp.communication.models import Message
+    from mhvp.documents.models import Document, DocumentLink
+
+    ids: set[uuid.UUID] = set(
+        await session.scalars(
+            select(DocumentLink.document_id).where(
+                DocumentLink.entity_type == "ticket", DocumentLink.entity_id == ticket.id
+            )
+        )
+    )
+    for row in await session.scalars(
+        select(TicketComment.document_ids).where(TicketComment.ticket_id == ticket.id)
+    ):
+        ids.update(row or [])
+    for row in await session.scalars(
+        select(Message.attachment_document_ids).where(Message.ticket_id == ticket.id)
+    ):
+        ids.update(row or [])
+    if not ids:
+        return []
+    docs = (
+        await session.scalars(
+            select(Document).where(Document.id.in_(ids)).order_by(Document.created_at)
+        )
+    ).all()
+    return [{"id": d.id, "filename": d.filename or d.title} for d in docs]
+
+
 async def queue_attachment(
     session: AsyncSession, ticket: Ticket, document_id: uuid.UUID, actor: uuid.UUID | None
 ) -> SchadenstoolItemLink:
-    from mhvp.documents.models import Document, DocumentLink
+    from mhvp.documents.models import Document
 
     link = await _linked_or_pending(session, ticket)
-    linked = await session.scalar(
-        select(DocumentLink.id).where(
-            DocumentLink.document_id == document_id,
-            DocumentLink.entity_type == "ticket",
-            DocumentLink.entity_id == ticket.id,
-        )
-    )
+    allowed = {d["id"] for d in await ticket_documents(session, ticket)}
     document = await session.get(Document, document_id)
-    if document is None or linked is None:
+    if document is None or document_id not in allowed:
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Das Dokument gehört nicht zu diesem Ticket."
         )

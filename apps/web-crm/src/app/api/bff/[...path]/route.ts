@@ -653,6 +653,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
   // Beleg aus Paperless holen und als Rechnung erfassen (M14 KI-Extraktion, manuelle Aktion).
   { method: "POST", pattern: /^invoices\/intake\/paperless$/ },
+  // Schadenbearbeiter (INT-SDT-01): settings (secrets write only), connection test, pull,
+  // takeover queue and ticket actions. The public webhook is not proxied.
+  { method: "GET", pattern: /^integrations\/schadenstool\/config$/ },
+  { method: "PUT", pattern: /^integrations\/schadenstool\/config$/ },
+  { method: "POST", pattern: /^integrations\/schadenstool\/(config\/test|pull)$/ },
+  { method: "GET", pattern: /^integrations\/schadenstool\/takeover$/ },
+  { method: "POST", pattern: new RegExp(`^integrations/schadenstool/takeover/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^integrations/schadenstool/tickets/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^integrations/schadenstool/tickets/${ID}/(handover|comments|attachments)$`) },
   // Telefonie (13.5, A70): settings (secret write only), call list, callback proposal.
   { method: "GET", pattern: /^communication\/telephony\/settings$/ },
   { method: "PUT", pattern: /^communication\/telephony\/settings$/ },

@@ -2571,6 +2571,21 @@
         "title": "AttachInvoiceIn",
         "type": "object"
       },
+      "AttachmentPushIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "document_id"
+        ],
+        "title": "AttachmentPushIn",
+        "type": "object"
+      },
       "AttendanceIn": {
         "additionalProperties": false,
         "properties": {
@@ -8758,6 +8773,39 @@
         "title": "CommentIn",
         "type": "object"
       },
+      "CommentPushIn": {
+        "additionalProperties": false,
+        "description": "Either an existing comment of the ticket or a new text (stored as internal comment and\nmarked \"an Schadenbearbeiter senden\").",
+        "properties": {
+          "body": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Body"
+          },
+          "comment_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment Id"
+          }
+        },
+        "title": "CommentPushIn",
+        "type": "object"
+      },
       "CompanyData": {
         "additionalProperties": false,
         "description": "Company master data and mandatory business letter details (5.2). Unknown: None.",
@@ -8995,6 +9043,260 @@
         ],
         "title": "Completeness",
         "type": "string"
+      },
+      "ConfigIn": {
+        "additionalProperties": false,
+        "properties": {
+          "avv_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed On"
+          },
+          "avv_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Note"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "clear_hmac_secret": {
+            "default": false,
+            "title": "Clear Hmac Secret",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hmac_secret": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hmac Secret"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "webhook_secret": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Secret"
+          }
+        },
+        "title": "ConfigIn",
+        "type": "object"
+      },
+      "ConfigOut": {
+        "properties": {
+          "avv_confirmed_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed By"
+          },
+          "avv_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed On"
+          },
+          "avv_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Note"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hmac_secret_set": {
+            "title": "Hmac Secret Set",
+            "type": "boolean"
+          },
+          "last_pull_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Pull At"
+          },
+          "last_pull_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Pull Message"
+          },
+          "last_test_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Message"
+          },
+          "last_test_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Ok"
+          },
+          "last_tested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Tested At"
+          },
+          "token_invalid": {
+            "title": "Token Invalid",
+            "type": "boolean"
+          },
+          "token_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Last4"
+          },
+          "token_set": {
+            "title": "Token Set",
+            "type": "boolean"
+          },
+          "webhook_path": {
+            "title": "Webhook Path",
+            "type": "string"
+          },
+          "webhook_secret_set": {
+            "title": "Webhook Secret Set",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "base_url",
+          "enabled",
+          "token_set",
+          "token_last4",
+          "token_invalid",
+          "hmac_secret_set",
+          "webhook_secret_set",
+          "webhook_path",
+          "avv_confirmed_on",
+          "avv_confirmed_by",
+          "avv_note",
+          "last_tested_at",
+          "last_test_ok",
+          "last_test_message",
+          "last_pull_at",
+          "last_pull_message"
+        ],
+        "title": "ConfigOut",
+        "type": "object"
       },
       "ConnectionIn": {
         "additionalProperties": false,
@@ -15526,6 +15828,30 @@
         "title": "DmsDocumentPageMeta",
         "type": "object"
       },
+      "DocumentChoiceOut": {
+        "properties": {
+          "filename": {
+            "title": "Filename",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sent": {
+            "title": "Sent",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "filename",
+          "sent"
+        ],
+        "title": "DocumentChoiceOut",
+        "type": "object"
+      },
       "DocumentDeletionOut": {
         "description": "Deletion of one document with its mirror steps; ``open`` (\"offen\") until every step\nis done.",
         "properties": {
@@ -19276,6 +19602,85 @@
         "title": "HandoverDispatchIn",
         "type": "object"
       },
+      "HandoverIn": {
+        "additionalProperties": false,
+        "properties": {
+          "damage_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Damage Date"
+          },
+          "damage_location": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Damage Location"
+          },
+          "damage_type": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Damage Type"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "reporter": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reporter"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "HandoverIn",
+        "type": "object"
+      },
       "HealthReport": {
         "properties": {
           "checks": {
@@ -22609,6 +23014,83 @@
           "warnings"
         ],
         "title": "InvoiceTaxOut",
+        "type": "object"
+      },
+      "ItemOut": {
+        "properties": {
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "local_id": {
+            "format": "uuid",
+            "title": "Local Id",
+            "type": "string"
+          },
+          "remote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Id"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "direction",
+          "local_id",
+          "remote_id",
+          "author_name",
+          "state",
+          "last_error",
+          "created_at"
+        ],
+        "title": "ItemOut",
         "type": "object"
       },
       "JobSettingsIn": {
@@ -36692,6 +37174,25 @@
         "title": "ProviderTestOut",
         "type": "object"
       },
+      "QueuedOut": {
+        "properties": {
+          "link_id": {
+            "format": "uuid",
+            "title": "Link Id",
+            "type": "string"
+          },
+          "queued": {
+            "title": "Queued",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "queued",
+          "link_id"
+        ],
+        "title": "QueuedOut",
+        "type": "object"
+      },
       "ReadingIn": {
         "additionalProperties": false,
         "properties": {
@@ -43318,6 +43819,230 @@
         "title": "TakeOverFolderOut",
         "type": "object"
       },
+      "TakeoverIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "create",
+              "link",
+              "dismiss"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "ticket_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Id"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "TakeoverIn",
+        "type": "object"
+      },
+      "TakeoverOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "object_external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Object External Id"
+          },
+          "proposed_property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Property Id"
+          },
+          "proposed_property_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Property Label"
+          },
+          "proposed_ticket_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Ticket Id"
+          },
+          "proposed_ticket_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposed Ticket Number"
+          },
+          "remote_external_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote External Id"
+          },
+          "remote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Id"
+          },
+          "remote_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Status"
+          },
+          "remote_status_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Status Label"
+          },
+          "remote_title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Title"
+          },
+          "remote_updated_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Updated At"
+          }
+        },
+        "required": [
+          "id",
+          "remote_id",
+          "remote_external_id",
+          "remote_title",
+          "remote_status",
+          "remote_status_label",
+          "object_external_id",
+          "remote_updated_at",
+          "proposed_property_id",
+          "proposed_property_label",
+          "proposed_ticket_id",
+          "proposed_ticket_number"
+        ],
+        "title": "TakeoverOut",
+        "type": "object"
+      },
+      "TakeoverResultOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sync_status": {
+            "title": "Sync Status",
+            "type": "string"
+          },
+          "ticket_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Id"
+          }
+        },
+        "required": [
+          "id",
+          "sync_status",
+          "ticket_id"
+        ],
+        "title": "TakeoverResultOut",
+        "type": "object"
+      },
       "TanIn": {
         "additionalProperties": false,
         "description": "TAN for `awaiting_tan`; omitted for a decoupled poll (`awaiting_decoupled`).",
@@ -44756,6 +45481,134 @@
           }
         },
         "title": "TicketIn",
+        "type": "object"
+      },
+      "TicketLinkOut": {
+        "properties": {
+          "documents": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/DocumentChoiceOut"
+            },
+            "title": "Documents",
+            "type": "array"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "failed": {
+            "default": 0,
+            "title": "Failed",
+            "type": "integer"
+          },
+          "items": {
+            "default": [],
+            "items": {
+              "$ref": "#/components/schemas/ItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "link_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Id"
+          },
+          "linked": {
+            "title": "Linked",
+            "type": "boolean"
+          },
+          "pending": {
+            "default": 0,
+            "title": "Pending",
+            "type": "integer"
+          },
+          "remote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Id"
+          },
+          "remote_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Status"
+          },
+          "remote_status_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Status Label"
+          },
+          "sync_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Status"
+          },
+          "token_invalid": {
+            "default": false,
+            "title": "Token Invalid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "linked"
+        ],
+        "title": "TicketLinkOut",
         "type": "object"
       },
       "TicketMergeIn": {
@@ -79219,6 +80072,438 @@
         "summary": "Webhook objektakte (HMAC, idempotent)",
         "tags": [
           "objektakte-dms"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/config": {
+      "get": {
+        "operationId": "get_config_api_v1_integrations_schadenstool_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Anbindung Schadenbearbeiter lesen",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      },
+      "put": {
+        "operationId": "put_config_api_v1_integrations_schadenstool_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConfigIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anbindung Schadenbearbeiter einrichten",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/config/test": {
+      "post": {
+        "operationId": "check_connection_api_v1_integrations_schadenstool_config_test_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Verbindung zum Schadenbearbeiter testen",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/pull": {
+      "post": {
+        "operationId": "request_pull_api_v1_integrations_schadenstool_pull_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Request Pull Api V1 Integrations Schadenstool Pull Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Abgleich mit dem Schadenbearbeiter anstoßen",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/takeover": {
+      "get": {
+        "operationId": "list_takeover_api_v1_integrations_schadenstool_takeover_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TakeoverOut"
+                  },
+                  "title": "Response List Takeover Api V1 Integrations Schadenstool Takeover Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vorhandene Schadentickets zur Übernahme",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/takeover/{link_id}": {
+      "post": {
+        "operationId": "decide_takeover_api_v1_integrations_schadenstool_takeover__link_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TakeoverIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TakeoverResultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schadenticket übernehmen, verknüpfen oder verwerfen",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/tickets/{ticket_id}": {
+      "get": {
+        "operationId": "ticket_link_api_v1_integrations_schadenstool_tickets__ticket_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketLinkOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Austausch mit dem Schadenbearbeiter je Ticket",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/tickets/{ticket_id}/attachments": {
+      "post": {
+        "operationId": "push_attachment_api_v1_integrations_schadenstool_tickets__ticket_id__attachments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachmentPushIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dokument an den Schadenbearbeiter senden",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/tickets/{ticket_id}/comments": {
+      "post": {
+        "operationId": "push_comment_api_v1_integrations_schadenstool_tickets__ticket_id__comments_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CommentPushIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kommentar an den Schadenbearbeiter senden",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/tickets/{ticket_id}/handover": {
+      "post": {
+        "operationId": "handover_api_v1_integrations_schadenstool_tickets__ticket_id__handover_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandoverIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueuedOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ticket an den Schadenbearbeiter übergeben",
+        "tags": [
+          "Schadenbearbeiter"
+        ]
+      }
+    },
+    "/api/v1/integrations/schadenstool/webhook/{tenant_id}/{path_id}": {
+      "post": {
+        "operationId": "receive_api_v1_integrations_schadenstool_webhook__tenant_id___path_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "path_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Path Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Angenommen oder bereits bekannt"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ereignis des Schadenbearbeiters entgegennehmen",
+        "tags": [
+          "Schadenbearbeiter Webhook"
         ]
       }
     },

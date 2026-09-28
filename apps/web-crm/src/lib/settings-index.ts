@@ -360,6 +360,22 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: null,
   },
   {
+    id: "schadenbearbeiter",
+    title: "Schadenbearbeiter",
+    breadcrumb: [ROOT, "Schnittstellen", "Schadenbearbeiter"],
+    href: "/einstellungen/schnittstellen/schadenbearbeiter",
+    keywords: ["schadenbearbeiter", "schadenstool", "versicherung", "schaden", "mdv", "midive", "gutachter"],
+    permission: ["tenant_settings:read"],
+  },
+  {
+    id: "schadenbearbeiter-uebernahme",
+    title: "Vorhandene Schadentickets übernehmen",
+    breadcrumb: [ROOT, "Schnittstellen", "Schadenbearbeiter", "Übernahme"],
+    href: "/einstellungen/schnittstellen/schadenbearbeiter#sdt-takeover-title",
+    keywords: ["schadenticket", "übernehmen", "import", "zuordnen"],
+    permission: ["tenant_settings:read"],
+  },
+  {
     id: "messdienstleister",
     title: "Messdienstleister",
     breadcrumb: [ROOT, "Schnittstellen", "Messdienstleister"],

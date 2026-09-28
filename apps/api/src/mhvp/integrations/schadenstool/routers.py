@@ -188,7 +188,7 @@ async def ticket_link(
     ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(TICKET_READ)
 ) -> s.TicketLinkOut:
     async with tenant_tx(request, principal) as session:
-        await _ticket(session, ticket_id)
+        ticket = await _ticket(session, ticket_id)
         config = await svc.get_config(session, principal.tenant_id)
         enabled = bool(config and config.enabled)
         link = await svc.link_for_ticket(session, ticket_id)
@@ -226,7 +226,13 @@ async def ticket_link(
                     created_at=item.created_at,
                 )
             )
+        sent_docs = {i.local_id for i in items if i.kind == "attachment"}
+        documents = [
+            s.DocumentChoiceOut(id=d["id"], filename=d["filename"], sent=d["id"] in sent_docs)
+            for d in await svc.ticket_documents(session, ticket)
+        ]
         return s.TicketLinkOut(
+            documents=documents,
             enabled=enabled,
             linked=True,
             link_id=link.id,

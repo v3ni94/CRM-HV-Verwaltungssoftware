@@ -9043,6 +9043,177 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/integrations/schadenstool/config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anbindung Schadenbearbeiter lesen */
+        get: operations["get_config_api_v1_integrations_schadenstool_config_get"];
+        /** Anbindung Schadenbearbeiter einrichten */
+        put: operations["put_config_api_v1_integrations_schadenstool_config_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/config/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verbindung zum Schadenbearbeiter testen */
+        post: operations["check_connection_api_v1_integrations_schadenstool_config_test_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/pull": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Abgleich mit dem Schadenbearbeiter anstoßen */
+        post: operations["request_pull_api_v1_integrations_schadenstool_pull_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/takeover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorhandene Schadentickets zur Übernahme */
+        get: operations["list_takeover_api_v1_integrations_schadenstool_takeover_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/takeover/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Schadenticket übernehmen, verknüpfen oder verwerfen */
+        post: operations["decide_takeover_api_v1_integrations_schadenstool_takeover__link_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/tickets/{ticket_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Austausch mit dem Schadenbearbeiter je Ticket */
+        get: operations["ticket_link_api_v1_integrations_schadenstool_tickets__ticket_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/tickets/{ticket_id}/attachments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dokument an den Schadenbearbeiter senden */
+        post: operations["push_attachment_api_v1_integrations_schadenstool_tickets__ticket_id__attachments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/tickets/{ticket_id}/comments": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kommentar an den Schadenbearbeiter senden */
+        post: operations["push_comment_api_v1_integrations_schadenstool_tickets__ticket_id__comments_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/tickets/{ticket_id}/handover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ticket an den Schadenbearbeiter übergeben */
+        post: operations["handover_api_v1_integrations_schadenstool_tickets__ticket_id__handover_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/integrations/schadenstool/webhook/{tenant_id}/{path_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Ereignis des Schadenbearbeiters entgegennehmen */
+        post: operations["receive_api_v1_integrations_schadenstool_webhook__tenant_id___path_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/invoices/intake/paperless": {
         parameters: {
             query?: never;
@@ -18264,6 +18435,14 @@ export interface components {
              */
             invoice_id: string;
         };
+        /** AttachmentPushIn */
+        AttachmentPushIn: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+        };
         /** AttendanceIn */
         AttendanceIn: {
             /**
@@ -20177,6 +20356,17 @@ export interface components {
             internal: boolean;
         };
         /**
+         * CommentPushIn
+         * @description Either an existing comment of the ticket or a new text (stored as internal comment and
+         *     marked "an Schadenbearbeiter senden").
+         */
+        CommentPushIn: {
+            /** Body */
+            body?: string | null;
+            /** Comment Id */
+            comment_id?: string | null;
+        };
+        /**
          * CompanyData
          * @description Company master data and mandatory business letter details (5.2). Unknown: None.
          */
@@ -20237,6 +20427,66 @@ export interface components {
          * @enum {string}
          */
         Completeness: "complete" | "incomplete";
+        /** ConfigIn */
+        ConfigIn: {
+            /** Avv Confirmed On */
+            avv_confirmed_on?: string | null;
+            /** Avv Note */
+            avv_note?: string | null;
+            /** Base Url */
+            base_url?: string | null;
+            /**
+             * Clear Hmac Secret
+             * @default false
+             */
+            clear_hmac_secret: boolean;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** Hmac Secret */
+            hmac_secret?: string | null;
+            /** Token */
+            token?: string | null;
+            /** Webhook Secret */
+            webhook_secret?: string | null;
+        };
+        /** ConfigOut */
+        ConfigOut: {
+            /** Avv Confirmed By */
+            avv_confirmed_by: string | null;
+            /** Avv Confirmed On */
+            avv_confirmed_on: string | null;
+            /** Avv Note */
+            avv_note: string | null;
+            /** Base Url */
+            base_url: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Hmac Secret Set */
+            hmac_secret_set: boolean;
+            /** Last Pull At */
+            last_pull_at: string | null;
+            /** Last Pull Message */
+            last_pull_message: string | null;
+            /** Last Test Message */
+            last_test_message: string | null;
+            /** Last Test Ok */
+            last_test_ok: boolean | null;
+            /** Last Tested At */
+            last_tested_at: string | null;
+            /** Token Invalid */
+            token_invalid: boolean;
+            /** Token Last4 */
+            token_last4: string | null;
+            /** Token Set */
+            token_set: boolean;
+            /** Webhook Path */
+            webhook_path: string;
+            /** Webhook Secret Set */
+            webhook_secret_set: boolean;
+        };
         /** ConnectionIn */
         ConnectionIn: {
             /** Bank Name */
@@ -22396,6 +22646,18 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** DocumentChoiceOut */
+        DocumentChoiceOut: {
+            /** Filename */
+            filename: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sent */
+            sent: boolean;
+        };
         /**
          * DocumentDeletionOut
          * @description Deletion of one document with its mirror steps; ``open`` ("offen") until every step
@@ -23581,6 +23843,21 @@ export interface components {
             /** Participant Ids */
             participant_ids?: string[] | null;
         };
+        /** HandoverIn */
+        HandoverIn: {
+            /** Damage Date */
+            damage_date?: string | null;
+            /** Damage Location */
+            damage_location?: string | null;
+            /** Damage Type */
+            damage_type?: string | null;
+            /** Description */
+            description?: string | null;
+            /** Reporter */
+            reporter?: string | null;
+            /** Title */
+            title?: string | null;
+        };
         /** HealthReport */
         HealthReport: {
             /** Checks */
@@ -24618,6 +24895,36 @@ export interface components {
             withholding_percent: string | null;
             /** Withholding Proposal */
             withholding_proposal: string | null;
+        };
+        /** ItemOut */
+        ItemOut: {
+            /** Author Name */
+            author_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Direction */
+            direction: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Last Error */
+            last_error: string | null;
+            /**
+             * Local Id
+             * Format: uuid
+             */
+            local_id: string;
+            /** Remote Id */
+            remote_id: string | null;
+            /** State */
+            state: string;
         };
         /** JobSettingsIn */
         JobSettingsIn: {
@@ -29105,6 +29412,16 @@ export interface components {
             /** Tiers */
             tiers: components["schemas"]["TierTestOut"][];
         };
+        /** QueuedOut */
+        QueuedOut: {
+            /**
+             * Link Id
+             * Format: uuid
+             */
+            link_id: string;
+            /** Queued */
+            queued: boolean;
+        };
         /** ReadingIn */
         ReadingIn: {
             /**
@@ -31411,6 +31728,60 @@ export interface components {
             /** Total */
             total: number;
         };
+        /** TakeoverIn */
+        TakeoverIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "create" | "link" | "dismiss";
+            /** Property Id */
+            property_id?: string | null;
+            /** Ticket Id */
+            ticket_id?: string | null;
+        };
+        /** TakeoverOut */
+        TakeoverOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Object External Id */
+            object_external_id: string | null;
+            /** Proposed Property Id */
+            proposed_property_id: string | null;
+            /** Proposed Property Label */
+            proposed_property_label: string | null;
+            /** Proposed Ticket Id */
+            proposed_ticket_id: string | null;
+            /** Proposed Ticket Number */
+            proposed_ticket_number: number | null;
+            /** Remote External Id */
+            remote_external_id: string | null;
+            /** Remote Id */
+            remote_id: string | null;
+            /** Remote Status */
+            remote_status: string | null;
+            /** Remote Status Label */
+            remote_status_label: string | null;
+            /** Remote Title */
+            remote_title: string | null;
+            /** Remote Updated At */
+            remote_updated_at: string | null;
+        };
+        /** TakeoverResultOut */
+        TakeoverResultOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sync Status */
+            sync_status: string;
+            /** Ticket Id */
+            ticket_id: string | null;
+        };
         /**
          * TanIn
          * @description TAN for `awaiting_tan`; omitted for a decoupled poll (`awaiting_decoupled`).
@@ -31873,6 +32244,52 @@ export interface components {
             unit_id?: string | null;
             /** Visible For */
             visible_for?: string[];
+        };
+        /** TicketLinkOut */
+        TicketLinkOut: {
+            /**
+             * Documents
+             * @default []
+             */
+            documents: components["schemas"]["DocumentChoiceOut"][];
+            /** Enabled */
+            enabled: boolean;
+            /**
+             * Failed
+             * @default 0
+             */
+            failed: number;
+            /**
+             * Items
+             * @default []
+             */
+            items: components["schemas"]["ItemOut"][];
+            /** Last Error */
+            last_error?: string | null;
+            /** Last Synced At */
+            last_synced_at?: string | null;
+            /** Link Id */
+            link_id?: string | null;
+            /** Linked */
+            linked: boolean;
+            /**
+             * Pending
+             * @default 0
+             */
+            pending: number;
+            /** Remote Id */
+            remote_id?: string | null;
+            /** Remote Status */
+            remote_status?: string | null;
+            /** Remote Status Label */
+            remote_status_label?: string | null;
+            /** Sync Status */
+            sync_status?: string | null;
+            /**
+             * Token Invalid
+             * @default false
+             */
+            token_invalid: boolean;
         };
         /** TicketMergeIn */
         TicketMergeIn: {
@@ -52867,6 +53284,322 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+        };
+    };
+    get_config_api_v1_integrations_schadenstool_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigOut"];
+                };
+            };
+        };
+    };
+    put_config_api_v1_integrations_schadenstool_config_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfigIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_connection_api_v1_integrations_schadenstool_config_test_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfigOut"];
+                };
+            };
+        };
+    };
+    request_pull_api_v1_integrations_schadenstool_pull_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+        };
+    };
+    list_takeover_api_v1_integrations_schadenstool_takeover_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoverOut"][];
+                };
+            };
+        };
+    };
+    decide_takeover_api_v1_integrations_schadenstool_takeover__link_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TakeoverIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoverResultOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ticket_link_api_v1_integrations_schadenstool_tickets__ticket_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TicketLinkOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    push_attachment_api_v1_integrations_schadenstool_tickets__ticket_id__attachments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AttachmentPushIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    push_comment_api_v1_integrations_schadenstool_tickets__ticket_id__comments_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CommentPushIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    handover_api_v1_integrations_schadenstool_tickets__ticket_id__handover_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandoverIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueuedOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    receive_api_v1_integrations_schadenstool_webhook__tenant_id___path_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tenant_id: string;
+                path_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Angenommen oder bereits bekannt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

@@ -6,6 +6,7 @@ import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { ContactRoleBadges } from "@/components/common/ContactRoleBadges";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
+import { SchadenstoolPanel } from "@/components/tickets/SchadenstoolPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketAppointmentButton } from "@/components/tickets/TicketAppointmentButton";
 import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvoiceButton";
@@ -167,6 +168,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           <TicketMailAttachments attachments={attachments} />
           <TicketWorkOrders orders={workOrders} />
           <TicketProposals ticketId={ticketId} />
+          <SchadenstoolPanel ticketId={ticketId} canUpdate={me.data?.permissions.includes("tickets:update") ?? false} />
           {data.property_id ? (
             <TicketBoardPanel
               ticketId={ticketId}

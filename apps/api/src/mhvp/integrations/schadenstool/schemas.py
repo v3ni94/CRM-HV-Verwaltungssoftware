@@ -86,6 +86,12 @@ class ItemOut(BaseModel):
     created_at: datetime
 
 
+class DocumentChoiceOut(BaseModel):
+    id: uuid.UUID
+    filename: str
+    sent: bool
+
+
 class TicketLinkOut(BaseModel):
     enabled: bool
     linked: bool
@@ -100,6 +106,7 @@ class TicketLinkOut(BaseModel):
     pending: int = 0
     failed: int = 0
     items: list[ItemOut] = []
+    documents: list[DocumentChoiceOut] = []
 
 
 class TakeoverOut(BaseModel):
