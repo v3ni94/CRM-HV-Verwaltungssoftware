@@ -44,6 +44,8 @@ D04_REV_A = "DE22100100105555555555"
 D04_REV_B = "DE72100100106666666666"
 D04_PAR_A = "DE25100100107777777777"
 D04_PAR_B = "DE75100100108888888888"
+D04_TRANSIT_A = "DE71100100109191919191"
+D04_TRANSIT_B = "DE05100100109292929292"
 D05_BANK = "DE02500105170137075030"
 D05_PAYER = "DE27100777770209299700"
 D07_BANK = "DE91100000000123456789"
@@ -570,6 +572,166 @@ def test_d04_parallel_bookings_of_both_halves_post_once(
         "reversal",
     ]
     _assert_d04_balances(client, h, w)
+
+
+def test_d04_half_booked_against_transit_before_pairing_is_cleared_via_transit(
+    client: TestClient, world: World
+) -> None:
+    """B08 refinement: statement A arrives alone and the outgoing half is booked against
+    Geldtransit 001360 (usual practice). Statement B then pairs the incoming half with the
+    already booked outgoing half. That transit posting does not move bank B, so it does not
+    settle the pair: the incoming half is booked against Geldtransit as well and clears it.
+    Against bank A (a second movement of bank A) it is refused with 409 MHVP-BANK-0020 naming
+    Geldtransit; the refused attempt posts nothing. Result: A 9.000,00 (10.000 - 1.000),
+    B 21.000,00 (20.000 + 1.000), Geldtransit 0,00 (+1.000 - 1.000), reconciliation
+    difference 0,00 on both accounts. A direct transfer posting needs the reversal of the
+    partner's transit posting first (rule 0.1.7, B03); balances end identical."""
+    h = bearer(login(client, world, "gapadmin"))
+    acc_user = bearer(login(client, world, "gapacc"))
+    iban_a, iban_b = D04_TRANSIT_A, D04_TRANSIT_B
+    w = _hoa(client, h, "484", [(iban_a, "hoa", "001210"), (iban_b, "reserve", "001211")])
+    bank_a, bank_b = w["ledger_banks"][iban_a], w["ledger_banks"][iban_b]
+    opening = _ok(
+        client.post(
+            f"{A}/ledgers/{w['ledger']}/entries",
+            json={
+                "kind": "opening_balance",
+                "booking_date": "2026-01-01",
+                "text": "Anfangsbestand D04 Transit",
+                "lines": [
+                    _line(bank_a, "10000.00"),
+                    _line(bank_b, "20000.00"),
+                    _line(w["accounts"]["009000"]["id"], "0", "30000.00"),
+                ],
+            },
+            headers=h,
+        ),
+        201,
+    )
+    _ok(client.post(f"{A}/ledgers/{w['ledger']}/entries/{opening['id']}/approve", headers=acc_user))
+    _ok(client.post(f"{A}/ledgers/{w['ledger']}/entries/{opening['id']}/post", headers=h))
+    transit = _ok(
+        client.post(
+            f"{A}/ledgers/{w['ledger']}/accounts",
+            json={
+                "number": "001360",
+                "name": "Geldtransit",
+                "category": "transit",
+                "type": "asset",
+            },
+            headers=h,
+        ),
+        201,
+    )["id"]
+    file_a = _camt(
+        "484-A",
+        iban_a,
+        "10000.00",
+        "9000.00",
+        [_ntry("484-A1", "1000.00", "DBIT", "2026-01-10", iban_b, "Umbuchung")],
+    )
+    _ok(
+        client.post(
+            f"{B}/imports", json={"document_id": _upload(client, h, "t_a.xml", file_a)}, headers=h
+        ),
+        201,
+    )
+    (out,) = _txs(client, h, w["bank_ids"][iban_a])
+    assert out["transfer_pair_id"] is None  # statement B not there yet
+    via_transit_a = _ok(_book_half(client, h, out, transit), 201)
+    file_b = _camt(
+        "484-B",
+        iban_b,
+        "20000.00",
+        "21000.00",
+        [_ntry("484-B1", "1000.00", "CRDT", "2026-01-11", iban_a, "Umbuchung")],
+    )
+    run_b = _ok(
+        client.post(
+            f"{B}/imports", json={"document_id": _upload(client, h, "t_b.xml", file_b)}, headers=h
+        ),
+        201,
+    )
+    assert run_b["counts"]["transfers"] == 1  # paired for display although A is booked
+    (into,) = _txs(client, h, w["bank_ids"][iban_b])
+    (out,) = _txs(client, h, w["bank_ids"][iban_a])
+    assert (out["transfer_pair_id"], into["transfer_pair_id"]) == (into["id"], out["id"])
+    assert (out["status"], into["status"]) == ("booked", "new")
+    posted_before = len(_entries(client, h, w["ledger"]))
+
+    doubled = _book_half(client, h, into, bank_a)
+    assert doubled.status_code == 409, doubled.text
+    body = doubled.json()
+    assert body["code"] == "MHVP-BANK-0020"
+    assert "001360 Geldtransit" in body["detail"]
+    assert "001210" in body["detail"]
+    assert "stornieren" in body["detail"]
+    own = _book_half(client, h, into, bank_b)
+    assert own.status_code == 422, own.text
+    assert len(_entries(client, h, w["ledger"])) == posted_before  # nothing posted
+
+    via_transit_b = _ok(_book_half(client, h, into, transit), 201)
+    out, into = _half_of(client, h, w, iban_a), _half_of(client, h, w, iban_b)
+    assert (out["status"], into["status"]) == ("booked", "booked")
+    assert out["journal_entry_id"] == via_transit_a["journal_entry_id"]
+    assert into["journal_entry_id"] == via_transit_b["journal_entry_id"]
+    again = _book_half(client, h, into, transit)
+    assert again.status_code == 409, again.text
+    assert again.json()["code"] == "MHVP-PLAT-0002"
+    kinds = sorted(e["kind"] for e in _entries(client, h, w["ledger"]) if e["status"] == "posted")
+    assert kinds == ["creditor_payment", "debtor_payment", "opening_balance"]
+    world_t = w | {"ibans": (iban_a, iban_b)}
+    _assert_d04_balances(client, h, world_t)
+    assert _balance(client, h, w["ledger"], "001360") == Decimal("0.00")
+
+    # Direct transfer wanted instead: the outgoing half's transit posting is reversed; the
+    # incoming half still sits on transit, so bank B stays refused with MHVP-BANK-0020 until
+    # that posting is reversed too. Then one transfer posting settles both halves.
+    _reverse(client, h, w["ledger"], via_transit_a["journal_entry_id"])
+    refused = _book_half(client, h, out, bank_b)
+    assert refused.status_code == 409, refused.text
+    assert refused.json()["code"] == "MHVP-BANK-0020"
+    assert "001360 Geldtransit" in refused.json()["detail"]
+    _reverse(client, h, w["ledger"], via_transit_b["journal_entry_id"])
+    transfer = _ok(_book_half(client, h, out, bank_b), 201)
+    out, into = _half_of(client, h, w, iban_a), _half_of(client, h, w, iban_b)
+    assert out["journal_entry_id"] == into["journal_entry_id"] == transfer["journal_entry_id"]
+    settled = _book_half(client, h, into, bank_a)
+    assert settled.status_code == 409, settled.text
+    assert settled.json()["code"] == "MHVP-BANK-0019"
+    kinds = sorted(e["kind"] for e in _entries(client, h, w["ledger"]) if e["status"] == "posted")
+    assert kinds == [
+        "bank_transfer",
+        "creditor_payment",
+        "debtor_payment",
+        "opening_balance",
+        "reversal",
+        "reversal",
+    ]
+    _assert_d04_balances(client, h, world_t)
+    assert _balance(client, h, w["ledger"], "001360") == Decimal("0.00")
+    _assert_g1_closed(client, h, w["ledger"])
+
+
+def _reverse(c: TestClient, h: dict[str, str], ledger: str, entry_id: str) -> None:
+    _ok(
+        c.post(
+            f"{A}/ledgers/{ledger}/entries/{entry_id}/reverse",
+            json={"reason": "Direkte Umbuchung statt Geldtransit", "booking_date": "2026-01-11"},
+            headers=h,
+        ),
+        201,
+    )
+
+
+def _half_of(c: TestClient, h: dict[str, str], w: dict[str, Any], iban: str) -> dict[str, Any]:
+    (row,) = _txs(c, h, w["bank_ids"][iban])
+    return row
+
+
+def _balance(c: TestClient, h: dict[str, str], ledger: str, number: str) -> Decimal:
+    by = {a["number"]: Decimal(a["balance"]) for a in _trial_balance(c, h, ledger)["accounts"]}
+    return by[number]
 
 
 # --- D05 echte Gleichzahlungen ------------------------------------------------------------

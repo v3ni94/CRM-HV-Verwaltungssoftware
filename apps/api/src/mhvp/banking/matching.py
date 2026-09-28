@@ -23,6 +23,7 @@ from mhvp.accounting.models import (
     EntrySource,
     EntryStatus,
     JournalEntry,
+    JournalLine,
     Ledger,
     LedgerAccount,
     OpenItem,
@@ -229,12 +230,49 @@ async def _effective_entry(
     return entry
 
 
-async def _transfer_partner(session: AsyncSession, tx: BankTransaction) -> BankTransaction:
+@dataclass
+class _Pair:
+    """The other half of a recognised transfer pair and how it is booked (D04, B08)."""
+
+    partner: BankTransaction
+    partner_bank: LedgerAccount
+    # Posting in force of the partner that did not move this half's bank account (e.g.
+    # against Geldtransit): it does not settle the pair, this half is booked on its own.
+    booked_elsewhere: JournalEntry | None = None
+
+
+async def _moves_account(session: AsyncSession, entry_id: uuid.UUID, account_id: uuid.UUID) -> bool:
+    found = await session.scalar(
+        select(JournalLine.id)
+        .where(JournalLine.journal_entry_id == entry_id, JournalLine.account_id == account_id)
+        .limit(1)
+    )
+    return found is not None
+
+
+async def _counter_accounts(session: AsyncSession, entry: JournalEntry, bank: LedgerAccount) -> str:
+    """Accounts of ``entry`` other than ``bank``, as "number name" for a problem detail."""
+    rows = (
+        await session.scalars(
+            select(LedgerAccount)
+            .join(JournalLine, JournalLine.account_id == LedgerAccount.id)
+            .where(JournalLine.journal_entry_id == entry.id, LedgerAccount.id != bank.id)
+            .order_by(LedgerAccount.number)
+            .distinct()
+        )
+    ).all()
+    return ", ".join(f"{a.number} {a.name}" for a in rows) or "ein anderes Konto"
+
+
+async def _transfer_partner(session: AsyncSession, tx: BankTransaction) -> _Pair:
     """The other half of a recognised transfer pair, locked; refuses a second effect (D04).
 
-    One posting of either half moves both bank accounts, so the pair is settled as soon as one
-    half carries a posting in force. After that posting is reversed, the pair is bookable
-    again, once, from either half."""
+    A real transfer posting (one entry with both bank accounts) moves both halves, so the pair
+    is settled as soon as one half carries such a posting in force. After that posting is
+    reversed, the pair is bookable again, once, from either half. A partner posting that did
+    not move this half's bank account (booked against another account, typically Geldtransit,
+    before the pair was recognised) does not settle the pair: this half stays bookable on its
+    own, only not against the partner bank account (B08)."""
     assert tx.transfer_pair_id is not None  # noqa: S101 - caller checks
     partner = await session.get(BankTransaction, tx.transfer_pair_id, with_for_update=True)
     if (
@@ -252,20 +290,25 @@ async def _transfer_partner(session: AsyncSession, tx: BankTransaction) -> BankT
         raise ProblemError(
             ErrorCodes.CONFLICT, detail="Der Umsatz ist bereits gebucht oder ignoriert."
         )
-    if own is not None or await _effective_entry(session, partner.journal_entry_id) is not None:
-        raise ProblemError(
-            ErrorCodes.BANK_TRANSFER_PAIR_SETTLED,
-            detail=(
-                "Die Umbuchung ist über die Partnerseite bereits gebucht; der Transfer hat "
-                "keine zweite Wirkung. Zum erneuten Buchen zuerst diese Buchung stornieren."
-            ),
-        )
+    settled = (
+        "Die Umbuchung ist über die Partnerseite bereits gebucht; der Transfer hat "
+        "keine zweite Wirkung. Zum erneuten Buchen zuerst diese Buchung stornieren."
+    )
+    if own is not None:  # this half carries the partner's transfer posting
+        raise ProblemError(ErrorCodes.BANK_TRANSFER_PAIR_SETTLED, detail=settled)
+    _, bank = await ledger_for(session, tx)
+    _, partner_bank = await ledger_for(session, partner)
+    theirs = await _effective_entry(session, partner.journal_entry_id)
+    if theirs is not None:
+        if await _moves_account(session, theirs.id, bank.id):
+            raise ProblemError(ErrorCodes.BANK_TRANSFER_PAIR_SETTLED, detail=settled)
+        return _Pair(partner, partner_bank, booked_elsewhere=theirs)
     if partner.status is TransactionStatus.NEEDS_REVIEW:
         raise ProblemError(
             ErrorCodes.CONFLICT,
             detail="Die Partnerseite muss zuerst als möglicher Doppelumsatz geklärt werden.",
         )
-    return partner
+    return _Pair(partner, partner_bank)
 
 
 async def book_payment(
@@ -283,11 +326,13 @@ async def book_payment(
     counter account. Complete or not at all (B02); a booked transaction cannot be booked twice.
 
     A recognised transfer pair (``transfer_pair_id``) is posted once, bank against the partner
-    bank account, and that posting settles both halves (D04, B08). Callers lock with
-    :func:`lock_for_booking`."""
-    partner = await _transfer_partner(session, tx) if tx.transfer_pair_id is not None else None
+    bank account, and that posting settles both halves (D04, B08). If the partner is already
+    posted against another account (e.g. Geldtransit), this half is posted on its own against
+    a counter account, never against the partner bank account (``MHVP-BANK-0020``), and the
+    partner is left untouched. Callers lock with :func:`lock_for_booking`."""
+    pair = await _transfer_partner(session, tx) if tx.transfer_pair_id is not None else None
     # A pair half whose posting was reversed is bookable again; everything else unchanged.
-    reopened = partner is not None and tx.journal_entry_id is not None
+    reopened = pair is not None and tx.journal_entry_id is not None
     if not reopened and (
         tx.status in (TransactionStatus.BOOKED, TransactionStatus.IGNORED) or tx.journal_entry_id
     ):
@@ -304,17 +349,41 @@ async def book_payment(
             ErrorCodes.VALIDATION,
             detail="Umbuchungen werden gegen das Bankkonto des Partners gebucht.",
         )
-    if partner is not None:
-        _, partner_bank = await ledger_for(session, partner)
-        if settlements or discount or counter_account_id != partner_bank.id:
+    ledger, bank = await ledger_for(session, tx)
+    # A real transfer posting: bank against the partner bank account, settling both halves.
+    transfer = pair is not None and pair.booked_elsewhere is None
+    if pair is not None and pair.booked_elsewhere is not None:
+        if settlements or discount or counter_account_id == bank.id:
             raise ProblemError(
                 ErrorCodes.VALIDATION,
                 detail=(
-                    "Umbuchungen werden ohne Postenausgleich und ohne Skonto gegen das "
-                    "Bankkonto des Partners gebucht."
+                    "Umbuchungen werden ohne Postenausgleich und ohne Skonto gegen ein "
+                    "anderes Konto als das eigene Bankkonto gebucht."
                 ),
             )
-    ledger, bank = await ledger_for(session, tx)
+        if counter_account_id == pair.partner_bank.id:
+            elsewhere = await _counter_accounts(session, pair.booked_elsewhere, pair.partner_bank)
+            raise ProblemError(
+                ErrorCodes.BANK_TRANSFER_PARTNER_BOOKED_ELSEWHERE,
+                detail=(
+                    f"Die Gegenseite dieser Umbuchung ist bereits gegen {elsewhere} gebucht, "
+                    "nicht als Umbuchung auf dieses Bankkonto. Eine Buchung gegen das "
+                    f"Bankkonto {pair.partner_bank.number} {pair.partner_bank.name} würde "
+                    "dieses Konto ein zweites Mal bewegen. Buchen Sie diesen Umsatz gegen "
+                    f"{elsewhere}; für eine direkte Umbuchung zwischen beiden Bankkonten ist "
+                    "zuerst die Buchung der Gegenseite zu stornieren."
+                ),
+            )
+    elif pair is not None and (
+        settlements or discount or counter_account_id != pair.partner_bank.id
+    ):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=(
+                "Umbuchungen werden ohne Postenausgleich und ohne Skonto gegen das "
+                "Bankkonto des Partners gebucht."
+            ),
+        )
     amount = abs(tx.amount)
     lines: list[acc.LineIn] = []
     plan: list[dict[str, Any]] = []
@@ -387,7 +456,7 @@ async def book_payment(
             raise ProblemError(ErrorCodes.VALIDATION, detail="Ausgleich nur auf Personenkonten.")
     kind = (
         EntryKind.BANK_TRANSFER
-        if tx.transfer_pair_id
+        if transfer
         else (EntryKind.DEBTOR_PAYMENT if incoming else EntryKind.CREDITOR_PAYMENT)
     )
     entry = JournalEntry(
@@ -405,10 +474,10 @@ async def book_payment(
     await acc.write_draft(session, ledger, entry, lines, plan)
     await acc.post(session, ledger, entry, user_id)
     tx.status, tx.journal_entry_id = TransactionStatus.BOOKED, entry.id
-    if partner is not None and partner.status is not TransactionStatus.IGNORED:
+    if transfer and pair is not None and pair.partner.status is not TransactionStatus.IGNORED:
         # The same posting moved the partner bank account: the other half is settled by the
         # pair and carries this entry; the entry keeps ``bank_transaction_id`` of this half.
-        partner.status, partner.journal_entry_id = TransactionStatus.BOOKED, entry.id
+        pair.partner.status, pair.partner.journal_entry_id = TransactionStatus.BOOKED, entry.id
     await session.flush()
     return entry
 

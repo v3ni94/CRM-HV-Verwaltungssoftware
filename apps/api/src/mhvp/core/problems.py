@@ -465,6 +465,18 @@ class ErrorCodes:
             "effect (D04, B08). Reverse that posting first to book the pair again."
         ),
     )
+    BANK_TRANSFER_PARTNER_BOOKED_ELSEWHERE = ErrorCode(
+        "MHVP-BANK-0020",
+        409,
+        "Gegenseite der Umbuchung anders gebucht",
+        (
+            "The other half of this recognised transfer pair is posted against another "
+            "account (e.g. Geldtransit), not as a transfer between both bank accounts. Booking "
+            "this half against the partner bank account would move that account a second "
+            "time; book it against the account named in the detail, or reverse the partner "
+            "posting first to post a direct transfer (D04, B08)."
+        ),
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,

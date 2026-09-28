@@ -220,7 +220,12 @@ async def import_finapi_transactions(
 
 
 async def pair_transfer(session: AsyncSession, tx: BankTransaction) -> bool:
-    """Link an internal transfer between own accounts of the same legal entity (D04)."""
+    """Link an internal transfer between own accounts of the same legal entity (D04).
+
+    The partner is linked even if it is already booked, also against another account such as
+    Geldtransit: the link shows that both halves belong together. It blocks nothing by itself;
+    only a real transfer posting (both bank accounts in one entry) settles the pair, which
+    ``matching.book_payment`` checks (B08)."""
     from mhvp.properties.models import PropertyBankAccount
 
     if tx.counterpart_iban_fingerprint is None:

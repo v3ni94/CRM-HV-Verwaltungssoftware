@@ -56,11 +56,22 @@ Paar genau einmal, von einer beliebigen Seite, gegen das Sachkonto des Partnerba
 Postenausgleich, ohne Skonto, sonst 422). Die Buchung bewegt beide Bankkonten; die Partnerseite
 erhält Status `booked` und dieselbe `journal_entry_id`. Ein weiterer Buchungsversuch auf die
 Partnerseite, auch in `/bulk-confirm`, endet mit 409 `MHVP-BANK-0019`, solange eine nicht
-stornierte Buchung auf einer Seite liegt. `matching.lock_for_booking` sperrt beide Seiten in
+stornierte Umbuchung auf einer Seite liegt. `matching.lock_for_booking` sperrt beide Seiten in
 stabiler Reihenfolge (`ORDER BY id ... FOR UPDATE`), damit parallele Buchungen der beiden Seiten
 nacheinander laufen. Nach dem Storno der Paarbuchung (`/accounting/.../entries/{id}/reverse`) ist
 das Paar wieder genau einmal buchbar. Umsätze ohne Paar sind unverändert. Tests:
 `tests/integration/test_annex_d_gaps.py::test_d04_*`.
+
+Erledigt wird ein Paar nur durch eine echte Umbuchung, also eine wirksame Buchung der
+Partnerseite mit einer Zeile auf dem Bankkonto dieser Hälfte. Wurde die Partnerseite vor der
+Paarerkennung gegen ein anderes Konto gebucht (typisch Geldtransit, wenn Auszug B später kommt),
+bucht man diese Hälfte eigenständig gegen ein Gegenkonto (üblich Geldtransit, das damit
+ausgeglichen wird; ohne Postenausgleich, ohne Skonto, nicht gegen das eigene Bankkonto). Gegen
+das Partnerbankkonto wird sie mit 409 `MHVP-BANK-0020` abgelehnt, weil dieses Konto sonst ein
+zweites Mal bewegt würde; die Meldung nennt das Konto der Partnerbuchung. Für eine direkte
+Umbuchung ist zuerst die Buchung der Partnerseite zu stornieren. `pair_transfer` verknüpft
+auch bereits gebuchte Umsätze; die Verknüpfung dient der Anzeige und sperrt allein nichts
+(Regel B08, Änderung 28.09.2026).
 
 ## Bankkontenauswahl (Konten je Objekt und Rechtsträger)
 

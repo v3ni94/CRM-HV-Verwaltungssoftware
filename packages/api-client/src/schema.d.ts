@@ -3857,7 +3857,11 @@ export interface paths {
          * Umsatz buchen (bestätigt)
          * @description A recognised transfer pair is booked once, from either half, against the partner bank
          *     account; that posting settles both halves. Booking the other half afterwards is refused
-         *     with 409 ``MHVP-BANK-0019`` until the posting is reversed (D04, B08).
+         *     with 409 ``MHVP-BANK-0019`` until the posting is reversed (D04, B08). If the partner half
+         *     was booked against another account (e.g. Geldtransit) before the pair was recognised, that
+         *     posting does not settle the pair: this half is booked on its own against a counter account
+         *     (e.g. Geldtransit, clearing it); against the partner bank account it is refused with 409
+         *     ``MHVP-BANK-0020``.
          */
         post: operations["book_api_v1_banking_transactions__tx_id__book_post"];
         delete?: never;

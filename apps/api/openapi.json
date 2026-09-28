@@ -61735,7 +61735,7 @@
     },
     "/api/v1/banking/transactions/{tx_id}/book": {
       "post": {
-        "description": "A recognised transfer pair is booked once, from either half, against the partner bank\naccount; that posting settles both halves. Booking the other half afterwards is refused\nwith 409 ``MHVP-BANK-0019`` until the posting is reversed (D04, B08).",
+        "description": "A recognised transfer pair is booked once, from either half, against the partner bank\naccount; that posting settles both halves. Booking the other half afterwards is refused\nwith 409 ``MHVP-BANK-0019`` until the posting is reversed (D04, B08). If the partner half\nwas booked against another account (e.g. Geldtransit) before the pair was recognised, that\nposting does not settle the pair: this half is booked on its own against a counter account\n(e.g. Geldtransit, clearing it); against the partner bank account it is refused with 409\n``MHVP-BANK-0020``.",
         "operationId": "book_api_v1_banking_transactions__tx_id__book_post",
         "parameters": [
           {
