@@ -8,6 +8,7 @@ import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAcco
 import { ContractNotesSection } from "@/components/contracts/ContractNotesSection";
 import { ContractMandates } from "@/components/contracts/ContractMandates";
 import { DepositPanel } from "@/components/contracts/DepositPanel";
+import { OwnershipTransfer } from "@/components/contracts/OwnershipTransfer";
 import { RentInvoicePanel } from "@/components/contracts/RentInvoicePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { getMe } from "@/lib/me";
@@ -37,7 +38,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       </div>
     );
   }
-  const { contract, deposits, settlements, rates, partyName, propertyLabel, unitLabel, allocationValues, allocationKeys, mandates, ledger, meterLabels, terminationReadings } = ctx;
+  const { contract, deposits, settlements, rates, partyName, propertyLabel, unitLabel, allocationValues, allocationKeys, mandates, ledger, meterLabels, terminationReadings, managementType } = ctx;
   const bool = (v: boolean) => (v ? t("yes") : t("no"));
 
   return (
@@ -136,6 +137,9 @@ export default async function ContractDetailPage({ params, searchParams }: { par
         </dl>
       </section>
       <ContractNotesSection contract={contract} canEdit={canUpdate} />
+      {contract.kind === "ownership" && !contract.end_date ? (
+        <OwnershipTransfer contractId={contract.id} sevAllowed={managementType === "hoa_with_sev"} canUpdate={canUpdate} />
+      ) : null}
       <section className={ui.card}>
         <h2 className={ui.h2}>{t("page.schedules")}</h2>
         {contract.schedules.length === 0 ? (

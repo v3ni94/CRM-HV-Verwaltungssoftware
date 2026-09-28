@@ -3,6 +3,7 @@ import Link from "next/link";
 
 import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
+import { OwnershipTransfer } from "@/components/contracts/OwnershipTransfer";
 import { Prospects } from "@/components/letting/Prospects";
 import { EnergyCertificateForm, type EnergyBuilding } from "@/components/properties/EnergyCertificateForm";
 import { UnitDetails } from "@/components/properties/UnitDetails";
@@ -63,6 +64,7 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
     )
   ).flat();
   const canEdit = me.data?.permissions.includes("properties:update") ?? false;
+  const canTransfer = me.data?.permissions.includes("contracts:update") ?? false;
   const links: EntityLink[] = [
     { type: "property", id: propertyId, label: property.data?.number ?? null },
     { type: "building", id: unit.data.building_id, parentId: propertyId, label: building.data?.name ?? null },
@@ -116,6 +118,9 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
       <EntityLinksBar links={links} />
       <UnitMasterData unit={unit.data as unknown as UnitMaster} canEdit={canEdit} subCommunities={subCommunities} />
       <UnitDetails unit={unit.data} occupants={occupants.data ?? null} showParameters={false} />
+      {occupants.data?.owner && !occupants.data.owner.end_date ? (
+        <OwnershipTransfer contractId={occupants.data.owner.contract_id} sevAllowed={property.data?.management_type === "hoa_with_sev"} canUpdate={canTransfer} />
+      ) : null}
       <VacancyValuesPanel rows={vacancyValues} />
       <MeterChangesPanel rows={meterChanges} />
       {building.data ? <EnergyCertificateForm building={building.data as unknown as EnergyBuilding} canEdit={canEdit} /> : null}

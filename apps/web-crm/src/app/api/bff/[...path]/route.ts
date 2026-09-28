@@ -81,6 +81,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/reject-import$`) },
   { method: "GET", pattern: new RegExp(`^contracts/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/(versions|termination|schedules|deposits)$`) },
+  // Eigentümerwechsel in der Oberfläche (operator 28.09.2026): Vorschau und Erfassung.
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/ownership-transfer/preview$`) },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/ownership-transfer$`) },
   // Vertragsbezogene Umlagewerte (P1, 4.5 Eigenschaften).
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/allocation-values$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/allocation-values$`) },

@@ -36,7 +36,7 @@ export async function loadContractContext(id: string) {
   const meterLabels = Object.fromEntries(allMeters.map((m) => [m.id, `${m.number} (${m.meter_type_code})`]));
   const terminationReadings = readingsRes.ok ? ((await readingsRes.json()) as TerminationReadingOut[]) : [];
   const partyName = party.ok ? ((await party.json()) as { display_name: string }).display_name : contract.party_id;
-  const prop = property.ok ? ((await property.json()) as { number: string; name: string }) : null;
+  const prop = property.ok ? ((await property.json()) as { number: string; name: string; management_type?: string | null }) : null;
   const unit = units.ok ? ((await units.json()) as { id: string; number: string; label: string | null }[]).find((u) => u.id === contract.unit_id) : undefined;
   // Kautionen (M5-02): only tenancies carry deposits; drafts and the reference rate table
   // feed the settlement form.
@@ -67,6 +67,8 @@ export async function loadContractContext(id: string) {
     settlements,
     rates,
     partyName,
+    // Eigentümerwechsel: SEV ist nur in Objekten der Verwaltungsart WEG mit SEV wählbar.
+    managementType: prop?.management_type ?? null,
     propertyLabel: prop ? `${prop.number} ${prop.name}` : contract.property_id,
     unitLabel: unit ? `${unit.number}${unit.label ? ` ${unit.label}` : ""}` : contract.unit_id,
   };
