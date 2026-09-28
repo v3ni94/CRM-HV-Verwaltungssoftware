@@ -41,7 +41,10 @@ describe("InlineField", () => {
         <InlineField name="notes" label="Bemerkung" type="textarea" value="alt" onSave={onSave} />
       </EditableSection>,
     );
-    await userEvent.click(screen.getByRole("button", { name: "Bemerkung bearbeiten" }));
+    // M31: the pencil is a 44 px icon button on touch devices (ui.iconButton).
+    const pencil = screen.getByRole("button", { name: "Bemerkung bearbeiten" });
+    expect(pencil).toHaveClass("h-11", "w-11", "sm:pointer-fine:h-9", "sm:pointer-fine:w-9");
+    await userEvent.click(pencil);
     const area = screen.getByLabelText("Bemerkung");
     expect(area).toHaveFocus();
     await userEvent.type(area, " neu{Escape}");

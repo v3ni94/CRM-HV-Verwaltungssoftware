@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 
 import { statusDescriptor, type StatusDescriptor, type StatusDomain, type StatusIcon, type StatusTone } from "@/lib/status-labels";
 
@@ -56,7 +56,21 @@ export function StatusChip({ domain, status, descriptor, label, explanation, cla
   const hint = explanation ?? d.explanation;
   const id = useId();
   const [open, setOpen] = useState(false);
+  const [flip, setFlip] = useState(false);
   const wrap = useRef<HTMLSpanElement>(null);
+  const hintRef = useRef<HTMLSpanElement>(null);
+
+  // Keep the popover inside the viewport (M31): anchored left, flipped to the right edge when
+  // it would run past the window.
+  useLayoutEffect(() => {
+    if (!open || !hintRef.current) return;
+    try {
+      const rect = hintRef.current.getBoundingClientRect();
+      setFlip(rect.right > window.innerWidth);
+    } catch {
+      /* no layout (server or detached node): keep left anchor */
+    }
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;
@@ -94,8 +108,10 @@ export function StatusChip({ domain, status, descriptor, label, explanation, cla
       </button>
       <span
         id={`${id}-hint`}
+        ref={hintRef}
         role="tooltip"
-        className={`absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-border bg-raised p-2 text-left text-xs font-normal text-fg shadow-lg ${open ? "" : "sr-only"}`}
+        data-flip={flip ? "right" : undefined}
+        className={`absolute top-full z-20 mt-1 w-64 max-w-[calc(100vw-2rem)] rounded-lg border border-border bg-raised p-2 text-left text-xs font-normal text-fg shadow-lg ${flip ? "right-0" : "left-0"} ${open ? "" : "sr-only"}`}
       >
         {hint}
       </span>

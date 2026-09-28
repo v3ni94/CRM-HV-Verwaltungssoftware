@@ -234,7 +234,7 @@ export function InlineField({
         {canEdit ? (
           <button
             type="button"
-            className="rounded p-1 text-muted transition hover:text-fg focus:outline-none focus:ring-2 focus:ring-focus"
+            className={ui.iconButton}
             aria-label={t("editField", { label })}
             onClick={() => setLocal(true)}
           >

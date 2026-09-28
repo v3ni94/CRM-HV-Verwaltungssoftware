@@ -26,6 +26,17 @@ describe("StatusChip", () => {
     expect(button).toHaveAttribute("aria-expanded", "false");
   });
 
+  it("flips the explanation to the right edge when it would leave the viewport (M31)", async () => {
+    render(<StatusChip domain="directDebitRun" status="approved" />);
+    const hint = screen.getByRole("tooltip");
+    expect(hint).toHaveClass("left-0", "max-w-[calc(100vw-2rem)]");
+    vi.spyOn(hint, "getBoundingClientRect").mockReturnValue({ right: window.innerWidth + 40 } as DOMRect);
+    await userEvent.click(screen.getByRole("button", { name: "Wartet auf Freigabe" }));
+    expect(hint).toHaveClass("right-0");
+    expect(hint).not.toHaveClass("left-0");
+    expect(hint).toHaveAttribute("data-flip", "right");
+  });
+
   it("falls back to a neutral chip with the raw value and accepts overrides", () => {
     render(<StatusChip domain="mail" status="weird" />);
     expect(screen.getByText("weird")).toHaveClass("bg-muted-bg");
