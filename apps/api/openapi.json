@@ -32558,6 +32558,7 @@
       },
       "OwnershipTransferIn": {
         "additionalProperties": false,
+        "description": "Eigentümerwechsel (D16, D17): either the party of the acquirer or a contact whose own\nparty (single member, role primary) is looked up or created. The standing amounts of the\ncurrent ownership (payments, payment schedule, allocation values valid on the title\ntransfer date) are carried over to the new ownership as a factual copy from that date on\nwhen ``carry_over_amounts`` is set. Nothing here splits an annual statement between\nseller and acquirer (rule W07, release point P01 stay open).",
         "properties": {
           "acquisition_kind": {
             "$ref": "#/components/schemas/AcquisitionKind"
@@ -32574,10 +32575,61 @@
             ],
             "title": "Benefit Burden Date"
           },
+          "carry_over_amounts": {
+            "default": true,
+            "description": "Sollbeträge, Zahlungsplan und Umlagewerte ab dem Eigentumsübergang übernehmen",
+            "title": "Carry Over Amounts",
+            "type": "boolean"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Nachweis (z. B. Grundbuchauszug), wird mit dem neuen Vertrag verknüpft",
+            "title": "Document Id"
+          },
+          "new_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Erwerber als Kontakt; die Vertragspartei wird ermittelt",
+            "title": "New Contact Id"
+          },
           "new_party_id": {
-            "format": "uuid",
-            "title": "New Party Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New Party Id"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "maxLength": 10000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
           },
           "sev_enabled": {
             "default": false,
@@ -32596,11 +32648,91 @@
           }
         },
         "required": [
-          "new_party_id",
           "title_transfer_date",
           "acquisition_kind"
         ],
         "title": "OwnershipTransferIn",
+        "type": "object"
+      },
+      "OwnershipTransferPreviewOut": {
+        "description": "What ``POST /contracts/{id}/ownership-transfer`` would do on the given date.",
+        "properties": {
+          "allocation_values": {
+            "items": {
+              "$ref": "#/components/schemas/ContractAllocationValueOut"
+            },
+            "title": "Allocation Values",
+            "type": "array"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          },
+          "new_start_date": {
+            "format": "date",
+            "title": "New Start Date",
+            "type": "string"
+          },
+          "old_end_date": {
+            "format": "date",
+            "title": "Old End Date",
+            "type": "string"
+          },
+          "party_id": {
+            "format": "uuid",
+            "title": "Party Id",
+            "type": "string"
+          },
+          "party_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Party Name"
+          },
+          "payments": {
+            "items": {
+              "$ref": "#/components/schemas/PaymentOut"
+            },
+            "title": "Payments",
+            "type": "array"
+          },
+          "schedules": {
+            "items": {
+              "$ref": "#/components/schemas/ScheduleOut"
+            },
+            "title": "Schedules",
+            "type": "array"
+          },
+          "statement_split": {
+            "const": "not_implemented",
+            "default": "not_implemented",
+            "title": "Statement Split",
+            "type": "string"
+          },
+          "title_transfer_date": {
+            "format": "date",
+            "title": "Title Transfer Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_id",
+          "party_id",
+          "party_name",
+          "title_transfer_date",
+          "old_end_date",
+          "new_start_date",
+          "payments",
+          "schedules",
+          "allocation_values"
+        ],
+        "title": "OwnershipTransferPreviewOut",
         "type": "object"
       },
       "PackageEntry": {
@@ -67917,7 +68049,7 @@
     },
     "/api/v1/contracts/{contract_id}/ownership-transfer": {
       "post": {
-        "description": "Ends the current ownership the day before the title transfer (D16, D17).",
+        "description": "Ends the current ownership the day before the title transfer (D16, D17), creates the\nnew ownership and, with ``carry_over_amounts``, copies the standing amounts valid on the\ntitle transfer date to the new contract from that date on (factual carry over, no split of\nthe annual statement: rule W07 and release point P01 stay open). Open receivables stay with\nthe seller (6.9.2, D15).",
         "operationId": "ownership_transfer_api_v1_contracts__contract_id__ownership_transfer_post",
         "parameters": [
           {
@@ -67964,6 +68096,60 @@
           }
         },
         "summary": "Eigentümerwechsel",
+        "tags": [
+          "Verträge"
+        ]
+      }
+    },
+    "/api/v1/contracts/{contract_id}/ownership-transfer/preview": {
+      "get": {
+        "description": "Shows what the transfer on the date would do: the current ownership ends the day before,\nthe new one starts on the date, and the listed standing amounts (payments, payment schedule,\nallocation values valid on the date) are carried over from the date on. Read only. The\nannual statement is not split between seller and acquirer (rule W07, release point P01).",
+        "operationId": "ownership_transfer_preview_api_v1_contracts__contract_id__ownership_transfer_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "title_transfer_date",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Title Transfer Date",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OwnershipTransferPreviewOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigentümerwechsel: Vorschau",
         "tags": [
           "Verträge"
         ]

@@ -4994,9 +4994,36 @@ export interface paths {
         put?: never;
         /**
          * Eigentümerwechsel
-         * @description Ends the current ownership the day before the title transfer (D16, D17).
+         * @description Ends the current ownership the day before the title transfer (D16, D17), creates the
+         *     new ownership and, with ``carry_over_amounts``, copies the standing amounts valid on the
+         *     title transfer date to the new contract from that date on (factual carry over, no split of
+         *     the annual statement: rule W07 and release point P01 stay open). Open receivables stay with
+         *     the seller (6.9.2, D15).
          */
         post: operations["ownership_transfer_api_v1_contracts__contract_id__ownership_transfer_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contracts/{contract_id}/ownership-transfer/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Eigentümerwechsel: Vorschau
+         * @description Shows what the transfer on the date would do: the current ownership ends the day before,
+         *     the new one starts on the date, and the listed standing amounts (payments, payment schedule,
+         *     allocation values valid on the date) are carried over from the date on. Read only. The
+         *     annual statement is not split between seller and acquirer (rule W07, release point P01).
+         */
+        get: operations["ownership_transfer_preview_api_v1_contracts__contract_id__ownership_transfer_preview_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -28289,16 +28316,39 @@ export interface components {
              */
             period_to: string;
         };
-        /** OwnershipTransferIn */
+        /**
+         * OwnershipTransferIn
+         * @description Eigentümerwechsel (D16, D17): either the party of the acquirer or a contact whose own
+         *     party (single member, role primary) is looked up or created. The standing amounts of the
+         *     current ownership (payments, payment schedule, allocation values valid on the title
+         *     transfer date) are carried over to the new ownership as a factual copy from that date on
+         *     when ``carry_over_amounts`` is set. Nothing here splits an annual statement between
+         *     seller and acquirer (rule W07, release point P01 stay open).
+         */
         OwnershipTransferIn: {
             acquisition_kind: components["schemas"]["AcquisitionKind"];
             /** Benefit Burden Date */
             benefit_burden_date?: string | null;
             /**
-             * New Party Id
-             * Format: uuid
+             * Carry Over Amounts
+             * @description Sollbeträge, Zahlungsplan und Umlagewerte ab dem Eigentumsübergang übernehmen
+             * @default true
              */
-            new_party_id: string;
+            carry_over_amounts: boolean;
+            /**
+             * Document Id
+             * @description Nachweis (z. B. Grundbuchauszug), wird mit dem neuen Vertrag verknüpft
+             */
+            document_id?: string | null;
+            /**
+             * New Contact Id
+             * @description Erwerber als Kontakt; die Vertragspartei wird ermittelt
+             */
+            new_contact_id?: string | null;
+            /** New Party Id */
+            new_party_id?: string | null;
+            /** Notes */
+            notes?: string | null;
             /**
              * Sev Enabled
              * @default false
@@ -28309,6 +28359,51 @@ export interface components {
              * @default false
              */
             special_succession_liability: boolean;
+            /**
+             * Title Transfer Date
+             * Format: date
+             */
+            title_transfer_date: string;
+        };
+        /**
+         * OwnershipTransferPreviewOut
+         * @description What ``POST /contracts/{id}/ownership-transfer`` would do on the given date.
+         */
+        OwnershipTransferPreviewOut: {
+            /** Allocation Values */
+            allocation_values: components["schemas"]["ContractAllocationValueOut"][];
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+            /**
+             * New Start Date
+             * Format: date
+             */
+            new_start_date: string;
+            /**
+             * Old End Date
+             * Format: date
+             */
+            old_end_date: string;
+            /**
+             * Party Id
+             * Format: uuid
+             */
+            party_id: string;
+            /** Party Name */
+            party_name: string | null;
+            /** Payments */
+            payments: components["schemas"]["PaymentOut"][];
+            /** Schedules */
+            schedules: components["schemas"]["ScheduleOut"][];
+            /**
+             * Statement Split
+             * @default not_implemented
+             * @constant
+             */
+            statement_split: "not_implemented";
             /**
              * Title Transfer Date
              * Format: date
@@ -45061,6 +45156,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContractOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    ownership_transfer_preview_api_v1_contracts__contract_id__ownership_transfer_preview_get: {
+        parameters: {
+            query: {
+                title_transfer_date: string;
+            };
+            header?: never;
+            path: {
+                contract_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OwnershipTransferPreviewOut"];
                 };
             };
             /** @description Validation Error */
