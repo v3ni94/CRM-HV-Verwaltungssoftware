@@ -18102,6 +18102,7 @@ export interface components {
         };
         /** ApplyIn */
         ApplyIn: {
+            chat_action?: components["schemas"]["ChatActionApplyIn"] | null;
             /** Contacts */
             contacts?: components["schemas"]["ContactChoice"][] | null;
             invoice?: components["schemas"]["InvoiceApplyIn"] | null;
@@ -20055,6 +20056,44 @@ export interface components {
             supersedes_id?: string | null;
             /** Version */
             version: number;
+        };
+        /**
+         * ChatActionApplyIn
+         * @description Confirmation of a chat action proposal; the texts may be edited before confirming.
+         */
+        ChatActionApplyIn: {
+            /** Description */
+            description?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Title */
+            title?: string | null;
+        };
+        /**
+         * ChatLink
+         * @description Record or page link of a platform lookup answer (mhvp.ai.lookup, rule AI-LOOKUP-01).
+         *     Produced by the platform from permission checked queries, never by the model.
+         */
+        ChatLink: {
+            /**
+             * Detail
+             * @default
+             */
+            detail: string;
+            /**
+             * Href
+             * @description CRM path, e.g. /kontakte/{id}
+             */
+            href: string;
+            /** Id */
+            id: string;
+            /** Label */
+            label: string;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "contact" | "property" | "unit" | "contract" | "ticket" | "page" | "handbook";
         };
         /** CheckOut */
         CheckOut: {
@@ -26940,8 +26979,17 @@ export interface components {
         MessageIn: {
             /** Content */
             content: string;
+            /** Context Entity Id */
+            context_entity_id?: string | null;
+            /** Context Entity Type */
+            context_entity_type?: ("contact" | "property" | "hoa" | "unit" | "contract" | "ticket" | "handover" | "mail") | null;
             /** Document Ids */
             document_ids?: string[];
+            /**
+             * Page
+             * @description Seitenname im CRM
+             */
+            page?: string | null;
             /**
              * Task
              * @enum {string}
@@ -26964,6 +27012,8 @@ export interface components {
              * Format: uuid
              */
             id: string;
+            /** Links */
+            links?: components["schemas"]["ChatLink"][];
             /** Proposal Id */
             proposal_id: string | null;
             /** Role */
@@ -30900,6 +30950,10 @@ export interface components {
             input_stats?: {
                 [key: string]: number;
             };
+            /** Links */
+            links?: components["schemas"]["ChatLink"][];
+            /** Lookup Answer */
+            lookup_answer?: string | null;
             /** Model */
             model: string | null;
             /** Model Tier Reason */

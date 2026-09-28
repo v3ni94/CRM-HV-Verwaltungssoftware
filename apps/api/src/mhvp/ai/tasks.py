@@ -197,10 +197,37 @@ class Source(_Out):
     excerpt: str
 
 
+class ChatActionChange(_Out):
+    field: str = Field(
+        description="salutation, title, first_name, last_name, company_name, "
+        "street, house_number, postal_code, city, phone oder email"
+    )
+    new: str = Field(description="neuer Wert; bei phone und email den Platzhalter übernehmen")
+
+
+class ChatAction(_Out):
+    """Vorgeschlagene Änderung aus dem Chat; die Plattform prüft sie und legt nur einen
+    Vorschlag an, den ein Mensch bestätigt (nie Bankverbindungen)."""
+
+    kind: Literal["contact_change", "contact_note", "ticket_create"]
+    refs: list[str] = Field(
+        description="IDs der betroffenen Treffer der Plattformsuche (Kontakt, Objekt, Einheit)"
+    )
+    changes: list[ChatActionChange] = Field(default_factory=list)
+    note: str | None = None
+    title: str | None = None
+    description: str | None = None
+    reason: str = Field(default="", description="kurz, warum diese Änderung vorgeschlagen wird")
+
+
 class AnswerResult(_Out):
     answer: str
     sources: list[Source]
     answerable: bool = Field(description="false, wenn die Quellen die Frage nicht beantworten")
+    action: ChatAction | None = Field(
+        default=None,
+        description="nur wenn der Nutzer ausdrücklich eine Änderung wünscht, sonst null",
+    )
 
 
 class SummaryResult(_Out):

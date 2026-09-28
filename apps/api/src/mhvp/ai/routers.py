@@ -10,6 +10,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai import (
+    chat_actions,
     connection_test,
     embeddings,
     examples,
@@ -717,7 +718,8 @@ async def send_message(
 ) -> s.RunOut:
     """Queues the task; the answer arrives as a new chat message when the run is done."""
     task = AiTask(body.task)
-    if task is AiTask.ANSWER_QUESTION and "documents:read" not in principal.permissions:
+    rag = "documents:read" in principal.permissions
+    if task is AiTask.ANSWER_QUESTION and body.document_ids and not rag:
         raise ProblemError(
             ErrorCodes.FORBIDDEN, developer_message="documents:read required for RAG"
         )
@@ -726,10 +728,15 @@ async def send_message(
         conversation = await _own_conversation(session, principal, conversation_id)
         for document_id in body.document_ids:
             await _get(session, Document, document_id)
-        context = {
+        context: dict[str, Any] = {
             "context_type": conversation.context_type,
             "context_id": str(conversation.context_id) if conversation.context_id else None,
         }
+        if task is AiTask.ANSWER_QUESTION and body.page:
+            context["page"] = body.page
+        if task is AiTask.ANSWER_QUESTION and body.context_entity_type:
+            context["entity_type"] = body.context_entity_type
+            context["entity_id"] = str(body.context_entity_id) if body.context_entity_id else None
         ref: dict[str, Any] = {
             "instruction": body.content,
             "document_ids": [str(d) for d in body.document_ids],
@@ -740,9 +747,26 @@ async def send_message(
             # Platform lookup (rule AI-LOOKUP-01): in the caller's session under RLS, each tool
             # gated by the permission of its regular endpoint; the result is the only source
             # of chat links and the fallback answer without AI.
-            found = await lookup.run(session, principal.permissions, body.content)
+            focus = (
+                (body.context_entity_type, body.context_entity_id)
+                if body.context_entity_type and body.context_entity_id
+                else None
+            )
+            found = await lookup.run(session, principal.permissions, body.content, focus)
             ref["lookup"] = found
+            # Without documents:read the question is answered without document search.
+            ref["rag"] = rag
             hash_extra["lookup"] = lookup.fingerprint(found)
+            # Multi turn: the history is part of the input, so a follow up question never
+            # reuses the answer of another conversation or an earlier turn (dedup, 9.3).
+            hash_extra["turn"] = [
+                str(conversation.id),
+                await session.scalar(
+                    select(func.count())
+                    .select_from(AiMessage)
+                    .where(AiMessage.conversation_id == conversation.id)
+                ),
+            ]
         run = AiTaskRun(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -950,6 +974,17 @@ async def apply_proposal(
     }
     async with tenant_tx(request, principal) as session:
         proposal = await _pending(session, proposal_id)
+        if proposal.entity_type == chat_actions.ENTITY_TYPE:
+            needed = {chat_actions.PERMISSIONS[str(proposal.proposed.get("kind"))]}
+            if needed - set(principal.permissions):
+                raise ProblemError(
+                    ErrorCodes.FORBIDDEN, developer_message=f"missing {sorted(needed)}"
+                )
+            kind = str(proposal.proposed["kind"])
+    if proposal.entity_type == chat_actions.ENTITY_TYPE:
+        return await _apply_chat_action(proposal_id, kind, body, request, principal)
+    async with tenant_tx(request, principal) as session:
+        proposal = await _pending(session, proposal_id)
         missing = required[proposal.entity_type] - set(principal.permissions)
         if missing:
             raise ProblemError(ErrorCodes.FORBIDDEN, developer_message=f"missing {sorted(missing)}")
@@ -991,6 +1026,125 @@ async def apply_proposal(
             session, principal, "import_run.applied", import_run.id, source=import_run.source
         )
         return await _import_out(session, import_run)
+
+
+async def _apply_chat_action(
+    proposal_id: uuid.UUID,
+    kind: str,
+    body: s.ApplyIn,
+    request: Request,
+    principal: TenantPrincipal,
+) -> s.ImportOut:
+    """Chat action (rule AI-LOOKUP-01): written only now, after the human confirmation, through
+    the same paths as the regular endpoints. Contact change and note run in one transaction
+    with the decision; a ticket is created through ``POST /tickets`` (own transaction) after
+    the proposal is marked accepted, and the mark is undone if the ticket cannot be created."""
+    from mhvp.contacts.models import Contact, ContactNote
+    from mhvp.tickets import proposals as contact_changes
+
+    edit = body.chat_action or s.ChatActionApplyIn()
+    async with tenant_tx(request, principal) as session:
+        # Row lock: a second confirmation waits and then finds the proposal decided.
+        await session.execute(
+            select(AiProposal.id).where(AiProposal.id == proposal_id).with_for_update()
+        )
+        proposal = await _pending(session, proposal_id)
+        run_row = await _get(session, AiTaskRun, proposal.task_run_id)
+        data = dict(proposal.proposed)
+        import_run = ImportRun(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            source=f"ai:{run_row.task.value}:{kind}",
+            status=ImportStatus.APPLIED,
+            document_ids=[],
+        )
+        session.add(import_run)
+        await session.flush()
+        summary: dict[str, Any] = {"kind": kind}
+        modified = False
+        if kind == "contact_change":
+            contact_id = uuid.UUID(str(data["contact_id"]))
+            changed = await contact_changes.apply_changes(
+                session,
+                principal,
+                contact_id,
+                contact_changes._validate_changes(list(data["changes"])),
+                proposal.id,
+            )
+            summary |= {"contact_id": str(contact_id), "fields": sorted(changed)}
+        elif kind == "contact_note":
+            contact_id = uuid.UUID(str(data["contact_id"]))
+            contact = await session.get(Contact, contact_id)
+            if contact is None or contact.deleted_at is not None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Kontakt nicht gefunden.")
+            text = (edit.note or data["note"]).strip()
+            modified = text != data["note"]
+            note = ContactNote(
+                tenant_id=principal.tenant_id,
+                contact_id=contact_id,
+                created_by=principal.user_id,
+                title="Notiz aus dem KI-Assistenten",
+                body=text,
+            )
+            session.add(note)
+            await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="contact.note_added",
+                entity_type="contact",
+                entity_id=contact_id,
+                actor_user_id=principal.user_id,
+                payload={"note_id": str(note.id), "proposal_id": str(proposal.id)},
+            )
+            summary |= {"contact_id": str(contact_id), "note_id": str(note.id)}
+        else:
+            modified = bool(
+                (edit.title and edit.title != data.get("title"))
+                or (edit.description and edit.description != data.get("description"))
+            )
+        proposal.decision = Decision.MODIFIED if modified else Decision.ACCEPTED
+        proposal.decided_by, proposal.decided_at = principal.user_id, datetime.now(UTC)
+        proposal.final = body.model_dump(mode="json")
+        proposal.import_run_id = import_run.id
+        import_run.summary = summary
+        import_id = import_run.id
+        if kind != "ticket_create":
+            await _event(
+                session, principal, "import_run.applied", import_run.id, source=import_run.source
+            )
+            return await _import_out(session, import_run)
+    from mhvp.tickets.routers import TicketIn, create_ticket
+
+    try:
+        ticket = await create_ticket(
+            TicketIn(
+                title=edit.title or data["title"],
+                public_description=edit.description or data.get("description"),
+                contact_id=chat_actions.uuid_or_none(data.get("contact_id")),
+                property_id=chat_actions.uuid_or_none(data.get("property_id")),
+                unit_id=chat_actions.uuid_or_none(data.get("unit_id")),
+            ),
+            request,
+            principal,
+        )
+    except Exception:
+        async with tenant_tx(request, principal) as session:
+            proposal = await _get(session, AiProposal, proposal_id)
+            proposal.decision, proposal.decided_by, proposal.decided_at = (
+                Decision.PENDING,
+                None,
+                None,
+            )
+            proposal.final, proposal.import_run_id = None, None
+            row = await _get(session, ImportRun, import_id)
+            row.status = ImportStatus.UNDONE
+        raise
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, ImportRun, import_id)
+        row.summary = {"kind": kind, "ticket_id": str(ticket["id"]), "number": ticket["number"]}
+        await _event(session, principal, "import_run.applied", row.id, source=row.source)
+        return await _import_out(session, row)
 
 
 async def _import_out(session: Any, row: ImportRun) -> s.ImportOut:

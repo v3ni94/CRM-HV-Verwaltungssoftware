@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from mhvp.ai import embeddings, examples, gateway, imports, lookup
+from mhvp.ai import chat_actions, embeddings, examples, gateway, imports, lookup
 from mhvp.ai.models import AiMessage, AiProposal, AiTask, AiTaskRun, RunStatus
 from mhvp.core import crypto
 from mhvp.core.config import Settings, get_settings
@@ -185,16 +185,30 @@ async def run_and_propose(
             session.add(proposal)
             await session.flush()
             proposal_id = proposal.id
+        action_note: str | None = None
+        if run.status is RunStatus.SUCCEEDED and run.task is AiTask.ANSWER_QUESTION:
+            # Chat action (rule AI-LOOKUP-01): checked by the platform, proposal only; nothing
+            # is written before a human confirms it (0.1.6).
+            payload, action_note = chat_actions.build(run)
+            if payload is not None:
+                action = chat_actions.proposal(run, payload, provider_used)
+                session.add(action)
+                await session.flush()
+                proposal_id = action.id
         if run.conversation_id is not None:
             found = run.input_ref.get("lookup") if run.task is AiTask.ANSWER_QUESTION else None
             if run.status is RunStatus.SUCCEEDED:
                 content = _answer_text(run, contacts_preview)
+                if action_note:
+                    content += f"\n\n{action_note}"
+                elif proposal_id is not None and run.task is AiTask.ANSWER_QUESTION:
+                    content += "\n\nVorschlag erstellt. Bitte prüfen und bestätigen."
             elif found is not None:
                 # Deterministic fallback (rule AI-LOOKUP-01): no released provider, budget
                 # exhausted or provider error; the platform hits are still answered.
                 content = (
-                    f"KI-Antwort nicht verfügbar ({run.error}). Ergebnis der Plattformsuche:\n"
-                    + lookup.answer_text(found)
+                    f"Die KI ist derzeit nicht verfügbar ({run.error}), daher zeige ich nur die "
+                    "Treffer der Plattformsuche.\n" + lookup.answer_text(found)
                 )
             else:
                 content = f"Nicht ausgeführt: {run.error}"

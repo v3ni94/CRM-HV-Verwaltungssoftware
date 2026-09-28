@@ -148,17 +148,21 @@ def records(database: Database, redis_url: str, world: World) -> dict[str, str]:
         }
 
 
-def _ask(c: TestClient, h: dict[str, str], question: str) -> tuple[dict[str, Any], dict[str, Any]]:
-    conversation = _ok(c.post("/api/v1/ai/conversations", json={}, headers=h))
+def _ask(
+    c: TestClient,
+    h: dict[str, str],
+    question: str,
+    conversation_id: str | None = None,
+    **extra: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    if conversation_id is None:
+        conversation_id = _ok(c.post("/api/v1/ai/conversations", json={}, headers=h))["id"]
+    body = {"content": question, "task": "answer_question", "document_ids": [], **extra}
     run = _ok(
-        c.post(
-            f"/api/v1/ai/conversations/{conversation['id']}/messages",
-            json={"content": question, "task": "answer_question", "document_ids": []},
-            headers=h,
-        ),
+        c.post(f"/api/v1/ai/conversations/{conversation_id}/messages", json=body, headers=h),
         202,
     )
-    detail = _ok(c.get(f"/api/v1/ai/conversations/{conversation['id']}", headers=h), 200)
+    detail = _ok(c.get(f"/api/v1/ai/conversations/{conversation_id}", headers=h), 200)
     answer = [m for m in detail["messages"] if m["role"] == "assistant"][-1]
     return run, answer
 
@@ -307,5 +311,130 @@ def test_with_provider_model_answers_from_masked_hits(
     assert answer["content"].startswith(f"Jan {SURNAME} ist als Kontakt erfasst.")
     assert "Gefunden (1)" in answer["content"]
     assert _hrefs(answer["links"]) == {f"/kontakte/{records['contact']}"}
-    assert fake.calls[-1]["system"].startswith("Du beantwortest Fragen")
+    assert fake.calls[-1]["system"].startswith("Du bist der Assistent im CRM")
     assert run["prompt_version"] == "v2"
+
+
+def _answer(text: str, action: dict[str, Any] | None = None) -> dict[str, Any]:
+    return {"answer": text, "sources": [], "answerable": True, "action": action}
+
+
+def test_page_context_focus_and_multi_turn_history(
+    client: TestClient, world: World, records: dict[str, str], fake: FakeProvider
+) -> None:
+    """Provider released by the previous test. The record open on the page is looked up
+    without a search term; the second turn carries the first one as history."""
+    admin = bearer(login(client, world, "lkadmin"))
+    conversation = _ok(client.post("/api/v1/ai/conversations", json={}, headers=admin))["id"]
+    fake.queue += [_answer("Beim Kontakt ist ein Vertrag hinterlegt."), _answer("Ja, seit 2026.")]
+    context = {
+        "context_entity_type": "contact",
+        "context_entity_id": records["contact"],
+        "page": "Kontakte",
+    }
+    run, answer = _ask(client, admin, "Was ist offen bei diesem Kontakt?", conversation, **context)
+    assert run["status"] == "succeeded", run
+    hrefs = _hrefs(answer["links"])
+    assert f"/kontakte/{records['contact']}" in hrefs
+    assert f"/vertraege/{records['contract']}" in hrefs  # contracts of the focused contact
+    first = fake.calls[-1]["messages"][-1]["content"]
+    assert "Geöffneter Datensatz auf der Seite: contact" in first
+    assert '"page": "Kontakte"' in first
+    run, _ = _ask(client, admin, "Und seit wann?", conversation, **context)
+    assert run["status"] == "succeeded", run
+    second = fake.calls[-1]["messages"][-1]["content"]
+    assert "Bisheriger Gesprächsverlauf" in second
+    assert "Nutzer: Was ist offen bei diesem Kontakt?" in second
+    assert "Assistent: Beim Kontakt ist ein Vertrag hinterlegt." in second
+
+
+def test_phone_change_is_a_proposal_until_confirmed(
+    client: TestClient, world: World, records: dict[str, str], fake: FakeProvider
+) -> None:
+    admin = bearer(login(client, world, "lkadmin"))
+    fake.queue.append(
+        _answer(
+            "Ich habe die Änderung vorbereitet.",
+            {
+                "kind": "contact_change",
+                "refs": [records["contact"]],
+                "changes": [{"field": "phone", "new": "[TELEFON]"}],
+                "reason": "Nutzer nennt neue Nummer",
+            },
+        )
+    )
+    run, answer = _ask(client, admin, f"Neue Telefonnummer von {SURNAME}: 0211 7654321")
+    assert run["status"] == "succeeded", run
+    assert "7654321" not in fake.calls[-1]["messages"][-1]["content"].replace(" ", "")
+    assert "Vorschlag erstellt" in answer["content"]
+    proposal_id = answer["proposal_id"]
+    proposal = _ok(client.get(f"/api/v1/ai/proposals/{proposal_id}", headers=admin), 200)
+    assert proposal["entity_type"] == "chat_action"
+    assert proposal["proposed"]["changes"] == [
+        {"field": "phone", "old": None, "new": "0211 7654321"}
+    ]
+    before = _ok(client.get(f"/api/v1/contacts/{records['contact']}", headers=admin), 200)
+    assert all("7654321" not in p["number"] for p in before["phones"])  # nothing written yet
+    applied = _ok(
+        client.post(
+            f"/api/v1/ai/proposals/{proposal_id}/apply", json={"chat_action": {}}, headers=admin
+        )
+    )
+    assert applied["summary"]["kind"] == "contact_change"
+    after = _ok(client.get(f"/api/v1/contacts/{records['contact']}", headers=admin), 200)
+    assert any("7654321" in p["number"] for p in after["phones"])
+    again = client.post(
+        f"/api/v1/ai/proposals/{proposal_id}/apply", json={"chat_action": {}}, headers=admin
+    )
+    assert again.status_code == 409
+
+
+def test_bank_details_are_never_a_chat_proposal(
+    client: TestClient, world: World, records: dict[str, str], fake: FakeProvider
+) -> None:
+    admin = bearer(login(client, world, "lkadmin"))
+    fake.queue.append(
+        _answer(
+            "Erledige ich.",
+            {
+                "kind": "contact_change",
+                "refs": [records["contact"]],
+                "changes": [{"field": "iban", "new": "[IBAN]"}],
+            },
+        )
+    )
+    _, answer = _ask(client, admin, f"Neue IBAN von {SURNAME}: DE02120300000000202051")
+    assert answer["proposal_id"] is None
+    assert "Vier-Augen-Freigabe" in answer["content"]
+
+
+def test_ticket_create_proposal_needs_confirmation(
+    client: TestClient, world: World, records: dict[str, str], fake: FakeProvider
+) -> None:
+    admin = bearer(login(client, world, "lkadmin"))
+    fake.queue.append(
+        _answer(
+            "Ticket vorbereitet.",
+            {
+                "kind": "ticket_create",
+                "refs": [records["contact"], str(uuid.uuid4())],  # unknown id is ignored
+                "title": f"Rückruf {RUN}",
+                "description": "Bitte zurückrufen.",
+            },
+        )
+    )
+    _, answer = _ask(client, admin, f"Lege ein Ticket für {SURNAME} an: Rückruf")
+    proposal_id = answer["proposal_id"]
+    proposal = _ok(client.get(f"/api/v1/ai/proposals/{proposal_id}", headers=admin), 200)
+    assert proposal["proposed"]["contact_id"] == records["contact"]
+    listed = _ok(client.get("/api/v1/tickets", params={"q": f"Rückruf {RUN}"}, headers=admin), 200)
+    assert listed == []  # nothing before the confirmation
+    applied = _ok(
+        client.post(
+            f"/api/v1/ai/proposals/{proposal_id}/apply", json={"chat_action": {}}, headers=admin
+        )
+    )
+    ticket_id = applied["summary"]["ticket_id"]
+    ticket = _ok(client.get(f"/api/v1/tickets/{ticket_id}", headers=admin), 200)
+    assert ticket["title"] == f"Rückruf {RUN}"
+    assert ticket["contact_id"] == records["contact"]

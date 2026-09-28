@@ -299,6 +299,38 @@ async def _document_name(session: AsyncSession, document_id: uuid.UUID) -> str:
     return document.filename if document is not None else str(document_id)
 
 
+HISTORY_MESSAGES = 10  # earlier messages of the conversation handed to the model
+HISTORY_CHARS = 1500  # per message
+
+
+async def conversation_history(session: AsyncSession, run: AiTaskRun) -> str:
+    """Earlier messages of the run's conversation (oldest first, without the current question),
+    so remarks and follow up questions keep their context."""
+    from mhvp.ai.models import AiMessage
+
+    if run.conversation_id is None:
+        return ""
+    rows = (
+        await session.scalars(
+            select(AiMessage)
+            .where(
+                AiMessage.conversation_id == run.conversation_id,
+                (AiMessage.task_run_id != run.id) | AiMessage.task_run_id.is_(None),
+            )
+            .order_by(AiMessage.created_at.desc())
+            .limit(HISTORY_MESSAGES)
+        )
+    ).all()
+    if not rows:
+        return ""
+    lines = ["Bisheriger Gesprächsverlauf (älteste zuerst, nur als Kontext):"]
+    for message in reversed(rows):
+        who = "Nutzer" if message.role == "user" else "Assistent"
+        text = message.content.replace("<", "\u2039").replace(">", "\u203a")
+        lines.append(f"{who}: {text[:HISTORY_CHARS]}")
+    return "\n".join(lines)
+
+
 async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -> TaskInput:
     ref = run.input_ref
     document_ids = [uuid.UUID(d) for d in ref.get("document_ids", [])]
@@ -339,7 +371,7 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
             chunks=chunks,
         )
 
-    if run.task is AiTask.ANSWER_QUESTION:
+    if run.task is AiTask.ANSWER_QUESTION and ref.get("rag", True):
         found = await retrieve(
             session,
             str(ref.get("instruction", "")),
@@ -351,7 +383,12 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
             found = [d for d in found if d.id in scope]
         document_ids = [*document_ids, *[d.id for d in found if d.id not in document_ids]]
 
-    records = lookup.prompt_text(ref.get("lookup")) if run.task is AiTask.ANSWER_QUESTION else ""
+    records = ""
+    if run.task is AiTask.ANSWER_QUESTION:
+        # Multi turn (rule AI-LOOKUP-01): the stored conversation is the history; platform hits
+        # of this question follow as data. Both are masked with the rest of the input.
+        history = await conversation_history(session, run)
+        records = "\n\n".join(p for p in (history, lookup.prompt_text(ref.get("lookup"))) if p)
 
     async def _assemble(ids: list[uuid.UUID], max_chars: int) -> tuple[str, dict[str, int]]:
         parts = [instruction, records] if records else [instruction]

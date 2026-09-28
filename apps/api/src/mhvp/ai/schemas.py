@@ -176,6 +176,14 @@ class MessageIn(_In):
         "extract_contacts", "extract_property", "extract_invoice", "answer_question", "summarize"
     ]
     document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=20)
+    # Page context of the CRM chat bubble (answer_question): the record open on the page, so
+    # the lookup starts from it and the answer stays on it (rule AI-LOOKUP-01).
+    context_entity_type: (
+        Literal["contact", "property", "hoa", "unit", "contract", "ticket", "handover", "mail"]
+        | None
+    ) = None
+    context_entity_id: uuid.UUID | None = None
+    page: str | None = Field(default=None, max_length=200, description="Seitenname im CRM")
 
 
 class RunOut(_Out):
@@ -279,10 +287,19 @@ class InvoiceApplyIn(_In):
     lines: list[InvoiceApplyLineIn] = Field(min_length=1, max_length=200)
 
 
+class ChatActionApplyIn(_In):
+    """Confirmation of a chat action proposal; the texts may be edited before confirming."""
+
+    note: str | None = Field(default=None, max_length=20_000)
+    title: str | None = Field(default=None, max_length=300)
+    description: str | None = Field(default=None, max_length=20_000)
+
+
 class ApplyIn(_In):
     contacts: list[ContactChoice] | None = None
     property: PropertyChoice | None = None
     invoice: InvoiceApplyIn | None = None
+    chat_action: ChatActionApplyIn | None = None
 
 
 class ApplyRoleIn(_In):

@@ -1410,6 +1410,16 @@
       "ApplyIn": {
         "additionalProperties": false,
         "properties": {
+          "chat_action": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ChatActionApplyIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "contacts": {
             "anyOf": [
               {
@@ -7759,6 +7769,94 @@
           "accounts"
         ],
         "title": "ChartTemplateOut",
+        "type": "object"
+      },
+      "ChatActionApplyIn": {
+        "additionalProperties": false,
+        "description": "Confirmation of a chat action proposal; the texts may be edited before confirming.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "ChatActionApplyIn",
+        "type": "object"
+      },
+      "ChatLink": {
+        "description": "Record or page link of a platform lookup answer (mhvp.ai.lookup, rule AI-LOOKUP-01).\nProduced by the platform from permission checked queries, never by the model.",
+        "properties": {
+          "detail": {
+            "default": "",
+            "title": "Detail",
+            "type": "string"
+          },
+          "href": {
+            "description": "CRM path, e.g. /kontakte/{id}",
+            "title": "Href",
+            "type": "string"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "type": {
+            "enum": [
+              "contact",
+              "property",
+              "unit",
+              "contract",
+              "ticket",
+              "page",
+              "handbook"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "id",
+          "label",
+          "href"
+        ],
+        "title": "ChatLink",
         "type": "object"
       },
       "CheckOut": {
@@ -29308,6 +29406,39 @@
             "title": "Content",
             "type": "string"
           },
+          "context_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Entity Id"
+          },
+          "context_entity_type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "contact",
+                  "property",
+                  "hoa",
+                  "unit",
+                  "contract",
+                  "ticket",
+                  "handover",
+                  "mail"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Entity Type"
+          },
           "document_ids": {
             "items": {
               "format": "uuid",
@@ -29316,6 +29447,19 @@
             "maxItems": 20,
             "title": "Document Ids",
             "type": "array"
+          },
+          "page": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Seitenname im CRM",
+            "title": "Page"
           },
           "task": {
             "enum": [
@@ -29359,6 +29503,13 @@
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ChatLink"
+            },
+            "title": "Links",
+            "type": "array"
           },
           "proposal_id": {
             "anyOf": [
@@ -41321,6 +41472,24 @@
             },
             "title": "Input Stats",
             "type": "object"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ChatLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "lookup_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lookup Answer"
           },
           "model": {
             "anyOf": [
