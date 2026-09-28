@@ -262,3 +262,27 @@ Hausnummernmaskierung fehlt in `mhvp.objektakte.masking` weiterhin (nur die Name
 erfasst zufällig manche Adressen); der Onboarding-Chat für neue Mitarbeiter (Kapitel 10, Rolle,
 Aufgaben, erste Schritte je Modul, `ui_preferences`) existiert nicht — `OnboardingWizard.tsx`
 (M27-03) ist die Mandantenanlage für Betreiber, kein Nutzer-Onboarding.
+
+## Platform lookup, page context and chat actions (rule AI-LOOKUP-01, 28.09.2026)
+
+- `lookup.py`: deterministic tools for `answer_question` (contacts, properties, units,
+  contracts, tickets, plus the page and handbook index `help_index.json`). They run in the
+  request's tenant session (RLS) with the permission of the regular endpoint; a tool without
+  permission returns nothing and is named in the answer. At most 10 hits per tool. The record
+  open on the page (`MessageIn.context_entity_type` / `context_entity_id`) is looked up first
+  (`focus_record`: contracts, tickets, mails of a contact; units, owners, open tickets of a
+  property; thread of a ticket). The result is stored as `input_ref["lookup"]`.
+- The gateway adds the hits, facts and the stored conversation history (last 10 messages) to
+  the masked data block; prompt `answer_question/v2` is conversational. The input hash includes
+  the hit ids and the turn, so dedup never reuses another conversation's answer.
+- `jobs.py` appends the platform hit list to the answer, stores the links on the message
+  (`ai_message.links`, migration 0223) and, without a released provider or budget, answers with
+  the hit list only. `RunOut.links` and `RunOut.lookup_answer` carry the same.
+- `chat_actions.py`: an `AnswerResult.action` becomes an `AiProposal` with
+  `entity_type="chat_action"` (contact_change, contact_note, ticket_create) only for records of
+  the run's own hits; phone and e-mail come from the user's message; bank details are refused.
+  `POST /ai/proposals/{id}/apply` with `{"chat_action": {}}` writes through the contact change
+  path of `mhvp.tickets.proposals`, a `ContactNote`, or `POST /tickets`.
+- `scripts/build_help_index.py` regenerates `help_index.json` from
+  `apps/web-crm/src/lib/settings-index.ts`, the main navigation and `docs/handbuch`;
+  `make lint` checks it is current.

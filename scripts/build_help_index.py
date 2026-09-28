@@ -67,6 +67,7 @@ MAIN_PAGES: list[tuple[str, str, list[str], list[str] | None]] = [
 HANDBOOK_PAGES: dict[str, str | None] = {
     "abrechnung-miete.md": "/abrechnung",
     "anleitung-bankverbindung.md": "/kontakte",
+    "assistent-chat.md": "/assistent",
     "anleitung-eigentuemerwechsel.md": "/objekte",
     "anleitung-mieterhoehung.md": "/vermietung/mieterhoehung",
     "anleitung-mieterwechsel.md": "/vertraege",

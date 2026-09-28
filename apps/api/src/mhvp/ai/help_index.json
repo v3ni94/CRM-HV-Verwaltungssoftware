@@ -2399,6 +2399,76 @@
  },
  {
   "kind": "handbook",
+  "title": "Fragen zu Kontakten, Objekten, Verträgen und Tickets",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Schreiben Sie Ihre Frage wie an eine Kollegin, zum Beispiel \"Telefonnummer von Herrn Kowalski\", \"Mietvertrag von Schmidt\", \"Einheit 07 im Lindenhof\" oder \"Status von Ticket 4711\". Die Plattform sucht selbst in Kontakten, Objekten, Einheiten, Verträgen und Tickets, jeweils nur in ",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Wo finde ich",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Fragen wie \"Wo finde ich die Markenfarben?\" oder \"Wo lege ich eine Rolle an?\" beantwortet der Assistent aus dem Handbuch und dem Verzeichnis der Einstellungsseiten, mit einem Link zur Seite.",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vorschläge je Seite",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Beim Öffnen zeigt der Chat Vorschläge passend zur Seite und zum geöffneten Datensatz, zum Beispiel auf einem Kontakt \"Was ist offen bei diesem Kontakt?\" oder auf einem Ticket \"Antwortentwurf erstellen\". Ein Klick stellt die Frage. Der Assistent bezieht sich dann auf den geöffnete",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Gespräch mit Rückfragen",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Jede Nachricht geht an den freigegebenen KI-Anbieter, mit Seite, Datensatz, den Treffern und dem bisherigen Gespräch. Anmerkungen und Anschlussfragen (\"Und seit wann?\") versteht der Assistent deshalb im Zusammenhang. Ist kein Anbieter freigegeben oder das Monatsbudget erreicht, z",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Änderungen über den Chat",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bitten Sie zum Beispiel \"Neue Telefonnummer von Kowalski: 0211 7654321\", \"Notiz an Kowalski: Rückruf erbeten\" oder \"Lege ein Ticket für Kowalski an\", erstellt der Assistent nur einen Vorschlag. Die Karte zeigt, was geändert würde. Erst mit \"Bestätigen und übernehmen\" wird die Änd",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Datenschutz und Protokoll",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Telefonnummern, E-Mail-Adressen und Bankverbindungen verlassen die Plattform nur maskiert. Die Trefferliste mit den vollständigen Angaben sehen Sie im Chat, sie kommt nicht von der KI. Alle Fragen, Antworten, Links und Vorschläge bleiben im Assistentenprotokoll nachvollziehbar.",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Grenzen",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Für WEG-Seiten, Übergabeprotokolle und das Postfach gibt es Vorschläge, aber noch keine eigene Datenabfrage zu Beschlüssen, Versammlungen, Rücklagen, Mängeln, Zählerständen oder Unterschriften; der Assistent kennt dort nur Seite und Datensatz. - Die Plattform wählt die Suchbere",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Ziel",
   "source": "Handbuch: Aufgabenverteilung Mail und Tickets: Vorschlag",
   "href": null,

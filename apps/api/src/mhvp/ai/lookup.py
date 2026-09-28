@@ -9,7 +9,7 @@ the caller lacks returns nothing and is reported as not permitted.
 The model only receives the hits as data (``<daten>``, masked like every ``answer_question``
 input) and phrases the answer; the links shown in the chat come from here, never from the
 model, so no record can be invented. Without a released provider or budget the chat shows the
-same hit list (``answer_text``), rule AI-LOOKUP-01 (docs/rules/ai-lookup.md).
+same hit list (``answer_text``), rule AI-LOOKUP-01 (docs/rules/AI-LOOKUP-01.md).
 
 Tool selection is deterministic (search terms plus intent words, below); a model planned tool
 choice is an open point (docs/OPEN_QUESTIONS.md), because it needs a second provider call per
