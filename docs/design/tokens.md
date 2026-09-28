@@ -1,24 +1,46 @@
 # Design Tokens der Oberfläche
 
-Stand 27.09.2026, Betreiberentscheidung Designvorschlag 4 (ruhige Typografie und Farbsystem).
-Quelle im Code: `packages/ui/src/tokens.css` (Werte), `packages/ui/src/theme.css` (Tailwind
-Zuordnung), `packages/ui/src/base.css` (Basisklassen), Klassenvorgaben in `apps/*/src/lib/ui.ts`.
-Beide Web Apps binden dieselben Dateien ein.
+Stand 27.09.2026, Betreiberentscheidung: Tagmodus ist Entwurf A "Klar und ruhig", Abendmodus ist
+Entwurf B "Dunkel und präzise" (Version 1.37). Quelle im Code: `packages/ui/src/tokens.css`
+(Werte je Modus), `packages/ui/src/theme.css` (Tailwind Zuordnung), `packages/ui/src/base.css`
+(Basisklassen), Klassenvorgaben in `apps/*/src/lib/ui.ts`. Beide Web Apps binden dieselben
+Dateien ein. Der Modus steht als `data-theme="day"` oder `data-theme="evening"` auf `html`
+(Steuerung `apps/web-crm/src/lib/theme.ts`), nie über `prefers-color-scheme`.
 
 ## Grundsätze
 
-1. Neutrale Farbwerte, bis die Unternehmensfarben freigegeben sind (OPEN_QUESTIONS M1-08). Die
-   Mandantenmarke (V14) überschreibt die Variablen zur Laufzeit.
-2. Farbe nur als Bedeutung: `success`, `warning`, `danger`, `info`, `muted`, `accent`. Der Akzent
-   markiert interaktive Zustände (Fokus, Hover, Marker), nie Fließtext.
-3. Karten ohne Schatten, Trennung durch Haarlinien (1px, `border-hairline`). Schatten nur für
-   schwebende Ebenen (Menüs, Dialoge, Hinweise).
-4. Dunkelmodus eigenständig kalibriert, nicht invertiert; aktiv über `prefers-color-scheme` und
-   `data-theme` auf `html`.
-5. Alle Text auf Hintergrund Paare erfüllen WCAG AA (Tabelle unten).
-6. Einheitlicher Fokusring: 2px Akzent, 2px Abstand, nur bei Tastaturfokus (`focus-visible`).
-7. Alte Namen (`gold`, `gold-soft`, `gold-tint`, `anthracite-soft`) bleiben als Aliasse und zeigen
-   bis zur Entscheidung M1-08 auf den neutralen Akzent.
+1. Zwei benannte Modi statt einer Invertierung. Die Mandantenmarke (V14) kann den Akzent zur
+   Laufzeit überschreiben.
+2. Farbe nur als Bedeutung: `success`, `warning`, `danger`, `info`, `muted`, `accent`, dazu die
+   Ampel `signal-*`. Der Akzent (Orange #E6A83C) markiert Handlungsbedarf, Fokus und aktive
+   Navigation, nie Fließtext; für Text und Fokusring gilt `accent-strong`.
+3. Tag: weiche Karten auf warmem Grund, sehr weiche Schatten, Radien 10 bis 14 px. Abend: feine
+   1px Linien, keine Schatten, Radius 6 px.
+4. Komponenten verwenden ausschließlich semantische Klassen (`bg-surface`, `text-muted`,
+   `border-field-line` usw.), keine Tailwind Palettenklassen (`bg-white`, `text-gray-*`) und keine
+   Hexwerte. Ausnahme: Inhalte, die wie Papier wirken müssen, nutzen `paper` und `ink`.
+5. Alle Text auf Hintergrund Paare erfüllen WCAG AA (Tabelle unten), Bedienelemente und Fokusring
+   mindestens 3 : 1.
+6. Einheitlicher Fokusring: 2px `accent-strong`, nur bei Tastaturfokus (`focus-visible`).
+7. Alte Namen (`gold`, `gold-soft`, `gold-tint`, `anthracite-soft`) bleiben als Aliasse.
+
+## Flächenrollen
+
+| Rolle | Klasse | Einsatz | Tag | Abend |
+| --- | --- | --- | --- | --- |
+| Seitengrund | `bg-bg` | App Rahmen, Kopfzeile | #F6F5F2 | #0F1115 |
+| Karte | `bg-surface` | `ui.card`, Tabellen, Buttons | #FFFFFF | #171A21 |
+| Füllfläche | `bg-surface-2` | Zeilen Hover, verschachtelte Elemente, Code | #FAF9F7 | #1C2028 |
+| Starke Füllung | `bg-surface-3` | gedrückt, Chat Blase, Skelett | #F0EFEB | #232833 |
+| Schwebend | `bg-raised` | Menüs, Popover, Dialoge, Palette | #FFFFFF | #1C2028 |
+| Eingabefeld | `bg-field-bg`, `border-field-line` | `ui.input` | #FFFFFF, #8F9095 | #12151B, #5B6373 |
+| Kartenlinie | `border-card-line` | Karten und Tabellen | #EFEEE9 | #262B35 |
+| Abdeckung | `bg-scrim` | Hintergrund modaler Dialoge | 40 % Anthrazit | 60 % Schwarz |
+| Papier | `bg-paper`, `ink` | Unterschrift, QR Code, HTML Vorschau | #FFFFFF | #FFFFFF |
+
+Diagramme: `chart-1` (neutrale Reihe), `chart-2` (Akzentreihe), `chart-grid`, `chart-axis`,
+`chart-label`. Ampel: `signal-ok`, `signal-attention`, `signal-warning`, `signal-critical`, immer
+zusammen mit einem Textlabel.
 
 ## Schrift
 
@@ -53,65 +75,67 @@ Zahlenspalten erhalten die Zellklasse `num` (rechtsbündig). Tailwind: `text-dis
 | `--mhvp-space-6` | 48px |
 | `--mhvp-space-8` | 64px |
 
-Tailwind Abstände (`p-4` = 16px, `gap-6` = 24px) liegen auf demselben Raster. Radien: sm 6px,
-md 8px, lg 12px (Karten), xl 16px.
+Tailwind Abstände (`p-4` = 16px, `gap-6` = 24px) liegen auf demselben Raster. Radien Tag: sm 6px,
+md 10px, lg 12px (Karten), xl 16px. Radien Abend: sm 4px, md 6px, lg 6px, xl 8px.
 
 ## Farben und Kontrast
 
-Kontrast nach WCAG 2.1 (relative Leuchtdichte), berechnet am 27.09.2026 mit dem Skript im
-Verlauf dieser Änderung. AA verlangt 4,5 : 1 für Text, 3 : 1 für große Schrift und Bedienelemente.
+Kontrast nach WCAG 2.1 (relative Leuchtdichte), berechnet am 27.09.2026 mit
+`python3 scripts/token_contrast.py --de` direkt aus `tokens.css` (Exitcode 1, sobald ein Paar sein
+Ziel verfehlt). AA verlangt 4,5 : 1 für Text und 3 : 1 für Bedienelemente und Fokus (1.4.11).
 
-### Hell
+| Paar | Zweck | Tag | Abend | Soll |
+| --- | --- | --- | --- | --- |
+| fg / bg | Fließtext auf Seitengrund | #1a1a1a auf #f6f5f2, 15,96 : 1 | #e8eaf0 auf #0f1115, 15,71 : 1 | 4,5 : 1 |
+| fg / surface | Fließtext auf Karte | #1a1a1a auf #ffffff, 17,40 : 1 | #e8eaf0 auf #171a21, 14,47 : 1 | 4,5 : 1 |
+| fg / surface-2 | Fließtext auf Hover/Füllfläche | #1a1a1a auf #faf9f7, 16,54 : 1 | #e8eaf0 auf #1c2028, 13,57 : 1 | 4,5 : 1 |
+| fg / raised | Text in Menüs und Dialogen | #1a1a1a auf #ffffff, 17,40 : 1 | #e8eaf0 auf #1c2028, 13,57 : 1 | 4,5 : 1 |
+| fg / field-bg | Eingabetext im Feld | #1a1a1a auf #ffffff, 17,40 : 1 | #e8eaf0 auf #12151b, 15,20 : 1 | 4,5 : 1 |
+| muted / bg | Sekundärtext auf Seitengrund | #6b6c6f auf #f6f5f2, 4,82 : 1 | #9aa3b2 auf #0f1115, 7,43 : 1 | 4,5 : 1 |
+| muted / surface | Sekundärtext auf Karte | #6b6c6f auf #ffffff, 5,25 : 1 | #9aa3b2 auf #171a21, 6,84 : 1 | 4,5 : 1 |
+| muted / surface-2 | Sekundärtext auf Füllfläche | #6b6c6f auf #faf9f7, 4,99 : 1 | #9aa3b2 auf #1c2028, 6,42 : 1 | 4,5 : 1 |
+| subtle / surface | Tabellenkopf, Labels auf Karte | #6b6c6f auf #ffffff, 5,25 : 1 | #9aa3b2 auf #171a21, 6,84 : 1 | 4,5 : 1 |
+| primary-fg / primary | Primärbutton | #ffffff auf #1a1a1a, 17,40 : 1 | #0f1115 auf #e8eaf0, 15,71 : 1 | 4,5 : 1 |
+| accent-fg / accent | Text auf Akzentfläche | #1a1a1a auf #e6a83c, 8,31 : 1 | #0f1115 auf #e6a83c, 9,03 : 1 | 4,5 : 1 |
+| fg / accent-soft | Badge Akzent (badgeGold) | #1a1a1a auf #fff1d9, 15,61 : 1 | #e8eaf0 auf #1d2230, 13,19 : 1 | 4,5 : 1 |
+| success-fg / success-bg | Badge Erfolg | #2f6b3a auf #edf6ee, 5,79 : 1 | #7bd69a auf #16301f, 8,08 : 1 | 4,5 : 1 |
+| warning-fg / warning-bg | Badge Warnung | #9a5a00 auf #fde8d0, 4,60 : 1 | #f5c26b auf #3a2a10, 8,44 : 1 | 4,5 : 1 |
+| danger-fg / danger-bg | Badge Fehler | #8b1d1d auf #fbe7e7, 7,72 : 1 | #f2aaaa auf #3a1717, 8,45 : 1 | 4,5 : 1 |
+| info-fg / info-bg | Badge Info | #44474d auf #eef0f3, 8,16 : 1 | #9cc2ff auf #1e2a40, 7,93 : 1 | 4,5 : 1 |
+| muted-fg / muted-bg | Badge neutral | #5b5c60 auf #f0efeb, 5,80 : 1 | #b4bcc9 auf #232833, 7,72 : 1 | 4,5 : 1 |
+| progress-label-fg / progress-label-bg | Namenslabel In Bearbeitung | #6b4d00 auf #ffe8a8, 6,46 : 1 | #0f1115 auf #e6a83c, 9,03 : 1 | 4,5 : 1 |
+| fg / progress-bg | Text auf In Bearbeitung | #1a1a1a auf #fff4d6, 15,88 : 1 | #e8eaf0 auf #1e1a10, 14,42 : 1 | 4,5 : 1 |
+| danger-fg / surface | Fehlertext auf Karte | #8b1d1d auf #ffffff, 9,17 : 1 | #f2aaaa auf #171a21, 9,21 : 1 | 4,5 : 1 |
+| success-fg / surface | Erfolgstext auf Karte | #2f6b3a auf #ffffff, 6,39 : 1 | #7bd69a auf #171a21, 9,89 : 1 | 4,5 : 1 |
+| warning-fg / surface | Warntext auf Karte | #9a5a00 auf #ffffff, 5,47 : 1 | #f5c26b auf #171a21, 10,62 : 1 | 4,5 : 1 |
+| rail-fg / rail-bg | Navigation | #55565a auf #ffffff, 7,33 : 1 | #9aa3b2 auf #0b0d11, 7,64 : 1 | 4,5 : 1 |
+| rail-muted / rail-bg | Navigation Gruppenlabel | #6c6d70 auf #ffffff, 5,17 : 1 | #8a93a3 auf #0b0d11, 6,28 : 1 | 4,5 : 1 |
+| rail-active-fg / rail-active | Navigation aktiv | #1a1a1a auf #fff1d9, 15,61 : 1 | #e6a83c auf #1d2230, 7,58 : 1 | 4,5 : 1 |
+| field-line / field-bg | Feldrahmen (Nicht-Text, 1.4.11) | #8f9095 auf #ffffff, 3,19 : 1 | #5b6373 auf #12151b, 3,03 : 1 | 3,0 : 1 |
+| accent-strong / surface | Fokusring auf Karte (Nicht-Text) | #935f08 auf #ffffff, 5,41 : 1 | #e6a83c auf #171a21, 8,32 : 1 | 3,0 : 1 |
+| accent-strong / bg | Fokusring auf Seitengrund (Nicht-Text) | #935f08 auf #f6f5f2, 4,96 : 1 | #e6a83c auf #0f1115, 9,03 : 1 | 3,0 : 1 |
+| accent-strong / surface | Akzentlink auf Karte | #935f08 auf #ffffff, 5,41 : 1 | #e6a83c auf #171a21, 8,32 : 1 | 4,5 : 1 |
+| signal-critical / surface | Ampel rot (Nicht-Text) | #dc2626 auf #ffffff, 4,83 : 1 | #f87171 auf #171a21, 6,29 : 1 | 3,0 : 1 |
+| signal-warning / surface | Ampel orange (Nicht-Text) | #ea6c0a auf #ffffff, 3,16 : 1 | #fb923c auf #171a21, 7,69 : 1 | 3,0 : 1 |
+| signal-ok / surface | Ampel grün (Nicht-Text) | #16a36a auf #ffffff, 3,24 : 1 | #34d399 auf #171a21, 9,06 : 1 | 3,0 : 1 |
+| signal-attention / surface | Ampel gelb (Nicht-Text, nur mit Textlabel) | #b88a00 auf #ffffff, 3,15 : 1 | #facc15 auf #171a21, 11,37 : 1 | 3,0 : 1 |
 
-| Vordergrund | Hintergrund | Werte | Kontrast |
-| --- | --- | --- | --- |
-| fg | bg | #1f1f23 auf #ffffff | 16,43 : 1 |
-| muted | bg | #5c5c66 auf #ffffff | 6,61 : 1 |
-| subtle | bg | #75757f auf #ffffff | 4,56 : 1 |
-| fg | surface | #1f1f23 auf #f6f6f7 | 15,21 : 1 |
-| muted | surface | #5c5c66 auf #f6f6f7 | 6,12 : 1 |
-| primary-fg | primary | #ffffff auf #1f1f23 | 16,43 : 1 |
-| accent | bg | #2f5e95 auf #ffffff | 6,65 : 1 |
-| accent-fg | accent | #ffffff auf #2f5e95 | 6,65 : 1 |
-| success-fg | success-bg | #1a5a33 auf #e3f1e8 | 7,05 : 1 |
-| warning-fg | warning-bg | #6f4a0a auf #fbeed3 | 6,87 : 1 |
-| danger-fg | danger-bg | #8b1d1d auf #fbe7e7 | 7,72 : 1 |
-| info-fg | info-bg | #1f4a75 auf #e4edf7 | 7,74 : 1 |
-| rail-fg | rail-bg | #ececef auf #1d1d22 | 14,24 : 1 |
-| rail-muted | rail-bg | #a3a3ab auf #1d1d22 | 6,70 : 1 |
-
-### Dunkel
-
-| Vordergrund | Hintergrund | Werte | Kontrast |
-| --- | --- | --- | --- |
-| fg | bg | #ececef auf #141417 | 15,59 : 1 |
-| muted | bg | #b0b0b8 auf #141417 | 8,53 : 1 |
-| subtle | bg | #8f8f98 auf #141417 | 5,73 : 1 |
-| fg | surface | #ececef auf #1b1b20 | 14,55 : 1 |
-| muted | surface | #b0b0b8 auf #1b1b20 | 7,96 : 1 |
-| primary-fg | primary | #141417 auf #ececef | 15,59 : 1 |
-| accent | bg | #8db4e6 auf #141417 | 8,58 : 1 |
-| accent-fg | accent | #0f1a28 auf #8db4e6 | 8,18 : 1 |
-| success-fg | success-bg | #9fd8b2 auf #16301f | 8,76 : 1 |
-| warning-fg | warning-bg | #f0cf84 auf #3a2d10 | 8,94 : 1 |
-| danger-fg | danger-bg | #f2aaaa auf #3a1717 | 8,45 : 1 |
-| info-fg | info-bg | #a9c8ec auf #182a3f | 8,43 : 1 |
-| rail-fg | rail-bg | #ececef auf #0f0f12 | 16,23 : 1 |
-| rail-muted | rail-bg | #93939b auf #0f0f12 | 6,28 : 1 |
-
-Alle Paare erfüllen AA, die meisten AAA. `subtle` ist für Labels und Hilfetexte gedacht, nicht für
-lange Absätze.
+`subtle` ist für Labels und Hilfetexte gedacht, nicht für lange Absätze. Die Ampelfarben sind
+Markierungen neben einem Textlabel und tragen die Bedeutung nie allein.
 
 ## Klassenvorgaben (`lib/ui.ts`)
 
-`card`, `cardLift`, `cardLink`: Haarlinie, kein Schatten, Hover nur über die Rahmenfarbe.
-`primary`: neutrale Primäraktion (`bg-primary`), `button` und `secondary` mit Akzent bei Hover.
-Alle Bedienelemente: `focus-visible:ring-2 focus-visible:ring-focus`. Neu: `h3`, `display`,
-`small`, `num`, `mono`, `info`, `warning`, `badgeInfo`.
+`card`, `cardLift`, `cardLink`: Karte (`bg-surface`, `border-card-line`, `shadow-card`), Hover nur
+über die Rahmenfarbe; die Markerklasse `mhvp-surface-card` lässt Tabellen darin flach. Eine
+`mhvp-table` außerhalb einer Karte erscheint selbst als Karte. `input`: `bg-field-bg` mit
+`border-field-line`. `primary`: neutrale Primäraktion (`bg-primary`), `button` und `secondary`
+mit Akzent bei Hover. `popover` und `scrim` für schwebende Ebenen. Badges (`badge*`, `StatusChip`,
+`StatusPill`) als runde Pillen in Halbfett auf den Statusflächen, neutral auf `muted-bg`. Alle
+Bedienelemente: `focus-visible:ring-2 focus-visible:ring-focus`.
 
 ## Offen
 
 - Freigabe der Unternehmensfarben (M1-08): danach `accent` und die Aliasse `gold*` mit den
   freigegebenen Werten belegen und die Kontrasttabelle neu berechnen.
-- Inter im CRM: `apps/web-crm/src/app/layout.tsx` muss `Inter({ variable: "--font-inter" })`
-  einbinden (Datei in Bearbeitung durch die Shell Aufgabe). Bis dahin greift `system-ui`.
+- Das Kundenportal (`apps/web-portal`) hat noch keinen Abendmodus; es nutzt die Flächenrollen im
+  Tagmodus.

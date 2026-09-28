@@ -31,6 +31,22 @@
   --mhvp-color-border: #ecebe7;
   --mhvp-color-border-soft: #f0efeb;
   --mhvp-color-hairline: var(--mhvp-color-border);
+  /* Surface roles (1.37.x redesign): bg is the page ground, surface the card, surface-2 a
+   * subtle fill inside a card (row hover, nested item, code block), surface-3 a stronger fill
+   * (pressed, chat bubble). raised is for floating layers (menus, popovers, dialogs). */
+  --mhvp-color-surface-3: #f0efeb;
+  --mhvp-color-raised: #ffffff;
+  /* Cards: day mode separates by a very soft shadow, the line is only a faint edge. */
+  --mhvp-color-card-line: #efeee9;
+  /* Form fields: own background and a line with at least 3:1 against the field (WCAG 1.4.11). */
+  --mhvp-color-field-bg: #ffffff;
+  --mhvp-color-field-line: #8f9095;
+  /* Modal backdrop. */
+  --mhvp-color-scrim: rgba(26, 26, 26, 0.4);
+  /* Paper: always white in both modes for content that must look like print (signature
+   * canvas, QR codes, HTML mail and signature previews); ink is the pen colour on it. */
+  --mhvp-color-paper: #ffffff;
+  --mhvp-color-ink: #1a1a1a;
 
   /* Primary action (neutral, calm) */
   --mhvp-color-primary: #1a1a1a;
@@ -42,6 +58,9 @@
   --mhvp-color-accent-fg: #1a1a1a;
   --mhvp-color-accent-soft: #fff1d9;
   --mhvp-color-accent-tint: #fff8ec;
+  /* Strong accent: same hue, dark enough for 4.5:1 against white and the page ground (focus
+   * ring per WCAG 1.4.11, accent coloured links and text). */
+  --mhvp-color-accent-strong: #935f08;
 
   /* Semantic states: bg for fills, fg for text on the fill, line for borders. Values match the
    * released mockup pills (high/medium/low) and the "in progress" highlight. */
@@ -57,31 +76,44 @@
   --mhvp-color-info-bg: #eef0f3;
   --mhvp-color-info-fg: #44474d;
   --mhvp-color-info-line: #d7dae0;
-  --mhvp-color-muted-bg: var(--mhvp-color-surface);
-  --mhvp-color-muted-fg: var(--mhvp-color-muted);
+  --mhvp-color-muted-bg: #f0efeb;
+  --mhvp-color-muted-fg: #5b5c60;
+  /* Traffic light marks (ticket attention, import rows): non text indicators next to a label,
+   * never the only carrier of meaning. ok green, attention yellow, warning orange, critical red. */
+  --mhvp-color-signal-ok: #16a36a;
+  --mhvp-color-signal-attention: #b88a00;
+  --mhvp-color-signal-warning: #ea6c0a;
+  --mhvp-color-signal-critical: #dc2626;
+  /* Charts: neutral series, accent series, grid, axis and labels. */
+  --mhvp-color-chart-1: var(--mhvp-color-muted);
+  --mhvp-color-chart-2: var(--mhvp-color-accent);
+  --mhvp-color-chart-grid: var(--mhvp-color-border-soft);
+  --mhvp-color-chart-axis: var(--mhvp-color-border);
+  --mhvp-color-chart-label: var(--mhvp-color-subtle);
   /* "In progress" highlight (mail and ticket lists): soft field with a labelled name tag. */
   --mhvp-color-progress-bg: #fff4d6;
   --mhvp-color-progress-label-bg: #ffe8a8;
   --mhvp-color-progress-label-fg: #6b4d00;
 
   /* Focus ring (consistent across inputs, buttons, links, cards) */
-  --mhvp-focus-ring-color: var(--mhvp-color-accent);
+  --mhvp-focus-ring-color: var(--mhvp-color-accent-strong);
   --mhvp-focus-ring-width: 2px;
   --mhvp-focus-ring-offset: 2px;
 
   /* Navigation rail: on the surface colour in day mode, active item gets the accent tint. */
   --mhvp-color-rail-bg: #ffffff;
   --mhvp-color-rail-fg: #55565a;
-  --mhvp-color-rail-muted: #87888a;
+  --mhvp-color-rail-muted: #6c6d70;
   --mhvp-color-rail-border: #ecebe7;
   --mhvp-color-rail-hover: #f6f5f2;
   --mhvp-color-rail-active: #fff1d9;
+  --mhvp-color-rail-active-fg: #1a1a1a;
 
   /* Legacy aliases (kept for existing class names; see header). */
   --mhvp-color-gold: var(--mhvp-color-accent);
   --mhvp-color-gold-soft: var(--mhvp-color-accent-soft);
   --mhvp-color-gold-tint: var(--mhvp-color-accent-tint);
-  --mhvp-color-anthracite-soft: var(--mhvp-color-surface-2);
+  --mhvp-color-anthracite-soft: var(--mhvp-color-surface-3);
 
   /* 8 point spacing scale */
   --mhvp-space-0-5: 0.25rem; /* 4px */
@@ -143,6 +175,9 @@
   /* Inter is loaded per app via next/font/google (variable --font-inter); no external CSS. */
   --mhvp-font-sans: var(--font-inter, "Inter"), system-ui, "Segoe UI", Roboto, sans-serif;
   --mhvp-font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, "Liberation Mono", monospace;
+
+  /* Chevron of custom styled selects, coloured with the muted text colour per mode. */
+  --mhvp-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236b6c6f' stroke-width='1.5'%3E%3Cpath d='M5.5 7.5 10 12l4.5-4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
 /* Evening mode (design B, "Dunkel und praezise"): set explicitly by the theme switch
@@ -157,7 +192,13 @@
   --mhvp-color-muted: #9aa3b2;
   --mhvp-color-subtle: #9aa3b2;
   --mhvp-color-border: #262b35;
-  --mhvp-color-border-soft: #1e222b;
+  --mhvp-color-border-soft: #222733;
+  --mhvp-color-surface-3: #232833;
+  --mhvp-color-raised: #1c2028;
+  --mhvp-color-card-line: #262b35;
+  --mhvp-color-field-bg: #12151b;
+  --mhvp-color-field-line: #5b6373;
+  --mhvp-color-scrim: rgba(0, 0, 0, 0.6);
 
   --mhvp-color-primary: #e8eaf0;
   --mhvp-color-primary-fg: #0f1115;
@@ -168,6 +209,7 @@
   --mhvp-color-accent-fg: #0f1115;
   --mhvp-color-accent-soft: #1d2230;
   --mhvp-color-accent-tint: #1a1e28;
+  --mhvp-color-accent-strong: #e6a83c;
 
   --mhvp-color-success-bg: #16301f;
   --mhvp-color-success-fg: #7bd69a;
@@ -181,6 +223,12 @@
   --mhvp-color-info-bg: #1e2a40;
   --mhvp-color-info-fg: #9cc2ff;
   --mhvp-color-info-line: #2f4b6d;
+  --mhvp-color-muted-bg: #232833;
+  --mhvp-color-muted-fg: #b4bcc9;
+  --mhvp-color-signal-ok: #34d399;
+  --mhvp-color-signal-attention: #facc15;
+  --mhvp-color-signal-warning: #fb923c;
+  --mhvp-color-signal-critical: #f87171;
   /* "In progress" highlight: gold border on a dark gold tinted field (per the mockup). */
   --mhvp-color-progress-bg: #1e1a10;
   --mhvp-color-progress-label-bg: #e6a83c;
@@ -188,10 +236,19 @@
 
   --mhvp-color-rail-bg: #0b0d11;
   --mhvp-color-rail-fg: #9aa3b2;
-  --mhvp-color-rail-muted: #6f7684;
+  --mhvp-color-rail-muted: #8a93a3;
   --mhvp-color-rail-border: #262b35;
   --mhvp-color-rail-hover: #171a21;
   --mhvp-color-rail-active: #1d2230;
+  --mhvp-color-rail-active-fg: #e6a83c;
+
+  --mhvp-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%239aa3b2' stroke-width='1.5'%3E%3Cpath d='M5.5 7.5 10 12l4.5-4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+
+  /* Precise 6 px radius on cards, fields and buttons (design B); pills stay round. */
+  --mhvp-radius-sm: 0.25rem;
+  --mhvp-radius-md: 0.375rem;
+  --mhvp-radius-lg: 0.375rem;
+  --mhvp-radius-xl: 0.5rem;
 
   /* No shadows in evening mode: fine 1px lines separate surfaces instead. */
   --mhvp-radius: 0.375rem;

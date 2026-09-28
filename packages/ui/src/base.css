@@ -1,8 +1,9 @@
 /*
  * Shared base styles and component classes on the MHVP tokens (both web apps import this after
  * theme.css). Typography classes: mhvp-display, mhvp-title (h1), mhvp-h2, mhvp-h3, mhvp-small,
- * mhvp-caption, mhvp-mono, mhvp-num, mhvp-label. Surfaces: mhvp-card (hairline, no shadow).
- * Focus: mhvp-focus (consistent ring). Tables: mhvp-table with right aligned tabular numbers.
+ * mhvp-caption, mhvp-mono, mhvp-num, mhvp-label. Surfaces: mhvp-card (surface on the page
+ * ground; soft shadow by day, 1px line in the evening). Focus: mhvp-focus (consistent ring).
+ * Tables: mhvp-table with right aligned tabular numbers. Selects: mhvp-select (token chevron).
  */
 body {
   background: var(--mhvp-color-bg);
@@ -41,24 +42,13 @@ body {
   letter-spacing: var(--mhvp-font-display-tracking);
   font-weight: var(--mhvp-font-display-weight);
 }
-/* Page title (h1) with a short accent bar underneath instead of a full underline. */
+/* Page title (h1): calm, no underline or accent bar (1.37 redesign: the accent is reserved for
+ * action needed and active navigation). */
 .mhvp-title {
-  position: relative;
-  padding-bottom: 0.5rem;
   font-size: var(--mhvp-font-h1-size);
   line-height: var(--mhvp-font-h1-line);
   letter-spacing: var(--mhvp-font-h1-tracking);
   font-weight: var(--mhvp-font-h1-weight);
-}
-.mhvp-title::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: 0;
-  width: 2rem;
-  height: 2px;
-  border-radius: 1px;
-  background: var(--mhvp-color-accent);
 }
 .mhvp-h2 {
   font-size: var(--mhvp-font-h2-size);
@@ -95,21 +85,57 @@ body {
   color: var(--mhvp-color-subtle);
 }
 
-/* Card: hairline, no shadow. */
+/* Card: surface on the page ground; soft shadow by day, fine line in the evening (the
+ * shadow token is none there). */
 .mhvp-card {
-  background: var(--mhvp-color-bg);
-  border: 1px solid var(--mhvp-color-hairline);
+  background: var(--mhvp-color-surface);
+  border: 1px solid var(--mhvp-color-card-line);
   border-radius: var(--mhvp-radius-lg);
+  box-shadow: var(--mhvp-shadow-card);
+}
+
+/* Custom styled select: native arrow replaced by a chevron in the muted colour of the mode. */
+.mhvp-select {
+  appearance: none;
+  background-image: var(--mhvp-select-chevron);
+  background-repeat: no-repeat;
+  background-position: right 0.6rem center;
+  background-size: 14px;
 }
 
 /* Data tables: airy rows, quiet header, no vertical rules, sticky head. The head stays below
- * the app header (z-30, opaque) and never above menus or dialogs. */
+ * the app header (z-30, opaque) and never above menus or dialogs. On the page ground a table
+ * is its own card (surface, line, soft shadow by day); inside a card (mhvp-surface-card, set
+ * by ui.card and mhvp-card) it stays flat. Separate borders with zero spacing keep the single
+ * bottom rule per row and allow rounded corners. */
 .mhvp-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: var(--mhvp-font-body-size);
   line-height: 1.25rem;
   font-variant-numeric: tabular-nums lining-nums;
+  background: var(--mhvp-color-surface);
+  border: 1px solid var(--mhvp-color-card-line);
+  border-radius: var(--mhvp-radius-lg);
+  box-shadow: var(--mhvp-shadow-card);
+}
+.mhvp-table thead th:first-child {
+  border-top-left-radius: var(--mhvp-radius-lg);
+}
+.mhvp-table thead th:last-child {
+  border-top-right-radius: var(--mhvp-radius-lg);
+}
+.mhvp-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+:where(.mhvp-card, .mhvp-surface-card) .mhvp-table {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+:where(.mhvp-card, .mhvp-surface-card) .mhvp-table thead th {
+  border-radius: 0;
 }
 .mhvp-table thead th {
   position: sticky;
@@ -121,7 +147,7 @@ body {
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--mhvp-color-subtle);
-  background: var(--mhvp-color-bg);
+  background: var(--mhvp-color-surface);
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--mhvp-color-border);
 }
@@ -134,7 +160,7 @@ body {
   transition: background var(--mhvp-motion-fast) var(--mhvp-motion-ease);
 }
 .mhvp-table tbody tr:hover {
-  background: var(--mhvp-color-surface);
+  background: var(--mhvp-color-surface-2);
 }
 .mhvp-table .num,
 .mhvp-table th.num,
@@ -149,7 +175,10 @@ body {
   position: sticky;
   left: 0;
   z-index: 2;
-  background: var(--mhvp-color-bg);
+  background: var(--mhvp-color-surface);
+}
+.mhvp-table--sticky-col tbody tr:hover td:first-child {
+  background: var(--mhvp-color-surface-2);
 }
 .mhvp-table--sticky-col thead th:first-child {
   z-index: 3;
@@ -162,6 +191,14 @@ body {
   height: 0.375rem;
   border-radius: 999px;
   background: currentColor;
+}
+
+/* Brand logo: the artwork is dark on light. In evening mode it sits on a small paper plate so
+ * it stays legible without recolouring the brand mark. */
+:root[data-theme="evening"] .mhvp-logo {
+  background: var(--mhvp-color-paper);
+  border-radius: var(--mhvp-radius-sm);
+  padding: 2px 3px;
 }
 
 /* Hover for clickable surfaces: border darkens, no lift or shadow (calm cards). */

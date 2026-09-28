@@ -14,6 +14,23 @@
   --color-border: var(--mhvp-color-border);
   --color-border-soft: var(--mhvp-color-border-soft);
   --color-hairline: var(--mhvp-color-hairline);
+  --color-surface-3: var(--mhvp-color-surface-3);
+  --color-raised: var(--mhvp-color-raised);
+  --color-card-line: var(--mhvp-color-card-line);
+  --color-field-bg: var(--mhvp-color-field-bg);
+  --color-field-line: var(--mhvp-color-field-line);
+  --color-scrim: var(--mhvp-color-scrim);
+  --color-paper: var(--mhvp-color-paper);
+  --color-ink: var(--mhvp-color-ink);
+  --color-signal-ok: var(--mhvp-color-signal-ok);
+  --color-signal-attention: var(--mhvp-color-signal-attention);
+  --color-signal-warning: var(--mhvp-color-signal-warning);
+  --color-signal-critical: var(--mhvp-color-signal-critical);
+  --color-chart-1: var(--mhvp-color-chart-1);
+  --color-chart-2: var(--mhvp-color-chart-2);
+  --color-chart-grid: var(--mhvp-color-chart-grid);
+  --color-chart-axis: var(--mhvp-color-chart-axis);
+  --color-chart-label: var(--mhvp-color-chart-label);
   --color-primary: var(--mhvp-color-primary);
   --color-primary-fg: var(--mhvp-color-primary-fg);
   --color-primary-hover: var(--mhvp-color-primary-hover);
@@ -21,6 +38,7 @@
   --color-accent-fg: var(--mhvp-color-accent-fg);
   --color-accent-soft: var(--mhvp-color-accent-soft);
   --color-accent-tint: var(--mhvp-color-accent-tint);
+  --color-accent-strong: var(--mhvp-color-accent-strong);
   --color-focus: var(--mhvp-focus-ring-color);
   --color-success-bg: var(--mhvp-color-success-bg);
   --color-success-fg: var(--mhvp-color-success-fg);
@@ -45,6 +63,7 @@
   --color-rail-border: var(--mhvp-color-rail-border);
   --color-rail-hover: var(--mhvp-color-rail-hover);
   --color-rail-active: var(--mhvp-color-rail-active);
+  --color-rail-active-fg: var(--mhvp-color-rail-active-fg);
   /* Legacy aliases (gold resolves to the accent until M1-08 is decided). */
   --color-gold: var(--mhvp-color-gold);
   --color-gold-soft: var(--mhvp-color-gold-soft);
