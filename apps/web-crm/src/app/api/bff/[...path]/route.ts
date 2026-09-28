@@ -309,6 +309,26 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^banking\/matching-metrics$/ },
   { method: "GET", pattern: new RegExp(`^banking/transactions/${ID}/candidates$`) },
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(book|ignore)$`) },
+  // BK-2 (plan M12 step S2): daily bank work in the CRM against the existing API. Transaction
+  // list with filters and pagination, duplicate clarification (keep or ignore with reason),
+  // "Regel lernen" from a booked transaction, bulk confirmation with preview, MT940 and CSV
+  // upload with column mapping, bank reconciliation B09, bank rules with the four eyes life
+  // cycle (propose, approve, activate with cap and evidence, disable). The automation runner
+  // (`POST /banking/auto-post`) and the switch (`PUT /banking/automation`) stay outside on
+  // purpose: activation is gated by an open operator decision (ADR 0013, plan section 4).
+  { method: "GET", pattern: /^banking\/transactions$/ },
+  { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(review|learn)$`) },
+  { method: "POST", pattern: /^banking\/bulk-confirm$/ },
+  { method: "POST", pattern: /^banking\/imports\/csv(\/preview)?$/ },
+  { method: "GET", pattern: /^banking\/csv-mappings$/ },
+  { method: "POST", pattern: /^banking\/csv-mappings$/ },
+  { method: "GET", pattern: new RegExp(`^banking/accounts/${ID}/reconciliation$`) },
+  { method: "GET", pattern: /^banking\/rules$/ },
+  { method: "POST", pattern: /^banking\/rules$/ },
+  { method: "POST", pattern: new RegExp(`^banking/rules/${ID}/(approve|activate|disable)$`) },
+  // Ledger list, chart of accounts and open items for the booking dialog (accounting:read).
+  { method: "GET", pattern: /^accounting\/ledgers$/ },
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/(accounts|open-items)$`) },
   // Payment orders (M15): approval and cancel only; the payment file needs G2.
   { method: "POST", pattern: new RegExp(`^banking/payment-orders/${ID}/(approve|cancel)$`) },
   // Direct debit runs (M15, pain.008): four eyes approval, cancel, file generation as a
