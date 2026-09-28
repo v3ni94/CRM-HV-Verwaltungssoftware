@@ -2,6 +2,7 @@
 reminder 10 days before expiry."""
 
 import asyncio
+import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from typing import Any
@@ -19,6 +20,8 @@ from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.problems import ProblemError
 from mhvp.platform.models import Tenant, TenantStatus
 from mhvp.workspace.services import local_today, notify
+
+log = logging.getLogger(__name__)
 
 # Incremental finAPI sync: overlap in days before the cursor (banks may book a transaction
 # with an earlier booking date after the previous run); dedup by provider id makes it idempotent.
@@ -431,7 +434,9 @@ async def _finapi_fetch_once(
                 run.status, run.errors = "failed", [str(exc)]
                 counts = {"new": 0}
             await session.flush()
-            return counts
+        # After the commit of the import (ADR 0013): proposal snapshots of this run.
+        await _proposals_after_import(settings, tenant_id, run_id)
+        return counts
     finally:
         await engine.dispose()
 
@@ -850,7 +855,10 @@ async def _fints_step_once(
                 tan_used=awaiting,
             )
             await session.flush()
-            return {"status": fs.status.value, **counts}
+            status_value, run_id = fs.status.value, fs.sync_run_id
+        # After the commit of the import (ADR 0013): proposal snapshots of this run.
+        await _proposals_after_import(settings, tenant_id, run_id)
+        return {"status": status_value, **counts}
     finally:
         await engine.dispose()
 
@@ -860,3 +868,86 @@ def fints_step(tenant_id: str, session_id: str) -> dict[str, Any]:
     return asyncio.run(
         _fints_step_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(session_id))
     )
+
+
+# --- Learning bookkeeper (ADR 0013, plan M12 S0 and S1) ---------------------------------------
+
+
+async def compute_proposals_once(
+    settings: Settings, tenant_id: uuid.UUID, run_id: uuid.UUID
+) -> dict[str, int]:
+    """Snapshot of the stage 1 proposals for every open transaction of one sync run
+    (``proposals.compute_for_run``), idempotent per run. Runs after the import committed:
+    the file and CSV endpoints queue it as an after-commit hook, the finAPI and FinTS tasks
+    call it once their own import transaction committed. A tenant without
+    ``learning_bookkeeper_enabled`` gets no rows."""
+    from mhvp.banking import proposals
+
+    _ensure_crypto(settings)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            return await proposals.compute_for_run(session, run_id)
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.banking.compute_proposals")
+def compute_proposals(tenant_id: str, run_id: str) -> dict[str, int]:
+    return asyncio.run(
+        compute_proposals_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(run_id))
+    )
+
+
+async def _proposals_after_import(
+    settings: Settings, tenant_id: uuid.UUID, run_id: uuid.UUID | None
+) -> None:
+    """Called by the finAPI and FinTS tasks after their import transaction committed. A
+    failure here never touches the import (logged, next import recomputes)."""
+    if run_id is None:
+        return
+    try:
+        await compute_proposals_once(settings, tenant_id, run_id)
+    except Exception:
+        log.exception(
+            "posting proposals after import failed",
+            extra={"tenant_id": str(tenant_id), "run_id": str(run_id)},
+        )
+
+
+async def process_events_once(settings: Settings, *, now: datetime | None = None) -> dict[str, int]:
+    """Beat job: per active tenant, the banking event consumer since its watermark
+    (``mhvp.banking.events_consumer.process_tenant``)."""
+    from mhvp.banking.events_consumer import process_tenant
+
+    _ensure_crypto(settings)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    totals = {"tenants": 0, "events": 0, "handled": 0, "failed": 0}
+    try:
+        factory = create_session_factory(engine)
+        async with platform_transaction(factory) as session:
+            tenant_ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in tenant_ids:
+            totals["tenants"] += 1
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    result = await process_tenant(session, tenant_id, now=now)
+                for key in ("events", "handled", "failed"):
+                    totals[key] += result[key]
+            except Exception:
+                log.warning("banking process_events failed", extra={"tenant_id": str(tenant_id)})
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.banking.process_events")
+def process_events() -> dict[str, int]:
+    return asyncio.run(process_events_once(get_settings()))

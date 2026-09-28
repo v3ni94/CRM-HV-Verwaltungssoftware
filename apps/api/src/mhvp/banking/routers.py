@@ -11,8 +11,9 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from mhvp.accounting.models import EntrySource
-from mhvp.banking import account_selection, matching, payments
+from mhvp.accounting.models import EntrySource, LedgerAccount
+from mhvp.banking import account_selection, decisions, matching, payments, proposals
+from mhvp.banking import event_types as ev
 from mhvp.banking import finapi as finapi_client
 from mhvp.banking import matching_metrics as matching_metrics_svc
 from mhvp.banking import services as svc
@@ -37,6 +38,8 @@ from mhvp.banking.models import (
     TransactionStatus,
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import ensure_legal_entity_allowed
+from mhvp.core.db.tenancy import after_commit
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
@@ -116,6 +119,59 @@ class TransactionOut(BaseModel):
 class DuplicateReviewIn(_In):
     decision: str = Field(pattern="^(keep|ignore)$")
     reason: str = Field(min_length=3, max_length=2000)
+    # Learning bookkeeper (ADR 0013): the pending decision round the person saw; a stale id
+    # is refused with 409 ``MHVP-BANK-0021``. Optional, ignored while the switch is off.
+    proposal_id: uuid.UUID | None = None
+
+
+class ReopenIn(_In):
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class ProposalRejectIn(ReopenIn):
+    """Reject the proposals of a transaction with a mandatory reason (plan M12 3.3). The
+    transaction stays open; ``chosen`` names the proposal the reason refers to (index into
+    the snapshot, default the best one); ``ai_proposal_id`` additionally closes a stored AI
+    proposal as rejected (``mhvp.ai.examples.record_rejection``)."""
+
+    proposal_id: uuid.UUID | None = None
+    chosen: int | None = Field(default=None, ge=0, le=100)
+    ai_proposal_id: uuid.UUID | None = None
+
+
+class LearningSwitchIn(_In):
+    enabled: bool
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class PostingDecisionOut(BaseModel):
+    """One round of ``posting_decision`` (ADR 0013)."""
+
+    id: uuid.UUID
+    bank_transaction_id: uuid.UUID
+    legal_entity_id: uuid.UUID
+    round: int
+    status: str
+    bulk: bool
+    engine_version: str
+    rule_version: str
+    features_hash: str
+    features: dict[str, Any]
+    proposals: list[dict[str, Any]]
+    case_kind: str
+    level: str
+    best_source: str | None
+    best_confidence: Decimal | None
+    computed_at: datetime
+    chosen_index: int | None
+    final: dict[str, Any] | None
+    diff: dict[str, Any] | None
+    reason: str | None
+    journal_entry_id: uuid.UUID | None
+    ai_proposal_id: uuid.UUID | None
+    supersedes_id: uuid.UUID | None
+    decided_by: uuid.UUID | None
+    decided_at: datetime | None
 
 
 def _conn_out(row: BankConnection) -> ConnectionOut:
@@ -194,7 +250,40 @@ async def import_statement(
             actor_user_id=principal.user_id,
             payload=run.counts,
         )
+        _queue_proposals(session, request, principal.tenant_id, run.id)
         return SyncRunOut.model_validate(run)
+
+
+def _queue_proposals(
+    session: Any, request: Request, tenant_id: uuid.UUID, run_id: uuid.UUID
+) -> None:
+    """Proposal snapshots of the learning bookkeeper (ADR 0013) are computed by the Celery task
+    ``mhvp.banking.compute_proposals`` after the import committed, never inside the import
+    request. The hook runs only after a successful commit; the task itself is a no-op for
+    tenants without the switch. With ``ai_inline`` (development and tests, no worker) the
+    computation runs in the calling process; a failure to enqueue is logged, the next import
+    or the consumer recomputes."""
+    import logging
+
+    from mhvp.banking.tasks import compute_proposals_once
+
+    settings = request.app.state.settings
+    log = logging.getLogger(__name__)
+
+    async def _start() -> None:
+        if settings.ai_inline:
+            await compute_proposals_once(settings, tenant_id, run_id)
+            return
+        try:
+            from mhvp.worker import get_celery
+
+            get_celery().send_task(
+                "mhvp.banking.compute_proposals", args=[str(tenant_id), str(run_id)]
+            )
+        except Exception:
+            log.exception("posting proposals not queued", extra={"run_id": str(run_id)})
+
+    after_commit(session, _start)
 
 
 @router.get("/runs", summary="Sync-Protokoll")
@@ -294,6 +383,15 @@ class BookIn(_In):
     settlements: list[SettleIn] = Field(default_factory=list, max_length=100)
     counter_account_id: uuid.UUID | None = None
     text: str | None = Field(default=None, max_length=500)
+    # Skonto against ``counter_account_id`` (7.3); the personal account is settled by
+    # amount plus discount.
+    discount: Decimal = Field(default=Decimal("0.00"), ge=0)
+    # Learning bookkeeper (ADR 0013, plan M12 3.3): the pending decision round the person
+    # booked from and the proposal chosen in it (index into the snapshot). A different
+    # proposal is a choice, not a modification; the diff is computed against ``chosen``.
+    # Both optional and ignored while ``learning_bookkeeper_enabled`` is off.
+    proposal_id: uuid.UUID | None = None
+    chosen: int | None = Field(default=None, ge=0, le=100)
 
 
 class BulkItem(BookIn):
@@ -486,6 +584,11 @@ async def posting_proposals(
             for p in ai_rows
         ]
         blocked = await gateway.posting_block_reason(session)
+        # Learning bookkeeper (ADR 0013): the pending decision round, when the switch is on
+        # and the snapshot job already ran; the CRM passes ``proposal_id`` and ``chosen`` back
+        # with the booking or rejection. Reading never writes a row.
+        learning = await proposals.learning_enabled(session)
+        pending = await proposals.pending_for(session, row.id) if learning else None
         return {
             "bank_transaction_id": tx_id,
             "amount": row.amount,
@@ -493,12 +596,24 @@ async def posting_proposals(
             "stage1": stage1,
             "ai": ai_items,
             "ai_stage": {"enabled": blocked is None, "blocked_reason": blocked},
+            "learning": {
+                "enabled": learning,
+                "decision_id": pending.id if pending is not None else None,
+                "round": pending.round if pending is not None else None,
+                "features_hash": pending.features_hash if pending is not None else None,
+                "proposals": pending.proposals if pending is not None else None,
+            },
             "note": "Vorschläge, keine Buchung. Buchung nur nach Prüfung und Freigabe.",
         }
 
 
 async def _book(
-    session: Any, principal: TenantPrincipal, row: BankTransaction, body: BookIn
+    session: Any,
+    principal: TenantPrincipal,
+    row: BankTransaction,
+    body: BookIn,
+    *,
+    bulk: bool = False,
 ) -> Any:
     reasons = await matching.allocation_reasons(
         session, row, [s.open_item_id for s in body.settlements]
@@ -511,11 +626,35 @@ async def _book(
         user_id=principal.user_id,
         source=EntrySource.BANK_IMPORT,
         text=body.text,
+        discount=body.discount,
+    )
+    counter_number = None
+    if body.counter_account_id is not None:
+        counter = await session.get(LedgerAccount, body.counter_account_id)
+        counter_number = counter.number if counter is not None else None
+    # Decision log (ADR 0013): the booking closes the pending round with the diff against the
+    # chosen proposal; no-op while the tenant switch is off.
+    decision = await proposals.record_booking(
+        session,
+        row,
+        journal_entry_id=entry.id,
+        user_id=principal.user_id,
+        proposal_id=body.proposal_id,
+        chosen=body.chosen,
+        final=decisions.normalise_final(
+            settlements=[
+                {"open_item_id": s.open_item_id, "amount": s.amount} for s in body.settlements
+            ],
+            counter_account_number=counter_number,
+            discount=body.discount,
+            text=body.text,
+        ),
+        bulk=bulk,
     )
     await emit(
         session,
         tenant_id=principal.tenant_id,
-        type="bank_transaction.booked",
+        type=ev.BANK_TRANSACTION_BOOKED,
         entity_type="bank_transaction",
         entity_id=row.id,
         actor_user_id=principal.user_id,
@@ -529,6 +668,16 @@ async def _book(
                 }
                 for s in body.settlements
             ],
+            "counter_account_number": counter_number,
+            "discount": str(body.discount),
+            "bulk": bulk,
+            "decision_id": str(decision.id) if decision is not None else None,
+            "decision_status": decision.status if decision is not None else None,
+            "proposal_source": (
+                decision.proposals[decision.chosen_index].get("source")
+                if decision is not None and decision.chosen_index is not None
+                else None
+            ),
         },
     )
     return entry
@@ -566,17 +715,160 @@ async def ignore(
                 ErrorCodes.CONFLICT, detail="Gebuchte Umsätze werden per Storno korrigiert."
             )
         row.status = TransactionStatus.IGNORED
+        row.updated_by = principal.user_id
+        await session.flush()
+        decision = await proposals.record_ignore(
+            session,
+            row,
+            user_id=principal.user_id,
+            reason=body.reason,
+            proposal_id=body.proposal_id,
+        )
         await emit(
             session,
             tenant_id=principal.tenant_id,
-            type="bank_transaction.ignored",
+            type=ev.BANK_TRANSACTION_IGNORED,
             entity_type="bank_transaction",
             entity_id=row.id,
             actor_user_id=principal.user_id,
-            payload={"reason": body.reason},
+            payload={
+                "reason": body.reason,
+                "decision_id": str(decision.id) if decision is not None else None,
+            },
         )
         await session.flush()
         return _tx_out(row)
+
+
+@router.post("/transactions/{tx_id}/reopen", summary="Ignorierten Umsatz wieder eröffnen")
+async def reopen(
+    tx_id: uuid.UUID,
+    body: ReopenIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> TransactionOut:
+    """An ignored transaction becomes ``new`` again with a reason (plan M12 3.3, ignoring is
+    no longer terminal). A transaction that carries a posting stays booked: corrections go
+    through the reversal (B03)."""
+    async with tenant_tx(request, principal) as session:
+        row = await matching.lock_for_booking(session, tx_id)
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        if row.status is not TransactionStatus.IGNORED:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Der Umsatz ist nicht ignoriert.")
+        if row.journal_entry_id is not None and await matching._effective_entry(
+            session, row.journal_entry_id
+        ):
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Gebuchte Umsätze werden per Storno korrigiert."
+            )
+        row.status = TransactionStatus.NEW
+        row.updated_by = principal.user_id
+        await session.flush()
+        decision = await proposals.ensure_pending(session, row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type=ev.BANK_TRANSACTION_REOPENED,
+            entity_type="bank_transaction",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "reason": body.reason,
+                "decision_id": str(decision.id) if decision is not None else None,
+            },
+        )
+        await session.flush()
+        return _tx_out(row)
+
+
+@router.post(
+    "/transactions/{tx_id}/reject",
+    summary="Vorschläge ablehnen (Pflichtgrund, Umsatz bleibt offen)",
+)
+async def reject_proposals(
+    tx_id: uuid.UUID,
+    body: ProposalRejectIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> PostingDecisionOut | None:
+    """Closes the pending decision round as ``rejected`` with the reason and opens the next
+    round (ADR 0013, M12-04). Nothing is booked or ignored. With ``ai_proposal_id`` the stored
+    AI proposal is marked rejected and, when the tenant records learning examples, handed to
+    ``mhvp.ai.examples.record_rejection``. Returns ``null`` while the learning switch is off
+    (the AI rejection is still recorded)."""
+    from mhvp.ai import examples as ai_examples
+    from mhvp.ai.models import AiProposal, AiTaskRun, Decision
+
+    async with tenant_tx(request, principal) as session:
+        row = await matching.lock_for_booking(session, tx_id)
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        if row.status is not TransactionStatus.NEW:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nur offene Umsätze haben ablehnbare Vorschläge."
+            )
+        ai_row = None
+        if body.ai_proposal_id is not None:
+            ai_row = await session.get(AiProposal, body.ai_proposal_id)
+            if ai_row is None or ai_row.context_id != row.id:
+                raise ProblemError(
+                    ErrorCodes.RESOURCE_NOT_FOUND, detail="KI-Vorschlag nicht gefunden."
+                )
+            if ai_row.decision is Decision.PENDING:
+                ai_row.decision = Decision.REJECTED
+                ai_row.decided_by, ai_row.decided_at = principal.user_id, datetime.now(UTC)
+                ai_row.rejection_reason = body.reason
+                run = await session.get(AiTaskRun, ai_row.task_run_id)
+                if run is not None:
+                    await ai_examples.record_rejection(
+                        session,
+                        proposal=ai_row,
+                        run=run,
+                        reason=body.reason,
+                        rejected_by=principal.user_id,
+                    )
+        decision = await proposals.record_rejection(
+            session,
+            row,
+            user_id=principal.user_id,
+            reason=body.reason,
+            proposal_id=body.proposal_id,
+            chosen=body.chosen,
+            ai_proposal_id=ai_row.id if ai_row is not None else None,
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type=ev.BANK_TRANSACTION_PROPOSAL_REJECTED,
+            entity_type="bank_transaction",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "reason": body.reason,
+                "decision_id": str(decision.id) if decision is not None else None,
+                "chosen_index": decision.chosen_index if decision is not None else None,
+                "ai_proposal_id": str(ai_row.id) if ai_row is not None else None,
+            },
+        )
+        await session.flush()
+        return (
+            PostingDecisionOut(**proposals.decision_out(decision)) if decision is not None else None
+        )
+
+
+@router.get(
+    "/transactions/{tx_id}/decisions",
+    summary="Vorschlags- und Entscheidungsprotokoll eines Umsatzes (ADR 0013)",
+)
+async def list_decisions(
+    tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[PostingDecisionOut]:
+    async with tenant_tx(request, principal) as session:
+        row = await _tx(session, tx_id)
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        return [
+            PostingDecisionOut(**proposals.decision_out(r))
+            for r in await proposals.rounds_of(session, tx_id)
+        ]
 
 
 @router.post(
@@ -618,7 +910,7 @@ async def bulk_confirm(
         for item, row in rows:
             nested = await session.begin_nested()
             try:
-                entry = await _book(session, principal, row, item)
+                entry = await _book(session, principal, row, item, bulk=True)
                 await nested.commit()
                 results.append({"transaction_id": row.id, "ok": True, "journal_entry_id": entry.id})
             except ProblemError as exc:
@@ -661,7 +953,32 @@ async def create_rule(
         )
         session.add(rule)
         await session.flush()
+        await _rule_event(session, principal, rule, ev.BANK_RULE_PROPOSED, {"origin": "manual"})
         return RuleOut.model_validate(rule)
+
+
+async def _rule_event(
+    session: Any,
+    principal: TenantPrincipal,
+    rule: BankRule,
+    event_type: str,
+    payload: dict[str, Any] | None = None,
+) -> None:
+    """Lifecycle event of a bank rule (ADR 0013, plan M12 S0): proposed, approved, activated,
+    disabled; ``superseded`` and ``downgraded`` follow with the learning module (S5, S6)."""
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type=event_type,
+        entity_type="bank_rule",
+        entity_id=rule.id,
+        actor_user_id=principal.user_id,
+        payload={
+            "approval_state": rule.approval_state.value,
+            "legal_entity_id": str(rule.legal_entity_id),
+            **(payload or {}),
+        },
+    )
 
 
 @router.get("/rules", summary="Bankregeln")
@@ -697,6 +1014,7 @@ async def approve_rule(
         rule.approval_state, rule.approved_by = RuleState.APPROVED, principal.user_id
         rule.approved_at = datetime.now(UTC)
         await session.flush()
+        await _rule_event(session, principal, rule, ev.BANK_RULE_APPROVED)
         return RuleOut.model_validate(rule)
 
 
@@ -718,14 +1036,15 @@ async def activate_rule(
             body.max_amount,
             body.test_evidence_document_id,
         )
-        await emit(
+        await _rule_event(
             session,
-            tenant_id=principal.tenant_id,
-            type="bank_rule.activated",
-            entity_type="bank_rule",
-            entity_id=rule.id,
-            actor_user_id=principal.user_id,
-            payload={"max_amount": str(body.max_amount)},
+            principal,
+            rule,
+            ev.BANK_RULE_ACTIVATED,
+            {
+                "max_amount": str(body.max_amount),
+                "test_evidence_document_id": str(body.test_evidence_document_id),
+            },
         )
         await session.flush()
         return RuleOut.model_validate(rule)
@@ -737,8 +1056,10 @@ async def disable_rule(
 ) -> RuleOut:
     async with tenant_tx(request, principal) as session:
         rule = await _rule(session, rule_id)
+        before = rule.approval_state.value
         rule.approval_state = RuleState.DISABLED
         await session.flush()
+        await _rule_event(session, principal, rule, ev.BANK_RULE_DISABLED, {"before": before})
         return RuleOut.model_validate(rule)
 
 
@@ -773,6 +1094,13 @@ async def learn(
         )
         session.add(rule)
         await session.flush()
+        await _rule_event(
+            session,
+            principal,
+            rule,
+            ev.BANK_RULE_PROPOSED,
+            {"origin": "learn", "bank_transaction_id": str(row.id)},
+        )
         return RuleOut.model_validate(rule)
 
 
@@ -884,6 +1212,61 @@ async def set_automation(
             entity_id=settings.id,
             actor_user_id=principal.user_id,
             payload={"enabled": body.enabled, "reason": body.reason},
+        )
+        await session.flush()
+        return {"enabled": body.enabled}
+
+
+@router.get("/learning", summary="Lernender Buchhalter: Schalter je Mandant lesen")
+async def get_learning(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.banking import features, posting_proposal
+
+    async with tenant_tx(request, principal) as session:
+        return {
+            "enabled": await proposals.learning_enabled(session),
+            "engine_version": posting_proposal.ENGINE_VERSION,
+            "rule_version": features.RULE_VERSION,
+            "note": (
+                "Vorschlags- und Entscheidungsprotokoll je Umsatz; bucht nichts, öffnet kein "
+                "Gate. Standard aus bis zur Datenschutzprüfung des Betreibers (M12-06)."
+            ),
+        }
+
+
+@router.put(
+    "/learning",
+    summary="Lernender Buchhalter: Entscheidungsprotokoll je Mandant ein- oder ausschalten",
+)
+async def set_learning(
+    body: LearningSwitchIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, bool]:
+    """``tenant_settings.learning_bookkeeper_enabled`` (ADR 0013, M12-04): accounting:approve
+    plus tenant_settings:update, reason and event, default off. Switching on starts the
+    proposal snapshots with the next import; switching off stops writing, existing rows stay
+    (retention, OPEN_QUESTIONS M12-06). Nothing is posted by the switch."""
+    from mhvp.platform.models import TenantSettings
+
+    if not principal.has("tenant_settings:update"):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, developer_message="Missing tenant_settings:update."
+        )
+    async with tenant_tx(request, principal) as session:
+        settings = await session.scalar(select(TenantSettings).with_for_update())
+        if settings is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before = settings.learning_bookkeeper_enabled
+        settings.learning_bookkeeper_enabled = body.enabled
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type=ev.TENANT_LEARNING_BOOKKEEPER_CHANGED,
+            entity_type="tenant_settings",
+            entity_id=settings.id,
+            actor_user_id=principal.user_id,
+            payload={"enabled": body.enabled, "reason": body.reason},
+            changes={"learning_bookkeeper_enabled": {"old": before, "new": body.enabled}},
         )
         await session.flush()
         return {"enabled": body.enabled}
@@ -2652,6 +3035,7 @@ async def import_csv(
             actor_user_id=principal.user_id,
             payload=run.counts,
         )
+        _queue_proposals(session, request, principal.tenant_id, run.id)
         return SyncRunOut.model_validate(run)
 
 

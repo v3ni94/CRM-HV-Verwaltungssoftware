@@ -231,6 +231,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.automation.process_events",
                 "schedule": 60.0,
             },
+            # Lernender Buchhalter (ADR 0013, plan M12 S0): Ereignisverbrauch je Mandant seit
+            # Wasserstand (Storno im Buchungskreis, Doppelumsatz geklaert, Kontaktloeschung);
+            # bucht nichts, oeffnet kein Gate.
+            "banking-process-events": {
+                "task": "mhvp.banking.process_events",
+                "schedule": 60.0,
+            },
             "sla-check-clocks": {
                 "task": "mhvp.sla.check_clocks",
                 "schedule": 300.0,

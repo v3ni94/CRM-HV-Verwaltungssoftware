@@ -690,3 +690,119 @@ class BankCsvMapping(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     label: Mapped[str] = mapped_column(String(120), nullable=False)
     mapping: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+
+
+# --- Learning bookkeeper: decision log (ADR 0013, rule M12-04, plan M12 S1) -------------------
+
+
+class PostingDecisionStatus(StrEnum):
+    """States of one decision round of a bank transaction. ``pending`` is the stored proposal
+    snapshot; every other state closes the round. The closed list of the plan (3.1 no. 1):
+    ``auto_posted`` is written by the runner of step S6 only, never here."""
+
+    PENDING = "pending"
+    ACCEPTED_UNCHANGED = "accepted_unchanged"  # exactly the chosen proposal was booked
+    MODIFIED = "modified"  # booked with a diff against the chosen proposal
+    REJECTED = "rejected"  # proposals rejected with a mandatory reason, transaction stays open
+    IGNORED = "ignored"  # transaction ignored with reason (reopenable)
+    AUTO_POSTED = "auto_posted"  # reserved for the runner (S6)
+    EXPIRED = "expired"  # superseded by a fresh snapshot (features changed)
+    REVERSED = "reversed"  # the booked entry was reversed (counter example, watermark job)
+
+
+POSTING_DECISION_STATUSES = tuple(s.value for s in PostingDecisionStatus)
+
+
+class PostingDecision(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Proposal and decision log per bank transaction and round (ADR 0013, M12-04).
+
+    Append only in the sense of B03: a row is inserted as ``pending`` (snapshot of all stage 1
+    proposals, engine and rule version, ``features_hash``) or directly in a closed state when a
+    person decides before the snapshot job ran; a pending row is closed exactly once (the
+    decision columns are filled, the snapshot columns never change); closed rows are immutable
+    and nothing is ever deleted (DB trigger ``mhvp_posting_decision_guard``, migration 0232).
+    At most one pending row per transaction (partial unique index). Learning (S3, S5) reads
+    only decisions of persons on postings that were not reversed (7.4 no. 6); ``reversed`` rows
+    are the counter examples. Contains payer data (fingerprints, purpose tokens): rows exist
+    only while ``tenant_settings.learning_bookkeeper_enabled`` is on."""
+
+    __tablename__ = "posting_decision"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ({})".format(", ".join(f"'{s}'" for s in POSTING_DECISION_STATUSES)),
+            name="posting_decision_status",
+        ),
+        CheckConstraint("round >= 1", name="posting_decision_round"),
+        Index(
+            "uq_posting_decision_pending",
+            "tenant_id",
+            "bank_transaction_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+        Index(
+            "ix_posting_decision_transaction",
+            "tenant_id",
+            "bank_transaction_id",
+            "round",
+        ),
+        Index(
+            "ix_posting_decision_journal_entry",
+            "tenant_id",
+            "journal_entry_id",
+            postgresql_where=text("journal_entry_id IS NOT NULL"),
+        ),
+        Index("ix_posting_decision_entity_status", "tenant_id", "legal_entity_id", "status"),
+    )
+
+    bank_transaction_id: Mapped[uuid.UUID] = _fk("bank_transaction.id")
+    # B01: the legal entity of the transaction's bank account; every key of the learning
+    # bookkeeper carries it, nothing is read across legal entities.
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
+    sync_run_id: Mapped[uuid.UUID | None] = _fk("bank_sync_run.id", nullable=True)
+    round: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default=PostingDecisionStatus.PENDING.value
+    )
+    # Bulk confirmations count as evidence with lower weight (plan 3.3).
+    bulk: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    engine_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    rule_version: Mapped[str] = mapped_column(String(32), nullable=False)
+    features_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    # Minimised feature summary (no names, no full purpose, no plain IBAN).
+    features: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # Snapshot of all stage 1 proposals as shown (``posting_proposal.Proposal.as_dict``).
+    proposals: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    case_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    level: Mapped[str] = mapped_column(String(4), nullable=False, default="L0")
+    best_source: Mapped[str | None] = mapped_column(String(16))
+    best_confidence: Mapped[Decimal | None] = mapped_column(Numeric(20, 8))
+    computed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    # Decision (filled once when the row is closed).
+    chosen_index: Mapped[int | None] = mapped_column(Integer)
+    final: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    diff: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    reason: Mapped[str | None] = mapped_column(Text)
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+    ai_proposal_id: Mapped[uuid.UUID | None] = _fk("ai_proposal.id", nullable=True)
+    supersedes_id: Mapped[uuid.UUID | None] = _fk("posting_decision.id", nullable=True)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class BankingEventWatermark(IdMixin, TenantMixin, Base):
+    """Position of the banking event consumer in ``domain_event`` per tenant (occurred_at, id),
+    pattern ``automation_watermark`` (``mhvp.banking.events_consumer``)."""
+
+    __tablename__ = "banking_event_watermark"
+    __table_args__ = (UniqueConstraint("tenant_id", name="uq_banking_event_watermark_tenant"),)
+
+    last_occurred_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    last_event_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )

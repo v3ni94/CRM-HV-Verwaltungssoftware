@@ -437,6 +437,16 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ai_learning_examples_retention_months: Mapped[int] = mapped_column(
         Integer, nullable=False, default=24, server_default=text("24")
     )
+    # Lernender Buchhalter (ADR 0013, Regel M12-04, Migration 0232): bei true schreibt die
+    # Plattform je Bankumsatz das Vorschlags- und Entscheidungsprotokoll ``posting_decision``
+    # (Snapshot der Stufe-1-Vorschläge, Entscheidung der Person mit Diff, Ablehnung mit
+    # Grund). Standard aus, weil der Speicher Zahlerdaten (IBAN-Fingerabdrücke, Zwecktoken)
+    # enthält und die Datenschutzprüfung des Betreibers offen ist (OPEN_QUESTIONS M12-06).
+    # Änderung nur über ``PUT /banking/learning`` (accounting:approve plus
+    # tenant_settings:update, Grund, Ereignis). Der Schalter bucht nichts und öffnet kein Gate.
+    learning_bookkeeper_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     # Lern-Workflow (rule M9-11, migration 0218): number of consistent manual decisions of the
     # same sender without a contradicting decision after which a rule is proposed. Standard 5
     # (assumption A-071, docs/ASSUMPTIONS.md); a proposal never activates itself.

@@ -477,6 +477,16 @@ class ErrorCodes:
             "posting first to post a direct transfer (D04, B08)."
         ),
     )
+    BANK_DECISION_STALE = ErrorCode(
+        "MHVP-BANK-0021",
+        409,
+        "Vorschlag veraltet",
+        (
+            "The proposal_id of the booking, rejection or ignore does not name the pending "
+            "decision round of this transaction (posting_decision): the snapshot was refreshed "
+            "or already closed. Reload the proposals and decide again (ADR 0013, M12-04)."
+        ),
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,

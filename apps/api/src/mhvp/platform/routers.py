@@ -389,6 +389,7 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         ticket_reopen_window_days=row.ticket_reopen_window_days,
         ai_learning_examples_enabled=row.ai_learning_examples_enabled,
         ai_learning_examples_retention_months=row.ai_learning_examples_retention_months,
+        learning_bookkeeper_enabled=row.learning_bookkeeper_enabled,
         rule_proposal_threshold=row.rule_proposal_threshold,
         metering_module_enabled=row.metering_module_enabled,
         resolution_kinds=ResolutionKindsConfig.model_validate(row.resolution_kinds or {}),
