@@ -749,6 +749,122 @@ async def create_key(
         return s.AllocationKeyOut.model_validate(key)
 
 
+@router.patch(
+    "/properties/{property_id}/allocation-keys/{key_id}", summary="Umlageschlüssel ändern"
+)
+async def update_key(
+    property_id: uuid.UUID,
+    key_id: uuid.UUID,
+    body: s.AllocationKeyPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.AllocationKeyOut:
+    """Name, unit, kind, sort order and the operator entered ``expected_total`` (C1). The code
+    stays immutable; the sum check against ``expected_total`` is a warning in the CRM only."""
+    async with tenant_tx(request, principal) as session:
+        key = await _get(session, AllocationKey, key_id)
+        if key.property_id != property_id:
+            raise _nf()
+        changes = body.model_dump(exclude_unset=True)
+        if "meter_type_code" in changes:
+            await svc.check_catalog(session, "meter_type", changes["meter_type_code"])
+        before = s.AllocationKeyOut.model_validate(key).model_dump(mode="json")
+        for field, value in changes.items():
+            setattr(key, field, value)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="allocation_key.updated",
+            entity_type="allocation_key",
+            entity_id=key.id,
+            actor_user_id=principal.user_id,
+            changes=diff(before, s.AllocationKeyOut.model_validate(key).model_dump(mode="json")),
+        )
+        await session.refresh(key)
+        return s.AllocationKeyOut.model_validate(key)
+
+
+@router.get(
+    "/properties/{property_id}/allocation-summary",
+    summary="Schlüsselwerte aller Einheiten zum Stichtag mit Summen je Schlüssel",
+)
+async def allocation_summary(
+    property_id: uuid.UUID,
+    request: Request,
+    as_of: date | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.AllocationSummaryOut:
+    """Matrix for the CRM (C1): every key of the property with the sum of the unit values valid
+    at ``as_of`` (default today, Europe/Berlin), the units in natural order and the single
+    values. ``difference`` is ``total - expected_total`` for information only; a deviation is
+    shown as a warning and never blocks an entry."""
+    async with tenant_tx(request, principal) as session:
+        await _get(session, Property, property_id)
+        day = as_of or _today()
+        keys = (
+            await session.scalars(
+                select(AllocationKey)
+                .where(AllocationKey.property_id == property_id)
+                .order_by(AllocationKey.sort_order, AllocationKey.code)
+            )
+        ).all()
+        units = sorted(
+            (await session.scalars(select(Unit).where(Unit.property_id == property_id))).all(),
+            key=lambda u: svc.natural_key(u.number),
+        )
+        values: list[UnitAllocationValue] = []
+        if units:
+            values = list(
+                (
+                    await session.scalars(
+                        select(UnitAllocationValue)
+                        .where(
+                            UnitAllocationValue.unit_id.in_([u.id for u in units]),
+                            svc.valid_at(UnitAllocationValue, day),
+                        )
+                        .order_by(UnitAllocationValue.valid_from)
+                    )
+                ).all()
+            )
+        totals: dict[uuid.UUID, Decimal] = {}
+        counted: dict[uuid.UUID, set[uuid.UUID]] = {}
+        for v in values:
+            totals[v.allocation_key_id] = totals.get(v.allocation_key_id, Decimal(0)) + v.value
+            counted.setdefault(v.allocation_key_id, set()).add(v.unit_id)
+        key_rows = []
+        for k in keys:
+            total = totals.get(k.id, Decimal(0))
+            with_value = len(counted.get(k.id, set()))
+            key_rows.append(
+                s.AllocationSummaryKeyOut(
+                    id=k.id,
+                    code=k.code,
+                    name=k.name,
+                    unit_of_measure=k.unit_of_measure,
+                    kind=k.kind,
+                    expected_total=k.expected_total,
+                    total=total,
+                    units_with_value=with_value,
+                    units_without_value=len(units) - with_value,
+                    difference=None if k.expected_total is None else total - k.expected_total,
+                )
+            )
+        return s.AllocationSummaryOut(
+            as_of=day,
+            keys=key_rows,
+            units=[
+                s.AllocationSummaryUnitOut(
+                    id=u.id, number=u.number, label=u.label, is_fictional=u.is_fictional
+                )
+                for u in units
+            ],
+            values=[
+                s.AllocationSummaryValueOut.model_validate(v, from_attributes=True) for v in values
+            ],
+        )
+
+
 @router.get("/units/{unit_id}/allocation-values", summary="Schlüsselwerte, Historie oder Stichtag")
 async def list_values(
     unit_id: uuid.UUID,

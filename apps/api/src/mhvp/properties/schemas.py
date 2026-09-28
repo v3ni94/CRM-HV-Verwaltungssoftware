@@ -5,7 +5,14 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal, Self
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    field_serializer,
+    field_validator,
+    model_validator,
+)
 
 from mhvp.contacts.validation import InvalidValueError, normalise_iban
 from mhvp.properties.catalogs import (
@@ -335,12 +342,77 @@ class AllocationKeyIn(_In):
     kind: AllocationKind
     meter_type_code: str | None = None
     sort_order: int = 0
+    # Reference sum of the key in the property (C1); entered by the operator, no default. The
+    # sum check of the unit values against it is a warning only, never a block.
+    expected_total: Qty | None = Field(default=None, ge=0)
+
+
+class AllocationKeyPatch(_In):
+    """Editable fields of an allocation key; the code is immutable because rows and imports
+    reference it (C1)."""
+
+    name: str | None = Field(default=None, min_length=2, max_length=200)
+    unit_of_measure: str | None = Field(default=None, min_length=1, max_length=16)
+    default_value: Qty | None = None
+    kind: AllocationKind | None = None
+    meter_type_code: str | None = None
+    sort_order: int | None = None
+    expected_total: Qty | None = Field(default=None, ge=0)
 
 
 class AllocationKeyOut(AllocationKeyIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
     is_template_derived: bool
+
+
+class AllocationSummaryKeyOut(BaseModel):
+    """One key of the property with the sum of the unit values valid at the reference date."""
+
+    id: uuid.UUID
+    code: str
+    name: str
+    unit_of_measure: str
+    kind: AllocationKind
+    expected_total: Qty | None
+    total: Qty
+    units_with_value: int
+    units_without_value: int
+    # total minus expected_total; None without an expected total. Information only (C1).
+    difference: Qty | None
+
+    @field_serializer("total", "difference", "expected_total", when_used="json")
+    def _plain(self, value: Decimal | None) -> str | None:
+        # Plain notation ("0.00000000", never "0E-8") so the CRM formats sums like values.
+        return None if value is None else f"{value:f}"
+
+
+class AllocationSummaryValueOut(BaseModel):
+    id: uuid.UUID
+    unit_id: uuid.UUID
+    allocation_key_id: uuid.UUID
+    value: Qty
+    valid_from: date
+    valid_to: date | None
+    source: ValueSource
+
+
+class AllocationSummaryUnitOut(BaseModel):
+    id: uuid.UUID
+    number: str
+    label: str | None
+    is_fictional: bool
+
+
+class AllocationSummaryOut(BaseModel):
+    """Key values of all units of a property at one reference date, with sums per key
+    (C1). The CRM shows a deviation from ``expected_total`` as a warning; the API never
+    blocks on it."""
+
+    as_of: date
+    keys: list[AllocationSummaryKeyOut]
+    units: list[AllocationSummaryUnitOut]
+    values: list[AllocationSummaryValueOut]
 
 
 class VatOptionIn(_Period):

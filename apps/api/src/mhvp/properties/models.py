@@ -551,6 +551,10 @@ class AllocationKey(IdMixin, TimestampMixin, TenantMixin, Base):
     meter_type_code: Mapped[str | None] = mapped_column(String(63))
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_template_derived: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # Operator entered reference sum of the key in the property (for example the total of the
+    # Miteigentumsanteile per Teilungserklärung); the CRM only warns when the unit values differ
+    # (package C1, docs/OPEN_QUESTIONS.md C1-01). No default, nothing derives from it.
+    expected_total: Mapped[Decimal | None] = mapped_column(AREA)
 
 
 class UnitAllocationValue(IdMixin, TimestampMixin, TenantMixin, Base):

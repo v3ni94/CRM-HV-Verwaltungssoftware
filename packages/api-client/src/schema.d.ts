@@ -14439,6 +14439,50 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/properties/{property_id}/allocation-keys/{key_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Umlageschlüssel ändern
+         * @description Name, unit, kind, sort order and the operator entered ``expected_total`` (C1). The code
+         *     stays immutable; the sum check against ``expected_total`` is a warning in the CRM only.
+         */
+        patch: operations["update_key_api_v1_properties__property_id__allocation_keys__key_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/allocation-summary": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Schlüsselwerte aller Einheiten zum Stichtag mit Summen je Schlüssel
+         * @description Matrix for the CRM (C1): every key of the property with the sum of the unit values valid
+         *     at ``as_of`` (default today, Europe/Berlin), the units in natural order and the single
+         *     values. ``difference`` is ``total - expected_total`` for information only; a deviation is
+         *     shown as a warning and never blocks an entry.
+         */
+        get: operations["allocation_summary_api_v1_properties__property_id__allocation_summary_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/properties/{property_id}/bank-account-options": {
         parameters: {
             query?: never;
@@ -18173,6 +18217,8 @@ export interface components {
             code: string;
             /** Default Value */
             default_value?: number | string | null;
+            /** Expected Total */
+            expected_total?: number | string | null;
             kind: components["schemas"]["AllocationKind"];
             /** Meter Type Code */
             meter_type_code?: string | null;
@@ -18192,6 +18238,8 @@ export interface components {
             code: string;
             /** Default Value */
             default_value?: string | null;
+            /** Expected Total */
+            expected_total?: string | null;
             kind: components["schemas"]["AllocationKind"];
             /** Meter Type Code */
             meter_type_code?: string | null;
@@ -18211,6 +18259,8 @@ export interface components {
             code: string;
             /** Default Value */
             default_value?: string | null;
+            /** Expected Total */
+            expected_total?: string | null;
             /**
              * Id
              * Format: uuid
@@ -18232,10 +18282,119 @@ export interface components {
             unit_of_measure: string;
         };
         /**
+         * AllocationKeyPatch
+         * @description Editable fields of an allocation key; the code is immutable because rows and imports
+         *     reference it (C1).
+         */
+        AllocationKeyPatch: {
+            /** Default Value */
+            default_value?: number | string | null;
+            /** Expected Total */
+            expected_total?: number | string | null;
+            kind?: components["schemas"]["AllocationKind"] | null;
+            /** Meter Type Code */
+            meter_type_code?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Sort Order */
+            sort_order?: number | null;
+            /** Unit Of Measure */
+            unit_of_measure?: string | null;
+        };
+        /**
          * AllocationKind
          * @enum {string}
          */
         AllocationKind: "static" | "consumption" | "fixed_amount" | "fixed_share";
+        /**
+         * AllocationSummaryKeyOut
+         * @description One key of the property with the sum of the unit values valid at the reference date.
+         */
+        AllocationSummaryKeyOut: {
+            /** Code */
+            code: string;
+            /** Difference */
+            difference: string | null;
+            /** Expected Total */
+            expected_total: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["AllocationKind"];
+            /** Name */
+            name: string;
+            /** Total */
+            total: string | null;
+            /** Unit Of Measure */
+            unit_of_measure: string;
+            /** Units With Value */
+            units_with_value: number;
+            /** Units Without Value */
+            units_without_value: number;
+        };
+        /**
+         * AllocationSummaryOut
+         * @description Key values of all units of a property at one reference date, with sums per key
+         *     (C1). The CRM shows a deviation from ``expected_total`` as a warning; the API never
+         *     blocks on it.
+         */
+        AllocationSummaryOut: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Keys */
+            keys: components["schemas"]["AllocationSummaryKeyOut"][];
+            /** Units */
+            units: components["schemas"]["AllocationSummaryUnitOut"][];
+            /** Values */
+            values: components["schemas"]["AllocationSummaryValueOut"][];
+        };
+        /** AllocationSummaryUnitOut */
+        AllocationSummaryUnitOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Fictional */
+            is_fictional: boolean;
+            /** Label */
+            label: string | null;
+            /** Number */
+            number: string;
+        };
+        /** AllocationSummaryValueOut */
+        AllocationSummaryValueOut: {
+            /**
+             * Allocation Key Id
+             * Format: uuid
+             */
+            allocation_key_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            source: components["schemas"]["ValueSource"];
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to: string | null;
+            /** Value */
+            value: string;
+        };
         /** AllocationValueIn */
         AllocationValueIn: {
             /**
@@ -65274,6 +65433,75 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AllocationKeyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_key_api_v1_properties__property_id__allocation_keys__key_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                key_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AllocationKeyPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationKeyOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    allocation_summary_api_v1_properties__property_id__allocation_summary_get: {
+        parameters: {
+            query?: {
+                as_of?: string | null;
+            };
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AllocationSummaryOut"];
                 };
             };
             /** @description Validation Error */

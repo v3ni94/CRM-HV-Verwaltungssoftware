@@ -857,6 +857,22 @@
             ],
             "title": "Default Value"
           },
+          "expected_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Total"
+          },
           "kind": {
             "$ref": "#/components/schemas/AllocationKind"
           },
@@ -918,6 +934,18 @@
             ],
             "title": "Default Value"
           },
+          "expected_total": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Total"
+          },
           "kind": {
             "$ref": "#/components/schemas/AllocationKind"
           },
@@ -978,6 +1006,18 @@
             ],
             "title": "Default Value"
           },
+          "expected_total": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Total"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -1030,6 +1070,103 @@
         "title": "AllocationKeyOut",
         "type": "object"
       },
+      "AllocationKeyPatch": {
+        "additionalProperties": false,
+        "description": "Editable fields of an allocation key; the code is immutable because rows and imports\nreference it (C1).",
+        "properties": {
+          "default_value": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Default Value"
+          },
+          "expected_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Total"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AllocationKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "meter_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meter Type Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "sort_order": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sort Order"
+          },
+          "unit_of_measure": {
+            "anyOf": [
+              {
+                "maxLength": 16,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Of Measure"
+          }
+        },
+        "title": "AllocationKeyPatch",
+        "type": "object"
+      },
       "AllocationKind": {
         "enum": [
           "static",
@@ -1039,6 +1176,216 @@
         ],
         "title": "AllocationKind",
         "type": "string"
+      },
+      "AllocationSummaryKeyOut": {
+        "description": "One key of the property with the sum of the unit values valid at the reference date.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "difference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "expected_total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expected Total"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AllocationKind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "total": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total"
+          },
+          "unit_of_measure": {
+            "title": "Unit Of Measure",
+            "type": "string"
+          },
+          "units_with_value": {
+            "title": "Units With Value",
+            "type": "integer"
+          },
+          "units_without_value": {
+            "title": "Units Without Value",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "unit_of_measure",
+          "kind",
+          "expected_total",
+          "total",
+          "units_with_value",
+          "units_without_value",
+          "difference"
+        ],
+        "title": "AllocationSummaryKeyOut",
+        "type": "object"
+      },
+      "AllocationSummaryOut": {
+        "description": "Key values of all units of a property at one reference date, with sums per key\n(C1). The CRM shows a deviation from ``expected_total`` as a warning; the API never\nblocks on it.",
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "keys": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationSummaryKeyOut"
+            },
+            "title": "Keys",
+            "type": "array"
+          },
+          "units": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationSummaryUnitOut"
+            },
+            "title": "Units",
+            "type": "array"
+          },
+          "values": {
+            "items": {
+              "$ref": "#/components/schemas/AllocationSummaryValueOut"
+            },
+            "title": "Values",
+            "type": "array"
+          }
+        },
+        "required": [
+          "as_of",
+          "keys",
+          "units",
+          "values"
+        ],
+        "title": "AllocationSummaryOut",
+        "type": "object"
+      },
+      "AllocationSummaryUnitOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_fictional": {
+            "title": "Is Fictional",
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "number": {
+            "title": "Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "number",
+          "label",
+          "is_fictional"
+        ],
+        "title": "AllocationSummaryUnitOut",
+        "type": "object"
+      },
+      "AllocationSummaryValueOut": {
+        "properties": {
+          "allocation_key_id": {
+            "format": "uuid",
+            "title": "Allocation Key Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "$ref": "#/components/schemas/ValueSource"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "value": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Value",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "unit_id",
+          "allocation_key_id",
+          "value",
+          "valid_from",
+          "valid_to",
+          "source"
+        ],
+        "title": "AllocationSummaryValueOut",
+        "type": "object"
       },
       "AllocationValueIn": {
         "additionalProperties": false,
@@ -98198,6 +98545,131 @@
           }
         },
         "summary": "Umlageschlüssel anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/allocation-keys/{key_id}": {
+      "patch": {
+        "description": "Name, unit, kind, sort order and the operator entered ``expected_total`` (C1). The code\nstays immutable; the sum check against ``expected_total`` is a warning in the CRM only.",
+        "operationId": "update_key_api_v1_properties__property_id__allocation_keys__key_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "key_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Key Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AllocationKeyPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationKeyOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Umlageschlüssel ändern",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/allocation-summary": {
+      "get": {
+        "description": "Matrix for the CRM (C1): every key of the property with the sum of the unit values valid\nat ``as_of`` (default today, Europe/Berlin), the units in natural order and the single\nvalues. ``difference`` is ``total - expected_total`` for information only; a deviation is\nshown as a warning and never blocks an entry.",
+        "operationId": "allocation_summary_api_v1_properties__property_id__allocation_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AllocationSummaryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schlüsselwerte aller Einheiten zum Stichtag mit Summen je Schlüssel",
         "tags": [
           "Objekte"
         ]
