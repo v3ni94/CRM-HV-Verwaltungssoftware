@@ -196,6 +196,11 @@ SYSTEM_ROLES: tuple[SystemRole, ...] = (
         | _OBJEKTAKTE_REVIEW,
     ),
     SystemRole("support", "Support", _SETTINGS_R | _MASTER_R | {"audit:read"} | _r("objektakte")),
+    # Freigabe (handbook anleitung-bankverbindung, 28.09.2026): second person of the four
+    # eyes release of contact IBANs and bank account changes, for example the bookkeeping,
+    # without administrator rights. Read access to contacts, properties, contracts and
+    # documents so the evidence can be compared; no write rights on master data.
+    SystemRole("approver", "Freigabe", _SETTINGS_R | _MASTER_R | {"contacts:approve"}),
     SystemRole("insurance_broker", "Versicherungsmakler", frozenset()),
     # Portal users (M21, M22): no CRM rights; portal endpoints check the access matrix.
     SystemRole("portal_user", "Portalzugang", frozenset()),
