@@ -3,7 +3,7 @@
 import calendar
 import re
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 
 from sqlalchemy import Select, String, cast, delete, func, literal_column, or_, select
@@ -12,10 +12,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.contacts import schemas
 from mhvp.contacts.models import (
     BankAccountApproval,
+    BankAccountChangeKind,
     Consent,
     Contact,
     ContactAddress,
     ContactBankAccount,
+    ContactBankAccountChange,
     ContactDate,
     ContactEmail,
     ContactIdentifier,
@@ -38,7 +40,7 @@ from mhvp.core.events import DomainEvent, emit
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 from mhvp.documents.models import RetentionProfile, RetentionStart
 from mhvp.objektakte.models import ObjektakteAssignment
-from mhvp.properties.models import Property, PropertyContact, PropertyOwner, Unit
+from mhvp.properties.models import LegalEntity, Property, PropertyContact, PropertyOwner, Unit
 
 _CHILDREN = (
     ContactAddress,
@@ -227,17 +229,18 @@ async def decide_bank_account(
     approve: bool,
     is_platform_admin: bool = False,
     reason: str | None = None,
-) -> None:
-    """Second person releases or rejects a pending IBAN; the requester never decides (M5-01)."""
+) -> str | None:
+    """Second person releases or rejects a pending IBAN; the requester never decides (M5-01).
+
+    A released row that replaces another account (CRM change, ``replaces_account_id``) ends
+    the old row the day before its own ``valid_from`` and takes over the default flag. Returns
+    the mandate reference of the replaced account when that account carried an active SEPA
+    mandate, so the caller can add the note of M3-02."""
     if account.approval_status != BankAccountApproval.PENDING:
         raise ProblemError(
             ErrorCodes.CONFLICT, detail="Die Bankverbindung wartet nicht auf eine Freigabe."
         )
-    if actor_user_id is None or is_platform_admin or account.requested_by == actor_user_id:
-        raise ProblemError(
-            ErrorCodes.GATE_FOUR_EYES,
-            detail="Die Freigabe muss eine andere Person als die erfassende vornehmen.",
-        )
+    _check_second_person(account.requested_by, actor_user_id, is_platform_admin)
     account.approval_status = (
         BankAccountApproval.APPROVED if approve else BankAccountApproval.REJECTED
     )
@@ -251,6 +254,25 @@ async def decide_bank_account(
     }
     if reason:
         payload["reason"] = reason
+    changed_mandate_reference: str | None = None
+    if approve and account.replaces_account_id is not None:
+        old = await session.get(ContactBankAccount, account.replaces_account_id)
+        if old is not None and old.contact_id == account.contact_id:
+            end = account.valid_from - timedelta(days=1)
+            if old.valid_to is None or old.valid_to > end:
+                old.valid_to = end
+            if old.is_default:
+                old.is_default = False
+                await session.flush()  # partial unique index: one default per contact
+                account.is_default = True
+            if (
+                old.sepa_enabled
+                and old.mandate_status == ContactMandateStatus.ACTIVE
+                and old.mandate_reference
+            ):
+                changed_mandate_reference = old.mandate_reference
+            payload["replaces_account_id"] = str(old.id)
+            payload["replaced_valid_to"] = old.valid_to.isoformat() if old.valid_to else None
     await emit(
         session,
         tenant_id=tenant_id,
@@ -261,6 +283,346 @@ async def decide_bank_account(
         payload=payload,
     )
     await session.flush()
+    return changed_mandate_reference
+
+
+def _check_second_person(
+    requested_by: uuid.UUID | None, actor_user_id: uuid.UUID | None, is_platform_admin: bool
+) -> None:
+    """Four eyes (M5-01): the requester, a platform admin and a call without user never
+    decide."""
+    if actor_user_id is None or is_platform_admin or requested_by == actor_user_id:
+        raise ProblemError(
+            ErrorCodes.GATE_FOUR_EYES,
+            detail="Die Freigabe muss eine andere Person als die erfassende vornehmen.",
+        )
+
+
+# Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026) ---------------------
+
+
+async def is_legal_entity_contact(session: AsyncSession, contact_id: uuid.UUID) -> bool:
+    """True when the contact stands for a legal entity of section 6.9.1: it is a member of
+    the party of a ``legal_entity`` (GdWE, rental owner, SEV owner) or carries the contact
+    type ``manager`` (the management company itself). Their bank account changes always need
+    a second person, whoever proposes them."""
+    linked = await session.scalar(
+        select(LegalEntity.id)
+        .join(PartyMember, PartyMember.party_id == LegalEntity.party_id)
+        .where(PartyMember.contact_id == contact_id)
+        .limit(1)
+    )
+    if linked is not None:
+        return True
+    manager = await session.scalar(
+        select(ContactType.id)
+        .where(ContactType.contact_id == contact_id, ContactType.type == ContactTypeCode.MANAGER)
+        .limit(1)
+    )
+    return manager is not None
+
+
+def _is_ended(account: ContactBankAccount, today: date) -> bool:
+    return account.approval_status == BankAccountApproval.REJECTED or (
+        account.valid_to is not None and account.valid_to < today
+    )
+
+
+async def _pending_change(
+    session: AsyncSession, account_id: uuid.UUID
+) -> ContactBankAccountChange | None:
+    row: ContactBankAccountChange | None = await session.scalar(
+        select(ContactBankAccountChange).where(
+            ContactBankAccountChange.bank_account_id == account_id,
+            ContactBankAccountChange.status == BankAccountApproval.PENDING,
+        )
+    )
+    return row
+
+
+async def _pending_replacement(session: AsyncSession, account_id: uuid.UUID) -> bool:
+    row = await session.scalar(
+        select(ContactBankAccount.id).where(
+            ContactBankAccount.replaces_account_id == account_id,
+            ContactBankAccount.approval_status == BankAccountApproval.PENDING,
+        )
+    )
+    return row is not None
+
+
+async def _check_no_pending(session: AsyncSession, account: ContactBankAccount) -> None:
+    if account.approval_status == BankAccountApproval.PENDING:
+        raise ProblemError(
+            ErrorCodes.CONTACT_BANK_CHANGE_PENDING,
+            detail="Die Bankverbindung selbst wartet noch auf ihre Freigabe.",
+        )
+    if await _pending_change(session, account.id) is not None or await _pending_replacement(
+        session, account.id
+    ):
+        raise ProblemError(ErrorCodes.CONTACT_BANK_CHANGE_PENDING)
+
+
+def _add_search_suffix(contact: Contact, suffix: str) -> None:
+    """Keep the IBAN suffix searchable (``build_search_text`` on PUT does the same)."""
+    if suffix.lower() not in (contact.search_text or "").split():
+        contact.search_text = f"{contact.search_text or ''} {suffix.lower()}".strip()
+
+
+async def _clear_default(session: AsyncSession, contact_id: uuid.UUID) -> None:
+    for row in await session.scalars(
+        select(ContactBankAccount).where(
+            ContactBankAccount.contact_id == contact_id, ContactBankAccount.is_default.is_(True)
+        )
+    ):
+        row.is_default = False
+    await session.flush()
+
+
+async def add_bank_account(
+    session: AsyncSession,
+    contact: Contact,
+    data: schemas.BankAccountIn,
+    *,
+    tenant_id: uuid.UUID,
+    actor_user_id: uuid.UUID | None,
+    replaces: ContactBankAccount | None = None,
+) -> ContactBankAccount:
+    """New bank account on an existing contact, always ``pending`` for a second person
+    (M5-01). With ``replaces`` the row is the new version of that account: the old row keeps
+    its IBAN and gets ``valid_to`` on release, never before."""
+    fingerprint = crypto.fingerprint(data.iban)
+    duplicate = await session.scalar(
+        select(ContactBankAccount.id).where(
+            ContactBankAccount.contact_id == contact.id,
+            ContactBankAccount.iban_fingerprint == fingerprint,
+            ContactBankAccount.approval_status != BankAccountApproval.REJECTED,
+        )
+    )
+    if duplicate is not None:
+        raise ProblemError(ErrorCodes.CONTACT_BANK_ACCOUNT_DUPLICATE)
+    values = data.model_dump()
+    if replaces is not None:
+        if replaces.contact_id != contact.id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if _is_ended(replaces, datetime.now(UTC).date()):
+            raise ProblemError(ErrorCodes.CONTACT_BANK_ACCOUNT_ENDED)
+        await _check_no_pending(session, replaces)
+        if data.valid_from <= replaces.valid_from:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Gültig ab der neuen Version muss nach Gültig ab der bisherigen liegen.",
+                errors=[
+                    FieldError(
+                        location=["body", "valid_from"],
+                        field="valid_from",
+                        code="invalid",
+                        message="liegt nicht nach der bisherigen Version",
+                    )
+                ],
+            )
+        values["is_default"] = False  # handed over on release
+    elif data.is_default:
+        await _clear_default(session, contact.id)
+    row = ContactBankAccount(
+        tenant_id=tenant_id,
+        contact_id=contact.id,
+        **values,
+        iban_suffix=data.iban[-4:],
+        iban_fingerprint=fingerprint,
+        approval_status=BankAccountApproval.PENDING,
+        requested_by=actor_user_id,
+        replaces_account_id=replaces.id if replaces is not None else None,
+        created_by=actor_user_id,
+    )
+    session.add(row)
+    _add_search_suffix(contact, row.iban_suffix)
+    contact.version += 1
+    contact.updated_by = actor_user_id
+    await session.flush()
+    payload: dict[str, Any] = {
+        "bank_account_id": str(row.id),
+        "iban_suffix": row.iban_suffix,
+        "source": "crm",
+    }
+    if replaces is not None:
+        payload["replaces_account_id"] = str(replaces.id)
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="bank_account.pending",
+        entity_type="contact",
+        entity_id=contact.id,
+        actor_user_id=actor_user_id,
+        payload=payload,
+    )
+    return row
+
+
+async def end_bank_account(
+    session: AsyncSession,
+    contact: Contact,
+    account: ContactBankAccount,
+    data: schemas.BankAccountEndIn,
+    *,
+    tenant_id: uuid.UUID,
+    actor_user_id: uuid.UUID | None,
+    can_approve: bool,
+    is_platform_admin: bool,
+) -> ContactBankAccountChange | None:
+    """Set ``valid_to`` on an existing account. Applied at once only when the requester
+    holds ``contacts:approve``, is a tenant user (no platform admin) and the contact is no
+    legal entity; otherwise a pending change is stored for a second person and returned.
+    The IBAN row itself is never deleted."""
+    if account.contact_id != contact.id:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    today = datetime.now(UTC).date()
+    if _is_ended(account, today):
+        raise ProblemError(ErrorCodes.CONTACT_BANK_ACCOUNT_ENDED)
+    await _check_no_pending(session, account)
+    if data.valid_to < account.valid_from:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Gültig bis liegt vor Gültig ab.",
+            errors=[
+                FieldError(
+                    location=["body", "valid_to"],
+                    field="valid_to",
+                    code="invalid",
+                    message="liegt vor Gültig ab",
+                )
+            ],
+        )
+    four_eyes = (
+        not can_approve
+        or is_platform_admin
+        or actor_user_id is None
+        or await is_legal_entity_contact(session, contact.id)
+    )
+    payload: dict[str, Any] = {
+        "bank_account_id": str(account.id),
+        "iban_suffix": account.iban_suffix,
+        "valid_to": data.valid_to.isoformat(),
+    }
+    if data.note:
+        payload["note"] = data.note
+    if not four_eyes:
+        account.valid_to = data.valid_to
+        account.updated_by = actor_user_id
+        contact.version += 1
+        contact.updated_by = actor_user_id
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type="bank_account.ended",
+            entity_type="contact",
+            entity_id=contact.id,
+            actor_user_id=actor_user_id,
+            payload=payload,
+        )
+        await session.flush()
+        return None
+    change = ContactBankAccountChange(
+        tenant_id=tenant_id,
+        contact_id=contact.id,
+        bank_account_id=account.id,
+        kind=BankAccountChangeKind.END,
+        valid_to=data.valid_to,
+        note=data.note,
+        status=BankAccountApproval.PENDING,
+        requested_by=actor_user_id,
+        created_by=actor_user_id,
+    )
+    session.add(change)
+    await session.flush()
+    payload["change_id"] = str(change.id)
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="bank_account.end_requested",
+        entity_type="contact",
+        entity_id=contact.id,
+        actor_user_id=actor_user_id,
+        payload=payload,
+    )
+    return change
+
+
+async def decide_bank_account_change(
+    session: AsyncSession,
+    change: ContactBankAccountChange,
+    *,
+    tenant_id: uuid.UUID,
+    actor_user_id: uuid.UUID | None,
+    approve: bool,
+    is_platform_admin: bool = False,
+    reason: str | None = None,
+) -> None:
+    """Second person confirms or rejects a pending change (end); same four eyes rules as
+    the IBAN release."""
+    if change.status != BankAccountApproval.PENDING:
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Die Änderung wartet nicht auf eine Freigabe."
+        )
+    _check_second_person(change.requested_by, actor_user_id, is_platform_admin)
+    account = await session.get(ContactBankAccount, change.bank_account_id)
+    if account is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    change.status = BankAccountApproval.APPROVED if approve else BankAccountApproval.REJECTED
+    change.decided_by = actor_user_id
+    change.decided_at = datetime.now(UTC)
+    change.rejected_reason = None if approve else (reason or None)
+    change.updated_by = actor_user_id
+    if approve and change.kind is BankAccountChangeKind.END:
+        account.valid_to = change.valid_to
+        account.updated_by = actor_user_id
+    payload: dict[str, Any] = {
+        "change_id": str(change.id),
+        "kind": change.kind.value,
+        "bank_account_id": str(account.id),
+        "iban_suffix": account.iban_suffix,
+        "valid_to": change.valid_to.isoformat(),
+        "requested_by": str(change.requested_by) if change.requested_by else None,
+    }
+    if reason:
+        payload["reason"] = reason
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="bank_account.end_approved" if approve else "bank_account.end_rejected",
+        entity_type="contact",
+        entity_id=change.contact_id,
+        actor_user_id=actor_user_id,
+        payload=payload,
+    )
+    await session.flush()
+
+
+def bank_account_change_out(c: ContactBankAccountChange) -> schemas.BankAccountChangeOut:
+    return schemas.BankAccountChangeOut(
+        id=c.id,
+        bank_account_id=c.bank_account_id,
+        kind=c.kind,
+        valid_to=c.valid_to,
+        note=c.note,
+        status=c.status,
+        requested_by=c.requested_by,
+        decided_by=c.decided_by,
+        decided_at=c.decided_at,
+        rejected_reason=c.rejected_reason,
+        created_at=c.created_at,
+    )
+
+
+async def pending_changes(
+    session: AsyncSession, contact_id: uuid.UUID
+) -> dict[uuid.UUID, ContactBankAccountChange]:
+    rows = await session.scalars(
+        select(ContactBankAccountChange).where(
+            ContactBankAccountChange.contact_id == contact_id,
+            ContactBankAccountChange.status == BankAccountApproval.PENDING,
+        )
+    )
+    return {row.bank_account_id: row for row in rows}
 
 
 async def _check_accounts_unreferenced(session: AsyncSession, contact_id: uuid.UUID) -> None:
@@ -601,7 +963,9 @@ async def object_relations(
     return sort_relations(out)
 
 
-def bank_account_out(b: ContactBankAccount) -> schemas.BankAccountOut:
+def bank_account_out(
+    b: ContactBankAccount, pending_change: ContactBankAccountChange | None = None
+) -> schemas.BankAccountOut:
     """API view of a contact bank account; ``rejected_*`` mirror the decision of a rejected
     row (M5-01, M19-05 addendum), so the CRM can show the reason without reading events."""
     rejected = b.approval_status == BankAccountApproval.REJECTED
@@ -633,6 +997,8 @@ def bank_account_out(b: ContactBankAccount) -> schemas.BankAccountOut:
         rejected_reason=b.rejected_reason,
         rejected_by=b.decided_by if rejected else None,
         rejected_at=b.decided_at if rejected else None,
+        replaces_account_id=b.replaces_account_id,
+        pending_change=bank_account_change_out(pending_change) if pending_change else None,
     )
 
 
@@ -658,6 +1024,7 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
             )
         ).all()
     )
+    changes = await pending_changes(session, contact_id)
     return schemas.ContactOut(
         id=contact.id,
         kind=contact.kind,
@@ -701,7 +1068,9 @@ async def load(session: AsyncSession, contact_id: uuid.UUID) -> schemas.ContactO
             schemas.ContactDateOut(id=d.id, kind=d.kind, date=d.value, note=d.note)
             for d in await rows(ContactDate)
         ],
-        bank_accounts=[bank_account_out(b) for b in await rows(ContactBankAccount)],
+        bank_accounts=[
+            bank_account_out(b, changes.get(b.id)) for b in await rows(ContactBankAccount)
+        ],
         types=sorted(t.type for t in await rows(ContactType)),
         roles=sorted(contact.roles),
         tags=tags,

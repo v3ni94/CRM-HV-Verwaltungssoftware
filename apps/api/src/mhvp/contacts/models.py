@@ -425,6 +425,59 @@ class ContactBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # Reason given by the second person on rejection (migration 0132); None when approved.
     rejected_reason: Mapped[str | None] = mapped_column(String(500))
+    # IBAN change from the CRM screen (migration 0225): the new IBAN is a new row that points
+    # to the account it replaces; on release the old row gets ``valid_to`` and, if it was the
+    # default account, hands the default over. IBAN history is never overwritten.
+    replaces_account_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("contact_bank_account.id", ondelete="SET NULL")
+    )
+
+
+class BankAccountChangeKind(StrEnum):
+    """Pending changes on an existing bank account that keep the row (migration 0225).
+    An IBAN change is not a change kind: it is a new row with ``replaces_account_id``."""
+
+    END = "end"
+
+
+class ContactBankAccountChange(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Four eyes change request on an existing contact bank account (CRM screen). Ending an
+    account of a legal entity contact, or any ending proposed by a person without
+    ``contacts:approve``, waits here until a second person with ``contacts:approve`` confirms
+    it; the requester never decides. At most one pending change per account."""
+
+    __tablename__ = "contact_bank_account_change"
+    __table_args__ = (
+        Index(
+            "ux_contact_bank_account_change_pending",
+            "bank_account_id",
+            unique=True,
+            postgresql_where=text("status = 'pending'"),
+        ),
+    )
+
+    contact_id: Mapped[uuid.UUID] = _contact_fk()
+    bank_account_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("contact_bank_account.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    kind: Mapped[BankAccountChangeKind] = mapped_column(
+        _enum(BankAccountChangeKind, "contact_bank_account_change_kind"), nullable=False
+    )
+    valid_to: Mapped[date] = mapped_column(Date, nullable=False)
+    note: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[BankAccountApproval] = mapped_column(
+        _enum(BankAccountApproval, "bank_account_approval_status"),
+        nullable=False,
+        default=BankAccountApproval.PENDING,
+        server_default="pending",
+    )
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    rejected_reason: Mapped[str | None] = mapped_column(String(500))
 
 
 class ContactType(IdMixin, TimestampMixin, TenantMixin, Base):

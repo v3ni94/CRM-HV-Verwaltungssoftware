@@ -903,6 +903,26 @@ class ErrorCodes:
             "virtual meetings, with a validity end on or after the meeting day (M25-03)."
         ),
     )
+    # Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026).
+    CONTACT_BANK_ACCOUNT_ENDED = ErrorCode(
+        "MHVP-CONT-0001",
+        409,
+        "Bankverbindung ist bereits beendet",
+        "The bank account already has a valid_to in the past or is rejected; it cannot be "
+        "changed or ended again.",
+    )
+    CONTACT_BANK_CHANGE_PENDING = ErrorCode(
+        "MHVP-CONT-0002",
+        409,
+        "Für diese Bankverbindung wartet bereits eine Änderung auf Freigabe",
+        "A replacement or an end request of this bank account is still pending; decide it first.",
+    )
+    CONTACT_BANK_ACCOUNT_DUPLICATE = ErrorCode(
+        "MHVP-CONT-0003",
+        409,
+        "Diese IBAN ist beim Kontakt bereits hinterlegt",
+        "An account with the same IBAN fingerprint already exists on this contact.",
+    )
 
 
 def _build_registry() -> dict[str, ErrorCode]:

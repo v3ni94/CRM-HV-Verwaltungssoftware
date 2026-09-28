@@ -4449,6 +4449,27 @@ export interface paths {
         patch: operations["patch_contact_api_v1_contacts__contact_id__patch"];
         trace?: never;
     };
+    "/api/v1/contacts/{contact_id}/bank-accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bankverbindung an bestehendem Kontakt hinzufügen (zur Freigabe)
+         * @description The account starts as ``pending``; a second person with ``contacts:approve`` releases
+         *     it (M5-01). Same rules as on ``POST /contacts``, without rewriting the other accounts.
+         */
+        post: operations["add_bank_account_api_v1_contacts__contact_id__bank_accounts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/approve": {
         parameters: {
             query?: never;
@@ -4460,6 +4481,61 @@ export interface paths {
         put?: never;
         /** Bankverbindung freigeben (Vier-Augen-Prinzip, zweite Person) */
         post: operations["approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/changes/{change_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Änderung an Bankverbindung bestätigen (Vier-Augen-Prinzip, zweite Person) */
+        post: operations["approve_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/changes/{change_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Änderung an Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person) */
+        post: operations["reject_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/end": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bankverbindung beenden (Gültig bis), Vier-Augen-Prinzip bei Rechtsträgern
+         * @description Applied at once when the caller holds ``contacts:approve`` and the contact is no legal
+         *     entity; otherwise the answer carries ``pending_change`` for a second person.
+         */
+        post: operations["end_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__end_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4494,6 +4570,28 @@ export interface paths {
         put?: never;
         /** Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person) */
         post: operations["reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/replace": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bankverbindung ändern: neue Version mit neuer IBAN (zur Freigabe)
+         * @description Creates the new version as a pending row that points to the replaced account
+         *     (``replaces_account_id``). On release the old row gets ``valid_to`` the day before the new
+         *     ``valid_from`` and hands over the default flag; its IBAN history stays.
+         */
+        post: operations["replace_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__replace_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18810,10 +18908,69 @@ export interface components {
          * @enum {string}
          */
         BankAccountApproval: "pending" | "approved" | "rejected";
+        /**
+         * BankAccountChangeKind
+         * @description Pending changes on an existing bank account that keep the row (migration 0225).
+         *     An IBAN change is not a change kind: it is a new row with ``replaces_account_id``.
+         * @enum {string}
+         */
+        BankAccountChangeKind: "end";
+        /** BankAccountChangeOut */
+        BankAccountChangeOut: {
+            /**
+             * Bank Account Id
+             * Format: uuid
+             */
+            bank_account_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["BankAccountChangeKind"];
+            /** Note */
+            note: string | null;
+            /** Rejected Reason */
+            rejected_reason: string | null;
+            /** Requested By */
+            requested_by: string | null;
+            status: components["schemas"]["BankAccountApproval"];
+            /**
+             * Valid To
+             * Format: date
+             */
+            valid_to: string;
+        };
         /** BankAccountDecisionIn */
         BankAccountDecisionIn: {
             /** Reason */
             reason?: string | null;
+        };
+        /**
+         * BankAccountEndIn
+         * @description End an existing bank account (``valid_to``); four eyes when the contact is a legal
+         *     entity or the requester holds no ``contacts:approve``.
+         */
+        BankAccountEndIn: {
+            /**
+             * Note
+             * @description Vermerk, zum Beispiel Rückfrage beim Kontakt
+             */
+            note?: string | null;
+            /**
+             * Valid To
+             * Format: date
+             */
+            valid_to: string;
         };
         /**
          * BankAccountKind
@@ -33969,6 +34126,8 @@ export interface components {
             /** Mandate Signed On */
             mandate_signed_on: string | null;
             mandate_status: components["schemas"]["ContactMandateStatus"];
+            /** @description Offene Änderung (Beendigung), die eine zweite Person freigeben muss. */
+            pending_change?: components["schemas"]["BankAccountChangeOut"] | null;
             /**
              * Rejected At
              * @description Zeitpunkt der Ablehnung; nur bei approval_status rejected.
@@ -33984,6 +34143,11 @@ export interface components {
              * @description Begründung der zweiten Person bei Ablehnung (M5-01).
              */
             rejected_reason?: string | null;
+            /**
+             * Replaces Account Id
+             * @description Bankverbindung, die diese neue Version nach Freigabe ablöst (IBAN-Änderung über die CRM-Oberfläche); die alte erhält dann Gültig bis.
+             */
+            replaces_account_id?: string | null;
             /** Requested By */
             requested_by?: string | null;
             /** Sepa Enabled */
@@ -43679,6 +43843,41 @@ export interface operations {
             };
         };
     };
+    add_bank_account_api_v1_contacts__contact_id__bank_accounts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post: {
         parameters: {
             query?: never;
@@ -43692,6 +43891,116 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+                change_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    end_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__end_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankAccountEndIn"];
             };
         };
         responses: {
@@ -43765,6 +44074,42 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    replace_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__replace_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+                account_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

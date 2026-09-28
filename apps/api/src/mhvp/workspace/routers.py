@@ -698,7 +698,11 @@ async def approvals(
     )
     from mhvp.accounting.models import DunningRun
     from mhvp.communication.models import Message
-    from mhvp.contacts.models import BankAccountApproval, ContactBankAccount
+    from mhvp.contacts.models import (
+        BankAccountApproval,
+        ContactBankAccount,
+        ContactBankAccountChange,
+    )
     from mhvp.metering import transmissions as metering_transmissions
     from mhvp.metering.models import MeteringTransmission, TransmissionStatus
     from mhvp.platform.models import GateRequestStatus, ReleaseGateRequest
@@ -720,8 +724,12 @@ async def approvals(
             where.append(Message.submitted_by == user_id)
         wanted["mail"] = count(Message, *where)
     if principal.has("contacts:approve"):
+        # Pending IBANs plus pending change requests (end) of the CRM screen (M5-01 addendum).
         wanted["bank_accounts"] = count(
             ContactBankAccount, ContactBankAccount.approval_status == BankAccountApproval.PENDING
+        ) + count(
+            ContactBankAccountChange,
+            ContactBankAccountChange.status == BankAccountApproval.PENDING,
         )
     if principal.has("release_gates:approve"):
         wanted["release_gates"] = count(

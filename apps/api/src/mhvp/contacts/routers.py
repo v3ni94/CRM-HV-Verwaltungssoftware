@@ -15,6 +15,7 @@ from mhvp.contacts.models import (
     Consent,
     Contact,
     ContactBankAccount,
+    ContactBankAccountChange,
     ContactMandateStatus,
     ContactNote,
     ContactRelation,
@@ -521,7 +522,7 @@ async def _decide_bank_account(
         account = await session.get(ContactBankAccount, account_id)
         if account is None or account.contact_id != contact_id:
             raise _not_found()
-        await services.decide_bank_account(
+        changed_reference = await services.decide_bank_account(
             session,
             account,
             tenant_id=principal.tenant_id,
@@ -530,10 +531,205 @@ async def _decide_bank_account(
             is_platform_admin=principal.is_platform_admin,
             reason=body.reason if body else None,
         )
+        if changed_reference is not None:
+            await _note_mandate_iban_changed(session, principal, contact_id, changed_reference)
         loaded = await services.load(session, contact_id)
         if loaded is None:
             raise _not_found()
         return next(b for b in loaded.bank_accounts if b.id == account_id)
+
+
+async def _note_mandate_iban_changed(
+    session: Any, principal: TenantPrincipal, contact_id: uuid.UUID, reference: str
+) -> None:
+    """Pinned note and event when the IBAN under an active SEPA mandate changed (M3-02); the
+    mandate is never revoked automatically."""
+    session.add(
+        ContactNote(
+            tenant_id=principal.tenant_id,
+            contact_id=contact_id,
+            created_by=principal.user_id,
+            category="sepa_mandate",
+            body=(
+                f"IBAN der Bankverbindung mit SEPA-Mandat {reference} wurde geändert. "
+                "Ein neues Mandat kann erforderlich sein; das bestehende Mandat wurde "
+                "nicht automatisch widerrufen."
+            ),
+            pinned=True,
+        )
+    )
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="contact.mandate_iban_changed",
+        entity_type="contact",
+        entity_id=contact_id,
+        actor_user_id=principal.user_id,
+        payload={"mandate_reference": reference},
+    )
+
+
+async def _account_out(
+    session: Any, contact_id: uuid.UUID, account_id: uuid.UUID
+) -> schemas.BankAccountOut:
+    loaded = await services.load(session, contact_id)
+    if loaded is None:
+        raise _not_found()
+    return next(b for b in loaded.bank_accounts if b.id == account_id)
+
+
+async def _own_account(
+    session: Any, contact_id: uuid.UUID, account_id: uuid.UUID
+) -> ContactBankAccount:
+    account: ContactBankAccount | None = await session.get(ContactBankAccount, account_id)
+    if account is None or account.contact_id != contact_id:
+        raise _not_found()
+    return account
+
+
+@router.post(
+    "/contacts/{contact_id}/bank-accounts",
+    status_code=201,
+    summary="Bankverbindung an bestehendem Kontakt hinzufügen (zur Freigabe)",
+)
+async def add_bank_account(
+    contact_id: uuid.UUID,
+    body: schemas.BankAccountIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> schemas.BankAccountOut:
+    """The account starts as ``pending``; a second person with ``contacts:approve`` releases
+    it (M5-01). Same rules as on ``POST /contacts``, without rewriting the other accounts."""
+    async with tenant_tx(request, principal) as session:
+        contact = await _active(session, contact_id)
+        row = await services.add_bank_account(
+            session,
+            contact,
+            body,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+        )
+        return await _account_out(session, contact_id, row.id)
+
+
+@router.post(
+    "/contacts/{contact_id}/bank-accounts/{account_id}/replace",
+    status_code=201,
+    summary="Bankverbindung ändern: neue Version mit neuer IBAN (zur Freigabe)",
+)
+async def replace_bank_account(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    body: schemas.BankAccountIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> schemas.BankAccountOut:
+    """Creates the new version as a pending row that points to the replaced account
+    (``replaces_account_id``). On release the old row gets ``valid_to`` the day before the new
+    ``valid_from`` and hands over the default flag; its IBAN history stays."""
+    async with tenant_tx(request, principal) as session:
+        contact = await _active(session, contact_id)
+        old = await _own_account(session, contact_id, account_id)
+        row = await services.add_bank_account(
+            session,
+            contact,
+            body,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            replaces=old,
+        )
+        return await _account_out(session, contact_id, row.id)
+
+
+@router.post(
+    "/contacts/{contact_id}/bank-accounts/{account_id}/end",
+    summary="Bankverbindung beenden (Gültig bis), Vier-Augen-Prinzip bei Rechtsträgern",
+)
+async def end_bank_account(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    body: schemas.BankAccountEndIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> schemas.BankAccountOut:
+    """Applied at once when the caller holds ``contacts:approve`` and the contact is no legal
+    entity; otherwise the answer carries ``pending_change`` for a second person."""
+    async with tenant_tx(request, principal) as session:
+        contact = await _active(session, contact_id)
+        account = await _own_account(session, contact_id, account_id)
+        await services.end_bank_account(
+            session,
+            contact,
+            account,
+            body,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            can_approve=principal.has("contacts:approve"),
+            is_platform_admin=principal.is_platform_admin,
+        )
+        return await _account_out(session, contact_id, account_id)
+
+
+async def _decide_change(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    change_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal,
+    *,
+    approve: bool,
+    body: schemas.BankAccountDecisionIn | None,
+) -> schemas.BankAccountOut:
+    async with tenant_tx(request, principal) as session:
+        await _active(session, contact_id)
+        await _own_account(session, contact_id, account_id)
+        change = await session.get(ContactBankAccountChange, change_id)
+        if change is None or change.bank_account_id != account_id:
+            raise _not_found()
+        await services.decide_bank_account_change(
+            session,
+            change,
+            tenant_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            approve=approve,
+            is_platform_admin=principal.is_platform_admin,
+            reason=body.reason if body else None,
+        )
+        return await _account_out(session, contact_id, account_id)
+
+
+@router.post(
+    "/contacts/{contact_id}/bank-accounts/{account_id}/changes/{change_id}/approve",
+    summary="Änderung an Bankverbindung bestätigen (Vier-Augen-Prinzip, zweite Person)",
+)
+async def approve_bank_account_change(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    change_id: uuid.UUID,
+    request: Request,
+    body: schemas.BankAccountDecisionIn | None = None,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.BankAccountOut:
+    return await _decide_change(
+        contact_id, account_id, change_id, request, principal, approve=True, body=body
+    )
+
+
+@router.post(
+    "/contacts/{contact_id}/bank-accounts/{account_id}/changes/{change_id}/reject",
+    summary="Änderung an Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person)",
+)
+async def reject_bank_account_change(
+    contact_id: uuid.UUID,
+    account_id: uuid.UUID,
+    change_id: uuid.UUID,
+    request: Request,
+    body: schemas.BankAccountDecisionIn | None = None,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> schemas.BankAccountOut:
+    return await _decide_change(
+        contact_id, account_id, change_id, request, principal, approve=False, body=body
+    )
 
 
 @router.post(

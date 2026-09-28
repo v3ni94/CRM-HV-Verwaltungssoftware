@@ -3165,6 +3165,117 @@
         "title": "BankAccountApproval",
         "type": "string"
       },
+      "BankAccountChangeKind": {
+        "description": "Pending changes on an existing bank account that keep the row (migration 0225).\nAn IBAN change is not a change kind: it is a new row with ``replaces_account_id``.",
+        "enum": [
+          "end"
+        ],
+        "title": "BankAccountChangeKind",
+        "type": "string"
+      },
+      "BankAccountChangeOut": {
+        "properties": {
+          "bank_account_id": {
+            "format": "uuid",
+            "title": "Bank Account Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/BankAccountChangeKind"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "rejected_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rejected Reason"
+          },
+          "requested_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requested By"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BankAccountApproval"
+          },
+          "valid_to": {
+            "format": "date",
+            "title": "Valid To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "bank_account_id",
+          "kind",
+          "valid_to",
+          "note",
+          "status",
+          "requested_by",
+          "decided_by",
+          "decided_at",
+          "rejected_reason",
+          "created_at"
+        ],
+        "title": "BankAccountChangeOut",
+        "type": "object"
+      },
       "BankAccountDecisionIn": {
         "additionalProperties": false,
         "properties": {
@@ -3182,6 +3293,35 @@
           }
         },
         "title": "BankAccountDecisionIn",
+        "type": "object"
+      },
+      "BankAccountEndIn": {
+        "additionalProperties": false,
+        "description": "End an existing bank account (``valid_to``); four eyes when the contact is a legal\nentity or the requester holds no ``contacts:approve``.",
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Vermerk, zum Beispiel Rückfrage beim Kontakt",
+            "title": "Note"
+          },
+          "valid_to": {
+            "format": "date",
+            "title": "Valid To",
+            "type": "string"
+          }
+        },
+        "required": [
+          "valid_to"
+        ],
+        "title": "BankAccountEndIn",
         "type": "object"
       },
       "BankAccountKind": {
@@ -50690,6 +50830,17 @@
           "mandate_status": {
             "$ref": "#/components/schemas/ContactMandateStatus"
           },
+          "pending_change": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/BankAccountChangeOut"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Offene Änderung (Beendigung), die eine zweite Person freigeben muss."
+          },
           "rejected_at": {
             "anyOf": [
               {
@@ -50727,6 +50878,19 @@
             ],
             "description": "Begründung der zweiten Person bei Ablehnung (M5-01).",
             "title": "Rejected Reason"
+          },
+          "replaces_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Bankverbindung, die diese neue Version nach Freigabe ablöst (IBAN-Änderung über die CRM-Oberfläche); die alte erhält dann Gültig bis.",
+            "title": "Replaces Account Id"
           },
           "requested_by": {
             "anyOf": [
@@ -65600,6 +65764,60 @@
         ]
       }
     },
+    "/api/v1/contacts/{contact_id}/bank-accounts": {
+      "post": {
+        "description": "The account starts as ``pending``; a second person with ``contacts:approve`` releases\nit (M5-01). Same rules as on ``POST /contacts``, without rewriting the other accounts.",
+        "operationId": "add_bank_account_api_v1_contacts__contact_id__bank_accounts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung an bestehendem Kontakt hinzufügen (zur Freigabe)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
     "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/approve": {
       "post": {
         "operationId": "approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post",
@@ -65665,6 +65883,230 @@
           }
         },
         "summary": "Bankverbindung freigeben (Vier-Augen-Prinzip, zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/changes/{change_id}/approve": {
+      "post": {
+        "operationId": "approve_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BankAccountDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Änderung an Bankverbindung bestätigen (Vier-Augen-Prinzip, zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/changes/{change_id}/reject": {
+      "post": {
+        "operationId": "reject_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "change_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Change Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/BankAccountDecisionIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Änderung an Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/end": {
+      "post": {
+        "description": "Applied at once when the caller holds ``contacts:approve`` and the contact is no legal\nentity; otherwise the answer carries ``pending_change`` for a second person.",
+        "operationId": "end_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__end_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankAccountEndIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung beenden (Gültig bis), Vier-Augen-Prinzip bei Rechtsträgern",
         "tags": [
           "Kontakte"
         ]
@@ -65788,6 +66230,70 @@
           }
         },
         "summary": "Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person)",
+        "tags": [
+          "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/replace": {
+      "post": {
+        "description": "Creates the new version as a pending row that points to the replaced account\n(``replaces_account_id``). On release the old row gets ``valid_to`` the day before the new\n``valid_from`` and hands over the default flag; its IBAN history stays.",
+        "operationId": "replace_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__replace_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__contacts__schemas__BankAccountOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankverbindung ändern: neue Version mit neuer IBAN (zur Freigabe)",
         "tags": [
           "Kontakte"
         ]

@@ -10,6 +10,7 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator, mo
 from mhvp.contacts.models import (
     AddressLabel,
     BankAccountApproval,
+    BankAccountChangeKind,
     Completeness,
     ConsentKind,
     ContactBankAccountKind,
@@ -255,6 +256,20 @@ class IdentifierOut(IdentifierIn):
     id: uuid.UUID
 
 
+class BankAccountChangeOut(BaseModel):
+    id: uuid.UUID
+    bank_account_id: uuid.UUID
+    kind: BankAccountChangeKind
+    valid_to: date
+    note: str | None
+    status: BankAccountApproval
+    requested_by: uuid.UUID | None
+    decided_by: uuid.UUID | None
+    decided_at: datetime | None
+    rejected_reason: str | None
+    created_at: datetime
+
+
 class BankAccountOut(BaseModel):
     id: uuid.UUID
     label: str | None
@@ -291,10 +306,31 @@ class BankAccountOut(BaseModel):
     rejected_at: datetime | None = Field(
         default=None, description="Zeitpunkt der Ablehnung; nur bei approval_status rejected."
     )
+    replaces_account_id: uuid.UUID | None = Field(
+        default=None,
+        description=(
+            "Bankverbindung, die diese neue Version nach Freigabe ablöst (IBAN-Änderung über "
+            "die CRM-Oberfläche); die alte erhält dann Gültig bis."
+        ),
+    )
+    pending_change: BankAccountChangeOut | None = Field(
+        default=None,
+        description="Offene Änderung (Beendigung), die eine zweite Person freigeben muss.",
+    )
 
 
 class BankAccountDecisionIn(_Strict):
     reason: str | None = Field(default=None, max_length=500)
+
+
+class BankAccountEndIn(_Strict):
+    """End an existing bank account (``valid_to``); four eyes when the contact is a legal
+    entity or the requester holds no ``contacts:approve``."""
+
+    valid_to: date
+    note: str | None = Field(
+        default=None, max_length=500, description="Vermerk, zum Beispiel Rückfrage beim Kontakt"
+    )
 
 
 class SepaMandateOut(BaseModel):
