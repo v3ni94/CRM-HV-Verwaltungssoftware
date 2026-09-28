@@ -64,7 +64,7 @@ async def _world(settings: Any) -> World:
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
     try:
-        a, _ = await services.provision_tenant(factory, slug=f"d-{RUN}", name=f"Dokumente {RUN}")
+        a, _ = await services.provision_tenant(factory, slug=f"doc-{RUN}", name=f"Dokumente {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"e-{RUN}", name=f"Fremd {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [
@@ -797,7 +797,7 @@ def test_m6_04_seed_is_idempotent_and_keeps_operator_edits(
             async with tenant_transaction(factory, world.tenant_a) as session:
                 added_again = await ensure_retention_defaults(session, world.tenant_a)
             # Re-provisioning the tenant (make seed on an existing installation) adds nothing.
-            await services.provision_tenant(factory, slug=f"d-{RUN}", name=f"Dokumente {RUN}")
+            await services.provision_tenant(factory, slug=f"doc-{RUN}", name=f"Dokumente {RUN}")
             async with tenant_transaction(factory, world.tenant_a) as session:
                 count = len((await session.scalars(select(RetentionProfile.id))).all())
                 years = await session.scalar(

@@ -491,6 +491,7 @@
       "house_money": "Hausgeldkonto",
       "legacy": "Altkonto"
     },
+    "accountKindLabel": "Kontotyp",
     "noAccountKind": "Kein Kontotyp",
     "defaultAccount": "Standardkonto",
     "retentionProfile": "Löschprofil",

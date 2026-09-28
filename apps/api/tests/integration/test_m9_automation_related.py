@@ -34,7 +34,10 @@ async def _world(settings: Any) -> World:
         a, _ = await services.provision_tenant(factory, slug=f"autr-{RUN}", name=f"AutR {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"autrb-{RUN}", name=f"AutRb {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
-        for name, role, tenant in [("aradmin", "tenant_admin", a), ("arb", "tenant_admin", b)]:
+        for name, role, tenant in [
+            ("autradmin", "tenant_admin", a),
+            ("autruser", "tenant_admin", b),
+        ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
             )
@@ -100,8 +103,8 @@ def _ticket(client: TestClient, h: dict[str, str], title: str, **extra: Any) -> 
 def test_conditions_on_related_property_and_contact(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
-    admin = bearer(login(client, world, "aradmin"))
-    other = bearer(login(client, world, "arb"))
+    admin = bearer(login(client, world, "autradmin"))
+    other = bearer(login(client, world, "autruser"))
     settings = _settings(database, redis_url)
     hoa = _property(client, admin, "701", "hoa", "Monheim am Rhein")
     rental = _property(client, admin, "702", "rental", "Langenfeld")
@@ -130,7 +133,7 @@ def test_conditions_on_related_property_and_contact(
         "name": f"Miete {RUN}",
         "trigger_event_type": "ticket.created",
         "conditions": {"field": "contract.rent", "op": "gt", "value": 0},
-        "actions": [{"type": "notify", "user_ids": [str(world.users["aradmin"])], "title": "x"}],
+        "actions": [{"type": "notify", "user_ids": [str(world.users["autradmin"])], "title": "x"}],
     }
     assert client.post(f"{A}/rules", json=bad, headers=admin).status_code == 422
 
@@ -148,7 +151,7 @@ def test_conditions_on_related_property_and_contact(
         "actions": [
             {
                 "type": "notify",
-                "user_ids": [str(world.users["aradmin"])],
+                "user_ids": [str(world.users["autradmin"])],
                 "title": "WEG {property.number} in {property.city}: {entity.title}",
             }
         ],
@@ -218,7 +221,7 @@ def test_conditions_on_related_property_and_contact(
                 "actions": [
                     {
                         "type": "notify",
-                        "user_ids": [str(world.users["arb"])],
+                        "user_ids": [str(world.users["autruser"])],
                         "title": "B {property.city}",
                     }
                 ],

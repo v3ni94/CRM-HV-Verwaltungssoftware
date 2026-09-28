@@ -48,6 +48,10 @@ function contact(overrides: Partial<ContactOut> = {}): ContactOut {
   };
 }
 
+// Each test uses userEvent.setup({ delay: null }): no setTimeout(0) per keystroke. Under load
+// (full suite next to other jobs) the typing heavy tests otherwise ran past the 5 s timeout,
+// and the interactions of the timed out test kept running and clicked "Speichern" in the
+// next test (one fetch too many there).
 describe("ContactForm", () => {
   const fetchMock = vi.fn<typeof fetch>();
   beforeEach(() => {
@@ -58,13 +62,14 @@ describe("ContactForm", () => {
   afterEach(() => vi.unstubAllGlobals());
 
   it("requires a name for persons and a company name for companies", async () => {
+    const user = userEvent.setup({ delay: null });
     renderIntl(<ContactForm mode="create" />);
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
       await screen.findByText("Personen benötigen Vor- oder Nachname."),
     ).toBeInTheDocument();
-    await userEvent.click(screen.getByLabelText("Firma"));
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(screen.getByLabelText("Firma"));
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
       await screen.findByText("Firmen benötigen einen Firmennamen."),
     ).toBeInTheDocument();
@@ -72,21 +77,24 @@ describe("ContactForm", () => {
   });
 
   it("validates e-mail and IBAN in the repeatable groups", async () => {
+    const user = userEvent.setup({ delay: null });
     renderIntl(<ContactForm mode="create" />);
-    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(
+    await user.type(screen.getByLabelText("Nachname"), "Mustermann");
+    await user.click(
       screen.getByRole("button", { name: "E-Mail-Adressen: Hinzufügen" }),
     );
-    await userEvent.type(screen.getByLabelText("E-Mail"), "falsch@");
-    await userEvent.click(
+    await user.type(screen.getByLabelText("E-Mail"), "falsch@");
+    await user.click(
       screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }),
     );
-    await userEvent.type(
+    // The label is its own message; "accountKind" is the object of the option labels.
+    expect(screen.getByLabelText("Kontotyp")).toHaveValue("");
+    await user.type(
       screen.getByLabelText("IBAN"),
       "DE89370400440532013001",
     );
-    await userEvent.type(screen.getByLabelText("BIC"), "XYZ");
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.type(screen.getByLabelText("BIC"), "XYZ");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
       await screen.findByText("Bitte eine gültige E-Mail-Adresse eingeben."),
     ).toBeInTheDocument();
@@ -96,6 +104,7 @@ describe("ContactForm", () => {
   });
 
   it("checks duplicates first and saves only after confirmation", async () => {
+    const user = userEvent.setup({ delay: null });
     fetchMock
       .mockResolvedValueOnce(
         jsonResponse([
@@ -115,15 +124,15 @@ describe("ContactForm", () => {
       )
       .mockResolvedValueOnce(jsonResponse(contact(), 201));
     renderIntl(<ContactForm mode="create" />);
-    await userEvent.type(screen.getByLabelText("Vorname"), "Erika");
-    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.type(screen.getByLabelText("Vorname"), "Erika");
+    await user.type(screen.getByLabelText("Nachname"), "Mustermann");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     expect(await screen.findByText("Mögliche Dubletten")).toBeInTheDocument();
     expect(String(fetchMock.mock.calls[0]![0])).toBe(
       "/api/bff/contacts/duplicates?first_name=Erika&last_name=Mustermann",
     );
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    await userEvent.click(
+    await user.click(
       screen.getByRole("button", { name: "Trotzdem speichern" }),
     );
     await waitFor(() => expect(push).toHaveBeenCalledWith(`/kontakte/${ID}`));
@@ -138,6 +147,7 @@ describe("ContactForm", () => {
   });
 
   it("maps API field errors to the form fields", async () => {
+    const user = userEvent.setup({ delay: null });
     fetchMock.mockResolvedValueOnce(jsonResponse([])).mockResolvedValueOnce(
       jsonResponse(
         {
@@ -157,12 +167,12 @@ describe("ContactForm", () => {
       ),
     );
     renderIntl(<ContactForm mode="create" />);
-    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(
+    await user.type(screen.getByLabelText("Nachname"), "Mustermann");
+    await user.click(
       screen.getByRole("button", { name: "Telefonnummern: Hinzufügen" }),
     );
-    await userEvent.type(screen.getByLabelText("Nummer"), "0211 1234");
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.type(screen.getByLabelText("Nummer"), "0211 1234");
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
       await screen.findByText("Telefonnummer ist ungültig."),
     ).toBeInTheDocument();
@@ -172,6 +182,7 @@ describe("ContactForm", () => {
   });
 
   it("sends If-Match on edit and explains a version conflict (412)", async () => {
+    const user = userEvent.setup({ delay: null });
     fetchMock.mockResolvedValueOnce(
       jsonResponse(
         { title: "Datensatz wurde zwischenzeitlich geändert", status: 412 },
@@ -179,7 +190,7 @@ describe("ContactForm", () => {
       ),
     );
     renderIntl(<ContactForm mode="edit" contact={contact()} />);
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "Der Datensatz wurde zwischenzeitlich geändert. Bitte die Seite neu laden",
     );
@@ -190,6 +201,7 @@ describe("ContactForm", () => {
   });
 
   it("saves a contact with bank accounts without resubmitting them", async () => {
+    const user = userEvent.setup({ delay: null });
     fetchMock.mockResolvedValueOnce(jsonResponse(contact(), 200));
     renderIntl(
       <ContactForm
@@ -224,7 +236,7 @@ describe("ContactForm", () => {
     expect(screen.getByText("DE89 **** **** 3000")).toBeInTheDocument();
     const save = screen.getByRole("button", { name: "Speichern" });
     expect(save).toBeEnabled();
-    await userEvent.click(save);
+    await user.click(save);
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(1));
     const init = fetchMock.mock.calls[0]![1]!;
     expect(init.method).toBe("PUT");
@@ -232,17 +244,18 @@ describe("ContactForm", () => {
   });
 
   it("requires signing date, granted via and a document or note when SEPA is enabled", async () => {
+    const user = userEvent.setup({ delay: null });
     renderIntl(<ContactForm mode="create" />);
-    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(
+    await user.type(screen.getByLabelText("Nachname"), "Mustermann");
+    await user.click(
       screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }),
     );
-    await userEvent.type(
+    await user.type(
       screen.getByLabelText("IBAN"),
       "DE89370400440532013000",
     );
-    await userEvent.click(screen.getByLabelText("SEPA-Lastschrift aktiv"));
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(screen.getByLabelText("SEPA-Lastschrift aktiv"));
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     expect(
       await screen.findByText("Bitte das Datum der Erteilung angeben."),
     ).toBeInTheDocument();
@@ -258,36 +271,37 @@ describe("ContactForm", () => {
   });
 
   it("submits the SEPA mandate fields for a new bank account", async () => {
+    const user = userEvent.setup({ delay: null });
     fetchMock
       .mockResolvedValueOnce(jsonResponse([]))
       .mockResolvedValueOnce(jsonResponse(contact(), 201));
     renderIntl(<ContactForm mode="create" />);
-    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
-    await userEvent.click(
+    await user.type(screen.getByLabelText("Nachname"), "Mustermann");
+    await user.click(
       screen.getByRole("button", { name: "Bankverbindungen: Hinzufügen" }),
     );
-    await userEvent.type(
+    await user.type(
       screen.getByLabelText("IBAN"),
       "DE89370400440532013000",
     );
-    await userEvent.click(screen.getByLabelText("SEPA-Lastschrift aktiv"));
-    await userEvent.type(
+    await user.click(screen.getByLabelText("SEPA-Lastschrift aktiv"));
+    await user.type(
       screen.getByLabelText("Mandatsreferenz"),
       "M-2026-001",
     );
-    await userEvent.type(
+    await user.type(
       screen.getByLabelText("Datum der Erteilung"),
       "2026-09-01",
     );
-    await userEvent.selectOptions(
+    await user.selectOptions(
       screen.getByLabelText("Erteilungsart"),
       "email",
     );
-    await userEvent.type(
+    await user.type(
       screen.getByLabelText("Vermerk"),
       "Per E-Mail bestätigt",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const body = JSON.parse(String(fetchMock.mock.calls[1]![1]!.body));
     expect(body.bank_accounts).toMatchObject([
@@ -304,15 +318,16 @@ describe("ContactForm", () => {
   });
 
   it("submits the selected roles", async () => {
+    const user = userEvent.setup({ delay: null });
     fetchMock
       .mockResolvedValueOnce(jsonResponse([]))
       .mockResolvedValueOnce(jsonResponse(contact(), 201));
     renderIntl(<ContactForm mode="create" />);
-    await userEvent.type(screen.getByLabelText("Nachname"), "Mustermann");
+    await user.type(screen.getByLabelText("Nachname"), "Mustermann");
     const rolesGroup = screen.getByRole("group", { name: "Klassifizierung" });
-    await userEvent.click(within(rolesGroup).getByLabelText("Mieter"));
-    await userEvent.click(within(rolesGroup).getByLabelText("Eigentümer"));
-    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await user.click(within(rolesGroup).getByLabelText("Mieter"));
+    await user.click(within(rolesGroup).getByLabelText("Eigentümer"));
+    await user.click(screen.getByRole("button", { name: "Speichern" }));
     await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
     const body = JSON.parse(String(fetchMock.mock.calls[1]![1]!.body));
     expect(body.roles.sort()).toEqual(["eigentuemer", "mieter"]);

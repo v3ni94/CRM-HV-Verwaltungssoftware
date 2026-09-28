@@ -38,7 +38,7 @@ async def _world(settings: Any) -> World:
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
     try:
-        a, _ = await services.provision_tenant(factory, slug=f"la-{RUN}", name=f"Adressen {RUN}")
+        a, _ = await services.provision_tenant(factory, slug=f"adli-{RUN}", name=f"Adressen {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
         for name, role in [("laadmin", "tenant_admin"), ("lareader", "read_only")]:
             uid = await services.create_user(

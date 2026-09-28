@@ -491,6 +491,7 @@
       "house_money": "House money account",
       "legacy": "Legacy account"
     },
+    "accountKindLabel": "Account type",
     "noAccountKind": "No account type",
     "defaultAccount": "Default account",
     "retentionProfile": "Retention profile",

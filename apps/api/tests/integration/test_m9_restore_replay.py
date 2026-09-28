@@ -41,7 +41,7 @@ async def _world(settings: Any) -> World:
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
     try:
-        a, _ = await services.provision_tenant(factory, slug=f"rr-{RUN}", name=f"Restore {RUN}")
+        a, _ = await services.provision_tenant(factory, slug=f"rsr-{RUN}", name=f"Restore {RUN}")
         world = World(tenant_a=a, tenant_b=a, app_url=settings.database_url.get_secret_value())
         for name in ("m9rradmin", "m9rrsecond"):
             uid = await services.create_user(

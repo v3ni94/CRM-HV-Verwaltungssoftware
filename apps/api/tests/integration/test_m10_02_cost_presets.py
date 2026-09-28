@@ -45,7 +45,7 @@ async def _world(settings: Any) -> World:
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
     try:
-        a, _ = await services.provision_tenant(factory, slug=f"cp-{RUN}", name=f"Presets {RUN}")
+        a, _ = await services.provision_tenant(factory, slug=f"cpre-{RUN}", name=f"Presets {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"cp2-{RUN}", name=f"Presets2 {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [("cpadmin", a, "tenant_admin"), ("cpother", b, "tenant_admin")]:

@@ -72,7 +72,7 @@ async def _world(settings: Any) -> World:
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
     try:
-        a, _ = await services.provision_tenant(factory, slug=f"po-{RUN}", name=f"Post {RUN}")
+        a, _ = await services.provision_tenant(factory, slug=f"pst-{RUN}", name=f"Post {RUN}")
         b, _ = await services.provision_tenant(factory, slug=f"pq-{RUN}", name=f"Fremd {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [

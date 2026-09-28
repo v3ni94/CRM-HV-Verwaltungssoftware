@@ -3,15 +3,26 @@ Mandantenkatalog gemerkt), Vorschau eigener und fremder Signatur, Admin setzt Po
 anderer Mitglieder, Rechte (fremde Vorschau nur mit ``members:read``, Mandantengrenze),
 Vorlage über die Mandanteneinstellungen."""
 
+import asyncio
+import uuid
 from collections.abc import Iterator
 from typing import Any
 
 import pytest
 from fastapi.testclient import TestClient
 
+from mhvp.core.db.engine import create_app_engine, create_session_factory
 from mhvp.main import create_app
+from mhvp.platform import services
 from tests.integration.conftest import Database
-from tests.integration.test_m2_platform import World, _settings, bearer, login
+from tests.integration.test_m2_platform import (
+    PASSWORD,
+    World,
+    _settings,
+    bearer,
+    enable_totp,
+    login,
+)
 
 pytestmark = pytest.mark.integration
 S = "/api/v1/mail/signature"
@@ -128,3 +139,42 @@ def test_template_from_settings_and_tenant_boundary(client: TestClient, world: W
     assert refused.json()["unknown_placeholders"] == ["company.name", "firma"]
     assert "{firma}" in refused.json()["detail"]
     assert _ok(client.get(f"{S}/preview", headers=admin))["text"] == "-- \nadmin\nMandant A"
+
+
+def test_signature_endpoints_for_member_with_second_factor(
+    database: Database, redis_url: str, client: TestClient, world: World
+) -> None:
+    """Order independent regression for the CryptoError above: whether ``admin`` of the
+    shared session world has TOTP depends on whether test_m2_platform ran first. A dedicated
+    member with the second factor switched on always takes that path; ``totp_secret`` is sealed
+    in the platform scope and is never decrypted in the tenant session."""
+    name = "sig2fa"
+    if name not in world.users:
+
+        async def _member() -> uuid.UUID:
+            engine = create_app_engine(_settings(database, redis_url))
+            try:
+                factory = create_session_factory(engine)
+                uid = await services.create_user(
+                    factory, email=world.email(name), display_name=name, password=PASSWORD
+                )
+                await services.add_member(
+                    factory,
+                    tenant_id=world.tenant_a,
+                    user_id=uid,
+                    role_codes=["standard"],
+                    actor_user_id=None,
+                )
+                return uid
+            finally:
+                await engine.dispose()
+
+        world.users[name] = asyncio.run(_member())
+    if name not in world.secrets:
+        enable_totp(client, world, name)
+    member = bearer(login(client, world, name, world.tenant_a))
+    assert _ok(client.get("/api/v1/auth/me", headers=member))["totp_enabled"] is True
+    assert _ok(client.get(f"{S}/preview", headers=member))["text"].startswith(f"-- \n{name}\n")
+    assert _ok(client.get(f"{S}/profile", headers=member))["position"] is None
+    updated = _ok(client.put(f"{S}/profile", json={"position": "Empfang"}, headers=member))
+    assert updated["position"] == "Empfang"

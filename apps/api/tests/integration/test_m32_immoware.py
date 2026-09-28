@@ -684,7 +684,12 @@ def test_parallel_start_is_refused_while_first_run_fetches(
 
 
 def test_router_409_and_task_skip_while_running_and_stale_run_is_closed(
-    client: TestClient, world: World, fake: FakeDav, database: Database, redis_url: str
+    client: TestClient,
+    world: World,
+    fake: FakeDav,
+    database: Database,
+    redis_url: str,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Bei vorhandener ``running``-Zeile antwortet der Router 409 mit Problemcode MHVP-IMW-0005
     und der Celery-Task ueberspringt den Tenant. Eine ``running``-Zeile aelter als
@@ -720,6 +725,16 @@ def test_router_409_and_task_skip_while_running_and_stale_run_is_closed(
     assert body["code"] == "MHVP-IMW-0005"
     assert body["run_id"] == str(stale_id)
 
+    # The task walks every active tenant of the database. Connections of other modules or of
+    # earlier runs against the same database become due after poll_minutes and would count as
+    # "ran"; they are held by "another worker" (Redis lock) so the totals describe this tenant.
+    try_lock = immoware_tasks._try_lock
+    own_key = f"immoware:sync:{SyncKind.WEBDAV.value}:{world.tenant_a}"
+    monkeypatch.setattr(
+        immoware_tasks,
+        "_try_lock",
+        lambda redis_client, key: key == own_key and try_lock(redis_client, key),
+    )
     totals = asyncio.run(immoware_tasks._sync_all(settings, SyncKind.WEBDAV))
     assert (totals["ran"], totals["failed"]) == (0, 0)
     assert totals["skipped"] >= 1

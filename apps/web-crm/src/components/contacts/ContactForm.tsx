@@ -388,7 +388,7 @@ export function ContactForm(props: Props) {
                 <Text name={`bank_accounts.${i}.bank_name`} label={t("bankName")} register={register} errors={errors} />
                 <Text name={`bank_accounts.${i}.holder`} label={t("holder")} register={register} errors={errors} />
                 <Text name={`bank_accounts.${i}.label`} label={t("label")} register={register} errors={errors} />
-                <Select name={`bank_accounts.${i}.kind`} label={t("accountKind")} register={register} options={[["", t("noAccountKind")], ...CONTACT_BANK_ACCOUNT_KINDS.map((v) => [v, t(`accountKind.${v}`)] as [string, string])]} />
+                <Select name={`bank_accounts.${i}.kind`} label={t("accountKindLabel")} register={register} options={[["", t("noAccountKind")], ...CONTACT_BANK_ACCOUNT_KINDS.map((v) => [v, t(`accountKind.${v}`)] as [string, string])]} />
                 <Check name={`bank_accounts.${i}.is_default`} label={t("defaultAccount")} register={register} />
                 <Text name={`bank_accounts.${i}.valid_from`} label={t("validFrom")} type="date" register={register} errors={errors} />
                 <Text name={`bank_accounts.${i}.valid_to`} label={t("validTo")} type="date" register={register} errors={errors} />

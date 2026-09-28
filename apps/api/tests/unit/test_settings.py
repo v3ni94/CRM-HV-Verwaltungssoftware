@@ -1,8 +1,20 @@
+import os
+
 import pytest
 from pydantic import SecretStr, ValidationError
 
 from mhvp.core.config import Environment, Settings
 from tests.conftest import make_settings
+
+
+@pytest.fixture(autouse=True)
+def _clean_mhvp_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    # Settings reads every MHVP_* variable. Values from the developer's shell or a sourced
+    # env file (MHVP_MASTER_KEY, MHVP_JWT_PRIVATE_KEY, MHVP_ENV, ...) must not decide which
+    # validator fires first, so each test here starts from an environment without them.
+    for name in list(os.environ):
+        if name.startswith("MHVP_"):
+            monkeypatch.delenv(name)
 
 
 def test_secrets_are_not_rendered() -> None:

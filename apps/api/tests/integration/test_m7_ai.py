@@ -79,7 +79,7 @@ async def _world(settings: Any) -> World:
     factory = create_session_factory(engine)
     try:
         a, _ = await services.provision_tenant(factory, slug=f"k-{RUN}", name=f"KI {RUN}")
-        b, _ = await services.provision_tenant(factory, slug=f"l-{RUN}", name=f"Fremd KI {RUN}")
+        b, _ = await services.provision_tenant(factory, slug=f"kil-{RUN}", name=f"Fremd KI {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [
             ("m7admin", a, "tenant_admin"),

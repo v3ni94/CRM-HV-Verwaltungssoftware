@@ -40,7 +40,7 @@ describe("PropertyTermination", () => {
       if (url.startsWith("/api/bff/contacts")) return jsonResponse({ items: [{ id: "c9", display_name: "Nachfolger Verwaltung GmbH" }] });
       return jsonResponse(TERMINATION, 200);
     });
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderIntl(<PropertyTermination propertyId={PID} status="active" termination={null} canEdit isSuperadmin={false} />);
     await user.click(screen.getByRole("button", { name: "Verwaltung beenden" }));
     const dialog = screen.getByTestId("termination-dialog");
@@ -87,7 +87,7 @@ describe("PropertyTermination", () => {
 
   it("lets the superadmin reactivate after confirmation", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ status: "active" }));
-    const user = userEvent.setup();
+    const user = userEvent.setup({ delay: null });
     renderIntl(<PropertyTermination propertyId={PID} status="terminated" termination={TERMINATION} canEdit isSuperadmin />);
     await user.click(screen.getByRole("button", { name: "Wieder aktivieren" }));
     await user.click(screen.getByRole("button", { name: "Ja, wieder aktivieren" }));

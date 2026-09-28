@@ -386,7 +386,7 @@ export default async function ContactDetailPage({
                 <thead className="border-b border-border text-left text-xs text-muted">
                   <tr>
                     <th className="py-1 pr-3 font-medium">{tf("iban")}</th>
-                    <th className="py-1 pr-3 font-medium">{tf("accountKind")}</th>
+                    <th className="py-1 pr-3 font-medium">{tf("accountKindLabel")}</th>
                     <th className="py-1 pr-3 font-medium">{tf("bic")}</th>
                     <th className="py-1 pr-3 font-medium">{tf("bankName")}</th>
                     <th className="py-1 pr-3 font-medium">{tf("holder")}</th>
