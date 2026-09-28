@@ -135,6 +135,7 @@ from mhvp.tenant.routers import router as tenant_setup_router
 from mhvp.tickets.board import portal_router as portal_board_submissions_router
 from mhvp.tickets.routers import router as tickets_router
 from mhvp.tickets.work_order_proposal_routers import router as work_order_proposal_router
+from mhvp.workspace.deadline_routers import router as deadline_router
 from mhvp.workspace.ops import router as ops_router
 from mhvp.workspace.routers import router as workspace_router
 
@@ -251,6 +252,7 @@ def create_app(
     app.include_router(vollimport_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)
     app.include_router(workspace_router, prefix=API_PREFIX)
+    app.include_router(deadline_router, prefix=API_PREFIX)
     app.include_router(data_quality_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
     app.include_router(accounting_router, prefix=API_PREFIX)

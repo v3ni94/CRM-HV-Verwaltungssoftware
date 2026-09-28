@@ -215,3 +215,105 @@ class ComplianceDeadline(IdMixin, TimestampMixin, TenantMixin, Base):
     property_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DeadlineType(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Tenant catalogue of deadline types (rule WS-01, handbook gaps Verwalterwechsel,
+    Mieterwechsel, Mieterhöhung): name, trigger, duration entered by the operator and the
+    responsible role. The duration has no default and no legal claim; the UI labels every
+    computed date "zu verifizieren". Three system types are seeded per tenant without a
+    duration (``deadlines.SYSTEM_TYPES``)."""
+
+    __tablename__ = "deadline_type"
+    __table_args__ = (UniqueConstraint("tenant_id", "code", name="uq_deadline_type_code"),)
+
+    code: Mapped[str] = mapped_column(String(63), nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    # termination_received | handover_done | rent_increase_access | management_start |
+    # management_end | contract_end | manual (``deadlines.TRIGGERS``)
+    trigger: Mapped[str] = mapped_column(String(32), nullable=False)
+    duration_months: Mapped[int | None] = mapped_column(Integer)
+    duration_days: Mapped[int | None] = mapped_column(Integer)
+    # Role code of the tenant (``role.code``) that is responsible by default; free text so a
+    # renamed role does not break the type.
+    responsible_role: Mapped[str | None] = mapped_column(String(63))
+    # Where the operator took the duration from (contract clause, legal advice); shown with
+    # the label "zu verifizieren".
+    source_note: Mapped[str | None] = mapped_column(Text)
+    is_system: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    is_active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+
+
+class DeadlineEntry(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Deadline created by a user from a ticket, contract, unit, property or rent increase
+    case with a deadline type and a responsible person (ES-10). The entry is the source row;
+    the job mirrors it into ``compliance_deadline`` (kind ``custom_deadline``) and the
+    calendar like every other dated field."""
+
+    __tablename__ = "deadline_entry"
+    __table_args__ = (
+        Index("ix_deadline_entry_due", "tenant_id", "status", "due_on"),
+        Index("ix_deadline_entry_source", "tenant_id", "source_type", "source_id"),
+    )
+
+    type_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("deadline_type.id", ondelete="RESTRICT"), nullable=False
+    )
+    title: Mapped[str] = mapped_column(String(300), nullable=False)
+    trigger_on: Mapped[date] = mapped_column(Date, nullable=False)
+    due_on: Mapped[date] = mapped_column(Date, nullable=False)
+    # True when ``due_on`` was computed from the type's duration, False when entered.
+    due_computed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    responsible_user_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
+    )
+    # ticket | contract | unit | property | rent_increase_case
+    source_type: Mapped[str] = mapped_column(String(32), nullable=False)
+    source_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    property_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("property.id", ondelete="SET NULL")
+    )
+    unit_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    contract_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    ticket_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    note: Mapped[str | None] = mapped_column(Text)
+    # open | done
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    done_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class PropertyChecklist(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Checklist started per property from a template (``deadlines.CHECKLIST_TEMPLATES``,
+    today only ``manager_change`` from the handbook page Verwalterwechsel). ``items`` is a
+    list of ``{code, label, done_at, done_by, done_by_name}``; ticking records date and user.
+    One open checklist per property and kind (partial unique index)."""
+
+    __tablename__ = "property_checklist"
+    __table_args__ = (
+        Index("ix_property_checklist_property", "tenant_id", "property_id"),
+        Index(
+            "uq_property_checklist_open",
+            "tenant_id",
+            "property_id",
+            "kind",
+            unique=True,
+            postgresql_where=text("status = 'open'"),
+        ),
+    )
+
+    property_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("property.id", ondelete="CASCADE"), nullable=False
+    )
+    kind: Mapped[str] = mapped_column(String(32), nullable=False)
+    # open | done
+    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    items: Mapped[list[Any]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    note: Mapped[str | None] = mapped_column(Text)
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

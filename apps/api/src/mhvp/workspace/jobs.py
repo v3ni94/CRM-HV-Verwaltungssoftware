@@ -45,6 +45,9 @@ DEADLINE_KINDS: tuple[str, ...] = (
     "note_follow_up",
     "meeting",
     "ticket_due",
+    # Rule WS-01: user created deadlines from the tenant's deadline type catalogue
+    # (``mhvp.workspace.deadlines``), mirrored from ``deadline_entry``.
+    "custom_deadline",
 )
 # Fixed lead time per kind; overrides the tenant setting (M9-06: 14 days for the notice date
 # of service provider contracts).
@@ -71,6 +74,8 @@ DEADLINE_PERMISSIONS: dict[str, tuple[str, str]] = {
     "note_follow_up": ("contacts:read", "contacts:update"),
     "meeting": ("accounting:read", "accounting:update"),
     "ticket_due": ("tickets:read", "tickets:update"),
+    # The responsible person of the entry is notified instead when one is set (WS-01).
+    "custom_deadline": ("tickets:read", "tickets:update"),
 }
 DEADLINE_NOTIFICATION_KIND = "compliance_deadline"
 DIGEST_NOTIFICATION_KIND = "daily_digest"
@@ -149,6 +154,7 @@ CALENDAR_REMINDERS: dict[str, list[str]] = {
     "service_contract_notice": ["14d"],
     "bank_consent": ["14d"],
     "document_retention_end": ["1m"],
+    "custom_deadline": ["14d", "1d"],
 }
 DEFAULT_REMINDERS = ["1d"]
 
@@ -491,7 +497,17 @@ def calendar_sources() -> list[SourceReader]:
         readers.append(_read_note_follow_ups)
     if _has_attr("mhvp.tickets.models.Ticket", "due_on"):
         readers.append(_read_ticket_due)
+    readers.append(_read_deadline_entries)
     return readers
+
+
+async def _read_deadline_entries(
+    session: AsyncSession, since: date, today: date
+) -> list[Candidate]:
+    """Open user created deadlines (rule WS-01, ``mhvp.workspace.deadlines``)."""
+    from mhvp.workspace.deadlines import read_entries
+
+    return await read_entries(session, since, today)
 
 
 async def deadline_candidates(
@@ -604,14 +620,24 @@ async def notify_deadlines(session: AsyncSession, tenant_id: uuid.UUID, today: d
     due = [r for r in rows if r.due_on - timedelta(days=r.lead_days) <= today]
     if not due:
         return 0
+    from mhvp.workspace.deadlines import CUSTOM_KIND, responsible_for_deadlines
+
     recipients: dict[str, list[uuid.UUID]] = {}
+    responsible = await responsible_for_deadlines(
+        session, {r.source_id for r in due if r.kind == CUSTOM_KIND}
+    )
     created = 0
     for row in due:
         permission = DEADLINE_PERMISSIONS.get(row.kind, ("", "tenant_settings:update"))[1]
         if permission not in recipients:
             recipients[permission] = await users_with_permission(session, tenant_id, permission)
         days = (row.due_on - today).days
-        for user_id in recipients[permission]:
+        # A user created deadline with a responsible person notifies that person only
+        # (ES-10); without one, the holders of the update permission as for every kind.
+        targets = recipients[permission]
+        if row.kind == CUSTOM_KIND and row.source_id in responsible:
+            targets = [responsible[row.source_id]]
+        for user_id in targets:
             note = await notify(
                 session,
                 tenant_id=tenant_id,

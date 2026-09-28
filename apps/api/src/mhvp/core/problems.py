@@ -775,6 +775,28 @@ class ErrorCodes:
             "contract for this operation/provider (rule 0.1.3)."
         ),
     )
+    # Deadline types and entries (rule WS-01, mhvp.workspace.deadlines).
+    DEADLINE_DURATION_MISSING = ErrorCode(
+        "MHVP-WS-0001",
+        422,
+        "Fristtyp ohne Dauer, Fälligkeit bitte eintragen",
+        (
+            "The deadline type carries no duration (operator has not entered one, no default "
+            "exists); the due date must be entered explicitly."
+        ),
+    )
+    DEADLINE_TYPE_INACTIVE = ErrorCode(
+        "MHVP-WS-0002",
+        422,
+        "Fristtyp ist deaktiviert",
+        "The deadline type is inactive; activate it in the catalogue first.",
+    )
+    CHECKLIST_ALREADY_OPEN = ErrorCode(
+        "MHVP-WS-0003",
+        409,
+        "Für dieses Objekt ist bereits eine Checkliste dieser Art offen",
+        "An open property checklist of this kind exists; finish it before starting another.",
+    )
     # M20-04 Vier-Augen-Prinzip beim Mailversand (mhvp.communication.mail_approval).
     MAIL_APPROVAL_FOUR_EYES = ErrorCode(
         "MHVP-COMM-0001",

@@ -17669,6 +17669,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspace/assignable-users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Aktive Mitglieder als Verantwortliche (ES-10)
+         * @description Names only, for the responsible person select; no roles or contact data.
+         */
+        get: operations["assignable_users_api_v1_workspace_assignable_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspace/bulk": {
         parameters: {
             query?: never;
@@ -17793,6 +17813,62 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspace/checklists": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Checklisten eines Objekts (Verwalterwechsel) */
+        get: operations["list_checklists_api_v1_workspace_checklists_get"];
+        put?: never;
+        /** Checkliste für ein Objekt starten */
+        post: operations["start_checklist_api_v1_workspace_checklists_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/checklists/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorlagen der Checklisten */
+        get: operations["checklist_templates_api_v1_workspace_checklists_templates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/checklists/{checklist_id}/items/{code}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Schritt abhaken oder zurücksetzen
+         * @description Records date and user of the tick; when every step is done the checklist closes,
+         *     resetting a step reopens it.
+         */
+        post: operations["tick_checklist_item_api_v1_workspace_checklists__checklist_id__items__code__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspace/dashboard": {
         parameters: {
             query?: never;
@@ -17825,6 +17901,93 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/deadline-entries": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigene Fristen (WS-01) */
+        get: operations["list_deadline_entries_api_v1_workspace_deadline_entries_get"];
+        put?: never;
+        /** Frist aus Ticket, Vertrag, Einheit oder Objekt anlegen */
+        post: operations["create_deadline_entry_api_v1_workspace_deadline_entries_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/deadline-entries/compute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fälligkeit aus Fristtyp und Auslöser (Orientierung) */
+        get: operations["compute_deadline_api_v1_workspace_deadline_entries_compute_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/deadline-entries/{entry_id}/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Frist als erledigt markieren */
+        post: operations["finish_deadline_entry_api_v1_workspace_deadline_entries__entry_id__done_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/deadline-types": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Fristtypen des Mandanten (WS-01, Dauer zu verifizieren) */
+        get: operations["list_deadline_types_api_v1_workspace_deadline_types_get"];
+        put?: never;
+        /** Fristtyp anlegen */
+        post: operations["create_deadline_type_api_v1_workspace_deadline_types_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/deadline-types/{type_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Fristtyp ändern */
+        patch: operations["update_deadline_type_api_v1_workspace_deadline_types__type_id__patch"];
         trace?: never;
     };
     "/api/v1/workspace/deadlines": {
@@ -17916,6 +18079,27 @@ export interface paths {
         get: operations["get_job_settings_api_v1_workspace_job_settings_get"];
         /** Schalter der Tagesjobs ändern */
         put: operations["put_job_settings_api_v1_workspace_job_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/notice-period": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kündigungsfrist als Orientierung (zu verifizieren)
+         * @description The contract model carries no notice period field today (ASSUMPTIONS), so the values
+         *     are entered; a contract id only adds its end date for the comparison hint.
+         */
+        get: operations["notice_period_api_v1_workspace_notice_period_get"];
+        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -18755,6 +18939,16 @@ export interface components {
             property_id: string;
             /** @default general */
             purpose: components["schemas"]["AccountPurpose"];
+        };
+        /** AssignableUserOut */
+        AssignableUserOut: {
+            /** Display Name */
+            display_name: string;
+            /**
+             * User Id
+             * Format: uuid
+             */
+            user_id: string;
         };
         /** AssigneeIn */
         AssigneeIn: {
@@ -22563,6 +22757,136 @@ export interface components {
             /** Valid From */
             valid_from: string | null;
         };
+        /** DeadlineComputeOut */
+        DeadlineComputeOut: {
+            /** Due On */
+            due_on: string | null;
+            /** Duration Days */
+            duration_days: number | null;
+            /** Duration Months */
+            duration_months: number | null;
+            /**
+             * Note
+             * @default Orientierung, zu verifizieren. Die Dauer stammt aus dem Fristtypkatalog des Mandanten beziehungsweise der Eingabe, nicht aus einer rechtlichen Regel (M1-09).
+             */
+            note: string;
+            /**
+             * Trigger On
+             * Format: date
+             */
+            trigger_on: string;
+            /**
+             * Type Id
+             * Format: uuid
+             */
+            type_id: string;
+            /**
+             * Verify
+             * @default true
+             */
+            verify: boolean;
+        };
+        /** DeadlineEntryIn */
+        DeadlineEntryIn: {
+            /** Due On */
+            due_on?: string | null;
+            /** Note */
+            note?: string | null;
+            /** Responsible User Id */
+            responsible_user_id?: string | null;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /** Source Type */
+            source_type: string;
+            /** Title */
+            title?: string | null;
+            /**
+             * Trigger On
+             * Format: date
+             */
+            trigger_on: string;
+            /**
+             * Type Id
+             * Format: uuid
+             */
+            type_id: string;
+        };
+        /** DeadlineEntryOut */
+        DeadlineEntryOut: {
+            /** Contract Id */
+            contract_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Done At */
+            done_at: string | null;
+            /** Done By */
+            done_by: string | null;
+            /** Due Computed */
+            due_computed: boolean;
+            /**
+             * Due On
+             * Format: date
+             */
+            due_on: string;
+            /** Href */
+            href?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Property Id */
+            property_id: string | null;
+            /** Responsible Name */
+            responsible_name?: string | null;
+            /** Responsible User Id */
+            responsible_user_id: string | null;
+            /**
+             * Source Id
+             * Format: uuid
+             */
+            source_id: string;
+            /** Source Type */
+            source_type: string;
+            /** Status */
+            status: string;
+            /** Ticket Id */
+            ticket_id: string | null;
+            /** Title */
+            title: string;
+            /**
+             * Trigger On
+             * Format: date
+             */
+            trigger_on: string;
+            /**
+             * Type Id
+             * Format: uuid
+             */
+            type_id: string;
+            /**
+             * Type Name
+             * @default
+             */
+            type_name: string;
+            /** Unit Id */
+            unit_id: string | null;
+            /**
+             * Verify
+             * @default true
+             */
+            verify: boolean;
+            /** Warnings */
+            warnings?: string[];
+        };
         /** DeadlineOut */
         DeadlineOut: {
             /** Done At */
@@ -22603,6 +22927,71 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
+        };
+        /** DeadlineTypeIn */
+        DeadlineTypeIn: {
+            /** Code */
+            code: string;
+            /** Duration Days */
+            duration_days?: number | null;
+            /** Duration Months */
+            duration_months?: number | null;
+            /** Name */
+            name: string;
+            /** Responsible Role */
+            responsible_role?: string | null;
+            /** Source Note */
+            source_note?: string | null;
+            /** Trigger */
+            trigger: string;
+        };
+        /** DeadlineTypeOut */
+        DeadlineTypeOut: {
+            /** Code */
+            code: string;
+            /** Duration Days */
+            duration_days: number | null;
+            /** Duration Months */
+            duration_months: number | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Is Active */
+            is_active: boolean;
+            /** Is System */
+            is_system: boolean;
+            /** Name */
+            name: string;
+            /** Responsible Role */
+            responsible_role: string | null;
+            /** Source Note */
+            source_note: string | null;
+            /** Trigger */
+            trigger: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
+        /** DeadlineTypePatch */
+        DeadlineTypePatch: {
+            /** Duration Days */
+            duration_days?: number | null;
+            /** Duration Months */
+            duration_months?: number | null;
+            /** Is Active */
+            is_active?: boolean | null;
+            /** Name */
+            name?: string | null;
+            /** Responsible Role */
+            responsible_role?: string | null;
+            /** Source Note */
+            source_note?: string | null;
+            /** Trigger */
+            trigger?: string | null;
         };
         /** DebtorAccountOut */
         DebtorAccountOut: {
@@ -28132,6 +28521,39 @@ export interface components {
             /** Valid To */
             valid_to?: string | null;
         };
+        /** NoticePeriodOut */
+        NoticePeriodOut: {
+            /** Contract End Covers */
+            contract_end_covers?: boolean | null;
+            /** Contract End Date */
+            contract_end_date?: string | null;
+            /** Days */
+            days: number;
+            /**
+             * End On
+             * Format: date
+             */
+            end_on: string;
+            /** Months */
+            months: number;
+            /**
+             * Note
+             * @default Orientierung, zu verifizieren. Die Kündigungsfrist stammt aus dem Vertrag oder der Eingabe, nicht aus einer rechtlichen Regel; die Prüfung blockiert nichts (M1-09).
+             */
+            note: string;
+            /**
+             * Termination On
+             * Format: date
+             */
+            termination_on: string;
+            /** To Month End */
+            to_month_end: boolean;
+            /**
+             * Verify
+             * @default true
+             */
+            verify: boolean;
+        };
         /**
          * NotificationOut
          * @description ``target_type``/``target_id`` name the subject of the notification; ``href`` is the
@@ -29565,6 +29987,72 @@ export interface components {
          * @enum {string}
          */
         Priority: "low" | "normal" | "high" | "urgent" | "immediate";
+        /** PropertyChecklistIn */
+        PropertyChecklistIn: {
+            /**
+             * Kind
+             * @default manager_change
+             */
+            kind: string;
+            /** Note */
+            note?: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+        };
+        /** PropertyChecklistItemIn */
+        PropertyChecklistItemIn: {
+            /** Done */
+            done: boolean;
+        };
+        /** PropertyChecklistItemOut */
+        PropertyChecklistItemOut: {
+            /** Code */
+            code: string;
+            /** Done At */
+            done_at?: string | null;
+            /** Done By */
+            done_by?: string | null;
+            /** Done By Name */
+            done_by_name?: string | null;
+            /** Label */
+            label: string;
+        };
+        /** PropertyChecklistOut */
+        PropertyChecklistOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Done At */
+            done_at: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Items */
+            items: components["schemas"]["PropertyChecklistItemOut"][];
+            /** Kind */
+            kind: string;
+            /** Note */
+            note: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Status */
+            status: string;
+            /**
+             * Updated At
+             * Format: date-time
+             */
+            updated_at: string;
+        };
         /** PropertyChoice */
         PropertyChoice: {
             /**
@@ -73032,6 +73520,26 @@ export interface operations {
             };
         };
     };
+    assignable_users_api_v1_workspace_assignable_users_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AssignableUserOut"][];
+                };
+            };
+        };
+    };
     bulk_api_v1_workspace_bulk_post: {
         parameters: {
             query?: never;
@@ -73305,6 +73813,128 @@ export interface operations {
             };
         };
     };
+    list_checklists_api_v1_workspace_checklists_get: {
+        parameters: {
+            query: {
+                property_id: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyChecklistOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_checklist_api_v1_workspace_checklists_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyChecklistIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyChecklistOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    checklist_templates_api_v1_workspace_checklists_templates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: components["schemas"]["PropertyChecklistItemOut"][];
+                    };
+                };
+            };
+        };
+    };
+    tick_checklist_item_api_v1_workspace_checklists__checklist_id__items__code__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                checklist_id: string;
+                code: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyChecklistItemIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyChecklistOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     dashboard_api_v1_workspace_dashboard_get: {
         parameters: {
             query?: never;
@@ -73348,6 +73978,224 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deadline_entries_api_v1_workspace_deadline_entries_get: {
+        parameters: {
+            query?: {
+                source_type?: string | null;
+                source_id?: string | null;
+                status?: string;
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineEntryOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_deadline_entry_api_v1_workspace_deadline_entries_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeadlineEntryIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    compute_deadline_api_v1_workspace_deadline_entries_compute_get: {
+        parameters: {
+            query: {
+                type_id: string;
+                trigger_on: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineComputeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    finish_deadline_entry_api_v1_workspace_deadline_entries__entry_id__done_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deadline_types_api_v1_workspace_deadline_types_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineTypeOut"][];
+                };
+            };
+        };
+    };
+    create_deadline_type_api_v1_workspace_deadline_types_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeadlineTypeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineTypeOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_deadline_type_api_v1_workspace_deadline_types__type_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                type_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DeadlineTypePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DeadlineTypeOut"];
                 };
             };
             /** @description Validation Error */
@@ -73562,6 +74410,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    notice_period_api_v1_workspace_notice_period_get: {
+        parameters: {
+            query: {
+                termination_on: string;
+                months?: number;
+                days?: number;
+                to_month_end?: boolean;
+                contract_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NoticePeriodOut"];
                 };
             };
             /** @description Validation Error */

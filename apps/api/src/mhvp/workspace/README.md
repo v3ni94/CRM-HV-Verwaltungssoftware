@@ -67,6 +67,38 @@ Readers of fields that other work packages add register only when the model carr
 field (`hasattr`), see `calendar_sources()`. The Google Calendar link (`calendar_event`,
 M23-02) is unchanged; generated entries are not synced to Google.
 
+## Deadline types, deadline entries, notice period and checklists (rule WS-01)
+
+`deadlines.py` and `deadline_routers.py` (migration 0230, tables `deadline_type`,
+`deadline_entry`, `property_checklist`, all with tenant RLS):
+
+* `GET /workspace/deadline-types` (every member; seeds the system types Verwalterwechsel,
+  Kautionsabrechnung and Mieterhöhung once per tenant, without duration), `POST` and
+  `PATCH /workspace/deadline-types/{id}` (`tenant_settings:update`). A type has a trigger
+  (`deadlines.TRIGGERS`), `duration_months` and `duration_days` entered by the operator (no
+  default, no legal claim, UI label "zu verifizieren") and a responsible role code.
+* `GET /workspace/deadline-entries` (`tickets:read`, filter `source_type`, `source_id`,
+  `status`), `GET /workspace/deadline-entries/compute` (due date preview),
+  `POST /workspace/deadline-entries` (`tickets:create`; from a ticket, contract, unit, property
+  or rent increase case; due date computed from the type or entered, `MHVP-WS-0001` when
+  neither exists; `warnings: ["ES-10"]` without a responsible person),
+  `POST /workspace/deadline-entries/{id}/done` (`tickets:update`).
+  `GET /workspace/assignable-users` lists names of active members for the responsible select.
+* The entry is the source row: reader `_read_deadline_entries` mirrors open entries as kind
+  `custom_deadline` into `compliance_deadline` and the generated calendar (reminders 14d, 1d);
+  the create endpoint writes the mirror at once, done closes it. The lead time notification
+  goes to the responsible person when set, otherwise to the holders of `tickets:update`.
+* `GET /workspace/notice-period` (`contracts:read`): termination date plus entered months and
+  days, optionally to the month end, as orientation with `verify=true`; with `contract_id` the
+  stored end date and `contract_end_covers` for the hint in the termination form. The contract
+  has no notice period field (A-074); nothing blocks the termination.
+* `GET/POST /workspace/checklists` (`properties:read` / `properties:update`),
+  `GET /workspace/checklists/templates`, `POST /workspace/checklists/{id}/items/{code}` with
+  `{done}`: checklist `manager_change` from the handbook page Verwalterwechsel, one open list
+  per property and kind (`MHVP-WS-0003`), every tick stores date, user id and display name;
+  all steps done closes the list.
+* Tests: `tests/unit/test_deadline_math.py`, `tests/integration/test_deadline_types.py`.
+
 ## Job `ops.backup_verify` (A67)
 
 `mhvp.workspace.backup_verify`: täglich 02:00 (Beat `ops-backup-verify`, Queue `io`) läuft

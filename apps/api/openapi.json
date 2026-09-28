@@ -2285,6 +2285,25 @@
         "title": "AssignPropertyIn",
         "type": "object"
       },
+      "AssignableUserOut": {
+        "properties": {
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "display_name"
+        ],
+        "title": "AssignableUserOut",
+        "type": "object"
+      },
       "AssigneeIn": {
         "additionalProperties": false,
         "properties": {
@@ -14554,6 +14573,360 @@
         "title": "DatevMappingOut",
         "type": "object"
       },
+      "DeadlineComputeOut": {
+        "properties": {
+          "due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due On"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "duration_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Months"
+          },
+          "note": {
+            "default": "Orientierung, zu verifizieren. Die Dauer stammt aus dem Fristtypkatalog des Mandanten beziehungsweise der Eingabe, nicht aus einer rechtlichen Regel (M1-09).",
+            "title": "Note",
+            "type": "string"
+          },
+          "trigger_on": {
+            "format": "date",
+            "title": "Trigger On",
+            "type": "string"
+          },
+          "type_id": {
+            "format": "uuid",
+            "title": "Type Id",
+            "type": "string"
+          },
+          "verify": {
+            "default": true,
+            "title": "Verify",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type_id",
+          "trigger_on",
+          "due_on",
+          "duration_months",
+          "duration_days"
+        ],
+        "title": "DeadlineComputeOut",
+        "type": "object"
+      },
+      "DeadlineEntryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due On"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible User Id"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_type": {
+            "pattern": "^(ticket|contract|unit|property|rent_increase_case)$",
+            "title": "Source Type",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "trigger_on": {
+            "format": "date",
+            "title": "Trigger On",
+            "type": "string"
+          },
+          "type_id": {
+            "format": "uuid",
+            "title": "Type Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type_id",
+          "source_type",
+          "source_id",
+          "trigger_on"
+        ],
+        "title": "DeadlineEntryIn",
+        "type": "object"
+      },
+      "DeadlineEntryOut": {
+        "properties": {
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
+          "done_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done By"
+          },
+          "due_computed": {
+            "title": "Due Computed",
+            "type": "boolean"
+          },
+          "due_on": {
+            "format": "date",
+            "title": "Due On",
+            "type": "string"
+          },
+          "href": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Href"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "responsible_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Name"
+          },
+          "responsible_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible User Id"
+          },
+          "source_id": {
+            "format": "uuid",
+            "title": "Source Id",
+            "type": "string"
+          },
+          "source_type": {
+            "title": "Source Type",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "ticket_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "trigger_on": {
+            "format": "date",
+            "title": "Trigger On",
+            "type": "string"
+          },
+          "type_id": {
+            "format": "uuid",
+            "title": "Type Id",
+            "type": "string"
+          },
+          "type_name": {
+            "default": "",
+            "title": "Type Name",
+            "type": "string"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "verify": {
+            "default": true,
+            "title": "Verify",
+            "type": "boolean"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "type_id",
+          "title",
+          "trigger_on",
+          "due_on",
+          "due_computed",
+          "responsible_user_id",
+          "source_type",
+          "source_id",
+          "property_id",
+          "unit_id",
+          "contract_id",
+          "ticket_id",
+          "note",
+          "status",
+          "done_at",
+          "done_by",
+          "created_at"
+        ],
+        "title": "DeadlineEntryOut",
+        "type": "object"
+      },
       "DeadlineOut": {
         "properties": {
           "done_at": {
@@ -14659,6 +15032,272 @@
           "updated_at"
         ],
         "title": "DeadlineOut",
+        "type": "object"
+      },
+      "DeadlineTypeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "maxLength": 63,
+            "minLength": 2,
+            "pattern": "^[a-z0-9_]+$",
+            "title": "Code",
+            "type": "string"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "maximum": 3660.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "duration_months": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Months"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "responsible_role": {
+            "anyOf": [
+              {
+                "maxLength": 63,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Role"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "trigger": {
+            "pattern": "^(termination_received|handover_done|rent_increase_access|management_start|management_end|contract_end|manual)$",
+            "title": "Trigger",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "name",
+          "trigger"
+        ],
+        "title": "DeadlineTypeIn",
+        "type": "object"
+      },
+      "DeadlineTypeOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "duration_days": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "duration_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Months"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "is_system": {
+            "title": "Is System",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "responsible_role": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Role"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "trigger": {
+            "title": "Trigger",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "code",
+          "name",
+          "trigger",
+          "duration_months",
+          "duration_days",
+          "responsible_role",
+          "source_note",
+          "is_system",
+          "is_active",
+          "updated_at"
+        ],
+        "title": "DeadlineTypeOut",
+        "type": "object"
+      },
+      "DeadlineTypePatch": {
+        "additionalProperties": false,
+        "properties": {
+          "duration_days": {
+            "anyOf": [
+              {
+                "maximum": 3660.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Days"
+          },
+          "duration_months": {
+            "anyOf": [
+              {
+                "maximum": 120.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Months"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "responsible_role": {
+            "anyOf": [
+              {
+                "maxLength": 63,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Role"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "pattern": "^(termination_received|handover_done|rent_increase_access|management_start|management_end|contract_end|manual)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
+          }
+        },
+        "title": "DeadlineTypePatch",
         "type": "object"
       },
       "DebtorAccountOut": {
@@ -31759,6 +32398,74 @@
         "title": "NoticePatch",
         "type": "object"
       },
+      "NoticePeriodOut": {
+        "properties": {
+          "contract_end_covers": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract End Covers"
+          },
+          "contract_end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract End Date"
+          },
+          "days": {
+            "title": "Days",
+            "type": "integer"
+          },
+          "end_on": {
+            "format": "date",
+            "title": "End On",
+            "type": "string"
+          },
+          "months": {
+            "title": "Months",
+            "type": "integer"
+          },
+          "note": {
+            "default": "Orientierung, zu verifizieren. Die Kündigungsfrist stammt aus dem Vertrag oder der Eingabe, nicht aus einer rechtlichen Regel; die Prüfung blockiert nichts (M1-09).",
+            "title": "Note",
+            "type": "string"
+          },
+          "termination_on": {
+            "format": "date",
+            "title": "Termination On",
+            "type": "string"
+          },
+          "to_month_end": {
+            "title": "To Month End",
+            "type": "boolean"
+          },
+          "verify": {
+            "default": true,
+            "title": "Verify",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "termination_on",
+          "months",
+          "days",
+          "to_month_end",
+          "end_on"
+        ],
+        "title": "NoticePeriodOut",
+        "type": "object"
+      },
       "NotificationOut": {
         "description": "``target_type``/``target_id`` name the subject of the notification; ``href`` is the\nroute to it in the CRM, derived on read (``workspace.links``). ``entity_type`` and\n``entity_id`` carry the same values for existing clients.",
         "properties": {
@@ -35795,6 +36502,181 @@
         ],
         "title": "Priority",
         "type": "string"
+      },
+      "PropertyChecklistIn": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "default": "manager_change",
+            "pattern": "^(manager_change)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "property_id"
+        ],
+        "title": "PropertyChecklistIn",
+        "type": "object"
+      },
+      "PropertyChecklistItemIn": {
+        "additionalProperties": false,
+        "properties": {
+          "done": {
+            "title": "Done",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "done"
+        ],
+        "title": "PropertyChecklistItemIn",
+        "type": "object"
+      },
+      "PropertyChecklistItemOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
+          "done_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done By"
+          },
+          "done_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done By Name"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "PropertyChecklistItemOut",
+        "type": "object"
+      },
+      "PropertyChecklistOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PropertyChecklistItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "kind",
+          "status",
+          "items",
+          "note",
+          "done_at",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "PropertyChecklistOut",
+        "type": "object"
       },
       "PropertyChoice": {
         "additionalProperties": false,
@@ -39976,7 +40858,7 @@
         "additionalProperties": false,
         "properties": {
           "action": {
-            "pattern": "^(approve|send|consent|reject|apply|cancel)$",
+            "pattern": "^(approve|send|consent|reject|apply|cancel|receipt)$",
             "title": "Action",
             "type": "string"
           },
@@ -110360,6 +111242,32 @@
         ]
       }
     },
+    "/api/v1/workspace/assignable-users": {
+      "get": {
+        "description": "Names only, for the responsible person select; no roles or contact data.",
+        "operationId": "assignable_users_api_v1_workspace_assignable_users_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AssignableUserOut"
+                  },
+                  "title": "Response Assignable Users Api V1 Workspace Assignable Users Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Aktive Mitglieder als Verantwortliche (ES-10)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
     "/api/v1/workspace/bulk": {
       "post": {
         "description": "All or nothing: unknown ids abort the whole action (rule 0.1.4 for bulk actions).",
@@ -110740,6 +111648,183 @@
         ]
       }
     },
+    "/api/v1/workspace/checklists": {
+      "get": {
+        "operationId": "list_checklists_api_v1_workspace_checklists_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PropertyChecklistOut"
+                  },
+                  "title": "Response List Checklists Api V1 Workspace Checklists Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Checklisten eines Objekts (Verwalterwechsel)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      },
+      "post": {
+        "operationId": "start_checklist_api_v1_workspace_checklists_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyChecklistIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyChecklistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Checkliste für ein Objekt starten",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/checklists/templates": {
+      "get": {
+        "operationId": "checklist_templates_api_v1_workspace_checklists_templates_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "$ref": "#/components/schemas/PropertyChecklistItemOut"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Checklist Templates Api V1 Workspace Checklists Templates Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vorlagen der Checklisten",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/checklists/{checklist_id}/items/{code}": {
+      "post": {
+        "description": "Records date and user of the tick; when every step is done the checklist closes,\nresetting a step reopens it.",
+        "operationId": "tick_checklist_item_api_v1_workspace_checklists__checklist_id__items__code__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "checklist_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Checklist Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "code",
+            "required": true,
+            "schema": {
+              "title": "Code",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyChecklistItemIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyChecklistOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Schritt abhaken oder zurücksetzen",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
     "/api/v1/workspace/dashboard": {
       "get": {
         "operationId": "dashboard_api_v1_workspace_dashboard_get",
@@ -110826,6 +111911,352 @@
         ]
       }
     },
+    "/api/v1/workspace/deadline-entries": {
+      "get": {
+        "operationId": "list_deadline_entries_api_v1_workspace_deadline_entries_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "source_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(ticket|contract|unit|property|rent_increase_case)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "source_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Source Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "default": "open",
+              "pattern": "^(open|done|all)$",
+              "title": "Status",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeadlineEntryOut"
+                  },
+                  "title": "Response List Deadline Entries Api V1 Workspace Deadline Entries Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigene Fristen (WS-01)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      },
+      "post": {
+        "operationId": "create_deadline_entry_api_v1_workspace_deadline_entries_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeadlineEntryIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadlineEntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Frist aus Ticket, Vertrag, Einheit oder Objekt anlegen",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/deadline-entries/compute": {
+      "get": {
+        "operationId": "compute_deadline_api_v1_workspace_deadline_entries_compute_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "type_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Type Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "trigger_on",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Trigger On",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadlineComputeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fälligkeit aus Fristtyp und Auslöser (Orientierung)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/deadline-entries/{entry_id}/done": {
+      "post": {
+        "operationId": "finish_deadline_entry_api_v1_workspace_deadline_entries__entry_id__done_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadlineEntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Frist als erledigt markieren",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/deadline-types": {
+      "get": {
+        "operationId": "list_deadline_types_api_v1_workspace_deadline_types_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DeadlineTypeOut"
+                  },
+                  "title": "Response List Deadline Types Api V1 Workspace Deadline Types Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Fristtypen des Mandanten (WS-01, Dauer zu verifizieren)",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      },
+      "post": {
+        "operationId": "create_deadline_type_api_v1_workspace_deadline_types_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeadlineTypeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadlineTypeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fristtyp anlegen",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/deadline-types/{type_id}": {
+      "patch": {
+        "operationId": "update_deadline_type_api_v1_workspace_deadline_types__type_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Type Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeadlineTypePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeadlineTypeOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Fristtyp ändern",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
     "/api/v1/workspace/deadlines": {
       "get": {
         "description": "Only kinds the caller may read (contracts, properties, accounting, documents). Own and\nshared manual calendar entries with reminders appear as kind ``appointment`` (recurring\nones once per occurrence, computed on read); they are appointments, not deadlines of\nthe source data, and are never notified by the lead time of the list.",
@@ -110838,7 +112269,7 @@
             "schema": {
               "anyOf": [
                 {
-                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline|energy_certificate|move_in|move_out|maintenance|note_follow_up|meeting|ticket_due|appointment)$",
+                  "pattern": "^(contract_end|contract_termination|meter_calibration|bank_consent|document_retention_end|service_contract_notice|meeting_resolution_deadline|energy_certificate|move_in|move_out|maintenance|note_follow_up|meeting|ticket_due|custom_deadline|appointment)$",
                   "type": "string"
                 },
                 {
@@ -111174,6 +112605,101 @@
           }
         },
         "summary": "Schalter der Tagesjobs ändern",
+        "tags": [
+          "Arbeitsplatz"
+        ]
+      }
+    },
+    "/api/v1/workspace/notice-period": {
+      "get": {
+        "description": "The contract model carries no notice period field today (ASSUMPTIONS), so the values\nare entered; a contract id only adds its end date for the comparison hint.",
+        "operationId": "notice_period_api_v1_workspace_notice_period_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "termination_on",
+            "required": true,
+            "schema": {
+              "format": "date",
+              "title": "Termination On",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 120,
+              "minimum": 0,
+              "title": "Months",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "days",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "maximum": 3660,
+              "minimum": 0,
+              "title": "Days",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to_month_end",
+            "required": false,
+            "schema": {
+              "default": false,
+              "title": "To Month End",
+              "type": "boolean"
+            }
+          },
+          {
+            "in": "query",
+            "name": "contract_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Contract Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoticePeriodOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kündigungsfrist als Orientierung (zu verifizieren)",
         "tags": [
           "Arbeitsplatz"
         ]

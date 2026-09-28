@@ -35,6 +35,8 @@ CRM_LIST_ROUTES: dict[str, str] = {
     "bank_connection": "/bank",
     "proposal": "/assistent",
     "invoice": "/rechnungen",
+    # User created deadlines (rule WS-01) are listed on the deadline page.
+    "deadline_entry": "/fristen",
 }
 # Portal: tickets are "Meldungen"; work orders and handovers have detail pages.
 PORTAL_DETAIL_ROUTES: dict[str, str] = {
