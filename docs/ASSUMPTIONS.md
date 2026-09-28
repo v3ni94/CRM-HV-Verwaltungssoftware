@@ -842,3 +842,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `mhvp.integrations.schadenstool`, `/integrations/schadenstool/*`, CRM `/einstellungen/schnittstellen/schadenbearbeiter`, Ticketdetail |
 | Überprüfung spätestens bei Meilenstein | vor produktiver Aktivierung der Anbindung |
 | Datum | 28.09.2026 |
+
+## A-073
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Erfassungsstandards (Regeln ES-01 bis ES-11): (1) Als Fristen mit verantwortlicher Person gelten die Fälligkeiten offener Tickets (`ticket.due_on` mit Bearbeiter `assignee_user_id`); abgeleitete Fristen der Fristenliste und eigene Kalendereinträge fallen nicht darunter. (2) Die Namensheuristik (Komma, Vorname im Nachnamen, Firmenbestandteile) ist bewusst einfach und darf Fehlalarme erzeugen, weil sie nur warnt. (3) Die harte PLZ Prüfung gilt nur für das Land DE, nur bei Anlage oder Änderung von PLZ oder Land über die API; Importe übernehmen Werte unverändert und erscheinen im Bericht. (4) Der Bericht verlangt das Recht Kontakte lesen und zeigt je Abschnitt höchstens 200 Einträge. |
+| Begründung | Die Standards sollen Daten angleichen, ohne Arbeit zu blockieren oder bestehende Daten zu verändern; eine eigene verantwortliche Person gibt es im Datenmodell nur am Ticket. |
+| Kennzeichnung | unkritisch (kein Geldfluss, keine Rechtsfrist, keine automatische Änderung) |
+| Betroffene Bereiche | `mhvp.dataquality`, `POST/PUT/PATCH /properties`, `GET /data-quality/report`, `POST /data-quality/check`, CRM Objekt, Kontakt und Ticketformulare, `/einstellungen/datenqualitaet` |
+| Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
+| Datum | 28.09.2026 |

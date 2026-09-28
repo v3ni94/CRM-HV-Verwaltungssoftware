@@ -28,6 +28,7 @@ Grundlagen
 - [Objekte und Einheiten](objekte-einheiten.md) (mit Energieausweis und Schwarzem Brett)
 - [Verträge (Miete, WEG, SEV, Kautionen mit Kautionsabrechnung, Dienstleisterverträge mit Kündigungsfristen)](vertraege.md)
 - [Kontakte (mit IBAN-Freigabe im Vier-Augen-Prinzip, Beziehungen zu Objekten und Einheiten)](kontakte.md)
+- [Erfassungsstandards und Bericht Datenqualität (Objektname, Namensfelder, Fristen)](erfassungsstandards.md)
 - [Kalender](kalender.md)
 
 Vorgänge und Kommunikation

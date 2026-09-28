@@ -175,5 +175,6 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M19-02](M19-02-beiratsbeteiligung.md) | Beiratsbeteiligung: Vorlage an den Verwaltungsbeirat (Kategorie Beirat der Objektkontakte) zur Kenntnis oder um Votum mit Frist, Rückmeldung im Portal und CRM, Protokoll am Ticket, Empfehlungsregel je Mandant, kein Geldbezug | M19, M21, M25, 6.2, 6.6 | implemented, not accepted (Migration 0203; M19-02 Wertgrenzen offen) |
 
 | [A80-01](A80-01-zuordnungskette.md) | Zuordnungsprüfung: sichere Kette vom Kontakt (eindeutiger Mietvertrag oder eindeutiges Eigentum einer Einheit) zu Einheit und Objekt, nur in ein leeres Feld, erneute Prüfung nach einem Ja auf die Kontakt-Rückfrage | A-068, Betreiberauftrag 27.09.2026 | implemented, not accepted |
+| [ES-01 to ES-11](ES-erfassungsstandards.md) | Erfassungsstandards: PLZ fünfstellig in Deutschland (hart, auch API), sonst nicht blockierende Hinweise zu Anschrift und Objektname, Namensfeldern von Kontakten, Fristdatum und verantwortlicher Person; Bericht Datenqualität ohne automatische Änderung | Betreiberrückmeldung 28.09.2026, Produktschutz | implemented, not accepted |
 
 Index checked against the files in this folder on 27.09.2026: every rule file has one row above (`A80-01` added).
