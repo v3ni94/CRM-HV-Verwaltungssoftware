@@ -10,6 +10,26 @@ debtor account reservation.
 * Tests: `apps/api/tests/integration/test_m5_contracts.py`, `apps/api/tests/unit/test_m5_rules.py`.
 * Locks: no postings (M10, G1), no direct debit collection (G2).
 
+## Sollbeträge im CRM (Paket D, 28.09.2026)
+
+Standing amounts (`contract_payment`: rent, advances, HOA fee, reserve, catalogue
+`payment_type`) are recorded and read through the existing endpoints, no new API:
+
+* `POST /contracts/{id}/payments` records a new amount of a kind from `valid_from`; an open
+  amount of the same kind that started earlier is closed the day before (`services.add_payment`),
+  earlier states are never overwritten. Other overlaps hit the exclusion constraint
+  `ex_contract_payment_period` and answer 409; gross must match net and VAT (422); negative
+  amounts only for `rent_reduction`; `valid_from` must lie within the term.
+* `GET /contracts/{id}/payments` is the history over all versions of the contract number.
+* The CRM (`apps/web-crm/src/components/contracts/AmountsPanel.tsx`, helpers `amounts.ts`)
+  shows the history with the total per month as of a date, checks overlaps before the request
+  and records the first amounts of a new contract from the start date (`ContractForm.tsx`).
+* Recording posts nothing: receivables come from the manual receivable run (`mhvp.accounting`),
+  statements stay behind G3. The amount has no allocation key and no revenue account in the
+  model yet (spec 6.3 names `revenue_account_id`); open point VTR-01 in `docs/OPEN_QUESTIONS.md`.
+* Tests: `tests/integration/test_contract_amounts.py` (history, overlap, validation, 403 for
+  caretakers, second tenant sees nothing).
+
 ## Dienstleisterverträge (M9-06)
 
 `service_contracts.py` (model `ServiceContract`, orientation calculation of next possible end and

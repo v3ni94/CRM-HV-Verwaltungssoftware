@@ -37,7 +37,8 @@ Entwurf mit Platzhaltern und vor Verwendung rechtlich zu prüfen.
   übernehmen, Verwerfen). `contracts:approve` haben in der Vorbelegung nur
   Mandantenadministrator und Administrator.
 - Am Mietvertrag ist zum Wirksamkeitsdatum eine Miete erfasst (sonst Fehlermeldung Keine Miete
-  zum Stichtag erfasst).
+  zum Stichtag erfasst). Die Miete steht auf der Vertragsseite im Abschnitt Sollbeträge
+  ([Verträge](vertraege.md), Sollbeträge und Zahlungsplan).
 - Keine Mieterhöhungssperre am Vertrag (Feld Mieterhöhungssperre bis).
 - Freigabestufe G3 ist für Versand erfassen erforderlich und derzeit geschlossen.
 
@@ -150,8 +151,12 @@ Für Mieterhöhungen gibt es keinen Fristtyp in der Fristenliste. Von Hand anleg
 
 ## Lücken in der Software
 
-- Versand erfassen bis G3 gesperrt; die Schritte Zustimmung und Übernahme sind damit im CRM
-  nicht erreichbar, die neue Miete muss bis dahin im führenden System gepflegt werden.
+- Versand erfassen bis G3 gesperrt; die Schritte Zustimmung und Übernahme des Falls sind damit
+  im CRM nicht erreichbar. Die neue Miete lässt sich nach Zustimmung des Mieters von Hand auf
+  der Vertragsseite im Abschnitt Sollbeträge als neuer Stand ab Wirksam ab mit Grund Erhöhung
+  erfassen (Zustimmungsnachweis als Dokument zur Einheit ablegen); der Fall selbst bleibt im
+  Status freigegeben und wird nicht automatisch abgeglichen. Parallel im führenden System
+  pflegen, solange der Parallelbetrieb läuft.
 - Zugangsdatum (Grundlage der Fristberechnung) nur über die Schnittstelle erfassbar, nicht in
   der Oberfläche.
 - Kein Fristtyp Mieterhöhung in der Fristenliste.

@@ -100,6 +100,9 @@ lassen. Einzelheiten in [Verträge](vertraege.md), Abschnitt Kautionsabrechnung.
    - Vertragspartner über die Kontaktsuche mit Rolle Mieter
    - Beginn, Ende leer bei unbefristetem Vertrag
    - Umsatzsteuer, Lastschrift mit SEPA-Mandat, Mieterhöhungssperre bis, Nutzerwechselgebühr
+   - Sollbeträge: je Zahlungsart ein Betrag (Miete, Betriebskosten- und
+     Heizkostenvorauszahlung, Netto im Format 1.234,56 und USt in Prozent), gültig ab
+     Vertragsbeginn; spätere Stände auf der Vertragsseite im Abschnitt Sollbeträge
    - Zahlungsplan gleich anlegen (Intervall, Fälligkeitsregel, Fälligkeitstag, Gültig ab)
    - Kaution gleich erfassen (Kautionsart, Betrag im Format 1.234,56, Raten 1 bis 12, Fällig ab)
    Vertrag anlegen.
@@ -119,7 +122,7 @@ Wie Schritt 2 mit einem neuen Protokoll, Beteiligte neuer Mieter und Vermieter.
 | --- | --- |
 | Einheit | Kündigung, Übergabeprotokolle (über Objekt und Einheit), Mietvertrag |
 | Vertrag alt | Vertragsende, Zählerstände zur Beendigung, Kautionsabrechnung |
-| Vertrag neu | Zahlungsplan, Kaution, Umlagewerte, SEPA-Mandat |
+| Vertrag neu | Sollbeträge, Zahlungsplan, Kaution, Umlagewerte, SEPA-Mandat |
 | Kontakt alt und neu | Ticket, Bankverbindung, Portalzugang |
 
 ## Fristen
@@ -145,7 +148,7 @@ Rechtsanwalt [Platzhalter]. Vorfrist mindestens 7 Tage.
 - [ ] Rückgabeprotokoll abgeschlossen und abgelegt
 - [ ] Kautionsabrechnung als Entwurf und PDF abgelegt
 - [ ] Messdienstleister informiert
-- [ ] Neuer Kontakt und Vertrag mit Zahlungsplan und Kaution angelegt
+- [ ] Neuer Kontakt und Vertrag mit Sollbeträgen, Zahlungsplan und Kaution angelegt
 - [ ] Umlagewerte (Personen) erfasst
 - [ ] Übergabeprotokoll Einzug abgeschlossen
 - [ ] Portaleinladung erzeugt
@@ -165,7 +168,5 @@ Rechtsanwalt [Platzhalter]. Vorfrist mindestens 7 Tage.
 - Übergabeprotokoll ohne Verknüpfung zum Vertrag in der Oberfläche.
 - Zählerstände aus dem Protokoll werden nicht in die Zählerstände der Einheit übernommen.
 - Keine Prüfung der Kündigungsfrist, kein Fristtyp für die Kautionsabrechnung.
-- Sollbeträge (Miete, Vorauszahlungen) am Vertrag nicht in der Oberfläche erfassbar, nur
-  Zahlungsplan; Beträge über Import oder Schnittstelle.
 - Kein Mieterwechsel-Assistent, der Beenden und Neuanlage verbindet.
 - Keine automatische Mitteilung an den Messdienstleister.

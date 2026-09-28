@@ -68,10 +68,35 @@ Eigentümerwechsel. Kündigungen sind vorher durch die Geschäftsführung freizu
 
 ## Sollbeträge und Zahlungsplan
 
-Je Vertrag werden Zahlungsarten mit Netto, Brutto und Gültigkeitsbeginn erfasst, zum
-Beispiel Miete 500,00 EUR ab 01.01.2024 oder Hausgeld und Erhaltungsrücklage aus dem
-beschlossenen Wirtschaftsplan (Kapitel WEG, Vorschüsse übernehmen). Die Zahlungshistorie
-zeigt alle Stände mit Zeitraum.
+Je Vertrag werden Zahlungsarten mit Netto, Umsatzsteuer, Brutto und Gültigkeitszeitraum
+erfasst, zum Beispiel Miete 500,00 EUR ab 01.01.2024, Betriebskosten- und
+Heizkostenvorauszahlung, Hausgeld und Erhaltungsrücklage (aus dem beschlossenen
+Wirtschaftsplan, Kapitel WEG, Vorschüsse übernehmen) oder weitere Zahlungsarten des Katalogs
+(Einstellungen, Kataloge, Zahlungsarten).
+
+Abschnitt Sollbeträge auf der Vertragsseite (Recht `contracts:update` zum Erfassen):
+
+- Die Tabelle zeigt alle Stände mit Zahlungsart, Netto, USt, Brutto, Gültig ab, Gültig bis
+  und Grund (Erstbetrag, Erhöhung, Indexanpassung, Staffel, Anpassung aus Abrechnung,
+  Sonstiges), auch aus früheren Vertragsversionen. Die zum Stichtag gültigen Stände sind
+  markiert, darüber steht die Summe je Monat zum Stichtag (Vorbelegung heute, Stichtag
+  änderbar, zum Beispiel für die Summe nach einer Erhöhung).
+- Betrag erfassen legt einen neuen Stand ab Datum an: Zahlungsart, Netto im Format 1.234,56,
+  USt in Prozent (Brutto wird berechnet), Gültig ab, optional Gültig bis, Grund. Der offene
+  Vorbetrag derselben Zahlungsart endet automatisch am Vortag; frühere Stände werden nie
+  überschrieben. Negative Beträge nur bei Mietminderung.
+- Die Software lehnt ab: Gültig ab außerhalb der Laufzeit, Gültig bis vor Gültig ab, einen
+  Zeitraum, der sich mit einem befristeten oder gleich beginnenden Stand derselben Zahlungsart
+  überschneidet (befristeten Stand zuerst anpassen oder späteres Datum wählen).
+- Beim Anlegen eines Vertrags lassen sich die ersten Sollbeträge gleich mitgeben (Abschnitt
+  Sollbeträge im Formular, je Zahlungsart ein Betrag, gültig ab Vertragsbeginn, Grund
+  Erstbetrag). Schlägt ein Betrag fehl, ist der Vertrag trotzdem angelegt; die Vertragsseite
+  zeigt den Hinweis und der Betrag wird dort nacherfasst.
+
+Das Erfassen eines Sollbetrags bucht nichts: Sollstellungen entstehen erst im manuell
+gestarteten Sollstellungslauf (Kapitel Buchhaltung), Abrechnungen bleiben bis zur
+Freigabestufe G3 Entwürfe. Der Zusammenhang mit dem Mieterhöhungsfall steht in
+[Mieterhöhung](anleitung-mieterhoehung.md).
 
 Der Zahlungsplan legt Intervall (Standard monatlich) und Fälligkeitstag fest (Standard der
 3. des Monats). Der Sollstellungslauf verarbeitet nur monatliche Beträge; zeitanteilige
