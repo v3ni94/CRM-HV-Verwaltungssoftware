@@ -4137,7 +4137,24 @@
       "floors": "Floors",
       "energyCertificate": "Energy certificate",
       "noEnergyCertificate": "no energy certificate",
-      "open": "Open building"
+      "open": "Open building",
+      "create": {
+        "title": "Add building",
+        "button": "Create",
+        "cancel": "Cancel",
+        "hint": "Only the name is required. Areas, construction type, energy certificate and further details are maintained on the building page afterwards.",
+        "created": "Building {name} created.",
+        "invalidYear": "Construction year as a four digit year.",
+        "invalidFloors": "Floors as a whole number.",
+        "fields": {
+          "name": "Name",
+          "street": "Street",
+          "house_number": "House number",
+          "address_addition": "Address addition",
+          "construction_year": "Construction year",
+          "floors": "Floors"
+        }
+      }
     },
     "billingPeriods": {
       "title": "Billing periods",
@@ -8010,7 +8027,89 @@
       "newNumber": "New number",
       "newInitial": "Initial reading new"
     },
-    "energyCertificateOfBuilding": "Energy certificate of the building"
+    "energyCertificateOfBuilding": "Energy certificate of the building",
+    "create": {
+      "title": "Add unit",
+      "button": "Create",
+      "cancel": "Cancel",
+      "open": "Open unit",
+      "created": "Unit {number} created.",
+      "noBuilding": "Create a building first; every unit belongs to a building of the property.",
+      "hint": "Building, number and type are required. The number must be unique within the property. Address, features, sub community, commission and deposit are maintained on the unit page afterwards, key values in the allocation keys section.",
+      "duplicateNumber": "Number {number} is already used in this property.",
+      "invalidArea": "Areas as a number in m², for example 65.5.",
+      "invalidRooms": "Rooms as a number, for example 3 or 2.5.",
+      "fields": {
+        "building_id": "Building",
+        "number": "Number",
+        "label": "Label",
+        "unit_type": "Type",
+        "location": "Location",
+        "floor": "Floor",
+        "living_area_sqm": "Living area in m²",
+        "total_area_sqm": "Total area in m²",
+        "rooms": "Rooms"
+      }
+    }
+  },
+  "AllocationKeys": {
+    "title": "Allocation keys and key values",
+    "intro": "Keys per property with expected total and the sum of the unit values at the reference date. Values carry a validity period; statements read them only after the releases G3 and G4.",
+    "asOf": "Reference date",
+    "loading": "Loading allocation keys.",
+    "empty": "The property has no allocation keys.",
+    "columns": {
+      "key": "Key",
+      "unitOfMeasure": "Unit of measure",
+      "kind": "Kind",
+      "expectedTotal": "Expected total",
+      "total": "Total at {date}",
+      "difference": "Difference",
+      "unitsWithout": "Units without value",
+      "unit": "Unit"
+    },
+    "kinds": {
+      "static": "static value",
+      "consumption": "consumption",
+      "fixed_amount": "fixed amount",
+      "fixed_share": "fixed share"
+    },
+    "expectedInput": "Expected total {code}",
+    "saveExpected": "Save",
+    "expectedHint": "Expected total: operator value without default, to be verified, for example the total of the co-ownership shares per declaration of division. Leave empty when there is no expected total (for example persons).",
+    "expectedSaved": "Expected total for {code} saved.",
+    "noExpected": "no expected total",
+    "matches": "matches",
+    "warningTitle": "Sum check",
+    "warningDeviation": "{code}: the total {total} {unit} differs from the expected total {expected} {unit} (difference {difference}).",
+    "warningFooter": "The check blocks nothing. Please verify the basis (declaration of division, survey, resolution) and the validity periods.",
+    "matrix": "Values per unit at the reference date",
+    "showAll": "Show all keys",
+    "noValues": "No key values at the reference date.",
+    "noValue": "no value",
+    "until": "until",
+    "sumRow": "Total",
+    "addValue": "Enter key value",
+    "choose": "please choose",
+    "fields": {
+      "unit": "Unit",
+      "key": "Allocation key",
+      "value": "Value",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "code": "Code",
+      "name": "Name",
+      "unitOfMeasure": "Unit of measure",
+      "kind": "Kind",
+      "expectedTotal": "Expected total"
+    },
+    "valueHint": "A new value closes the open previous value on the day before; the history is kept. Never enter a change retroactively without the basis (survey, resolution) filed as a document on the unit.",
+    "saveValue": "Save value",
+    "valueSaved": "Key value saved.",
+    "addKey": "Add allocation key",
+    "keyHint": "Code of capital letters, digits and underscore, unique within the property. The code cannot be changed after creation.",
+    "saveKey": "Create key",
+    "keySaved": "Allocation key {code} created."
   },
   "ResolutionKindsSettings": {
     "title": "Resolution kinds at ticket closure",

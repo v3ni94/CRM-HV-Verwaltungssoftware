@@ -7,6 +7,8 @@ import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
 import { PropertyMeteringTab } from "@/components/metering/PropertyMeteringTab";
 import { CompletenessPanel } from "@/components/objektakte/CompletenessPanel";
+import { AllocationKeysPanel } from "@/components/properties/AllocationKeysPanel";
+import { BuildingsCreate } from "@/components/properties/BuildingsCreate";
 import { LegalEntityBankAccounts } from "@/components/properties/LegalEntityBankAccounts";
 import { PropertyMasterData, type PropertyMaster } from "@/components/properties/PropertyMasterData";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
@@ -24,6 +26,7 @@ import {
   type ProviderRow,
   type SubCommunityRow,
 } from "@/components/properties/PropertyPanels";
+import { UnitsCreate } from "@/components/properties/UnitsCreate";
 import { UnitsTable } from "@/components/properties/UnitsTable";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -112,7 +115,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
   const isHoa = data.management_type !== "rental";
   const openMaintenance = (maintenance.data ?? []).filter((m) => m.status === "open");
   const canEdit = me.data?.permissions.includes("properties:update") ?? false;
+  const canCreate = me.data?.permissions.includes("properties:create") ?? false;
   const isSuperadmin = me.data?.is_superadmin ?? false;
+  // Stammdaten in der Oberfläche (C1): Anlage von Gebäuden, Einheiten und Schlüsselwerten nur
+  // bei laufender Verwaltung; ein beendetes Objekt bleibt lesbar.
+  const canAdd = data.status !== "terminated";
   const ownerRows = owners.map((o) => ({
     ...o,
     clearing_account_label: o.clearing_account_id ? (accounts.labels.get(o.clearing_account_id) ?? null) : null,
@@ -193,6 +200,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       <PropertyOwnerPanel propertyId={propertyId} managementType={data.management_type} owners={ownerRows} canEdit={canEdit} />
 
       <BuildingsPanel buildings={buildings} />
+      <BuildingsCreate propertyId={propertyId} canCreate={canCreate && canAdd} />
 
       <section id="einheiten" className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("units")}</h2>
@@ -201,7 +209,15 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
         ) : (
           <UnitsTable units={unitRows} />
         )}
+        <UnitsCreate
+          propertyId={propertyId}
+          buildings={buildings.map((b) => ({ id: b.id, name: b.name }))}
+          existingNumbers={unitRows.map((u) => u.number)}
+          canCreate={canCreate && canAdd}
+        />
       </section>
+
+      <AllocationKeysPanel propertyId={propertyId} canEdit={canEdit && canAdd} canCreate={canCreate && canAdd} />
 
       {isHoa ? <SubCommunitiesPanel rows={subCommunities} /> : null}
       <BillingPeriodsPanel periods={periods} />

@@ -51,6 +51,12 @@ export function checkProperty(d: PropertyDraft): Finding[] {
   return out;
 }
 
+/** Building of a property (C1): only ES-03 applies, the address of the property carries
+ *  postcode and city. */
+export function checkBuilding(d: { street?: string | null; house_number?: string | null }): Finding[] {
+  return STREET_WITH_NUMBER.test(str(d.street)) && blank(d.house_number) ? [{ rule: "ES-03", field: "street", severity: "warning" }] : [];
+}
+
 export type ContactDraft = {
   kind?: string | null;
   first_name?: string | null;

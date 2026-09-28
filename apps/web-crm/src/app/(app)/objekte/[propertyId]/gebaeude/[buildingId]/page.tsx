@@ -5,6 +5,7 @@ import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { BuildingMasterData, type BuildingMaster } from "@/components/properties/BuildingMasterData";
 import { EnergyCertificateForm, type EnergyBuilding } from "@/components/properties/EnergyCertificateForm";
+import { UnitsCreate } from "@/components/properties/UnitsCreate";
 import { UnitsTable } from "@/components/properties/UnitsTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -35,6 +36,7 @@ export default async function BuildingPage({ params }: { params: Promise<{ prope
     );
   }
   const canEdit = me.data?.permissions.includes("properties:update") ?? false;
+  const canCreate = (me.data?.permissions.includes("properties:create") ?? false) && property.data?.status !== "terminated";
   const unitRows = (units.data ?? []).filter((u) => u.building_id === buildingId);
   const address = [building.data.street, building.data.house_number, building.data.address_addition].filter(Boolean).join(" ");
   return (
@@ -66,6 +68,13 @@ export default async function BuildingPage({ params }: { params: Promise<{ prope
       <section id="einheiten" className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("unitsOfBuilding")}</h2>
         {unitRows.length === 0 ? <p className="text-sm text-muted">{t("noUnits")}</p> : <UnitsTable units={unitRows} />}
+        <UnitsCreate
+          propertyId={propertyId}
+          buildings={[{ id: buildingId, name: building.data.name }]}
+          existingNumbers={(units.data ?? []).map((u) => u.number)}
+          defaultBuildingId={buildingId}
+          canCreate={canCreate}
+        />
       </section>
       <AuditLogPanel entityType="building" entityId={buildingId} />
     </div>

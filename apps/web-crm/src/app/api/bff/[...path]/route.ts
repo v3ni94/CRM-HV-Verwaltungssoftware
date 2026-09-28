@@ -490,6 +490,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: new RegExp(`^platform/rent-law/cap-areas/${ID}$`) },
   // Properties (M4): creation only; reads go through the server components.
   { method: "POST", pattern: /^properties$/ },
+  // Stammdaten in der Oberfläche (C1): Gebäude, Einheiten, Umlageschlüssel und Schlüsselwerte.
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/buildings$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/units$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/allocation-(keys|summary)$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/allocation-keys$`) },
+  { method: "PATCH", pattern: new RegExp(`^properties/${ID}/allocation-keys/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^units/${ID}/allocation-values$`) },
   // Tickets (M19).
   { method: "POST", pattern: /^tickets$/ },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}$`) },

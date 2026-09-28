@@ -4137,7 +4137,24 @@
       "floors": "Geschosse",
       "energyCertificate": "Energieausweis",
       "noEnergyCertificate": "kein Energieausweis",
-      "open": "Gebäude öffnen"
+      "open": "Gebäude öffnen",
+      "create": {
+        "title": "Gebäude anlegen",
+        "button": "Anlegen",
+        "cancel": "Abbrechen",
+        "hint": "Nur die Bezeichnung ist Pflicht. Flächen, Bauweise, Energieausweis und weitere Angaben werden danach auf der Gebäudeseite gepflegt.",
+        "created": "Gebäude {name} angelegt.",
+        "invalidYear": "Baujahr als vierstellige Jahreszahl.",
+        "invalidFloors": "Geschosse als ganze Zahl.",
+        "fields": {
+          "name": "Bezeichnung",
+          "street": "Straße",
+          "house_number": "Hausnummer",
+          "address_addition": "Adresszusatz",
+          "construction_year": "Baujahr",
+          "floors": "Geschosse"
+        }
+      }
     },
     "billingPeriods": {
       "title": "Abrechnungszeiträume",
@@ -8010,7 +8027,89 @@
       "newNumber": "Neue Nummer",
       "newInitial": "Anfangsstand neu"
     },
-    "energyCertificateOfBuilding": "Energieausweis des Gebäudes"
+    "energyCertificateOfBuilding": "Energieausweis des Gebäudes",
+    "create": {
+      "title": "Einheit anlegen",
+      "button": "Anlegen",
+      "cancel": "Abbrechen",
+      "open": "Einheit öffnen",
+      "created": "Einheit {number} angelegt.",
+      "noBuilding": "Zuerst ein Gebäude anlegen; jede Einheit gehört zu einem Gebäude des Objekts.",
+      "hint": "Pflicht sind Gebäude, Nummer und Art. Die Nummer muss im Objekt eindeutig sein. Anschrift, Ausstattung, Untergemeinschaft, Provision und Kaution werden danach auf der Einheitenseite gepflegt, Schlüsselwerte im Abschnitt Umlageschlüssel.",
+      "duplicateNumber": "Die Nummer {number} ist in diesem Objekt bereits vergeben.",
+      "invalidArea": "Flächen als Zahl in m², zum Beispiel 65,5.",
+      "invalidRooms": "Zimmer als Zahl, zum Beispiel 3 oder 2,5.",
+      "fields": {
+        "building_id": "Gebäude",
+        "number": "Nummer",
+        "label": "Bezeichnung",
+        "unit_type": "Art",
+        "location": "Lage",
+        "floor": "Etage",
+        "living_area_sqm": "Wohnfläche in m²",
+        "total_area_sqm": "Gesamtfläche in m²",
+        "rooms": "Zimmer"
+      }
+    }
+  },
+  "AllocationKeys": {
+    "title": "Umlageschlüssel und Schlüsselwerte",
+    "intro": "Schlüssel je Objekt mit Sollsumme und der Summe der Einheitenwerte zum Stichtag. Werte werden mit Gültigkeitszeitraum geführt; die Abrechnung liest sie erst nach den Freigaben G3 und G4.",
+    "asOf": "Stichtag",
+    "loading": "Umlageschlüssel werden geladen.",
+    "empty": "Im Objekt sind keine Umlageschlüssel angelegt.",
+    "columns": {
+      "key": "Schlüssel",
+      "unitOfMeasure": "Maßeinheit",
+      "kind": "Art",
+      "expectedTotal": "Sollsumme",
+      "total": "Summe zum {date}",
+      "difference": "Abweichung",
+      "unitsWithout": "Einheiten ohne Wert",
+      "unit": "Einheit"
+    },
+    "kinds": {
+      "static": "fester Wert",
+      "consumption": "Verbrauch",
+      "fixed_amount": "fester Betrag",
+      "fixed_share": "fester Anteil"
+    },
+    "expectedInput": "Sollsumme {code}",
+    "saveExpected": "Speichern",
+    "expectedHint": "Sollsumme: Betreiberwert ohne Vorgabe, zu verifizieren, zum Beispiel die Summe der Miteigentumsanteile laut Teilungserklärung. Leer lassen, wenn es keine Sollsumme gibt (zum Beispiel Personen).",
+    "expectedSaved": "Sollsumme für {code} gespeichert.",
+    "noExpected": "keine Sollsumme",
+    "matches": "stimmt überein",
+    "warningTitle": "Summenprüfung",
+    "warningDeviation": "{code}: Die Summe {total} {unit} weicht von der Sollsumme {expected} {unit} ab (Abweichung {difference}).",
+    "warningFooter": "Die Prüfung sperrt nichts. Bitte Grundlage (Teilungserklärung, Aufmaß, Beschluss) und Gültigkeitszeiträume prüfen.",
+    "matrix": "Werte je Einheit zum Stichtag",
+    "showAll": "Alle Schlüssel anzeigen",
+    "noValues": "Zum Stichtag sind keine Schlüsselwerte hinterlegt.",
+    "noValue": "kein Wert",
+    "until": "bis",
+    "sumRow": "Summe",
+    "addValue": "Schlüsselwert erfassen",
+    "choose": "bitte wählen",
+    "fields": {
+      "unit": "Einheit",
+      "key": "Umlageschlüssel",
+      "value": "Wert",
+      "validFrom": "Gültig ab",
+      "validTo": "Gültig bis",
+      "code": "Kürzel",
+      "name": "Bezeichnung",
+      "unitOfMeasure": "Maßeinheit",
+      "kind": "Art",
+      "expectedTotal": "Sollsumme"
+    },
+    "valueHint": "Ein neuer Wert schließt den offenen Vorwert am Vortag; die Historie bleibt erhalten. Eine Änderung nie rückwirkend eintragen, ohne dass die Grundlage (Aufmaß, Beschluss) als Dokument an der Einheit abgelegt ist.",
+    "saveValue": "Wert speichern",
+    "valueSaved": "Schlüsselwert gespeichert.",
+    "addKey": "Umlageschlüssel anlegen",
+    "keyHint": "Kürzel aus Großbuchstaben, Ziffern und Unterstrich, im Objekt eindeutig. Das Kürzel ist nach der Anlage nicht mehr änderbar.",
+    "saveKey": "Schlüssel anlegen",
+    "keySaved": "Umlageschlüssel {code} angelegt."
   },
   "ResolutionKindsSettings": {
     "title": "Erledigungsarten beim Ticketabschluss",
