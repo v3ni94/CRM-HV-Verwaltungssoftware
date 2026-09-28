@@ -17,6 +17,22 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.38.0",
+    date: "28.09.2026",
+    title: "Lern-Workflow, Folgevorgänge und durchgängiges Design",
+    changes: [
+      "Postfach: \"Antworten\" und \"Vorschlag übernehmen\" zeigen bei Nutzern mit eingeschaltetem zweiten Faktor (TOTP) keinen \"Interner Fehler\" mehr; die Signatur liest nur noch den Anzeigenamen des Nutzers. Dasselbe gilt für Einreichen, Ticketantwort und Signaturvorschau.",
+      "Leere Einträge in gespeicherten Empfängerlisten führen nicht mehr zum Abbruch beim Antworten, und Kopien im Sammelpostfach antworten an die Reply-To-Adresse.",
+      "Lern-Workflow: Nach fünf gleichen manuellen Zuordnungen für denselben Absender ohne Widerspruch schlägt die Plattform eine Regel vor; aktiv wird sie erst nach ausdrücklicher Annahme.",
+      "Neue Seite Regelvorschläge unter Einstellungen mit Annehmen, Ablehnen mit Grund und einstellbarer Schwelle sowie Hinweis im Mailbereich.",
+      "Angenommene Vorschläge werden normale Automatisierungsregeln, die leere Zuordnungen, Ticketthema oder Bearbeiter setzen; Zahlungsempfänger, IBAN, Beschlüsse, Gebühren und Steuer werden nie gelernt.",
+      "Neue E-Mails zu abgeschlossenen Tickets öffnen das Ticket nur noch innerhalb von 30 Kalendertagen nach dem Abschluss wieder (je Mandant einstellbar unter Einstellungen, Mandant); danach entsteht ein Folgevorgang mit Verweis auf das alte Ticket und übernommenem Objekt, Einheit und Kontakt.",
+      "Automatische Antworten wie Abwesenheitsnotizen öffnen keine Tickets mehr wieder und legen keinen Folgevorgang an; im Ticketdetail ist der Vorgänger oder Folgevorgang verlinkt.",
+      "Oberfläche: Tag und Abendmodus durchgängig im neuen Design; Karten, Tabellen, Eingabefelder, Schaltflächen, Statusanzeigen und Navigation nutzen einheitliche Farbrollen statt fester Farbwerte. Seitenhintergrund und Karten waren seit 1.37.0 vertauscht und sind korrigiert.",
+      "Barrierefreiheit: Kontraste in beiden Modi nach WCAG AA geprüft, deutlicherer Fokusrahmen, sichtbare Feldrahmen und lesbare Ampelfarben auch im Abendmodus.",
+    ],
+  },
+  {
     version: "1.37.0",
     date: "27.09.2026",
     title: "Darstellung Tag und Abend",
