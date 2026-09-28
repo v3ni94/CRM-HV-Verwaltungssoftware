@@ -4525,6 +4525,19 @@
       "BookIn": {
         "additionalProperties": false,
         "properties": {
+          "chosen": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
           "counter_account_id": {
             "anyOf": [
               {
@@ -4536,6 +4549,32 @@
               }
             ],
             "title": "Counter Account Id"
+          },
+          "discount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.00",
+            "title": "Discount"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
           },
           "settlements": {
             "items": {
@@ -6111,6 +6150,19 @@
       "BulkItem": {
         "additionalProperties": false,
         "properties": {
+          "chosen": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
           "counter_account_id": {
             "anyOf": [
               {
@@ -6122,6 +6174,32 @@
               }
             ],
             "title": "Counter Account Id"
+          },
+          "discount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.00",
+            "title": "Discount"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
           },
           "settlements": {
             "items": {
@@ -16964,6 +17042,18 @@
             "title": "Decision",
             "type": "string"
           },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
           "reason": {
             "maxLength": 2000,
             "minLength": 3,
@@ -17437,6 +17527,17 @@
               }
             ],
             "title": "Reversal Reason"
+          },
+          "reversal_reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reversal Reason Code"
           },
           "reversed_by_id": {
             "anyOf": [
@@ -24144,6 +24245,27 @@
         ],
         "title": "LearningStatus",
         "type": "string"
+      },
+      "LearningSwitchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "reason"
+        ],
+        "title": "LearningSwitchIn",
+        "type": "object"
       },
       "LedgerIn": {
         "additionalProperties": false,
@@ -34472,6 +34594,234 @@
         "title": "PostalSubmitIn",
         "type": "object"
       },
+      "PostingDecisionOut": {
+        "description": "One round of ``posting_decision`` (ADR 0013).",
+        "properties": {
+          "ai_proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Proposal Id"
+          },
+          "bank_transaction_id": {
+            "format": "uuid",
+            "title": "Bank Transaction Id",
+            "type": "string"
+          },
+          "best_confidence": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Confidence"
+          },
+          "best_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Best Source"
+          },
+          "bulk": {
+            "title": "Bulk",
+            "type": "boolean"
+          },
+          "case_kind": {
+            "title": "Case Kind",
+            "type": "string"
+          },
+          "chosen_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen Index"
+          },
+          "computed_at": {
+            "format": "date-time",
+            "title": "Computed At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "diff": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Diff"
+          },
+          "engine_version": {
+            "title": "Engine Version",
+            "type": "string"
+          },
+          "features": {
+            "additionalProperties": true,
+            "title": "Features",
+            "type": "object"
+          },
+          "features_hash": {
+            "title": "Features Hash",
+            "type": "string"
+          },
+          "final": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "journal_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Journal Entry Id"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "level": {
+            "title": "Level",
+            "type": "string"
+          },
+          "proposals": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Proposals",
+            "type": "array"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "round": {
+            "title": "Round",
+            "type": "integer"
+          },
+          "rule_version": {
+            "title": "Rule Version",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          }
+        },
+        "required": [
+          "id",
+          "bank_transaction_id",
+          "legal_entity_id",
+          "round",
+          "status",
+          "bulk",
+          "engine_version",
+          "rule_version",
+          "features_hash",
+          "features",
+          "proposals",
+          "case_kind",
+          "level",
+          "best_source",
+          "best_confidence",
+          "computed_at",
+          "chosen_index",
+          "final",
+          "diff",
+          "reason",
+          "journal_entry_id",
+          "ai_proposal_id",
+          "supersedes_id",
+          "decided_by",
+          "decided_at"
+        ],
+        "title": "PostingDecisionOut",
+        "type": "object"
+      },
       "PostingEnabledIn": {
         "additionalProperties": false,
         "properties": {
@@ -36699,6 +37049,60 @@
           "rejection_reason"
         ],
         "title": "ProposalOut",
+        "type": "object"
+      },
+      "ProposalRejectIn": {
+        "additionalProperties": false,
+        "description": "Reject the proposals of a transaction with a mandatory reason (plan M12 3.3). The\ntransaction stays open; ``chosen`` names the proposal the reason refers to (index into\nthe snapshot, default the best one); ``ai_proposal_id`` additionally closes a stored AI\nproposal as rejected (``mhvp.ai.examples.record_rejection``).",
+        "properties": {
+          "ai_proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ai Proposal Id"
+          },
+          "chosen": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ProposalRejectIn",
         "type": "object"
       },
       "ProposalsIn": {
@@ -39508,6 +39912,22 @@
         "title": "RentLawRuleIn",
         "type": "object"
       },
+      "ReopenIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ReopenIn",
+        "type": "object"
+      },
       "ReplyTemplateIn": {
         "additionalProperties": false,
         "properties": {
@@ -40496,6 +40916,22 @@
         "title": "RetentionStart",
         "type": "string"
       },
+      "ReversalReason": {
+        "description": "Reason code of a reversal (B03, ADR 0013). The free text ``reversal_reason`` stays\nmandatory; the code makes corrections countable for the learning bookkeeper (an\n``automation_error`` downgrades the rule that posted the entry, plan M12 S6). Codes are\nproduct standards, no tax or legal classification.",
+        "enum": [
+          "input_error",
+          "wrong_assignment",
+          "wrong_amount",
+          "wrong_date",
+          "duplicate",
+          "bank_return",
+          "run_reversal",
+          "automation_error",
+          "other"
+        ],
+        "title": "ReversalReason",
+        "type": "string"
+      },
       "ReverseIn": {
         "additionalProperties": false,
         "properties": {
@@ -40516,6 +40952,10 @@
             "minLength": 3,
             "title": "Reason",
             "type": "string"
+          },
+          "reason_code": {
+            "$ref": "#/components/schemas/ReversalReason",
+            "default": "other"
           }
         },
         "required": [
@@ -45267,6 +45707,11 @@
           },
           "company": {
             "$ref": "#/components/schemas/CompanyData"
+          },
+          "learning_bookkeeper_enabled": {
+            "default": false,
+            "title": "Learning Bookkeeper Enabled",
+            "type": "boolean"
           },
           "mail_approval_mode": {
             "default": "external_only",
@@ -61937,6 +62382,73 @@
         ]
       }
     },
+    "/api/v1/banking/learning": {
+      "get": {
+        "operationId": "get_learning_api_v1_banking_learning_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Learning Api V1 Banking Learning Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Lernender Buchhalter: Schalter je Mandant lesen",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "put": {
+        "description": "``tenant_settings.learning_bookkeeper_enabled`` (ADR 0013, M12-04): accounting:approve\nplus tenant_settings:update, reason and event, default off. Switching on starts the\nproposal snapshots with the next import; switching off stops writing, existing rows stay\n(retention, OPEN_QUESTIONS M12-06). Nothing is posted by the switch.",
+        "operationId": "set_learning_api_v1_banking_learning_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LearningSwitchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Set Learning Api V1 Banking Learning Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lernender Buchhalter: Entscheidungsprotokoll je Mandant ein- oder ausschalten",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
     "/api/v1/banking/matching-metrics": {
       "get": {
         "description": "Coverage = automatically and unambiguously assigned transactions / transactions of the\nperiod; error rate = automatic assignments later reversed (corrected or cancelled) /\nautomatic assignments. See ``mhvp.banking.matching_metrics`` (M12 acceptance, A45).",
@@ -63206,6 +63718,53 @@
         ]
       }
     },
+    "/api/v1/banking/transactions/{tx_id}/decisions": {
+      "get": {
+        "operationId": "list_decisions_api_v1_banking_transactions__tx_id__decisions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PostingDecisionOut"
+                  },
+                  "title": "Response List Decisions Api V1 Banking Transactions  Tx Id  Decisions Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschlags- und Entscheidungsprotokoll eines Umsatzes (ADR 0013)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
     "/api/v1/banking/transactions/{tx_id}/ignore": {
       "post": {
         "operationId": "ignore_api_v1_banking_transactions__tx_id__ignore_post",
@@ -63344,6 +63903,122 @@
           }
         },
         "summary": "Kontierungsvorschläge in zwei Stufen (Regel, Abgleich, KI) mit Konfidenz",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/reject": {
+      "post": {
+        "description": "Closes the pending decision round as ``rejected`` with the reason and opens the next\nround (ADR 0013, M12-04). Nothing is booked or ignored. With ``ai_proposal_id`` the stored\nAI proposal is marked rejected and, when the tenant records learning examples, handed to\n``mhvp.ai.examples.record_rejection``. Returns ``null`` while the learning switch is off\n(the AI rejection is still recorded).",
+        "operationId": "reject_proposals_api_v1_banking_transactions__tx_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProposalRejectIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/PostingDecisionOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Reject Proposals Api V1 Banking Transactions  Tx Id  Reject Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschläge ablehnen (Pflichtgrund, Umsatz bleibt offen)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/reopen": {
+      "post": {
+        "description": "An ignored transaction becomes ``new`` again with a reason (plan M12 3.3, ignoring is\nno longer terminal). A transaction that carries a posting stays booked: corrections go\nthrough the reversal (B03).",
+        "operationId": "reopen_api_v1_banking_transactions__tx_id__reopen_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReopenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TransactionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ignorierten Umsatz wieder eröffnen",
         "tags": [
           "Bank"
         ]

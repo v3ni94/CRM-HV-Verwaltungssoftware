@@ -3485,6 +3485,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/learning": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Lernender Buchhalter: Schalter je Mandant lesen */
+        get: operations["get_learning_api_v1_banking_learning_get"];
+        /**
+         * Lernender Buchhalter: Entscheidungsprotokoll je Mandant ein- oder ausschalten
+         * @description ``tenant_settings.learning_bookkeeper_enabled`` (ADR 0013, M12-04): accounting:approve
+         *     plus tenant_settings:update, reason and event, default off. Switching on starts the
+         *     proposal snapshots with the next import; switching off stops writing, existing rows stay
+         *     (retention, OPEN_QUESTIONS M12-06). Nothing is posted by the switch.
+         */
+        put: operations["set_learning_api_v1_banking_learning_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/matching-metrics": {
         parameters: {
             query?: never;
@@ -3887,6 +3911,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/transactions/{tx_id}/decisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorschlags- und Entscheidungsprotokoll eines Umsatzes (ADR 0013) */
+        get: operations["list_decisions_api_v1_banking_transactions__tx_id__decisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/transactions/{tx_id}/ignore": {
         parameters: {
             query?: never;
@@ -3941,6 +3982,52 @@ export interface paths {
         get: operations["posting_proposals_api_v1_banking_transactions__tx_id__posting_proposals_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vorschläge ablehnen (Pflichtgrund, Umsatz bleibt offen)
+         * @description Closes the pending decision round as ``rejected`` with the reason and opens the next
+         *     round (ADR 0013, M12-04). Nothing is booked or ignored. With ``ai_proposal_id`` the stored
+         *     AI proposal is marked rejected and, when the tenant records learning examples, handed to
+         *     ``mhvp.ai.examples.record_rejection``. Returns ``null`` while the learning switch is off
+         *     (the AI rejection is still recorded).
+         */
+        post: operations["reject_proposals_api_v1_banking_transactions__tx_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/reopen": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ignorierten Umsatz wieder eröffnen
+         * @description An ignored transaction becomes ``new`` again with a reason (plan M12 3.3, ignoring is
+         *     no longer terminal). A transaction that carries a posting stays booked: corrections go
+         *     through the reversal (B03).
+         */
+        post: operations["reopen_api_v1_banking_transactions__tx_id__reopen_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19228,8 +19315,17 @@ export interface components {
         };
         /** BookIn */
         BookIn: {
+            /** Chosen */
+            chosen?: number | null;
             /** Counter Account Id */
             counter_account_id?: string | null;
+            /**
+             * Discount
+             * @default 0.00
+             */
+            discount: number | string;
+            /** Proposal Id */
+            proposal_id?: string | null;
             /** Settlements */
             settlements?: components["schemas"]["SettleIn"][];
             /** Text */
@@ -19576,8 +19672,17 @@ export interface components {
         };
         /** BulkItem */
         BulkItem: {
+            /** Chosen */
+            chosen?: number | null;
             /** Counter Account Id */
             counter_account_id?: string | null;
+            /**
+             * Discount
+             * @default 0.00
+             */
+            discount: number | string;
+            /** Proposal Id */
+            proposal_id?: string | null;
             /** Settlements */
             settlements?: components["schemas"]["SettleIn"][];
             /** Text */
@@ -23130,6 +23235,8 @@ export interface components {
         DuplicateReviewIn: {
             /** Decision */
             decision: string;
+            /** Proposal Id */
+            proposal_id?: string | null;
             /** Reason */
             reason: string;
         };
@@ -23304,6 +23411,8 @@ export interface components {
             reference: string | null;
             /** Reversal Reason */
             reversal_reason: string | null;
+            /** Reversal Reason Code */
+            reversal_reason_code?: string | null;
             /** Reversed By Id */
             reversed_by_id: string | null;
             /** Reverses Id */
@@ -25355,6 +25464,13 @@ export interface components {
          * @enum {string}
          */
         LearningStatus: "pending" | "running" | "done" | "failed";
+        /** LearningSwitchIn */
+        LearningSwitchIn: {
+            /** Enabled */
+            enabled: boolean;
+            /** Reason */
+            reason: string;
+        };
         /** LedgerIn */
         LedgerIn: {
             /**
@@ -28833,6 +28949,82 @@ export interface components {
             /** Registered */
             registered?: string | null;
         };
+        /**
+         * PostingDecisionOut
+         * @description One round of ``posting_decision`` (ADR 0013).
+         */
+        PostingDecisionOut: {
+            /** Ai Proposal Id */
+            ai_proposal_id: string | null;
+            /**
+             * Bank Transaction Id
+             * Format: uuid
+             */
+            bank_transaction_id: string;
+            /** Best Confidence */
+            best_confidence: string | null;
+            /** Best Source */
+            best_source: string | null;
+            /** Bulk */
+            bulk: boolean;
+            /** Case Kind */
+            case_kind: string;
+            /** Chosen Index */
+            chosen_index: number | null;
+            /**
+             * Computed At
+             * Format: date-time
+             */
+            computed_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /** Diff */
+            diff: {
+                [key: string]: unknown;
+            } | null;
+            /** Engine Version */
+            engine_version: string;
+            /** Features */
+            features: {
+                [key: string]: unknown;
+            };
+            /** Features Hash */
+            features_hash: string;
+            /** Final */
+            final: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Journal Entry Id */
+            journal_entry_id: string | null;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Level */
+            level: string;
+            /** Proposals */
+            proposals: {
+                [key: string]: unknown;
+            }[];
+            /** Reason */
+            reason: string | null;
+            /** Round */
+            round: number;
+            /** Rule Version */
+            rule_version: string;
+            /** Status */
+            status: string;
+            /** Supersedes Id */
+            supersedes_id: string | null;
+        };
         /** PostingEnabledIn */
         PostingEnabledIn: {
             /** Enabled */
@@ -29446,6 +29638,23 @@ export interface components {
              * Format: uuid
              */
             task_run_id: string;
+        };
+        /**
+         * ProposalRejectIn
+         * @description Reject the proposals of a transaction with a mandatory reason (plan M12 3.3). The
+         *     transaction stays open; ``chosen`` names the proposal the reason refers to (index into
+         *     the snapshot, default the best one); ``ai_proposal_id`` additionally closes a stored AI
+         *     proposal as rejected (``mhvp.ai.examples.record_rejection``).
+         */
+        ProposalRejectIn: {
+            /** Ai Proposal Id */
+            ai_proposal_id?: string | null;
+            /** Chosen */
+            chosen?: number | null;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Reason */
+            reason: string;
         };
         /** ProposalsIn */
         ProposalsIn: {
@@ -30378,6 +30587,11 @@ export interface components {
             /** Value */
             value?: number | string | null;
         };
+        /** ReopenIn */
+        ReopenIn: {
+            /** Reason */
+            reason: string;
+        };
         /** ReplyTemplateIn */
         ReplyTemplateIn: {
             /**
@@ -30720,12 +30934,23 @@ export interface components {
          * @enum {string}
          */
         RetentionStart: "end_of_year_created" | "end_of_year_last_entry" | "contract_end" | "statement_issued" | "purpose_end";
+        /**
+         * ReversalReason
+         * @description Reason code of a reversal (B03, ADR 0013). The free text ``reversal_reason`` stays
+         *     mandatory; the code makes corrections countable for the learning bookkeeper (an
+         *     ``automation_error`` downgrades the rule that posted the entry, plan M12 S6). Codes are
+         *     product standards, no tax or legal classification.
+         * @enum {string}
+         */
+        ReversalReason: "input_error" | "wrong_assignment" | "wrong_amount" | "wrong_date" | "duplicate" | "bank_return" | "run_reversal" | "automation_error" | "other";
         /** ReverseIn */
         ReverseIn: {
             /** Booking Date */
             booking_date?: string | null;
             /** Reason */
             reason: string;
+            /** @default other */
+            reason_code: components["schemas"]["ReversalReason"];
         };
         /**
          * ReviewStatus
@@ -32297,6 +32522,11 @@ export interface components {
             auto_posting_enabled: boolean;
             branding: components["schemas"]["Branding"];
             company: components["schemas"]["CompanyData"];
+            /**
+             * Learning Bookkeeper Enabled
+             * @default false
+             */
+            learning_bookkeeper_enabled: boolean;
             /**
              * Mail Approval Mode
              * @default external_only
@@ -41340,6 +41570,63 @@ export interface operations {
             };
         };
     };
+    get_learning_api_v1_banking_learning_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    set_learning_api_v1_banking_learning_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LearningSwitchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     matching_metrics_api_v1_banking_matching_metrics_get: {
         parameters: {
             query?: {
@@ -42172,6 +42459,37 @@ export interface operations {
             };
         };
     };
+    list_decisions_api_v1_banking_transactions__tx_id__decisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostingDecisionOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     ignore_api_v1_banking_transactions__tx_id__ignore_post: {
         parameters: {
             query?: never;
@@ -42258,6 +42576,76 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_proposals_api_v1_banking_transactions__tx_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProposalRejectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PostingDecisionOut"] | null;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reopen_api_v1_banking_transactions__tx_id__reopen_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReopenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TransactionOut"];
                 };
             };
             /** @description Validation Error */
