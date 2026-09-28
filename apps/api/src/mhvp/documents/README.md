@@ -19,6 +19,13 @@ letter templates, PDF letters and serial letters.
   unreachable store with `MHVP-DOC-0007` (503, `application/problem+json`, ADR 0004); the
   underlying boto error is logged, the upload aborts before an index row exists
   (`services.store_document` writes the object first, then the row).
+* Content check (`text.sniff_matches`, called by `services.check_upload` for every upload
+  path: CRM, portal, mail attachments, handover, letting, metering): PDF, JPEG, PNG, TIFF,
+  ZIP and OOXML by magic bytes; HEIC/HEIF (A72) only with an ISO BMFF `ftyp` box whose major
+  or compatible brand is a HEIF brand (`heic`, `heix`, `heim`, `heis`, `hevc`, `hevx`,
+  `hevm`, `hevs`, `mif1`, `msf1`), so a renamed executable, an MP4 or an AVIF declared as
+  `image/heic` is refused with `MHVP-DOC-0003` (422). Portal photos are additionally decoded
+  and re-encoded by `mhvp.handover.images.sanitize_image`.
 * Malware scan (operator decision 27.09.2026, `scan.py`): `store_document` streams every
   file to clamd (`INSTREAM`, TCP) before the blob is written, except platform generated PDFs
   (`DocumentSource.GENERATED`) or `scan_for_malware=False`. A finding answers

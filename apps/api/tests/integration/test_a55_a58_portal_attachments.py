@@ -167,6 +167,14 @@ def test_a55_photo_is_a_document_link_on_the_ticket(client: TestClient, world: W
     )
     assert broken.status_code == 422
     assert "HEIC" in broken.json()["detail"]
+    # A72: content of another kind declared as HEIC stops at the signature check.
+    renamed = client.post(
+        f"{P}/uploads",
+        files={"file": ("x.heic", b"MZ\x90\x00" + b"\x00" * 20, "image/heic")},
+        headers=ta,
+    )
+    assert renamed.status_code == 422
+    assert renamed.json()["code"] == "MHVP-DOC-0003"
     heic = _upload(client, ta, "iphone.HEIC", _heic_with_exif(), "image/heic")
     meta = _ok(client.get(f"/api/v1/documents/{heic}", headers=h), 200)
     assert meta["mime_type"] == "image/jpeg"

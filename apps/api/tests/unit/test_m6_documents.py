@@ -23,6 +23,32 @@ def test_extraction_and_sniffing() -> None:
     assert sniff_matches("text/plain", b"anything")
 
 
+def _ftyp(major: bytes, *compatible: bytes) -> bytes:
+    body = major + b"\x00\x00\x00\x00" + b"".join(compatible)
+    return (8 + len(body)).to_bytes(4, "big") + b"ftyp" + body
+
+
+def test_heic_signature_is_checked() -> None:
+    """A72: HEIC/HEIF must start with an ``ftyp`` box carrying a HEIF brand (major or
+    compatible); renamed executables, JPEGs, MP4 videos and AVIF are refused."""
+    assert sniff_matches("image/heic", _ftyp(b"heic", b"mif1", b"heic"))
+    assert sniff_matches("image/heic", _ftyp(b"mif1", b"heic"))
+    assert sniff_matches("image/heif", _ftyp(b"msf1", b"hevc"))
+    # iPhone style: major brand heic, box size larger than the bytes present (truncated read).
+    assert sniff_matches("image/heic", b"\x00\x00\x00\x18ftypheic")
+    # compatible brand only, major brand not HEIF
+    assert sniff_matches("image/heic", _ftyp(b"isom", b"mp41", b"heix"))
+    assert not sniff_matches("image/heic", b"MZ\x90\x00" + b"\x00" * 20)
+    assert not sniff_matches("image/heic", b"\xff\xd8\xff\xe0" + b"\x00" * 20)
+    assert not sniff_matches("image/heic", _ftyp(b"isom", b"iso2", b"mp41"))
+    assert not sniff_matches("image/heic", _ftyp(b"avif", b"mif2"))
+    assert not sniff_matches("image/heic", b"")
+    assert not sniff_matches("image/heic", b"\x00\x00\x00\x18ftyp")
+    # a brand beyond the declared box size does not count
+    short_box = (16).to_bytes(4, "big") + b"ftypisom\x00\x00\x00\x00heic"
+    assert not sniff_matches("image/heic", short_box)
+
+
 def test_drive_folder_name() -> None:
     assert (
         property_folder_name("342", "Monheim am Rhein", "Rheinpromenade", "13")

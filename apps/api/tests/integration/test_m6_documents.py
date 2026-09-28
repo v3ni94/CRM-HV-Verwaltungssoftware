@@ -205,6 +205,16 @@ def test_upload_link_search_download_and_isolation(client: TestClient, world: Wo
     fake = _upload(client, h, "fake.pdf", b"MZ not a pdf", "application/pdf")
     assert fake.status_code == 422
     assert fake.json()["code"] == "MHVP-DOC-0003"
+    # A72: HEIC needs an ftyp box with a HEIF brand; a renamed executable or an MP4 is refused.
+    fake_heic = _upload(client, h, "foto.heic", b"MZ\x90\x00" + b"0" * 20, "image/heic")
+    assert fake_heic.status_code == 422
+    assert fake_heic.json()["code"] == "MHVP-DOC-0003"
+    mp4 = b"\x00\x00\x00\x18ftypisom\x00\x00\x02\x00isomiso2"
+    assert _upload(client, h, "clip.heic", mp4, "image/heic").status_code == 422
+    heic_head = b"\x00\x00\x00\x18ftypheic\x00\x00\x00\x00mif1heic" + b"0" * 20
+    assert _ok(_upload(client, h, "iphone.heic", heic_head, "image/heic"))["mime_type"] == (
+        "image/heic"
+    )
     assert _upload(client, h, "big.txt", b"x" * 200_001, "text/plain").status_code == 422
     bad_link = json.dumps([{"entity_type": "invoice", "entity_id": prop["id"]}])
     assert _upload(client, h, "a.txt", b"abc", "text/plain", links=bad_link).status_code == 422

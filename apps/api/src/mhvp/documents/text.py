@@ -47,8 +47,32 @@ _SIGNATURES: dict[str, tuple[bytes, ...]] = {
 }
 
 
+# HEIF brands of the ISO base media file format (ISO/IEC 23008-12): still images and image
+# sequences, HEVC coded or generic. AVIF and video brands (``isom``, ``mp42``) are no HEIC.
+_HEIF_BRANDS: frozenset[bytes] = frozenset(
+    {b"heic", b"heix", b"heim", b"heis", b"hevc", b"hevx", b"hevm", b"hevs", b"mif1", b"msf1"}
+)
+_HEIF_MIME_TYPES: frozenset[str] = frozenset({"image/heic", "image/heif"})
+
+
+def _is_heif(data: bytes) -> bool:
+    """A72: the first box is ``ftyp`` and its major brand or one of its compatible brands is a
+    HEIF brand. A truncated box is judged on the bytes present; decoding (``sanitize_image``)
+    still rejects a damaged image, this check only stops content of another kind."""
+    if len(data) < 12 or data[4:8] != b"ftyp":
+        return False
+    if data[8:12] in _HEIF_BRANDS:
+        return True
+    box_size = int.from_bytes(data[0:4], "big")
+    end = min(len(data), box_size) if box_size >= 16 else 16
+    # Compatible brands follow major brand (4 bytes) and minor version (4 bytes).
+    return any(data[i : i + 4] in _HEIF_BRANDS for i in range(16, end - 3, 4))
+
+
 def sniff_matches(mime_type: str, data: bytes) -> bool:
     """Reject files whose content contradicts the declared type (no renamed executables)."""
+    if mime_type in _HEIF_MIME_TYPES:
+        return _is_heif(data)
     signatures = _SIGNATURES.get(mime_type)
     if mime_type.startswith("application/vnd.openxmlformats"):
         signatures = _SIGNATURES["application/zip"]
