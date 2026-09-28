@@ -5,6 +5,14 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.40.0 (28.09.2026) Kundenportal Hell und Dunkel, Lernregeln mit Zuordnungskette
+
+- Kundenportal mit Tag und Abendmodus: Standard folgt der Einstellung des Betriebssystems, Umschalter Hell, Dunkel und Automatisch in der Kopfzeile, Wahl nur im Browser gespeichert, kein Aufblitzen beim Laden, fest codierte Farben durch Design Tokens ersetzt und Kontrast in beiden Modi nach WCAG AA geprüft.
+- Anmeldeseite des Portals: die beiden Links haben jetzt ausreichenden Kontrast im Tagmodus.
+- Der Umschalter Tag, Abend und Automatisch im CRM ist mit den Pfeiltasten bedienbar.
+- Setzt eine angenommene Lernregel den Kontakt einer Mail oder eines Tickets, ergänzt das System Objekt und Einheit über die sichere Zuordnungskette (genau ein aktiver Mietvertrag oder genau eine aktive Eigentümerschaft), nur in leere und nicht entschiedene Felder, mit Grund und Protokolleintrag; bei mehreren Verträgen bleibt die Rückfrage bestehen.
+- Die Nachweissuche des Lern-Workflows je Absenderadresse nutzt einen neuen Index (Migration 0220, normalisierte Absenderspalte); die Migration schreibt die Mailtabelle einmal neu und läuft bei gestoppter API.
+
 ## 1.39.0 (28.09.2026) Umbuchungen, Portalformulare, Kalenderfehler und Release-Skript
 
 - Umbuchungen zwischen eigenen Bankkonten werden nur einmal gebucht: Nach der Buchung einer Seite gilt die Partnerseite als erledigt, ein weiterer Buchungsversuch wird mit MHVP-BANK-0019 abgelehnt; nach einem Storno ist das Paar genau einmal neu buchbar (Abnahmefall D04, Regel B08). Ein Umbuchungspaar kann nur noch gegen das Bankkonto der Partnerseite gebucht werden.

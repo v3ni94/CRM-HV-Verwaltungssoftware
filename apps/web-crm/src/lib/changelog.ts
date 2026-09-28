@@ -17,6 +17,18 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.40.0",
+    date: "28.09.2026",
+    title: "Kundenportal Hell und Dunkel, Lernregeln mit Zuordnungskette",
+    changes: [
+      "Kundenportal mit Tag und Abendmodus: Standard folgt der Einstellung des Betriebssystems, Umschalter Hell, Dunkel und Automatisch in der Kopfzeile, Wahl nur im Browser gespeichert, kein Aufblitzen beim Laden, fest codierte Farben durch Design Tokens ersetzt und Kontrast in beiden Modi nach WCAG AA geprüft.",
+      "Anmeldeseite des Portals: die beiden Links haben jetzt ausreichenden Kontrast im Tagmodus.",
+      "Der Umschalter Tag, Abend und Automatisch im CRM ist mit den Pfeiltasten bedienbar.",
+      "Setzt eine angenommene Lernregel den Kontakt einer Mail oder eines Tickets, ergänzt das System Objekt und Einheit über die sichere Zuordnungskette (genau ein aktiver Mietvertrag oder genau eine aktive Eigentümerschaft), nur in leere und nicht entschiedene Felder, mit Grund und Protokolleintrag; bei mehreren Verträgen bleibt die Rückfrage bestehen.",
+      "Die Nachweissuche des Lern-Workflows je Absenderadresse nutzt einen neuen Index (Migration 0220, normalisierte Absenderspalte); die Migration schreibt die Mailtabelle einmal neu und läuft bei gestoppter API.",
+    ],
+  },
+  {
     version: "1.39.0",
     date: "28.09.2026",
     title: "Umbuchungen, Portalformulare, Kalenderfehler und Release-Skript",
