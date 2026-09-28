@@ -30,6 +30,7 @@ from mhvp.accounting.models import (
     JournalEntry,
     OpenItem,
     PostingStatus,
+    ReversalReason,
 )
 from mhvp.banking import matching
 from mhvp.banking.models import (
@@ -601,6 +602,7 @@ async def record_return(
         user_id=user_id,
         reason=reason or "Rückgabe durch die Bank",
         booking_date=booking_date,
+        reason_code=ReversalReason.BANK_RETURN,
     )
     if credit is not None:  # the posted reversal stays untouched; the link lives on the credit
         credit.status, credit.journal_entry_id = TransactionStatus.BOOKED, reversal.id

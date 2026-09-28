@@ -155,3 +155,14 @@ booking_date)`, `journal_line(journal_entry_id)`, `journal_line(account_id)`,
   released (date, releaser, comment, optional tax advisor document), new version after a
   change (`supersedes_id`), history, CSV/PDF export. Gate G1 is approved only with a
   released template (`MHVP-GATE-0004`, checked in `mhvp.platform.routers._decide`).
+
+## Reversal reason code (B03 addendum 28.09.2026, ADR 0013)
+
+`services.reverse` takes `reason_code: ReversalReason` (`input_error`, `wrong_assignment`,
+`wrong_amount`, `wrong_date`, `duplicate`, `bank_return`, `run_reversal`, `automation_error`,
+`other`; default `other`) next to the mandatory free text; the code is stored on the reversal
+entry (`journal_entry.reversal_reason_code`, migration 0232) and carried by the event
+`journal_entry.reversed` together with `bank_transaction_id`. `ReverseIn.reason_code` is
+optional for clients. Bank returns pass `bank_return`, run reversals `run_reversal`. The bank
+side consumes the event in `mhvp.banking.events_consumer`; accounting never imports banking.
+Index `ix_journal_entry_bank_transaction` (tenant, bank transaction, partial) serves that lookup.

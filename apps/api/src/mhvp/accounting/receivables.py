@@ -32,6 +32,7 @@ from mhvp.accounting.models import (
     PaymentTypeAccount,
     ReceivableItem,
     ReceivableRun,
+    ReversalReason,
     RunStatus,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -562,7 +563,13 @@ async def reverse_run(
         if entry is None or ledger is None:  # pragma: no cover
             raise ProblemError(ErrorCodes.CONFLICT)
         await acc.reverse(
-            session, ledger, entry, user_id=user_id, reason=reason, booking_date=booking_date
+            session,
+            ledger,
+            entry,
+            user_id=user_id,
+            reason=reason,
+            booking_date=booking_date,
+            reason_code=ReversalReason.RUN_REVERSAL,
         )
         item.status = ItemStatus.REVERSED
     run.status = RunStatus.REVERSED

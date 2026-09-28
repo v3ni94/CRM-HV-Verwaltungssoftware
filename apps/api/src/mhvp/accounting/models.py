@@ -137,6 +137,23 @@ class EntryStatus(StrEnum):
     POSTED = "posted"
 
 
+class ReversalReason(StrEnum):
+    """Reason code of a reversal (B03, ADR 0013). The free text ``reversal_reason`` stays
+    mandatory; the code makes corrections countable for the learning bookkeeper (an
+    ``automation_error`` downgrades the rule that posted the entry, plan M12 S6). Codes are
+    product standards, no tax or legal classification."""
+
+    INPUT_ERROR = "input_error"  # Erfassungsfehler (Text, Beleg, Vorzeichen)
+    WRONG_ASSIGNMENT = "wrong_assignment"  # falscher offener Posten oder falsches Konto
+    WRONG_AMOUNT = "wrong_amount"
+    WRONG_DATE = "wrong_date"  # falsches Buchungsdatum oder falsche Periode
+    DUPLICATE = "duplicate"  # doppelt gebucht
+    BANK_RETURN = "bank_return"  # Rückgabe oder Rücklastschrift durch die Bank
+    RUN_REVERSAL = "run_reversal"  # Storno eines ganzen Laufs (Sollstellung)
+    AUTOMATION_ERROR = "automation_error"  # Automatik hat falsch gebucht
+    OTHER = "other"
+
+
 class OpenItemKind(StrEnum):
     RECEIVABLE = "receivable"
     PAYABLE = "payable"
@@ -314,6 +331,14 @@ class JournalEntry(IdMixin, TimestampMixin, TenantMixin, Base):
         # Journal filters: status and booking date per ledger (performance review 26.09.2026).
         Index("ix_journal_entry_ledger_status", "tenant_id", "ledger_id", "status"),
         Index("ix_journal_entry_ledger_booking_date", "tenant_id", "ledger_id", "booking_date"),
+        # Postings per bank transaction (history and reversal lookup of the learning
+        # bookkeeper, ADR 0013, migration 0232).
+        Index(
+            "ix_journal_entry_bank_transaction",
+            "tenant_id",
+            "bank_transaction_id",
+            postgresql_where=text("bank_transaction_id IS NOT NULL"),
+        ),
     )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
@@ -336,6 +361,9 @@ class JournalEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     reverses_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
     reversed_by_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
     reversal_reason: Mapped[str | None] = mapped_column(Text)
+    # Reason code of a reversal entry (``ReversalReason``, B03); set on the reversal, not on
+    # the reversed entry. Free text stays mandatory.
+    reversal_reason_code: Mapped[str | None] = mapped_column(String(32))
     source: Mapped[EntrySource] = mapped_column(
         _enum(EntrySource, "journal_entry_source"), nullable=False, default=EntrySource.MANUAL
     )

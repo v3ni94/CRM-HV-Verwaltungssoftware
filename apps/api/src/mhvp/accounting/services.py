@@ -33,6 +33,7 @@ from mhvp.accounting.models import (
     OpenItem,
     OpenItemKind,
     OpenItemSettlement,
+    ReversalReason,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -469,8 +470,11 @@ async def reverse(
     user_id: uuid.UUID | None,
     reason: str,
     booking_date: date,
+    reason_code: ReversalReason = ReversalReason.OTHER,
 ) -> JournalEntry:
-    """Reversal with swapped lines, reference, reason and author (B03); undoes open item effects."""
+    """Reversal with swapped lines, reference, reason, reason code and author (B03); undoes
+    open item effects. ``reason_code`` (``ReversalReason``) classifies the correction for the
+    learning bookkeeper (ADR 0013); it never replaces the free text reason."""
     if entry.status is not EntryStatus.POSTED:
         raise ProblemError(
             ErrorCodes.CONFLICT, detail="Nur gebuchte Sätze können storniert werden."
@@ -510,6 +514,7 @@ async def reverse(
         contract_id=entry.contract_id,
         reverses_id=entry.id,
         reversal_reason=reason,
+        reversal_reason_code=ReversalReason(reason_code).value,
         source=entry.source,
     )
     swapped = [

@@ -641,6 +641,7 @@ async def reverse_entry(
             user_id=principal.user_id,
             reason=body.reason,
             booking_date=booking_date,
+            reason_code=body.reason_code,
         )
         await emit(
             session,
@@ -649,7 +650,14 @@ async def reverse_entry(
             entity_type="journal_entry",
             entity_id=entry.id,
             actor_user_id=principal.user_id,
-            payload={"reversal_id": str(reversal.id), "reason": body.reason},
+            payload={
+                "reversal_id": str(reversal.id),
+                "reason": body.reason,
+                "reason_code": body.reason_code.value,
+                "bank_transaction_id": (
+                    str(entry.bank_transaction_id) if entry.bank_transaction_id else None
+                ),
+            },
         )
         return await _out(session, reversal)
 
@@ -1298,6 +1306,18 @@ async def update_invoice(
         if inv.payee_iban_fingerprint != before_iban:
             inv.iban_confirmed_by = None
             await invoices.evaluate(session, inv)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice.updated",
+            entity_type="invoice",
+            entity_id=inv.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "version": inv.version,
+                "payee_iban_changed": before_iban != inv.payee_iban_fingerprint,
+            },
+        )
         await session.flush()
         return await _invoice_full(session, inv)
 

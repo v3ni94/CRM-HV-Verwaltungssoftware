@@ -16,6 +16,7 @@ from mhvp.accounting.models import (
     EntrySource,
     EntryStatus,
     LeadingSystem,
+    ReversalReason,
     StatementKind,
     VatMode,
 )
@@ -175,6 +176,7 @@ class EntryOut(BaseModel):
     reverses_id: uuid.UUID | None
     reversed_by_id: uuid.UUID | None
     reversal_reason: str | None
+    reversal_reason_code: str | None = None
     source: EntrySource
     settlement_plan: list[dict[str, Any]]
     posted_at: datetime | None
@@ -187,6 +189,8 @@ class EntryOut(BaseModel):
 class ReverseIn(_In):
     reason: str = Field(min_length=3, max_length=2000)
     booking_date: date | None = None
+    # B03 reason code (``ReversalReason``); default ``other`` keeps existing clients working.
+    reason_code: ReversalReason = ReversalReason.OTHER
 
 
 class LockIn(_In):
