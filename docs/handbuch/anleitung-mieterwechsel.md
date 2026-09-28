@@ -62,7 +62,10 @@ prüfen durch Rechtsanwalt [Platzhalter]; Ergebnis im Ticket vermerken.
 Makler, Übergabeprotokoll:
 
 1. Neues Übergabeprotokoll, Protokollart Wohnungsübergabe (Vermietung), Objekt aus dem
-   Bestand, Objekt und Einheit wählen, Anlegen. Adresse, Etage und Einheit werden vorbelegt.
+   Bestand, Objekt, Einheit und Vertrag wählen (Auswahl zeigt die Verträge der Einheit),
+   Anlegen. Adresse, Etage und Einheit werden vorbelegt. Die Vertragsverknüpfung lässt sich
+   im Protokoll im Abschnitt Objekt, Block Verknüpfter Vertrag, ändern oder nachholen; der
+   verknüpfte Vertrag ist dort als Link zur Vertragsseite sichtbar.
 2. Termin anlegen erzeugt den Kalendertermin Übergabe.
 3. Abschnitte ausfüllen: Beteiligte (Beteiligten aus den Kontakten übernehmen), Kaution,
    Zähler, Räume, Mängel, Schlüssel, Gegenstände, Bemerkungen, Anhänge, Fotos. Angaben im
@@ -72,10 +75,22 @@ Makler, Übergabeprotokoll:
    Briefbogen des Mandanten und wird als Dokument abgelegt; danach nur noch neue Version.
 6. Zustellung vorbereiten legt E-Mail-Entwürfe an; Versand über den Postausgang mit Freigabe.
 
-Wichtig: Zählerstände im Protokoll werden nicht automatisch als Zählerstand der Einheit
-übernommen. Die Stände zusätzlich unter Zählerstände zur Beendigung am Vertrag erfassen. Das
-Protokoll wird nicht mit dem Vertrag verknüpft; im Ticket die Protokollnummer
-(`UP-JJJJMMTT-NNN`) vermerken.
+7. Zählerstände übernehmen: Abschnitt Zähler, Block Zählerstände übernehmen, Schaltfläche
+   Zählerstände übernehmen, Rückfrage bestätigen. Jeder Zähler des Protokolls mit Wert wird
+   als Zählerstand am Zähler der Einheit angelegt (Ablesedatum aus dem Protokoll, sonst das
+   Übergabedatum, Vermerk mit der Protokollnummer). Die Zuordnung läuft über den im Eintrag
+   gewählten Zähler oder über die Zählernummer; Zeilen ohne Wert, ohne passenden Zähler oder
+   mit mehrdeutiger Nummer werden mit Grund übersprungen und bleiben unverändert. Jede Zeile
+   wird nur einmal übernommen, ein zweiter Aufruf legt nichts doppelt an. Voraussetzung ist
+   eine Einheit aus dem Bestand mit angelegten Zählern (Rechte `contracts:update` und
+   `properties:update`). Die Übernahme geht auch nach dem Abschluss des Protokolls, nicht
+   bei stornierten Protokollen.
+
+Wichtig: Die Zählerstände zur Beendigung am Vertrag (Schritt 1) sind nur noch nötig, wenn
+kein Protokoll erstellt wird oder ein Zähler im Protokoll nicht zugeordnet werden konnte.
+Übernommene Stände werden im Protokoll als übernommen gezählt und lassen sich nur in den
+Zählerständen der Einheit korrigieren. Die Protokollnummer (`UP-JJJJMMTT-NNN`) im Ticket zu
+vermerken bleibt sinnvoll, ist aber keine Ersatzverknüpfung mehr.
 
 ### 3. Kaution abrechnen
 
@@ -124,9 +139,9 @@ Wie Schritt 2 mit einem neuen Protokoll, Beteiligte neuer Mieter und Vermieter.
 
 | Datensatz | Was |
 | --- | --- |
-| Einheit | Kündigung, Übergabeprotokolle (über Objekt und Einheit), Mietvertrag |
-| Vertrag alt | Vertragsende, Zählerstände zur Beendigung, Kautionsabrechnung |
-| Vertrag neu | Sollbeträge, Zahlungsplan, Kaution, Umlagewerte, SEPA-Mandat |
+| Einheit | Kündigung, Übergabeprotokolle (über Objekt und Einheit), Mietvertrag, Zählerstände aus dem Protokoll |
+| Vertrag alt | Vertragsende, Übergabeprotokoll Rückgabe (Verknüpfung), Zählerstände zur Beendigung nur bei fehlender Übernahme, Kautionsabrechnung |
+| Vertrag neu | Übergabeprotokoll Einzug (Verknüpfung), Sollbeträge, Zahlungsplan, Kaution, Umlagewerte, SEPA-Mandat |
 | Kontakt alt und neu | Ticket, Bankverbindung, Portalzugang |
 
 ## Fristen
@@ -151,20 +166,24 @@ eingetragen. Die Frist der Kautionsabrechnung ist rechtlich zu prüfen durch Rec
 
 - [ ] Kündigung abgelegt, Frist geprüft
 - [ ] Vertrag beendet mit Vertragsende, Kündigungsdatum, Grund, Auszug
-- [ ] Zählerstände zur Beendigung erfasst
-- [ ] Rückgabeprotokoll abgeschlossen und abgelegt
+- [ ] Rückgabeprotokoll mit dem Vertrag verknüpft, abgeschlossen und abgelegt
+- [ ] Zählerstände aus dem Protokoll übernommen (übersprungene Zeilen geprüft)
 - [ ] Kautionsabrechnung als Entwurf und PDF abgelegt
 - [ ] Messdienstleister informiert
 - [ ] Neuer Kontakt und Vertrag mit Sollbeträgen, Zahlungsplan und Kaution angelegt
 - [ ] Umlagewerte (Personen) erfasst
-- [ ] Übergabeprotokoll Einzug abgeschlossen
+- [ ] Übergabeprotokoll Einzug mit dem neuen Vertrag verknüpft, abgeschlossen, Zählerstände übernommen
 - [ ] Portaleinladung erzeugt
 
 ## Häufige Fehler
 
 - Mieter im bestehenden Vertrag getauscht: Vertragspartner ist fest, ein neuer Mieter ist ein
   neuer Vertrag.
-- Zählerstände nur im Protokoll erfasst.
+- Zählerstände nur im Protokoll erfasst und nicht übernommen: Block Zählerstände übernehmen
+  im Abschnitt Zähler nutzen; übersprungene Zeilen (kein Zähler, mehrdeutige Nummer) im
+  Eintrag dem richtigen Zähler zuordnen und erneut übernehmen.
+- Protokoll ohne Vertragsbezug angelegt: im Abschnitt Objekt den Vertrag nachträglich
+  verknüpfen.
 - Kautionsabrechnung vor dem Vertragsende datiert: wird abgelehnt.
 - Einbehalte über dem Guthaben: wird abgelehnt, Nachforderung ist ein eigener Vorgang.
 - Zeitanteilige Miete im Einzugs- oder Auszugsmonat erwartet: der Sollstellungslauf führt sie
@@ -172,8 +191,12 @@ eingetragen. Die Frist der Kautionsabrechnung ist rechtlich zu prüfen durch Rec
 
 ## Lücken in der Software
 
-- Übergabeprotokoll ohne Verknüpfung zum Vertrag in der Oberfläche.
-- Zählerstände aus dem Protokoll werden nicht in die Zählerstände der Einheit übernommen.
+- Übergabeprotokoll und Vertrag (28.09.2026 geschlossen): Vertragsauswahl beim Anlegen und
+  Block Verknüpfter Vertrag im Abschnitt Objekt.
+- Zählerstände aus dem Protokoll (28.09.2026 geschlossen): Block Zählerstände übernehmen im
+  Abschnitt Zähler. Offen bleibt die Zuordnung eines Protokollzählers zu einem Zähler der
+  Einheit direkt im Zählereintrag; bis dahin muss die Zählernummer im Protokoll der Nummer
+  in den Stammdaten entsprechen.
 - Kündigungsfrist nur als Eingabe je Kündigung, kein Vertragsfeld (WS-01-Q2); Dauer des Fristtyps
   Kautionsabrechnung noch nicht hinterlegt (WS-01-Q1).
 - Kein Mieterwechsel-Assistent, der Beenden und Neuanlage verbindet.

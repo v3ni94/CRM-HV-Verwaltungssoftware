@@ -150,3 +150,23 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 `GET /documents/intake-proposals` loads the documents of a page in one IN query. Indexes
 `document(tenant_id, created_at)` and `ai_proposal(tenant_id, entity_type, decision,
 created_at)` (migration 0127). Measurements in `docs/reviews/2026-09-26-performance.md`.
+
+## Package F (28.09.2026): Standardkategorien 04/05, Ordnerstruktur, Upload mit Verknüpfungen
+
+* `defaults.CATEGORIES` enthält zusätzlich `tenant_file` (Mieterakte, `04_Mieterakte`) und
+  `owner_file` (Eigentümerakte, `05_Eigentümerakte`), am Ende der Liste, damit die Sortierung
+  bestehender Mandanten unverändert bleibt. Neue Mandanten erhalten sie bei der
+  Bereitstellung; bestehende über `POST /document-categories/ensure-defaults`
+  (`tenant_settings:update`, idempotent, ändert keine vorhandene Zeile) oder den Knopf
+  "Standardkategorien ergänzen" auf der Seite DMS, Suche im Archiv.
+* `folders.py` und `GET /document-folders` (`documents:read`): die sechs Ordner aus
+  `dms.DRIVE_FOLDERS` mit der Ablagevorgabe des Handbuchs (`anleitung-objektordner.md`), den
+  Kategorien je Ordner und für 04 und 05 den Unterordnern aus der Objektübernahme
+  (`objektakte_document_class.subfolder_name` mit den Dokumenttypen). Die Bezeichnungen der
+  elf Unterordner liegen nicht im Repository und werden nicht erfunden; ohne Import zeigt das
+  CRM "zu verifizieren" (`docs/OPEN_QUESTIONS.md` F-01). CRM: `DmsFolderStructure.tsx`.
+* Upload in der Dokumentsuche (`DmsUpload.tsx`): zusätzlich Kategorie (`category_id`), Vertrag
+  der Einheit oder des Objekts und Kontakt (Suche) als Verknüpfungen `contract` und `contact`
+  mit Rolle `original`; der Endpunkt `POST /documents` konnte das bereits.
+* Tests: `tests/integration/test_package_f_handover_folders.py`,
+  `DmsUpload.test.tsx`, `DmsFolderStructure.test.tsx`.
