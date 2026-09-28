@@ -17,6 +17,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.42.0",
+    date: "28.09.2026",
+    title: "Rückmeldungen aus dem Team",
+    changes: [
+      "Handbuch: Handlungsanweisungen für Verwalterwechsel, Stammdaten, Eigentümerwechsel, Mieterwechsel und Wohnungsübergabe, Mieterhöhung, Bankverbindung mit Vier-Augen-Freigabe und Objektordner sowie ein Vorschlag zur Aufgabenverteilung für Mail und Tickets ergänzt; Lücken in der Software im Handbuch gesammelt.",
+      "Erfassungsstandards für Objekte, Kontakte und Fristen an einer Stelle festgelegt (Handbuch Erfassungsstandards, Regeln ES-01 bis ES-11).",
+      "Objektformulare: Hinweise zu Straße, Hausnummer, PLZ, Ort und Objektname nach dem Muster Straße Hausnummer, PLZ Ort, mit Namensvorschlag zum Übernehmen; eine deutsche Postleitzahl muss aus genau fünf Ziffern bestehen, geprüft im Formular und über die API.",
+      "Kontaktformulare: Hinweise bei vertauschten Namen, Komma im Namensfeld und Firmenbestandteilen in Personennamen.",
+      "Ticketfälligkeit: ein Datum in der Vergangenheit wird erst nach ausdrücklicher Bestätigung gespeichert, dazu ein Hinweis auf die fehlende verantwortliche Person.",
+      "Neue Seite Einstellungen, Datenqualität mit Links zur Korrektur; bestehende Daten werden nicht automatisch geändert.",
+      "Vertragsliste zeigt je Vertrag Objekt, Einheit sowie Mieter oder Eigentümer, jeweils verlinkt, und hat eine Freitextsuche nach Name, Objekt, Anschrift, Einheit und Vertragsnummer.",
+      "Postfach: Threadansicht, Mailverlauf im Ticket, Nachrichtenzahl und Kontakthistorie zeigen Kopien derselben Mail nur noch einmal; eigene gesendete Mails mit Kopie an ein eigenes Postfach erscheinen nicht mehr als neue Eingangsmail; eine mehrfach abgerufene Gmail-Mail ohne Message-ID und Datum wird nur einmal gespeichert. Kopien bleiben als Nachweis erhalten.",
+    ],
+  },
+  {
     version: "1.41.0",
     date: "28.09.2026",
     title: "Anbindung Schadenbearbeiter",
