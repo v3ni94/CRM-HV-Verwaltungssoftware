@@ -40,7 +40,7 @@ export function EntityLinksBar({ links, testId = "entity-links" }: { links: Enti
         <Link
           key={`${link.type}-${link.id ?? link.href}-${index}`}
           href={link.href}
-          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 py-0.5 text-xs font-medium text-fg transition hover:border-gold hover:bg-bg"
+          className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface-2 px-2.5 py-0.5 text-xs font-medium text-fg transition hover:border-gold hover:bg-surface"
         >
           <span className="text-muted">{t(link.type)}</span>
           {link.label ? <span>{link.label}</span> : null}

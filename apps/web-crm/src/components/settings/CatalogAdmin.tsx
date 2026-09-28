@@ -174,7 +174,7 @@ export function CatalogAdmin({
               <button
                 type="button"
                 aria-current={c.catalog === selected ? "true" : undefined}
-                className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface ${c.catalog === selected ? "bg-surface font-medium" : ""}`}
+                className={`flex w-full items-center justify-between rounded-md px-2 py-1.5 text-left text-sm hover:bg-surface-2 ${c.catalog === selected ? "bg-surface-2 font-medium" : ""}`}
                 onClick={() => {
                   setSelected(c.catalog);
                   setEditing(null);

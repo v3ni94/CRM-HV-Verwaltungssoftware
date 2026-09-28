@@ -17,7 +17,7 @@ export function PaymentsByDebtor({ rows }: { rows: PaymentsByDebtorRow[] }) {
     <div className="flex flex-col gap-3">
       <ul className="flex flex-col gap-2 sm:hidden" data-testid="payments-by-debtor-cards">
         {rows.map((r) => (
-          <li key={r.number} className="rounded-md border border-border bg-bg p-3">
+          <li key={r.number} className="rounded-md border border-border bg-surface p-3">
             <p className="text-sm font-medium text-fg">
               {r.number} {r.name}
             </p>

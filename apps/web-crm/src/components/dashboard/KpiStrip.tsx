@@ -45,7 +45,7 @@ export function KpiStrip({ tiles, analyticsHref }: { tiles: Record<string, numbe
                 <span className="text-muted">{t.has(`tile.${key}`) ? t(`tile.${key}`) : key}</span>
               </>
             );
-            const cls = "inline-flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1 text-xs";
+            const cls = "inline-flex items-center gap-2 rounded-full border border-card-line bg-surface px-3 py-1 text-xs shadow-xs";
             return (
               <li key={key} data-testid={`tile-${key}`}>
                 {href ? (

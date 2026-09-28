@@ -216,7 +216,7 @@ export function AssignmentsTable({
           </thead>
           <tbody>
             {rows.map((a) => (
-              <tr key={a.id} data-testid={`assignment-${a.id}`} className={selectedId === a.id ? "bg-surface" : undefined}>
+              <tr key={a.id} data-testid={`assignment-${a.id}`} className={selectedId === a.id ? "bg-surface-2" : undefined}>
                 {canUpdate && !propertyId ? (
                   <td>
                     <input

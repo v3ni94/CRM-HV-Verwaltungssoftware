@@ -60,7 +60,7 @@ function RolesEditor({ member, roles, onSaved }: { member: Member; roles: Role[]
     );
   }
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2">
       {roles.map((r) => (
         <label key={r.id} className="flex items-center gap-2 text-xs">
           <input
@@ -125,7 +125,7 @@ function CompetencesEditor({
     );
   }
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2">
       {catalogue.map((c) => (
         <label key={c.code} className="flex items-center gap-2 text-xs">
           <input
@@ -203,7 +203,7 @@ function ReplyApprovalEditor({
     );
   }
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2" data-testid="reply-approval-editor">
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2" data-testid="reply-approval-editor">
       <label className="flex items-center gap-2 text-xs">
         <input type="checkbox" checked={required} onChange={(e) => setRequired(e.target.checked)} />
         {t("replyApprovalRequired")}
@@ -269,7 +269,7 @@ function MobilePhoneEditor({ member, onSaved }: { member: Member; onSaved: (phon
     );
   }
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2">
       <label className="flex flex-col gap-1 text-xs">
         {t("mobilePhone")}
         <input
@@ -340,7 +340,7 @@ function LegalEntitiesEditor({
     );
   }
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2">
       <p className="text-xs text-muted">{t("legalEntitiesHint")}</p>
       {options.length === 0 ? <p className="text-xs text-muted">{t("legalEntitiesEmpty")}</p> : null}
       {options.map((o) => (
@@ -402,7 +402,7 @@ function ResetPassword({ membershipId }: { membershipId: string }) {
     );
   }
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2">
       <p className="text-xs text-muted">{t("resetHint")}</p>
       <input
         type="password"
@@ -599,7 +599,7 @@ export function MembersAdmin({
           </li>
         ))}
       </ul>
-      <div className="hidden overflow-x-auto rounded-xl border border-border sm:block">
+      <div className="mhvp-surface-card hidden overflow-x-auto rounded-lg border border-card-line bg-surface shadow-card sm:block">
         <table className={ui.table}>
           <thead>
             <tr>

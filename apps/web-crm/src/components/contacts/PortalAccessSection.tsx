@@ -237,7 +237,7 @@ export function PortalAccessSection({
         <div className={ui.notice} data-testid="contact-invitation">
           <p className="font-medium">{t("tokenTitle")}</p>
           <p>{t("tokenHelp")}</p>
-          <code className="mt-1 block select-all break-all rounded bg-bg px-2 py-1 font-mono text-xs">
+          <code className="mt-1 block select-all break-all rounded bg-surface px-2 py-1 font-mono text-xs">
             {invited.invitation_token}
           </code>
           <InvitationQr url={invited.invitation_url} title={t("linkTitle")} alt={t("qrAlt")} />

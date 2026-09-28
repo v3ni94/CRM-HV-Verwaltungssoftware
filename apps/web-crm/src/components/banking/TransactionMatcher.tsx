@@ -110,7 +110,7 @@ export function TransactionMatcher({
     t.has(`kind.${kind}`) ? t(`kind.${kind}`) : kind;
   const row = (p: Proposal, key: string, splits: Split[] | undefined) => (
     <li key={key} className="flex flex-wrap items-center gap-2">
-      <span className="rounded bg-surface px-1 font-medium">
+      <span className="rounded bg-surface-2 px-1 font-medium">
         {t(SOURCE_KEY[p.source])}
       </span>
       <span>{kindLabel(p.kind)}</span>
@@ -131,7 +131,7 @@ export function TransactionMatcher({
       ) : null}
       <span className="text-muted">{reasons(p.reasoning)}</span>
       {p.unambiguous ? (
-        <span className="rounded bg-surface px-1">{t("unambiguous")}</span>
+        <span className="rounded bg-surface-2 px-1">{t("unambiguous")}</span>
       ) : null}
       {splits && splits.length > 0 ? (
         <span className="flex flex-wrap gap-2">

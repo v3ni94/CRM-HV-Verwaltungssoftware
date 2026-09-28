@@ -22,7 +22,7 @@ export default async function HoaPage() {
       <p className={ui.notice}>{t("gateNotice")}</p>
       <div className={`${ui.card} flex flex-wrap items-center justify-between gap-3`}>
         <p className="text-sm text-muted">{t("objectsHint")}</p>
-        <Link href="/objekte?art=hoa" className="shrink-0 text-sm font-medium text-gold hover:underline">
+        <Link href="/objekte?art=hoa" className="shrink-0 text-sm font-medium text-accent-strong hover:underline">
           {t("objectsLink")} →
         </Link>
       </div>

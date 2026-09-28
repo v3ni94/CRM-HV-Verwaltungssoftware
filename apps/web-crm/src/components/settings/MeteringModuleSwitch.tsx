@@ -39,7 +39,7 @@ export function MeteringModuleSwitch({ initial, canUpdate }: { initial: boolean;
           <h2 id="metering-module-switch-title" className={ui.h2}>
             {t("title")}
           </h2>
-          <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${enabled ? "bg-success-bg text-success-fg" : "bg-surface text-muted"}`} data-testid="metering-module-switch-status">
+          <span className={`rounded-md px-2 py-0.5 text-xs font-medium ${enabled ? "bg-success-bg text-success-fg" : "bg-surface-2 text-muted"}`} data-testid="metering-module-switch-status">
             {enabled ? t("status.on") : t("status.off")}
           </span>
         </div>

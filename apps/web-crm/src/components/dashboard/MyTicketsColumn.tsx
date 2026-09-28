@@ -47,7 +47,7 @@ export function MyTicketsColumn({
       </div>
       <p className="mt-1 text-xs text-subtle">{s("tickets.description")}</p>
       {fallback && tickets.length > 0 ? (
-        <p className="mt-2 text-xs text-gold" data-testid="my-tickets-fallback">
+        <p className="mt-2 text-xs text-accent-strong" data-testid="my-tickets-fallback">
           {s("tickets.fallback")}
         </p>
       ) : null}
@@ -61,7 +61,7 @@ export function MyTicketsColumn({
               <li key={ticket.id} data-testid="my-ticket" data-attention={attention}>
                 <Link
                   href={`/tickets/${ticket.id}`}
-                  className={`block rounded-md bg-surface px-3 py-2 transition duration-150 hover:bg-surface-2 ${ATTENTION_BORDER[attention]}`}
+                  className={`block rounded-md bg-surface-2 px-3 py-2 transition duration-150 hover:bg-surface-3 ${ATTENTION_BORDER[attention]}`}
                 >
                   <span className="flex items-baseline gap-2">
                     <span className="shrink-0 tabular-nums text-xs text-muted">#{ticket.number}</span>

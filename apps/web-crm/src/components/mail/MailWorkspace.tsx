@@ -331,7 +331,7 @@ export function MailWorkspace({
             className={`rounded-md px-3 py-1.5 text-sm font-medium transition ${
               tab === tabItem.key
                 ? "bg-accent text-accent-fg"
-                : "text-muted hover:bg-surface"
+                : "text-muted hover:bg-surface-2"
             }`}
             onClick={() => {
               setTab(tabItem.key);

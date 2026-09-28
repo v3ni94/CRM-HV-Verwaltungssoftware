@@ -296,14 +296,14 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
             />
             {contactResults.length > 0 && !contactLabel ? (
               <ul
-                className="max-h-48 overflow-auto rounded-md border border-border bg-bg text-sm shadow-card"
+                className="max-h-48 overflow-auto rounded-md border border-border bg-raised text-sm shadow-lg"
                 role="listbox"
               >
                 {contactResults.map((c) => (
                   <li key={c.id}>
                     <button
                       type="button"
-                      className="block w-full px-3 py-1.5 text-left hover:bg-surface"
+                      className="block w-full px-3 py-1.5 text-left hover:bg-surface-2"
                       onClick={() => {
                         setContactLabel(c.display_name);
                         setContactQuery("");

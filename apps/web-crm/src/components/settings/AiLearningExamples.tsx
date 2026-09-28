@@ -71,7 +71,7 @@ export function AiLearningExamples({
             {t("title")}
           </h2>
           <span
-            className={`rounded-md px-2 py-0.5 text-xs font-medium ${enabled ? "bg-warning-bg text-warning-fg" : "bg-surface text-muted"}`}
+            className={`rounded-md px-2 py-0.5 text-xs font-medium ${enabled ? "bg-warning-bg text-warning-fg" : "bg-muted-bg text-muted-fg"}`}
             data-testid="ai-learning-examples-status"
           >
             {enabled ? t("status.on") : t("status.off")}

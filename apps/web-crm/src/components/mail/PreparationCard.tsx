@@ -115,7 +115,7 @@ export function PreparationCard({
           {preparation.draft ? (
             <div className="flex flex-col gap-1">
               <span className={ui.label}>{t("draft")}</span>
-              <p className="whitespace-pre-wrap rounded-md border border-border bg-surface p-2 text-sm">{preparation.draft}</p>
+              <p className="whitespace-pre-wrap rounded-md border border-border bg-surface-2 p-2 text-sm">{preparation.draft}</p>
             </div>
           ) : null}
 

@@ -122,7 +122,7 @@ export function MailList({
       </div>
       {checked.size > 0 ? (
         <div
-          className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-gold bg-surface px-3 py-2"
+          className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-gold bg-surface-2 px-3 py-2"
           role="toolbar"
           aria-label={t("bulkToolbar")}
           data-testid="mail-bulk-bar"
@@ -152,10 +152,10 @@ export function MailList({
           const rowClass = isChecked
             ? `border-gold ${inProgress ? "bg-progress-bg" : "bg-gold/10"}`
             : message.id === selectedId
-              ? `border-gold ${inProgress ? "bg-progress-bg" : "bg-surface"}`
+              ? `border-gold ${inProgress ? "bg-progress-bg" : "bg-surface-2"}`
               : inProgress
                 ? "border-gold/60 bg-progress-bg hover:border-gold"
-                : "border-border bg-bg hover:border-gold/60";
+                : "border-border bg-surface hover:border-gold/60";
           return (
             <li key={message.id} className="flex min-w-0 items-start gap-2" data-in-progress={inProgress || undefined}>
               <input

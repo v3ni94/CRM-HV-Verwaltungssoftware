@@ -98,7 +98,7 @@ export function SettingsSearch({ permissions }: { permissions: readonly string[]
                 data-testid={`settings-search-option-${entry.id}`}
                 role="option"
                 aria-selected={index === active}
-                className={`cursor-pointer rounded-md px-3 py-2 ${index === active ? "bg-surface" : ""}`}
+                className={`cursor-pointer rounded-md px-3 py-2 ${index === active ? "bg-surface-2" : ""}`}
                 onMouseEnter={() => setActive(index)}
                 onClick={() => go(index)}
               >

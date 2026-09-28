@@ -45,7 +45,7 @@ export default async function LedgersPage() {
           </thead>
           <tbody>
             {data.map((l) => (
-              <tr key={l.id} className="border-b border-border hover:bg-surface">
+              <tr key={l.id} className="border-b border-border hover:bg-surface-2">
                 <td>
                   <Link href={`/buchhaltung/${l.id}`} className="font-medium hover:underline">
                     {l.name}

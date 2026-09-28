@@ -19,14 +19,14 @@ export function ProposalBadge({
   return (
     <div className="flex flex-col gap-1 text-xs">
       <div className="flex flex-wrap items-center gap-2">
-        <span className="rounded border border-border bg-bg px-1.5 py-0.5 font-medium" data-testid="proposal-badge">
+        <span className="rounded border border-border bg-surface px-1.5 py-0.5 font-medium" data-testid="proposal-badge">
           {t("proposal")}
         </span>
         <span className="text-muted">{conf ? t("confidence", { value: conf }) : t("confidenceUnknown")}</span>
       </div>
       <details>
         <summary className="cursor-pointer text-muted underline">{t("why")}</summary>
-        <div className="mt-1 flex flex-col gap-1 rounded border border-border bg-bg p-2">
+        <div className="mt-1 flex flex-col gap-1 rounded border border-border bg-surface p-2">
           <p className="text-muted">{t("whyHint")}</p>
           {empty ? <p>{t("whyEmpty")}</p> : null}
           {reasoning && reasoning.sources.length > 0 ? (

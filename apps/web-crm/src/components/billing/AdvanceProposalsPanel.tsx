@@ -129,7 +129,7 @@ export function AdvanceProposalsPanel({ id, hasSnapshot, snapshotHash }: { id: s
             </tbody>
           </table>
           {open ? (
-            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-hairline bg-surface p-3 text-sm" data-testid="letter-text">
+            <pre className="mt-2 whitespace-pre-wrap rounded-md border border-hairline bg-surface-2 p-3 text-sm" data-testid="letter-text">
               {rows.find((r) => r.id === open)?.letter_text}
               {rows.find((r) => r.id === open)?.note ? `\n${rows.find((r) => r.id === open)?.note}` : ""}
             </pre>

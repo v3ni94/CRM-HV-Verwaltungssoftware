@@ -317,7 +317,7 @@ export function HelperAccessSection({
           <div className={ui.notice} data-testid="helper-invitation-token">
             <p className="font-medium">{t("helperAccess.tokenTitle")}</p>
             <p>{asMailDraft ? t("helperAccess.tokenHelp") : t("helperAccess.tokenHelpManual")}</p>
-            <code className="mt-1 block select-all break-all rounded bg-bg px-2 py-1 font-mono text-xs">
+            <code className="mt-1 block select-all break-all rounded bg-surface px-2 py-1 font-mono text-xs">
               {created.invitation_token}
             </code>
             <InvitationQr url={created.invitation_url} title={t("helperAccess.linkTitle")} alt={t("helperAccess.qrAlt")} />

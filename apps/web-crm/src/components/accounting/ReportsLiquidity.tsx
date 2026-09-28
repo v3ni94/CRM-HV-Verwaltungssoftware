@@ -28,27 +28,27 @@ export function LiquidityReport({ data }: { data: LiquiditySnapshot | null }) {
   return (
     <div className="flex flex-col gap-4">
       <dl className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-md border border-border bg-bg p-3">
+        <div className="rounded-md border border-border bg-surface p-3">
           <dt className="mhvp-label text-subtle">{t("reports.liquidity.freeFunds")}</dt>
           <dd className="text-lg font-semibold tabular-nums">{formatEur(data.free_funds)}</dd>
         </div>
-        <div className="rounded-md border border-border bg-bg p-3">
+        <div className="rounded-md border border-border bg-surface p-3">
           <dt className="mhvp-label text-subtle">{t("reports.liquidity.reserveFunds")}</dt>
           <dd className="text-lg font-semibold tabular-nums">{formatEur(data.reserve_funds)}</dd>
         </div>
-        <div className="rounded-md border border-border bg-bg p-3">
+        <div className="rounded-md border border-border bg-surface p-3">
           <dt className="mhvp-label text-subtle">{t("reports.liquidity.segregatedDeposits")}</dt>
           <dd className="text-lg font-semibold tabular-nums">{formatEur(data.segregated_deposits)}</dd>
         </div>
-        <div className="rounded-md border border-border bg-bg p-3">
+        <div className="rounded-md border border-border bg-surface p-3">
           <dt className="mhvp-label text-subtle">{t("reports.liquidity.expectedInflows")}</dt>
           <dd className="text-lg font-semibold tabular-nums">{formatEur(data.expected_inflows)}</dd>
         </div>
-        <div className="rounded-md border border-border bg-bg p-3">
+        <div className="rounded-md border border-border bg-surface p-3">
           <dt className="mhvp-label text-subtle">{t("reports.liquidity.expectedOutflows")}</dt>
           <dd className="text-lg font-semibold tabular-nums">{formatEur(data.expected_outflows)}</dd>
         </div>
-        <div className="rounded-md border border-border bg-bg p-3">
+        <div className="rounded-md border border-border bg-surface p-3">
           <dt className="mhvp-label text-subtle">{t("reports.liquidity.projectedFreeFunds")}</dt>
           <dd className="text-lg font-semibold tabular-nums">{formatEur(data.projected_free_funds)}</dd>
         </div>

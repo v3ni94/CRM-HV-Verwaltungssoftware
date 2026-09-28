@@ -51,7 +51,7 @@ export function RelationsPanel({ relations }: { relations: ObjectRelation[] }) {
                   </td>
                   <td className="py-1.5 pr-2">{r.unit_label ?? ""}</td>
                   <td className="py-1.5 pr-2">
-                    <span className="rounded-full bg-surface px-2 py-0.5 text-xs text-muted">
+                    <span className="rounded-full bg-muted-bg px-2 py-0.5 text-xs text-muted-fg">
                       {r.kind === "kontakt" ? (r.category_code ?? "") : tl(`role.${r.kind}`)}
                     </span>
                   </td>

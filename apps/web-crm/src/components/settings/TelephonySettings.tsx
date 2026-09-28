@@ -53,7 +53,7 @@ export function TelephonySettings({ initial, canManage }: { initial: TelephonySe
       <p className={ui.help}>{t("intro")}</p>
       <p className="text-sm">
         <span className="text-muted">{t("endpoint")}</span>{" "}
-        <code className="rounded bg-surface px-1 py-0.5 text-xs">{saved.webhook_path}</code>
+        <code className="rounded bg-surface-2 px-1 py-0.5 text-xs">{saved.webhook_path}</code>
       </p>
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={enabled} disabled={busy || !canManage} onChange={(e) => setEnabled(e.target.checked)} />

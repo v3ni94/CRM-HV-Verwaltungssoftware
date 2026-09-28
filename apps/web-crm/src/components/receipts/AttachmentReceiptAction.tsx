@@ -48,7 +48,7 @@ export function AttachmentReceiptAction({
 
   if (draftId) {
     return (
-      <Link href={`/rechnungen/belegeingang?entwurf=${draftId}`} className="text-xs font-medium text-accent hover:underline">
+      <Link href={`/rechnungen/belegeingang?entwurf=${draftId}`} className="text-xs font-medium text-accent-strong hover:underline">
         {t("openDraft")}
       </Link>
     );

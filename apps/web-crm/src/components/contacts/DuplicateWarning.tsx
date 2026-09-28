@@ -21,7 +21,7 @@ export function DuplicateWarning({
   const t = useTranslations("Duplicates");
   const tf = useTranslations("ContactForm");
   return (
-    <section role="alert" aria-labelledby="dup-title" className="rounded border border-border bg-surface p-4">
+    <section role="alert" aria-labelledby="dup-title" className="rounded border border-border bg-surface-2 p-4">
       <h2 id="dup-title" className="text-base font-semibold">
         {t("title")}
       </h2>

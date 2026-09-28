@@ -153,7 +153,7 @@ export function BankAccountSelect({
         <ul
           id={listId}
           role="listbox"
-          className="absolute top-full z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-bg p-1 shadow-card"
+          className="absolute top-full z-20 mt-1 max-h-72 w-full overflow-auto rounded-md border border-border bg-raised p-1 shadow-lg"
         >
           {loaded === null ? (
             <li className="px-2 py-1 text-sm text-muted">{t("loading")}</li>
@@ -170,7 +170,7 @@ export function BankAccountSelect({
                 id={`${listId}-${a.id}`}
                 role="option"
                 aria-selected={a.id === value}
-                className={`cursor-pointer rounded px-2 py-1.5 text-sm ${index === active ? "bg-surface" : ""} ${a.id === value ? "font-medium" : ""}`}
+                className={`cursor-pointer rounded px-2 py-1.5 text-sm ${index === active ? "bg-surface-2" : ""} ${a.id === value ? "font-medium" : ""}`}
                 onMouseEnter={() => setActive(index)}
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => choose(a)}

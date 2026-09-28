@@ -99,7 +99,7 @@ function AttachmentRow({ ticketId, messageId, direction, attachment }: { ticketI
         ) : null}
       </div>
       {open && previewable ? (
-        <div className="max-w-full overflow-hidden rounded-md border border-border bg-surface" data-testid="ticket-mail-attachment-preview">
+        <div className="max-w-full overflow-hidden rounded-md border border-border bg-surface-2" data-testid="ticket-mail-attachment-preview">
           {isImage ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img src={base} alt={name} className="h-auto max-h-[70vh] max-w-full" />
@@ -120,9 +120,9 @@ function MessageBody({ message }: { message: ThreadMessage }) {
   return (
     <div className="flex min-w-0 flex-col gap-2">
       {asHtml && message.body_html ? (
-        <SafeHtml html={message.body_html} className="rounded-md border border-border bg-surface p-3 text-sm" testId="ticket-mail-html" />
+        <SafeHtml html={message.body_html} className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="ticket-mail-html" />
       ) : (
-        <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="ticket-mail-text">
+        <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="ticket-mail-text">
           {visible}
           {quoted && showQuote ? <span className="mt-2 block border-l-2 border-border pl-2 text-muted">{quoted}</span> : null}
         </SafeText>

@@ -334,7 +334,7 @@ export function ReceiptIntake({
                 {visible.map((d) => {
                   const confidence = minConfidence(d);
                   return (
-                    <tr key={d.id} className={d.id === selectedId ? "bg-surface" : undefined}>
+                    <tr key={d.id} className={d.id === selectedId ? "bg-surface-2" : undefined}>
                       <td>{formatDateTime(d.created_at)}</td>
                       <td>{d.fields.supplier_name?.value ?? ""}</td>
                       <td className="num">{d.fields.gross?.value ? formatEur(d.fields.gross.value) : ""}</td>
@@ -638,7 +638,7 @@ export function ReceiptIntake({
           {selected.masked_excerpt ? (
             <details className="text-xs text-muted">
               <summary className="cursor-pointer">{t("review.maskedExcerpt")}</summary>
-              <pre className="mt-2 whitespace-pre-wrap break-words rounded-md bg-surface p-2">{selected.masked_excerpt}</pre>
+              <pre className="mt-2 whitespace-pre-wrap break-words rounded-md bg-surface-2 p-2">{selected.masked_excerpt}</pre>
             </details>
           ) : null}
           <p className={ui.help}>{formatDate(selected.created_at)}</p>

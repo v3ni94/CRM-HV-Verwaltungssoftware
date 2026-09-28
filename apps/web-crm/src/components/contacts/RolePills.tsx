@@ -11,7 +11,7 @@ export function RolePills({ roles }: { roles: Role[] }) {
   return (
     <span className="flex flex-wrap gap-1">
       {roles.map((r) => (
-        <span key={r} className="rounded-full bg-surface px-2 py-0.5 text-xs text-muted">
+        <span key={r} className="rounded-full bg-muted-bg px-2 py-0.5 text-xs text-muted-fg">
           {tl(`role.${r}`)}
         </span>
       ))}

@@ -189,7 +189,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
       </div>
       {selectedIds.length > 0 ? (
         <div
-          className="fixed inset-x-0 bottom-0 z-10 flex flex-col gap-2 border-t border-border bg-surface p-3 shadow-lg sm:flex-row sm:items-center"
+          className="fixed inset-x-0 bottom-0 z-10 flex flex-col gap-2 border-t border-border bg-raised p-3 shadow-lg sm:flex-row sm:items-center"
           data-testid="bulk-bar"
         >
           <span className="font-medium">

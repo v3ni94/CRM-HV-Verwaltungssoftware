@@ -115,7 +115,7 @@ export function OnboardingWizard() {
           {t("welcomeTo")}: {result.welcome_email.to}
         </p>
         <p className="text-sm font-medium">{result.welcome_email.subject}</p>
-        <pre className="whitespace-pre-wrap rounded-md border border-hairline bg-surface p-3 text-sm">{result.welcome_email.body}</pre>
+        <pre className="whitespace-pre-wrap rounded-md border border-hairline bg-surface-2 p-3 text-sm">{result.welcome_email.body}</pre>
       </section>
     );
   }

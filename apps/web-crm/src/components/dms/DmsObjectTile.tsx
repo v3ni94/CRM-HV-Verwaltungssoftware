@@ -36,7 +36,7 @@ export function DmsObjectTile({ object }: { object: DmsObject }) {
           <dd className="tabular-nums font-medium">{c.missing}</dd>
         </div>
       </dl>
-      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface" aria-hidden>
+      <div className="h-1.5 w-full overflow-hidden rounded-full bg-surface-3" aria-hidden>
         <div className="h-full bg-gold" style={{ width: `${Math.min(100, Math.max(0, c.percent))}%` }} />
       </div>
       <div className="flex flex-wrap gap-2">

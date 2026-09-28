@@ -28,7 +28,7 @@ export function UsagePanel({ usage }: { usage: Usage }) {
         {pct !== null ? ` (${pct} %)` : ""}
       </p>
       {pct !== null ? (
-        <div className="h-2 w-full rounded bg-bg" aria-hidden>
+        <div className="h-2 w-full rounded bg-surface" aria-hidden>
           <div className={`h-2 rounded ${usage.warning || usage.blocked ? "bg-danger-fg" : "bg-accent"}`} style={{ width: `${Math.min(pct, 100)}%` }} />
         </div>
       ) : null}

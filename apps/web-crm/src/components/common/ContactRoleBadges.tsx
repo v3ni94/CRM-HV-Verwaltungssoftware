@@ -91,7 +91,7 @@ export function ContactRoleBadges({ contactId }: { contactId: string }) {
         return (
           <li
             key={role.key}
-            className="inline-flex items-center gap-1 rounded-full border border-border bg-surface px-2 py-0.5 text-[11px] font-medium text-fg"
+            className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-2 py-0.5 text-[11px] font-medium text-fg"
           >
             <span>{role.label}</span>
             {unitHref ? (

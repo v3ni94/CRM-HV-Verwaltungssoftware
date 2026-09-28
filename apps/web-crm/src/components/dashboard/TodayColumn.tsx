@@ -44,7 +44,7 @@ export function TodayColumn({ items, today }: { items: TodayItem[]; today: strin
             return (
               <li key={`${item.source}-${item.id}`} data-testid={`today-${item.source}`}>
                 {item.href ? (
-                  <Link href={item.href} className="flex items-center gap-3 py-2 transition duration-150 hover:bg-surface">
+                  <Link href={item.href} className="flex items-center gap-3 py-2 transition duration-150 hover:bg-surface-2">
                     {row}
                   </Link>
                 ) : (

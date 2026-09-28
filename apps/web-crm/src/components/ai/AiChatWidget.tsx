@@ -502,7 +502,7 @@ export function AiChatWidget() {
           aria-label={open ? t("close") : t("open")}
           aria-expanded={open}
           onClick={() => setOpen((o) => !o)}
-          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-lg transition duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-gold/60"
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-fg shadow-lg transition duration-200 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-focus"
         >
           <span aria-hidden className="text-xl">
             {open ? "×" : "✦"}
@@ -512,7 +512,7 @@ export function AiChatWidget() {
       {open ? (
         <section
           aria-label={t("title")}
-          className="fixed inset-0 z-40 flex flex-col overflow-hidden border-2 border-gold/30 bg-surface shadow-2xl sm:inset-auto sm:bottom-20 sm:right-5 sm:h-[32rem] sm:w-[min(26rem,calc(100vw-2.5rem))] sm:rounded-2xl"
+          className="fixed inset-0 z-40 flex flex-col overflow-hidden border-2 border-gold/30 bg-raised shadow-lg sm:inset-auto sm:bottom-20 sm:right-5 sm:h-[32rem] sm:w-[min(26rem,calc(100vw-2.5rem))] sm:rounded-2xl"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <header className="flex items-center justify-between border-b border-rail-border bg-rail-bg px-4 py-3 text-rail-fg">
@@ -565,7 +565,7 @@ export function AiChatWidget() {
                         <button
                           key={c.id}
                           type="button"
-                          className="inline-flex items-center rounded-full border border-border bg-bg px-3 py-1 text-xs font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface focus:outline-none focus:ring-2 focus:ring-gold/40"
+                          className="inline-flex items-center rounded-full border border-border bg-surface px-3 py-1 text-xs font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus"
                           onClick={() => onChip(c)}
                         >
                           {c.label}
@@ -599,7 +599,7 @@ export function AiChatWidget() {
           <form onSubmit={submit} className="flex flex-col gap-2 border-t border-border-soft p-3">
             {files.length ? <p className="text-xs text-muted">{files.map((f) => f.name).join(", ")}</p> : null}
             <div className="flex items-end gap-2">
-              <label className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-bg text-fg transition duration-150 hover:border-gold hover:bg-surface" title={t("attach")}>
+              <label className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full border border-border bg-surface text-fg transition duration-150 hover:border-gold hover:bg-surface-2" title={t("attach")}>
                 <span aria-hidden>📎</span>
                 <input ref={fileInput} type="file" multiple aria-label={t("attach")} className="sr-only" onChange={(e) => setFiles(Array.from(e.target.files ?? []).slice(0, 20))} />
               </label>

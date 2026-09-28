@@ -54,7 +54,7 @@ export function EmbeddingsStatus({ initial }: { initial: EmbeddingStatus | null 
             {t("title")}
           </h2>
           <span
-            className={`rounded-md px-2 py-0.5 text-xs font-medium ${status?.enabled ? "bg-success-bg text-success-fg" : "bg-surface text-muted"}`}
+            className={`rounded-md px-2 py-0.5 text-xs font-medium ${status?.enabled ? "bg-success-bg text-success-fg" : "bg-muted-bg text-muted-fg"}`}
             data-testid="ai-embeddings-model"
           >
             {status?.enabled ? `${t("model")}: ${status.model ?? ""}` : t("disabled")}

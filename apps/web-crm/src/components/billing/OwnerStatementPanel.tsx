@@ -142,7 +142,7 @@ export function OwnerStatementPanel({ ledgers }: { ledgers: { id: string; name: 
             </thead>
             <tbody>
               {list.map((s) => (
-                <tr key={s.id} className={s.id === selected?.id ? "bg-surface" : undefined}>
+                <tr key={s.id} className={s.id === selected?.id ? "bg-surface-2" : undefined}>
                   <td>
                     <button type="button" className="font-medium hover:underline" onClick={() => open(s.id)}>
                       {ledgerName(s.ledger_id)}

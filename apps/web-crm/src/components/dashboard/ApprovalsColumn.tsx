@@ -44,7 +44,7 @@ export function ApprovalsColumn({ counts }: { counts: ApprovalCounts }) {
               <Link href={APPROVAL_LINKS[kind]} className={`${ui.cardLink} flex items-center justify-between gap-3 !p-3`}>
                 <span className="min-w-0">
                   <span className="block text-sm font-medium">{s(`approvals.kind.${kind}`)}</span>
-                  <span className="block text-xs text-gold">{s("approvals.open")} →</span>
+                  <span className="block text-xs text-accent-strong">{s("approvals.open")} →</span>
                 </span>
                 <span className={`${ui.badgeWarning} tabular-nums`}>{(counts[kind] ?? 0).toLocaleString("de-DE")}</span>
               </Link>

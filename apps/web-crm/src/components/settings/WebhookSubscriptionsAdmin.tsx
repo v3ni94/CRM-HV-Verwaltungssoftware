@@ -166,7 +166,7 @@ export function WebhookSubscriptionsAdmin({
         <div className={`${ui.card} flex flex-col gap-2`} data-testid="webhook-secret">
           <h2 id="webhook-secret-title" className={ui.h2}>{t("secret.title")}</h2>
           <p className={ui.help}>{t("secret.hint")}</p>
-          <code className="break-all rounded bg-surface px-2 py-1 text-xs">{created.secret}</code>
+          <code className="break-all rounded bg-surface-2 px-2 py-1 text-xs">{created.secret}</code>
           <div className={ui.formActions}>
             <button type="button" className={ui.secondary} onClick={() => copySecret(created.secret)}>
               {t("secret.copy")}
@@ -308,7 +308,7 @@ function WebhookRow({
       </tr>
       {logOpen ? (
         <tr data-testid={`webhook-log-${hook.id}`}>
-          <td colSpan={5} className="bg-surface">
+          <td colSpan={5} className="bg-surface-2">
             <h3 className="mhvp-label mb-2">{t("log.title")}</h3>
             {log === undefined ? null : log.length === 0 ? (
               <p className="text-sm text-muted">{t("log.empty")}</p>

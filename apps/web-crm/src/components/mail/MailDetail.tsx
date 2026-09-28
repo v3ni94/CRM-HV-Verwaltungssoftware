@@ -113,7 +113,7 @@ function MailActionBar({
   onMarkDone: () => void;
 }) {
   const t = useTranslations("Mail");
-  const sticky = position === "top" ? "sticky top-0 z-10 -mx-1 border-b border-border-soft bg-bg/95 px-1 py-2 backdrop-blur" : "";
+  const sticky = position === "top" ? "sticky top-0 z-10 -mx-1 border-b border-border-soft bg-surface/95 px-1 py-2 backdrop-blur" : "";
   return (
     <div
       className={`flex flex-wrap items-center gap-2 ${sticky}`}
@@ -449,7 +449,7 @@ export function MailDetail({
           <p className={ui.notice} data-testid="mail-sending-hint">
             {t("sendingHint")}
           </p>
-          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
+          <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
           {canApprove ? (
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className={ui.primary} disabled={busy} onClick={() => void approve()}>
@@ -475,7 +475,7 @@ export function MailDetail({
       ) : message.status === "pending" ? (
         <div className="flex flex-col gap-3">
           <p className="text-xs text-muted">{submitterLabel(message, members, t)}</p>
-          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
+          <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
           {canApprove ? (
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className={ui.primary} disabled={busy} onClick={() => void approve()}>
@@ -503,11 +503,11 @@ export function MailDetail({
       ) : message.status === "sent" ? (
         <div className="flex flex-col gap-2">
           <p className="text-xs text-muted">{message.sent_at ? t("sentAt", { at: formatDateTime(message.sent_at) }) : ""}</p>
-          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
+          <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <SafeText className="rounded-md border border-border bg-surface p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
+          <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
           {actionBar("bottom")}
         </div>
       )}

@@ -72,7 +72,7 @@ export function PortalAccessBox({
     : null;
 
   return (
-    <div className="flex flex-col gap-2 rounded-md border border-border-soft bg-surface p-3" data-testid="portal-access">
+    <div className="flex flex-col gap-2 rounded-md border border-border-soft bg-surface-2 p-3" data-testid="portal-access">
       <div className="flex flex-wrap items-center gap-2">
         <span className="mhvp-label">{t("portalAccess.title")}</span>
         {statusText ? <span className={access?.active ? ui.badgeGold : ui.badge}>{statusText}</span> : null}
@@ -112,7 +112,7 @@ export function PortalAccessBox({
         <div className={ui.notice} data-testid="invitation-token">
           <p className="font-medium">{t("portalAccess.tokenTitle")}</p>
           <p>{t("portalAccess.tokenHelp")}</p>
-          <code className="mt-1 block select-all break-all rounded bg-bg px-2 py-1 font-mono text-xs">
+          <code className="mt-1 block select-all break-all rounded bg-surface px-2 py-1 font-mono text-xs">
             {granted.invitation_token}
           </code>
           <InvitationQr url={granted.invitation_url} title={t("portalAccess.linkTitle")} alt={t("portalAccess.qrAlt")} />

@@ -40,7 +40,7 @@ export function CircularLowerMajoritySwitch({ initial, canUpdate }: { initial: b
             {t("title")}
           </h2>
           <span
-            className={`rounded-md px-2 py-0.5 text-xs font-medium ${enabled ? "bg-success-bg text-success-fg" : "bg-surface text-muted"}`}
+            className={`rounded-md px-2 py-0.5 text-xs font-medium ${enabled ? "bg-success-bg text-success-fg" : "bg-muted-bg text-muted-fg"}`}
             data-testid="circular-lower-majority-switch-status"
           >
             {enabled ? t("status.on") : t("status.off")}

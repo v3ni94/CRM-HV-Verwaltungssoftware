@@ -115,7 +115,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
         <Link
           href={roleLink()}
           aria-current={!role ? "true" : undefined}
-          className={`rounded-full px-3 py-1 text-xs ${!role ? "bg-accent text-accent-fg" : "bg-surface text-muted hover:text-fg"}`}
+          className={`rounded-full px-3 py-1 text-xs ${!role ? "bg-accent text-accent-fg" : "bg-muted-bg text-muted-fg hover:text-fg"}`}
         >
           {t("allRoles")}
         </Link>
@@ -124,7 +124,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
             key={r}
             href={roleLink(r)}
             aria-current={role === r ? "true" : undefined}
-            className={`rounded-full px-3 py-1 text-xs ${role === r ? "bg-accent text-accent-fg" : "bg-surface text-muted hover:text-fg"}`}
+            className={`rounded-full px-3 py-1 text-xs ${role === r ? "bg-accent text-accent-fg" : "bg-muted-bg text-muted-fg hover:text-fg"}`}
           >
             {tl(`role.${r}`)}
           </Link>

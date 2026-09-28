@@ -54,7 +54,7 @@ export function WeekView({
                   <li key={`${item.kind}-${item.entity_id ?? item.google_event_id}-${item.date}`}>
                     <button
                       type="button"
-                      className="flex w-full items-start gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-surface"
+                      className="flex w-full items-start gap-1.5 rounded px-1 py-0.5 text-left text-xs hover:bg-surface-2"
                       onClick={() => onSelect(item)}
                     >
                       <span className={`mt-0.5 inline-block h-2 w-2 shrink-0 rounded-full ${SOURCE_DOT[item.source]}`} aria-hidden="true" />
