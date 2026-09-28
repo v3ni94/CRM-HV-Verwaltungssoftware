@@ -50,8 +50,12 @@ freizugeben.
    Speichern mit Vertrag beenden. Vertragsende und Auszug erscheinen in Kalender und
    Fristenliste (Typen Vertragsende, Kündigung, Auszug).
 
-Die Software prüft nicht, ob das Vertragsende zur Kündigungsfrist passt. Die Frist ist
-rechtlich zu prüfen durch Rechtsanwalt [Platzhalter]; Ergebnis im Ticket vermerken.
+Im Abschnitt Vertrag beenden steht die Prüfung Kündigungsfrist (Orientierung): Frist in
+Monaten und Tagen eintragen, wahlweise zum Monatsende, Berechnen. Das rechnerische Ende wird
+als zu verifizieren angezeigt und mit dem eingetragenen Vertragsende verglichen; liegt das
+Vertragsende davor, erscheint ein Hinweis. Die Prüfung blockiert nichts, da der Vertrag kein
+Feld für die Kündigungsfrist hat (Betreiberentscheidung WS-01-Q2). Die Frist ist rechtlich zu
+prüfen durch Rechtsanwalt [Platzhalter]; Ergebnis im Ticket vermerken.
 
 ### 2. Wohnungsübergabe (Rückgabe)
 
@@ -127,9 +131,12 @@ Wie Schritt 2 mit einem neuen Protokoll, Beteiligte neuer Mieter und Vermieter.
 
 ## Fristen
 
-Automatisch: Vertragsende, Kündigung, Auszug, Einzug aus den Vertragsdaten. Zusätzlich von Hand:
-Ticket Fälligkeit für die Kautionsabrechnung; die Frist dafür ist rechtlich zu prüfen durch
-Rechtsanwalt [Platzhalter]. Vorfrist mindestens 7 Tage.
+Automatisch: Vertragsende, Kündigung, Auszug, Einzug aus den Vertragsdaten. Zusätzlich auf der
+Vertragsseite, Abschnitt Fristen, Frist anlegen: Fristtyp Kautionsabrechnung (Auslöser
+Übergabe erfolgt), Auslösedatum der Rückgabe, verantwortliche Person. Die Fälligkeit wird aus
+der unter Einstellungen, Fristtypen hinterlegten Dauer berechnet (zu verifizieren) oder
+eingetragen. Die Frist der Kautionsabrechnung ist rechtlich zu prüfen durch Rechtsanwalt
+[Platzhalter]; die Software gibt keine Dauer vor.
 
 ## Freigaben
 
@@ -167,6 +174,7 @@ Rechtsanwalt [Platzhalter]. Vorfrist mindestens 7 Tage.
 
 - Übergabeprotokoll ohne Verknüpfung zum Vertrag in der Oberfläche.
 - Zählerstände aus dem Protokoll werden nicht in die Zählerstände der Einheit übernommen.
-- Keine Prüfung der Kündigungsfrist, kein Fristtyp für die Kautionsabrechnung.
+- Kündigungsfrist nur als Eingabe je Kündigung, kein Vertragsfeld (WS-01-Q2); Dauer des Fristtyps
+  Kautionsabrechnung noch nicht hinterlegt (WS-01-Q1).
 - Kein Mieterwechsel-Assistent, der Beenden und Neuanlage verbindet.
 - Keine automatische Mitteilung an den Messdienstleister.

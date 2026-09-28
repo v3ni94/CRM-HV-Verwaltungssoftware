@@ -221,6 +221,18 @@ Jahr (Kapitel Verträge). Die Plattform bezieht keinen Zinssatz automatisch und 
 Wert vor. Welcher Satz für Mietkautionen rechtlich maßgeblich ist, ist durch Rechtsberatung
 zu bestätigen; die Fundstelle gehört in den Vermerk.
 
+## Fristtypen
+
+Einstellungen, Fristtypen (Lesen mit `tenant_settings:read`, Pflege mit `tenant_settings:update`).
+Je Fristtyp: Bezeichnung, Code, Auslöser (Zugang der Kündigung, Übergabe erfolgt, Zugang des
+Mieterhöhungsschreibens, Verwaltungsbeginn, Verwaltungsende, Vertragsende oder Datum wird
+eingetragen), Dauer in Monaten und Tagen, verantwortliche Rolle, Quelle der Dauer, Aktiv. Die
+Systemtypen Verwalterwechsel, Kautionsabrechnung und Mieterhöhung sind ohne Dauer angelegt. Die
+Software gibt keine Dauer vor und trifft keine Rechtsaussage; jede berechnete Fälligkeit trägt
+den Hinweis zu verifizieren. Dauer nur nach rechtlicher Prüfung eintragen und die Quelle
+vermerken (offener Punkt WS-01-Q1). Ein Typ ohne Dauer verlangt beim Anlegen der Frist die
+Eingabe der Fälligkeit. Deaktivierte Typen stehen beim Anlegen nicht mehr zur Auswahl.
+
 ## Buchhaltung, DATEV
 
 Unter Buchhaltung, DATEV wird die DATEV-Kontenzuordnung gepflegt (Recht Buchhaltung

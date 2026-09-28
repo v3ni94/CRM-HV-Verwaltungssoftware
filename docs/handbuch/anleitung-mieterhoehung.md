@@ -82,8 +82,11 @@ Versand erfassen verlangt die Auswahl der Dokumentierten rechtlichen Prüfung de
 Der Schritt ist gesperrt, solange G3 geschlossen ist. Bis dahin:
 
 - Den Versand außerhalb der Software nur nach Freigabe durch die Geschäftsführung vornehmen.
-- Versandweg, Datum und Zugangsnachweis im Ticket zur Einheit festhalten und den
-  Zugangsnachweis als Dokument ablegen (04 Mieterakte).
+- Auf der Fallseite im Abschnitt Zugangsdatum den Zugang des Schreibens beim Mieter erfassen
+  (Recht `contracts:approve`). Der Status des Falls ändert sich nicht; erst mit freigegebenem
+  Regelwerk zeigt der Fall daraus abgeleitete Hinweise.
+- Versandweg und Zugangsnachweis im Ticket zur Einheit festhalten und den Zugangsnachweis als
+  Dokument ablegen (04 Mieterakte).
 
 ### 5. Zustimmung oder Ablehnung
 
@@ -112,11 +115,14 @@ sichtbar.
 
 ## Fristen
 
-Für Mieterhöhungen gibt es keinen Fristtyp in der Fristenliste. Von Hand anlegen:
+Auf der Fallseite, Abschnitt Fristen, Frist anlegen: Fristtyp Mieterhöhung (Auslöser Zugang
+des Mieterhöhungsschreibens) ist vorbelegt, das Auslösedatum wird aus dem Zugangsdatum
+übernommen. Fälligkeit aus der Dauer des Fristtyps (Einstellungen, Fristtypen, zu verifizieren)
+oder eintragen, verantwortliche Person wählen. Die Frist erscheint in Übersicht, Fristen und im
+Kalender.
 
-- Ticket zur Einheit, Titel `Mieterhöhung <Einheit>`, Fälligkeit auf das Ende der
-  Zustimmungsfrist. Die Frist ist rechtlich zu prüfen durch Rechtsanwalt [Platzhalter]; Vorfrist
-  mindestens 7 Tage.
+- Die Zustimmungsfrist ist rechtlich zu prüfen durch Rechtsanwalt [Platzhalter]; die Software
+  gibt keine Dauer vor.
 - Kalendertermin für die Wiedervorlage vor dem Wirksamkeitstermin.
 - Frühester Zeitpunkt nach Wartefrist aus dem Fall ist Orientierung und zu prüfen.
 
@@ -137,7 +143,7 @@ Für Mieterhöhungen gibt es keinen Fristtyp in der Fristenliste. Von Hand anleg
 - [ ] Schreiben rechtlich geprüft, Prüfung abgelegt
 - [ ] Freigabe durch zweite Person
 - [ ] Versand nach Freigabe der Geschäftsführung, Zugangsnachweis abgelegt
-- [ ] Ticket mit Fälligkeit Zustimmungsfrist
+- [ ] Zugangsdatum erfasst, Frist Mieterhöhung mit Verantwortlichem angelegt
 - [ ] Zustimmung oder Ablehnung erfasst
 - [ ] Neue Miete übernommen, Mieter informiert über geänderten Zahlbetrag
 
@@ -157,9 +163,8 @@ Für Mieterhöhungen gibt es keinen Fristtyp in der Fristenliste. Von Hand anleg
   erfassen (Zustimmungsnachweis als Dokument zur Einheit ablegen); der Fall selbst bleibt im
   Status freigegeben und wird nicht automatisch abgeglichen. Parallel im führenden System
   pflegen, solange der Parallelbetrieb läuft.
-- Zugangsdatum (Grundlage der Fristberechnung) nur über die Schnittstelle erfassbar, nicht in
-  der Oberfläche.
-- Kein Fristtyp Mieterhöhung in der Fristenliste.
+- Dauer des Fristtyps Mieterhöhung noch nicht hinterlegt (WS-01-Q1); bis dahin Fälligkeit je
+  Frist eintragen.
 - Musterschreiben ohne Briefbogen-PDF.
 - Keine automatische Prüfung für Modernisierung, Index- und Staffelmiete.
 - Regelwerk wirkt erst nach Freigabe je Regel durch den Betreiber; laut Regeldatei bis dahin

@@ -1,0 +1,28 @@
+# WS-01 Fristtypen, eigene Fristen, Kündigungsfrist als Orientierung, Checkliste Verwalterwechsel
+
+| Field | Content |
+| --- | --- |
+| ID | `WS-01` |
+| Title | Tenant configurable deadline type catalogue (name, trigger, duration entered by the operator, responsible role), deadlines created from a ticket, contract, unit, property or rent increase case with a responsible person (ES-10), notice period end as orientation, checklist Verwalterwechsel per property with date and user per step, access date (Zugangsdatum) of a rent increase in the CRM |
+| Scope | `mhvp.workspace.deadlines` (pure date arithmetic, seeds, source resolution, mirror), `mhvp.workspace.deadline_routers` (`GET/POST /workspace/deadline-types`, `PATCH /workspace/deadline-types/{id}`, `GET /workspace/assignable-users`, `GET/POST /workspace/deadline-entries`, `GET /workspace/deadline-entries/compute`, `POST /workspace/deadline-entries/{id}/done`, `GET /workspace/notice-period`, `GET/POST /workspace/checklists`, `GET /workspace/checklists/templates`, `POST /workspace/checklists/{id}/items/{code}`), kind `custom_deadline` in `mhvp.workspace.jobs` (deadline list, calendar entry, lead time notification to the responsible person), action `receipt` of `POST /letting/rent-increases/{id}/actions`; CRM `/einstellungen/fristtypen`, `/fristen` (Eigene Fristen), panels on ticket, contract, unit, property and rent increase case pages, notice period hint in the termination form. Migration 0230 (`deadline_type`, `deadline_entry`, `property_checklist`, RLS) |
+| Source status | Produktschutz and Fachliche Umsetzung. No legal rule: the duration of every type is entered by the operator per tenant without a default and shown as "zu verifizieren"; the notice period end adds only the entered months and days; nothing blocks a business action. Legal durations (Herausgabefrist Verwalterwechsel, Frist der Kautionsabrechnung, Zustimmungsfrist Mieterhöhung, Kündigungsfrist) remain open decisions WS-01-Q1 and WS-01-Q2 in `docs/OPEN_QUESTIONS.md` (owner Betreiber with Rechtsanwalt). Rule M1-09 (no legal deadline calculation) and M9-06 (deadline list as orientation) apply unchanged |
+| Acceptance case | None in annex D. Tests `apps/api/tests/unit/test_deadline_math.py` (month arithmetic with clamping, due date with and without duration, notice period end with month end, seeds and checklist template with fixed values), `apps/api/tests/integration/test_deadline_types.py` (seeded types without duration, 403 for catalogue maintenance without `tenant_settings:update`, 422 `MHVP-WS-0001` without duration and due date, ES-10 warning, computed due date 30.09.2026 + 90 days = 29.12.2026, immediate mirror in the deadline list, tenant separation of types, entries, checklists and the notice period contract lookup, done closes the mirror, nightly job idempotent and notifies the responsible person only, notice period 05.09.2026 + 3 months to month end = 31.12.2026, checklist start, 409 `MHVP-WS-0003`, tick with user and date, receipt action keeps the status and needs `contracts:approve`), CRM vitest for `DeadlineCreatePanel`, `DeadlineEntriesPanel`, `DeadlineTypesAdmin`, `ManagerChangeChecklist`, `NoticePeriodHint`, `RentIncreaseReceipt` |
+| Implementation | Three tenant tables with RLS (ADR 0002). The three system types Verwalterwechsel (trigger Verwaltungsbeginn), Kautionsabrechnung (trigger Übergabe erfolgt) and Mieterhöhung (trigger Zugang des Mieterhöhungsschreibens) are seeded lazily per tenant without duration and role. A deadline entry is the source row; the job mirrors it as kind `custom_deadline` into `compliance_deadline` and the generated calendar (reminders 14d, 1d); the create endpoint writes the mirror at once. The lead time notification goes to the responsible person when set, otherwise to the holders of `tickets:update`. Permissions: catalogue read by every member, maintenance `tenant_settings:update`; entries `tickets:read`, `tickets:create`, `tickets:update`; notice period `contracts:read`; checklists `properties:read`, `properties:update`. `assignable-users` returns only names of active members of the tenant (explicit tenant filter, `membership` has no RLS). Error codes `MHVP-WS-0001` to `MHVP-WS-0003` |
+| Change reason | Handbook gaps (28.09.2026): Verwalterwechsel row 1 (no deadline type and no checklist), Mieterwechsel row 3 (no notice period check, no deadline type Kautionsabrechnung), Mieterhöhung rows 2 and 3 (access date only via the API, no deadline type Mieterhöhung; the letter PDF part of row 3 stays open) |
+
+## Model facts
+
+- A deadline type carries `duration_months` and `duration_days` (both nullable, no default). Due
+  date = trigger date + months (calendar months, day clamped to the month length) + days. A type
+  without any duration forces the user to enter the due date (`MHVP-WS-0001`).
+- The contract model has no notice period field (A-076). `GET /workspace/notice-period` takes
+  the termination date, months, days and the month end switch from the user; with a contract id
+  it returns the stored `end_date` and whether it lies on or after the computed end. The result
+  is advisory, the termination endpoint is unchanged.
+- The checklist template `manager_change` mirrors the ten steps of
+  `docs/handbuch/anleitung-verwalterwechsel.md`, Abschnitt Checkliste. Ticking stores
+  `done_at`, `done_by` and the display name; all steps done closes the checklist, resetting a
+  step reopens it. One open checklist per property and kind (partial unique index).
+- Action `receipt` stores `received_on` in every status draft, approved or sent without changing
+  the status; with released rent law rules (M26-01) the same deadline hints as the `send` action
+  are derived, otherwise nothing.

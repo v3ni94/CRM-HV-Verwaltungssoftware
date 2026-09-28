@@ -122,17 +122,22 @@ Objektseite; deren Pflege erfolgt über den Import oder die Schnittstelle.
 3. Verwaltung, Objektakte, Listen aus der Objektakte: Anforderungsliste über alle Objekte für
    die Nachverfolgung.
 
-### 8. Fristen und Wiedervorlagen
+### 8. Checkliste, Fristen und Wiedervorlagen
 
-Die Fristenliste (Übersicht, Fristen) enthält nur Termine aus den Stammdaten. Für den
-Verwalterwechsel gibt es keinen eigenen Fristtyp. Stattdessen:
-
-- Ticket zum Objekt anlegen (Übersicht, Tickets) mit Titel `Verwalterwechsel <Objektnummer>`
-  und Fälligkeit für die Herausgabe der Unterlagen; erscheint als Ticketfrist in Kalender und
-  Fristen.
-- Termin im Kalender für Übergabegespräch und Begehung.
-- Die konkrete Herausgabefrist ist rechtlich zu prüfen durch Rechtsanwalt: [Platzhalter].
-  Vorfrist von mindestens 7 Tagen eintragen.
+1. Objektseite, Abschnitt Checkliste Verwalterwechsel, Checkliste starten. Die zehn Schritte
+   dieser Anleitung erscheinen als Liste; jeder Schritt wird beim Abhaken mit Datum und
+   Benutzer festgehalten. Sind alle Schritte erledigt, gilt die Liste als abgeschlossen; ein
+   zurückgesetzter Schritt öffnet sie wieder. Je Objekt ist eine offene Liste möglich.
+2. Objektseite, Abschnitt Fristen, Frist anlegen: Fristtyp Verwalterwechsel (Auslöser
+   Verwaltungsbeginn), Auslösedatum, verantwortliche Person. Ist im Fristtyp eine Dauer
+   hinterlegt, wird die Fälligkeit daraus berechnet und als zu verifizieren angezeigt; sonst
+   die Fälligkeit eintragen. Die Frist erscheint in Übersicht, Fristen (Typ Eigene Frist) und
+   im Kalender; die Vorfrist aus den Einstellungen der Tagesjobs benachrichtigt die
+   verantwortliche Person.
+3. Termin im Kalender für Übergabegespräch und Begehung.
+4. Die Dauer des Fristtyps pflegt die Geschäftsführung unter Einstellungen, Fristtypen (siehe
+   [Einstellungen](einstellungen.md)). Die konkrete Herausgabefrist ist rechtlich zu prüfen
+   durch Rechtsanwalt: [Platzhalter]; die Software gibt keine Dauer vor.
 
 ## Zu verknüpfende Datensätze
 
@@ -162,7 +167,7 @@ Verwalterwechsel gibt es keinen eigenen Fristtyp. Stattdessen:
 - [ ] Bankkonten zugeordnet, Standardkonto gesetzt; neue IBAN freigegeben
 - [ ] Unterlagen der Vorverwaltung hochgeladen und im richtigen Ordner abgelegt
 - [ ] Vollständigkeit geprüft, Nachforderungsschreiben freigegeben und versandt, Kopie abgelegt
-- [ ] Ticket Verwalterwechsel mit Fälligkeit angelegt
+- [ ] Frist Verwalterwechsel mit Fälligkeit und Verantwortlichem angelegt
 - [ ] Rechtliche Punkte durch Rechtsanwalt geprüft
 
 ## Häufige Fehler
@@ -188,7 +193,8 @@ Export der Objektakte für den Nachfolger bietet die Oberfläche nicht an.
 
 - Keine Oberfläche zum Anlegen von Gebäuden, Einheiten und Umlageschlüsselwerten; nur Import
   oder Schnittstelle.
-- Kein Fristtyp und keine Checkliste Verwalterwechsel; Ersatz über Ticket und Kalender.
+- Dauer des Fristtyps Verwalterwechsel noch nicht hinterlegt (WS-01-Q1); bis dahin Fälligkeit je
+  Frist von Hand eintragen.
 - Ansprechpartner des Objekts (Beirat) nicht in der Oberfläche pflegbar.
 - Pflichtunterlagen der Vollständigkeitsprüfung nur über die Schnittstelle pflegbar.
 - Nachforderungsschreiben nur als Textentwurf, kein Briefbogen-PDF und kein Versandnachweis.

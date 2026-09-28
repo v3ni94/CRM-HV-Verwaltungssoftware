@@ -91,7 +91,7 @@ M23-02) is unchanged; generated entries are not synced to Google.
 * `GET /workspace/notice-period` (`contracts:read`): termination date plus entered months and
   days, optionally to the month end, as orientation with `verify=true`; with `contract_id` the
   stored end date and `contract_end_covers` for the hint in the termination form. The contract
-  has no notice period field (A-074); nothing blocks the termination.
+  has no notice period field (A-076); nothing blocks the termination.
 * `GET/POST /workspace/checklists` (`properties:read` / `properties:update`),
   `GET /workspace/checklists/templates`, `POST /workspace/checklists/{id}/items/{code}` with
   `{done}`: checklist `manager_change` from the handbook page Verwalterwechsel, one open list

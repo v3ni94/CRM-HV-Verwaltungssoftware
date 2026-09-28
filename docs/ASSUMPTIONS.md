@@ -875,3 +875,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `POST /contracts/{id}/ownership-transfer`, `GET /contracts/{id}/ownership-transfer/preview`, CRM Vertrags- und Einheitenseite (`OwnershipTransfer`), `docs/rules/M5-03-eigentuemerwechsel-sollbetraege.md` |
 | Überprüfung spätestens bei Meilenstein | vor G4 (WEG-Abrechnung), zusammen mit W07 und P01 |
 | Datum | 28.09.2026 |
+
+## A-076
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Fristtypen und eigene Fristen (Regel WS-01): (1) Das Vertragsmodell trägt keine Kündigungsfrist; die Prüfung beim Beenden nutzt die vom Benutzer eingegebenen Monate und Tage (Vorbelegung des Formulars drei Monate zum Monatsende, nur als Eingabehilfe, kein Rechtswert) und addiert Kalendermonate mit Begrenzung auf die Monatslänge. (2) Die Dauer eines Fristtyps wird als Auslösedatum plus Monate plus Tage berechnet; ein Typ ohne Dauer verlangt die Eingabe der Fälligkeit. (3) Die verantwortliche Person einer Frist erhält die Vorfristbenachrichtigung allein; ohne Person gehen sie wie bei allen Fristarten an die Inhaber von `tickets:update`. (4) Die Checkliste Verwalterwechsel bildet die zehn Punkte der Handlungsanweisung ab; je Objekt ist eine offene Liste dieser Art möglich. |
+| Begründung | Die Handbuchlücken verlangen Fristtypen und Prüfungen ohne Rechtsaussage; ein Vertragsfeld für die Kündigungsfrist ist eine offene Betreiberentscheidung (WS-01-Q2). |
+| Kennzeichnung | unkritisch (kein Geldfluss, keine Rechtsfrist, keine Sperre) |
+| Betroffene Bereiche | `mhvp.workspace.deadlines`, `mhvp.workspace.deadline_routers`, CRM Fristen, Einstellungen Fristtypen, Vertrag beenden, Objektseite, Mieterhöhungsfall |
+| Überprüfung spätestens bei Meilenstein | Entscheidung WS-01-Q1 und WS-01-Q2 |
+| Datum | 28.09.2026 |

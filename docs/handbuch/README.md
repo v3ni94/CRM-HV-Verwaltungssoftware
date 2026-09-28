@@ -195,6 +195,15 @@ Darüber steht die kompakte Leiste Kennzahlen mit den mandantenweiten Zahlen (Ob
 
 Das Menü Fristen listet Termine aus den Stammdaten mit Vorfrist aus den Einstellungen: Vertragsende, Kündigung, Eichfrist Zähler, Ablauf Bankzustimmung, Ende Aufbewahrung, Kündigungsfrist Dienstleistervertrag (14 Tage Vorfrist) und Beschlussfrist virtuelle Versammlung (7 Tage Vorfrist). Die Liste ist Orientierung und in der Oberfläche als zu prüfen gekennzeichnet; sie ersetzt keine rechtliche Fristberechnung. Notfristen sind nie allein aus der Liste zu führen.
 
+Eigene Fristen (Regel WS-01): Auf Ticket, Vertrag, Einheit, Objekt und Mieterhöhungsfall gibt es
+den Abschnitt Fristen mit Frist anlegen: Fristtyp aus dem Katalog des Mandanten, Auslösedatum,
+Fälligkeit (aus der Dauer des Typs berechnet oder eingetragen, immer zu verifizieren) und
+verantwortliche Person (Erfassungsstandard ES-10). Die Frist erscheint unter Fristen im
+Abschnitt Eigene Fristen und als Typ Eigene Frist in der Liste, dazu im Kalender; die Vorfrist
+benachrichtigt die verantwortliche Person. Den Katalog pflegt die Geschäftsführung unter
+Einstellungen, Fristtypen; die Typen Verwalterwechsel, Kautionsabrechnung und Mieterhöhung sind
+ohne Dauer angelegt, die Dauer ist eine Betreiberentscheidung nach rechtlicher Prüfung.
+
 ## Suche
 
 `Strg+K` (auf macOS `Cmd+K`) oder die Schaltfläche Suchen in der Kopfzeile öffnet die Befehlspalette. Ein Eingabefeld findet Kontakte, Objekte, Gebäude, Einheiten, Verträge, Tickets, Buchungen und Dokumente, dazu Aktionen (Ticket anlegen, Kontakt anlegen, Mahnlauf starten, Zur Auswertung Tickets) und jeden Eintrag der Navigation. Angezeigt wird nur, wofür eine Berechtigung besteht. Ohne Eingabe stehen die zuletzt geöffneten Datensätze bereit (je Benutzer im Browser gemerkt). Pfeiltasten wählen, Eingabe öffnet, Escape schließt. Einzelheiten in [suche.md](suche.md).
