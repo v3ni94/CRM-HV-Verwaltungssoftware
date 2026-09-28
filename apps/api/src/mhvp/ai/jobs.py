@@ -9,7 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from mhvp.ai import embeddings, examples, gateway, imports
+from mhvp.ai import embeddings, examples, gateway, imports, lookup
 from mhvp.ai.models import AiMessage, AiProposal, AiTask, AiTaskRun, RunStatus
 from mhvp.core import crypto
 from mhvp.core.config import Settings, get_settings
@@ -58,8 +58,14 @@ def _answer_text(run: AiTaskRun, contacts_preview: dict[str, Any] | None = None)
         return f"{base}\n{extra}" if extra else base
     if run.task is AiTask.ANSWER_QUESTION:
         text = str(output.get("answer", ""))
-        if not output.get("answerable", True):
+        found = run.input_ref.get("lookup")
+        links = lookup.links_of(found)
+        if not links and not output.get("answerable", True):
             text += "\n\n(Die vorhandenen Unterlagen beantworten die Frage nicht sicher.)"
+        if found is not None and (links or found.get("terms")):
+            # The hit list (with the links below the message) comes from the platform, not
+            # from the model (rule AI-LOOKUP-01); "nothing found" is said just as plainly.
+            text += "\n\n" + lookup.answer_text(found)
         return text
     if run.task is AiTask.SUMMARIZE:
         points = "\n".join(f"- {p}" for p in output.get("open_points", []))
@@ -180,11 +186,18 @@ async def run_and_propose(
             await session.flush()
             proposal_id = proposal.id
         if run.conversation_id is not None:
-            content = (
-                _answer_text(run, contacts_preview)
-                if run.status is RunStatus.SUCCEEDED
-                else f"Nicht ausgeführt: {run.error}"
-            )
+            found = run.input_ref.get("lookup") if run.task is AiTask.ANSWER_QUESTION else None
+            if run.status is RunStatus.SUCCEEDED:
+                content = _answer_text(run, contacts_preview)
+            elif found is not None:
+                # Deterministic fallback (rule AI-LOOKUP-01): no released provider, budget
+                # exhausted or provider error; the platform hits are still answered.
+                content = (
+                    f"KI-Antwort nicht verfügbar ({run.error}). Ergebnis der Plattformsuche:\n"
+                    + lookup.answer_text(found)
+                )
+            else:
+                content = f"Nicht ausgeführt: {run.error}"
             session.add(
                 AiMessage(
                     tenant_id=tenant_id,
@@ -194,6 +207,7 @@ async def run_and_propose(
                     document_ids=[],
                     task_run_id=run.id,
                     proposal_id=proposal_id,
+                    links=lookup.links_of(found),
                 )
             )
     return run

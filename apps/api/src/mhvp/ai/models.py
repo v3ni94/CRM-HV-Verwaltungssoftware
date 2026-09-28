@@ -231,6 +231,11 @@ class AiMessage(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     task_run_id: Mapped[uuid.UUID | None] = _fk("ai_task_run.id", nullable=True)
     proposal_id: Mapped[uuid.UUID | None] = _fk("ai_proposal.id", nullable=True)
+    # Record links of a platform lookup answer (mhvp.ai.lookup): produced by the platform from
+    # permission checked queries, never by the model; kept with the message for the audit.
+    links: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default="[]"
+    )
 
 
 class AiKnowledgeKind(StrEnum):

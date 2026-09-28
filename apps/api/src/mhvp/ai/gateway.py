@@ -23,7 +23,7 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.ai import instructions as chat_instructions
-from mhvp.ai import providers, table_mapper, tasks
+from mhvp.ai import lookup, providers, table_mapper, tasks
 from mhvp.ai.models import AiExample, AiProvider, AiProviderConfig, AiTask, AiTaskRun, RunStatus
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
@@ -351,8 +351,10 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
             found = [d for d in found if d.id in scope]
         document_ids = [*document_ids, *[d.id for d in found if d.id not in document_ids]]
 
+    records = lookup.prompt_text(ref.get("lookup")) if run.task is AiTask.ANSWER_QUESTION else ""
+
     async def _assemble(ids: list[uuid.UUID], max_chars: int) -> tuple[str, dict[str, int]]:
-        parts = [instruction]
+        parts = [instruction, records] if records else [instruction]
         stats: dict[str, int] = {}
         for document_id in ids:
             text, raw_chars = await document_text(session, blobs, document_id, max_chars=max_chars)

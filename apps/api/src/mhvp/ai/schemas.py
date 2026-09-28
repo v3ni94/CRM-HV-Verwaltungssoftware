@@ -135,6 +135,17 @@ class ConversationIn(_In):
     title: str = Field(default="Assistent", min_length=1, max_length=200)
 
 
+class ChatLink(BaseModel):
+    """Record or page link of a platform lookup answer (mhvp.ai.lookup, rule AI-LOOKUP-01).
+    Produced by the platform from permission checked queries, never by the model."""
+
+    type: Literal["contact", "property", "unit", "contract", "ticket", "page", "handbook"]
+    id: str
+    label: str
+    href: str = Field(description="CRM path, e.g. /kontakte/{id}")
+    detail: str = ""
+
+
 class MessageOut(_Out):
     id: uuid.UUID
     role: str
@@ -142,6 +153,7 @@ class MessageOut(_Out):
     document_ids: list[uuid.UUID]
     task_run_id: uuid.UUID | None
     proposal_id: uuid.UUID | None
+    links: list[ChatLink] = Field(default_factory=list)
     created_at: datetime
 
 
@@ -194,6 +206,10 @@ class RunOut(_Out):
     model_tier_reason: str | None = None
     # Non fatal notices, e.g. a chunk that could not be processed or a row/result count mismatch.
     warnings: list[str] = Field(default_factory=list)
+    # answer_question: links of the platform lookup and the deterministic hit list text (the
+    # answer without AI when no provider is released or the budget is exhausted).
+    links: list[ChatLink] = Field(default_factory=list)
+    lookup_answer: str | None = None
 
 
 class ProposalOut(_Out):

@@ -9,7 +9,17 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.ai import connection_test, embeddings, examples, gateway, imports, jobs, providers, tasks
+from mhvp.ai import (
+    connection_test,
+    embeddings,
+    examples,
+    gateway,
+    imports,
+    jobs,
+    lookup,
+    providers,
+    tasks,
+)
 from mhvp.ai import schemas as s
 from mhvp.ai.models import (
     AiConversation,
@@ -720,11 +730,19 @@ async def send_message(
             "context_type": conversation.context_type,
             "context_id": str(conversation.context_id) if conversation.context_id else None,
         }
-        ref = {
+        ref: dict[str, Any] = {
             "instruction": body.content,
             "document_ids": [str(d) for d in body.document_ids],
             "context": context,
         }
+        hash_extra: dict[str, Any] = {}
+        if task is AiTask.ANSWER_QUESTION:
+            # Platform lookup (rule AI-LOOKUP-01): in the caller's session under RLS, each tool
+            # gated by the permission of its regular endpoint; the result is the only source
+            # of chat links and the fallback answer without AI.
+            found = await lookup.run(session, principal.permissions, body.content)
+            ref["lookup"] = found
+            hash_extra["lookup"] = lookup.fingerprint(found)
         run = AiTaskRun(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -732,7 +750,10 @@ async def send_message(
             conversation_id=conversation.id,
             prompt_version=prompt.version,
             input_hash=gateway.input_hash(
-                task, prompt.version, body.content, {**context, "docs": ref["document_ids"]}
+                task,
+                prompt.version,
+                body.content,
+                {**context, "docs": ref["document_ids"], **hash_extra},
             ),
             input_ref=ref,
             status=RunStatus.QUEUED,
@@ -784,6 +805,9 @@ async def get_run(
         out.progress = ref.get("progress")
         out.model_tier_reason = ref.get("model_tier_reason")
         out.warnings = list(ref.get("warnings") or [])
+        if ref.get("lookup") is not None:
+            out.links = [s.ChatLink.model_validate(x) for x in lookup.links_of(ref["lookup"])]
+            out.lookup_answer = lookup.answer_text(ref["lookup"])
         out.proposal_id = await session.scalar(
             select(AiProposal.id).where(AiProposal.task_run_id == run.id)
         )
