@@ -544,11 +544,15 @@ async def mark_archive_pending_for_ticket(
     )
     for row in rows:
         row.archive_status = ARCHIVE_PENDING
+        # Expected state of the platform (rule M20-08): the echo of this archiving in the
+        # Gmail history is recognised as an own action, never as a user decision.
+        row.gmail_expected_state = "archived"
     return len(rows)
 
 
 def mark_archive_pending(message: Message) -> bool:
-    """Marks an inbound Gmail mail as ``pending`` unless it is already archived."""
+    """Marks an inbound Gmail mail as ``pending`` unless it is already archived. Sets
+    ``gmail_expected_state = archived`` in the same transaction (rule M20-08)."""
     if (
         message.direction != "in"
         or not message.gmail_message_id
@@ -557,6 +561,7 @@ def mark_archive_pending(message: Message) -> bool:
     ):
         return False
     message.archive_status = ARCHIVE_PENDING
+    message.gmail_expected_state = "archived"
     return True
 
 
@@ -666,29 +671,22 @@ async def complete_message(
     ``source`` is ``user`` (single action) or ``bulk`` (bulk action).
 
     Returns ``{"archive": bool, "ticket_closed": bool, "reason": str | None}``."""
-    from mhvp.core.db.tenancy import after_commit
+    from mhvp.communication.gmail_state import complete_group
     from mhvp.tickets.models import Ticket, TicketEvent, TicketStatus, WorkOrder
     from mhvp.tickets.resolution_kinds import active_kind_codes, load_resolution_kinds_config
     from mhvp.tickets.status import CLOSING_STATUSES, ResolutionIn, transition_status
 
     result: dict[str, Any] = {"archive": False, "ticket_closed": False, "reason": None}
     tenant_id = message.tenant_id
-    members = await duplicates.group_members(session, message) or [message]
-    group_ids = [m.id for m in members]
-    pending_ids: list[uuid.UUID] = []
-    for member in members:
-        if member.status != "done":
-            member.status = "done"
-        if mark_archive_pending(member):
-            pending_ids.append(member.id)
-    if pending_ids:
-
-        async def _archive() -> None:
-            await enqueue_archive_for_messages(session, settings, tenant_id, pending_ids)
-
-        after_commit(session, _archive)
-        result["archive"] = True
-    if message.ticket_id is None or message.direction != "in":
+    if message.direction != "in":
+        message.status = "done"
+        return result
+    completed = await complete_group(
+        session, settings, message, source=source, actor_user_id=actor_user_id
+    )
+    result["archive"] = bool(completed["archive"])
+    group_ids = list(completed["copy_ids"])
+    if message.ticket_id is None:
         return result
     ticket = await session.get(Ticket, message.ticket_id, with_for_update=True)
     if ticket is None or ticket.status in CLOSING_STATUSES:

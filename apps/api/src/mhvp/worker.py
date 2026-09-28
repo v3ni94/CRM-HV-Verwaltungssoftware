@@ -179,6 +179,19 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": crontab(hour=4, minute=10),
                 "options": {"queue": "mail"},
             },
+            # Gmail back channel (rule M20-08): hourly reconcile of the stored copy states
+            # with the inbox listing of every enabled Gmail mailbox (minute 17, queue mail).
+            "communication-gmail-state-reconcile": {
+                "task": "mhvp.communication.gmail_state_reconcile_all",
+                "schedule": crontab(minute=17),
+                "options": {"queue": "mail"},
+            },
+            # Gmail back channel (rule M20-08): settle periods of pending group decisions.
+            "communication-gmail-settle": {
+                "task": "mhvp.communication.gmail_settle_all",
+                "schedule": 60.0,
+                "options": {"queue": "mail"},
+            },
             # Catch up of Gmail archiving (operator 27.09.2026): every 15 minutes, all inbound
             # mails of the last 30 days that are done or requested but not archived; mailboxes
             # without gmail.modify wait until they are reconnected.

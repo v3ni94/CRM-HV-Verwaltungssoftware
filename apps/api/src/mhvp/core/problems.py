@@ -816,6 +816,41 @@ class ErrorCodes:
             "at all. Transient: retry later, the stored grant is not affected."
         ),
     )
+    # Rückkanal Gmail zu Plattform (rule M20-08, mhvp.communication.gmail_state).
+    GMAIL_RESTORE_DISABLED = ErrorCode(
+        "MHVP-COMM-0006",
+        422,
+        "Zurücklegen in den Gmail Posteingang ist aus",
+        (
+            "tenant_settings.gmail_restore_inbox_on_reopen is false: the platform never adds "
+            "the INBOX label back. Switch it on under Mandant, Erledigt aus Gmail first."
+        ),
+    )
+    GMAIL_SPIKE_NOT_CONFIRMED = ErrorCode(
+        "MHVP-COMM-0007",
+        422,
+        "Modus Übernehmen braucht den bestätigten Spike",
+        (
+            "gmail_done_sync_mode may be set to done only after POST /tenant/settings/"
+            "gmail-spike-confirm recorded the protocol of the Gmail behaviour test "
+            "(docs/integrations/gmail.md, section Spike)."
+        ),
+    )
+    RECONCILE_RUNNING = ErrorCode(
+        "MHVP-COMM-0008",
+        409,
+        "Abgleich läuft bereits",
+        "A reconcile of this mailbox is queued or running; wait for its result.",
+    )
+    GMAIL_REVERT_NOT_APPLICABLE = ErrorCode(
+        "MHVP-COMM-0009",
+        422,
+        "Keine automatische Entscheidung vorhanden",
+        (
+            "The mail was not completed by the Gmail back channel (done_source is not gmail) "
+            "and its ticket was not closed by it; there is nothing to revert."
+        ),
+    )
     # Lern-Workflow, rule proposals (rule M9-11, mhvp.automation.learning).
     RULE_PROPOSAL_NOT_OPEN = ErrorCode(
         "MHVP-AUTO-0001",

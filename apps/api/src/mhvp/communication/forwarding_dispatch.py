@@ -116,10 +116,22 @@ async def forward_and_archive(
         # Archivieren nur, wenn die Weiterleitung alle Anhänge enthält (H3); sonst bleibt das
         # Original mit der Rechnung im Posteingang sichtbar.
         if complete and message.gmail_message_id and mailbox.archive_on_ticket_done:
+            from mhvp.communication.tasks import _archive_result
+
+            # Own action for the back channel (rule M20-08): expected state before the call.
+            message.gmail_expected_state = "archived"
+            message.archive_status = "pending"
             try:
-                await client.archive(message.gmail_message_id)
-            except GmailScopeMissingError:
+                result = await client.archive(message.gmail_message_id)
+                if result.status == "gone":
+                    _archive_result(
+                        message, "archived", "Nachricht in Gmail nicht vorhanden (404)", gone=True
+                    )
+                else:
+                    _archive_result(message, "archived", history_id=result.history_id)
+            except GmailScopeMissingError as exc:
                 mailbox.archive_scope_missing = True
+                _archive_result(message, "scope_missing", str(exc))
     finally:
         await client.aclose()
     await emit(

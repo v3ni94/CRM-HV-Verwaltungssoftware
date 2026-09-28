@@ -2931,6 +2931,13 @@
       "approvalReason": {
         "azubi": "trainee",
         "neuer_mitarbeiter": "new employee"
+      },
+      "sync": {
+        "synchron": "In sync",
+        "abweichend": "Deviating",
+        "ausstehend": "Pending",
+        "geloescht": "Deleted in Gmail",
+        "unbekannt": "Unknown"
       }
     },
     "workOrders": {
@@ -2960,7 +2967,13 @@
         "manual": "manual"
       },
       "follow_up_of": "follow up to",
-      "follow_up_created": "follow up created"
+      "follow_up_created": "follow up created",
+      "autoCloseGmail": "automatically done from Gmail, mailbox {address}",
+      "reopenedGmail": "reopened from Gmail, mailbox {address}",
+      "reopenSkipped": "reopen skipped, window of {days} days elapsed",
+      "reverted": "automatic decision reverted",
+      "auto_close_skipped": "automatic close skipped",
+      "reopen_skipped": "reopen skipped"
     },
     "noComments": "No comments.",
     "portalAuthor": "Portal user",
@@ -3019,7 +3032,25 @@
       "successorsHint": "New emails for this closed ticket are handled in the follow up ticket."
     },
     "dueOnConfirmPast": "Confirm past date",
-    "dueOnDiscard": "Discard"
+    "dueOnDiscard": "Discard",
+    "autoCloseSkipped": {
+      "open_mails": "other mails open",
+      "open_work_order": "work order open",
+      "open_outbound": "reply not sent yet",
+      "open_proposal": "AI proposal open",
+      "open_assignment_review": "assignment review open",
+      "open_invoice": "invoice processing open",
+      "status_waiting": "ticket waiting",
+      "assigned_in_progress": "ticket assigned or in progress",
+      "keep_open_label": "work label in Gmail",
+      "ticket_close_disabled": "ticket close from Gmail is off",
+      "settle_pending": "settle period running",
+      "resolution_kind_disabled": "resolution kind information given is disabled",
+      "transition_refused": "completion check refused",
+      "deleted": "mail permanently deleted in Gmail",
+      "not_current": "ticket is not the end of its chain"
+    },
+    "systemAuthor": "System"
   },
   "Automation": {
     "title": "Automation",
@@ -3578,7 +3609,69 @@
     "inProgressBy": "In progress by {name}",
     "inProgress": "In progress",
     "duplicateBadge": "Duplicate",
-    "duplicateHint": "Copy of the same mail from another mailbox, linked to the leading copy"
+    "duplicateHint": "Copy of the same mail from another mailbox, linked to the leading copy",
+    "sync": {
+      "synchron": "In sync",
+      "abweichend": "Deviating",
+      "ausstehend": "Pending",
+      "geloescht": "Deleted in Gmail",
+      "unbekannt": "Unknown"
+    },
+    "syncFilter": "Gmail sync",
+    "syncFilterAll": "Sync: all",
+    "doneFromGmail": "Done from Gmail ({address})",
+    "doneFromGmailShort": "Done from Gmail",
+    "copyState": {
+      "inbox": "{address}: in the inbox",
+      "archived": "{address}: archived ({by}, {at})",
+      "trashed": "{address}: in the trash ({by}, {at})",
+      "spam": "{address}: marked as spam ({by}, {at})",
+      "deleted": "{address}: permanently deleted ({by}, {at})"
+    },
+    "copyStateShort": {
+      "inbox": "in the inbox",
+      "archived": "archived",
+      "trashed": "in the trash",
+      "spam": "spam",
+      "deleted": "deleted"
+    },
+    "copyBy": {
+      "user": "user",
+      "platform": "platform",
+      "reconcile": "reconcile"
+    },
+    "copyCollective": "Collective mailbox {address}",
+    "copyAuthoritative": "decides",
+    "copyHidden": "{address}: copy without read access",
+    "keepOpenLabel": "Filed in Gmail under label {label}, stays open.",
+    "settlePending": "Settle period until {until}, then the mail is taken over as done.",
+    "recordOnlyHint": "Record only: changes in Gmail are recorded, the status stays unchanged.",
+    "restoreInbox": "Back to the Gmail inbox",
+    "revertDecision": "Revert automatic decision",
+    "revertConfirm": "Revert the automatic completion from Gmail? Mail and ticket are reopened.",
+    "syncEvents": "Sync history",
+    "syncEventsEmpty": "No sync events.",
+    "syncEvent": {
+      "done": "taken over as done",
+      "reopened": "reopened",
+      "ignored_own": "own platform action",
+      "ignored_replay": "replay discarded",
+      "ignored_personal": "personal mailbox, not authoritative",
+      "ignored_spam": "spam never decides",
+      "ignored_keep_open": "work label keeps open",
+      "skipped_mode": "mode off",
+      "skipped_mailbox": "back channel of the mailbox off",
+      "noted": "recorded",
+      "settle_pending": "settle period running",
+      "completed": "group completed ({source})",
+      "reopened_group": "group reopened ({source})",
+      "restore_requested": "restore to the inbox requested"
+    },
+    "syncBackPaused": "The Gmail back channel is switched off for {addresses}.",
+    "lastSync": "Last fetch {address}: {at}",
+    "syncBackWarning": "Note: the Gmail back channel reports anomalies (reconcile failed, fetch older than 30 minutes or many fallback attributions).",
+    "trashNote": "Trash counts like archive.",
+    "deletedNote": "Permanently deleted mails never close a ticket."
   },
   "PlatformOverview": {
     "title": "Tenant overview",
@@ -4682,6 +4775,33 @@
     "invalid": "Please enter a whole number between 0 and 3650.",
     "readOnly": "Changing this requires the permission to update tenant settings."
   },
+  "GmailDoneSync": {
+    "title": "Take over done from Gmail",
+    "description": "When someone archives or deletes a mail in Gmail, the platform takes that over as done. The collective mailbox decides. If only a personal mailbox archives, the mail stays open until the collective mailbox has archived it too. Without a collective mailbox every mailbox must have archived. Nothing is deleted, the original stays stored.",
+    "mode": "Level",
+    "modeOff": "Off",
+    "modeRecordOnly": "Record only",
+    "modeDone": "Take over",
+    "spikeRequired": "only after the confirmed test of the Gmail behaviour",
+    "closesTicket": "Close the ticket automatically when nothing is open",
+    "closesTicketHint": "The close happens only without open mails, work orders, replies, proposals and invoices and is logged with an internal comment and a notification.",
+    "closeAssigned": "Also close assigned tickets or tickets in progress",
+    "doneOnTrash": "Trash counts like archive",
+    "reopenOnUnarchive": "Restoring in Gmail reopens the mail",
+    "restoreInbox": "Put back into the Gmail inbox when reopened in the CRM",
+    "restoreInboxHint": "Default off: the platform sets the INBOX label in personal mailboxes only with this switch.",
+    "settleSeconds": "Settle period in seconds",
+    "settleHint": "0 to 3600 seconds. Undo, snooze or trash in two steps trigger a status change only after it ended.",
+    "graceSeconds": "Reconcile grace in seconds",
+    "graceHint": "60 to 3600 seconds. The reconcile leaves freshly changed mails alone for this long.",
+    "keepOpenLabels": "Work labels (comma separated)",
+    "keepOpenLabelsHint": "Mails filed in Gmail under one of these labels stay open. At most 20, no system labels.",
+    "save": "Save",
+    "saved": "Saved.",
+    "invalid": "Please enter valid values: settle period 0 to 3600, grace 60 to 3600, at most 20 work labels.",
+    "readOnly": "Changing this requires the permission to update tenant settings.",
+    "latencyHint": "Changes in Gmail are detected immediately via push, otherwise within five minutes. A status change additionally waits for the settle period."
+  },
   "DatevMappings": {
     "title": "DATEV account mapping",
     "description": "Assignment of CRM account numbers to the tax advisor's DATEV accounts. The batch export uses this mapping and stops while accounts with postings are unmapped.",
@@ -4903,7 +5023,17 @@
       "failed": "Full fetch aborted at {done} of {total} messages, start again to resume"
     },
     "archiveScopeMissing": "Reconnect the mailbox, permission to archive is missing. Completed mail and closed tickets are archived out of the inbox only after the Google connection is renewed; open jobs are caught up automatically afterwards.",
-    "reconnectGoogle": "Reconnect with Google"
+    "reconnectGoogle": "Reconnect with Google",
+    "syncBackEnabled": "Gmail back channel",
+    "syncBackHint": "Archivings, trash and restores of this mailbox are taken over into the platform.",
+    "collectiveHint": "Collective mailbox: with the Gmail back channel this mailbox decides about completion.",
+    "lastReconcile": "Last reconcile {at}: {checked} checked, {deviating} deviating",
+    "reconcilePreview": "Reconcile preview",
+    "reconcileNow": "Start reconcile",
+    "reconcileRunning": "Reconcile running",
+    "previewTitle": "Reconcile preview (no effect)",
+    "previewClose": "Close",
+    "previewSummary": "Would take over: {archive} archived, {trash} in the trash, {delete} deleted, {reopen} back in the inbox, {own} own actions."
   },
   "Dms": {
     "area": "Administration",

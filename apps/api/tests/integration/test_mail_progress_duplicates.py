@@ -1173,6 +1173,10 @@ class _FakeGmail:
             await hook()
         return self.raws[mid], None
 
+    async def raw_message_full(self, mid: str) -> tuple[bytes, str | None, list[str] | None]:
+        raw, thread = await self.raw_message_with_thread(mid)
+        return raw, thread, None
+
 
 def _sql_rows(database: Database, tenant: Any, statement: str, **params: Any) -> list[Any]:
     engine = sa.create_engine(database.migrator_url)

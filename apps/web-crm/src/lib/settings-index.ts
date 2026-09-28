@@ -120,6 +120,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["tenant_settings:read"],
   },
   {
+    id: "mandant-gmail-done-sync",
+    title: "Erledigt aus Gmail übernehmen",
+    breadcrumb: [ROOT, "Mandant und Briefbogen", "Erledigt aus Gmail übernehmen"],
+    href: "/einstellungen/mandant#gmail-done-sync-title",
+    keywords: ["Gmail", "archiviert", "erledigt", "Rückkanal", "Sammelpostfach", "papierkorb", "wiederherstellen"],
+    permission: ["tenant_settings:read"],
+  },
+  {
     id: "mandant-messdienstleister-modul",
     title: "Messdienstleister-Modul",
     breadcrumb: [ROOT, "Mandant und Briefbogen", "Messdienstleister-Modul"],

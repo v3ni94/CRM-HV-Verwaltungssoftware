@@ -240,7 +240,7 @@ def test_ticket_closing_status_archives_linked_and_thread_mails(
             world,
             database,
             redis_url,
-            "UPDATE message SET archived_at = NULL, archive_status = NULL "
+            "UPDATE message SET archived_at = NULL, archive_status = NULL, gmail_state = NULL "
             "WHERE id IN (:a, :b) RETURNING 1",
             {"a": first["id"], "b": later["id"]},
         )

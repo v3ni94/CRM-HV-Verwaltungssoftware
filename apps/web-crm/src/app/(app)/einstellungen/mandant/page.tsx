@@ -9,6 +9,7 @@ import { ManagerEntitySetup, type ManagerEntityStatus } from "@/components/setti
 import { AiLearningExamples } from "@/components/settings/AiLearningExamples";
 import { ResolutionKindsSettings } from "@/components/settings/ResolutionKindsSettings";
 import { MeteringModuleSwitch } from "@/components/settings/MeteringModuleSwitch";
+import { GMAIL_DONE_SYNC_DEFAULTS, GmailDoneSync, type GmailDoneSyncSettings } from "@/components/settings/GmailDoneSync";
 import { TicketReopenWindow } from "@/components/settings/TicketReopenWindow";
 import { TicketReplyApprovalAll } from "@/components/settings/TicketReplyApprovalAll";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -46,6 +47,11 @@ export default async function CompanySettingsPage() {
       <TicketReplyApprovalAll initial={settings.data.ticket_reply_approval_all} canUpdate={can("tenant_settings:update")} />
       <TicketReopenWindow
         initial={settings.data.ticket_reopen_window_days ?? 30}
+        canUpdate={can("tenant_settings:update")}
+      />
+      <GmailDoneSync
+        initial={{ ...GMAIL_DONE_SYNC_DEFAULTS, ...(settings.data as Partial<GmailDoneSyncSettings>) }}
+        version={settings.data.version}
         canUpdate={can("tenant_settings:update")}
       />
       <MeteringModuleSwitch initial={settings.data.metering_module_enabled ?? false} canUpdate={can("tenant_settings:update")} />

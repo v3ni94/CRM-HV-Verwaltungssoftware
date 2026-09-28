@@ -72,6 +72,7 @@ from mhvp.platform.schemas import (
     GateRequestCreate,
     GateRequestOut,
     GateStateOut,
+    GmailSpikeConfirmIn,
     LegalEntityOption,
     MemberCompetences,
     MemberCreate,
@@ -395,8 +396,36 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         mail_approval_mode=row.mail_approval_mode,
         signature_template=SignatureTemplate.model_validate(row.signature_template or {}),
         position_catalogue_extra=[str(p) for p in (row.position_catalogue_extra or [])],
+        gmail_done_sync_mode=row.gmail_done_sync_mode,
+        gmail_done_closes_ticket=row.gmail_done_closes_ticket,
+        gmail_done_on_trash=row.gmail_done_on_trash,
+        gmail_reopen_on_unarchive=row.gmail_reopen_on_unarchive,
+        gmail_restore_inbox_on_reopen=row.gmail_restore_inbox_on_reopen,
+        gmail_settle_seconds=row.gmail_settle_seconds,
+        gmail_reconcile_grace_seconds=row.gmail_reconcile_grace_seconds,
+        gmail_keep_open_labels=[str(x) for x in (row.gmail_keep_open_labels or [])],
+        gmail_close_assigned_tickets=row.gmail_close_assigned_tickets,
+        gmail_spike_confirmed_at=row.gmail_spike_confirmed_at,
+        gmail_spike_protocol_ref=row.gmail_spike_protocol_ref,
         version=row.version,
     )
+
+
+GMAIL_SETTING_FIELDS = (
+    "gmail_done_sync_mode",
+    "gmail_done_closes_ticket",
+    "gmail_done_on_trash",
+    "gmail_reopen_on_unarchive",
+    "gmail_restore_inbox_on_reopen",
+    "gmail_settle_seconds",
+    "gmail_reconcile_grace_seconds",
+    "gmail_keep_open_labels",
+    "gmail_close_assigned_tickets",
+)
+
+
+def _gmail_settings_snapshot(row: TenantSettings) -> dict[str, Any]:
+    return {field: getattr(row, field) for field in GMAIL_SETTING_FIELDS}
 
 
 @tenant_router.get("/settings", summary="Mandanteneinstellungen")
@@ -441,6 +470,7 @@ async def patch_settings(
             "mail_approval_mode": row.mail_approval_mode,
             "signature_template": row.signature_template,
             "position_catalogue_extra": row.position_catalogue_extra,
+            **_gmail_settings_snapshot(row),
         }
         if body.company is not None:
             row.company = body.company.model_dump(mode="json")
@@ -482,6 +512,16 @@ async def patch_settings(
             row.signature_template = body.signature_template.model_dump(mode="json")
         if body.position_catalogue_extra is not None:
             row.position_catalogue_extra = list(body.position_catalogue_extra)
+        # Rückkanal Gmail zu Plattform (rule M20-08): mode done only after the confirmed
+        # spike; every change is recorded in the event with before and after.
+        if body.gmail_done_sync_mode is not None:
+            if body.gmail_done_sync_mode == "done" and row.gmail_spike_confirmed_at is None:
+                raise ProblemError(ErrorCodes.GMAIL_SPIKE_NOT_CONFIRMED)
+            row.gmail_done_sync_mode = body.gmail_done_sync_mode
+        for field in GMAIL_SETTING_FIELDS[1:]:
+            value = getattr(body, field)
+            if value is not None:
+                setattr(row, field, list(value) if isinstance(value, list) else value)
         after = {
             "company": row.company,
             "branding": row.branding,
@@ -496,6 +536,7 @@ async def patch_settings(
             "mail_approval_mode": row.mail_approval_mode,
             "signature_template": row.signature_template,
             "position_catalogue_extra": row.position_catalogue_extra,
+            **_gmail_settings_snapshot(row),
         }
         changes = diff(before, after)
         if changes:
@@ -512,6 +553,48 @@ async def patch_settings(
                 changes=changes,
             )
         response.headers["ETag"] = f'"{row.version}"'
+        return _settings_out(row)
+
+
+@tenant_router.post(
+    "/settings/gmail-spike-confirm", summary="Spike des Gmail Rückkanals als bestanden vermerken"
+)
+async def confirm_gmail_spike(
+    body: GmailSpikeConfirmIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> TenantSettingsOut:
+    """Rule M20-08, Abschnitt 13: der Modus ``done`` ist erst nach dem protokollierten Test des
+    Gmail Verhaltens (``docs/integrations/gmail.md``) erlaubt. ``protocol_ref`` verweist auf
+    das Protokoll; Zeitpunkt und Nutzer werden protokolliert (``tenant_settings.updated``)."""
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise _not_found()
+        before = {
+            "gmail_spike_confirmed_at": row.gmail_spike_confirmed_at,
+            "gmail_spike_protocol_ref": row.gmail_spike_protocol_ref,
+        }
+        row.gmail_spike_confirmed_at = datetime.now(UTC)
+        row.gmail_spike_protocol_ref = body.protocol_ref
+        row.version += 1
+        row.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=row.tenant_id,
+            type="tenant_settings.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"fields": ["gmail_spike_confirmed_at", "gmail_spike_protocol_ref"]},
+            changes=diff(
+                {k: (v.isoformat() if isinstance(v, datetime) else v) for k, v in before.items()},
+                {
+                    "gmail_spike_confirmed_at": row.gmail_spike_confirmed_at.isoformat(),
+                    "gmail_spike_protocol_ref": row.gmail_spike_protocol_ref,
+                },
+            ),
+        )
         return _settings_out(row)
 
 

@@ -19843,6 +19843,22 @@
         "title": "GateStateOut",
         "type": "object"
       },
+      "GmailSpikeConfirmIn": {
+        "additionalProperties": false,
+        "properties": {
+          "protocol_ref": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Protocol Ref",
+            "type": "string"
+          }
+        },
+        "required": [
+          "protocol_ref"
+        ],
+        "title": "GmailSpikeConfirmIn",
+        "type": "object"
+      },
       "GoogleCalendarPatchIn": {
         "additionalProperties": false,
         "properties": {
@@ -27582,6 +27598,17 @@
               }
             ],
             "title": "Secret"
+          },
+          "sync_back_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Back Enabled"
           }
         },
         "title": "MailboxPatchIn",
@@ -38317,6 +38344,18 @@
         "title": "RecomputeRolesOut",
         "type": "object"
       },
+      "ReconcileStateIn": {
+        "additionalProperties": false,
+        "properties": {
+          "preview": {
+            "default": false,
+            "title": "Preview",
+            "type": "boolean"
+          }
+        },
+        "title": "ReconcileStateIn",
+        "type": "object"
+      },
       "ReconciliationNoteIn": {
         "additionalProperties": false,
         "description": "Explained difference of the cash flow reconciliation (W04): signed amount that bridges\nthe costs booked in the year to the distributed costs, with the reason.",
@@ -40509,6 +40548,25 @@
           "reason"
         ],
         "title": "ReverseIn",
+        "type": "object"
+      },
+      "RevertGmailDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "event_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Event Id"
+          }
+        },
+        "title": "RevertGmailDecisionIn",
         "type": "object"
       },
       "ReviewStatus": {
@@ -45255,6 +45313,76 @@
           "company": {
             "$ref": "#/components/schemas/CompanyData"
           },
+          "gmail_close_assigned_tickets": {
+            "default": false,
+            "title": "Gmail Close Assigned Tickets",
+            "type": "boolean"
+          },
+          "gmail_done_closes_ticket": {
+            "default": false,
+            "title": "Gmail Done Closes Ticket",
+            "type": "boolean"
+          },
+          "gmail_done_on_trash": {
+            "default": true,
+            "title": "Gmail Done On Trash",
+            "type": "boolean"
+          },
+          "gmail_done_sync_mode": {
+            "default": "record_only",
+            "title": "Gmail Done Sync Mode",
+            "type": "string"
+          },
+          "gmail_keep_open_labels": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Gmail Keep Open Labels",
+            "type": "array"
+          },
+          "gmail_reconcile_grace_seconds": {
+            "default": 300,
+            "title": "Gmail Reconcile Grace Seconds",
+            "type": "integer"
+          },
+          "gmail_reopen_on_unarchive": {
+            "default": true,
+            "title": "Gmail Reopen On Unarchive",
+            "type": "boolean"
+          },
+          "gmail_restore_inbox_on_reopen": {
+            "default": false,
+            "title": "Gmail Restore Inbox On Reopen",
+            "type": "boolean"
+          },
+          "gmail_settle_seconds": {
+            "default": 600,
+            "title": "Gmail Settle Seconds",
+            "type": "integer"
+          },
+          "gmail_spike_confirmed_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Spike Confirmed At"
+          },
+          "gmail_spike_protocol_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Spike Protocol Ref"
+          },
           "mail_approval_mode": {
             "default": "external_only",
             "title": "Mail Approval Mode",
@@ -45370,6 +45498,114 @@
                 "type": "null"
               }
             ]
+          },
+          "gmail_close_assigned_tickets": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Close Assigned Tickets"
+          },
+          "gmail_done_closes_ticket": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Done Closes Ticket"
+          },
+          "gmail_done_on_trash": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Done On Trash"
+          },
+          "gmail_done_sync_mode": {
+            "anyOf": [
+              {
+                "pattern": "^(off|record_only|done)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Done Sync Mode"
+          },
+          "gmail_keep_open_labels": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Keep Open Labels"
+          },
+          "gmail_reconcile_grace_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 60.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Reconcile Grace Seconds"
+          },
+          "gmail_reopen_on_unarchive": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Reopen On Unarchive"
+          },
+          "gmail_restore_inbox_on_reopen": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Restore Inbox On Reopen"
+          },
+          "gmail_settle_seconds": {
+            "anyOf": [
+              {
+                "maximum": 3600.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Gmail Settle Seconds"
           },
           "mail_approval_mode": {
             "anyOf": [
@@ -83970,6 +84206,62 @@
         ]
       }
     },
+    "/api/v1/mail/mailboxes/{mailbox_id}/reconcile-state": {
+      "post": {
+        "description": "``preview=true`` vergleicht synchron und schreibt nichts (Zähler und bis zu 50\nBeispiele); sonst wird der Abgleich in die Warteschlange ``mail`` gestellt (202), inline\nohne Worker. 409, solange ein Abgleich läuft.",
+        "operationId": "reconcile_mailbox_state_api_v1_mail_mailboxes__mailbox_id__reconcile_state_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "mailbox_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Mailbox Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconcileStateIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reconcile Mailbox State Api V1 Mail Mailboxes  Mailbox Id  Reconcile State Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgleich der Gmail Zustände (Rückkanal M20-08): Vorschau oder Lauf",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/mailboxes/{mailbox_id}/sync": {
       "post": {
         "operationId": "sync_mailbox_now_api_v1_mail_mailboxes__mailbox_id__sync_post",
@@ -84066,6 +84358,32 @@
           }
         },
         "summary": "Postfach für Benutzer freigeben",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/maintenance/align-copies": {
+      "post": {
+        "description": "Bestandsfix 1.42.2: Kopien derselben Mail in weiteren eigenen Postfächern, deren Status\nvon der führenden Kopie abweicht (Erledigt vor dem Fix nur auf der angeklickten Kopie),\nübernehmen den Status der führenden Kopie. Je Zeile ein Ereignis ``message.copy_aligned``\nmit dem vorherigen Status; idempotent, nichts wird gelöscht.",
+        "operationId": "align_copies_api_v1_mail_maintenance_align_copies_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "integer"
+                  },
+                  "title": "Response Align Copies Api V1 Mail Maintenance Align Copies Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Wartung: Status der Kopien an die führende Kopie angleichen",
         "tags": [
           "Postfach"
         ]
@@ -84269,6 +84587,25 @@
               ],
               "description": "Einträge je Seite (max. 200); ohne Angabe gilt limit (erste Seite)",
               "title": "Page Size"
+            }
+          },
+          {
+            "description": "Abgleichstand mit Gmail (Rückkanal M20-08)",
+            "in": "query",
+            "name": "sync_state",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "pattern": "^(abweichend|ausstehend|geloescht)$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Abgleichstand mit Gmail (Rückkanal M20-08)",
+              "title": "Sync State"
             }
           }
         ],
@@ -85613,6 +85950,108 @@
         ]
       }
     },
+    "/api/v1/mail/messages/{message_id}/restore-inbox": {
+      "post": {
+        "description": "Öffnet die Gruppe wieder und legt archivierte oder gelöschte Kopien in den Posteingang\nzurück; 422 ``GMAIL_RESTORE_DISABLED``, solange der Mandantenschalter aus ist.",
+        "operationId": "restore_inbox_api_v1_mail_messages__message_id__restore_inbox_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Restore Inbox Api V1 Mail Messages  Message Id  Restore Inbox Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mail in den Gmail Posteingang zurücklegen (Rückkanal M20-08)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/revert-gmail-decision": {
+      "post": {
+        "description": "Hebt eine automatische Erledigung aus Gmail auf: Mail offen, Ticket ohne Fensterprüfung\nwieder in Bearbeitung, Ereignis ``reverted``. 422, wenn nichts automatisch entschieden\nwurde (``done_source`` nicht gmail und Ticket nicht durch den Rückkanal geschlossen).",
+        "operationId": "revert_gmail_decision_api_v1_mail_messages__message_id__revert_gmail_decision_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RevertGmailDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Revert Gmail Decision Api V1 Mail Messages  Message Id  Revert Gmail Decision Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Automatik zurücknehmen (Rückkanal M20-08, P05)",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/messages/{message_id}/submit": {
       "post": {
         "operationId": "submit_api_v1_mail_messages__message_id__submit_post",
@@ -85698,6 +86137,55 @@
           }
         },
         "summary": "KI-Vorschlag neu berechnen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/sync-events": {
+      "get": {
+        "description": "Ereignisse ``message.gmail_state_changed``, ``message.completed``, ``message.reopened``\nund ``message.gmail_restore_requested`` aller Kopien der Gruppe, älteste zuerst.",
+        "operationId": "message_sync_events_api_v1_mail_messages__message_id__sync_events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Message Sync Events Api V1 Mail Messages  Message Id  Sync Events Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgleichereignisse der Mail mit Gmail (Rückkanal M20-08)",
         "tags": [
           "Postfach"
         ]
@@ -104100,6 +104588,48 @@
           }
         },
         "summary": "Mandanteneinstellungen ändern",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/settings/gmail-spike-confirm": {
+      "post": {
+        "description": "Rule M20-08, Abschnitt 13: der Modus ``done`` ist erst nach dem protokollierten Test des\nGmail Verhaltens (``docs/integrations/gmail.md``) erlaubt. ``protocol_ref`` verweist auf\ndas Protokoll; Zeitpunkt und Nutzer werden protokolliert (``tenant_settings.updated``).",
+        "operationId": "confirm_gmail_spike_api_v1_tenant_settings_gmail_spike_confirm_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GmailSpikeConfirmIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantSettingsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Spike des Gmail Rückkanals als bestanden vermerken",
         "tags": [
           "Mandant"
         ]

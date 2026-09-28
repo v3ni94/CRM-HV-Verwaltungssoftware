@@ -28,6 +28,24 @@ export type Mailbox = {
   backfill_finished_at?: string | null;
   archive_on_ticket_done?: boolean;
   archive_scope_missing?: boolean;
+  is_collective?: boolean;
+  // Rückkanal Gmail zu Plattform (M20-08).
+  sync_back_enabled?: boolean;
+  gmail_last_sync_at?: string | null;
+  gmail_state_reconciled_at?: string | null;
+  gmail_state_reconcile_status?: string;
+  gmail_state_reconcile_counts?: Record<string, number>;
+  sync_back_warning?: boolean;
+};
+export type ReconcilePreview = {
+  checked: number;
+  would_archive: number;
+  would_trash: number;
+  would_delete: number;
+  would_reopen: number;
+  own: number;
+  deferred: number;
+  samples: { message_id: string; subject: string | null; ticket_id: string | null; action: string }[];
 };
 export type Member = { user_id: string; email: string; display_name: string; status: string };
 
@@ -119,7 +137,16 @@ function MailboxRow({
     if (res.ok) apply(res.data);
     else setError(res.message);
   };
-  const patch = (body: Partial<Pick<Mailbox, "enabled" | "is_default" | "calendar_enabled">>) =>
+  const [preview, setPreview] = useState<ReconcilePreview | null>(null);
+  const reconcile = (previewOnly: boolean) =>
+    run<ReconcilePreview | { queued: boolean }>(
+      () => bff(`/api/bff/mail/mailboxes/${box.id}/reconcile-state`, { method: "POST", body: JSON.stringify({ preview: previewOnly }) }),
+      (r) => {
+        if (previewOnly) setPreview(r as ReconcilePreview);
+        else onChange({ ...box, gmail_state_reconcile_status: "queued" });
+      },
+    );
+  const patch = (body: Partial<Pick<Mailbox, "enabled" | "is_default" | "calendar_enabled" | "sync_back_enabled">>) =>
     run<Mailbox>(() => bff(`/api/bff/mail/mailboxes/${box.id}`, { method: "PATCH", body: JSON.stringify(body) }), onChange);
   const toggleUser = (userId: string, on: boolean) => {
     const user_ids = on ? [...box.user_ids, userId] : box.user_ids.filter((u) => u !== userId);
@@ -206,8 +233,36 @@ function MailboxRow({
           </label>
         ) : null}
         {box.kind === "gmail" ? (
+          <label className="flex items-center gap-1.5" title={t("syncBackHint")}>
+            <input
+              type="checkbox"
+              checked={box.sync_back_enabled !== false}
+              disabled={busy}
+              onChange={(e) => void patch({ sync_back_enabled: e.target.checked })}
+              data-testid="sync-back-enabled"
+            />
+            {t("syncBackEnabled")}
+          </label>
+        ) : null}
+        {box.kind === "gmail" ? (
           <button type="button" className={ui.button} disabled={busy} onClick={() => void sync()}>
             {t("syncNow")}
+          </button>
+        ) : null}
+        {box.kind === "gmail" ? (
+          <button type="button" className={ui.button} disabled={busy} onClick={() => void reconcile(true)} data-testid="reconcile-preview">
+            {t("reconcilePreview")}
+          </button>
+        ) : null}
+        {box.kind === "gmail" ? (
+          <button
+            type="button"
+            className={ui.button}
+            disabled={busy || box.gmail_state_reconcile_status === "queued" || box.gmail_state_reconcile_status === "running"}
+            onClick={() => void reconcile(false)}
+            data-testid="reconcile-now"
+          >
+            {box.gmail_state_reconcile_status === "queued" || box.gmail_state_reconcile_status === "running" ? t("reconcileRunning") : t("reconcileNow")}
           </button>
         ) : null}
         {box.kind === "gmail" ? (
@@ -221,6 +276,48 @@ function MailboxRow({
         {syncInfo ? <span className="text-xs text-success-fg">{syncInfo}</span> : null}
       </div>
       {box.kind === "gmail" && box.calendar_enabled ? <p className="text-xs text-muted">{t("calendarHint")}</p> : null}
+      {box.kind === "gmail" && box.is_collective ? <p className="text-xs text-muted">{t("collectiveHint")}</p> : null}
+      {box.kind === "gmail" && box.gmail_state_reconciled_at ? (
+        <p className="text-xs text-muted" data-testid="last-reconcile">
+          {t("lastReconcile", {
+            at: fmt(box.gmail_state_reconciled_at),
+            checked: box.gmail_state_reconcile_counts?.checked ?? 0,
+            deviating:
+              (box.gmail_state_reconcile_counts?.archived ?? 0) +
+              (box.gmail_state_reconcile_counts?.trashed ?? 0) +
+              (box.gmail_state_reconcile_counts?.deleted ?? 0) +
+              (box.gmail_state_reconcile_counts?.returned ?? 0),
+          })}
+        </p>
+      ) : null}
+      {preview ? (
+        <div role="dialog" aria-label={t("previewTitle")} className={`${ui.card} flex flex-col gap-2 text-sm`} data-testid="reconcile-preview-dialog">
+          <div className="flex items-center justify-between gap-2">
+            <span className="font-medium">{t("previewTitle")}</span>
+            <button type="button" className={ui.button} onClick={() => setPreview(null)}>
+              {t("previewClose")}
+            </button>
+          </div>
+          <p className="text-xs text-muted">
+            {t("previewSummary", {
+              archive: preview.would_archive,
+              trash: preview.would_trash,
+              delete: preview.would_delete,
+              reopen: preview.would_reopen,
+              own: preview.own,
+            })}
+          </p>
+          {preview.samples.length > 0 ? (
+            <ul className="text-xs text-muted">
+              {preview.samples.map((s) => (
+                <li key={s.message_id}>
+                  {s.action}: {s.subject || "ohne Betreff"}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+      ) : null}
       {box.is_default ? (
         <p className="text-xs text-muted">{t("defaultHint")}</p>
       ) : (

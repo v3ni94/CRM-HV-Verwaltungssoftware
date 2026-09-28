@@ -159,4 +159,33 @@ describe("MailList", () => {
     expect(screen.queryByTestId("mail-bulk-bar")).not.toBeInTheDocument();
     fetchSpy.mockRestore();
   });
+
+  it("shows the Gmail sync chip per state, hides it when off and marks done from Gmail (M20-08)", () => {
+    const messages = [
+      makeMessage({
+        id: "m1",
+        subject: "Kopie in timo",
+        gmail_sync: {
+          state: "abweichend",
+          copies: [
+            { mailbox_address: "timo@example.com", is_collective: false, authoritative: false, gmail_state: "archived", visible: true },
+            { mailbox_address: "info@example.com", is_collective: true, authoritative: true, gmail_state: "inbox", visible: true },
+          ],
+        },
+      }),
+      makeMessage({ id: "m2", subject: "Ohne Abgleich", gmail_sync: { state: "aus", copies: [] } }),
+      makeMessage({
+        id: "m3",
+        subject: "Aus Gmail erledigt",
+        status: "done",
+        done_source: "gmail",
+        gmail_sync: { state: "synchron", copies: [{ mailbox_address: "info@example.com", is_collective: true, authoritative: true, gmail_state: "archived", visible: true }] },
+      }),
+    ];
+    renderIntl(<MailList messages={messages} selectedId={null} onSelect={() => {}} loading={false} />);
+    expect(screen.getByText("Abweichend")).toBeInTheDocument();
+    expect(screen.getByText("Synchron")).toBeInTheDocument();
+    expect(screen.queryByText("Unbekannt")).not.toBeInTheDocument();
+    expect(screen.getByTestId("done-from-gmail").textContent).toContain("info@example.com");
+  });
 });

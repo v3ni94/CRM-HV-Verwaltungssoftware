@@ -209,6 +209,7 @@ async def transition_status(
     bulk: bool = False,
     skip_flow: bool = False,
     resolution: ResolutionIn | None = None,
+    extra_payload: dict[str, Any] | None = None,
 ) -> bool:
     """Applies a status change with all side effects. Returns False when the status is
     unchanged. Raises ``ProblemError`` for a forbidden transition or failed completion checks.
@@ -264,7 +265,14 @@ async def transition_status(
         entity_type="ticket",
         entity_id=ticket.id,
         actor_user_id=actor_user_id,
-        payload={"from": previous.value, "to": new_status.value, "number": ticket.number},
+        payload={
+            "from": previous.value,
+            "to": new_status.value,
+            "number": ticket.number,
+            # Automatic close by the Gmail back channel (rule M20-08) adds source and
+            # auto_close so automation rules can exclude it (condition on payload.source).
+            **(extra_payload or {}),
+        },
     )
     # Claims adjuster link (INT-SDT-01): a mapped status of a linked ticket is queued for
     # PATCH; the call itself runs in the outbound job, never in this request.

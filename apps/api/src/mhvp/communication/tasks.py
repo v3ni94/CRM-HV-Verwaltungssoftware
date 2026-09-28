@@ -9,7 +9,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from celery import shared_task
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
@@ -432,14 +432,32 @@ ARCHIVE_RETRY_LIMIT = 200
 ARCHIVE_OPEN_STATUSES = ("pending", "failed", "scope_missing")
 
 
-def _archive_result(message: Any, status: str, error: str | None = None) -> None:
-    """Records the outcome of one archive attempt on the message (visible in the CRM)."""
+def _archive_result(
+    message: Any,
+    status: str,
+    error: str | None = None,
+    history_id: int | None = None,
+    *,
+    gone: bool = False,
+) -> None:
+    """Records the outcome of one archive attempt on the message (visible in the CRM). A
+    success also stores the copy state of the back channel (rule M20-08): ``archived`` by
+    the platform with the ``historyId`` of the modify answer; a 404 (``gone``) keeps the
+    terminal status ``archived`` with the reason and the state ``deleted``."""
     now = datetime.now(UTC)
     message.archive_status = status
     message.archive_error = error[:1000] if error else None
     message.archive_attempted_at = now
     if status == "archived":
         message.archived_at = now
+        message.gmail_expected_state = "archived"
+        if gone or message.gmail_state in (None, "inbox"):
+            # A copy the user already trashed or archived keeps its own state.
+            message.gmail_state = "deleted" if gone else "archived"
+            message.gmail_state_by = "platform"
+            message.gmail_state_at = now
+        if history_id is not None:
+            message.archive_history_id = history_id
 
 
 async def _archive_messages(
@@ -466,6 +484,12 @@ async def _archive_messages(
         for message in messages:
             if message.archived_at is not None:
                 continue  # idempotent: done earlier
+            if message.gmail_state in ("archived", "trashed", "spam", "deleted"):
+                # Already out of the inbox by a user action (rule M20-08): no Gmail write,
+                # the request is fulfilled and the user's state stays.
+                _archive_result(message, "archived", "Bereits aus dem Posteingang (Gmail).")
+                counts["archived"] += 1
+                continue
             if message.mailbox_id is None or message.gmail_message_id is None:
                 _archive_result(message, "skipped", "Keine Gmail-Nachricht.")
                 counts["skipped"] += 1
@@ -497,8 +521,14 @@ async def _archive_messages(
                     continue
                 clients[mailbox.id] = client
             try:
-                await client.archive(message.gmail_message_id)
-                _archive_result(message, "archived")
+                message.gmail_expected_state = "archived"  # before the Gmail write (M20-08)
+                result = await client.archive(message.gmail_message_id)
+                if result.status == "gone":
+                    _archive_result(
+                        message, "archived", "Nachricht in Gmail nicht vorhanden (404)", gone=True
+                    )
+                else:
+                    _archive_result(message, "archived", history_id=result.history_id)
                 counts["archived"] += 1
             except GmailScopeMissingError as exc:
                 mailbox.archive_scope_missing = True
@@ -538,6 +568,8 @@ def _archive_candidates(ticket_id: uuid.UUID) -> Any:
             Message.gmail_message_id.is_not(None),
             Message.direction == "in",
             Message.archived_at.is_(None),
+            # A copy the user already archived or trashed (rule M20-08) needs no request.
+            or_(Message.gmail_state.is_(None), Message.gmail_state == "inbox"),
             (
                 (Message.ticket_id == ticket_id)
                 | (
@@ -582,6 +614,8 @@ async def archive_messages_once(
     try:
         factory = create_session_factory(engine)
         async with tenant_transaction(factory, tenant_id) as session:
+            # Only requested rows (``pending``, rule M20-08): a rolled back savepoint of the
+            # back channel leaves no mark, so the queued job must never archive its rows.
             messages = list(
                 await session.scalars(
                     select(Message)
@@ -590,6 +624,7 @@ async def archive_messages_once(
                         Message.gmail_message_id.is_not(None),
                         Message.direction == "in",
                         Message.archived_at.is_(None),
+                        Message.archive_status == "pending",
                     )
                     .with_for_update(skip_locked=True)
                 )
@@ -727,3 +762,205 @@ def archive_retry(self: Any, tenant_id: str) -> dict[str, int]:
 @shared_task(name="mhvp.communication.archive_retry_all")
 def archive_retry_all() -> dict[str, int]:
     return asyncio.run(archive_retry_all_once(get_settings()))
+
+
+# Gmail back channel (rule M20-08) ------------------------------------------------------------
+
+
+async def gmail_state_reconcile_once(
+    settings: Settings, tenant_id: uuid.UUID, mailbox_id: uuid.UUID
+) -> dict[str, Any]:
+    """Full reconcile of one mailbox (``gmail_state.reconcile_mailbox``) under the mailbox
+    lock, own connection and transaction; a failure is recorded on the mailbox."""
+    from mhvp.communication import gmail_state
+    from mhvp.communication.gmail import make_client, oauth_client
+    from mhvp.communication.models import Mailbox
+
+    _ensure_crypto(settings)
+    engine = _engine(settings)
+    try:
+        factory = create_session_factory(engine)
+        try:
+            async with tenant_transaction(factory, tenant_id) as session:
+                box = await session.get(Mailbox, mailbox_id, with_for_update=True)
+                if box is None or box.deleted_at is not None or box.kind != "gmail":
+                    return {"status": "skipped"}
+                client_id, client_secret = await oauth_client(session, settings)
+                client = make_client(client_id, client_secret, box)
+                try:
+                    return await gmail_state.reconcile_mailbox(session, settings, box, client)
+                finally:
+                    await client.aclose()
+        except Exception as exc:
+            log.warning(
+                "gmail state reconcile failed",
+                extra={"mailbox_id": str(mailbox_id), "reason": str(exc)[:300]},
+            )
+            async with tenant_transaction(factory, tenant_id) as session:
+                box = await session.get(Mailbox, mailbox_id)
+                if box is not None:
+                    box.gmail_state_reconcile_status = "failed"
+                    box.gmail_state_reconcile_counts = {"reason": str(exc)[:300]}
+            return {"status": "failed"}
+    finally:
+        await engine.dispose()
+
+
+async def gmail_state_reconcile_all_once(settings: Settings) -> dict[str, int]:
+    """Hourly reconcile of every enabled Gmail mailbox with the back channel on."""
+    _ensure_crypto(settings)
+    engine = _engine(settings)
+    totals = {"mailboxes": 0, "failed": 0}
+    try:
+        factory = create_session_factory(engine)
+        targets: list[tuple[uuid.UUID, uuid.UUID]] = []
+        for tenant_id in await _active_tenant_ids(factory):
+            async with tenant_transaction(factory, tenant_id) as session:
+                boxes = await enabled_gmail_mailboxes(session)
+                targets.extend((tenant_id, m.id) for m in boxes if m.sync_back_enabled)
+    finally:
+        await engine.dispose()
+    for tenant_id, mailbox_id in targets:
+        totals["mailboxes"] += 1
+        result = await gmail_state_reconcile_once(settings, tenant_id, mailbox_id)
+        if result.get("status") == "failed":
+            totals["failed"] += 1
+    return totals
+
+
+@shared_task(name="mhvp.communication.gmail_state_reconcile")
+def gmail_state_reconcile(tenant_id: str, mailbox_id: str) -> dict[str, Any]:
+    return asyncio.run(
+        gmail_state_reconcile_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(mailbox_id))
+    )
+
+
+@shared_task(name="mhvp.communication.gmail_state_reconcile_all")
+def gmail_state_reconcile_all() -> dict[str, int]:
+    return asyncio.run(gmail_state_reconcile_all_once(get_settings()))
+
+
+async def gmail_restore_inbox_once(
+    settings: Settings, tenant_id: uuid.UUID, message_ids: list[uuid.UUID]
+) -> dict[str, int]:
+    """Puts copies back into the Gmail inbox (P03, P05 with ``gmail_restore_inbox_on_reopen``):
+    ``untrash`` for trashed copies, then INBOX. Only rows marked ``restore_pending`` with the
+    expected state ``inbox``; the result lands in ``archive_status`` (restored,
+    restore_failed) and ``archive_history_id`` so the echo counts as an own action."""
+    from mhvp.communication.gmail import GmailScopeMissingError, make_client, oauth_client
+    from mhvp.communication.models import Mailbox, Message
+
+    _ensure_crypto(settings)
+    engine = _engine(settings)
+    counts = {"restored": 0, "failed": 0, "skipped": 0}
+    try:
+        factory = create_session_factory(engine)
+        async with tenant_transaction(factory, tenant_id) as session:
+            rows = list(
+                await session.scalars(
+                    select(Message)
+                    .where(
+                        Message.id.in_(message_ids),
+                        Message.gmail_message_id.is_not(None),
+                        Message.archive_status == "restore_pending",
+                    )
+                    .with_for_update(skip_locked=True)
+                )
+            )
+            if not rows:
+                return counts
+            client_id, client_secret = await oauth_client(session, settings)
+            clients: dict[uuid.UUID, Any] = {}
+            try:
+                for row in rows:
+                    mailbox = await session.get(Mailbox, row.mailbox_id) if row.mailbox_id else None
+                    if mailbox is None or mailbox.kind != "gmail":
+                        row.archive_status = "restore_failed"
+                        row.archive_error = "Kein Gmail-Postfach."
+                        counts["skipped"] += 1
+                        continue
+                    client = clients.get(mailbox.id)
+                    if client is None:
+                        client = clients[mailbox.id] = make_client(
+                            client_id, client_secret, mailbox
+                        )
+                    now = datetime.now(UTC)
+                    row.gmail_expected_state = "inbox"
+                    try:
+                        history_id = await client.restore_inbox(
+                            str(row.gmail_message_id), untrash=row.gmail_state == "trashed"
+                        )
+                    except GmailScopeMissingError as exc:
+                        mailbox.archive_scope_missing = True
+                        row.archive_status, row.archive_error = "restore_failed", str(exc)[:1000]
+                        counts["failed"] += 1
+                        continue
+                    except GmailError as exc:
+                        row.archive_status, row.archive_error = "restore_failed", str(exc)[:1000]
+                        counts["failed"] += 1
+                        continue
+                    row.archive_attempted_at = now
+                    if history_id is None:
+                        row.archive_status = "restore_failed"
+                        row.archive_error = "Nachricht in Gmail nicht vorhanden (404)"
+                        row.gmail_state, row.gmail_state_by, row.gmail_state_at = (
+                            "deleted",
+                            "platform",
+                            now,
+                        )
+                        counts["failed"] += 1
+                        continue
+                    row.archive_status, row.archive_error = "restored", None
+                    row.archive_history_id = history_id
+                    row.gmail_state, row.gmail_state_by, row.gmail_state_at = (
+                        "inbox",
+                        "platform",
+                        now,
+                    )
+                    counts["restored"] += 1
+            finally:
+                for client in clients.values():
+                    await client.aclose()
+    finally:
+        await engine.dispose()
+    return counts
+
+
+@shared_task(name="mhvp.communication.gmail_restore_inbox", bind=True)
+def gmail_restore_inbox(self: Any, tenant_id: str, message_ids: list[str]) -> dict[str, int]:
+    return _run_archive(
+        lambda: gmail_restore_inbox_once(
+            get_settings(), uuid.UUID(tenant_id), [uuid.UUID(m) for m in message_ids]
+        ),
+        self,
+    )
+
+
+async def gmail_settle_all_once(settings: Settings) -> dict[str, int]:
+    """Beat ``communication-gmail-settle`` (60 s): executes group decisions whose settle
+    period ended, per active tenant under RLS (``gmail_done.settle_due``)."""
+    from mhvp.communication.gmail_done import settle_due
+
+    _ensure_crypto(settings)
+    engine = _engine(settings)
+    totals = {"tenants": 0, "checked": 0, "done": 0}
+    try:
+        factory = create_session_factory(engine)
+        for tenant_id in await _active_tenant_ids(factory):
+            totals["tenants"] += 1
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    counts = await settle_due(session, settings)
+            except Exception:
+                log.exception("gmail settle failed", extra={"tenant_id": str(tenant_id)})
+                continue
+            totals["checked"] += counts["checked"]
+            totals["done"] += counts["done"]
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.communication.gmail_settle_all")
+def gmail_settle_all() -> dict[str, int]:
+    return asyncio.run(gmail_settle_all_once(get_settings()))

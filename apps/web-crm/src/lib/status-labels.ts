@@ -26,7 +26,8 @@ export type StatusDomain =
   | "directDebitRun"
   | "gate"
   | "meteringAssignment"
-  | "property";
+  | "property"
+  | "mailSync";
 
 const TICKET: Record<string, StatusDescriptor> = {
   new: { label: "Neu", tone: "info", icon: "dot", explanation: "Noch nicht zugeordnet oder bearbeitet." },
@@ -124,6 +125,20 @@ const PROPERTY: Record<string, StatusDescriptor> = {
   terminated: { label: "Deaktiviert", tone: "neutral", icon: "lock", explanation: "Das Verwaltungsverhältnis ist beendet. Das Objekt bleibt mit allen Daten erhalten, wird aber nicht mehr bearbeitet." },
 };
 
+/** Abgleichstand einer Mail mit Gmail (Rückkanal M20-08); `aus` wird nicht gerendert. */
+const MAIL_SYNC: Record<string, StatusDescriptor> = {
+  synchron: { label: "Synchron", tone: "neutral", icon: "check", explanation: "Plattform und Gmail Posteingang stimmen überein." },
+  abweichend: {
+    label: "Abweichend",
+    tone: "warning",
+    icon: "warning",
+    explanation: "Mindestens eine Postfachkopie steht in Gmail anders als der Status in der Plattform.",
+  },
+  ausstehend: { label: "Ausstehend", tone: "info", icon: "clock", explanation: "Eine Archivierung, Wiederherstellung oder Beruhigungsfrist läuft noch." },
+  geloescht: { label: "In Gmail gelöscht", tone: "neutral", icon: "cross", explanation: "Die Nachricht wurde in Gmail endgültig gelöscht, das Original bleibt gespeichert." },
+  unbekannt: { label: "Unbekannt", tone: "neutral", icon: "dot", explanation: "Keine Gmail Kopie bekannt." },
+};
+
 export const STATUS_LABELS: Record<StatusDomain, Record<string, StatusDescriptor>> = {
   ticket: TICKET,
   ticketPriority: TICKET_PRIORITY,
@@ -134,6 +149,7 @@ export const STATUS_LABELS: Record<StatusDomain, Record<string, StatusDescriptor
   gate: GATE,
   meteringAssignment: METERING_ASSIGNMENT,
   property: PROPERTY,
+  mailSync: MAIL_SYNC,
 };
 
 /** Descriptor for a domain status; unknown values fall back to a neutral chip with the raw value. */

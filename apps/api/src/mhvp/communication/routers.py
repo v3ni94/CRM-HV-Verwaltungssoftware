@@ -4,7 +4,7 @@ through a Vier-Augen-Freigabe: submit -> approve (by someone else) -> sent, or r
 
 import logging
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from email.message import EmailMessage
 from email.utils import make_msgid
 from typing import Any
@@ -12,8 +12,9 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import delete, func, or_, select
+from sqlalchemy import delete, exists, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from mhvp.ai import schemas as ai_s
 from mhvp.communication import (
@@ -154,7 +155,33 @@ def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[st
         "backfill_done": m.backfill_done,
         "backfill_started_at": m.backfill_started_at,
         "backfill_finished_at": m.backfill_finished_at,
+        # Rückkanal Gmail zu Plattform (rule M20-08): switch, last sync, reconcile state.
+        "sync_back_enabled": m.sync_back_enabled,
+        "gmail_last_sync_at": m.gmail_last_sync_at,
+        "gmail_state_reconciled_at": m.gmail_state_reconciled_at,
+        "gmail_state_reconcile_status": m.gmail_state_reconcile_status,
+        "gmail_state_reconcile_counts": m.gmail_state_reconcile_counts or {},
+        "gmail_sync_back_counts": m.gmail_sync_back_counts or {},
+        "sync_back_warning": _sync_back_warning(m),
     }
+
+
+SYNC_STALE = timedelta(minutes=30)
+FALLBACK_WARN = 20
+
+
+def _sync_back_warning(m: Mailbox) -> bool:
+    """True when the back channel of an enabled Gmail mailbox looks unhealthy: many fallback
+    attributions, a failed reconcile or no successful sync for 30 minutes."""
+    if m.kind != "gmail" or not m.enabled or not m.sync_back_enabled:
+        return False
+    counts = m.gmail_sync_back_counts or {}
+    if int(counts.get("fallback_attributions", 0) or 0) > FALLBACK_WARN:
+        return True
+    if m.gmail_state_reconcile_status == "failed":
+        return True
+    last = m.gmail_last_sync_at
+    return last is None or datetime.now(UTC) - last > SYNC_STALE
 
 
 PREVIEW_CHARS = 200
@@ -200,7 +227,18 @@ _LIST_FIELDS = (
     "suggestion",
     "suggestion_status",
     "duplicate_of_id",
+    # Rückkanal Gmail zu Plattform (rule M20-08), additive.
+    "gmail_state",
+    "gmail_state_at",
+    "gmail_state_by",
+    "gmail_expected_state",
+    "done_source",
+    "done_at",
+    "gmail_reopened_at",
+    "gmail_keep_open_label",
+    "gmail_settle_until",
 )
+NO_SYNC = {"state": "unbekannt", "copies": []}
 
 
 def _preview(body: str | None) -> str | None:
@@ -210,7 +248,9 @@ def _preview(body: str | None) -> str | None:
     return text[:PREVIEW_CHARS] + ("…" if len(text) > PREVIEW_CHARS else "")
 
 
-def _list_out(m: Message, state: progress.Progress | None = None) -> dict[str, Any]:
+def _list_out(
+    m: Message, state: progress.Progress | None = None, sync: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """List row (Review 26.09.2026, M3): every field of the detail except ``body`` and
     ``body_html``; ``body_preview`` holds the first 200 characters. The detail endpoint
     (``GET /mail/messages/{id}``) and the thread deliver the full text.
@@ -224,13 +264,43 @@ def _list_out(m: Message, state: progress.Progress | None = None) -> dict[str, A
     out["in_progress"] = state.in_progress
     out["handler_user_id"] = state.handler_user_id
     out["handler_display_name"] = state.handler_display_name
+    # ``gmail_sync`` (rule M20-08): aggregated state and the copies per mailbox.
+    out["gmail_sync"] = sync if sync is not None else dict(NO_SYNC)
     return out
 
 
-def _out(m: Message, state: progress.Progress | None = None) -> dict[str, Any]:
-    out = _list_out(m, state)
+def _out(
+    m: Message, state: progress.Progress | None = None, sync: dict[str, Any] | None = None
+) -> dict[str, Any]:
+    out = _list_out(m, state, sync)
     out["body"], out["body_html"] = m.body, m.body_html
     return out
+
+
+async def _sync_for(
+    session: AsyncSession, principal: TenantPrincipal, rows: list[Message]
+) -> dict[uuid.UUID, dict[str, Any]]:
+    """``gmail_sync`` per row; copies in mailboxes the user may not read show the address
+    only (``visible: false``), rule M20-08 and the open data protection point."""
+    from mhvp.communication import gmail_state
+
+    if not rows:
+        return {}
+    readable = None
+    if not principal.has("tenant_settings:update"):
+        allowed = set(
+            (await session.scalars(await _accessible_mailboxes(session, principal.user_id))).all()
+        )
+        boxes = {m.mailbox_id for m in rows if m.mailbox_id is not None}
+        for mailbox_id in boxes - allowed:
+            box = await session.get(Mailbox, mailbox_id)
+            if box is not None and await mailbox_accessible(session, principal, box):
+                allowed.add(mailbox_id)
+
+        def readable(mailbox_id: uuid.UUID | None) -> bool:
+            return mailbox_id is None or mailbox_id in allowed
+
+    return await gmail_state.sync_info_for(session, rows, readable=readable)
 
 
 def _playbook_out(p: Playbook) -> dict[str, Any]:
@@ -304,6 +374,12 @@ class MailboxPatchIn(_In):
     calendar_id: str | None = Field(default=None, min_length=1, max_length=320)
     archive_on_ticket_done: bool | None = None
     is_collective: bool | None = None
+    # Rückkanal Gmail zu Plattform (rule M20-08) je Postfach.
+    sync_back_enabled: bool | None = None
+
+
+class ReconcileStateIn(_In):
+    preview: bool = False
 
 
 class MailboxUsersIn(_In):
@@ -806,6 +882,7 @@ def _messages_query(
     q: str | None,
     include_closed: bool = True,
     include_duplicates: bool = False,
+    sync_state: str | None = None,
 ) -> Any:
     """Filter of the mail list and its count. Members see messages without mailbox, of the
     default mailboxes and of mailboxes shared with them; administrators every message.
@@ -835,8 +912,16 @@ def _messages_query(
         closed_ticket = select(Ticket.id).where(Ticket.status.in_(CLOSING_STATUSES))
         query = query.where(
             Message.status != "done",
-            or_(Message.ticket_id.is_(None), Message.ticket_id.not_in(closed_ticket)),
+            or_(
+                Message.ticket_id.is_(None),
+                Message.ticket_id.not_in(closed_ticket),
+                # A mail reopened from Gmail whose ticket stayed closed (window elapsed)
+                # stays visible in the default list (rule M20-08, E10).
+                Message.gmail_reopened_at.is_not(None),
+            ),
         )
+    if sync_state:
+        query = query.where(_sync_state_condition(sync_state))
     if contact_id:
         query = query.where(Message.contact_id == contact_id)
     if direction:
@@ -855,6 +940,37 @@ def _messages_query(
             )
         )
     return query
+
+
+def _sync_state_condition(sync_state: str) -> Any:
+    """Approximation of ``gmail_sync.state`` in SQL over the copies of the group (rule
+    M20-08): ``ausstehend`` while an own job or a settle period is open, ``geloescht`` when a
+    copy is deleted, ``abweichend`` when a copy contradicts the platform status."""
+    copy = aliased(Message)
+    root = func.coalesce(Message.duplicate_of_id, Message.id)
+    same_group = or_(copy.id == root, copy.duplicate_of_id == root)
+    if sync_state == "ausstehend":
+        condition: Any = or_(
+            copy.archive_status.in_(("pending", "failed", "scope_missing", "restore_pending")),
+            copy.gmail_settle_until.is_not(None),
+        )
+    elif sync_state == "geloescht":
+        condition = copy.gmail_state == "deleted"
+    else:
+        condition = or_(
+            (copy.status == "done")
+            & or_(copy.gmail_state.is_(None), copy.gmail_state == "inbox")
+            & copy.archive_status.is_(None),
+            (copy.status != "done") & copy.gmail_state.in_(("archived", "trashed")),
+        )
+    return exists(
+        select(copy.id).where(
+            same_group,
+            copy.direction == "in",
+            copy.gmail_message_id.is_not(None),
+            condition,
+        )
+    )
 
 
 @router.get(
@@ -904,6 +1020,11 @@ async def messages(
         le=200,
         description="Einträge je Seite (max. 200); ohne Angabe gilt limit (erste Seite)",
     ),
+    sync_state: str | None = Query(
+        default=None,
+        pattern="^(abweichend|ausstehend|geloescht)$",
+        description="Abgleichstand mit Gmail (Rückkanal M20-08)",
+    ),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     """Rows carry ``body_preview`` (200 characters) instead of ``body`` and ``body_html``
@@ -924,6 +1045,7 @@ async def messages(
             q=q,
             include_closed=include_closed,
             include_duplicates=include_duplicates,
+            sync_state=sync_state,
         )
         size = page_size or limit
         total = (
@@ -936,10 +1058,11 @@ async def messages(
         )
         rows = list((await session.scalars(query.offset((page - 1) * size).limit(size))).all())
         states = await progress.progress_for(session, rows)
+        sync = await _sync_for(session, principal, rows)
         response.headers["X-Total-Count"] = str(total)
         response.headers["X-Page"] = str(page)
         response.headers["X-Page-Size"] = str(size)
-        return [_list_out(m, states.get(m.id)) for m in rows]
+        return [_list_out(m, states.get(m.id), sync.get(m.id)) for m in rows]
 
 
 @router.get("/messages/count", summary="Anzahl der Nachrichten je Filter")
@@ -978,7 +1101,109 @@ async def get_message(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await assert_message_accessible(session, principal, row)
         states = await progress.progress_for(session, [row])
-        return _out(row, states.get(row.id))
+        sync = await _sync_for(session, principal, [row])
+        return _out(row, states.get(row.id), sync.get(row.id))
+
+
+@router.get(
+    "/messages/{message_id}/sync-events",
+    summary="Abgleichereignisse der Mail mit Gmail (Rückkanal M20-08)",
+)
+async def message_sync_events(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    """Ereignisse ``message.gmail_state_changed``, ``message.completed``, ``message.reopened``
+    und ``message.gmail_restore_requested`` aller Kopien der Gruppe, älteste zuerst."""
+    from mhvp.communication.gmail_state import SYNC_EVENT_TYPES
+    from mhvp.core.events import DomainEvent
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Message, message_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await assert_message_accessible(session, principal, row)
+        ids = [m.id for m in await duplicates.group_members(session, row)] or [row.id]
+        events = await session.scalars(
+            select(DomainEvent)
+            .where(
+                DomainEvent.entity_type == "message",
+                DomainEvent.entity_id.in_(ids),
+                DomainEvent.type.in_(SYNC_EVENT_TYPES),
+            )
+            .order_by(DomainEvent.occurred_at, DomainEvent.id)
+        )
+        return [
+            {
+                "id": e.id,
+                "occurred_at": e.occurred_at,
+                "type": e.type,
+                "entity_id": e.entity_id,
+                "payload": e.payload,
+            }
+            for e in events
+        ]
+
+
+@router.post(
+    "/mailboxes/{mailbox_id}/reconcile-state",
+    summary="Abgleich der Gmail Zustände (Rückkanal M20-08): Vorschau oder Lauf",
+)
+async def reconcile_mailbox_state(
+    mailbox_id: uuid.UUID,
+    body: ReconcileStateIn,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(ADMIN),
+) -> dict[str, Any]:
+    """``preview=true`` vergleicht synchron und schreibt nichts (Zähler und bis zu 50
+    Beispiele); sonst wird der Abgleich in die Warteschlange ``mail`` gestellt (202), inline
+    ohne Worker. 409, solange ein Abgleich läuft."""
+    from mhvp.communication import gmail_state
+    from mhvp.communication.gmail import GmailError, make_client, oauth_client
+
+    settings = request.app.state.settings
+    async with tenant_tx(request, principal) as session:
+        box = await _live_mailbox(session, mailbox_id, lock=True)
+        if box.kind != "gmail":
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nur Gmail-Postfächer werden abgeglichen."
+            )
+        if body.preview:
+            client_id, client_secret = await oauth_client(session, settings)
+            client = make_client(client_id, client_secret, box)
+            try:
+                return await gmail_state.reconcile_mailbox(
+                    session, settings, box, client, mode="preview"
+                )
+            except GmailError as exc:
+                raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+            finally:
+                await client.aclose()
+        if box.gmail_state_reconcile_status in ("queued", "running"):
+            raise ProblemError(ErrorCodes.RECONCILE_RUNNING)
+        box.gmail_state_reconcile_status = "queued"
+        tenant_id = principal.tenant_id
+
+        async def _start() -> None:
+            if settings.ai_inline:
+                from mhvp.communication.tasks import gmail_state_reconcile_once
+
+                await gmail_state_reconcile_once(settings, tenant_id, mailbox_id)
+                return
+            try:
+                from mhvp.worker import get_celery
+
+                get_celery().send_task(
+                    "mhvp.communication.gmail_state_reconcile",
+                    args=[str(tenant_id), str(mailbox_id)],
+                    queue="mail",
+                )
+            except Exception:
+                log.exception("could not queue reconcile", extra={"mailbox_id": str(mailbox_id)})
+
+        after_commit(session, _start)
+    response.status_code = 202
+    return {"queued": True}
 
 
 @router.get("/messages/{message_id}/thread", summary="Alle Nachrichten des Vorgangs")
@@ -1013,6 +1238,7 @@ async def assign(
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
+    from mhvp.communication.gmail_done import reopen_from_crm
     from mhvp.communication.services import complete_message
 
     async with tenant_tx(request, principal) as session:
@@ -1026,7 +1252,74 @@ async def assign(
         if body.status == "done" and not was_done:
             # Erledigt archiviert die Mail und schließt ggf. das Ticket (Betreiber 26.09.2026).
             await complete_message(session, request.app.state.settings, row, principal.user_id)
-        return _out(row)
+        elif was_done and body.status in ("assigned", "new") and row.direction == "in":
+            # Zurück in den Posteingang (rule M20-08, P03): alle Kopien offen, Gmail nur mit
+            # dem Schalter gmail_restore_inbox_on_reopen.
+            await reopen_from_crm(
+                session, request.app.state.settings, row, actor_user_id=principal.user_id
+            )
+        sync = await _sync_for(session, principal, [row])
+        return _out(row, None, sync.get(row.id))
+
+
+@router.post(
+    "/messages/{message_id}/restore-inbox",
+    summary="Mail in den Gmail Posteingang zurücklegen (Rückkanal M20-08)",
+)
+async def restore_inbox(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Öffnet die Gruppe wieder und legt archivierte oder gelöschte Kopien in den Posteingang
+    zurück; 422 ``GMAIL_RESTORE_DISABLED``, solange der Mandantenschalter aus ist."""
+    from mhvp.communication.gmail_done import reopen_group
+    from mhvp.communication.gmail_state import tenant_settings_row
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id, principal)
+        tenant_settings = await tenant_settings_row(session)
+        if tenant_settings is None or not tenant_settings.gmail_restore_inbox_on_reopen:
+            raise ProblemError(ErrorCodes.GMAIL_RESTORE_DISABLED)
+        if row.direction != "in":
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Nur Eingangsmails.")
+        result = await reopen_group(
+            session,
+            request.app.state.settings,
+            row,
+            source="user",
+            restore=True,
+            actor_user_id=principal.user_id,
+        )
+        return {"copies": result["copies"], "requested": bool(result["restore"])}
+
+
+class RevertGmailDecisionIn(_In):
+    event_id: uuid.UUID | None = None
+
+
+@router.post(
+    "/messages/{message_id}/revert-gmail-decision",
+    summary="Automatik zurücknehmen (Rückkanal M20-08, P05)",
+)
+async def revert_gmail_decision(
+    message_id: uuid.UUID,
+    body: RevertGmailDecisionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Hebt eine automatische Erledigung aus Gmail auf: Mail offen, Ticket ohne Fensterprüfung
+    wieder in Bearbeitung, Ereignis ``reverted``. 422, wenn nichts automatisch entschieden
+    wurde (``done_source`` nicht gmail und Ticket nicht durch den Rückkanal geschlossen)."""
+    from mhvp.communication.gmail_done import revert_gmail_decision as revert
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id, principal)
+        return await revert(
+            session,
+            request.app.state.settings,
+            row,
+            event_id=body.event_id,
+            actor_user_id=principal.user_id,
+        )
 
 
 @router.post("/messages/{message_id}/archive", summary="Gmail-Archivierung jetzt ausführen")
@@ -1108,7 +1401,9 @@ async def bulk_messages(
                 # ticket when nothing else is open (operator 26.09.2026).
                 from mhvp.communication.services import complete_message
 
-                await complete_message(session, request.app.state.settings, row, principal.user_id)
+                await complete_message(
+                    session, request.app.state.settings, row, principal.user_id, source="bulk"
+                )
         await session.flush()
     return {"changed": changed, "failed": failed}
 

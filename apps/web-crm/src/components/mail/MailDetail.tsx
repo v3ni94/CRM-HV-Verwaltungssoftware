@@ -12,6 +12,7 @@ import { AssignmentPrompt } from "@/components/assignment/AssignmentPrompt";
 import { AttachmentReceiptAction } from "@/components/receipts/AttachmentReceiptAction";
 import { ContactRoleBadges } from "@/components/common/ContactRoleBadges";
 import { SafeText } from "@/components/ui/SafeText";
+import { StatusChip } from "@/components/ui/StatusChip";
 import { ui } from "@/lib/ui";
 
 import { DraftEditor } from "./DraftEditor";
@@ -20,6 +21,19 @@ import { PreparationCard } from "./PreparationCard";
 import { SuggestionCard } from "./SuggestionCard";
 
 type Member = { user_id: string; display_name: string; email: string };
+type SyncEvent = { id: string; occurred_at: string; type: string; payload: Record<string, unknown> };
+
+function syncEventText(e: SyncEvent, t: ReturnType<typeof useTranslations>): string {
+  const p = e.payload;
+  if (e.type === "message.gmail_state_changed") {
+    const effect = String(p.effect ?? "noted");
+    return `${String(p.mailbox_address ?? "")}: ${String(p.from ?? "")} → ${String(p.to ?? "")} (${t(`copyBy.${String(p.by ?? "user")}`)}), ${t(`syncEvent.${effect}`)}`;
+  }
+  if (e.type === "message.completed") return t("syncEvent.completed", { source: String(p.source ?? "") });
+  if (e.type === "message.reopened") return t("syncEvent.reopened_group", { source: String(p.source ?? "") });
+  if (e.type === "message.gmail_restore_requested") return t("syncEvent.restore_requested");
+  return e.type;
+}
 
 function submitterLabel(message: Message, members: Member[] | null, t: ReturnType<typeof useTranslations>): string {
   if (!message.submitted_by) return "";
@@ -175,11 +189,16 @@ export function MailDetail({
   // im Reiter Entwürfe zu landen.
   const [replyDraft, setReplyDraft] = useState<Message | null>(null);
   const replyRef = useRef<HTMLDivElement | null>(null);
+  // Rückkanal M20-08: Verlauf der Abgleichereignisse, auf Wunsch geladen.
+  const [syncEvents, setSyncEvents] = useState<SyncEvent[] | null>(null);
+  const [showSyncEvents, setShowSyncEvents] = useState(false);
 
   useEffect(() => {
     setThread(null);
     setError(null);
     setReplyDraft(null);
+    setSyncEvents(null);
+    setShowSyncEvents(false);
     setShowReject(false);
     setRejectNote("");
     setShowReauth(false);
@@ -255,6 +274,39 @@ export function MailDetail({
   const archiveNow = async () => {
     const next = await act("/archive", "POST");
     if (next) onUpdated(next);
+  };
+  // Rückkanal M20-08: zurück in den Gmail Posteingang, Automatik zurücknehmen, Verlauf.
+  const restoreInbox = async () => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ copies: number }>(`/api/bff/mail/messages/${message.id}/restore-inbox`, { method: "POST", body: "{}" });
+    if (res.ok) {
+      const fresh = await bff<Message>(`/api/bff/mail/messages/${message.id}`);
+      if (fresh.ok) onUpdated(fresh.data);
+    } else setError(res.message);
+    setBusy(false);
+  };
+  const revertDecision = async () => {
+    if (!window.confirm(t("revertConfirm"))) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ message_reopened: boolean }>(`/api/bff/mail/messages/${message.id}/revert-gmail-decision`, {
+      method: "POST",
+      body: "{}",
+    });
+    if (res.ok) {
+      const fresh = await bff<Message>(`/api/bff/mail/messages/${message.id}`);
+      if (fresh.ok) onUpdated(fresh.data);
+    } else setError(res.message);
+    setBusy(false);
+  };
+  const toggleSyncEvents = async () => {
+    const next = !showSyncEvents;
+    setShowSyncEvents(next);
+    if (next && syncEvents === null) {
+      const res = await bff<SyncEvent[]>(`/api/bff/mail/messages/${message.id}/sync-events`);
+      setSyncEvents(res.ok ? res.data : []);
+    }
   };
   const createTicket = async () => {
     setBusy(true);
@@ -388,6 +440,54 @@ export function MailDetail({
               </>
             ) : null}
           </p>
+        ) : null}
+        {message.direction === "in" && message.gmail_sync && message.gmail_sync.state !== "aus" ? (
+          <div className="flex flex-col gap-1 text-xs text-subtle" data-testid="mail-gmail-state">
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusChip domain="mailSync" status={message.gmail_sync.state} label={t(`sync.${message.gmail_sync.state}`)} />
+              {message.done_source === "gmail" ? <span className={ui.badge}>{t("doneFromGmailShort")}</span> : null}
+            </div>
+            <ul className="flex flex-col gap-0.5">
+              {message.gmail_sync.copies.map((c, i) => (
+                <li key={c.message_id ?? `${c.mailbox_address}-${i}`}>
+                  {c.visible
+                    ? `${t(`copyState.${c.gmail_state ?? "inbox"}`, {
+                        address: c.mailbox_address ?? "",
+                        by: t(`copyBy.${c.gmail_state_by ?? "user"}`),
+                        at: c.gmail_state_at ? formatDateTime(c.gmail_state_at) : "",
+                      })}${c.authoritative ? ` (${t("copyAuthoritative")})` : ""}`
+                    : t("copyHidden", { address: c.mailbox_address ?? "" })}
+                </li>
+              ))}
+            </ul>
+            {message.gmail_keep_open_label ? <p>{t("keepOpenLabel", { label: message.gmail_keep_open_label })}</p> : null}
+            {message.gmail_settle_until ? <p>{t("settlePending", { until: formatDateTime(message.gmail_settle_until) })}</p> : null}
+            <div className="flex flex-wrap gap-3">
+              {message.gmail_sync.copies.some((c) => c.visible && ["archived", "trashed"].includes(c.gmail_state ?? "")) ? (
+                <button type="button" className="underline" disabled={busy} onClick={() => void restoreInbox()}>
+                  {t("restoreInbox")}
+                </button>
+              ) : null}
+              {message.done_source === "gmail" ? (
+                <button type="button" className="underline" disabled={busy} onClick={() => void revertDecision()}>
+                  {t("revertDecision")}
+                </button>
+              ) : null}
+              <button type="button" className="underline" onClick={() => void toggleSyncEvents()} aria-expanded={showSyncEvents}>
+                {t("syncEvents")}
+              </button>
+            </div>
+            {showSyncEvents ? (
+              <ul className="flex flex-col gap-0.5" data-testid="mail-sync-events">
+                {(syncEvents ?? []).map((e) => (
+                  <li key={e.id}>
+                    {formatDateTime(e.occurred_at)} · {syncEventText(e, t)}
+                  </li>
+                ))}
+                {syncEvents && syncEvents.length === 0 ? <li>{t("syncEventsEmpty")}</li> : null}
+              </ul>
+            ) : null}
+          </div>
         ) : null}
         {rejected.length > 0 ? (
           <p className="text-xs text-warning-fg" data-testid="mail-attachments-rejected">

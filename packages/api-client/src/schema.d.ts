@@ -10168,6 +10168,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/mailboxes/{mailbox_id}/reconcile-state": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Abgleich der Gmail Zustände (Rückkanal M20-08): Vorschau oder Lauf
+         * @description ``preview=true`` vergleicht synchron und schreibt nichts (Zähler und bis zu 50
+         *     Beispiele); sonst wird der Abgleich in die Warteschlange ``mail`` gestellt (202), inline
+         *     ohne Worker. 409, solange ein Abgleich läuft.
+         */
+        post: operations["reconcile_mailbox_state_api_v1_mail_mailboxes__mailbox_id__reconcile_state_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/mailboxes/{mailbox_id}/sync": {
         parameters: {
             query?: never;
@@ -10199,6 +10221,29 @@ export interface paths {
          */
         put: operations["put_mailbox_users_api_v1_mail_mailboxes__mailbox_id__users_put"];
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/maintenance/align-copies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Wartung: Status der Kopien an die führende Kopie angleichen
+         * @description Bestandsfix 1.42.2: Kopien derselben Mail in weiteren eigenen Postfächern, deren Status
+         *     von der führenden Kopie abweicht (Erledigt vor dem Fix nur auf der angeklickten Kopie),
+         *     übernehmen den Status der führenden Kopie. Je Zeile ein Ereignis ``message.copy_aligned``
+         *     mit dem vorherigen Status; idempotent, nichts wird gelöscht.
+         */
+        post: operations["align_copies_api_v1_mail_maintenance_align_copies_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10643,6 +10688,49 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/messages/{message_id}/restore-inbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mail in den Gmail Posteingang zurücklegen (Rückkanal M20-08)
+         * @description Öffnet die Gruppe wieder und legt archivierte oder gelöschte Kopien in den Posteingang
+         *     zurück; 422 ``GMAIL_RESTORE_DISABLED``, solange der Mandantenschalter aus ist.
+         */
+        post: operations["restore_inbox_api_v1_mail_messages__message_id__restore_inbox_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/revert-gmail-decision": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Automatik zurücknehmen (Rückkanal M20-08, P05)
+         * @description Hebt eine automatische Erledigung aus Gmail auf: Mail offen, Ticket ohne Fensterprüfung
+         *     wieder in Bearbeitung, Ereignis ``reverted``. 422, wenn nichts automatisch entschieden
+         *     wurde (``done_source`` nicht gmail und Ticket nicht durch den Rückkanal geschlossen).
+         */
+        post: operations["revert_gmail_decision_api_v1_mail_messages__message_id__revert_gmail_decision_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/{message_id}/submit": {
         parameters: {
             query?: never;
@@ -10671,6 +10759,27 @@ export interface paths {
         put?: never;
         /** KI-Vorschlag neu berechnen */
         post: operations["recompute_suggestion_api_v1_mail_messages__message_id__suggest_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/sync-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Abgleichereignisse der Mail mit Gmail (Rückkanal M20-08)
+         * @description Ereignisse ``message.gmail_state_changed``, ``message.completed``, ``message.reopened``
+         *     und ``message.gmail_restore_requested`` aller Kopien der Gruppe, älteste zuerst.
+         */
+        get: operations["message_sync_events_api_v1_mail_messages__message_id__sync_events_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -16278,6 +16387,28 @@ export interface paths {
         head?: never;
         /** Mandanteneinstellungen ändern */
         patch: operations["patch_settings_api_v1_tenant_settings_patch"];
+        trace?: never;
+    };
+    "/api/v1/tenant/settings/gmail-spike-confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Spike des Gmail Rückkanals als bestanden vermerken
+         * @description Rule M20-08, Abschnitt 13: der Modus ``done`` ist erst nach dem protokollierten Test des
+         *     Gmail Verhaltens (``docs/integrations/gmail.md``) erlaubt. ``protocol_ref`` verweist auf
+         *     das Protokoll; Zeitpunkt und Nutzer werden protokolliert (``tenant_settings.updated``).
+         */
+        post: operations["confirm_gmail_spike_api_v1_tenant_settings_gmail_spike_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/tenant/webhook-deliveries/{delivery_id}/redeliver": {
@@ -23988,6 +24119,11 @@ export interface components {
             /** Scopes */
             scopes: string[];
         };
+        /** GmailSpikeConfirmIn */
+        GmailSpikeConfirmIn: {
+            /** Protocol Ref */
+            protocol_ref: string;
+        };
         /** GoogleCalendarPatchIn */
         GoogleCalendarPatchIn: {
             /** All Day */
@@ -26325,6 +26461,8 @@ export interface components {
             kind?: string | null;
             /** Secret */
             secret?: string | null;
+            /** Sync Back Enabled */
+            sync_back_enabled?: boolean | null;
         };
         /** MailboxUsersIn */
         MailboxUsersIn: {
@@ -29895,6 +30033,14 @@ export interface components {
             /** Changed */
             changed: number;
         };
+        /** ReconcileStateIn */
+        ReconcileStateIn: {
+            /**
+             * Preview
+             * @default false
+             */
+            preview: boolean;
+        };
         /**
          * ReconciliationNoteIn
          * @description Explained difference of the cash flow reconciliation (W04): signed amount that bridges
@@ -30647,6 +30793,11 @@ export interface components {
             booking_date?: string | null;
             /** Reason */
             reason: string;
+        };
+        /** RevertGmailDecisionIn */
+        RevertGmailDecisionIn: {
+            /** Event Id */
+            event_id?: string | null;
         };
         /**
          * ReviewStatus
@@ -32219,6 +32370,52 @@ export interface components {
             branding: components["schemas"]["Branding"];
             company: components["schemas"]["CompanyData"];
             /**
+             * Gmail Close Assigned Tickets
+             * @default false
+             */
+            gmail_close_assigned_tickets: boolean;
+            /**
+             * Gmail Done Closes Ticket
+             * @default false
+             */
+            gmail_done_closes_ticket: boolean;
+            /**
+             * Gmail Done On Trash
+             * @default true
+             */
+            gmail_done_on_trash: boolean;
+            /**
+             * Gmail Done Sync Mode
+             * @default record_only
+             */
+            gmail_done_sync_mode: string;
+            /** Gmail Keep Open Labels */
+            gmail_keep_open_labels?: string[];
+            /**
+             * Gmail Reconcile Grace Seconds
+             * @default 300
+             */
+            gmail_reconcile_grace_seconds: number;
+            /**
+             * Gmail Reopen On Unarchive
+             * @default true
+             */
+            gmail_reopen_on_unarchive: boolean;
+            /**
+             * Gmail Restore Inbox On Reopen
+             * @default false
+             */
+            gmail_restore_inbox_on_reopen: boolean;
+            /**
+             * Gmail Settle Seconds
+             * @default 600
+             */
+            gmail_settle_seconds: number;
+            /** Gmail Spike Confirmed At */
+            gmail_spike_confirmed_at?: string | null;
+            /** Gmail Spike Protocol Ref */
+            gmail_spike_protocol_ref?: string | null;
+            /**
              * Mail Approval Mode
              * @default external_only
              */
@@ -32268,6 +32465,24 @@ export interface components {
             ai_learning_examples_retention_months?: number | null;
             branding?: components["schemas"]["Branding"] | null;
             company?: components["schemas"]["CompanyData"] | null;
+            /** Gmail Close Assigned Tickets */
+            gmail_close_assigned_tickets?: boolean | null;
+            /** Gmail Done Closes Ticket */
+            gmail_done_closes_ticket?: boolean | null;
+            /** Gmail Done On Trash */
+            gmail_done_on_trash?: boolean | null;
+            /** Gmail Done Sync Mode */
+            gmail_done_sync_mode?: string | null;
+            /** Gmail Keep Open Labels */
+            gmail_keep_open_labels?: string[] | null;
+            /** Gmail Reconcile Grace Seconds */
+            gmail_reconcile_grace_seconds?: number | null;
+            /** Gmail Reopen On Unarchive */
+            gmail_reopen_on_unarchive?: boolean | null;
+            /** Gmail Restore Inbox On Reopen */
+            gmail_restore_inbox_on_reopen?: boolean | null;
+            /** Gmail Settle Seconds */
+            gmail_settle_seconds?: number | null;
             /** Mail Approval Mode */
             mail_approval_mode?: string | null;
             /** Metering Module Enabled */
@@ -55954,6 +56169,43 @@ export interface operations {
             };
         };
     };
+    reconcile_mailbox_state_api_v1_mail_mailboxes__mailbox_id__reconcile_state_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                mailbox_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconcileStateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     sync_mailbox_now_api_v1_mail_mailboxes__mailbox_id__sync_post: {
         parameters: {
             query?: never;
@@ -56024,6 +56276,28 @@ export interface operations {
             };
         };
     };
+    align_copies_api_v1_mail_maintenance_align_copies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: number;
+                    };
+                };
+            };
+        };
+    };
     link_duplicates_api_v1_mail_maintenance_link_duplicates_post: {
         parameters: {
             query?: never;
@@ -56064,6 +56338,8 @@ export interface operations {
                 page?: number;
                 /** @description Einträge je Seite (max. 200); ohne Angabe gilt limit (erste Seite) */
                 page_size?: number | null;
+                /** @description Abgleichstand mit Gmail (Rückkanal M20-08) */
+                sync_state?: string | null;
             };
             header?: never;
             path?: never;
@@ -56909,6 +57185,76 @@ export interface operations {
             };
         };
     };
+    restore_inbox_api_v1_mail_messages__message_id__restore_inbox_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revert_gmail_decision_api_v1_mail_messages__message_id__revert_gmail_decision_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RevertGmailDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     submit_api_v1_mail_messages__message_id__submit_post: {
         parameters: {
             query?: never;
@@ -56962,6 +57308,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    message_sync_events_api_v1_mail_messages__message_id__sync_events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
             /** @description Validation Error */
@@ -69200,6 +69579,39 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TenantSettingsPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantSettingsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_gmail_spike_api_v1_tenant_settings_gmail_spike_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GmailSpikeConfirmIn"];
             };
         };
         responses: {

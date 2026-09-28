@@ -1236,12 +1236,14 @@ async def ticket_messages(
     wie in der Postfachansicht."""
     from mhvp.communication.models import Mailbox
     from mhvp.communication.routers import _out as message_out
+    from mhvp.communication.routers import _sync_for
 
     async with tenant_tx(request, principal) as session:
         ticket = await session.get(Ticket, ticket_id)
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         rows = await _ticket_messages(session, principal, ticket)
+        sync = await _sync_for(session, principal, list(rows))
         mailbox_ids = {m.mailbox_id for m in rows if m.mailbox_id}
         boxes = (
             {
@@ -1259,7 +1261,7 @@ async def ticket_messages(
         )
         out = []
         for m in rows:
-            data = message_out(m)
+            data = message_out(m, None, sync.get(m.id))
             data["mailbox_address"] = boxes.get(m.mailbox_id) if m.mailbox_id else None
             data["attachments"] = await _attachment_rows(session, list(m.attachment_document_ids))
             data["created_by_name"] = names.get(m.created_by) if m.created_by else None

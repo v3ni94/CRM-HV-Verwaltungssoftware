@@ -131,11 +131,60 @@ class TenantSettingsOut(BaseModel):
     # E-Mail-Signatur (operator 27.09.2026): Vorlage und manuell angelegte Positionen.
     signature_template: SignatureTemplate = Field(default_factory=SignatureTemplate)
     position_catalogue_extra: list[str] = Field(default_factory=list)
+    # Rückkanal Gmail zu Plattform (rule M20-08): mode off, record_only (Standard) or done
+    # and its guards; ``gmail_spike_confirmed_at`` is set by the spike confirmation.
+    gmail_done_sync_mode: str = "record_only"
+    gmail_done_closes_ticket: bool = False
+    gmail_done_on_trash: bool = True
+    gmail_reopen_on_unarchive: bool = True
+    gmail_restore_inbox_on_reopen: bool = False
+    gmail_settle_seconds: int = 600
+    gmail_reconcile_grace_seconds: int = 300
+    gmail_keep_open_labels: list[str] = Field(default_factory=list)
+    gmail_close_assigned_tickets: bool = False
+    gmail_spike_confirmed_at: datetime | None = None
+    gmail_spike_protocol_ref: str | None = None
     version: int
+
+
+# Gmail system labels that never count as work labels (rule M20-08).
+GMAIL_SYSTEM_LABELS = frozenset(
+    {"INBOX", "TRASH", "SPAM", "UNREAD", "STARRED", "IMPORTANT", "SENT", "DRAFT", "CHAT"}
+)
+
+
+class GmailSpikeConfirmIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    protocol_ref: str = Field(min_length=1, max_length=500)
 
 
 class TenantSettingsPatch(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+    gmail_done_sync_mode: str | None = Field(default=None, pattern=r"^(off|record_only|done)$")
+    gmail_done_closes_ticket: bool | None = None
+    gmail_done_on_trash: bool | None = None
+    gmail_reopen_on_unarchive: bool | None = None
+    gmail_restore_inbox_on_reopen: bool | None = None
+    gmail_settle_seconds: int | None = Field(default=None, ge=0, le=3600)
+    gmail_reconcile_grace_seconds: int | None = Field(default=None, ge=60, le=3600)
+    gmail_keep_open_labels: list[str] | None = Field(default=None, max_length=20)
+    gmail_close_assigned_tickets: bool | None = None
+
+    @field_validator("gmail_keep_open_labels")
+    @classmethod
+    def _keep_open_labels(cls, value: list[str] | None) -> list[str] | None:
+        if value is None:
+            return None
+        cleaned = [" ".join(v.split()) for v in value]
+        if any(not v or len(v) > 128 for v in cleaned):
+            raise ValueError("Jedes Arbeitslabel braucht 1 bis 128 Zeichen.")
+        for label in cleaned:
+            upper = label.upper()
+            if upper in GMAIL_SYSTEM_LABELS or upper.startswith("CATEGORY_"):
+                raise ValueError(f"Systemlabel {label} ist kein Arbeitslabel.")
+        return cleaned
 
     company: CompanyData | None = None
     branding: Branding | None = None

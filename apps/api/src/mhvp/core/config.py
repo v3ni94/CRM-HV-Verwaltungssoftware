@@ -169,6 +169,10 @@ class Settings(BaseSettings):
     google_client_id: str | None = None
     google_client_secret: SecretStr | None = None
     gmail_sync_batch: int = Field(default=50, ge=1, le=500)
+    # Gmail back channel (rule M20-08): ``message_labels`` calls per reconcile run and the
+    # largest inbox listing the reconcile walks before it stops with ``listing_too_large``.
+    gmail_state_reconcile_limit: int = Field(default=200, ge=1, le=5000)
+    gmail_reconcile_listing_max: int = Field(default=20000, ge=500, le=200000)
     # Gmail push notifications (operator decision 26.09.2026: new mails appear immediately).
     # ``gmail_pubsub_topic`` is the full Pub/Sub topic name ``projects/<id>/topics/<name>``
     # that the operator creates in the Google Cloud project of the OAuth client and grants

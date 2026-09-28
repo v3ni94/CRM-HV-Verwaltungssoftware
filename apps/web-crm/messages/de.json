@@ -2931,6 +2931,13 @@
       "approvalReason": {
         "azubi": "Azubi",
         "neuer_mitarbeiter": "neuer Mitarbeiter"
+      },
+      "sync": {
+        "synchron": "Synchron",
+        "abweichend": "Abweichend",
+        "ausstehend": "Ausstehend",
+        "geloescht": "In Gmail gelöscht",
+        "unbekannt": "Unbekannt"
       }
     },
     "workOrders": {
@@ -2960,7 +2967,13 @@
         "manual": "manuell"
       },
       "follow_up_of": "Folgevorgang zu",
-      "follow_up_created": "Folgevorgang angelegt"
+      "follow_up_created": "Folgevorgang angelegt",
+      "autoCloseGmail": "automatisch erledigt aus Gmail, Postfach {address}",
+      "reopenedGmail": "wieder geöffnet aus Gmail, Postfach {address}",
+      "reopenSkipped": "Wiedereröffnung übersprungen, Fenster von {days} Tagen abgelaufen",
+      "reverted": "Automatik zurückgenommen",
+      "auto_close_skipped": "Automatischer Abschluss übersprungen",
+      "reopen_skipped": "Wiedereröffnung übersprungen"
     },
     "noComments": "Keine Kommentare.",
     "portalAuthor": "Portal",
@@ -3019,7 +3032,25 @@
       "successorsHint": "Neue E-Mails zu diesem abgeschlossenen Ticket werden im Folgevorgang bearbeitet."
     },
     "dueOnConfirmPast": "Vergangenes Datum bestätigen",
-    "dueOnDiscard": "Verwerfen"
+    "dueOnDiscard": "Verwerfen",
+    "autoCloseSkipped": {
+      "open_mails": "weitere Mails offen",
+      "open_work_order": "Auftrag offen",
+      "open_outbound": "Antwort noch nicht versendet",
+      "open_proposal": "KI Vorschlag offen",
+      "open_assignment_review": "Zuordnungsprüfung offen",
+      "open_invoice": "Rechnungsverarbeitung offen",
+      "status_waiting": "Ticket wartet",
+      "assigned_in_progress": "Ticket zugewiesen oder in Bearbeitung",
+      "keep_open_label": "Arbeitslabel in Gmail",
+      "ticket_close_disabled": "Ticketabschluss aus Gmail ist aus",
+      "settle_pending": "Beruhigungsfrist läuft",
+      "resolution_kind_disabled": "Erledigungsart Auskunft erteilt ist deaktiviert",
+      "transition_refused": "Abschlussprüfung abgelehnt",
+      "deleted": "Mail in Gmail endgültig gelöscht",
+      "not_current": "Ticket ist nicht das Ende der Kette"
+    },
+    "systemAuthor": "System"
   },
   "Automation": {
     "title": "Automatisierung",
@@ -3578,7 +3609,69 @@
     "inProgressBy": "In Bearbeitung von {name}",
     "inProgress": "In Bearbeitung",
     "duplicateBadge": "Duplikat",
-    "duplicateHint": "Kopie derselben Mail aus einem weiteren Postfach, verknüpft mit der führenden Kopie"
+    "duplicateHint": "Kopie derselben Mail aus einem weiteren Postfach, verknüpft mit der führenden Kopie",
+    "sync": {
+      "synchron": "Synchron",
+      "abweichend": "Abweichend",
+      "ausstehend": "Ausstehend",
+      "geloescht": "In Gmail gelöscht",
+      "unbekannt": "Unbekannt"
+    },
+    "syncFilter": "Abgleich mit Gmail",
+    "syncFilterAll": "Abgleich: alle",
+    "doneFromGmail": "Erledigt aus Gmail ({address})",
+    "doneFromGmailShort": "Erledigt aus Gmail",
+    "copyState": {
+      "inbox": "{address}: im Posteingang",
+      "archived": "{address}: archiviert ({by}, {at})",
+      "trashed": "{address}: im Papierkorb ({by}, {at})",
+      "spam": "{address}: als Spam eingestuft ({by}, {at})",
+      "deleted": "{address}: endgültig gelöscht ({by}, {at})"
+    },
+    "copyStateShort": {
+      "inbox": "im Posteingang",
+      "archived": "archiviert",
+      "trashed": "im Papierkorb",
+      "spam": "Spam",
+      "deleted": "gelöscht"
+    },
+    "copyBy": {
+      "user": "Nutzer",
+      "platform": "Plattform",
+      "reconcile": "Abgleich"
+    },
+    "copyCollective": "Sammelpostfach {address}",
+    "copyAuthoritative": "entscheidet",
+    "copyHidden": "{address}: Kopie ohne Lesefreigabe",
+    "keepOpenLabel": "In Gmail unter Label {label} abgelegt, bleibt offen.",
+    "settlePending": "Beruhigungsfrist bis {until}, danach wird die Mail als erledigt übernommen.",
+    "recordOnlyHint": "Nur anzeigen: Änderungen in Gmail werden vermerkt, der Status bleibt unverändert.",
+    "restoreInbox": "Zurück in den Gmail Posteingang",
+    "revertDecision": "Automatik zurücknehmen",
+    "revertConfirm": "Die automatische Erledigung aus Gmail aufheben? Mail und Ticket werden wieder geöffnet.",
+    "syncEvents": "Abgleichverlauf",
+    "syncEventsEmpty": "Keine Abgleichereignisse.",
+    "syncEvent": {
+      "done": "als erledigt übernommen",
+      "reopened": "wieder geöffnet",
+      "ignored_own": "eigene Aktion der Plattform",
+      "ignored_replay": "Wiederholung verworfen",
+      "ignored_personal": "persönliches Postfach, nicht maßgeblich",
+      "ignored_spam": "Spam entscheidet nicht",
+      "ignored_keep_open": "Arbeitslabel hält offen",
+      "skipped_mode": "Modus aus",
+      "skipped_mailbox": "Rückkanal des Postfachs aus",
+      "noted": "vermerkt",
+      "settle_pending": "Beruhigungsfrist läuft",
+      "completed": "Gruppe erledigt ({source})",
+      "reopened_group": "Gruppe wieder geöffnet ({source})",
+      "restore_requested": "Zurücklegen in den Posteingang angefordert"
+    },
+    "syncBackPaused": "Rückkanal aus Gmail ist für {addresses} ausgeschaltet.",
+    "lastSync": "Letzter Abruf {address}: {at}",
+    "syncBackWarning": "Hinweis: Der Rückkanal aus Gmail meldet Auffälligkeiten (Abgleich fehlgeschlagen, Abruf älter als 30 Minuten oder viele Rückfallzuordnungen).",
+    "trashNote": "Papierkorb zählt wie Archiv.",
+    "deletedNote": "Endgültig gelöschte Mails schließen nie ein Ticket."
   },
   "PlatformOverview": {
     "title": "Mandantenübersicht",
@@ -4682,6 +4775,33 @@
     "invalid": "Bitte eine ganze Zahl zwischen 0 und 3650 eingeben.",
     "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
   },
+  "GmailDoneSync": {
+    "title": "Erledigt aus Gmail übernehmen",
+    "description": "Archiviert oder löscht jemand eine Mail in Gmail, übernimmt die Plattform das als erledigt. Maßgeblich ist das Sammelpostfach. Archiviert nur ein persönliches Postfach, bleibt die Mail offen, bis auch das Sammelpostfach archiviert hat. Ohne Sammelpostfach müssen alle Postfächer archiviert haben. Nichts wird gelöscht, das Original bleibt gespeichert.",
+    "mode": "Stufe",
+    "modeOff": "Aus",
+    "modeRecordOnly": "Nur anzeigen",
+    "modeDone": "Übernehmen",
+    "spikeRequired": "erst nach bestätigtem Test des Gmail Verhaltens",
+    "closesTicket": "Ticket automatisch abschließen, wenn nichts mehr offen ist",
+    "closesTicketHint": "Der Abschluss erfolgt nur ohne offene Mails, Aufträge, Antworten, Vorschläge und Rechnungen und wird mit internem Kommentar und Benachrichtigung protokolliert.",
+    "closeAssigned": "Auch zugewiesene Tickets oder Tickets in Bearbeitung abschließen",
+    "doneOnTrash": "Papierkorb zählt wie Archiv",
+    "reopenOnUnarchive": "Wiederherstellen in Gmail öffnet die Mail wieder",
+    "restoreInbox": "Beim Wiederöffnen im CRM in den Gmail Posteingang zurücklegen",
+    "restoreInboxHint": "Standard aus: Die Plattform setzt das Label INBOX in persönlichen Postfächern nur mit diesem Schalter.",
+    "settleSeconds": "Beruhigungsfrist in Sekunden",
+    "settleHint": "0 bis 3600 Sekunden. Rückgängig, Zurückstellen oder Papierkorb in zwei Schritten lösen erst nach Ablauf einen Statuswechsel aus.",
+    "graceSeconds": "Karenz des Abgleichs in Sekunden",
+    "graceHint": "60 bis 3600 Sekunden. Der Abgleich lässt frisch geänderte Mails so lange unberührt.",
+    "keepOpenLabels": "Arbeitslabels (durch Komma getrennt)",
+    "keepOpenLabelsHint": "Mails, die in Gmail unter einem dieser Labels abgelegt werden, bleiben offen. Höchstens 20, keine Systemlabels.",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "invalid": "Bitte gültige Werte eingeben: Beruhigungsfrist 0 bis 3600, Karenz 60 bis 3600, höchstens 20 Arbeitslabels.",
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern.",
+    "latencyHint": "Änderungen in Gmail werden per Push sofort, sonst spätestens nach fünf Minuten erkannt. Ein Statuswechsel wartet zusätzlich die Beruhigungsfrist ab."
+  },
   "DatevMappings": {
     "title": "DATEV-Kontenzuordnung",
     "description": "Zuordnung der CRM-Kontonummern zu den DATEV-Sachkonten des Steuerberaters. Der Buchungsstapel-Export nutzt diese Zuordnung und bricht ab, solange Konten mit Buchungen nicht zugeordnet sind.",
@@ -4903,7 +5023,17 @@
       "failed": "Vollabruf abgebrochen bei {done} von {total} Nachrichten, erneut starten setzt fort"
     },
     "archiveScopeMissing": "Postfach neu verbinden, Berechtigung zum Archivieren fehlt. Erledigte Mails und geschlossene Tickets werden erst nach der erneuten Google-Verbindung aus dem Posteingang archiviert; offene Aufträge werden danach automatisch nachgeholt.",
-    "reconnectGoogle": "Erneut mit Google verbinden"
+    "reconnectGoogle": "Erneut mit Google verbinden",
+    "syncBackEnabled": "Rückkanal aus Gmail",
+    "syncBackHint": "Archivierungen, Papierkorb und Wiederherstellungen dieses Postfachs werden in die Plattform übernommen.",
+    "collectiveHint": "Sammelpostfach: Beim Rückkanal aus Gmail entscheidet dieses Postfach über die Erledigung.",
+    "lastReconcile": "Letzter Abgleich {at}: {checked} geprüft, {deviating} abweichend",
+    "reconcilePreview": "Abgleich Vorschau",
+    "reconcileNow": "Abgleich starten",
+    "reconcileRunning": "Abgleich läuft",
+    "previewTitle": "Vorschau des Abgleichs (ohne Wirkung)",
+    "previewClose": "Schließen",
+    "previewSummary": "Würde übernehmen: {archive} archiviert, {trash} im Papierkorb, {delete} gelöscht, {reopen} wieder im Posteingang, {own} eigene Aktionen."
   },
   "Dms": {
     "area": "Verwaltung",

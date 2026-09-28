@@ -178,6 +178,57 @@ the last 30 days; `POST /mail/messages/{id}/archive` does it for one mail; the O
 clears the scope flag and queues `archive_retry` for the tenant. Tests:
 `tests/integration/test_m20_archive_done.py`.
 
+## Rückkanal Gmail zu Plattform (M20-08, operator 28.09.2026)
+
+Rule `docs/rules/M20-08-gmail-rueckkanal-erledigt.md`, migration 0224. Label changes in
+Gmail are read per mailbox copy and, in mode `done`, complete or reopen the copy group.
+
+* Event types (`gmail.history_since`, all four history types, no `labelId` filter): `added`,
+  `inbox_removed`, `inbox_added`, `trash_added`, `trash_removed`, `spam_added`,
+  `spam_removed`, `deleted`, `label_added_other` (work labels). UNREAD, STARRED, IMPORTANT
+  and CATEGORY_* are dropped while parsing; the batch budget counts relevant events only.
+* Authoritative copies (`gmail_state.authoritative`): copies in collective mailboxes, without
+  one every copy with a mailbox; echoes and rows without Gmail id never decide. A personal
+  archive only records (`ignored_personal`); several collective mailboxes decide together;
+  trash counts like archive (`gmail_done_on_trash`), spam never decides, a permanent delete
+  completes the mail but never the ticket (comment K3).
+* Own actions: `gmail_expected_state` is set with `archive_status = pending` in the same
+  transaction (`mark_archive_pending`, ticket close, invoice forward) and
+  `archive_history_id` stores the `historyId` of the own modify call; an event whose id is
+  not newer, or whose state equals the expected state, is `ignored_own`. The replay guard
+  `gmail_state_history_id` is monotone per copy. The archive job leaves copies alone that a
+  user already archived or trashed (their state stays).
+* Settle period (`gmail_settle_seconds`, default 600): a completion waits (`settle_pending`),
+  beat `communication-gmail-settle` (60 s) executes it after a fresh check; a return into the
+  inbox before drops it. Work labels (`gmail_keep_open_labels`) keep a mail open.
+* Reconcile (`gmail_state.reconcile_mailbox`): profile history id first, complete inbox
+  listing, candidates of the last 90 days older than the grace period, own expected states
+  without a call, at most `gmail_state_reconcile_limit` single reads, returners as
+  `inbox_added`; hourly beat `communication-gmail-state-reconcile` (minute 17), after an
+  expired history in the same task, `POST /mail/mailboxes/{id}/reconcile-state` (preview or
+  queued run, 409 while running).
+* Modes (`tenant_settings.gmail_done_sync_mode`): `off`, `record_only` (default),
+  `done` (only after `POST /tenant/settings/gmail-spike-confirm`, else `MHVP-COMM-0007`).
+  Mailbox switch `sync_back_enabled`; a mailbox without `gmail.modify` only records.
+* Mode `done` (`gmail_done.py`): `complete_group` per group, ticket check once per ticket
+  with the refusal reasons of section 6.1 (`auto_close_skipped`), status event without user
+  and `source = gmail`, comments K1 to K4 without author (shown as System), notifications
+  `ticket.auto_closed`, `ticket.auto_reopened`, `ticket.auto_close_blocked`; reopen from
+  Gmail inside the reopen window, otherwise `reopen_skipped` with the mail visible through
+  `gmail_reopened_at`; P03 (`PATCH status=assigned` from done) and P05
+  (`POST /mail/messages/{id}/revert-gmail-decision`) reopen from the CRM, Gmail is written
+  only with `gmail_restore_inbox_on_reopen` (`POST /mail/messages/{id}/restore-inbox`, task
+  `gmail_restore_inbox`, `archive_status` restore_pending, restored, restore_failed).
+* API: `gmail_sync` (`state` synchron, abweichend, ausstehend, geloescht, unbekannt, aus and
+  `copies` per mailbox, hidden copies as `visible: false`), filter `sync_state`,
+  `GET /mail/messages/{id}/sync-events`, mailbox fields `sync_back_enabled`,
+  `gmail_last_sync_at`, `gmail_state_reconcile_*`, `sync_back_warning`.
+* Domain events: `message.gmail_state_changed` (effect per decision), `message.completed`,
+  `message.reopened`, `message.gmail_restore_requested`; `ticket.status_changed` carries
+  `source` and `auto_close` for automation conditions (`payload.source ne gmail`).
+* Tests: `tests/unit/test_gmail_state_decide.py`, `tests/unit/test_gmail_history_events.py`,
+  `tests/integration/test_m20_gmail_state_sync.py`.
+
 ## Further files (addendum 26.09.2026)
 
 Checked against the folder contents on 26.09.2026, the following files were not listed above:

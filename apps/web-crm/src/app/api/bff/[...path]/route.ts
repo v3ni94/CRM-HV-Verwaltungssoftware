@@ -741,6 +741,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^mail\/mail-approval\/deputies$/ },
   { method: "DELETE", pattern: new RegExp(`^mail/mail-approval/deputies/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/archive$`) },
+  // Rückkanal Gmail zu Plattform (M20-08): Verlauf, Zurücklegen, Automatik zurücknehmen,
+  // Abgleich je Postfach, Wartungslauf der Kopien, Spike-Bestätigung.
+  { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/sync-events$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/restore-inbox$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/revert-gmail-decision$`) },
+  { method: "POST", pattern: new RegExp(`^mail/mailboxes/${ID}/reconcile-state$`) },
+  { method: "POST", pattern: /^mail\/maintenance\/align-copies$/ },
+  { method: "POST", pattern: /^tenant\/settings\/gmail-spike-confirm$/ },
   { method: "POST", pattern: new RegExp(`^mail/mailboxes/${ID}/backfill$`) },
   // Messwesen: Übermittlungen an den Messdienstleister (Prüfung, Freigabe, Auftrag, Abruf).
   { method: "GET", pattern: /^metering\/transmissions$/ },

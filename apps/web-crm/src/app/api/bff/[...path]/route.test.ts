@@ -41,6 +41,12 @@ describe("BFF proxy", () => {
   });
 
   it.each([
+    ["GET", `mail/messages/${ID}/sync-events`],
+    ["POST", `mail/messages/${ID}/restore-inbox`],
+    ["POST", `mail/messages/${ID}/revert-gmail-decision`],
+    ["POST", `mail/mailboxes/${ID}/reconcile-state`],
+    ["POST", "mail/maintenance/align-copies"],
+    ["POST", "tenant/settings/gmail-spike-confirm"],
     ["GET", "ai/conversations"],
     ["POST", "ai/conversations"],
     ["GET", `ai/conversations/${ID}`],

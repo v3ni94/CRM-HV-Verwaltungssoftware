@@ -9,8 +9,9 @@ current inbox and relies on Message-ID deduplication.
 import base64
 import logging
 import uuid
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from sqlalchemy import select
@@ -28,6 +29,104 @@ API = "https://gmail.googleapis.com/gmail/v1/users/me"
 
 class GmailError(RuntimeError):
     pass
+
+
+# History entry kinds of ``GmailClient.history_since`` (rule M20-08). ``added`` is a message
+# added to the inbox (or without label information), the label kinds describe INBOX, TRASH
+# and SPAM changes, ``label_added_other`` carries every other added label (work labels),
+# ``deleted`` a permanent deletion. All other labels (UNREAD, STARRED, IMPORTANT, CATEGORY_*)
+# are dropped while parsing.
+HISTORY_TYPES = ("messageAdded", "labelRemoved", "labelAdded", "messageDeleted")
+LABEL_KINDS: dict[str, tuple[str, str]] = {
+    "INBOX": ("inbox_removed", "inbox_added"),
+    "TRASH": ("trash_removed", "trash_added"),
+    "SPAM": ("spam_removed", "spam_added"),
+}
+
+
+@dataclass(frozen=True)
+class HistoryEvent:
+    history_id: int
+    message_id: str
+    kind: str  # added | inbox_removed | inbox_added | trash_added | trash_removed |
+    # spam_added | spam_removed | deleted | label_added_other
+    label_ids: tuple[str, ...] = ()  # labelIds of the message when Google includes them
+    added_labels: tuple[str, ...] = ()  # raw labelIds of labelsAdded (work labels)
+
+
+@dataclass(frozen=True)
+class ArchiveResult:
+    status: Literal["archived", "gone"]
+    history_id: int | None
+
+
+def state_from_labels(label_ids: Any) -> str:
+    """Copy state derived from a message's ``labelIds``: TRASH and SPAM win, no INBOX is
+    ``archived``, otherwise ``inbox`` (also when Google sends no labels at all)."""
+    labels = set(label_ids or ())
+    if "TRASH" in labels:
+        return "trashed"
+    if "SPAM" in labels:
+        return "spam"
+    if label_ids is None or "INBOX" in labels:
+        return "inbox"
+    return "archived"
+
+
+def parse_history(history: list[dict[str, Any]], fallback_id: str) -> list[HistoryEvent]:
+    """Events of one page of ``history.list`` in response order (M20-08). ``messagesAdded``
+    without ``labelIds`` or with INBOX count as ``added`` (a message added straight to the
+    archive, e.g. by a filter, is not fetched); label changes to INBOX, TRASH and SPAM get
+    their kind; other added labels are kept in ``added_labels`` of a ``label_added_other``
+    event; every other label is dropped."""
+    events: list[HistoryEvent] = []
+    for h in history:
+        entry_id = int(h.get("id") or fallback_id)
+        for added in h.get("messagesAdded", []):
+            message = added.get("message") or {}
+            labels = message.get("labelIds")
+            if labels is None or "INBOX" in labels:
+                events.append(
+                    HistoryEvent(
+                        entry_id,
+                        str(message["id"]),
+                        "added",
+                        label_ids=tuple(labels) if labels is not None else (),
+                    )
+                )
+        for removed in h.get("labelsRemoved", []):
+            mid = str((removed.get("message") or {}).get("id") or "")
+            for label in removed.get("labelIds", []):
+                if mid and label in LABEL_KINDS:
+                    events.append(HistoryEvent(entry_id, mid, LABEL_KINDS[label][0]))
+        for added in h.get("labelsAdded", []):
+            mid = str((added.get("message") or {}).get("id") or "")
+            if not mid:
+                continue
+            other: list[str] = []
+            for label in added.get("labelIds", []):
+                if label in LABEL_KINDS:
+                    events.append(HistoryEvent(entry_id, mid, LABEL_KINDS[label][1]))
+                elif not _is_system_label(label):
+                    other.append(str(label))
+            if other:
+                events.append(
+                    HistoryEvent(entry_id, mid, "label_added_other", added_labels=tuple(other))
+                )
+        for deleted in h.get("messagesDeleted", []):
+            mid = str((deleted.get("message") or {}).get("id") or "")
+            if mid:
+                events.append(HistoryEvent(entry_id, mid, "deleted"))
+    return events
+
+
+SYSTEM_LABELS = frozenset(
+    {"INBOX", "TRASH", "SPAM", "UNREAD", "STARRED", "IMPORTANT", "SENT", "DRAFT", "CHAT"}
+)
+
+
+def _is_system_label(label: str) -> bool:
+    return label in SYSTEM_LABELS or label.startswith("CATEGORY_")
 
 
 class GmailClient:
@@ -154,18 +253,20 @@ class GmailClient:
         found = r.json().get("messages") or []
         return str(found[0]["id"]) if found else None
 
-    async def history_since(self, history_id: str) -> list[tuple[int, str]] | None:
-        """All ``(historyId, messageId)`` pairs of inbox messages added since ``history_id``,
-        every page, in history order; None when the history is expired (HTTP 404). The caller
-        decides how many to process and moves the cursor only past processed entries."""
-        seen: set[str] = set()
-        entries: list[tuple[int, str]] = []
+    async def history_since(self, history_id: str) -> list[HistoryEvent] | None:
+        """Every history event since ``history_id`` (all pages, in history order): messages
+        added to the inbox and label changes of INBOX, TRASH and SPAM, other added labels and
+        deletions (``HISTORY_TYPES``, no ``labelId`` filter, rule M20-08). None when the
+        history is expired (HTTP 404). The caller decides how many to process and moves the
+        cursor only past processed entries. Deduplicated per (kind, message, history id)."""
+        seen: set[tuple[str, str, int]] = set()
+        events: list[HistoryEvent] = []
         page: str | None = None
         while True:
             params: dict[str, Any] = {
                 "startHistoryId": history_id,
-                "historyTypes": "messageAdded",
-                "labelId": "INBOX",
+                "historyTypes": list(HISTORY_TYPES),
+                "maxResults": 500,
             }
             if page:
                 params["pageToken"] = page
@@ -175,16 +276,15 @@ class GmailClient:
             if r.status_code != 200:
                 raise GmailError(f"Verlauf nicht lesbar (HTTP {r.status_code}).")
             data = r.json()
-            for h in data.get("history", []):
-                entry_id = int(h.get("id") or history_id)
-                for added in h.get("messagesAdded", []):
-                    mid = added["message"]["id"]
-                    if mid not in seen:
-                        seen.add(mid)
-                        entries.append((entry_id, mid))
+            for event in parse_history(data.get("history", []), history_id):
+                key = (event.kind, event.message_id, event.history_id)
+                if key not in seen:
+                    seen.add(key)
+                    events.append(event)
             page = data.get("nextPageToken")
             if not page:
-                return entries
+                events.sort(key=lambda e: e.history_id)  # stable: response order kept per id
+                return events
 
     async def list_since(self, history_id: str, limit: int) -> list[str] | None:
         """Message ids added since history_id (first ``limit``); None when the history is
@@ -192,7 +292,7 @@ class GmailClient:
         entries = await self.history_since(history_id)
         if entries is None:
             return None
-        return [mid for _, mid in entries][:limit]
+        return [e.message_id for e in entries if e.kind == "added"][:limit]
 
     async def raw_message(self, message_id: str) -> bytes | None:
         fetched = await self.raw_message_with_thread(message_id)
@@ -201,6 +301,13 @@ class GmailClient:
     async def raw_message_with_thread(self, message_id: str) -> tuple[bytes, str | None] | None:
         """Raw RFC 822 bytes and the Gmail thread id (threading fallback, M7); None when the
         message is gone."""
+        fetched = await self.raw_message_full(message_id)
+        return (fetched[0], fetched[1]) if fetched is not None else None
+
+    async def raw_message_full(
+        self, message_id: str
+    ) -> tuple[bytes, str | None, list[str] | None] | None:
+        """Raw bytes, thread id and ``labelIds`` (initial copy state, M20-08); None when gone."""
         r = await self._get(f"messages/{message_id}", format="raw")
         if r.status_code == 404:
             return None
@@ -208,7 +315,36 @@ class GmailClient:
             raise GmailError(f"Nachricht nicht lesbar (HTTP {r.status_code}).")
         data = r.json()
         thread = data.get("threadId")
-        return base64.urlsafe_b64decode(data["raw"] + "=="), (str(thread) if thread else None)
+        labels = data.get("labelIds")
+        return (
+            base64.urlsafe_b64decode(data["raw"] + "=="),
+            (str(thread) if thread else None),
+            [str(x) for x in labels] if labels is not None else None,
+        )
+
+    async def message_labels(self, message_id: str) -> tuple[int, list[str]] | None:
+        """``(historyId, labelIds)`` of a message (``format=minimal``, reconcile M20-08);
+        None when the message no longer exists (404)."""
+        r = await self._get(f"messages/{message_id}", format="minimal")
+        if r.status_code == 404:
+            return None
+        if r.status_code != 200:
+            raise GmailError(f"Nachricht nicht lesbar (HTTP {r.status_code}).")
+        data = r.json()
+        return int(data.get("historyId") or 0), [str(x) for x in data.get("labelIds") or []]
+
+    async def thread_message_ids(self, thread_id: str) -> list[tuple[str, list[str]]] | None:
+        """``(message id, labelIds)`` of every message of a Gmail thread (SENT hint of the
+        automatic ticket close, M20-08); None when the thread is gone."""
+        r = await self._get(f"threads/{thread_id}", format="minimal")
+        if r.status_code == 404:
+            return None
+        if r.status_code != 200:
+            raise GmailError(f"Konversation nicht lesbar (HTTP {r.status_code}).")
+        return [
+            (str(m["id"]), [str(x) for x in m.get("labelIds") or []])
+            for m in r.json().get("messages", [])
+        ]
 
     async def find_by_rfc822_msgid(self, header_message_id: str) -> str | None:
         """Gmail id of a message with this ``Message-ID`` header, or None. Proof of dispatch
@@ -248,22 +384,43 @@ class GmailClient:
             raise GmailError(f"Versand fehlgeschlagen (HTTP {r.status_code}).")
         return str(r.json()["id"])
 
-    async def archive(self, message_id: str) -> None:
+    async def archive(self, message_id: str) -> ArchiveResult:
         """Removes the labels ``INBOX`` and ``UNREAD`` (M20-03, "Erledigt archiviert Mail").
         ``gmail.readonly`` cannot modify labels, so this needs the ``gmail.modify`` scope in
         ``SCOPES`` below; a mailbox connected before that change lacks it on its stored
         consent. HTTP 403 with an insufficient permission reason raises
         ``GmailScopeMissingError`` so the caller records a notice on the mailbox instead of
         failing the whole job; a rate limit 403 stays a plain ``GmailError`` (retried). A 404
-        (mail deleted or moved) counts as done. ``message_id`` is the Gmail message id, never
-        the thread id."""
+        (mail deleted or moved) counts as done (``status="gone"``). ``message_id`` is the
+        Gmail message id, never the thread id. The ``historyId`` of the modify answer is
+        returned so the back channel recognises the echo of this own action (M20-08)."""
+        r = await self._modify(message_id, {"removeLabelIds": ["INBOX", "UNREAD"]}, "Archivieren")
+        if r is None:
+            return ArchiveResult("gone", None)
+        return ArchiveResult("archived", _history_id_of(r))
+
+    async def restore_inbox(self, message_id: str, *, untrash: bool) -> int | None:
+        """Puts a message back into the inbox (M20-08, P03 and P05): ``untrash`` first when
+        the copy is in the trash, then ``addLabelIds INBOX``. Returns the ``historyId`` of
+        the last answer, None when the message is gone (404)."""
+        if untrash:
+            r = await self._modify(message_id, None, "Wiederherstellen")
+            if r is None:
+                return None
+        r = await self._modify(message_id, {"addLabelIds": ["INBOX"]}, "Wiederherstellen")
+        return _history_id_of(r) if r is not None else None
+
+    async def _modify(
+        self, message_id: str, payload: dict[str, Any] | None, action: str
+    ) -> httpx.Response | None:
+        """``messages.modify`` (payload) or ``messages.untrash`` (payload None) with the 401
+        retry and the 403 distinction of ``archive``; None on 404."""
         token = await self._access_token()
+        path = f"{API}/messages/{message_id}/" + ("untrash" if payload is None else "modify")
 
         async def _post(bearer: str) -> httpx.Response:
             return await self._http.post(
-                f"{API}/messages/{message_id}/modify",
-                json={"removeLabelIds": ["INBOX", "UNREAD"]},
-                headers={"Authorization": f"Bearer {bearer}"},
+                path, json=payload or {}, headers={"Authorization": f"Bearer {bearer}"}
             )
 
         r = await _post(token)
@@ -272,17 +429,26 @@ class GmailClient:
             token = await self._access_token()
             r = await _post(token)
         if r.status_code == 404:
-            return  # already gone (deleted or previously archived)
+            return None  # already gone (deleted or previously archived)
         if r.status_code == 403:
             reason = _error_reason(r)
             if reason in RATE_LIMIT_REASONS:
-                raise GmailError(f"Archivieren vorübergehend abgelehnt (Gmail: {reason}).")
+                raise GmailError(f"{action} vorübergehend abgelehnt (Gmail: {reason}).")
             raise GmailScopeMissingError(
                 "Berechtigung gmail.modify fehlt, Postfach unter Einstellungen, Postfächer "
                 "erneut mit Google verbinden."
             )
         if r.status_code != 200:
-            raise GmailError(f"Archivieren fehlgeschlagen (HTTP {r.status_code}).")
+            raise GmailError(f"{action} fehlgeschlagen (HTTP {r.status_code}).")
+        return r
+
+
+def _history_id_of(response: httpx.Response) -> int | None:
+    try:
+        value = response.json().get("historyId")
+    except ValueError:
+        return None
+    return int(value) if value not in (None, "") else None
 
 
 # Gmail reports quota and rate limits with HTTP 403 as well; these are no scope problems.
@@ -402,13 +568,17 @@ async def _ingest_one(
     mid: str,
     counts: dict[str, Any],
     created_ids: list[uuid.UUID] | None,
+    event: HistoryEvent | None = None,
 ) -> bool:
     """Fetches and ingests one Gmail message inside its own savepoint. Returns False when the
-    ingest failed (recorded in ``counts["errors"]``); a message gone from Gmail counts as done."""
+    ingest failed (recorded in ``counts["errors"]``); a message gone from Gmail counts as done.
+    A new row stores its initial copy state from the ``labelIds`` of the history entry or of
+    the fetched message (rule M20-08); a late copy of a group that is already done leaves the
+    inbox with the group (``archive_status = pending``)."""
     from mhvp.communication.services import ingest_raw
 
     try:
-        fetched = await client.raw_message_with_thread(mid)
+        fetched = await client.raw_message_full(mid)
     except (GmailError, httpx.HTTPError) as exc:
         # Transient fetch error of one message (HTTP 5xx, network): remembered for the retry
         # queue, the rest of the batch continues. Token errors surface before this point.
@@ -418,7 +588,7 @@ async def _ingest_one(
         return False
     if fetched is None:
         return True
-    raw, thread_id = fetched
+    raw, thread_id, fetched_labels = fetched
     counts["fetched"] += 1
     # Savepoint per mail: one unreadable or unstorable mail must not roll back the
     # whole batch or poison the session (seen 25.09.2026 as PendingRollbackError).
@@ -447,11 +617,46 @@ async def _ingest_one(
         message.gmail_message_id = mid
     counts["created" if created else "duplicates"] += 1
     if created:
+        _initial_state(session, settings, mailbox, message, event, fetched_labels)
         if created_ids is not None:
             created_ids.append(message.id)
         if message.ticket_id is not None:
             await _start_sla_clock(session, mailbox.tenant_id, message.ticket_id)
     return True
+
+
+def _initial_state(
+    session: AsyncSession,
+    settings: Settings,
+    mailbox: Mailbox,
+    message: Any,
+    event: HistoryEvent | None,
+    fetched_labels: list[str] | None,
+) -> None:
+    """Initial copy state of a new row (M20-08, 4.3) and the archive request for a late copy
+    of a done group (``duplicates.copy_of`` copies the status)."""
+    from mhvp.communication.services import enqueue_archive_for_messages, mark_archive_pending
+    from mhvp.core.db.tenancy import after_commit
+
+    labels: Any = event.label_ids if event is not None and event.label_ids else fetched_labels
+    message.gmail_state = state_from_labels(labels)
+    message.gmail_state_by = "user"
+    message.gmail_state_at = datetime.now(UTC)
+    if event is not None:
+        message.gmail_state_history_id = event.history_id
+    if (
+        message.status == "done"
+        and message.duplicate_of_id is not None
+        and message.gmail_state == "inbox"
+        and not (message.classification or {}).get("own_sent_echo")
+        and mark_archive_pending(message)
+    ):
+        tenant_id, message_id = mailbox.tenant_id, message.id
+
+        async def _archive() -> None:
+            await enqueue_archive_for_messages(session, settings, tenant_id, [message_id])
+
+        after_commit(session, _archive)
 
 
 async def _start_sla_clock(
@@ -543,9 +748,17 @@ async def sync_mailbox(
     A message that fails to ingest is remembered in ``mailbox_sync_retry`` and tried again
     first thing in the following runs; the cursor still advances past it.
 
+    Back channel (rule M20-08): the history walk requests every history type; label events
+    (INBOX, TRASH, SPAM removed or added, deletions, work labels) are applied after the
+    ingest loop through ``gmail_state.apply_events``. The batch budget counts only relevant
+    events; dropped entries still move the cursor. An expired history marks the mailbox
+    (``gmail_history_expired_at``) so ``sync_one`` runs the reconcile in the same task.
+
     Result: counters ``fetched``, ``created``, ``duplicates``, ``failed``, ``retried``,
-    ``remaining`` (history entries left for the next run) and ``errors`` (list of
-    ``{"gmail_id", "error"}`` of this run)."""
+    ``remaining`` (history entries left for the next run), ``state_events`` (label events
+    applied) and ``errors`` (list of ``{"gmail_id", "error"}`` of this run)."""
+    from mhvp.communication import gmail_state
+
     counts: dict[str, Any] = {
         "fetched": 0,
         "created": 0,
@@ -553,38 +766,61 @@ async def sync_mailbox(
         "failed": 0,
         "retried": 0,
         "remaining": 0,
+        "state_events": 0,
         "errors": [],
     }
     try:
         await _retry_failed(session, blobs, settings, mailbox, client, counts, created_ids)
         profile_cursor = int(await client.profile_history_id())
-        entries: list[tuple[int, str]] | None = None
+        tenant_settings = await gmail_state.tenant_settings_row(session)
+        keep_open = gmail_state.keep_open_set(tenant_settings)
+        entries: list[HistoryEvent] | None = None
         if mailbox.gmail_history_id:
             entries = await client.history_since(mailbox.gmail_history_id)
+            if entries is None:
+                mailbox.gmail_history_expired_at = datetime.now(UTC)
         if entries is None:
             # No cursor yet or history expired (404): restart from the inbox listing; the
             # Message-ID deduplication keeps this free of duplicates.
             entries = [
-                (profile_cursor, mid) for mid in await client.list_inbox(settings.gmail_sync_batch)
+                HistoryEvent(profile_cursor, mid, "added")
+                for mid in await client.list_inbox(settings.gmail_sync_batch)
             ]
             complete = True
         else:
-            complete = len(entries) <= settings.gmail_sync_batch
-        batch = entries[: settings.gmail_sync_batch]
-        # Finish the history entry at the cut so the cursor never splits one entry.
-        if not complete:
-            last_entry = batch[-1][0]
-            while len(batch) < len(entries) and entries[len(batch)][0] == last_entry:
-                batch.append(entries[len(batch)])
+            complete = _relevant_count(entries, keep_open) <= settings.gmail_sync_batch
+        batch = (
+            _cut_batch(entries, settings.gmail_sync_batch, keep_open) if not complete else entries
+        )
         counts["remaining"] = len(entries) - len(batch)
         last_done: int | None = None
-        for entry_id, mid in batch:
-            ok = await _ingest_one(
-                session, blobs, settings, mailbox, client, mid, counts, created_ids
+        state_events: list[HistoryEvent] = []
+        for event in batch:
+            if event.kind == "added":
+                ok = await _ingest_one(
+                    session,
+                    blobs,
+                    settings,
+                    mailbox,
+                    client,
+                    event.message_id,
+                    counts,
+                    created_ids,
+                    event,
+                )
+                if not ok:
+                    await _remember_failure(
+                        session, mailbox, event.message_id, counts["errors"][-1]["error"]
+                    )
+            else:
+                state_events.append(event)
+            last_done = event.history_id
+        if state_events:
+            applied = await gmail_state.apply_events(
+                session, settings, mailbox, state_events, tenant_settings
             )
-            if not ok:
-                await _remember_failure(session, mailbox, mid, counts["errors"][-1]["error"])
-            last_done = entry_id
+            counts["state_events"] = int(applied.get("applied", 0))
+            counts["state"] = applied
         if complete:
             mailbox.gmail_history_id = str(max(profile_cursor, last_done or 0))
         elif last_done is not None:
@@ -593,6 +829,7 @@ async def sync_mailbox(
         mailbox.last_error = (
             f"Nachricht {first['gmail_id']}: {first['error']}"[:1000] if first else None
         )
+        mailbox.gmail_last_sync_at = datetime.now(UTC)
     except (GmailError, httpx.HTTPError) as exc:
         mailbox.last_error = str(exc)[:1000]
         raise
@@ -600,6 +837,34 @@ async def sync_mailbox(
         mailbox.last_synced_at = datetime.now(UTC)
     await session.flush()
     return counts
+
+
+def _is_relevant(event: HistoryEvent, keep_open: frozenset[str]) -> bool:
+    """Events that consume the batch budget (M20-08): inbox additions, INBOX, TRASH and
+    SPAM changes, deletions and work labels that are configured."""
+    if event.kind == "label_added_other":
+        return any(label.lower() in keep_open for label in event.added_labels)
+    return True
+
+
+def _relevant_count(entries: list[HistoryEvent], keep_open: frozenset[str]) -> int:
+    return sum(1 for e in entries if _is_relevant(e, keep_open))
+
+
+def _cut_batch(
+    entries: list[HistoryEvent], budget: int, keep_open: frozenset[str]
+) -> list[HistoryEvent]:
+    """First ``budget`` relevant events, extended to the end of the history entry at the cut
+    so the cursor never splits one entry (review 26.09.2026, H1)."""
+    batch: list[HistoryEvent] = []
+    used = 0
+    for event in entries:
+        if used >= budget and event.history_id != batch[-1].history_id:
+            break
+        batch.append(event)
+        if _is_relevant(event, keep_open):
+            used += 1
+    return batch
 
 
 async def backfill_gmail_ids(
@@ -720,6 +985,17 @@ async def sync_one(
             counts["backfilled"] = filled["filled"]
         except (GmailError, httpx.HTTPError) as exc:
             log.warning("gmail id backfill failed", extra={"reason": str(exc)[:200]})
+        if mailbox.gmail_history_expired_at is not None and mailbox.sync_back_enabled:
+            # Expired history (rule M20-08, E20): the label changes between the old cursor
+            # and now are unknown, the reconcile finds them in the same task.
+            from mhvp.communication import gmail_state
+
+            try:
+                counts["reconcile"] = await gmail_state.reconcile_mailbox(
+                    session, settings, mailbox, client
+                )
+            except (GmailError, httpx.HTTPError) as exc:
+                log.warning("gmail state reconcile failed", extra={"reason": str(exc)[:200]})
         return counts
     finally:
         await client.aclose()

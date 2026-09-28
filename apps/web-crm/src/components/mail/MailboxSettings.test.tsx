@@ -91,4 +91,48 @@ describe("MailboxSettings", () => {
     renderIntl(<MailboxSettings oauth={oauth} mailboxes={[{ ...box, archive_scope_missing: false }]} members={[]} />);
     expect(screen.queryByTestId("archive-scope-missing")).not.toBeInTheDocument();
   });
+
+  it("switches the Gmail back channel, runs the reconcile preview and shows a running reconcile (M20-08)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/bff/mail/mailboxes/m1") && init?.method === "PATCH") {
+        return jsonResponse({ ...box, ...JSON.parse(String(init.body)) });
+      }
+      if (url.endsWith("/api/bff/mail/mailboxes/m1/reconcile-state") && init?.method === "POST") {
+        const body = JSON.parse(String(init.body));
+        if (body.preview) {
+          return jsonResponse({
+            checked: 3,
+            would_archive: 2,
+            would_trash: 0,
+            would_delete: 1,
+            would_reopen: 0,
+            own: 1,
+            deferred: 0,
+            samples: [{ message_id: "x1", subject: "Heizung", ticket_id: null, action: "archived" }],
+          });
+        }
+        return jsonResponse({ title: "Abgleich läuft bereits" }, 409);
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    renderIntl(
+      <MailboxSettings
+        oauth={oauth}
+        mailboxes={[{ ...box, sync_back_enabled: true, is_collective: true, gmail_state_reconciled_at: "2026-09-28T08:00:00Z", gmail_state_reconcile_counts: { checked: 5, archived: 1 } }]}
+        members={[]}
+      />,
+    );
+    expect(screen.getByText(/Sammelpostfach: Beim Rückkanal/)).toBeInTheDocument();
+    expect(screen.getByTestId("last-reconcile").textContent).toContain("5 geprüft, 1 abweichend");
+    await userEvent.click(screen.getByTestId("sync-back-enabled"));
+    await waitFor(() => expect(screen.getByTestId("sync-back-enabled")).not.toBeChecked());
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith("/mail/mailboxes/m1") && init?.method === "PATCH" && String(init.body).includes('"sync_back_enabled":false'))).toBe(true);
+    await userEvent.click(screen.getByTestId("reconcile-preview"));
+    await waitFor(() => expect(screen.getByTestId("reconcile-preview-dialog")).toBeInTheDocument());
+    expect(screen.getByTestId("reconcile-preview-dialog").textContent).toContain("2 archiviert");
+    expect(screen.getByTestId("reconcile-preview-dialog").textContent).toContain("Heizung");
+    await userEvent.click(screen.getByTestId("reconcile-now"));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Abgleich läuft bereits"));
+  });
 });

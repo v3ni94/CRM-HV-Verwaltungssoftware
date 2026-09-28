@@ -272,4 +272,58 @@ describe("MailDetail", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Keine Berechtigung für das Postfach dieser Nachricht.");
     expect(screen.queryByTestId("mail-reply-draft")).not.toBeInTheDocument();
   });
+
+  it("shows the Gmail copies, hidden copies, the sync history and the back channel actions (M20-08)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.endsWith("/api/bff/mail/messages/m1/sync-events")) {
+        return jsonResponse([
+          {
+            id: "e1",
+            occurred_at: "2026-09-28T09:00:00Z",
+            type: "message.gmail_state_changed",
+            payload: { mailbox_address: "info@example.com", from: "inbox", to: "archived", by: "user", effect: "done" },
+          },
+        ]);
+      }
+      if (url.endsWith("/api/bff/mail/messages/m1/revert-gmail-decision") && init?.method === "POST") {
+        return jsonResponse({ message_reopened: true, ticket_reopened: true });
+      }
+      if (url.endsWith("/api/bff/mail/messages/m1") && (!init?.method || init.method === "GET")) {
+        return jsonResponse(makeMessage({ status: "assigned", done_source: null }));
+      }
+      return jsonResponse([], 200);
+    });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const onUpdated = vi.fn();
+    renderIntl(
+      <MailDetail
+        message={makeMessage({
+          status: "done",
+          done_source: "gmail",
+          gmail_sync: {
+            state: "synchron",
+            copies: [
+              { mailbox_address: "info@example.com", is_collective: true, authoritative: true, gmail_state: "archived", gmail_state_by: "user", gmail_state_at: "2026-09-28T09:00:00Z", visible: true },
+              { mailbox_address: "timo@example.com", visible: false },
+            ],
+          },
+        })}
+        canApprove={false}
+        canReadMembers={false}
+        onUpdated={onUpdated}
+        onCreated={() => {}}
+      />,
+    );
+    const block = screen.getByTestId("mail-gmail-state");
+    expect(block.textContent).toContain("info@example.com: archiviert (Nutzer");
+    expect(block.textContent).toContain("(entscheidet)");
+    expect(block.textContent).toContain("timo@example.com: Kopie ohne Lesefreigabe");
+    expect(screen.getByRole("button", { name: "Zurück in den Gmail Posteingang" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Abgleichverlauf" }));
+    await waitFor(() => expect(screen.getByTestId("mail-sync-events").textContent).toContain("als erledigt übernommen"));
+    await userEvent.click(screen.getByRole("button", { name: "Automatik zurücknehmen" }));
+    await waitFor(() => expect(onUpdated).toHaveBeenCalledWith(expect.objectContaining({ status: "assigned" })));
+    expect(fetchMock.mock.calls.some(([input, init]) => String(input).endsWith("/revert-gmail-decision") && init?.method === "POST")).toBe(true);
+  });
 });

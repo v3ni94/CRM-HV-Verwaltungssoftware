@@ -7,6 +7,7 @@ import { useState } from "react";
 import { AttachmentReceiptAction } from "@/components/receipts/AttachmentReceiptAction";
 import { RECEIPT_MIME_TYPES } from "@/components/tickets/TicketMailAttachments";
 import { SafeHtml, SafeLine, SafeText } from "@/components/ui/SafeText";
+import { StatusChip } from "@/components/ui/StatusChip";
 import { formatDateTime } from "@/lib/format";
 import { formatBytes, isPreviewable, splitQuoted } from "@/lib/mailText";
 import { ui } from "@/lib/ui";
@@ -42,6 +43,9 @@ export type ThreadMessage = {
   approved_at?: string | null;
   author_approval_required?: boolean;
   author_approval_reason?: string | null;
+  /** Rückkanal M20-08: Abgleichstand mit Gmail und Erledigungsquelle. */
+  gmail_sync?: { state: string } | null;
+  done_source?: string | null;
 };
 
 /** Display status of a message: outbound drafts, pending, sent, or failed (send error
@@ -173,6 +177,9 @@ export function TicketMailThread({
                 <span className={statusClass(status)} data-testid="ticket-mail-status">
                   {t(`status.${status}`)}
                 </span>
+                {inbound && m.gmail_sync && m.gmail_sync.state !== "aus" ? (
+                  <StatusChip domain="mailSync" status={m.gmail_sync.state} label={t(`sync.${m.gmail_sync.state}`)} />
+                ) : null}
               </div>
               <span>{formatDateTime(messageTime(m))}</span>
             </div>

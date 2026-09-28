@@ -8,6 +8,7 @@ import { useTranslations } from "next-intl";
 import { Pagination } from "@/components/ui/Pagination";
 import type { Preparation } from "@/lib/ai";
 import { bff } from "@/lib/bff";
+import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { MailDetail } from "./MailDetail";
@@ -77,9 +78,57 @@ export type Message = {
   handler_display_name?: string | null;
   // Copy of the same mail from another own mailbox, linked to the leading copy.
   duplicate_of_id?: string | null;
+  // Rückkanal Gmail zu Plattform (M20-08): Zustand dieser Kopie, Erledigungsquelle und der
+  // Abgleichstand der Gruppe mit den Kopien je Postfach.
+  gmail_state?: string | null;
+  gmail_state_by?: string | null;
+  gmail_state_at?: string | null;
+  gmail_expected_state?: string | null;
+  done_source?: string | null;
+  done_at?: string | null;
+  gmail_reopened_at?: string | null;
+  gmail_keep_open_label?: string | null;
+  gmail_settle_until?: string | null;
+  gmail_sync?: GmailSync;
 };
 
-export type Mailbox = { id: string; address: string; archive_scope_missing?: boolean };
+export type GmailSyncCopy = {
+  message_id?: string;
+  mailbox_id?: string;
+  mailbox_address: string | null;
+  is_collective?: boolean;
+  authoritative?: boolean;
+  gmail_state?: string | null;
+  gmail_state_by?: string | null;
+  gmail_state_at?: string | null;
+  archive_status?: string | null;
+  visible: boolean;
+};
+export type GmailSync = { state: string; copies: GmailSyncCopy[] };
+export const SYNC_FILTERS = ["abweichend", "ausstehend", "geloescht"] as const;
+
+/** Klartext je Kopie, z. B. "In timo@ archiviert, Sammelpostfach info@ noch offen". */
+export function syncHint(sync: GmailSync | undefined, t: (key: string, values?: Record<string, string>) => string): string {
+  if (!sync) return "";
+  return sync.copies
+    .map((c) => {
+      const address = c.mailbox_address ?? "";
+      if (!c.visible) return t("copyHidden", { address });
+      const state = c.gmail_state ?? "inbox";
+      const prefix = c.is_collective ? t("copyCollective", { address }) : address;
+      return `${prefix}: ${t(`copyStateShort.${state}`)}`;
+    })
+    .join(", ");
+}
+
+export type Mailbox = {
+  id: string;
+  address: string;
+  archive_scope_missing?: boolean;
+  sync_back_enabled?: boolean;
+  gmail_last_sync_at?: string | null;
+  sync_back_warning?: boolean;
+};
 
 type Tab = "inbox" | "drafts" | "pending" | "sent";
 
@@ -94,6 +143,7 @@ function queryFor(
   q: string,
   showClosed = false,
   page = 1,
+  syncState = "",
 ): string {
   const params = new URLSearchParams();
   if (tab === "inbox") {
@@ -101,6 +151,8 @@ function queryFor(
     if (status) params.set("status", status);
     // Operator 26.09.2026: done mails (or mails of closed tickets) stay hidden unless shown.
     else if (showClosed) params.set("include_closed", "true");
+    // Rückkanal M20-08: Abgleichstand mit Gmail als Filter.
+    if (syncState) params.set("sync_state", syncState);
   } else if (tab === "drafts") {
     params.set("direction", "out");
     params.set("status", "draft");
@@ -137,6 +189,7 @@ export function MailWorkspace({
   const [q, setQ] = useState("");
   const [queryText, setQueryText] = useState("");
   const [mailboxId, setMailboxId] = useState("");
+  const [syncState, setSyncState] = useState("");
   const [mailboxes, setMailboxes] = useState<Mailbox[]>([]);
   const [messages, setMessages] = useState<Message[] | null>(null);
   // Deep link from the ticket mail thread (operator 26.09.2026): /mail?message=<id>.
@@ -182,11 +235,12 @@ export function MailWorkspace({
       activeQ: string,
       activeShowClosed: boolean,
       activePage: number,
+      activeSyncState = "",
     ) => {
       setBusy(true);
       setError(null);
       void bff<Message[]>(
-        `/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ, activeShowClosed, activePage)}`,
+        `/api/bff/mail/messages?${queryFor(activeTab, activeStatus, activeMailbox, activeQ, activeShowClosed, activePage, activeSyncState)}`,
       ).then((res) => {
         setBusy(false);
         if (res.ok) {
@@ -208,8 +262,8 @@ export function MailWorkspace({
   );
 
   useEffect(() => {
-    load(tab, status, mailboxId, q, showClosed, page);
-  }, [tab, status, mailboxId, q, showClosed, page, load]);
+    load(tab, status, mailboxId, q, showClosed, page, syncState);
+  }, [tab, status, mailboxId, q, showClosed, page, syncState, load]);
 
   // Filterwechsel setzt auf Seite 1 zurück (Betreibermeldung 27.09.2026); der Seitenwechsel
   // selbst löst load() über den Effekt oben aus. Der erste Durchlauf beim Einhängen darf eine
@@ -266,7 +320,7 @@ export function MailWorkspace({
     };
   }, [selectedId]);
 
-  const refresh = () => load(tab, status, mailboxId, q, showClosed, page);
+  const refresh = () => load(tab, status, mailboxId, q, showClosed, page, syncState);
 
   const toggleClosed = (next: boolean) => {
     setShowClosed(next);
@@ -381,6 +435,22 @@ export function MailWorkspace({
             {t("showClosed")}
           </label>
         ) : null}
+        {tab === "inbox" ? (
+          <select
+            className={`${ui.input} w-auto min-w-[10rem]`}
+            value={syncState}
+            onChange={(e) => setSyncState(e.target.value)}
+            aria-label={t("syncFilter")}
+            data-testid="sync-filter"
+          >
+            <option value="">{t("syncFilterAll")}</option>
+            {SYNC_FILTERS.map((s) => (
+              <option key={s} value={s}>
+                {t(`sync.${s}`)}
+              </option>
+            ))}
+          </select>
+        ) : null}
         {mailboxes.length > 0 ? (
           <select
             className={`${ui.input} w-auto min-w-[12rem]`}
@@ -423,6 +493,22 @@ export function MailWorkspace({
           <Link href="/einstellungen/postfaecher" className="font-medium underline">
             {t("archiveScopeLink")}
           </Link>
+        </p>
+      ) : null}
+      {mailboxes.some((m) => m.sync_back_enabled === false) ? (
+        <p role="status" className={ui.warning} data-testid="sync-back-paused">
+          {t("syncBackPaused", {
+            addresses: mailboxes.filter((m) => m.sync_back_enabled === false).map((m) => m.address).join(", "),
+          })}
+        </p>
+      ) : null}
+      {mailboxes.some((m) => m.gmail_last_sync_at || m.sync_back_warning) ? (
+        <p className="text-xs text-muted" data-testid="last-sync">
+          {mailboxes
+            .filter((m) => m.gmail_last_sync_at)
+            .map((m) => t("lastSync", { address: m.address, at: formatDateTime(m.gmail_last_sync_at as string) }))
+            .join(" · ")}
+          {mailboxes.some((m) => m.sync_back_warning) ? ` ${t("syncBackWarning")}` : ""}
         </p>
       ) : null}
       <div className="grid min-w-0 gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)]">

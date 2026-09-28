@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import forwarding_dispatch as fd
+from mhvp.communication.gmail import ArchiveResult
 from mhvp.core.config import Settings
 
 
@@ -23,6 +24,8 @@ def _message(**overrides: Any) -> Any:
         "from_address": "lieferant@example.org",
         "gmail_message_id": "g-1",
         "attachment_document_ids": [uuid.uuid4()],
+        "gmail_state": None,
+        "archive_status": None,
     }
     return SimpleNamespace(**(base | overrides))
 
@@ -50,8 +53,9 @@ class _FakeClient:
         self.sent.append(raw)
         return "sent-1"
 
-    async def archive(self, message_id: str) -> None:
+    async def archive(self, message_id: str) -> ArchiveResult:
         self.archived.append(message_id)
+        return ArchiveResult("archived", 77)
 
     async def aclose(self) -> None:
         return None

@@ -316,6 +316,18 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
             "ticket_reopen_window_days BETWEEN 0 AND 3650",
             name="ticket_reopen_window_days_range",
         ),
+        # Gmail back channel (rule M20-08, migration 0224).
+        CheckConstraint(
+            "gmail_done_sync_mode IN ('off', 'record_only', 'done')",
+            name="gmail_done_sync_mode_values",
+        ),
+        CheckConstraint(
+            "gmail_settle_seconds BETWEEN 0 AND 3600", name="gmail_settle_seconds_range"
+        ),
+        CheckConstraint(
+            "gmail_reconcile_grace_seconds BETWEEN 60 AND 3600",
+            name="gmail_reconcile_grace_seconds_range",
+        ),
     )
 
     company: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
@@ -475,6 +487,43 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     hoa_virtual_meetings_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # Rückkanal Gmail zu Plattform (rule M20-08, migration 0224, docs/rules/M20-08): mode
+    # ``off`` (label changes are ignored), ``record_only`` (default: states and events are
+    # recorded, nothing changes status) or ``done`` (a mail archived in Gmail by the
+    # authoritative copies becomes done, optionally closing its ticket). ``done`` needs the
+    # confirmed spike (``gmail_spike_confirmed_at``). The other switches guard the mode:
+    # trash counts like archive, restoring in Gmail reopens, restoring from the CRM writes
+    # INBOX back (default off), settle period and reconcile grace in seconds, work labels
+    # that keep a mail open, auto close also of assigned tickets (default off).
+    gmail_done_sync_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="record_only", server_default="record_only"
+    )
+    gmail_done_closes_ticket: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    gmail_done_on_trash: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    gmail_reopen_on_unarchive: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    gmail_restore_inbox_on_reopen: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    gmail_settle_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=600, server_default=text("600")
+    )
+    gmail_reconcile_grace_seconds: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=300, server_default=text("300")
+    )
+    gmail_keep_open_labels: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    gmail_close_assigned_tickets: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    gmail_spike_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    gmail_spike_protocol_ref: Mapped[str | None] = mapped_column(String(500))
 
 
 class VatStatus(StrEnum):

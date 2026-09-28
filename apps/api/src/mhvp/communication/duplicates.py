@@ -375,6 +375,8 @@ def copy_of(
         gmail_message_id=gmail_message_id,
         gmail_thread_id=gmail_thread_id,
         status=primary.status,
+        done_source=primary.done_source,
+        done_at=primary.done_at,
         classification=classification,
         appointment_suggestions=list(primary.appointment_suggestions),
         duplicate_of_id=primary.id,

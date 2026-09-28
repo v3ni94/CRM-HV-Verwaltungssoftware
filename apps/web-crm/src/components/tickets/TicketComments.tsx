@@ -11,6 +11,7 @@ export type TicketCommentRow = {
   body: string;
   internal: boolean;
   created_at: string;
+  author_user_id?: string | null;
   author_name?: string | null;
   author_contact_id?: string | null;
   document_ids?: string[];
@@ -25,7 +26,9 @@ export function TicketComments({ comments }: { comments: TicketCommentRow[] }) {
   return (
     <ul className="flex min-w-0 flex-col gap-2 text-sm" data-testid="ticket-comments">
       {comments.map((c, i) => {
-        const author = c.author_name ?? (c.author_contact_id ? t("portalAuthor") : t("unknownAuthor"));
+        // Kommentare ohne Benutzer und ohne Kontakt stammen vom System (Rückkanal M20-08).
+        const author =
+          c.author_name ?? (c.author_contact_id ? t("portalAuthor") : c.author_user_id === null ? t("systemAuthor") : t("unknownAuthor"));
         const docs = c.document_ids?.length ?? 0;
         return (
           <li key={c.id ?? i} className={`${ui.card} min-w-0`}>

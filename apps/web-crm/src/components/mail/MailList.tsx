@@ -9,7 +9,7 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-import type { Message } from "./MailWorkspace";
+import { syncHint, type Message } from "./MailWorkspace";
 
 function counterpart(message: Message): string {
   if (message.direction === "in") return message.from_address ?? "";
@@ -196,6 +196,19 @@ export function MailList({
                     </span>
                   ) : null}
                   {category ? <span className={ui.badge}>{category}</span> : null}
+                  {message.gmail_sync && message.gmail_sync.state !== "aus" && message.direction === "in" ? (
+                    <StatusChip
+                      domain="mailSync"
+                      status={message.gmail_sync.state}
+                      label={t(`sync.${message.gmail_sync.state}`)}
+                      explanation={syncHint(message.gmail_sync, t) || undefined}
+                    />
+                  ) : null}
+                  {message.done_source === "gmail" ? (
+                    <span className={ui.badge} data-testid="done-from-gmail">
+                      {t("doneFromGmail", { address: message.gmail_sync?.copies.find((c) => c.authoritative)?.mailbox_address ?? "" })}
+                    </span>
+                  ) : null}
                 </div>
               </button>
             </li>

@@ -6,6 +6,7 @@ from decimal import Decimal
 from typing import Any
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     Computed,
     Date,
@@ -107,6 +108,28 @@ class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
     is_collective: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # Rückkanal Gmail zu Plattform (rule M20-08, migration 0224): label changes of this
+    # mailbox are read from the history (``mhvp.communication.gmail_state``); off keeps the
+    # states untouched. ``gmail_history_expired_at`` marks a 404 restart (reconcile due),
+    # ``gmail_state_reconciled_at`` the last full reconcile with its status (idle, queued,
+    # running, done, failed) and counters; ``gmail_last_sync_at`` the end of the last
+    # successful sync run; ``gmail_sync_back_counts`` running counters (events, done,
+    # reopened, ignored_own, ignored_replay, fallback_attributions).
+    sync_back_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    gmail_history_expired_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    gmail_state_reconciled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    gmail_state_reconcile_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="idle", server_default="idle"
+    )
+    gmail_state_reconcile_counts: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
+    gmail_last_sync_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    gmail_sync_back_counts: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default="{}"
+    )
 
 
 class MailboxUser(IdMixin, TenantMixin, Base):
@@ -148,6 +171,21 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
         ),
         # Sender lookup of the Lern-Workflow (rule M9-11, migration 0220).
         Index("ix_message_tenant_from_address_norm", "tenant_id", "from_address_norm"),
+        # Gmail back channel (rule M20-08, migration 0224): copy lookup per mailbox and Gmail
+        # id, settle deadlines and mails reopened from Gmail. The partial unique index
+        # ``uq_message_mailbox_gmail_id`` is created by the migration only without
+        # duplicate rows (see docs/integrations/gmail.md) and is not declared here.
+        Index("ix_message_mailbox_gmail_id", "tenant_id", "mailbox_id", "gmail_message_id"),
+        Index(
+            "ix_message_gmail_settle",
+            "tenant_id",
+            postgresql_where=text("gmail_settle_until IS NOT NULL"),
+        ),
+        Index(
+            "ix_message_gmail_reopened",
+            "tenant_id",
+            postgresql_where=text("gmail_reopened_at IS NOT NULL"),
+        ),
     )
 
     channel: Mapped[str] = mapped_column(String(16), nullable=False, default="email")
@@ -247,6 +285,29 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     duplicate_of_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("message.id", ondelete="SET NULL"), nullable=True
     )
+    # Rückkanal Gmail zu Plattform (rule M20-08, migration 0224). ``gmail_state`` is the
+    # label state of this copy in its mailbox: inbox (also NULL), archived, trashed, spam,
+    # deleted; ``gmail_state_by`` who caused the last change (user, platform, reconcile),
+    # ``gmail_state_history_id`` the last applied history id of the copy (monotone replay
+    # guard). ``gmail_expected_state`` (inbox, archived) is the state the platform itself
+    # requested, set in the same transaction as ``archive_status = pending`` so the echo of
+    # an own archiving is recognised without any status dependency; ``archive_history_id``
+    # the history id Google returned for the platform's own modify call. ``done_source``
+    # (user, bulk, gmail, echo, reconcile) and ``done_at`` describe the last switch to done;
+    # ``gmail_reopened_at`` keeps a mail reopened from Gmail visible in the default list even
+    # when its ticket stayed closed; ``gmail_keep_open_label`` is a work label that blocks the
+    # completion; ``gmail_settle_until`` the end of the settle period of a pending decision.
+    gmail_state: Mapped[str | None] = mapped_column(String(16))
+    gmail_state_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    gmail_state_by: Mapped[str | None] = mapped_column(String(16))
+    gmail_state_history_id: Mapped[int | None] = mapped_column(BigInteger)
+    gmail_expected_state: Mapped[str | None] = mapped_column(String(16))
+    archive_history_id: Mapped[int | None] = mapped_column(BigInteger)
+    done_source: Mapped[str | None] = mapped_column(String(16))
+    done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    gmail_reopened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    gmail_keep_open_label: Mapped[str | None] = mapped_column(String(128))
+    gmail_settle_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Playbook(IdMixin, TimestampMixin, TenantMixin, Base):
