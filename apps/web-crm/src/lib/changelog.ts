@@ -17,6 +17,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.39.0",
+    date: "28.09.2026",
+    title: "Umbuchungen, Portalformulare, Kalenderfehler und Release-Skript",
+    changes: [
+      "Umbuchungen zwischen eigenen Bankkonten werden nur einmal gebucht: Nach der Buchung einer Seite gilt die Partnerseite als erledigt, ein weiterer Buchungsversuch wird mit MHVP-BANK-0019 abgelehnt; nach einem Storno ist das Paar genau einmal neu buchbar (Abnahmefall D04, Regel B08). Ein Umbuchungspaar kann nur noch gegen das Bankkonto der Partnerseite gebucht werden.",
+      "Kalender: Fehler des Google Kalenders führen nicht mehr zu \"Interner Fehler\"; eine abgelaufene oder widerrufene Google-Verbindung meldet MHVP-COMM-0004 mit dem Hinweis, das Postfach unter Einstellungen, Postfächer neu zu verbinden, eine vorübergehende Störung meldet MHVP-COMM-0005 mit der Bitte um einen erneuten Versuch; interne Termine und Fristen werden weiter angezeigt.",
+      "Anmeldeseite: Logo, Favicon und die übrigen Dateien aus dem öffentlichen Verzeichnis werden ohne Sitzung ausgeliefert und nicht mehr auf die Anmeldung umgeleitet; Seiten und Schnittstellen bleiben geschützt.",
+      "Portalformulare: Die Einreichungen lassen sich im CRM nach dem Status des zugehörigen Tickets filtern (Alle, Offen oder ein einzelner Status).",
+      "Dokumente: Hochgeladene HEIC- und HEIF-Dateien werden nur noch mit gültiger Dateisignatur angenommen, umbenannte Programme oder Videos werden abgelehnt.",
+      "Der Einladungsbrief zum Kundenportal ist durch einen API-Test abgesichert (Codewechsel, 90 Tage Gültigkeit, QR-Code nur mit öffentlicher Portaladresse, Berechtigung und Mandantentrennung).",
+      "Neues Skript infra/scripts/release.sh für den Release auf dem Produktionsserver: Pull, geprüfte Datenbanksicherung, Build der drei Images, Umstellung von .env.prod mit Sicherungskopie, Migration, Start mit Gesundheitsprüfung, Logprüfung und Rollback-Hinweise ohne automatisches Zurücksetzen; Probelauf mit --dry-run; Runbook docs/runbooks/release.md.",
+      "Lückenliste vom 26.09.2026 geprüft: Teil A ist vollständig umgesetzt, offene Restpunkte warten auf Betreiberentscheidungen.",
+    ],
+  },
+  {
     version: "1.38.0",
     date: "28.09.2026",
     title: "Lern-Workflow, Folgevorgänge und durchgängiges Design",
