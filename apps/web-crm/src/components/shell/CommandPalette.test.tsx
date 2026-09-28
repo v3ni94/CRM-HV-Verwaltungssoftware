@@ -76,6 +76,24 @@ describe("CommandPalette", () => {
     expect(within(recent).getByRole("option", { name: /Max Muster/ })).toBeInTheDocument();
   });
 
+  it("collapses to a 44 px icon on phones and opens as a full screen with a close button (M31)", async () => {
+    setup();
+    const trigger = screen.getByRole("button", { name: "Suche und Befehle öffnen" });
+    expect(trigger).toHaveClass("h-11", "w-11", "sm:w-auto", "sm:min-w-56");
+    expect(screen.getByTestId("palette-label")).toHaveClass("hidden", "sm:flex");
+    expect(screen.getByText("Strg+K")).toHaveClass("hidden", "lg:inline");
+    await userEvent.click(trigger);
+    const dialog = screen.getByRole("dialog", { name: "Befehlspalette" });
+    expect(dialog).toHaveClass("h-dvh", "flex-col", "sm:h-auto");
+    const close = within(dialog).getByRole("button", { name: "Schließen" });
+    expect(close).toHaveClass("min-h-11", "sm:hidden");
+    expect(within(dialog).getByRole("combobox")).toHaveClass("min-h-11");
+    for (const option of within(dialog).getAllByRole("option")) expect(option).toHaveClass("min-h-11");
+    await userEvent.click(close);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(trigger).toHaveFocus();
+  });
+
   it("executes an action and matches navigation entries by text", async () => {
     setup();
     await userEvent.keyboard("{Control>}k{/Control}");

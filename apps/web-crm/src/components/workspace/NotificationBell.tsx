@@ -53,7 +53,7 @@ export function NotificationBell() {
     void bff<null>("/api/bff/workspace/notifications/read", { method: "POST", body: JSON.stringify([id]) });
   }
 
-  const entryClass = "block rounded-lg px-2 py-1.5 text-sm transition duration-150 hover:bg-surface-2";
+  const entryClass = "flex min-h-11 flex-col justify-center rounded-lg px-2 py-1.5 text-sm transition duration-150 hover:bg-surface-2 sm:pointer-fine:min-h-0";
   const content = (n: Notice) => (
     <>
       <p className="font-medium">{n.title}</p>
@@ -64,9 +64,12 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
+      {/* Round 44 px icon below sm, the labelled pill from sm (36 px with a mouse as before,
+          44 px on touch), M31. */}
       <button
         type="button"
-        className="relative inline-flex h-9 items-center gap-1.5 rounded-full border border-border bg-surface px-3 text-sm font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus"
+        className="relative inline-flex h-11 w-11 items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus sm:w-auto sm:px-3 sm:pointer-fine:h-9"
+        aria-label={t("notifications")}
         aria-expanded={open}
         aria-controls="notifications"
         onClick={() => setOpen((v) => !v)}
@@ -75,10 +78,10 @@ export function NotificationBell() {
           <path d="M5 8a5 5 0 0 1 10 0v3.2l1.2 2.3H3.8L5 11.2Z" strokeLinejoin="round" />
           <path d="M8.3 15.5a1.8 1.8 0 0 0 3.4 0" strokeLinecap="round" />
         </svg>
-        {t("notifications")}
+        <span className="hidden sm:inline">{t("notifications")}</span>
         {items.length > 0 ? (
           <span
-            className="inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-accent-fg"
+            className="absolute -right-0.5 -top-0.5 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-accent-fg sm:static"
             data-testid="unread-count"
           >
             {items.length}
@@ -86,7 +89,10 @@ export function NotificationBell() {
         ) : null}
       </button>
       {open ? (
-        <div id="notifications" className="absolute right-0 z-40 mt-2 w-80 rounded-xl border border-border bg-raised p-2 shadow-lg">
+        <div
+          id="notifications"
+          className="fixed inset-x-4 top-[calc(var(--mhvp-header-h)+0.5rem)] z-40 max-h-[70vh] overflow-auto rounded-xl border border-border bg-raised p-2 shadow-lg sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 sm:max-h-none sm:w-80"
+        >
           {items.length === 0 ? (
             <p className="p-2 text-sm text-muted">{t("noNotifications")}</p>
           ) : (

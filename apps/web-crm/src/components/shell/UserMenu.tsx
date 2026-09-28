@@ -17,6 +17,9 @@ function initials(name: string): string {
   return `${first}${last}`.toUpperCase() || "?";
 }
 
+/** Menu entries: 44 px on touch, the compact row with a mouse from `sm` (M31). */
+const MENU_ITEM = "flex min-h-11 items-center rounded-md px-3 py-1.5 text-left text-sm transition duration-150 hover:bg-surface-2 sm:pointer-fine:min-h-0";
+
 export function UserMenu({ name, email }: { name: string; email?: string }) {
   const t = useTranslations("Shell");
   const router = useRouter();
@@ -25,16 +28,17 @@ export function UserMenu({ name, email }: { name: string; email?: string }) {
 
   useEffect(() => {
     if (!open) return;
-    function onClick(event: MouseEvent) {
+    // pointerdown instead of mousedown: fires for touch as well (M31).
+    function onClick(event: PointerEvent) {
       if (ref.current && !ref.current.contains(event.target as Node)) setOpen(false);
     }
     function onKey(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
     }
-    document.addEventListener("mousedown", onClick);
+    document.addEventListener("pointerdown", onClick);
     document.addEventListener("keydown", onKey);
     return () => {
-      document.removeEventListener("mousedown", onClick);
+      document.removeEventListener("pointerdown", onClick);
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
@@ -53,7 +57,7 @@ export function UserMenu({ name, email }: { name: string; email?: string }) {
         aria-haspopup="menu"
         aria-expanded={open}
         onClick={() => setOpen((v) => !v)}
-        className="flex h-9 w-9 items-center justify-center rounded-full bg-gold-soft text-sm font-semibold text-fg shadow-xs transition duration-150 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2"
+        className="flex h-11 w-11 items-center justify-center rounded-full bg-gold-soft text-sm font-semibold text-fg shadow-xs transition duration-150 hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-focus focus:ring-offset-2 sm:pointer-fine:h-9 sm:pointer-fine:w-9"
       >
         {initials(name)}
       </button>
@@ -72,7 +76,7 @@ export function UserMenu({ name, email }: { name: string; email?: string }) {
           <Link
             href="/einstellungen/profil"
             role="menuitem"
-            className="block rounded-md px-3 py-1.5 text-left text-sm transition duration-150 hover:bg-surface-2"
+            className={MENU_ITEM}
             onClick={() => setOpen(false)}
           >
             {t("myData")}
@@ -80,7 +84,7 @@ export function UserMenu({ name, email }: { name: string; email?: string }) {
           <Link
             href="/einstellungen"
             role="menuitem"
-            className="block rounded-md px-3 py-1.5 text-left text-sm transition duration-150 hover:bg-surface-2"
+            className={MENU_ITEM}
             onClick={() => setOpen(false)}
           >
             {t("settings")}
@@ -88,7 +92,7 @@ export function UserMenu({ name, email }: { name: string; email?: string }) {
           <button
             type="button"
             role="menuitem"
-            className="block w-full rounded-md px-3 py-1.5 text-left text-sm transition duration-150 hover:bg-surface-2"
+            className={`${MENU_ITEM} w-full`}
             onClick={() => void logout()}
           >
             {t("logout")}

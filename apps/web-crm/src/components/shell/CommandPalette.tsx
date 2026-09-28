@@ -7,6 +7,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { entityHref } from "@/lib/entity-links";
+import { ui } from "@/lib/ui";
 
 import { allowedActions } from "./palette-actions";
 
@@ -212,9 +213,11 @@ export function CommandPalette({
 
   return (
     <>
+      {/* Round 44 px icon below sm, the labelled pill from sm (44 px on touch), shortcut hint
+          from lg (M31). */}
       <button
         type="button"
-        className="inline-flex min-w-56 items-center justify-between gap-2 rounded-full border border-border bg-surface px-3.5 py-2 text-sm text-muted shadow-xs transition duration-150 hover:border-accent hover:text-fg focus:outline-none focus:ring-2 focus:ring-focus"
+        className="inline-flex h-11 min-h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full border border-border bg-surface text-sm text-muted shadow-xs transition duration-150 hover:border-accent hover:text-fg focus:outline-none focus:ring-2 focus:ring-focus sm:h-auto sm:w-auto sm:min-w-56 sm:justify-between sm:px-3.5 sm:py-2 sm:pointer-fine:min-h-0"
         onClick={(e) => show(e.currentTarget)}
         aria-keyshortcuts="Control+K Meta+K"
         aria-label={t("palette.open")}
@@ -224,35 +227,44 @@ export function CommandPalette({
             <circle cx="8.5" cy="8.5" r="5" />
             <path d="m16 16-3.2-3.2" strokeLinecap="round" />
           </svg>
-          {t("search")}
+          <span className="hidden sm:flex" data-testid="palette-label">
+            {t("search")}
+          </span>
         </span>
-        <kbd className="rounded border border-border bg-surface-2 px-1.5 py-0.5 text-xs text-subtle">{t("searchShortcut")}</kbd>
+        <kbd className="hidden rounded border border-border bg-surface-2 px-1.5 py-0.5 text-xs text-subtle lg:inline">{t("searchShortcut")}</kbd>
       </button>
       {open ? (
-        <div className="fixed inset-0 z-50 flex items-start justify-center bg-scrim p-4 pt-24" onMouseDown={close}>
+        <div className="fixed inset-0 z-50 flex items-start justify-center bg-scrim p-0 sm:p-4 sm:pt-24" onMouseDown={close}>
+          {/* Full screen below sm: input pinned at the top, results fill the rest, a close
+              button for touch; the centred card from sm as before. */}
           <div
             ref={dialogRef}
             role="dialog"
             aria-modal="true"
             aria-label={t("palette.title")}
-            className="w-full max-w-xl overflow-hidden rounded-xl border border-border bg-raised shadow-lg"
+            className="flex h-dvh w-full max-w-xl flex-col overflow-hidden bg-raised pt-[env(safe-area-inset-top)] sm:h-auto sm:max-h-[80dvh] sm:rounded-xl sm:border sm:border-border sm:pt-0 sm:shadow-lg"
             onMouseDown={(e) => e.stopPropagation()}
             onKeyDown={onKeyDown}
           >
-            <input
-              ref={inputRef}
-              type="search"
-              role="combobox"
-              aria-expanded={items.length > 0}
-              aria-controls="palette-results"
-              aria-activedescendant={activeId}
-              aria-label={t("searchPlaceholder")}
-              placeholder={t("searchPlaceholder")}
-              className="w-full border-b border-border bg-transparent px-4 py-3 text-base focus:outline-none"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-            />
-            <div id="palette-results" role="listbox" aria-label={t("palette.title")} className="max-h-96 overflow-auto py-1">
+            <div className="flex shrink-0 items-center border-b border-border">
+              <input
+                ref={inputRef}
+                type="search"
+                role="combobox"
+                aria-expanded={items.length > 0}
+                aria-controls="palette-results"
+                aria-activedescendant={activeId}
+                aria-label={t("searchPlaceholder")}
+                placeholder={t("searchPlaceholder")}
+                className="min-h-11 w-full min-w-0 flex-1 bg-transparent px-4 py-3 text-base focus:outline-none"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              <button type="button" className={`${ui.button} mr-2 min-h-11 sm:hidden`} onClick={close}>
+                {t("close")}
+              </button>
+            </div>
+            <div id="palette-results" role="listbox" aria-label={t("palette.title")} className="min-h-0 flex-1 overflow-auto py-1 sm:max-h-96 sm:flex-none">
               {sections.map((section) => (
                 <div key={section.key} role="group" aria-label={section.title}>
                   <p className="px-4 pb-1 pt-2 text-xs font-medium uppercase tracking-wide text-subtle" aria-hidden="true">
@@ -264,8 +276,10 @@ export function CommandPalette({
                       id={item.id}
                       role="option"
                       aria-selected={index === active}
-                      className={`flex cursor-pointer items-center gap-2 px-4 py-2 text-sm ${index === active ? "bg-surface-2" : ""}`}
-                      onMouseEnter={() => setActive(index)}
+                      className={`flex min-h-11 cursor-pointer items-center gap-2 px-4 py-2 text-sm sm:pointer-fine:min-h-0 ${index === active ? "bg-surface-2" : ""}`}
+                      onPointerMove={() => {
+                        if (index !== active) setActive(index);
+                      }}
                       onClick={() => run(item)}
                     >
                       {item.kind === "hit" || item.kind === "recent" ? (

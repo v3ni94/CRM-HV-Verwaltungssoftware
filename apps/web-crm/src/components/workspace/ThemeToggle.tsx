@@ -35,7 +35,7 @@ export function ThemeSwitch({ className = "" }: { className?: string }) {
       optionLabels={{ day: t("theme.day"), evening: t("theme.evening"), auto: t("theme.auto") }}
       className={`inline-flex items-center gap-0.5 rounded-full border border-border bg-surface-2 p-0.5 ${className}`}
       optionClassName={(checked) =>
-        `min-h-8 rounded-full px-3 text-xs font-medium transition duration-150 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
+        `min-h-11 rounded-full px-3 text-xs font-medium transition duration-150 sm:pointer-fine:min-h-8 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus ${
           checked ? "bg-accent-soft text-fg shadow-xs ring-1 ring-inset ring-accent" : "text-muted hover:text-fg"
         }`
       }
