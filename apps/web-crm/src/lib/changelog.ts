@@ -17,6 +17,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.40.1",
+    date: "28.09.2026",
+    title: "Gespeicherte Darstellung, stabile Tests",
+    changes: [
+      "Darstellung im CRM: Die Wahl Tag, Abend oder Automatisch sowie die aufgeklappten Menügruppen werden jetzt tatsächlich im Benutzerkonto gespeichert und gelten auf allen Geräten; bisher galt nur die Kopie im jeweiligen Browser.",
+      "Kontaktformular und Kontaktansicht: die Beschriftung Kontotyp wird wieder korrekt angezeigt statt eines internen Schlüssels.",
+      "Tests stabilisiert: Umgebungsvariablen beeinflussen die Einstellungsprüfung nicht mehr, Testmandanten und Testnutzer sind je Modul eindeutig, der Immoware Sammellauf wird im Test auf den eigenen Mandanten begrenzt, Kontaktformular und Objektkündigung laufen auch unter Last stabil.",
+      "Neue Playwright-Tests für Darstellung, Antworten an alle mit zweitem Faktor, Regelvorschläge, Folgevorgänge, Kontaktverweise im Reiter Einheiten und den Hell und Dunkelmodus im Kundenportal.",
+    ],
+  },
+  {
     version: "1.40.0",
     date: "28.09.2026",
     title: "Kundenportal Hell und Dunkel, Lernregeln mit Zuordnungskette",

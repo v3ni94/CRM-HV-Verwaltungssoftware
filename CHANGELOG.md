@@ -5,6 +5,13 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.40.1 (28.09.2026) Gespeicherte Darstellung, stabile Tests
+
+- Darstellung im CRM: Die Wahl Tag, Abend oder Automatisch sowie die aufgeklappten Menügruppen werden jetzt tatsächlich im Benutzerkonto gespeichert und gelten auf allen Geräten; bisher galt nur die Kopie im jeweiligen Browser.
+- Kontaktformular und Kontaktansicht: die Beschriftung Kontotyp wird wieder korrekt angezeigt statt eines internen Schlüssels.
+- Tests stabilisiert: Umgebungsvariablen beeinflussen die Einstellungsprüfung nicht mehr, Testmandanten und Testnutzer sind je Modul eindeutig, der Immoware Sammellauf wird im Test auf den eigenen Mandanten begrenzt, Kontaktformular und Objektkündigung laufen auch unter Last stabil.
+- Neue Playwright-Tests für Darstellung, Antworten an alle mit zweitem Faktor, Regelvorschläge, Folgevorgänge, Kontaktverweise im Reiter Einheiten und den Hell und Dunkelmodus im Kundenportal.
+
 ## 1.40.0 (28.09.2026) Kundenportal Hell und Dunkel, Lernregeln mit Zuordnungskette
 
 - Kundenportal mit Tag und Abendmodus: Standard folgt der Einstellung des Betriebssystems, Umschalter Hell, Dunkel und Automatisch in der Kopfzeile, Wahl nur im Browser gespeichert, kein Aufblitzen beim Laden, fest codierte Farben durch Design Tokens ersetzt und Kontrast in beiden Modi nach WCAG AA geprüft.
