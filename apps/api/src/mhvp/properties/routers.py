@@ -1335,11 +1335,17 @@ async def list_property_contacts(
 ) -> list[s.PropertyContactOut]:
     async with tenant_tx(request, principal) as session:
         rows = (
-            await session.scalars(
-                select(PropertyContact).where(PropertyContact.property_id == property_id)
+            await session.execute(
+                select(PropertyContact, Contact.display_name)
+                .join(Contact, Contact.id == PropertyContact.contact_id)
+                .where(PropertyContact.property_id == property_id)
+                .order_by(PropertyContact.category_code, PropertyContact.valid_from)
             )
         ).all()
-        return [s.PropertyContactOut.model_validate(c) for c in rows]
+        return [
+            s.PropertyContactOut.model_validate(c).model_copy(update={"contact_name": name})
+            for c, name in rows
+        ]
 
 
 @router.post(
@@ -1353,14 +1359,25 @@ async def add_property_contact(
 ) -> s.PropertyContactOut:
     async with tenant_tx(request, principal) as session:
         await _get(session, Property, property_id)
-        await _get(session, Contact, body.contact_id)
+        contact = await _get(session, Contact, body.contact_id)
         await svc.check_catalog(session, "property_contact_category", body.category_code)
         row = PropertyContact(
             tenant_id=principal.tenant_id, property_id=property_id, **body.model_dump()
         )
         session.add(row)
         await session.flush()
-        return s.PropertyContactOut.model_validate(row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="property.contact_added",
+            entity_type="property",
+            entity_id=property_id,
+            actor_user_id=principal.user_id,
+            payload={"contact_id": str(body.contact_id), "category": body.category_code},
+        )
+        return s.PropertyContactOut.model_validate(row).model_copy(
+            update={"contact_name": contact.display_name}
+        )
 
 
 @router.get("/properties/{property_id}/meters", summary="Zähler")
@@ -1511,7 +1528,7 @@ async def list_maintenance(
                 .order_by(MaintenanceItem.due_date)
             )
         ).all()
-        return [s.MaintenanceOut.model_validate(m) for m in rows]
+        return [maintenance_out(m) for m in rows]
 
 
 @router.post("/properties/{property_id}/maintenance", status_code=201, summary="Wartung anlegen")
@@ -1529,7 +1546,13 @@ async def add_maintenance(
         session.add(row)
         await session.flush()
         await session.refresh(row)
-        return s.MaintenanceOut.model_validate(row)
+        return maintenance_out(row)
+
+
+def maintenance_out(item: MaintenanceItem) -> s.MaintenanceOut:
+    """Maintenance row with the last completion as a Berlin calendar day (C2)."""
+    out = s.MaintenanceOut.model_validate(item)
+    return out.model_copy(update={"last_done_on": svc.last_done_on(item.done_at)})
 
 
 # P1 additions (Ergänzung CRM 4.2 to 4.4): billing periods, sub communities, Objektmappe,

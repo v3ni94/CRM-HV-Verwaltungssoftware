@@ -592,6 +592,26 @@ class PropertyContactIn(_Period):
 class PropertyContactOut(PropertyContactIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
+    # Display name of the contact (C2, Stammdaten in der Oberfläche): filled by the list and
+    # write endpoints so the CRM screen needs no second call per row.
+    contact_name: str | None = None
+
+
+class PropertyContactPatch(_In):
+    """Partial update of a contact person assignment (C2). The contact itself is immutable:
+    a wrong person is ended (``valid_to``) and assigned anew."""
+
+    category_code: str | None = None
+    valid_from: date | None = None
+    valid_to: date | None = None
+    visible_in_portal_for: list[str] | None = None
+
+    @field_validator("visible_in_portal_for")
+    @classmethod
+    def _audience(cls, value: list[str] | None) -> list[str] | None:
+        if value is not None and not set(value) <= {"tenant", "owner", "provider"}:
+            raise ValueError("erlaubt: tenant, owner, provider")
+        return sorted(set(value)) if value is not None else None
 
 
 class MeterIn(_Period):
@@ -610,6 +630,24 @@ class MeterIn(_Period):
 class MeterOut(MeterIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
+    property_id: uuid.UUID | None = None
+
+
+class MeterPatch(_In):
+    """Partial update of a meter (C2). The number is not part of it: a replaced device is
+    recorded as Zählerwechsel (``POST /meters/{id}/changes``), which keeps the history."""
+
+    unit_id: uuid.UUID | None = None
+    meter_type_code: str | None = None
+    malo_id: str | None = Field(default=None, max_length=33)
+    name: str | None = None
+    connection: MeterConnection | None = None
+    location: str | None = None
+    calibration_due_date: date | None = None
+    remote_readable: bool | None = None
+    valid_from: date | None = None
+    valid_to: date | None = None
+    notes: str | None = None
 
 
 class ReadingIn(_In):
@@ -686,6 +724,34 @@ class MaintenanceOut(MaintenanceIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
     status: str
+    # C2: last completion (``done_at`` as stored, ``last_done_on`` as the Berlin calendar day).
+    done_at: datetime | None = None
+    last_done_on: date | None = None
+
+
+class MaintenancePatch(_In):
+    """Partial update of a maintenance item (C2); status and completion only via ``/done``."""
+
+    unit_id: uuid.UUID | None = None
+    kind: MaintenanceKind | None = None
+    title: str | None = Field(default=None, min_length=2, max_length=200)
+    due_date: date | None = None
+    remind_before: str | None = Field(default=None, pattern=r"^(14d|1m|3m|6m)$")
+    interval_months: int | None = Field(default=None, ge=1, le=240)
+    provider_relation_id: uuid.UUID | None = None
+
+
+class MaintenanceDoneIn(_In):
+    """Completion of a maintenance item (C2). With an interval the next due date is
+    ``done_on`` plus ``interval_months`` (day clamped to the month end) and the item stays
+    open; without an interval the item is closed."""
+
+    done_on: date
+
+
+class MaintenanceDoneOut(BaseModel):
+    item: MaintenanceOut
+    next_due_date: date | None
 
 
 class CatalogEntryIn(_In):

@@ -1,10 +1,12 @@
 """Property services: legal entities, templates, custom fields, periods, plausibility."""
 
+import calendar
 import re
 import uuid
-from datetime import date, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from sqlalchemy import and_, cast, or_, select
 from sqlalchemy.dialects.postgresql import JSONB
@@ -569,3 +571,32 @@ async def owner_view(
         "power_of_attorney_document_id": owner.power_of_attorney_document_id,
         "tax_advisor_contact_id": owner.tax_advisor_contact_id,
     }
+
+
+# Stammdaten in der Oberfläche (C2, 28.09.2026): maintenance cycle -----------------------
+
+BERLIN = ZoneInfo("Europe/Berlin")
+
+
+def add_months(day: date, months: int) -> date:
+    """``day`` plus ``months`` calendar months; the day is clamped to the end of the target
+    month (31.01. + 1 month = 28.02. or 29.02.). Deterministic, no legal meaning."""
+    month_index = day.month - 1 + months
+    year = day.year + month_index // 12
+    month = month_index % 12 + 1
+    last = calendar.monthrange(year, month)[1]
+    return date(year, month, min(day.day, last))
+
+
+def done_at_for(done_on: date) -> datetime:
+    """Timestamp stored for a completion entered as a calendar day: noon Berlin time, so the
+    Berlin calendar day of ``done_at`` equals ``done_on`` in every season."""
+    return datetime.combine(done_on, time(12, 0), tzinfo=BERLIN).astimezone(UTC)
+
+
+def last_done_on(done_at: datetime | None) -> date | None:
+    if done_at is None:
+        return None
+    if done_at.tzinfo is None:
+        done_at = done_at.replace(tzinfo=UTC)
+    return done_at.astimezone(BERLIN).date()

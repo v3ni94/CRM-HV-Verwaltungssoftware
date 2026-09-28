@@ -678,6 +678,13 @@ class ErrorCodes:
         "Eigentümerwechsel nicht möglich",
         "Only an open ownership can be transferred, and not to its current owner.",
     )
+    # Stammdaten in der Oberfläche (C2, 28.09.2026): maintenance completion.
+    PROPERTY_MAINTENANCE_ALREADY_DONE = ErrorCode(
+        "MHVP-PROP-0005",
+        409,
+        "Wartung ist bereits erledigt",
+        "A maintenance item without interval that is already done cannot be completed again.",
+    )
     # lexoffice (M13-lexoffice, docs/integrations/lexoffice.md).
     LEXOFFICE_NOT_CONFIGURED = ErrorCode(
         "MHVP-LEXO-0001",
