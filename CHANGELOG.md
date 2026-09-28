@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.42.1 (28.09.2026) Release-Skript mit Compose v5
+
+- Release-Skript: die Prüfung der Images vor dem Einspielen berücksichtigt nur noch die eigenen Images für API, CRM und Portal; Compose v5 nennt zusätzlich die Images der abhängigen Dienste (Postgres, Redis, Objektspeicher, Virenscanner), was bisher zum Abbruch vor jeder Änderung führte. Fehlt eines der drei eigenen Images, bricht das Skript weiterhin vor jeder Änderung ab.
+
 ## 1.42.0 (28.09.2026) Rückmeldungen aus dem Team
 
 - Handbuch: Handlungsanweisungen für Verwalterwechsel, Stammdaten, Eigentümerwechsel, Mieterwechsel und Wohnungsübergabe, Mieterhöhung, Bankverbindung mit Vier-Augen-Freigabe und Objektordner sowie ein Vorschlag zur Aufgabenverteilung für Mail und Tickets ergänzt; Lücken in der Software im Handbuch gesammelt.

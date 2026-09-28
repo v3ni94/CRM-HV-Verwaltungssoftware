@@ -65,7 +65,11 @@ case "$*" in
     crm_tag="$tag"
     # STALE_CRM: web-crm pinned to the old tag (the "partially set tag" pitfall).
     [[ -n "${STALE_CRM:-}" ]] && crm_tag=1.38.0
-    printf '%s\n' "$reg/mhvp-api:$tag" "$reg/mhvp-web-crm:$crm_tag" "$reg/mhvp-web-portal:$tag" ;;
+    # Compose v5 also lists the images of dependencies (postgres, redis, ...).
+    printf '%s\n' "$reg/mhvp-api:$tag" "redis:7.4-alpine" \
+      "$reg/mhvp-web-crm:$crm_tag" "pgvector/pgvector:0.8.1-pg16" "clamav/clamav:1.4"
+    [[ -z "${NO_PORTAL:-}" ]] && printf '%s\n' "$reg/mhvp-web-portal:$tag"
+    true ;;
   "run --rm migrate")
     [[ -n "${FAIL_MIGRATE:-}" ]] && { echo "alembic: migration failed" >&2; exit 1; } ;;
   "exec -T api python -c"*)
@@ -271,6 +275,13 @@ assert_contains "$CALLS" "docker build" "built before the switch"
 assert_not_contains "$CALLS" "mhvp.sh stop" "no stop"
 assert_contains "$OUT" "local/mhvp-web-crm:1.38.0" "offending image named"
 assert_contains "$OUT" "zurückgesetzt, Dienste unverändert" "message"
+
+# --- an app image missing from compose aborts before any change --------------------------
+setup missing_portal
+run_release NO_PORTAL=1
+assert_eq "$RC" 2 "exit code"
+assert_not_contains "$CALLS" "pg_dump" "aborted before backup"
+assert_contains "$OUT" "kein Image local/mhvp-web-portal" "missing image named"
 
 # --- pull options -----------------------------------------------------------------------
 setup pull_options

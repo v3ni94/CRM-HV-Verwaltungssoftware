@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.42.1",
+    date: "28.09.2026",
+    title: "Release-Skript mit Compose v5",
+    changes: [
+      "Release-Skript: die Prüfung der Images vor dem Einspielen berücksichtigt nur noch die eigenen Images für API, CRM und Portal; Compose v5 nennt zusätzlich die Images der abhängigen Dienste (Postgres, Redis, Objektspeicher, Virenscanner), was bisher zum Abbruch vor jeder Änderung führte. Fehlt eines der drei eigenen Images, bricht das Skript weiterhin vor jeder Änderung ab.",
+    ],
+  },
+  {
     version: "1.42.0",
     date: "28.09.2026",
     title: "Rückmeldungen aus dem Team",

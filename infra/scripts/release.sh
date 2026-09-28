@@ -76,11 +76,21 @@ check_images() {
     err "$WRAPPER config --images lieferte kein Ergebnis"
     return 1
   fi
-  bad="$(printf '%s\n' "$images" | grep -vxE "$BUILD_REGISTRY/mhvp-(api|web-crm|web-portal):$tag_re" | tr '\n' ' ' || true)"
+  # Some compose versions ignore the service arguments of `config --images` and list every
+  # image of the project; infrastructure images (postgres, redis, ...) are not ours to check.
+  local app app_image
+  app="$(printf '%s\n' "$images" | grep -E '(^|/)mhvp-(api|web-crm|web-portal):' || true)"
+  bad="$(printf '%s\n' "$app" | grep -vxE "$BUILD_REGISTRY/mhvp-(api|web-crm|web-portal):$tag_re" | tr '\n' ' ' || true)"
   if [[ -n "$bad" ]]; then
     err "Compose verwendet nicht $BUILD_REGISTRY/mhvp-*:$1, sondern: $bad"
     return 1
   fi
+  for app_image in api web-crm web-portal; do
+    if ! printf '%s\n' "$app" | grep -qxE "$BUILD_REGISTRY/mhvp-$app_image:$tag_re"; then
+      err "Compose verwendet kein Image $BUILD_REGISTRY/mhvp-$app_image:$1; gefunden: $(printf '%s ' $images)"
+      return 1
+    fi
+  done
 }
 
 # run CMD...: print and execute (print only with --dry-run).
