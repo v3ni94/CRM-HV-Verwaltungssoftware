@@ -2694,7 +2694,7 @@
   "href": "/bank",
   "keywords": [],
   "permission": null,
-  "excerpt": "Der Bereich Bank zeigt Kontoauszüge (Dateiupload oder finAPI) und schlägt Zuordnungen zu offenen Posten vor. Die Anbindung ist lesend: keine Überweisung, keine automatische Verbuchung. Die IBAN allein beweist keinen Schuldner; gebucht wird nur nach Bestätigung und, bis zur Freiga",
+  "excerpt": "Der Bereich Bank zeigt Kontoauszüge (Dateiupload, finAPI oder FinTS) und schlägt Zuordnungen zu offenen Posten vor. Die Anbindung ist lesend: keine Überweisung, keine automatische Verbuchung. Die IBAN allein beweist keinen Schuldner; gebucht wird nur nach Bestätigung und, bis zur",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -2704,7 +2704,77 @@
   "href": "/bank",
   "keywords": [],
   "permission": null,
-  "excerpt": "Über Kontoauszug (CAMT.053) und Importieren lässt sich ein Auszug hochladen. Die Liste zeigt Buchungstag, Gegenpartei, Verwendungszweck und Betrag je Umsatz, mit Kennzahlen zu neuen, bereits vorhandenen und möglichen doppelten Umsätzen sowie Umbuchungen.",
+  "excerpt": "Über Kontoauszug und Importieren lässt sich ein Auszug hochladen. Zulässig sind CAMT.053 (.xml), MT940 (.sta, .mt940, .940, .swi) und Bank-CSV (.csv). CAMT und MT940 werden direkt importiert; die Ergebniszeile zeigt neue, bereits vorhandene und mögliche doppelte Umsätze sowie Umb",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Umsatzliste",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Liste filtert nach Konto, Status (neu, prüfen, gebucht, ignoriert), Richtung (Eingänge, Ausgänge) und Zeitraum und blättert in Seiten zu 50 Umsätzen (Zurück, Weiter). Je Zeile stehen Buchungstag, Konto, Gegenpartei mit IBAN-Endung, Verwendungszweck, Betrag, Status und die Akt",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Buchungsdialog",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Buchen öffnet den Dialog zum Umsatz. Oben stehen die Vorschläge mit Quelle (Regel, Abgleich, KI), Konfidenz und Begründung; Übernehmen füllt die Zuordnung mit den Splits des Vorschlags. Nichts ist vorausgewählt. Darunter: - Offene Posten: Suche nach Konto, Art oder Vertrag; Hinzu",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Dublettenklärung",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ein Umsatz im Status prüfen (Dublette?) wurde beim Import als möglicher Doppelumsatz erkannt. Dublette klären verlangt eine Begründung und bietet Als echten Umsatz behalten (Status neu) oder Als Dublette ignorieren. Nichts wird gelöscht (B08). Ignorierte Umsätze sind derzeit endg",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Massenbestätigung",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Neue Umsätze der Seite auswählen oder einzelne Kästchen markieren, dann Massenbestätigung. Der Dialog lädt die Vorschläge der gewählten Umsätze und bereitet nur deterministisch geprüfte Fälle vor (eindeutiger Vollausgleich oder Treffer einer freigegebenen Regel); alle anderen ers",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Regel lernen",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bei einem gebuchten Eingang legt Regel lernen einen Regelvorschlag aus IBAN-Fingerabdruck und gebuchtem Konto an (Zustand vorgeschlagen). Der Vorschlag bucht nichts; Freigabe und Aktivierung laufen unter Bankregeln.",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bankregeln",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Menü Bank, Bankregeln. Die Seite zeigt oben den Automatikschalter des Mandanten nur lesend (Standard ausgeschaltet); das Einschalten setzt die offene Betreiberentscheidung zur Automatik vor G1 (ADR 0013) und den Automatiklauf mit Nachkontrolle voraus (BK2-03). Regel vorschlagen: ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bankabstimmung",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Menü Bank, Bankabstimmung: je Auszug Anfangsbestand, Bewegungen, Endbestand, Differenz des Auszugs sowie Saldo des Sachkontos zum Stichtag und dessen Differenz (B09). Differenzen sind rot hervorgehoben und ein Befund zur Klärung; die Ansicht korrigiert nichts. Ohne Salden im Ausz",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -2739,16 +2809,6 @@
  },
  {
   "kind": "handbook",
-  "title": "Zuordnung",
-  "source": "Handbuch: Banking",
-  "href": "/bank",
-  "keywords": [],
-  "permission": null,
-  "excerpt": "Bankverbindung dauerhaft mit einem Buchungskreis oder Objekt verknüpfen (Zuordnen, ID des internen Kontos). Je Umsatz zeigt die Spalte Vorschläge mögliche offene Posten; Zuordnen und buchen verlangt eine Bestätigung des Betrags. Ohne passenden offenen Posten lässt sich der Umsatz",
-  "file": "docs/handbuch/banking.md"
- },
- {
-  "kind": "handbook",
   "title": "Zahlungsaufträge",
   "source": "Handbuch: Banking",
   "href": "/bank",
@@ -2764,7 +2824,7 @@
   "href": "/bank",
   "keywords": [],
   "permission": null,
-  "excerpt": "Vorschläge zur Zuordnung eines Umsatzes zu einem offenen Posten sind stets zu prüfen; Zuordnen und buchen ist die verbindliche Handlung. Eine Zahlungsauslösung bleibt bis zur Freigabestufe G2 vollständig gesperrt.",
+  "excerpt": "Vorschläge zur Zuordnung eines Umsatzes sind stets zu prüfen; Buchung bestätigen im Buchungsdialog und die Bestätigung der Massenbestätigung sind die verbindlichen Handlungen. Ein Regelvorschlag, eine freigegebene oder aktive Regel bucht nichts; der Automatiklauf ist nicht Teil d",
   "file": "docs/handbuch/banking.md"
  },
  {

@@ -77,11 +77,18 @@ test.describe("bank booking dialog against the API @backend", () => {
     );
     await call("POST", `/accounting/ledgers/${ledger}/entries/${draft.id}/post`);
 
+    // Balance arithmetic of the reconciliation (B09, `mhvp.banking.services.reconcile`): the
+    // statement side checks OPBD + movements = CLBD, the ledger side checks CLBD against the
+    // posted lines on 001210 up to the closing date. Only the two bank postings of this test
+    // land on 001210 (+250,00 and -79,90 = 170,10); an opening balance posting would need the
+    // check by a second person (kind opening_balance, four eyes), which the single E2E admin
+    // cannot give. The statement therefore opens at 0,00 and closes at 170,10 so that both
+    // differences are 0,00.
     const entry = (ref: string, amount: string, ind: "CRDT" | "DBIT", iban: string, purpose: string) => {
       const partyTag = ind === "CRDT" ? "Dbtr" : "Cdtr";
       return `<Ntry><Amt Ccy="EUR">${amount}</Amt><CdtDbtInd>${ind}</CdtDbtInd><Sts><Cd>BOOK</Cd></Sts><BookgDt><Dt>2026-01-05</Dt></BookgDt><ValDt><Dt>2026-01-05</Dt></ValDt><AcctSvcrRef>${ref}</AcctSvcrRef><NtryDtls><TxDtls><Refs><EndToEndId>NOTPROVIDED</EndToEndId></Refs><RltdPties><${partyTag}><Nm>Zahler ${run}</Nm></${partyTag}><${partyTag}Acct><Id><IBAN>${iban}</IBAN></Id></${partyTag}Acct></RltdPties><RmtInf><Ustrd>${purpose}</Ustrd></RmtInf></TxDtls></NtryDtls></Ntry>`;
     };
-    const camt = `<?xml version="1.0" encoding="UTF-8"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt><GrpHdr><MsgId>M-${run}</MsgId><CreDtTm>2026-02-01T08:00:00</CreDtTm></GrpHdr><Stmt><Id>S-${run}</Id><Acct><Id><IBAN>${bankIban}</IBAN></Id><Ccy>EUR</Ccy></Acct><Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp><Amt Ccy="EUR">1000.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-01-01</Dt></Dt></Bal><Bal><Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp><Amt Ccy="EUR">1170.10</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-01-31</Dt></Dt></Bal>${entry(`IN-${run}`, "250.00", "CRDT", payerIban, `Hausgeld ${contract.number}`)}${entry(`OUT-${run}`, "79.90", "DBIT", "DE75512108001245126199", `Hausmeister ${run}`)}</Stmt></BkToCstmrStmt></Document>`;
+    const camt = `<?xml version="1.0" encoding="UTF-8"?><Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08"><BkToCstmrStmt><GrpHdr><MsgId>M-${run}</MsgId><CreDtTm>2026-02-01T08:00:00</CreDtTm></GrpHdr><Stmt><Id>S-${run}</Id><Acct><Id><IBAN>${bankIban}</IBAN></Id><Ccy>EUR</Ccy></Acct><Bal><Tp><CdOrPrtry><Cd>OPBD</Cd></CdOrPrtry></Tp><Amt Ccy="EUR">0.00</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-01-01</Dt></Dt></Bal><Bal><Tp><CdOrPrtry><Cd>CLBD</Cd></CdOrPrtry></Tp><Amt Ccy="EUR">170.10</Amt><CdtDbtInd>CRDT</CdtDbtInd><Dt><Dt>2026-01-31</Dt></Dt></Bal>${entry(`IN-${run}`, "250.00", "CRDT", payerIban, `Hausgeld ${contract.number}`)}${entry(`OUT-${run}`, "79.90", "DBIT", "DE75512108001245126199", `Hausmeister ${run}`)}</Stmt></BkToCstmrStmt></Document>`;
     const form = new FormData();
     form.set("file", new Blob([camt], { type: "application/xml" }), `e2e-${run}.xml`);
     const upload = await fetch(`${apiBase}/api/v1/documents`, { method: "POST", headers: { authorization: `Bearer ${token}` }, body: form });
@@ -126,11 +133,13 @@ test.describe("bank booking dialog against the API @backend", () => {
     const transactions = await call<{ bank_reference: string; status: string }[]>("GET", `/banking/transactions?bank_account_id=${bankAccount.id}`);
     expect(transactions.map((t) => t.status)).toEqual(["booked", "booked"]);
 
-    // 3. Reconciliation B09: the statement closes at 1.170,10 and reconciles with the ledger.
+    // 3. Reconciliation B09: the statement closes at 170,10 (0,00 + 250,00 - 79,90) and the
+    //    ledger account 001210 carries the same 170,10 from the two postings, so the statement
+    //    difference and the ledger difference are both 0,00.
     await page.goto("/bank/abstimmung");
     await page.getByLabel("Bankkonto").selectOption(bankAccount.id);
     await expect(page.getByTestId("reconciliation-summary")).toContainText("Alle Auszüge stimmen ab.");
-    await expect(page.getByText("1.170,10 EUR").first()).toBeVisible();
+    await expect(page.getByText("170,10 EUR").first()).toBeVisible();
 
     // 4. Rules page shows the read only automation switch (default off) and the four eyes text.
     await page.goto("/bank/regeln");

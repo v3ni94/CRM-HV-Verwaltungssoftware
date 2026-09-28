@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { jsonResponse, renderIntl } from "@/test/intl";
 
 import { AutomationSwitchCard } from "./AutomationSwitchCard";
-import { BankRules, type BankRule } from "./BankRules";
+import { BankRules, parsePriority, type BankRule } from "./BankRules";
 
 const ME = "0192abcd-0000-7000-8000-0000000000aa";
 const OTHER = "0192abcd-0000-7000-8000-0000000000bb";
@@ -84,7 +84,7 @@ describe("BankRules", () => {
     const form = screen.getByTestId("activate-form");
     const confirm = within(form).getByRole("button", { name: "Mit Grenze und Nachweis aktivieren" });
     expect(confirm).toBeDisabled();
-    await userEvent.type(within(form).getByLabelText("Betragsgrenze"), "500,00");
+    await userEvent.type(within(form).getByLabelText("Betragsgrenze"), "1.500,00");
     expect(confirm).toBeDisabled();
     await userEvent.upload(within(form).getByLabelText("Testnachweis (Dokument)"), new File(["%PDF-1.4 test"], "testsatz.pdf", { type: "application/pdf" }));
     expect(confirm).toBeEnabled();
@@ -93,7 +93,19 @@ describe("BankRules", () => {
     const upload = calls.find((c) => c.url.endsWith("/api/bff/documents"))!;
     expect((upload.init!.body as FormData).get("file")).toBeInstanceOf(File);
     const activate = calls.find((c) => c.url.endsWith("/activate"))!;
-    expect(JSON.parse(activate.init!.body as string)).toEqual({ max_amount: "500.00", test_evidence_document_id: DOC });
+    expect(JSON.parse(activate.init!.body as string)).toEqual({ max_amount: "1500.00", test_evidence_document_id: DOC });
+  });
+
+  it("refuses an unreadable amount cap before uploading anything", async () => {
+    const calls = mockApi([rule(RULE_APPROVED, { approval_state: "approved" })]);
+    renderIntl(<BankRules canCreate canApprove canUpdate userId={ME} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Aktivieren" }));
+    const form = screen.getByTestId("activate-form");
+    await userEvent.type(within(form).getByLabelText("Betragsgrenze"), "1.500.00");
+    await userEvent.upload(within(form).getByLabelText("Testnachweis (Dokument)"), new File(["%PDF-1.4 test"], "testsatz.pdf", { type: "application/pdf" }));
+    await userEvent.click(within(form).getByRole("button", { name: "Mit Grenze und Nachweis aktivieren" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Betrag nicht lesbar: 1.500.00.");
+    expect(calls.some((c) => c.url.endsWith("/api/bff/documents") || c.url.endsWith("/activate"))).toBe(false);
   });
 
   it("proposes a rule with legal entity, match fields and a non bank account", async () => {
@@ -106,7 +118,8 @@ describe("BankRules", () => {
     await waitFor(() => expect(within(form).getByRole("option", { name: "1400 Debitor Muster" })).toBeInTheDocument());
     expect(within(form).queryByRole("option", { name: "1200 Bank" })).not.toBeInTheDocument();
     await userEvent.type(within(form).getByLabelText("IBAN der Gegenpartei (wird als Fingerabdruck gespeichert)"), "DE02 1203 0000 0000 2020 51");
-    await userEvent.type(within(form).getByLabelText("Betrag bis"), "300,00");
+    await userEvent.type(within(form).getByLabelText("Betrag von"), "250");
+    await userEvent.type(within(form).getByLabelText("Betrag bis"), "1.250,00");
     await userEvent.selectOptions(within(form).getByLabelText("Konto der Buchung"), ACC);
     await userEvent.click(within(form).getByRole("button", { name: "Vorschlagen" }));
     await waitFor(() => expect(screen.getByText("Regel „Hausgeld Muster“ vorgeschlagen.")).toBeInTheDocument());
@@ -116,9 +129,31 @@ describe("BankRules", () => {
       legal_entity_id: "le1",
       priority: 100,
       counterpart_iban: "DE02 1203 0000 0000 2020 51",
-      amount_max: "300.00",
+      amount_min: "250.00",
+      amount_max: "1250.00",
       account_id: ACC,
     });
+  });
+
+  it("sends priority 0 as entered and rejects an unreadable amount", async () => {
+    const calls = mockApi([]);
+    renderIntl(<BankRules canCreate canApprove canUpdate userId={ME} />);
+    await userEvent.click(await screen.findByRole("button", { name: "Regel vorschlagen" }));
+    const form = screen.getByTestId("rule-form");
+    await userEvent.type(within(form).getByLabelText("Name"), "Erste Regel");
+    await userEvent.selectOptions(within(form).getByLabelText("Rechtsträger"), "le1");
+    const priority = within(form).getByLabelText("Priorität (0 zuerst)");
+    await userEvent.clear(priority);
+    await userEvent.type(priority, "0");
+    await userEvent.type(within(form).getByLabelText("Betrag bis"), "12,34,5");
+    await userEvent.click(within(form).getByRole("button", { name: "Vorschlagen" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Betrag nicht lesbar: 12,34,5.");
+    expect(calls.some((c) => c.url.endsWith("/banking/rules") && c.init?.method === "POST")).toBe(false);
+    await userEvent.clear(within(form).getByLabelText("Betrag bis"));
+    await userEvent.click(within(form).getByRole("button", { name: "Vorschlagen" }));
+    await waitFor(() => expect(screen.getByText("Regel „Hausgeld Muster“ vorgeschlagen.")).toBeInTheDocument());
+    const created = calls.find((c) => c.url.endsWith("/banking/rules") && c.init?.method === "POST")!;
+    expect(JSON.parse(created.init!.body as string)).toEqual({ name: "Erste Regel", legal_entity_id: "le1", priority: 0 });
   });
 
   it("hides create and approve without the permissions and disables through the API", async () => {
@@ -130,6 +165,20 @@ describe("BankRules", () => {
     expect(row).toHaveTextContent("300,00 EUR");
     await userEvent.click(within(row).getByRole("button", { name: "Abschalten" }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith(`/banking/rules/${RULE_OTHER}/disable`))).toBe(true));
+  });
+});
+
+describe("parsePriority", () => {
+  it("keeps 0, takes the API default for an empty field and rejects anything else", () => {
+    expect(parsePriority("0")).toBe(0);
+    expect(parsePriority(" 7 ")).toBe(7);
+    expect(parsePriority("10000")).toBe(10000);
+    expect(parsePriority("")).toBe(100);
+    expect(parsePriority("10001")).toBeNull();
+    expect(parsePriority("-1")).toBeNull();
+    expect(parsePriority("2.5")).toBeNull();
+    expect(parsePriority("abc")).toBeNull();
+    expect(parsePriority("12abc")).toBeNull();
   });
 });
 

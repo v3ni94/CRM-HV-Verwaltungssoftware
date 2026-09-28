@@ -53,7 +53,7 @@ describe("verifiedSplits", () => {
 describe("BulkConfirm", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("previews count, sums per legal entity and exceptions, then books on confirmation", async () => {
+  it("previews only the bookable items (API exceptions excluded), then books exactly those", async () => {
     const calls: { url: string; init?: RequestInit }[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
       const url = String(input);
@@ -87,10 +87,12 @@ describe("BulkConfirm", () => {
       ["le2", "WEG Süd"],
     ]);
     renderIntl(<BulkConfirm transactions={[tx(1), tx(2), tx(3)]} legalEntityNames={names} onClose={() => {}} onDone={onDone} />);
-    await waitFor(() => expect(screen.getByTestId("bulk-count")).toHaveTextContent("2"));
-    expect(screen.getByTestId("bulk-total")).toHaveTextContent("200,00 EUR");
+    // The API counts and sums all submitted items (count 2, total 200,00) and lists tx 2 as
+    // an exception; the dialog shows only what will be booked: tx 1 of WEG Nord, 100,00.
+    await waitFor(() => expect(screen.getByTestId("bulk-count")).toHaveTextContent("1"));
+    expect(screen.getByTestId("bulk-total")).toHaveTextContent("100,00 EUR");
     expect(screen.getByText("WEG Nord")).toBeInTheDocument();
-    expect(screen.getByText("WEG Süd")).toBeInTheDocument();
+    expect(screen.queryByText("WEG Süd")).not.toBeInTheDocument();
     const exceptions = screen.getByTestId("bulk-exceptions");
     expect(exceptions).toHaveTextContent("Zahler 3");
     expect(exceptions).toHaveTextContent("kein geprüfter Vorschlag");
@@ -100,13 +102,40 @@ describe("BulkConfirm", () => {
     expect(previewBody.preview).toBe(true);
     expect(previewBody.items).toHaveLength(2);
     expect(previewBody.items[0]).toEqual({ transaction_id: ids(1), settlements: split() });
-    await userEvent.click(screen.getByRole("button", { name: "2 Umsätze buchen" }));
+    expect(screen.queryByRole("button", { name: "2 Umsätze buchen" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "1 Umsatz buchen" }));
+    // The API result is rendered as returned (a state change between preview and confirmation
+    // may still fail an item); the confirmation itself carries only the bookable item.
     await waitFor(() => expect(screen.getByTestId("bulk-result")).toHaveTextContent("1 gebucht, 1 nicht gebucht."));
     expect(screen.getByText(/bereits gebucht oder ignoriert/)).toBeInTheDocument();
     const confirm = calls.filter((c) => c.url.endsWith("/banking/bulk-confirm")).at(-1)!;
-    expect(JSON.parse(confirm.init!.body as string).preview).toBe(false);
+    const confirmBody = JSON.parse(confirm.init!.body as string);
+    expect(confirmBody.preview).toBe(false);
+    expect(confirmBody.items).toEqual([{ transaction_id: ids(1), settlements: split() }]);
     await userEvent.click(screen.getByRole("button", { name: "Schließen" }));
     expect(onDone).toHaveBeenCalled();
+  });
+
+  it("disables the confirmation when every verified item is an API exception", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, init });
+      if (url.includes("/posting-proposals")) {
+        return jsonResponse(base([{ source: "match", kind: "full", confidence: 0.9, reasoning: null, account_number: "1400", splits: split(), unambiguous: true }]));
+      }
+      if (url.endsWith("/banking/bulk-confirm")) {
+        return jsonResponse({ preview: true, count: 1, total: "100.00", legal_entities: ["le1"], exceptions: [ids(1)], allocations: {} });
+      }
+      return jsonResponse({}, 404);
+    });
+    renderIntl(<BulkConfirm transactions={[tx(1)]} legalEntityNames={new Map([["le1", "WEG Nord"]])} onClose={() => {}} onDone={() => {}} />);
+    await waitFor(() => expect(screen.getByTestId("bulk-exceptions")).toHaveTextContent("Zahler 1"));
+    expect(screen.getByTestId("bulk-count")).toHaveTextContent("0");
+    expect(screen.getByTestId("bulk-total")).toHaveTextContent("0,00 EUR");
+    expect(screen.queryByText("WEG Nord")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "0 Umsätze buchen" })).toBeDisabled();
+    expect(calls.filter((c) => c.url.endsWith("/banking/bulk-confirm"))).toHaveLength(1);
   });
 
   it("books nothing when no selected transaction has a verified proposal", async () => {

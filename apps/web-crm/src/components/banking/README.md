@@ -19,6 +19,8 @@ allowlist (`src/app/api/bff/[...path]/route.ts`); authorization stays with the A
 Marked hooks waiting for API operations of plan M12 step S1 (docs/OPEN_QUESTIONS.md BK2-01):
 `STAGE1_REJECT_PATH` and `API_SUPPORTS_DISCOUNT` in `BookingDialog.tsx`, `REOPEN_PATH` in
 `TransactionList.tsx`. Money is handled as integer cents (`bankTypes.toCents`, `fromCents`)
-and sent as two decimal strings; nothing is booked without an explicit confirmation of the
+and sent as two decimal strings; every typed amount goes through `bankTypes.parseAmount`,
+which reads the displayed notation (`1.250,00`), plain German and the API notation and
+returns null for unreadable input instead of 0 or a guess; nothing is booked without an explicit confirmation of the
 signed in person. Tests: `*.test.tsx` next to each component (vitest), core path
 `e2e/bank-buchen.spec.ts` (Playwright against the API).

@@ -9,7 +9,7 @@ import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-import { accountLabel, type BankAccountOption, type Ledger, type LedgerAccount } from "./bankTypes";
+import { accountLabel, parseAmount, type BankAccountOption, type Ledger, type LedgerAccount } from "./bankTypes";
 
 export type BankRule = {
   id: string;
@@ -65,6 +65,17 @@ const EMPTY: Form = {
   account_id: "",
   priority: "100",
 };
+
+/** Priority as the API expects it (`RuleIn.priority`, 0 to 10000): an empty field takes the
+ *  API default 100, anything else must be a whole number in range. 0 is a valid value and
+ *  is never replaced (the runner takes the first hit ordered by priority). */
+export function parsePriority(input: string): number | null {
+  const s = input.trim();
+  if (s === "") return 100;
+  if (!/^\d{1,5}$/.test(s)) return null;
+  const n = Number(s);
+  return n <= 10000 ? n : null;
+}
 
 /** Bank rules with the four eyes life cycle of the existing API (6.9.4, 7.4 Nr. 4, D51):
  *  create (`proposed`), approve by a second person (`approved`), activate with an amount cap
@@ -125,19 +136,31 @@ export function BankRules({ canCreate, canApprove, canUpdate, userId }: BankRule
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
-    setBusyId("new");
     setError(null);
+    const priority = parsePriority(form.priority);
+    if (priority === null) {
+      setError(t("invalidPriority"));
+      return;
+    }
     const body: Record<string, unknown> = {
       name: form.name.trim(),
       legal_entity_id: form.legal_entity_id,
-      priority: Number(form.priority) || 100,
+      priority,
     };
     if (form.counterpart_iban.trim()) body.counterpart_iban = form.counterpart_iban.trim();
     if (form.name_contains.trim()) body.name_contains = form.name_contains.trim();
     if (form.purpose_regex.trim()) body.purpose_regex = form.purpose_regex.trim();
-    if (form.amount_min.trim()) body.amount_min = form.amount_min.trim().replace(",", ".");
-    if (form.amount_max.trim()) body.amount_max = form.amount_max.trim().replace(",", ".");
+    for (const key of ["amount_min", "amount_max"] as const) {
+      if (!form[key].trim()) continue;
+      const amount = parseAmount(form[key]);
+      if (amount === null) {
+        setError(t("invalidAmount", { value: form[key].trim() }));
+        return;
+      }
+      body[key] = amount;
+    }
     if (form.account_id) body.account_id = form.account_id;
+    setBusyId("new");
     const res = await bff<BankRule>("/api/bff/banking/rules", { method: "POST", body: JSON.stringify(body) });
     setBusyId(null);
     if (res.ok) {
@@ -159,8 +182,13 @@ export function BankRules({ canCreate, canApprove, canUpdate, userId }: BankRule
 
   const activate = async (rule: BankRule) => {
     if (!evidence || !maxAmount.trim()) return;
-    setBusyId(rule.id);
     setError(null);
+    const cap = parseAmount(maxAmount);
+    if (cap === null) {
+      setError(t("invalidAmount", { value: maxAmount.trim() }));
+      return;
+    }
+    setBusyId(rule.id);
     const formData = new FormData();
     formData.append("file", evidence, evidence.name);
     formData.append("title", t("evidenceTitle", { name: rule.name }));
@@ -172,7 +200,7 @@ export function BankRules({ canCreate, canApprove, canUpdate, userId }: BankRule
     }
     const res = await bff<BankRule>(`/api/bff/banking/rules/${rule.id}/activate`, {
       method: "POST",
-      body: JSON.stringify({ max_amount: maxAmount.trim().replace(",", "."), test_evidence_document_id: doc.data.id }),
+      body: JSON.stringify({ max_amount: cap, test_evidence_document_id: doc.data.id }),
     });
     setBusyId(null);
     if (res.ok) {

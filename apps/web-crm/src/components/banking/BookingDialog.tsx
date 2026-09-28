@@ -12,6 +12,7 @@ import {
   fromCents,
   isContraAccountCandidate,
   isPartnerBankAccountCandidate,
+  parseAmount,
   toCents,
   type AiProposal,
   type LedgerAccount,
@@ -166,11 +167,14 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
   const restCents = amountCents + discountCents - allocatedCents;
   const settledAccounts = new Set(settlements.map((s) => itemById.get(s.open_item_id)?.account_id ?? s.open_item_id));
   const overAllocated = allocatedCents > amountCents + discountCents;
-  const invalidAmount = settlements.some((s) => toCents(s.amount) <= 0);
+  // A partial amount that cannot be read ("1.250.00", letters) is reported as such; only a
+  // readable amount of 0,00 or less counts as too small.
+  const unreadableAmount = settlements.some((s) => parseAmount(s.amount) === null);
+  const invalidAmount = settlements.some((s) => parseAmount(s.amount) !== null && toCents(s.amount) <= 0);
   const restAsCredit = restCents > 0 && !counterAccountId && settlements.length > 0 && settledAccounts.size === 1;
   const restNeedsContra = restCents > 0 && !counterAccountId && !restAsCredit;
   const transferNeedsPartner = isTransfer && !counterAccountId;
-  const canBook = !busy && !loading && !overAllocated && !invalidAmount && !restNeedsContra && !transferNeedsPartner;
+  const canBook = !busy && !loading && !overAllocated && !unreadableAmount && !invalidAmount && !restNeedsContra && !transferNeedsPartner;
 
   const applySplits = (splits: Split[] | undefined) => {
     setSettlements((splits ?? []).map((s) => ({ open_item_id: s.open_item_id, amount: s.amount })));
@@ -452,6 +456,7 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
               </dd>
             </dl>
             {overAllocated ? <p className={ui.error}>{t("overAllocated")}</p> : null}
+            {unreadableAmount ? <p className={ui.error}>{t("unreadableAmount")}</p> : null}
             {invalidAmount ? <p className={ui.error}>{t("invalidAmount")}</p> : null}
             {restNeedsContra && !isTransfer ? <p className={ui.error}>{t("restNeedsContra")}</p> : null}
             {restAsCredit ? <p className={ui.help}>{t("restCredit")}</p> : null}

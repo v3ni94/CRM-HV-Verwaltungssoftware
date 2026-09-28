@@ -43,7 +43,9 @@ Nichts ist vorausgewählt. Darunter:
 
 - Offene Posten: Suche nach Konto, Art oder Vertrag; Hinzufügen übernimmt den Posten mit
   dem Restbetrag, begrenzt auf den noch nicht zugeordneten Zahlbetrag. Der Teilbetrag je
-  Posten lässt sich ändern; mehrere Posten sind möglich (Split).
+  Posten lässt sich ändern; mehrere Posten sind möglich (Split). Beträge werden in der
+  angezeigten Schreibweise eingegeben (1.250,00 oder 1250,00, auch 1250.00); ein nicht
+  lesbarer Betrag wird als solcher gemeldet und sperrt das Buchen.
 - Gegenkonto: Suche nach Nummer oder Name. Bank-, System- und inaktive Konten werden nicht
   angeboten. Ein Ausgang ohne offenen Posten wird gegen das Gegenkonto gebucht (zum Beispiel
   Bankgebühr gegen Kostenkonto).
@@ -77,10 +79,11 @@ endgültig; ein Wiedereröffnen folgt mit Schritt S1 (BK2-01).
 Neue Umsätze der Seite auswählen oder einzelne Kästchen markieren, dann Massenbestätigung.
 Der Dialog lädt die Vorschläge der gewählten Umsätze und bereitet nur deterministisch geprüfte
 Fälle vor (eindeutiger Vollausgleich oder Treffer einer freigegebenen Regel); alle anderen
-erscheinen als Ausnahme und bleiben manuell. Die Vorschau zeigt Anzahl, Summe, Summen je
-Rechtsträger und die von der Schnittstelle gemeldeten Ausnahmen (Status, Umbuchung). Erst die
-Bestätigung bucht, je Umsatz ganz oder gar nicht; das Ergebnis nennt gebuchte und nicht
-gebuchte Umsätze mit Grund. Jede Buchung ist eine manuelle Buchung der angemeldeten Person.
+erscheinen als Ausnahme und bleiben manuell. Die Vorschau zeigt unter Buchbar nur die Umsätze,
+die tatsächlich gebucht werden: von der Schnittstelle gemeldete Ausnahmen (Status, Umbuchung)
+zählen nicht mit, weder in der Anzahl noch in der Summe oder den Summen je Rechtsträger, und
+werden nicht gesendet. Erst die Bestätigung bucht, je Umsatz ganz oder gar nicht; das Ergebnis
+nennt gebuchte und nicht gebuchte Umsätze mit Grund. Jede Buchung ist eine manuelle Buchung der angemeldeten Person.
 
 ## Regel lernen
 
@@ -97,6 +100,8 @@ vor G1 (ADR 0013) und den Automatiklauf mit Nachkontrolle voraus (BK2-03).
 Regel vorschlagen: Name, Rechtsträger, IBAN der Gegenpartei (gespeichert als Fingerabdruck),
 Name enthält, Verwendungszweck als regulärer Ausdruck, Betragsspanne, Priorität und das Konto
 der Buchung (Debitorenkonto; leer, wenn der eindeutige offene Posten das Konto bestimmt).
+Die Priorität 0 wird als 0 gespeichert (0 zuerst); Beträge werden wie angezeigt eingegeben
+(1.250,00), ein nicht lesbarer Betrag wird vor dem Senden gemeldet.
 Bankkonto, Betrag und Zweck gelten zusammen; die IBAN allein beweist keinen Schuldner (7.4).
 
 Lebenszyklus mit vier Augen: Freigeben ist für die vorschlagende Person gesperrt und

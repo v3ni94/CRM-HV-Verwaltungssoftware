@@ -137,6 +137,34 @@ describe("BookingDialog", () => {
     });
   });
 
+  it("reads a partial amount in the displayed notation and names an unreadable one", async () => {
+    mockApi();
+    renderIntl(<BookingDialog tx={tx({ amount: "1250.00" })} onClose={() => {}} onBooked={() => {}} />);
+    const candidates = await screen.findByTestId("open-item-candidates");
+    await waitFor(() => expect(within(candidates).getAllByText("Hinzufügen").length).toBe(2));
+    await userEvent.click(within(candidates).getAllByText("Hinzufügen")[0]!);
+    const amountInput = screen.getByLabelText("Betrag für 1400 Debitor Muster, fällig 03.09.2026", { selector: "input" });
+    // The displayed notation with a thousands separator is an amount, not 0,00.
+    await userEvent.clear(amountInput);
+    await userEvent.type(amountInput, "1.250,00");
+    expect(screen.getByTestId("allocated")).toHaveTextContent("1.250,00 EUR");
+    expect(screen.getByTestId("rest")).toHaveTextContent("0,00 EUR");
+    expect(screen.queryByText(/nicht lesbar/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/größer als 0,00 EUR/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Buchen" })).toBeEnabled();
+    // Two dots cannot be read: own message, no misleading "greater than 0,00", booking locked.
+    await userEvent.clear(amountInput);
+    await userEvent.type(amountInput, "1.250.00");
+    expect(screen.getByText(/Betrag nicht lesbar/)).toBeInTheDocument();
+    expect(screen.queryByText(/größer als 0,00 EUR/)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Buchen" })).toBeDisabled();
+    // A readable 0,00 keeps the existing message.
+    await userEvent.clear(amountInput);
+    await userEvent.type(amountInput, "0,00");
+    expect(screen.getByText(/größer als 0,00 EUR/)).toBeInTheDocument();
+    expect(screen.queryByText(/nicht lesbar/)).not.toBeInTheDocument();
+  });
+
   it("refuses an allocation above the payment amount and a remainder without contra account", async () => {
     mockApi();
     renderIntl(<BookingDialog tx={tx({ amount: "50.00" })} onClose={() => {}} onBooked={() => {}} />);

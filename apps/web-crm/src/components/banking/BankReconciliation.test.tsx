@@ -29,12 +29,28 @@ describe("BankReconciliation", () => {
     });
     renderIntl(<BankReconciliation />);
     await userEvent.selectOptions(await screen.findByLabelText("Bankkonto"), PBA);
-    await waitFor(() => expect(screen.getByTestId("reconciliation-summary")).toHaveTextContent("1 Auszüge mit Differenz."));
+    await waitFor(() => expect(screen.getByTestId("reconciliation-summary")).toHaveTextContent("1 Auszug mit Differenz."));
     expect(screen.getByText("2026/09")).toBeInTheDocument();
     expect(screen.getAllByText("1.250,00 EUR").length).toBeGreaterThan(0);
     expect(screen.getByText("10,00 EUR")).toHaveClass("text-danger-fg");
     expect(screen.getAllByText("nicht ermittelbar")).toHaveLength(2);
     expect(calls.some((url) => url.endsWith(`/banking/accounts/${PBA}/reconciliation`))).toBe(true);
+  });
+
+  it("counts several statements with a difference in the plural", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.includes("/reconciliation")) {
+        return jsonResponse([
+          { statement_id: "s1", statement_ref: "2026/09", closing_date: "2026-09-30", opening_balance: "1000.00", movements: "250.00", closing_balance: "1250.00", statement_difference: "0.00", ledger_balance: "250.00", ledger_difference: "1000.00" },
+          { statement_id: "s2", statement_ref: "2026/10", closing_date: "2026-10-31", opening_balance: "1250.00", movements: "-100.00", closing_balance: "1160.00", statement_difference: "10.00", ledger_balance: null, ledger_difference: null },
+        ]);
+      }
+      return jsonResponse(accounts);
+    });
+    renderIntl(<BankReconciliation />);
+    await userEvent.selectOptions(await screen.findByLabelText("Bankkonto"), PBA);
+    await waitFor(() => expect(screen.getByTestId("reconciliation-summary")).toHaveTextContent("2 Auszüge mit Differenz."));
   });
 
   it("reports an empty account", async () => {

@@ -7,7 +7,7 @@ import { bff } from "@/lib/bff";
 import { formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-import { toCents, type Proposal, type Proposals, type Split, type Transaction } from "./bankTypes";
+import { fromCents, toCents, type Proposal, type Proposals, type Split, type Transaction } from "./bankTypes";
 
 type Item = { transaction_id: string; settlements: { open_item_id: string; amount: string }[] };
 type PreviewOut = {
@@ -47,7 +47,9 @@ export type BulkConfirmProps = {
 /** Bulk confirmation with preview (7.4, plan M12 S2): loads the stage 1 proposals of every
  *  selected transaction, takes only verified splits, shows count, sums per legal entity and
  *  exceptions from `POST /banking/bulk-confirm?preview`, then books on explicit confirmation
- *  (each transaction completely or not at all; the API decides per item). */
+ *  (each transaction completely or not at all; the API decides per item). The API counts and
+ *  sums every submitted item and lists exceptions (already booked, ignored, transfer pair)
+ *  separately; the preview here shows only what will be booked, and only that is sent. */
 export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }: BulkConfirmProps) {
   const t = useTranslations("Bank.bulk");
   const [items, setItems] = useState<Item[] | null>(null);
@@ -86,9 +88,12 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
   }, [transactions]);
 
   const byId = new Map(transactions.map((tx) => [tx.id, tx]));
+  const excepted = new Set(preview?.exceptions ?? []);
+  const bookable = preview ? (items ?? []).filter((item) => !excepted.has(item.transaction_id)) : [];
+  const bookableCents = bookable.reduce((sum, item) => sum + Math.abs(toCents(byId.get(item.transaction_id)?.amount)), 0);
   const sumsPerEntity = () => {
     const sums = new Map<string, number>();
-    for (const item of items ?? []) {
+    for (const item of bookable) {
       const tx = byId.get(item.transaction_id);
       if (!tx) continue;
       sums.set(tx.legal_entity_id, (sums.get(tx.legal_entity_id) ?? 0) + Math.abs(toCents(tx.amount)));
@@ -97,12 +102,12 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
   };
 
   const confirm = async () => {
-    if (!items || items.length === 0) return;
+    if (bookable.length === 0) return;
     setBusy(true);
     setError(null);
     const res = await bff<ResultOut>("/api/bff/banking/bulk-confirm", {
       method: "POST",
-      body: JSON.stringify({ items, preview: false }),
+      body: JSON.stringify({ items: bookable, preview: false }),
     });
     setBusy(false);
     if (res.ok) setResult(res.data);
@@ -129,11 +134,11 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
               <dd className="text-right tabular-nums">{transactions.length}</dd>
               <dt className="text-muted">{t("verified")}</dt>
               <dd className="text-right tabular-nums" data-testid="bulk-count">
-                {preview?.count ?? items.length}
+                {bookable.length}
               </dd>
               <dt className="text-muted">{t("total")}</dt>
               <dd className="text-right tabular-nums" data-testid="bulk-total">
-                {preview ? formatEur(preview.total) : ""}
+                {preview ? formatEur(fromCents(bookableCents)) : ""}
               </dd>
             </dl>
             <h3 className={ui.h3}>{t("perEntity")}</h3>
@@ -141,7 +146,7 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
               {sumsPerEntity().map(([entityId, cents]) => (
                 <li key={entityId} className="flex justify-between">
                   <span>{legalEntityNames.get(entityId) ?? entityId}</span>
-                  <span className="tabular-nums">{formatEur(cents / 100)}</span>
+                  <span className="tabular-nums">{formatEur(fromCents(cents))}</span>
                 </li>
               ))}
             </ul>
@@ -164,8 +169,8 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
             )}
             <p className="text-xs text-muted">{t("note")}</p>
             <div className={ui.formActions}>
-              <button type="button" className={ui.primary} onClick={confirm} disabled={busy || !preview || items.length === 0}>
-                {t("confirm", { count: preview?.count ?? 0 })}
+              <button type="button" className={ui.primary} onClick={confirm} disabled={busy || !preview || bookable.length === 0}>
+                {t("confirm", { count: bookable.length })}
               </button>
               <button type="button" className={ui.secondary} onClick={onClose} disabled={busy}>
                 {t("cancel")}
