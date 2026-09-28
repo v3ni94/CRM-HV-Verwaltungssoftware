@@ -6682,7 +6682,11 @@
         "invited": "eingeladen",
         "active": "aktiv",
         "locked": "gesperrt"
-      }
+      },
+      "statusFilter": "Status",
+      "statusAll": "Alle Status",
+      "statusOpen": "Offen (neu, in Bearbeitung, wartet)",
+      "emptyFiltered": "Keine Einreichungen mit diesem Status."
     }
   },
   "ReconciliationReports": {

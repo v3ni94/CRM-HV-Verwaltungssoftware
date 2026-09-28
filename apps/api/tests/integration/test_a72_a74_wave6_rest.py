@@ -258,6 +258,21 @@ def test_a73_form_submissions_listed_per_template(client: TestClient, world: Wor
     assert rows[0]["unit_id"] == tenancy["unit_id"]
     assert rows[0]["created_at"]
     assert "values" not in rows[0]
+    # A74: filter by the status of the ticket (repeatable), combined with the template.
+    first_ticket = submitted[0]["ticket_id"]
+    _ok(client.patch(f"/api/v1/tickets/{first_ticket}", json={"status": "in_progress"}, headers=h))
+    url = f"{PA}/forms/{template['id']}/submissions"
+    by_new = _ok(client.get(url, params={"status": "new"}, headers=h))
+    assert [r["id"] for r in by_new] == [submitted[1]["id"]]
+    by_progress = _ok(client.get(url, params={"status": "in_progress"}, headers=h))
+    assert [r["id"] for r in by_progress] == [submitted[0]["id"]]
+    assert by_progress[0]["ticket_status"] == "in_progress"
+    both = _ok(client.get(url, params=[("status", "new"), ("status", "in_progress")], headers=h))
+    assert len(both) == 2
+    assert _ok(client.get(url, params={"status": "done"}, headers=h)) == []
+    bad = client.get(url, params={"status": "erledigt"}, headers=h)
+    assert bad.status_code == 422
+    assert client.get(url, params={"status": "new"}, headers=hb).status_code == 404
     # Tenant B: not found; the portal user: no CRM right; unknown template: not found.
     assert client.get(f"{PA}/forms/{template['id']}/submissions", headers=hb).status_code == 404
     assert client.get(f"{PA}/forms/{template['id']}/submissions", headers=ta).status_code == 403

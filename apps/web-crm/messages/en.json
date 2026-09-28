@@ -6682,7 +6682,11 @@
         "invited": "invited",
         "active": "active",
         "locked": "locked"
-      }
+      },
+      "statusFilter": "Status",
+      "statusAll": "All statuses",
+      "statusOpen": "Open (new, in progress, waiting)",
+      "emptyFiltered": "No submissions with this status."
     }
   },
   "ReconciliationReports": {

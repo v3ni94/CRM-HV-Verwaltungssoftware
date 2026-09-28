@@ -13,6 +13,9 @@ Portal forms (A56): `forms.py` (templates, submissions, pure validation and rend
 submission creates a ticket of the template's category with own uploads as attachments. The
 CRM lists the submissions per template (`GET /portal-admin/forms/{id}/submissions`, A73,
 tickets:read) with account, contact name and the created ticket; the values stay on the ticket.
+The optional, repeatable `status` query parameter (A74) filters on the ticket status, which is
+the processing state of a submission; the CRM offers all, open (new, in progress, waiting) or
+one status.
 
 Layout once implemented: `models.py`, `schemas.py`, `services.py`, `routers.py`, tests under
 `apps/api/tests/portal/`. Register models in `mhvp/models.py` for Alembic autogenerate.

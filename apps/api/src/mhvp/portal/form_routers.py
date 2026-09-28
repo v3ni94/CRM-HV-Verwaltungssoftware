@@ -8,7 +8,7 @@ import uuid
 from datetime import UTC, datetime, timedelta
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
@@ -18,6 +18,7 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import forms
 from mhvp.portal.forms import PortalFormSubmission, PortalFormTemplate
 from mhvp.portal.routers import Portal, _scopes, portal_user
+from mhvp.tickets.models import TicketStatus
 from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/portal", tags=["Portal"])
@@ -175,11 +176,22 @@ async def delete_template(
 
 @admin.get("/forms/{template_id}/submissions", summary="Einreichungen einer Formularvorlage")
 async def list_submissions(
-    template_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    template_id: uuid.UUID,
+    request: Request,
+    status: list[TicketStatus] | None = Query(
+        None,
+        description=(
+            "Nur Einreichungen, deren Ticket einen dieser Status hat (A74, mehrfach "
+            "angebbar); ohne Angabe alle."
+        ),
+    ),
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     """A73: submissions per template for the CRM (newest first) with the portal account, the
     contact name and the ticket created from it. The values themselves are on the ticket
-    (public description); only the identification is listed here (data minimisation)."""
+    (public description); only the identification is listed here (data minimisation).
+    A74: ``status`` filters on the status of the ticket, which is the processing state of
+    the submission (a submission has no status of its own)."""
     from mhvp.contacts.models import Contact
     from mhvp.portal.models import PortalAccount
     from mhvp.tickets.models import Ticket
@@ -188,15 +200,20 @@ async def list_submissions(
         t = await session.get(PortalFormTemplate, template_id)
         if t is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        query = (
+            select(PortalFormSubmission, PortalAccount, Contact, Ticket)
+            .join(PortalAccount, PortalAccount.id == PortalFormSubmission.account_id)
+            .join(Contact, Contact.id == PortalAccount.contact_id)
+            .join(Ticket, Ticket.id == PortalFormSubmission.ticket_id)
+            .where(PortalFormSubmission.template_id == t.id)
+        )
+        if status:
+            query = query.where(Ticket.status.in_(status))
         rows = (
             await session.execute(
-                select(PortalFormSubmission, PortalAccount, Contact, Ticket)
-                .join(PortalAccount, PortalAccount.id == PortalFormSubmission.account_id)
-                .join(Contact, Contact.id == PortalAccount.contact_id)
-                .join(Ticket, Ticket.id == PortalFormSubmission.ticket_id)
-                .where(PortalFormSubmission.template_id == t.id)
-                .order_by(PortalFormSubmission.created_at.desc(), PortalFormSubmission.id.desc())
-                .limit(500)
+                query.order_by(
+                    PortalFormSubmission.created_at.desc(), PortalFormSubmission.id.desc()
+                ).limit(500)
             )
         ).all()
         return [

@@ -1,9 +1,9 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { PortalFormSubmissions } from "./PortalFormSubmissions";
+import { PortalFormSubmissions, submissionsQuery } from "./PortalFormSubmissions";
 
 const TPL = "01920000-0000-7000-8000-0000000000f1";
 
@@ -36,9 +36,62 @@ describe("PortalFormSubmissions", () => {
     expect(String(fetchMock.mock.calls[0]?.[0])).toBe(`/api/bff/portal-admin/forms/${TPL}/submissions`);
     expect(screen.getByRole("link", { name: "Ticket 4711" })).toHaveAttribute("href", "/tickets/t1");
     expect(screen.getByRole("link", { name: "Max Mieter" })).toHaveAttribute("href", "/kontakte/c1");
-    expect(screen.getByText("neu")).toBeInTheDocument();
+    expect(within(screen.getByRole("table")).getByText("neu")).toBeInTheDocument();
     expect(screen.getByText("26.09.2026 10:30")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Einreichungen aktualisieren" })).toBeInTheDocument();
+  });
+
+  it("builds the status query for all, open and a single status (A74)", () => {
+    expect(submissionsQuery("")).toBe("");
+    expect(submissionsQuery("open")).toBe("?status=new&status=in_progress&status=waiting");
+    expect(submissionsQuery("done")).toBe("?status=done");
+  });
+
+  it("filters by ticket status and reloads with the filter (A74)", async () => {
+    const row = {
+      id: "s1",
+      template_id: TPL,
+      account_id: "acc1",
+      account_status: "active",
+      contact_id: "c1",
+      contact_name: "Max Mieter",
+      created_at: "2026-09-26T08:30:00Z",
+      unit_id: null,
+      ticket_id: "t1",
+      ticket_number: 4711,
+      ticket_status: "new",
+    };
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse([row]))
+      .mockResolvedValueOnce(jsonResponse([]))
+      .mockResolvedValueOnce(jsonResponse([row]))
+      .mockResolvedValueOnce(jsonResponse([row]));
+    const user = userEvent.setup();
+    renderIntl(<PortalFormSubmissions templateId={TPL} />);
+    // The filter appears once the list is loaded.
+    expect(screen.queryByRole("combobox", { name: "Status" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Einreichungen anzeigen" }));
+    await screen.findByText("Max Mieter");
+    const select = screen.getByRole("combobox", { name: "Status" });
+    expect(screen.getByRole("option", { name: "Alle Status" })).toBeInTheDocument();
+    expect(screen.getByRole("option", { name: "abgelehnt" })).toBeInTheDocument();
+
+    await user.selectOptions(select, "done");
+    expect(await screen.findByText("Keine Einreichungen mit diesem Status.")).toBeInTheDocument();
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(
+      `/api/bff/portal-admin/forms/${TPL}/submissions?status=done`,
+    );
+
+    await user.selectOptions(select, "open");
+    await screen.findByText("Max Mieter");
+    expect(String(fetchMock.mock.calls[2]?.[0])).toBe(
+      `/api/bff/portal-admin/forms/${TPL}/submissions?status=new&status=in_progress&status=waiting`,
+    );
+    // Reload keeps the chosen filter.
+    await user.click(screen.getByRole("button", { name: "Einreichungen aktualisieren" }));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(4));
+    expect(String(fetchMock.mock.calls[3]?.[0])).toContain("status=waiting");
   });
 
   it("shows the empty state and an error from the BFF", async () => {

@@ -91084,7 +91084,7 @@
     },
     "/api/v1/portal-admin/forms/{template_id}/submissions": {
       "get": {
-        "description": "A73: submissions per template for the CRM (newest first) with the portal account, the\ncontact name and the ticket created from it. The values themselves are on the ticket\n(public description); only the identification is listed here (data minimisation).",
+        "description": "A73: submissions per template for the CRM (newest first) with the portal account, the\ncontact name and the ticket created from it. The values themselves are on the ticket\n(public description); only the identification is listed here (data minimisation).\nA74: ``status`` filters on the status of the ticket, which is the processing state of\nthe submission (a submission has no status of its own).",
         "operationId": "list_submissions_api_v1_portal_admin_forms__template_id__submissions_get",
         "parameters": [
           {
@@ -91095,6 +91095,27 @@
               "format": "uuid",
               "title": "Template Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Nur Einreichungen, deren Ticket einen dieser Status hat (A74, mehrfach angebbar); ohne Angabe alle.",
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "items": {
+                    "$ref": "#/components/schemas/TicketStatus"
+                  },
+                  "type": "array"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur Einreichungen, deren Ticket einen dieser Status hat (A74, mehrfach angebbar); ohne Angabe alle.",
+              "title": "Status"
             }
           }
         ],

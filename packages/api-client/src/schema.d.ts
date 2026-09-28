@@ -12651,6 +12651,8 @@ export interface paths {
          * @description A73: submissions per template for the CRM (newest first) with the portal account, the
          *     contact name and the ticket created from it. The values themselves are on the ticket
          *     (public description); only the identification is listed here (data minimisation).
+         *     A74: ``status`` filters on the status of the ticket, which is the processing state of
+         *     the submission (a submission has no status of its own).
          */
         get: operations["list_submissions_api_v1_portal_admin_forms__template_id__submissions_get"];
         put?: never;
@@ -60708,7 +60710,10 @@ export interface operations {
     };
     list_submissions_api_v1_portal_admin_forms__template_id__submissions_get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Nur Einreichungen, deren Ticket einen dieser Status hat (A74, mehrfach angebbar); ohne Angabe alle. */
+                status?: components["schemas"]["TicketStatus"][] | null;
+            };
             header?: never;
             path: {
                 template_id: string;
