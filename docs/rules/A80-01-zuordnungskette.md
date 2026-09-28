@@ -4,11 +4,11 @@
 | --- | --- |
 | ID | `A80-01` (Zuordnungskette; die Rückfrage selbst steht in `docs/ASSUMPTIONS.md` A-068) |
 | Title | Ist der Kontakt einer Mail oder eines Tickets sicher (automatisch oder durch ein Ja bestätigt) und hat er genau einen aktiven Mietvertrag oder genau eine aktive Eigentümerschaft einer Einheit, werden Einheit und Objekt automatisch übernommen, nur in ein leeres Feld. Mehrere Verträge oder Einheiten bleiben eine Rückfrage mit diesen Kandidaten; ein unsicherer Kontakt leitet nichts ab |
-| Scope | `mhvp.communication.assignment` (`contact_sure_chain`) und `mhvp.communication.assignment_review` (`evaluate`), Mails (`Message.property_id`) und Tickets (`Ticket.property_id`, `Ticket.unit_id`); keine Geldwirkung, keine Rechtsgrundlage, reine Produktschutzregel gegen unnötige Rückfragen bei eindeutiger Lage |
+| Scope | `mhvp.communication.assignment` (`contact_sure_chain`) und `mhvp.communication.assignment_review` (`evaluate`; seit 28.09.2026 auch `apply_rule_assignment` über `_rule_contact_chain`), Mails (`Message.property_id`) und Tickets (`Ticket.property_id`, `Ticket.unit_id`); keine Geldwirkung, keine Rechtsgrundlage, reine Produktschutzregel gegen unnötige Rückfragen bei eindeutiger Lage |
 | Source status | Kein Anhang-C-Eintrag nötig (organisatorische Regel ohne Rechtsbezug). Betreiberauftrag 27.09.2026 (Nachtrag zu A-068) |
-| Acceptance case | Keiner in Anhang D. Tests `apps/api/tests/integration/test_a80_assignment_chain.py` (ein Mietvertrag, eine Eigentümerschaft, zwei Verträge bleiben Rückfrage, unsicherer Kontakt ohne Ableitung, bereits gesetztes Feld bleibt unverändert, erneute Prüfung nach Ja, Ereignis `assignment_review.auto`); bestehende `test_a80_assignment_review.py` unverändert grün |
-| Implementation | Version 1.37.0, kein Migrationsbedarf (nutzt bestehende Tabellen `contract`, `assignment_review`) |
-| Change reason | Betreiberauftrag 27.09.2026: Mails und Tickets sollen so weit wie möglich automatisch mit Mieter, Eigentümer, Einheit und Objekt verknüpft werden, ohne die bestehenden Sicherheitsregeln der Zuordnungsprüfung (A-068) zu lockern |
+| Acceptance case | Keiner in Anhang D. Tests `apps/api/tests/integration/test_a80_assignment_chain.py` (ein Mietvertrag, eine Eigentümerschaft, zwei Verträge bleiben Rückfrage, unsicherer Kontakt ohne Ableitung, bereits gesetztes Feld bleibt unverändert, erneute Prüfung nach Ja, Ereignis `assignment_review.auto`); `apps/api/tests/integration/test_a80_rule_assignment_chain.py` (Regel 6: Kontaktregel mit Kette an Ticket und Mail, zwei Verträge, gesetztes oder entschiedenes Feld, Mandantentrennung); bestehende `test_a80_assignment_review.py` unverändert grün |
+| Implementation | Version 1.37.0, kein Migrationsbedarf (nutzt bestehende Tabellen `contract`, `assignment_review`); Regel 6 seit 28.09.2026 ohne Migration |
+| Change reason | Betreiberauftrag 27.09.2026: Mails und Tickets sollen so weit wie möglich automatisch mit Mieter, Eigentümer, Einheit und Objekt verknüpft werden, ohne die bestehenden Sicherheitsregeln der Zuordnungsprüfung (A-068) zu lockern. Nacharbeit 28.09.2026 (Regel 6): Setzt eine angenommene Lernregel (M9-11) den Kontakt, blieben Objekt und Einheit bisher leer, weil die Regel-Engine nur eine Stufe ausführt; die Kette wird jetzt direkt im Anschluss angewendet |
 
 ## Regel
 
@@ -38,3 +38,13 @@
    einmal das Ereignis `assignment_review.auto` mit `dimension`, `chosen_id` und `reason`
    ("eindeutiger Vertrag" / "eindeutiges Eigentum"), bei Tickets zusätzlich einen Ticketverlaufs-
    eintrag (unverändert zu A-068).
+6. **Kontakt durch eine Lernregel (28.09.2026).** Setzt eine angenommene Lernregel (M9-11,
+   Aktion `assign_record`, Dimension Kontakt) den Kontakt, wendet `apply_rule_assignment` im
+   selben Schritt dieselbe Kette an (`contact_sure_chain`), ohne die Tiefe der Regel-Engine zu
+   erhöhen. Objekt und Einheit werden nur in ein leeres Feld übernommen, für das kein Mitglied
+   in der Zuordnungsprüfung entschieden hat; die Einheit nur, wenn das Objekt der Kette
+   entspricht (ein anders gesetztes Objekt lässt die Einheit leer). Die Zeile lautet `auto`
+   mit dem Grund der Kette, das Ereignis `assignment_review.auto` trägt zusätzlich `rule_id`
+   und das Kennzeichen `automation` (löst keine weitere Regel aus). Mehrere Verträge oder
+   Einheiten ändern nichts; eine offene Rückfrage bleibt offen. Das Ergebnis im Regelprotokoll
+   nennt die ergänzten Dimensionen.

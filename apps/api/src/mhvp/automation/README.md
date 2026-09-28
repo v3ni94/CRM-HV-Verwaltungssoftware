@@ -106,6 +106,12 @@ explicit accept by a member with `tenant_settings:update`.
 * Evidence: the domain events `assignment_review.decided` (Ja, manual choice, Nein),
   `ticket.assigned` (reason `manuell`) and `ticket.topic_changed`, joined to the sender (mail
   `from_address`, ticket: first inbound mail). Events with the automation marker never count.
+  The sender is compared as `message.from_address_norm` (stored generated column
+  `lower(btrim(from_address))`, migration 0220) through the index
+  `ix_message_tenant_from_address_norm` `(tenant_id, from_address_norm)`. A functional index on
+  `lower(from_address)` is not usable for the runtime role: `message` forces RLS and `lower`
+  is not leakproof, so the planner never takes it as an index condition ahead of the tenant
+  policy. Domain patterns (`split_part`) remain a filter over the tenant's inbound mails.
 * Patterns per entity type, field (`contact`, `property`, `unit`, `topic`,
   `assignee_user_id`; closed list) and sender address, plus sender domain for non shared
   domains with at least two addresses. A contradicting decision resets the streak and
@@ -115,8 +121,14 @@ explicit accept by a member with `tenant_settings:update`.
   `assign_record` (fills an empty assignment field through
   `assignment_review.apply_rule_assignment`, decision `rule`) or `set_ticket_field`
   (`topic`, `assignee_user_id`, on the ticket the mail opened, `entity.opens_ticket`).
+* A contact set by `assign_record` feeds the sure chain of the assignment review in the same
+  action (rule A80-01 no. 6, 28.09.2026): exactly one active tenancy contract or ownership
+  unit of the contact fills property and unit, only into empty fields without a member's
+  decision (unit only below the chain's property), row `auto` with the chain's reason, event
+  `assignment_review.auto` with `rule_id` and the automation marker. The rule depth stays 1;
+  ambiguous contracts change nothing and an open question stays open.
 * Errors: `MHVP-AUTO-0001` (proposal already decided), `MHVP-AUTO-0002` (evidence no longer
   holds on accept).
 * Tests: `tests/unit/test_rule_proposal_learning.py`, `tests/integration/test_m9_rule_proposals.py`,
-  CRM `RuleProposals.test.tsx`.
+  `tests/integration/test_a80_rule_assignment_chain.py`, CRM `RuleProposals.test.tsx`.
 

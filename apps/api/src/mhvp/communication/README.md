@@ -306,7 +306,12 @@ im Savepoint, ob dieselbe Entscheidung für denselben Absender die Schwelle erre
 höchstens einen Regelvorschlag an. Eine angenommene Regel ordnet über
 `apply_rule_assignment` zu: nur leere, von keinem Mitglied entschiedene Felder, Zeile `auto`
 mit Entscheidung `rule` und Regelname als Grund; eine spätere Prüfung lässt sie stehen, ein Ja
-korrigiert sie.
+korrigiert sie. Setzt die Regel den Kontakt, ergänzt `_rule_contact_chain` im selben Schritt
+Objekt und Einheit über `assignment.contact_sure_chain` (Regel A80-01 Nr. 6, 28.09.2026): nur
+leere, nicht entschiedene Felder, Zeile `auto` mit dem Grund der Kette, Ereignis
+`assignment_review.auto` mit `rule_id` und Kennzeichen `automation`. Für die Nachweissuche je
+Absender trägt `message` die erzeugte Spalte `from_address_norm` (`lower(btrim(from_address))`)
+mit Index `ix_message_tenant_from_address_norm` (Migration 0220).
 
 Stand Review 1.36.0: Die GET-Endpunkte rechnen nur und speichern nichts; nicht gespeicherte
 Zeilen tragen eine feste, aus Vorgang und Dimension abgeleitete Kennung. Gespeichert wird beim

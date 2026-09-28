@@ -308,17 +308,23 @@ async def _record_auto(
     actor_user_id: uuid.UUID | None,
     *,
     prefilled: bool,
+    rule_id: uuid.UUID | None = None,
+    marker: dict[str, Any] | None = None,
 ) -> None:
     """Domain event (and ticket history entry) for an automatic assignment; ``prefilled``: the
     value was set before the check (sender address at ingest, copied from the mail) and the
-    rules confirm it (review 1.36.0)."""
-    data = {
+    rules confirm it (review 1.36.0). ``rule_id`` and ``marker``: the assignment follows a
+    learned rule (sure chain after ``apply_rule_assignment``); the event carries the automation
+    marker so it never triggers a rule again (depth 1)."""
+    data: dict[str, Any] = {
         "dimension": review.dimension,
         "decision": "auto",
         "chosen_id": str(review.chosen_id) if review.chosen_id else None,
         "reason": review.reason,
         "prefilled": prefilled,
     }
+    if rule_id is not None:
+        data["rule_id"] = str(rule_id)
     await emit(
         session,
         tenant_id=entity.tenant_id,
@@ -326,7 +332,7 @@ async def _record_auto(
         entity_type=review.entity_type,
         entity_id=entity.id,
         actor_user_id=actor_user_id,
-        payload=data | {"candidates": review.candidates},
+        payload=data | {"candidates": review.candidates} | (marker or {}),
     )
     if isinstance(entity, Ticket):
         session.add(
@@ -617,8 +623,10 @@ async def apply_rule_assignment(
     empty field is filled, and only when no member decided on this dimension yet; a member's
     decision always wins. The review row is stored as ``auto`` with decision ``rule`` and the
     rule as reason, so a later check keeps it and a member can still correct it with a Ja.
-    The domain event carries the automation marker (depth 1). Returns a short German result
-    text; raises ``LookupError`` when the target record is gone."""
+    The domain event carries the automation marker (depth 1). A contact set by the rule feeds
+    the sure chain of the review (``_rule_contact_chain``), which fills property and unit
+    without a second rule step. Returns a short German result text; raises ``LookupError``
+    when the target record is gone."""
     field = ENTITY_FIELDS[entity_type].get(dimension)
     if field is None:
         raise LookupError(f"Dimension {dimension} für {entity_type} unbekannt.")
@@ -679,7 +687,75 @@ async def apply_rule_assignment(
                 data=data,
             )
         )
-    return f"Zugeordnet: {label}"
+    result = f"Zugeordnet: {label}"
+    if dimension == "contact":
+        chained = await _rule_contact_chain(
+            session, entity_type, entity, value, rule_id=rule_id, marker=marker
+        )
+        if chained:
+            result += f"; über die sichere Kette ergänzt: {', '.join(chained)}"
+    return result
+
+
+CHAIN_LABELS = {"property": "Objekt", "unit": "Einheit"}
+
+
+async def _rule_contact_chain(
+    session: AsyncSession,
+    entity_type: str,
+    entity: Message | Ticket,
+    contact_id: uuid.UUID,
+    *,
+    rule_id: uuid.UUID,
+    marker: dict[str, Any],
+) -> list[str]:
+    """Sure chain after a learned rule set the contact (rule M9-11 with A80-01, follow-up
+    28.09.2026): the rule engine runs one action per event (depth 1), so property and unit are
+    derived here with the same deterministic chain the review uses
+    (``assignment.contact_sure_chain``: exactly one active tenancy contract or exactly one
+    active ownership unit). Only into an empty field without a member's decision; the unit
+    only below the property of the chain (a property set otherwise leaves the unit alone);
+    the row reads ``auto`` with the reason of the chain and writes ``assignment_review.auto``
+    with the rule and the automation marker. Several contracts (no chain) change nothing, an
+    open question stays open. Returns the German labels of the filled dimensions."""
+    chain = await assignment.contact_sure_chain(session, entity.tenant_id, contact_id)
+    if chain is None:
+        return []
+    fields = ENTITY_FIELDS[entity_type]
+    applied: list[AssignmentReview] = []
+    for dimension, candidate in zip(("property", "unit"), chain, strict=True):
+        field = fields.get(dimension)
+        if field is None:
+            continue
+        if dimension == "unit" and entity.property_id != chain[0].id:
+            continue
+        if getattr(entity, field) is not None:
+            continue
+        review = await _get_review(session, entity_type, entity.id, dimension)
+        if review is not None and review.decision is not None:
+            continue
+        if review is None:
+            review = AssignmentReview(
+                tenant_id=entity.tenant_id,
+                entity_type=entity_type,
+                entity_id=entity.id,
+                dimension=dimension,
+            )
+            session.add(review)
+        setattr(entity, field, candidate.id)
+        review.candidates = [candidate.as_dict()]
+        review.status = "auto"
+        review.chosen_id = review.basis_id = candidate.id
+        review.reason = "; ".join(candidate.reasons)
+        applied.append(review)
+    if not applied:
+        return []
+    await session.flush()
+    for review in applied:
+        await _record_auto(
+            session, entity, review, None, prefilled=False, rule_id=rule_id, marker=marker
+        )
+    return [CHAIN_LABELS[r.dimension] for r in applied]
 
 
 def review_out(row: AssignmentReview, entity: Message | Ticket | None = None) -> dict[str, Any]:

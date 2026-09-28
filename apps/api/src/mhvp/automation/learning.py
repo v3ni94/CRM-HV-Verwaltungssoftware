@@ -36,7 +36,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import func, select
+from sqlalchemy import Select, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.automation.models import (
@@ -309,25 +309,43 @@ async def sender_of(session: AsyncSession, entity_type: str, entity_id: uuid.UUI
 async def load_decisions(
     session: AsyncSession, *, entity_type: str, field: str, scope: str, key: str
 ) -> list[Decision]:
-    """Manual decisions of the pattern from the domain event log, oldest first."""
+    """Manual decisions of the pattern from the domain event log, oldest first.
+
+    The sender is ``Message.from_address_norm`` (generated ``lower(btrim(from_address))``,
+    migration 0220). For an address pattern the lookup compares that plain column, so the
+    index ``ix_message_tenant_from_address_norm`` is an index condition also under row level
+    security (a comparison through ``lower()`` is not leakproof and never would be); for a
+    ticket the candidate tickets come from that index before the first inbound mail of each
+    is determined. A domain pattern (``split_part``) cannot use a btree index on the address
+    and stays a filter over the inbound mails of the tenant."""
     from mhvp.communication.models import Message
 
-    address = func.lower(func.trim(Message.from_address))
+    address = Message.from_address_norm
+    senders: Select[Any]
     if entity_type == "message":
         senders = select(Message.id.label("entity_id"), address.label("address")).where(
-            Message.direction == "in", Message.from_address.is_not(None)
+            Message.direction == "in", address.is_not(None)
         )
+        if scope == SCOPE_ADDRESS:
+            senders = senders.where(address == key)
     else:
         senders = (
             select(Message.ticket_id.label("entity_id"), address.label("address"))
             .where(
                 Message.direction == "in",
                 Message.ticket_id.is_not(None),
-                Message.from_address.is_not(None),
+                address.is_not(None),
             )
             .distinct(Message.ticket_id)
             .order_by(Message.ticket_id, Message.created_at, Message.id)
         )
+        if scope == SCOPE_ADDRESS:
+            # Only tickets with an inbound mail of the sender can have it as first sender;
+            # the outer match below still checks that it is the first one.
+            candidates = select(Message.ticket_id).where(
+                Message.direction == "in", Message.ticket_id.is_not(None), address == key
+            )
+            senders = senders.where(Message.ticket_id.in_(candidates))
     sub = senders.subquery()
     match = (
         sub.c.address == key
