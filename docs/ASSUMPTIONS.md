@@ -831,3 +831,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `automation_rule_proposal`, `tenant_settings.rule_proposal_threshold`, `GET /automation/rule-proposals`, `POST /automation/rule-proposals/{id}/accept`, `POST /automation/rule-proposals/{id}/reject`, Aktion `assign_record`, Ereignis `ticket.topic_changed`, CRM `/einstellungen/regelvorschlaege` |
 | Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
 | Datum | 27.09.2026 |
+
+## A-072
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Schadenbearbeiter (Regel INT-SDT-01, Migration 0222): (1) Statusabbildung lokal nach extern `new` zu `open`, `in_progress` zu `in_progress`, `waiting` zu `waiting`, `done` zu `resolved`, `closed` zu `closed`; `rejected` wird nicht gesendet; empfangene Werte werden roh gespeichert und ändern den lokalen Status nie. (2) Antwortfelder der Gegenseite werden tolerant gelesen (`id` oder `mdvId`, `commentId` oder `id`, `attachmentId` oder `id`, `downloadUrl`), eine Liste als `items` oder als bloßes Array. (3) `entityId` eines Ticketereignisses ist die Ticket-ID der Gegenseite, sonst `payload.ticketId`. (4) Die Einheit geht als zusätzliches optionales Feld `unitExternalId` mit (Vertrag Abschnitt 11 erlaubt neue optionale Felder). (5) Der Abgleich läuft alle 15 Minuten mit `updatedSince` gleich dem jüngsten gesehenen `updatedAt` abzüglich 5 Minuten Überlappung. (6) Eingehende Kommentare werden als interne Kommentare gespeichert (nicht im Portal sichtbar). (7) Downloads nur vom Host der Basisadresse, höchstens 25 MB. |
+| Begründung | Der Vertragsentwurf nennt Felder, aber keine vollständigen Schemas und keine Statusliste; die Annahmen sind so gewählt, dass nichts automatisch geändert, gelöscht oder übermittelt wird, was ein Mitglied nicht ausdrücklich gewählt hat. |
+| Kennzeichnung | unkritisch (kein Geldfluss, keine Frist); Datenschutz über SDT-01 gesperrt, Feldnamen und Statusliste über SDT-02 und SDT-03 zu bestätigen |
+| Betroffene Bereiche | `mhvp.integrations.schadenstool`, `/integrations/schadenstool/*`, CRM `/einstellungen/schnittstellen/schadenbearbeiter`, Ticketdetail |
+| Überprüfung spätestens bei Meilenstein | vor produktiver Aktivierung der Anbindung |
+| Datum | 28.09.2026 |

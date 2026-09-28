@@ -66,6 +66,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M11-finapi-authorization](M11-finapi-authorization.md) | finAPI: Recht `banking:approve`, unzugeordnete Konten verborgen | M11 | implemented, not accepted |
 | [M11-05](M11-05-credentials-never-in-crm.md) | Zugangsdaten nie im CRM (Bank-WebForm) | M11 | implemented, not accepted |
 | [M11-07](M11-07-fints-pin-tan.md) | FinTS PIN/TAN: Zugangsdaten verschlüsselt, keine Wiederholung nach Fehlversuch, 90 Tage, nur lesend | M11 | implemented, not accepted |
+| [INT-SDT-01](INT-SDT-01-schadenbearbeiter.md) | Schadenbearbeiter: Austausch nur nach AVV, nur ausdrücklich gewählte Inhalte, Übernahme nur nach Bestätigung | Integrationen | implemented, not accepted |
 | [M10-03](M10-03-tilgungsfolge-vorschlag.md) | Ausgleich offener Posten nach gesetzlicher Reihenfolge, nur Vorschlag mit Bestätigung (Tilgungsfolge, D39) | M10, 7.4 Nr. 5 | implemented, not accepted |
 | [M11-06](M11-06-payment-proposal-only-until-g2.md) | Zahlung nur Vorschlag bis G2 (Rechnungsabgleich) | M11, 18.0 | implemented, not accepted |
 | [M14-02](M14-02.md) | Vorsteuer: getrennte Erfassung, Abzug nur als Vorschlag bei optierten Objekten nach Umsatzschlüssel, Schalter Standard aus | M14, 7.2, PÜ03 | implemented, not accepted (zu prüfen durch Steuerberater) |
