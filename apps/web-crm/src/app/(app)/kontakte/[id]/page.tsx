@@ -3,7 +3,7 @@ import Link from "next/link";
 
 import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
 import { CallsPanel, type CallOut } from "@/components/contacts/CallsPanel";
-import { BankAccountApproval } from "@/components/contacts/BankAccountApproval";
+import { BankAccountsSection } from "@/components/contacts/BankAccountsSection";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { ContactMasterData } from "@/components/contacts/ContactMasterData";
@@ -341,97 +341,14 @@ export default async function ContactDetailPage({
       ) : null}
 
       {tab === "bankverbindungen" ? (
-        contact.bank_accounts.length ? (
-          <div className="flex flex-col gap-2">
-            <p className="text-xs text-muted">{t("bankApproval.hint")}</p>
-            {/* Phone width: one card per account so the release status and buttons stay visible
-                without horizontal scrolling (review 26.09.2026, contacts B1). */}
-            <ul
-              className="flex flex-col gap-2 sm:hidden"
-              data-testid="bank-accounts-cards"
-            >
-              {contact.bank_accounts.map((b) => (
-                <li
-                  key={b.id}
-                  className={`${ui.card} flex flex-col gap-1 text-sm`}
-                >
-                  <span className="font-mono whitespace-nowrap">
-                    {b.iban_masked}
-                    {b.is_default ? <span className="ml-1 font-sans text-xs text-muted">{tf("defaultAccount")}</span> : null}
-                  </span>
-                  {b.kind ? <span className="text-xs text-muted">{tf(`accountKind.${b.kind}`)}</span> : null}
-                  <span className="text-xs text-muted">
-                    {[b.bank_name, b.bic, b.holder].filter(Boolean).join(", ")}
-                  </span>
-                  <span className="text-xs text-muted">
-                    {tf("validFrom")} {formatDate(b.valid_from)}
-                    {b.valid_to
-                      ? `, ${tf("validTo")} ${formatDate(b.valid_to)}`
-                      : ""}
-                  </span>
-                  <div className="mt-1">
-                    <BankAccountApproval
-                      contactId={contact.id}
-                      account={b}
-                      canApprove={canApproveBank}
-                      currentUserId={currentUserId}
-                      isPlatformAdmin={isPlatformAdmin}
-                    />
-                  </div>
-                </li>
-              ))}
-            </ul>
-            <div className="hidden overflow-x-auto sm:block">
-              <table className="w-full text-sm">
-                <thead className="border-b border-border text-left text-xs text-muted">
-                  <tr>
-                    <th className="py-1 pr-3 font-medium">{tf("iban")}</th>
-                    <th className="py-1 pr-3 font-medium">{tf("accountKindLabel")}</th>
-                    <th className="py-1 pr-3 font-medium">{tf("bic")}</th>
-                    <th className="py-1 pr-3 font-medium">{tf("bankName")}</th>
-                    <th className="py-1 pr-3 font-medium">{tf("holder")}</th>
-                    <th className="py-1 pr-3 font-medium">{tf("validFrom")}</th>
-                    <th className="py-1 pr-3 font-medium">{tf("validTo")}</th>
-                    <th className="py-1 font-medium">
-                      {t("bankApproval.title")}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {contact.bank_accounts.map((b) => (
-                    <tr key={b.id} className="border-b border-border align-top">
-                      <td className="py-1.5 pr-3 font-mono whitespace-nowrap">
-                        {b.iban_masked}
-                        {b.is_default ? <span className="ml-1 text-xs text-muted">{tf("defaultAccount")}</span> : null}
-                      </td>
-                      <td className="py-1.5 pr-3">{b.kind ? tf(`accountKind.${b.kind}`) : ""}</td>
-                      <td className="py-1.5 pr-3">{b.bic ?? ""}</td>
-                      <td className="py-1.5 pr-3">{b.bank_name ?? ""}</td>
-                      <td className="py-1.5 pr-3">{b.holder ?? ""}</td>
-                      <td className="py-1.5 pr-3 whitespace-nowrap">
-                        {formatDate(b.valid_from)}
-                      </td>
-                      <td className="py-1.5 pr-3 whitespace-nowrap">
-                        {formatDate(b.valid_to)}
-                      </td>
-                      <td className="py-1.5">
-                        <BankAccountApproval
-                          contactId={contact.id}
-                          account={b}
-                          canApprove={canApproveBank}
-                          currentUserId={currentUserId}
-                          isPlatformAdmin={isPlatformAdmin}
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        ) : (
-          <p className="text-sm text-muted">{t("none")}</p>
-        )
+        <BankAccountsSection
+          contactId={contact.id}
+          accounts={contact.bank_accounts}
+          canEdit={canEditMaster}
+          canApprove={canApproveBank}
+          currentUserId={currentUserId}
+          isPlatformAdmin={isPlatformAdmin}
+        />
       ) : null}
 
       {tab === "bankverbindungen" ? (

@@ -137,6 +137,14 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     method: "POST",
     pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/(approve|reject)$`),
   },
+  // Bankverbindungen am Kontakt (M5-01 addendum 28.09.2026): add, change as new version,
+  // end, and the four eyes decision on a pending change.
+  { method: "POST", pattern: new RegExp(`^contacts/${ID}/bank-accounts$`) },
+  { method: "POST", pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/(replace|end)$`) },
+  {
+    method: "POST",
+    pattern: new RegExp(`^contacts/${ID}/bank-accounts/${ID}/changes/${ID}/(approve|reject)$`),
+  },
   // AI assistant (M7): conversations, runs, proposals, import runs, provider settings.
   { method: "GET", pattern: /^ai\/conversations$/ },
   // Tenant members, roles and settings (settings area).
