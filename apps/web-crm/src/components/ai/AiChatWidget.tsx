@@ -115,11 +115,16 @@ export function AiChatWidget() {
   };
 
   // Greeting once per page area and record; the page is named so the user sees the context.
+  // The widget survives client navigations (app layout), so the conversation of the previous
+  // page is dropped here: the next question starts a conversation with the current record
+  // (context_type, context_id) and never carries the history of another record.
   const greetKey = `${ctx.area}:${ctx.entityId ?? ""}`;
   useEffect(() => {
     if (!open || greetedFor.current === greetKey) return;
     greetedFor.current = greetKey;
     setFlow({ step: "idle" });
+    setConversation(null);
+    conversationRef.current = null;
     say(t(ctx.entityType ? "greetingRecord" : "greeting", { page: t(`area.${ctx.area}`) }), startChips(ctx.area));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, greetKey]);
@@ -129,7 +134,8 @@ export function AiChatWidget() {
   }, [entries, busy]);
 
   const ensureConversation = async (): Promise<Conversation> => {
-    if (conversation) return conversation;
+    // Reuse only a conversation of the current record (see the greeting effect).
+    if (conversation && conversation.context_type === ctx.contextType && (conversation.context_id ?? null) === ctx.contextId) return conversation;
     const res = await bff<Conversation>("/api/bff/ai/conversations", {
       method: "POST",
       body: JSON.stringify({ title: t("conversationTitle", { page: t(`area.${ctx.area}`) }), context_type: ctx.contextType, context_id: ctx.contextId }),

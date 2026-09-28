@@ -82,6 +82,11 @@ export type ChatTask = (typeof CHAT_TASKS)[number];
 
 export const POLL_INTERVAL_MS = 2000;
 
+/** Import run of a confirmed chat action (rule AI-LOOKUP-01): no items, the import undo refuses it. */
+export function isChatActionRun(source: string | null | undefined): boolean {
+  return Boolean(source && source.startsWith("ai:answer_question:"));
+}
+
 export function isRunPending(run: Pick<Run, "status">): boolean {
   return run.status === "queued" || run.status === "running";
 }

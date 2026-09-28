@@ -85,16 +85,36 @@ async def record_rejection(
         return None
     if not await learning_examples_enabled(session, proposal.tenant_id):
         return None
+    proposed = proposal.proposed
+    if proposal.entity_type == "chat_action":
+        # The proposal of a chat action carries the raw phone number or e-mail address from
+        # the user's message (rule AI-LOOKUP-01); examples are sent to the provider, so the
+        # stored copy is masked (0.1.13, 9.1). Ids stay as they are.
+        proposed = masked_copy(proposed)
     example = AiExample(
         tenant_id=proposal.tenant_id,
         created_by=rejected_by,
         task=run.task,
         features={"proposal_id": str(proposal.id), "entity_type": proposal.entity_type},
-        result={"rejected": True, "reason": reason.strip()[:2000], "proposed": proposal.proposed},
+        result={"rejected": True, "reason": reason.strip()[:2000], "proposed": proposed},
         proposal_id=proposal.id,
     )
     session.add(example)
     return example
+
+
+def masked_copy(value: Any, key: str | None = None) -> Any:
+    """Deep copy with every string value masked (IBAN, e-mail, phone); keys ending in ``_id``
+    are kept, a UUID is no personal identifier and the phone pattern would mangle it."""
+    from mhvp.objektakte.masking import mask_identifiers
+
+    if isinstance(value, dict):
+        return {str(k): masked_copy(v, str(k)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [masked_copy(v, key) for v in value]
+    if isinstance(value, str) and not (key or "").endswith("_id"):
+        return mask_identifiers(value)
+    return value
 
 
 async def retention_months(session: AsyncSession, tenant_id: uuid.UUID) -> int:

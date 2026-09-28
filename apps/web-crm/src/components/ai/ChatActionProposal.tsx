@@ -52,6 +52,7 @@ export function ChatActionProposal({ proposal }: { proposal: Proposal }) {
     <div className={`${ui.card} flex flex-col gap-2 text-sm`} data-testid="chat-action-proposal">
       <p className="font-medium">{t(`chatAction.kind.${p.kind ?? "contact_change"}`)}</p>
       {p.contact_label ? <p>{t("chatAction.contact", { name: p.contact_label })}</p> : null}
+      {p.reason ? <p className="text-muted">{t("chatAction.reason", { reason: p.reason })}</p> : null}
       {p.kind === "contact_change" ? (
         <ul className="list-disc pl-5">
           {(p.changes ?? []).map((c) => (

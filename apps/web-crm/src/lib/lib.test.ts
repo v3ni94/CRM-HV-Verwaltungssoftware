@@ -1,4 +1,5 @@
 // @vitest-environment node
+import { isChatActionRun } from "./ai";
 import { isValidIban } from "./contact-schema";
 import { originAllowed } from "./csrf";
 import { formatConfidence, formatDate, formatEur } from "./format";
@@ -69,5 +70,14 @@ describe("money format without float", () => {
     expect(formatEur("-12")).toBe("-12,00 EUR");
     expect(formatEur(null)).toBe("");
     expect(formatConfidence("0.873")).toBe("87 %");
+  });
+});
+
+describe("chat action import runs", () => {
+  it("are recognised by their source and offered no undo", () => {
+    expect(isChatActionRun("ai:answer_question:contact_change")).toBe(true);
+    expect(isChatActionRun("ai:answer_question:ticket_create")).toBe(true);
+    expect(isChatActionRun("ai:extract_contacts")).toBe(false);
+    expect(isChatActionRun(null)).toBe(false);
   });
 });

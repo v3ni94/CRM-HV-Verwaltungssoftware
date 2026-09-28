@@ -1,7 +1,7 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { jsonResponse, renderIntl } from "@/test/intl";
+import { IntlTestProvider, jsonResponse, renderIntl } from "@/test/intl";
 
 import { AiChatWidget, looksLikeContactData, looksLikeImportIntent, pageContext, RUN_TIMEOUT_MS } from "./AiChatWidget";
 
@@ -460,5 +460,54 @@ describe("AiChatWidget page context", () => {
       page: "Kontakte",
     });
     expect(String((sent as unknown as { content: string }).content)).toContain("Was ist offen bei diesem Kontakt?");
+  });
+
+  it("starts a new conversation with the new record after a client navigation", async () => {
+    const CONTACT = "01920000-0000-7000-8000-00000000e778";
+    const PROPERTY = "01920000-0000-7000-8000-00000000e779";
+    const CONV2 = "01920000-0000-7000-8000-00000000c002";
+    const created: Record<string, unknown>[] = [];
+    const sent: { url: string; body: Record<string, unknown> }[] = [];
+    pathname = `/kontakte/${CONTACT}`;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (url.endsWith("/api/bff/ai/conversations") && method === "POST") {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        created.push(body);
+        const id = created.length === 1 ? CONV : CONV2;
+        return jsonResponse({ id, title: "x", context_type: body.context_type, context_id: body.context_id, created_at: "2026-09-28T10:00:00Z", messages: [] }, 201);
+      }
+      if (url.includes("/api/bff/ai/conversations/") && url.endsWith("/messages")) {
+        sent.push({ url, body: JSON.parse(String(init?.body)) as Record<string, unknown> });
+        return jsonResponse({ id: RUN, status: "succeeded", task: "answer_question", proposal_id: null, output: { answer: "x" }, links: [] }, 202);
+      }
+      if (url.endsWith(`/api/bff/ai/runs/${RUN}`))
+        return jsonResponse({ id: RUN, status: "succeeded", task: "answer_question", proposal_id: null, output: { answer: "Antwort." }, links: [] });
+      if (url.includes("/api/bff/ai/conversations/") && method === "GET") return jsonResponse({}, 404);
+      return jsonResponse({}, 404);
+    });
+
+    const view = renderIntl(<AiChatWidget />);
+    await userEvent.click(screen.getByRole("button", { name: "KI-Assistent öffnen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Was ist offen bei diesem Kontakt?" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(created).toEqual([{ title: "Chat auf Seite Kontakte", context_type: "contact", context_id: CONTACT }]);
+    expect(sent[0]?.url).toContain(`/conversations/${CONV}/messages`);
+
+    pathname = `/objekte/${PROPERTY}`;
+    view.rerender(
+      <IntlTestProvider>
+        <AiChatWidget />
+      </IntlTestProvider>,
+    );
+    expect(await screen.findByText(/Sie sind gerade auf der Seite Objekte/)).toBeInTheDocument();
+    await userEvent.type(screen.getByLabelText("Nachricht"), "Was ist offen?{enter}");
+    await waitFor(() => expect(sent).toHaveLength(2));
+    // A second conversation with the record now open; the question never goes to the old one.
+    expect(created).toHaveLength(2);
+    expect(created[1]).toEqual({ title: "Chat auf Seite Objekte", context_type: "property", context_id: PROPERTY });
+    expect(sent[1]?.url).toContain(`/conversations/${CONV2}/messages`);
+    expect(sent[1]?.body).toMatchObject({ context_entity_type: "property", context_entity_id: PROPERTY, page: "Objekte" });
   });
 });

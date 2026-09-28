@@ -274,15 +274,30 @@ Aufgaben, erste Schritte je Modul, `ui_preferences`) existiert nicht — `Onboar
   property; thread of a ticket). The result is stored as `input_ref["lookup"]`.
 - The gateway adds the hits, facts and the stored conversation history (last 10 messages) to
   the masked data block; prompt `answer_question/v2` is conversational. The input hash includes
-  the hit ids and the turn, so dedup never reuses another conversation's answer.
+  the hit ids and the turn, so dedup never reuses another conversation's answer. The user's
+  instruction is its own part `<frage>` in front of `<daten>` (`TaskInput.instruction`, chat
+  only); every record field, fact and history message is written on one line
+  (`lookup.flat`), and contact hits carry `model_detail` with placeholders instead of phone and
+  e-mail for the model (`links_of` strips it for messages and runs). Mail facts of the open
+  record apply the mailbox rule of the mail endpoints through the session principal.
+- `answer_question` started outside the chat (`create_extraction_run`: automation `ai_task`,
+  intake) keeps prompt v1 (`NON_CHAT_PROMPT`) and never produces a chat action (`jobs.py`
+  builds one only when `input_ref["lookup"]` exists).
 - `jobs.py` appends the platform hit list to the answer, stores the links on the message
   (`ai_message.links`, migration 0223) and, without a released provider or budget, answers with
   the hit list only. `RunOut.links` and `RunOut.lookup_answer` carry the same.
 - `chat_actions.py`: an `AnswerResult.action` becomes an `AiProposal` with
   `entity_type="chat_action"` (contact_change, contact_note, ticket_create) only for records of
-  the run's own hits; phone and e-mail come from the user's message; bank details are refused.
-  `POST /ai/proposals/{id}/apply` with `{"chat_action": {}}` writes through the contact change
-  path of `mhvp.tickets.proposals`, a `ContactNote`, or `POST /tickets`.
+  the run's own hits and only when the user's own message (page hint stripped) asks for that
+  kind (`CHANGE_INTENT`, `NOTE_INTENT`, `TICKET_INTENT`; otherwise dropped and logged); phone
+  and e-mail come from the user's message, name and address values must appear in it; bank
+  words or an IBAN in the message, the note or the ticket text refuse the action. The
+  proposal carries the model's `reason`, shown in the chat card. `POST /ai/proposals/{id}/apply`
+  with `{"chat_action": {}}` writes decision, import run, event and the record (contact change
+  path of `mhvp.tickets.proposals`, a `ContactNote`, or `tickets.routers.create_ticket_in_session`)
+  in one transaction. The import run has no items; `POST /imports/{id}/undo` refuses runs with
+  source `ai:answer_question:*` (409). A rejected chat action is stored as a masked learning
+  example (`examples.masked_copy`), and `gateway._messages` masks the examples of masked tasks.
 - `scripts/build_help_index.py` regenerates `help_index.json` from
   `apps/web-crm/src/lib/settings-index.ts`, the main navigation and `docs/handbuch`;
   `make lint` checks it is current.

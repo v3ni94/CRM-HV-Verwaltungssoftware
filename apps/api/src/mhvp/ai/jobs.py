@@ -186,9 +186,14 @@ async def run_and_propose(
             await session.flush()
             proposal_id = proposal.id
         action_note: str | None = None
-        if run.status is RunStatus.SUCCEEDED and run.task is AiTask.ANSWER_QUESTION:
-            # Chat action (rule AI-LOOKUP-01): checked by the platform, proposal only; nothing
-            # is written before a human confirms it (0.1.6).
+        if (
+            run.status is RunStatus.SUCCEEDED
+            and run.task is AiTask.ANSWER_QUESTION
+            and run.input_ref.get("lookup") is not None
+        ):
+            # Chat action (rule AI-LOOKUP-01): only for chat runs with a platform lookup (never
+            # for the automation or intake callers of the task), checked by the platform,
+            # proposal only; nothing is written before a human confirms it (0.1.6).
             payload, action_note = chat_actions.build(run)
             if payload is not None:
                 action = chat_actions.proposal(run, payload, provider_used)

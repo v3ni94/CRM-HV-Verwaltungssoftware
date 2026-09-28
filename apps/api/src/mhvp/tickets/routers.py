@@ -1369,97 +1369,105 @@ async def create_ticket(
     body: TicketIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        tpl = (
-            await session.get(TicketTemplate, body.template_id)
-            if body.template_id
-            else (
-                await session.scalar(
-                    select(TicketTemplate).where(TicketTemplate.category == body.category)
-                )
-                if body.category
-                else None
-            )
-        )
-        if body.template_id and tpl is None:
-            raise ProblemError(
-                ErrorCodes.RESOURCE_NOT_FOUND, detail="Ticketvorlage nicht gefunden."
-            )
-        title = body.title or (tpl.title if tpl else None)
-        if not title:
-            raise ProblemError(ErrorCodes.VALIDATION, detail="Titel fehlt.")
-        await _assert_known_topic(session, principal.tenant_id, body.topic)
-        await _assert_references_exist(
-            session,
-            contact_id=body.contact_id,
-            property_id=body.property_id,
-            unit_id=body.unit_id,
-        )
-        priority = body.priority or (tpl.default_priority if tpl else Priority.NORMAL)
-        hours = tpl.sla_hours if tpl and tpl.sla_hours else SLA_HOURS[priority]
-        checklist = (
-            [
-                {
-                    "key": c["key"],
-                    "label": c["label"],
-                    "required": c.get("required", False),
-                    "done": False,
-                    "done_by": None,
-                    "done_at": None,
-                }
-                for c in tpl.checklist
-            ]
-            if tpl
-            else []
-        )
-        ticket = Ticket(
-            tenant_id=principal.tenant_id,
-            created_by=principal.user_id,
-            number=await next_number(session, principal.tenant_id, "ticket"),
-            template_id=tpl.id if tpl else None,
-            title=title,
-            priority=priority,
-            team_id=tpl.default_team_id if tpl else None,
-            checklist=checklist,
-            sla_due_at=datetime.now(UTC) + timedelta(hours=hours),
-            **body.model_dump(exclude={"title", "priority", "template_id", "topic"}),
-            topic=body.topic or (tpl.topic if tpl else None),
-        )
-        session.add(ticket)
-        await session.flush()
-        from mhvp.sla.service import start_clock
+        return await create_ticket_in_session(session, body, principal)
 
-        await start_clock(
-            session, principal.tenant_id, ticket.id, ticket.priority, category=ticket.category
+
+async def create_ticket_in_session(
+    session: AsyncSession, body: TicketIn, principal: TenantPrincipal
+) -> dict[str, Any]:
+    """The body of ``POST /tickets`` inside the caller's transaction (template, number, SLA
+    clock, history, event, assignment review), so a caller that writes other rows together
+    with the ticket (chat action of the assistant, ``mhvp.ai.routers``) succeeds or fails as
+    one unit. The caller enforces ``tickets:create``."""
+    tpl = (
+        await session.get(TicketTemplate, body.template_id)
+        if body.template_id
+        else (
+            await session.scalar(
+                select(TicketTemplate).where(TicketTemplate.category == body.category)
+            )
+            if body.category
+            else None
         )
-        await _event(
+    )
+    if body.template_id and tpl is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Ticketvorlage nicht gefunden.")
+    title = body.title or (tpl.title if tpl else None)
+    if not title:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Titel fehlt.")
+    await _assert_known_topic(session, principal.tenant_id, body.topic)
+    await _assert_references_exist(
+        session,
+        contact_id=body.contact_id,
+        property_id=body.property_id,
+        unit_id=body.unit_id,
+    )
+    priority = body.priority or (tpl.default_priority if tpl else Priority.NORMAL)
+    hours = tpl.sla_hours if tpl and tpl.sla_hours else SLA_HOURS[priority]
+    checklist = (
+        [
+            {
+                "key": c["key"],
+                "label": c["label"],
+                "required": c.get("required", False),
+                "done": False,
+                "done_by": None,
+                "done_at": None,
+            }
+            for c in tpl.checklist
+        ]
+        if tpl
+        else []
+    )
+    ticket = Ticket(
+        tenant_id=principal.tenant_id,
+        created_by=principal.user_id,
+        number=await next_number(session, principal.tenant_id, "ticket"),
+        template_id=tpl.id if tpl else None,
+        title=title,
+        priority=priority,
+        team_id=tpl.default_team_id if tpl else None,
+        checklist=checklist,
+        sla_due_at=datetime.now(UTC) + timedelta(hours=hours),
+        **body.model_dump(exclude={"title", "priority", "template_id", "topic"}),
+        topic=body.topic or (tpl.topic if tpl else None),
+    )
+    session.add(ticket)
+    await session.flush()
+    from mhvp.sla.service import start_clock
+
+    await start_clock(
+        session, principal.tenant_id, ticket.id, ticket.priority, category=ticket.category
+    )
+    await _event(
+        session,
+        ticket,
+        "created",
+        principal.user_id,
+        {"routing": "template" if tpl else "manual"},
+    )
+    if tpl and tpl.default_assignee_user_id:
+        await assign_ticket(
             session,
             ticket,
-            "created",
+            tpl.default_assignee_user_id,
             principal.user_id,
-            {"routing": "template" if tpl else "manual"},
+            reason="Vorlage",
         )
-        if tpl and tpl.default_assignee_user_id:
-            await assign_ticket(
-                session,
-                ticket,
-                tpl.default_assignee_user_id,
-                principal.user_id,
-                reason="Vorlage",
-            )
-        await emit(
-            session,
-            tenant_id=principal.tenant_id,
-            type="ticket.created",
-            entity_type="ticket",
-            entity_id=ticket.id,
-            actor_user_id=principal.user_id,
-            payload={"number": ticket.number, "source": ticket.source.value},
-        )
-        from mhvp.communication.assignment_review import review_ticket
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="ticket.created",
+        entity_type="ticket",
+        entity_id=ticket.id,
+        actor_user_id=principal.user_id,
+        payload={"number": ticket.number, "source": ticket.source.value},
+    )
+    from mhvp.communication.assignment_review import review_ticket
 
-        await review_ticket(session, ticket, principal.user_id)
-        await session.flush()
-        return _ticket_out(ticket)
+    await review_ticket(session, ticket, principal.user_id)
+    await session.flush()
+    return _ticket_out(ticket)
 
 
 @router.post("/tickets/merge", status_code=201, summary="Tickets zusammenführen")

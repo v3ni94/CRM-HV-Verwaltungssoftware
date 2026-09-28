@@ -5,6 +5,7 @@ import { ImportUndoButton } from "@/components/ai/ImportUndoButton";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
+import { isChatActionRun } from "@/lib/ai";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { formatDateTime } from "@/lib/format";
@@ -60,7 +61,7 @@ export default async function ImportsPage() {
                   <span className="text-sm text-muted">{t.has(`source.${run.source}`) ? t(`source.${run.source}`) : run.source}</span>
                   <StatusPill variant={STATUS_VARIANT[run.status] ?? "neutral"} label={t(`status.${run.status}`)} />
                   {run.undone_at ? <span className="text-sm text-muted">{t("colUndone")}: {formatDateTime(run.undone_at)}</span> : null}
-                  {canUndo && run.status !== "undone" ? <ImportUndoButton id={run.id} /> : null}
+                  {canUndo && run.status !== "undone" && !isChatActionRun(run.source) ? <ImportUndoButton id={run.id} /> : null}
                 </div>
               </li>
             ))}
@@ -89,7 +90,7 @@ export default async function ImportsPage() {
                       <StatusPill variant={STATUS_VARIANT[run.status] ?? "neutral"} label={t(`status.${run.status}`)} />
                     </td>
                     <td>{formatDateTime(run.undone_at)}</td>
-                    <td>{canUndo && run.status !== "undone" ? <ImportUndoButton id={run.id} /> : null}</td>
+                    <td>{canUndo && run.status !== "undone" && !isChatActionRun(run.source) ? <ImportUndoButton id={run.id} /> : null}</td>
                   </tr>
                 ))}
               </tbody>

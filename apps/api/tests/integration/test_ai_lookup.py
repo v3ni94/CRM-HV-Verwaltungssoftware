@@ -17,6 +17,7 @@ import boto3
 import pytest
 from fastapi.testclient import TestClient
 from moto import mock_aws
+from sqlalchemy import select
 
 from mhvp.ai import lookup
 from mhvp.main import create_app
@@ -49,6 +50,7 @@ async def _world(settings: Any) -> World:
             ("lkadmin", a, "tenant_admin"),
             ("lksecond", a, "tenant_admin"),
             ("lkcaretaker", a, "caretaker"),
+            ("lkclerk", a, "clerk_no_delete"),  # ai:create, communication:read, no admin
             ("lkother", b, "tenant_admin"),
         ]:
             uid = await services.create_user(
@@ -169,6 +171,38 @@ def _ask(
 
 def _hrefs(links: list[dict[str, Any]]) -> set[str]:
     return {link["href"] for link in links}
+
+
+def _sent(fake: FakeProvider) -> str:
+    return str(fake.calls[-1]["messages"][-1]["content"])
+
+
+def _message(database: Database, redis_url: str, tenant_id: uuid.UUID, **fields: Any) -> uuid.UUID:
+    """Stores a mail of the tenant directly (the IMAP or Gmail sync is not part of this test)."""
+    from datetime import UTC, datetime
+
+    from mhvp.communication.models import Message
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    async def _store() -> uuid.UUID:
+        engine = create_app_engine(_settings(database, redis_url))
+        try:
+            async with tenant_transaction(create_session_factory(engine), tenant_id) as session:
+                row = Message(
+                    tenant_id=tenant_id,
+                    direction="in",
+                    from_address=f"absender-{RUN}@example.org",
+                    received_at=datetime.now(UTC),
+                    **fields,
+                )
+                session.add(row)
+                await session.flush()
+                return row.id
+        finally:
+            await engine.dispose()
+
+    return asyncio.run(_store())
 
 
 # Order matters: the fallback tests run before the provider is released in this tenant.
@@ -319,6 +353,197 @@ def _answer(text: str, action: dict[str, Any] | None = None) -> dict[str, Any]:
     return {"answer": text, "sources": [], "answerable": True, "action": action}
 
 
+def test_foreign_phone_and_any_iban_spelling_never_reach_the_provider(
+    client: TestClient,
+    world: World,
+    records: dict[str, str],
+    fake: FakeProvider,
+    database: Database,
+    redis_url: str,
+) -> None:
+    """Contacts store E.164 numbers (a Swiss owner: +41...), mails spell IBANs in any case with
+    any separator; neither leaves the platform (0.1.13). Provider released by the previous
+    test."""
+    admin = bearer(login(client, world, "lkadmin"))
+    surname = f"Zimmerli{RUN}"
+    contact = _ok(
+        client.post(
+            "/api/v1/contacts",
+            json={
+                "kind": "person",
+                "first_name": "Ruedi",
+                "last_name": surname,
+                "phones": [{"number": "+41 79 123 45 67", "is_primary": True}],
+                "emails": [{"email": f"ruedi.{RUN}@example.ch", "is_primary": True}],
+            },
+            headers=admin,
+        )
+    )
+    _message(
+        database,
+        redis_url,
+        world.tenant_a,
+        contact_id=uuid.UUID(contact["id"]),
+        subject=f"Neue Bankverbindung {RUN}",
+        body="Bitte künftig auf de44-5001-0517-5407-3249-31 überweisen.\nDanke, Ruedi",
+    )
+    fake.queue.append(_answer("Die Bankverbindung ändere ich nicht."))
+    run, _ = _ask(
+        client,
+        admin,
+        f"Was schreibt {surname}?",
+        context_entity_type="contact",
+        context_entity_id=contact["id"],
+        page="Kontakte",
+    )
+    assert run["status"] == "succeeded", run
+    sent = _sent(fake)
+    assert surname in sent
+    assert "Ruedi" in sent
+    assert "Neue Bankverbindung" in sent  # the mail is a fact of the open record
+    assert "41791234567" not in sent.replace(" ", "")
+    assert "791234567" not in sent.replace(" ", "")
+    assert f"ruedi.{RUN}@example.ch" not in sent
+    assert "5001" not in sent
+    assert "3249" not in sent
+    assert "[IBAN]" in sent
+    assert "[TELEFON]" in sent
+    assert "[E-MAIL]" in sent
+    # The chat itself (employee with contacts:read) still shows the number in the hit list.
+    hit = next(x for x in run["links"] if x["type"] == "contact")
+    assert "+41791234567" in hit["detail"]
+    assert "model_detail" not in hit
+
+
+def test_mail_facts_follow_the_mailbox_rule_of_the_mail_endpoints(
+    client: TestClient,
+    world: World,
+    records: dict[str, str],
+    fake: FakeProvider,
+    database: Database,
+    redis_url: str,
+) -> None:
+    """A member without a grant on a colleague's personal mailbox never gets its mails as
+    facts (same rule as GET /mail/messages); an administrator reads every mailbox."""
+    admin = bearer(login(client, world, "lkadmin"))
+    clerk = bearer(login(client, world, "lkclerk"))
+    box = _ok(
+        client.post(
+            "/api/v1/mail/mailboxes",
+            json={"address": f"privat-{RUN}@example.com", "kind": "gmail", "secret": "x"},
+            headers=admin,
+        )
+    )
+    assert box["is_default"] is False
+    contact_id = uuid.UUID(records["contact"])
+    _message(
+        database,
+        redis_url,
+        world.tenant_a,
+        contact_id=contact_id,
+        mailbox_id=uuid.UUID(box["id"]),
+        subject=f"Persönlich {RUN}",
+        body=f"Vertraulich{RUN} nur für das persönliche Postfach.",
+    )
+    _message(
+        database,
+        redis_url,
+        world.tenant_a,
+        contact_id=contact_id,
+        subject=f"Allgemein {RUN}",
+        body=f"Allgemein{RUN} ohne Postfach.",
+    )
+    focus = {
+        "context_entity_type": "contact",
+        "context_entity_id": records["contact"],
+        "page": "Kontakte",
+    }
+    fake.queue.append(_answer("Es gibt eine Mail."))
+    run, _ = _ask(client, clerk, "Was ist offen bei diesem Kontakt?", **focus)
+    assert run["status"] == "succeeded", run
+    sent = _sent(fake)
+    assert f"Allgemein{RUN}" in sent
+    assert f"Vertraulich{RUN}" not in sent
+    assert f"Persönlich {RUN}" not in sent
+    # The regular endpoint answers the same way for this member (no inference from 404).
+    listed = _ok(client.get("/api/v1/mail/messages", headers=clerk), 200)
+    subjects = {m["subject"] for m in (listed["data"] if isinstance(listed, dict) else listed)}
+    assert f"Persönlich {RUN}" not in subjects
+    fake.queue.append(_answer("Es gibt zwei Mails."))
+    run, _ = _ask(client, admin, "Was ist offen bei diesem Kontakt?", **focus)
+    assert run["status"] == "succeeded", run
+    sent = _sent(fake)
+    assert f"Allgemein{RUN}" in sent
+    assert f"Vertraulich{RUN}" in sent
+
+
+def test_answer_question_outside_the_chat_keeps_v1_and_never_proposes(
+    client: TestClient,
+    world: World,
+    records: dict[str, str],
+    fake: FakeProvider,
+    database: Database,
+    redis_url: str,
+) -> None:
+    """The automation action ``ai_task`` starts ``answer_question`` through
+    ``create_extraction_run`` (no chat user, no platform lookup): prompt v1, and an action in
+    the model output never becomes a chat action proposal."""
+    from mhvp.ai import jobs
+    from mhvp.ai.models import AiProposal, AiTask, AiTaskRun
+    from mhvp.ai.routers import create_extraction_run
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.documents.blobs import BlobStore
+
+    settings = _settings(database, redis_url)
+    fake.queue.append(
+        _answer(
+            "Ticket vorbereitet.",
+            {"kind": "ticket_create", "refs": [], "title": f"Aus der Regel {RUN}"},
+        )
+    )
+
+    async def _run() -> tuple[str, str, int, dict[str, Any] | None]:
+        engine = create_app_engine(settings)
+        factory = create_session_factory(engine)
+        try:
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                run_id = await create_extraction_run(
+                    session,
+                    world.tenant_a,
+                    None,
+                    AiTask.ANSWER_QUESTION,
+                    [],
+                    f"Lege ein Ticket an: Aus der Regel {RUN}",
+                    "automation",
+                    None,
+                    trigger="automation:test",
+                )
+            with mock_aws():
+                boto3.client("s3", region_name="us-east-1").create_bucket(Bucket=BUCKET)
+                await jobs.run_and_propose(
+                    factory, world.tenant_a, run_id, BlobStore(settings), None
+                )
+            async with tenant_transaction(factory, world.tenant_a) as session:
+                run = await session.get(AiTaskRun, run_id)
+                assert run is not None
+                proposals = (
+                    await session.scalars(
+                        select(AiProposal).where(AiProposal.task_run_id == run_id)
+                    )
+                ).all()
+                return run.status.value, run.prompt_version, len(proposals), run.output
+        finally:
+            await engine.dispose()
+
+    status, version, proposals, output = asyncio.run(_run())
+    assert status == "succeeded", output
+    assert version == "v1"
+    assert proposals == 0
+    assert fake.calls[-1]["system"].startswith("Du beantwortest Fragen von Mitarbeitenden")
+    assert "<frage>" in _sent(fake)  # the instruction stays outside the data block
+
+
 def test_page_context_focus_and_multi_turn_history(
     client: TestClient, world: World, records: dict[str, str], fake: FakeProvider
 ) -> None:
@@ -387,6 +612,71 @@ def test_phone_change_is_a_proposal_until_confirmed(
         f"/api/v1/ai/proposals/{proposal_id}/apply", json={"chat_action": {}}, headers=admin
     )
     assert again.status_code == 409
+    # The import run of a chat action has no items: the import undo refuses it instead of
+    # logging a rollback that reverts nothing (0.1.7).
+    assert applied["source"] == "ai:answer_question:contact_change"
+    undo = client.post(f"/api/v1/imports/{applied['id']}/undo", headers=admin)
+    assert undo.status_code == 409, undo.text
+    assert "Chat-Aktionen" in undo.json()["detail"]
+    kept = _ok(client.get(f"/api/v1/imports/{applied['id']}", headers=admin), 200)
+    assert kept["status"] == "applied"
+    assert kept["undone_at"] is None
+    still = _ok(client.get(f"/api/v1/contacts/{records['contact']}", headers=admin), 200)
+    assert any("7654321" in p["number"] for p in still["phones"])
+
+
+def test_rejected_chat_action_is_learned_masked(
+    client: TestClient, world: World, records: dict[str, str], fake: FakeProvider
+) -> None:
+    """A rejected proposal with a reason becomes a learning example; the raw phone number of
+    the chat action never reaches the provider through the examples (0.1.13)."""
+    admin = bearer(login(client, world, "lkadmin"))
+    _ok(
+        client.patch(
+            "/api/v1/tenant/settings", json={"ai_learning_examples_enabled": True}, headers=admin
+        ),
+        200,
+    )
+    try:
+        fake.queue.append(
+            _answer(
+                "Vorbereitet.",
+                {
+                    "kind": "contact_change",
+                    "refs": [records["contact"]],
+                    "changes": [{"field": "phone", "new": "[TELEFON]"}],
+                },
+            )
+        )
+        _, answer = _ask(client, admin, f"Neue Telefonnummer von {SURNAME}: 0221 9998877")
+        proposal_id = answer["proposal_id"]
+        assert proposal_id
+        rejected = _ok(
+            client.post(
+                f"/api/v1/ai/proposals/{proposal_id}/reject",
+                json={"reason": "falsche Nummer"},
+                headers=admin,
+            ),
+            200,
+        )
+        assert rejected["decision"] == "rejected"
+        fake.queue.append(_answer(f"{SURNAME} ist erfasst."))
+        run, _ = _ask(client, admin, f"Wer ist {SURNAME}?")
+        assert run["status"] == "succeeded", run
+        sent = _sent(fake)
+        assert "Bestätigte Beispiele" in sent
+        assert "falsche Nummer" in sent
+        assert "9998877" not in sent.replace(" ", "")
+        assert '"new": "[TELEFON]"' in sent
+    finally:
+        _ok(
+            client.patch(
+                "/api/v1/tenant/settings",
+                json={"ai_learning_examples_enabled": False},
+                headers=admin,
+            ),
+            200,
+        )
 
 
 def test_bank_details_are_never_a_chat_proposal(
@@ -438,3 +728,82 @@ def test_ticket_create_proposal_needs_confirmation(
     ticket = _ok(client.get(f"/api/v1/tickets/{ticket_id}", headers=admin), 200)
     assert ticket["title"] == f"Rückruf {RUN}"
     assert ticket["contact_id"] == records["contact"]
+
+
+def test_ticket_create_apply_is_one_transaction_with_the_decision(
+    client: TestClient,
+    world: World,
+    records: dict[str, str],
+    fake: FakeProvider,
+    database: Database,
+    redis_url: str,
+) -> None:
+    """When the ticket cannot be created, nothing else is written either: the proposal stays
+    pending, no import run exists, no ticket (AI-LOOKUP-Q3)."""
+    from sqlalchemy import create_engine, text
+
+    admin = bearer(login(client, world, "lkadmin"))
+    unit = _unit(client, admin, records["property"], "08")
+    fake.queue.append(
+        _answer(
+            "Ticket vorbereitet.",
+            {
+                "kind": "ticket_create",
+                "refs": [unit],
+                "title": f"Dachfenster {RUN}",
+                "description": "Undicht.",
+            },
+        )
+    )
+    _, answer = _ask(client, admin, f"Lege ein Ticket für Einheit 08 im {HOUSE} an: Dachfenster")
+    proposal_id = answer["proposal_id"]
+    assert proposal_id, answer
+    proposal = _ok(client.get(f"/api/v1/ai/proposals/{proposal_id}", headers=admin), 200)
+    assert proposal["proposed"]["unit_id"] == unit
+
+    def _applied_ticket_events() -> int:
+        rows = _ok(
+            client.get(
+                "/api/v1/tenant/events", params={"type": "import_run.applied"}, headers=admin
+            ),
+            200,
+        )
+        return sum(
+            1 for e in rows if e["payload"].get("source") == "ai:answer_question:ticket_create"
+        )
+
+    imports_before = len(_ok(client.get("/api/v1/imports", headers=admin), 200))
+    events_before = _applied_ticket_events()
+    # The unit disappears between proposal and confirmation (owner connection, outside RLS).
+    engine = create_engine(database.migrator_url)
+    with engine.begin() as conn:
+        conn.execute(
+            text("SELECT set_config('app.tenant_id', :tenant, true)"),
+            {"tenant": str(world.tenant_a)},
+        )
+        deleted = conn.execute(text("DELETE FROM unit WHERE id = :id"), {"id": unit}).rowcount
+    engine.dispose()
+    assert deleted == 1
+    failed = client.post(
+        f"/api/v1/ai/proposals/{proposal_id}/apply", json={"chat_action": {}}, headers=admin
+    )
+    assert failed.status_code == 404, failed.text
+    assert "Einheit nicht gefunden" in failed.json()["detail"]
+    proposal = _ok(client.get(f"/api/v1/ai/proposals/{proposal_id}", headers=admin), 200)
+    assert proposal["decision"] == "pending"
+    assert proposal["import_run_id"] is None
+    assert len(_ok(client.get("/api/v1/imports", headers=admin), 200)) == imports_before
+    assert _applied_ticket_events() == events_before
+    listed = _ok(
+        client.get("/api/v1/tickets", params={"q": f"Dachfenster {RUN}"}, headers=admin), 200
+    )
+    assert listed == []
+    # A second confirmation is still possible once the cause is fixed: nothing is stuck.
+    assert (
+        client.post(
+            f"/api/v1/ai/proposals/{proposal_id}/reject",
+            json={"reason": "Einheit weg"},
+            headers=admin,
+        ).status_code
+        == 200
+    )

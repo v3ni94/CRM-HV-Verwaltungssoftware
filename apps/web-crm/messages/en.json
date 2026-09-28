@@ -4208,6 +4208,7 @@
         "ticket_create": "Proposal: create ticket"
       },
       "contact": "Contact: {name}",
+      "reason": "Reason given by the AI: {reason}",
       "change": "{field}: {value}",
       "title": "Title: {title}",
       "property": "Property: {name}",

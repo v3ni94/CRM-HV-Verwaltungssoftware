@@ -92,6 +92,10 @@ class TaskInput:
     # Row chunks (extraction tasks only): one prompt text per chunk, each self contained
     # (instruction, header line(s) kept, wrapped like a normal document). Empty for other tasks.
     chunks: list[str]
+    # The user's instruction as its own delimited part (``<frage>``) in front of the data
+    # block, so nothing inside ``<daten>`` can imitate it (chat, rule AI-LOOKUP-01). ``None``:
+    # the instruction is the first line of ``text`` (other tasks, unchanged).
+    instruction: str | None = None
 
 
 # Input preparation (deterministic, no AI) ------------------------------------------------
@@ -326,7 +330,9 @@ async def conversation_history(session: AsyncSession, run: AiTaskRun) -> str:
     lines = ["Bisheriger Gesprächsverlauf (älteste zuerst, nur als Kontext):"]
     for message in reversed(rows):
         who = "Nutzer" if message.role == "user" else "Assistent"
-        text = message.content.replace("<", "\u2039").replace(">", "\u203a")
+        # One line per message: a line break inside a message can never start a line that
+        # looks like another turn or the instruction (9.1).
+        text = lookup.flat(message.content).replace("<", "\u2039").replace(">", "\u203a")
         lines.append(f"{who}: {text[:HISTORY_CHARS]}")
     return "\n".join(lines)
 
@@ -334,7 +340,12 @@ async def conversation_history(session: AsyncSession, run: AiTaskRun) -> str:
 async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -> TaskInput:
     ref = run.input_ref
     document_ids = [uuid.UUID(d) for d in ref.get("document_ids", [])]
-    instruction = f"Anweisung des Nutzers: {ref.get('instruction', '')}"
+    question = str(ref.get("instruction", ""))
+    instruction = f"Anweisung des Nutzers: {question}"
+    # Chat (rule AI-LOOKUP-01): the instruction becomes its own delimited part in front of the
+    # data block instead of its first line, so record fields, mails and history inside
+    # ``<daten>`` can never pass as the instruction (9.1).
+    separate = run.task is AiTask.ANSWER_QUESTION
     context = dict(ref.get("context", {}))
     input_stats: dict[str, int] = {}
 
@@ -391,7 +402,9 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
         records = "\n\n".join(p for p in (history, lookup.prompt_text(ref.get("lookup"))) if p)
 
     async def _assemble(ids: list[uuid.UUID], max_chars: int) -> tuple[str, dict[str, int]]:
-        parts = [instruction, records] if records else [instruction]
+        parts = [] if separate else [instruction]
+        if records:
+            parts.append(records)
         stats: dict[str, int] = {}
         for document_id in ids:
             text, raw_chars = await document_text(session, blobs, document_id, max_chars=max_chars)
@@ -424,8 +437,14 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
             )
     if run.task in MASKED_TASKS:
         text = mask_identifiers(text)
+        question = mask_identifiers(question)
     return TaskInput(
-        text=text, document_ids=document_ids, context=context, input_stats=input_stats, chunks=[]
+        text=text,
+        document_ids=document_ids,
+        context=context,
+        input_stats=input_stats,
+        chunks=[],
+        instruction=question if separate else None,
     )
 
 
@@ -675,16 +694,31 @@ def confidence_of(task: AiTask, data: dict[str, Any]) -> Decimal | None:
 
 
 def _messages(
-    text: str, context: dict[str, Any], shots: list[dict[str, Any]]
+    text: str,
+    context: dict[str, Any],
+    shots: list[dict[str, Any]],
+    instruction: str | None = None,
+    *,
+    masked: bool = False,
 ) -> list[dict[str, str]]:
+    """The user message: examples, context, the instruction in ``<frage>`` (when handed
+    separately) and the data block. ``masked``: the examples are masked like the text of a
+    ``MASKED_TASKS`` run, so a stored example (a rejected proposal, ``examples.record_rejection``)
+    never carries a phone number, e-mail address or IBAN to the provider (0.1.13)."""
     context_json = json.dumps(context, ensure_ascii=False, sort_keys=True)
     parts = []
     if shots:
+        shots_json = json.dumps(shots, ensure_ascii=False)
+        if masked:
+            shots_json = mask_identifiers(shots_json)
         parts.append(
             "Bestätigte Beispiele dieses Mandanten (nur als Orientierung für Format und "
-            f"Zuordnung):\n{json.dumps(shots, ensure_ascii=False)}"
+            f"Zuordnung):\n{shots_json}"
         )
     parts.append(f"Kontext: {context_json}")
+    if instruction is not None:
+        neutral = lookup.flat(instruction).replace("<", "\u2039").replace(">", "\u203a")
+        parts.append(f"<frage>\n{neutral}\n</frage>")
     parts.append(f"<daten>\n{text}\n</daten>")
     return [{"role": "user", "content": "\n\n".join(parts)}]
 
@@ -1367,7 +1401,9 @@ async def execute(
             else:
                 error = warnings[-1] if warnings else "Alle Teile fehlgeschlagen."
         else:
-            messages = _messages(item.text, item.context, shots)
+            messages = _messages(
+                item.text, item.context, shots, item.instruction, masked=task in MASKED_TASKS
+            )
             result = await _call_plan(
                 plan,
                 keys,

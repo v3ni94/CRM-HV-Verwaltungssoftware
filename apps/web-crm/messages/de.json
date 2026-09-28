@@ -4208,6 +4208,7 @@
         "ticket_create": "Vorschlag: Ticket anlegen"
       },
       "contact": "Kontakt: {name}",
+      "reason": "Begründung der KI: {reason}",
       "change": "{field}: {value}",
       "title": "Titel: {title}",
       "property": "Objekt: {name}",

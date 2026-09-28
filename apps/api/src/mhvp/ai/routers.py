@@ -599,6 +599,11 @@ async def get_conversation(
         )
 
 
+# Prompt version of tasks started outside the chat (rule AI-LOOKUP-01: v2 of answer_question
+# is the chat persona with platform hits and chat actions; other callers keep v1).
+NON_CHAT_PROMPT: dict[AiTask, str] = {AiTask.ANSWER_QUESTION: "v1"}
+
+
 async def create_extraction_run(
     session: AsyncSession,
     tenant_id: uuid.UUID,
@@ -611,9 +616,12 @@ async def create_extraction_run(
     trigger: str | None = None,
 ) -> uuid.UUID:
     """Creates conversation, queued run and user message of an extraction start inside the
-    caller's tenant transaction and returns the run id. Shared by the intake actions and the
-    automatic invoice intake (M14-05); execution goes through the unchanged gateway."""
-    prompt = tasks.prompt(task)
+    caller's tenant transaction and returns the run id. Shared by the intake actions, the
+    automatic invoice intake (M14-05) and the automation action ``ai_task``; execution goes
+    through the unchanged gateway. ``answer_question`` runs from here have no platform lookup,
+    no history and no chat user, so they keep the prompt without the chat persona
+    (``NON_CHAT_PROMPT``); the chat path (``send_message``) uses the latest version."""
+    prompt = tasks.prompt(task, NON_CHAT_PROMPT.get(task))
     conversation = AiConversation(
         tenant_id=tenant_id,
         created_by=user_id,
@@ -942,6 +950,8 @@ async def reject_proposal(
         reason = body.reason if body is not None else None
         proposal.rejection_reason = reason.strip() if reason else None
         run_row = await _get(session, AiTaskRun, proposal.task_run_id)
+        # A chat action holds the raw phone number or e-mail address the user wrote (by
+        # design); the learning example is masked, since examples go to the provider (0.1.13).
         await examples.record_rejection(
             session,
             proposal=proposal,
@@ -1036,11 +1046,14 @@ async def _apply_chat_action(
     principal: TenantPrincipal,
 ) -> s.ImportOut:
     """Chat action (rule AI-LOOKUP-01): written only now, after the human confirmation, through
-    the same paths as the regular endpoints. Contact change and note run in one transaction
-    with the decision; a ticket is created through ``POST /tickets`` (own transaction) after
-    the proposal is marked accepted, and the mark is undone if the ticket cannot be created."""
+    the same paths as the regular endpoints. Decision, import run, event and the written rows
+    (contact change, note or ticket through ``tickets.routers.create_ticket_in_session``) are
+    one transaction: either everything exists or nothing (AI-LOOKUP-Q3, closed 28.09.2026).
+    The import run has no items: a chat action is not taken back through the import undo
+    (``undo_import`` refuses it), the record is changed through its own endpoints."""
     from mhvp.contacts.models import Contact, ContactNote
     from mhvp.tickets import proposals as contact_changes
+    from mhvp.tickets.routers import TicketIn, create_ticket_in_session
 
     edit = body.chat_action or s.ChatActionApplyIn()
     async with tenant_tx(request, principal) as session:
@@ -1103,48 +1116,27 @@ async def _apply_chat_action(
                 (edit.title and edit.title != data.get("title"))
                 or (edit.description and edit.description != data.get("description"))
             )
+            ticket = await create_ticket_in_session(
+                session,
+                TicketIn(
+                    title=edit.title or data["title"],
+                    public_description=edit.description or data.get("description"),
+                    contact_id=chat_actions.uuid_or_none(data.get("contact_id")),
+                    property_id=chat_actions.uuid_or_none(data.get("property_id")),
+                    unit_id=chat_actions.uuid_or_none(data.get("unit_id")),
+                ),
+                principal,
+            )
+            summary |= {"ticket_id": str(ticket["id"]), "number": ticket["number"]}
         proposal.decision = Decision.MODIFIED if modified else Decision.ACCEPTED
         proposal.decided_by, proposal.decided_at = principal.user_id, datetime.now(UTC)
         proposal.final = body.model_dump(mode="json")
         proposal.import_run_id = import_run.id
         import_run.summary = summary
-        import_id = import_run.id
-        if kind != "ticket_create":
-            await _event(
-                session, principal, "import_run.applied", import_run.id, source=import_run.source
-            )
-            return await _import_out(session, import_run)
-    from mhvp.tickets.routers import TicketIn, create_ticket
-
-    try:
-        ticket = await create_ticket(
-            TicketIn(
-                title=edit.title or data["title"],
-                public_description=edit.description or data.get("description"),
-                contact_id=chat_actions.uuid_or_none(data.get("contact_id")),
-                property_id=chat_actions.uuid_or_none(data.get("property_id")),
-                unit_id=chat_actions.uuid_or_none(data.get("unit_id")),
-            ),
-            request,
-            principal,
+        await _event(
+            session, principal, "import_run.applied", import_run.id, source=import_run.source
         )
-    except Exception:
-        async with tenant_tx(request, principal) as session:
-            proposal = await _get(session, AiProposal, proposal_id)
-            proposal.decision, proposal.decided_by, proposal.decided_at = (
-                Decision.PENDING,
-                None,
-                None,
-            )
-            proposal.final, proposal.import_run_id = None, None
-            row = await _get(session, ImportRun, import_id)
-            row.status = ImportStatus.UNDONE
-        raise
-    async with tenant_tx(request, principal) as session:
-        row = await _get(session, ImportRun, import_id)
-        row.summary = {"kind": kind, "ticket_id": str(ticket["id"]), "number": ticket["number"]}
-        await _event(session, principal, "import_run.applied", row.id, source=row.source)
-        return await _import_out(session, row)
+        return await _import_out(session, import_run)
 
 
 async def _import_out(session: Any, row: ImportRun) -> s.ImportOut:
@@ -1186,9 +1178,17 @@ async def get_import(
 async def undo_import(
     import_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UNDO)
 ) -> s.ImportOut:
-    """Removes what is not bound by later data; kept items carry the reason (10.1 step 5)."""
+    """Removes what is not bound by later data; kept items carry the reason (10.1 step 5).
+    A confirmed chat action (contact change, note, ticket) registers no items; its run is not
+    undoable here, otherwise the log would record a rollback that reverted nothing (0.1.7)."""
     async with tenant_tx(request, principal) as session:
         row = await _get(session, ImportRun, import_id)
+        if chat_actions.is_chat_action_run(row.source):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Chat-Aktionen werden nicht über die Import-Rücknahme zurückgenommen. "
+                "Bitte den Datensatz direkt bearbeiten.",
+            )
         await imports.undo(session, row, principal.user_id)
         out = await _import_out(session, row)
         kept = [i for i in out.items if not i.undone and i.kept_reason]

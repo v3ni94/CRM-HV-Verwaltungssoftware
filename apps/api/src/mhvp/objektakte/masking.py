@@ -5,9 +5,13 @@ document classification prompt; it is deliberately conservative (over-masking is
 an IBAN or phone number reaching the provider is not).
 
 Masks, in this order so a later pattern cannot re-expose what an earlier one hid:
-1. IBAN (`DE`-style and generic, spaces optional; rule 0.1.13 cites IBANs by name).
+1. IBAN (`DE`-style and generic, any case, groups separated by nothing, a space, a dot or a
+   hyphen; rule 0.1.13 cites IBANs by name).
 2. E-Mail addresses.
-3. Phone numbers (German-style: `+49`/`0` prefix, digits, spaces, hyphens, at least 6 digits).
+3. Phone numbers (international `+` or `00` prefix with any country code, or a national `0`
+   prefix; digits, spaces, hyphens, at least 6 digits). Contact phones are stored in E.164
+   (`+41...`, `+43...`), so a German-only prefix would let foreign numbers through (review
+   28.09.2026).
 4. Person names: a conservative heuristic (two or three capitalised words in a row, optionally
    with a title such as "Herr"/"Frau"), since general German NER is out of scope for this
    stage. This heuristic both under- and over-matches (it also catches ordinary capitalised
@@ -22,9 +26,11 @@ from __future__ import annotations
 
 import re
 
-_IBAN = re.compile(r"(?<![A-Za-z0-9])[A-Z]{2}[0-9]{2}(?:[ ]?[A-Z0-9]{1,4}){2,7}(?![A-Za-z0-9])")
+_IBAN = re.compile(
+    r"(?<![A-Za-z0-9])[A-Z]{2}[0-9]{2}(?:[ .\-]?[A-Z0-9]{1,4}){2,7}(?![A-Za-z0-9])", re.IGNORECASE
+)
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[A-Za-z]{2,}\b")
-_PHONE = re.compile(r"(?<![\w])(?:\+49|0049|0)[ /()\-]?(?:\d[ /()\-]?){5,13}\d(?![\w])")
+_PHONE = re.compile(r"(?<![\w])(?:\+\d{1,3}|00\d{1,3}|0)[ /()\-]?(?:\d[ /()\-]?){5,13}\d(?![\w])")
 _TITLE = r"(?:Herr|Frau|Familie|Firma)\s+"
 _NAME_WORD = r"[A-ZÄÖÜ][a-zäöüß]+(?:-[A-ZÄÖÜ][a-zäöüß]+)?"
 _NAME = re.compile(rf"\b(?:{_TITLE})?{_NAME_WORD}(?:\s+{_NAME_WORD}){{1,2}}\b")
