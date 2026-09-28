@@ -53,10 +53,29 @@ async def ingest_parsed(
 
     # Parallel syncs of two own mailboxes wait here for each other (review 1.36.0).
     await duplicates.lock_mail(session, tenant_id, parsed)
+    known = await duplicates.known_gmail_row(session, mailbox_id, gmail_message_id)
+    if known is not None:
+        return known, False
     stored, primary = await duplicates.find_known(session, parsed, mailbox_id)
     if stored is not None:
         # Same mail already stored for this mailbox binding: a re-import returns it.
         return stored, False
+    sent = await duplicates.own_sent(session, parsed) if primary is None else None
+    if sent is not None:
+        # Delivered copy of an own sent mail (cc to an own mailbox, feedback 28.09.2026):
+        # stored for evidence, linked to the sent row and hidden from the lists.
+        echo = duplicates.echo_of(
+            sent,
+            parsed,
+            mailbox_id=mailbox_id,
+            document_id=document_id,
+            gmail_message_id=gmail_message_id,
+            gmail_thread_id=gmail_thread_id,
+            actor_user_id=actor_user_id,
+        )
+        session.add(echo)
+        await session.flush()
+        return echo, True
     if primary is not None:
         # Same mail (Message-ID and content) in another own mailbox: linked duplicate copy
         # (operator 27.09.2026): the personal mailbox leads, the collective one is hidden. A
@@ -474,6 +493,9 @@ async def ingest_raw(
 
     parsed = mail.parse(raw)
     await duplicates.lock_mail(session, tenant_id, parsed)
+    known = await duplicates.known_gmail_row(session, mailbox_id, gmail_message_id)
+    if known is not None:
+        return known, False
     stored, _ = await duplicates.find_known(session, parsed, mailbox_id)
     if stored is not None:
         return stored, False

@@ -1172,13 +1172,17 @@ async def _ticket_messages(
     (dieselbe Regel wie ``GET /mail/messages``), chronologisch."""
     from sqlalchemy import func, or_
 
+    from mhvp.communication.duplicates import hide_copies
     from mhvp.communication.models import Message
     from mhvp.communication.routers import _accessible_mailboxes
 
     query = select(Message).where(Message.ticket_id == ticket.id)
+    allowed = None
     if not principal.has("tenant_settings:update"):
         allowed = await _accessible_mailboxes(session, principal.user_id)
         query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
+    # One row per mail: copies from other own mailboxes share the ticket (feedback 28.09.2026).
+    query = hide_copies(query, allowed)
     return (
         await session.scalars(
             query.order_by(
@@ -2365,7 +2369,9 @@ async def get_ticket(
 
         message_count = int(
             await session.scalar(
-                select(func.count()).select_from(Message).where(Message.ticket_id == ticket.id)
+                select(func.count())
+                .select_from(Message)
+                .where(Message.ticket_id == ticket.id, Message.duplicate_of_id.is_(None))
             )
             or 0
         )

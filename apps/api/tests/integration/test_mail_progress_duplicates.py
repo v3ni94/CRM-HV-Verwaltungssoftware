@@ -300,9 +300,12 @@ def test_duplicate_across_mailboxes_leads_in_personal_mailbox(
     # Ein Mitglied ohne Zugriff auf brink@ sieht weiter die Kopie des Sammelpostfachs.
     for_std = _ok(client.get(f"{M}/messages", params={"q": f"Doppelt {RUN}"}, headers=std))
     assert [m["id"] for m in for_std] == [first["id"]]
-    # Der Vorgang zeigt beide Kopien im selben Thread.
+    # Beide Kopien liegen im selben Thread; der Verlauf zeigt die Mail einmal (Rückmeldung
+    # 28.09.2026: vorher erschien sie dort doppelt), das Mitglied ohne brink@ die Kopie.
     thread = _ok(client.get(f"{M}/messages/{second['id']}/thread", headers=admin))
-    assert {m["id"] for m in thread} >= {first["id"], second["id"]}
+    assert [m["id"] for m in thread] == [second["id"]]
+    thread_std = _ok(client.get(f"{M}/messages/{first['id']}/thread", headers=std))
+    assert [m["id"] for m in thread_std] == [first["id"]]
 
     # Bearbeitung an einer Kopie kennzeichnet beide.
     _ok(

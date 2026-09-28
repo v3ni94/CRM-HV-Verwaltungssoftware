@@ -12,9 +12,8 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
-from sqlalchemy import delete, exists, func, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import aliased
 
 from mhvp.ai import schemas as ai_s
 from mhvp.communication import (
@@ -825,15 +824,7 @@ def _messages_query(
         )
         query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
     if not include_duplicates and mailbox_id is None:
-        if admin:
-            query = query.where(Message.duplicate_of_id.is_(None))
-        else:
-            leading = aliased(Message)
-            visible_lead = select(leading.id).where(
-                leading.id == Message.duplicate_of_id,
-                or_(leading.mailbox_id.is_(None), leading.mailbox_id.in_(allowed)),
-            )
-            query = query.where(or_(Message.duplicate_of_id.is_(None), ~exists(visible_lead)))
+        query = duplicates.hide_copies(query, None if admin else allowed)
     if status:
         query = query.where(Message.status == status)
     elif not include_closed and ticket_id is None:
@@ -1005,9 +996,13 @@ async def message_thread(
             .where(or_(Message.thread_id == thread_id, Message.id == thread_id))
             .order_by(func.coalesce(Message.received_at, Message.sent_at, Message.created_at))
         )
+        allowed = None
         if not principal.has("tenant_settings:update"):
             allowed = await _accessible_mailboxes(session, principal.user_id)
             query = query.where(or_(Message.mailbox_id.is_(None), Message.mailbox_id.in_(allowed)))
+        # Copies of the same mail in other own mailboxes share the thread (feedback
+        # 28.09.2026): one row per mail.
+        query = duplicates.hide_copies(query, allowed)
         return [_out(m) for m in (await session.scalars(query)).all()]
 
 

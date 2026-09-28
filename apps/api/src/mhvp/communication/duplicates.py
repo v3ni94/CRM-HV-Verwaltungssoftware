@@ -26,8 +26,9 @@ import uuid
 from collections import Counter
 from typing import Any
 
-from sqlalchemy import func, or_, select, text, update
+from sqlalchemy import exists, func, or_, select, text, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import aliased
 
 from mhvp.communication.models import Mailbox, Message
 
@@ -64,6 +65,28 @@ def is_collective_address(address: str | None) -> bool:
     for sep in _SEPARATORS:
         local = local.split(sep, 1)[0]
     return local in COLLECTIVE_LOCAL_PARTS
+
+
+def hide_copies(query: Any, allowed: Any = None) -> Any:
+    """Restricts a ``select(Message)`` to one row per mail group (feedback 28.09.2026: the
+    same mail was still shown several times in the thread view, the ticket history and the
+    contact history, because every copy shares thread, ticket and contact).
+
+    ``allowed`` is the subquery of the mailboxes the user may read, ``None`` for a user who
+    reads every mailbox. A copy stays visible when its leading copy is not readable for the
+    user (personal mailbox of a colleague), so nothing disappears; otherwise only the leading
+    copy is listed (also when the user opened a copy: the thread then shows the leading copy
+    with the same content). Stored copies are never deleted (evidence), only hidden."""
+    if allowed is None:
+        condition: Any = Message.duplicate_of_id.is_(None)
+    else:
+        leading = aliased(Message)
+        visible_lead = select(leading.id).where(
+            leading.id == Message.duplicate_of_id,
+            or_(leading.mailbox_id.is_(None), leading.mailbox_id.in_(allowed)),
+        )
+        condition = or_(Message.duplicate_of_id.is_(None), ~exists(visible_lead))
+    return query.where(condition)
 
 
 def group_root(row: Message) -> uuid.UUID:
@@ -172,6 +195,106 @@ async def _row_fingerprint(session: AsyncSession, row: Message) -> tuple[Any, ..
         else []
     )
     return (row.from_address, row.subject, row.body or "", digests)
+
+
+async def known_gmail_row(
+    session: AsyncSession, mailbox_id: uuid.UUID | None, gmail_message_id: str | None
+) -> Message | None:
+    """Row already stored for this Gmail message of this mailbox (feedback 28.09.2026). The
+    Gmail id is stable per mailbox, so a second fetch (incremental sync, push, retry queue and
+    backfill overlap) of a mail without ``Message-ID`` and without ``Date`` returns the stored
+    row instead of a second mail; the content key alone needs a timestamp and missed it."""
+    if mailbox_id is None or not gmail_message_id:
+        return None
+    row: Message | None = await session.scalar(
+        select(Message)
+        .where(
+            Message.mailbox_id == mailbox_id,
+            Message.gmail_message_id == gmail_message_id,
+            Message.direction == "in",
+        )
+        .order_by(Message.created_at)
+        .limit(1)
+    )
+    return row
+
+
+async def own_sent(session: AsyncSession, parsed: dict[str, Any]) -> Message | None:
+    """Outbound mail of this tenant that the inbound mail is the delivered copy of (feedback
+    28.09.2026): a reply sent through the platform to or with a copy to an own mailbox (cc
+    info@) is synced back from that mailbox with the same ``Message-ID``. Matches only a sent
+    (or sending) row with the same ``Message-ID`` and subject whose sender is the stored
+    sender or the address of its mailbox; the platform generates that ``Message-ID``."""
+    message_id = parsed.get("message_id")
+    if not message_id:
+        return None
+    rows = (
+        await session.scalars(
+            select(Message)
+            .where(
+                Message.header_message_id == message_id,
+                Message.direction == "out",
+                Message.status.in_(("sent", "sending")),
+            )
+            .order_by(Message.created_at)
+        )
+    ).all()
+    sender = (parsed.get("from") or "").lower()
+    for row in rows:
+        if (row.subject or None) != (parsed.get("subject") or None):
+            continue
+        addresses = {(row.from_address or "").lower()}
+        if row.mailbox_id is not None:
+            box = await session.get(Mailbox, row.mailbox_id)
+            if box is not None:
+                addresses.add(box.address.lower())
+        if sender and sender in addresses:
+            return row
+    return None
+
+
+def echo_of(
+    sent: Message,
+    parsed: dict[str, Any],
+    *,
+    mailbox_id: uuid.UUID | None,
+    document_id: uuid.UUID,
+    gmail_message_id: str | None,
+    gmail_thread_id: str | None,
+    actor_user_id: uuid.UUID | None,
+) -> Message:
+    """Inbound row for the delivered copy of an own sent mail, linked to the sent row and
+    hidden like any other copy. It opens no ticket, no suggestion and no invoice forward;
+    the status is ``done`` because the mail needs no handling (it is our own)."""
+    return Message(
+        tenant_id=sent.tenant_id,
+        created_by=actor_user_id,
+        direction="in",
+        mailbox_id=mailbox_id,
+        from_address=parsed.get("from"),
+        reply_to=parsed.get("reply_to"),
+        to_addresses=list(parsed.get("to") or []),
+        cc_addresses=list(parsed.get("cc") or []),
+        subject=parsed.get("subject"),
+        body=parsed.get("body"),
+        body_html=sent.body_html,
+        header_message_id=parsed.get("message_id"),
+        in_reply_to=parsed.get("in_reply_to"),
+        references_header=parsed.get("references"),
+        thread_id=sent.thread_id or sent.id,
+        received_at=parsed.get("received_at") or sent.sent_at,
+        contact_id=sent.contact_id,
+        property_id=sent.property_id,
+        ticket_id=sent.ticket_id,
+        document_id=document_id,
+        attachment_document_ids=list(sent.attachment_document_ids or []),
+        gmail_message_id=gmail_message_id,
+        gmail_thread_id=gmail_thread_id,
+        status="done",
+        classification={"method": "rules", "duplicate_copy": True, "own_sent_echo": True},
+        appointment_suggestions=[],
+        duplicate_of_id=sent.id,
+    )
 
 
 async def find_known(

@@ -348,6 +348,27 @@ Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen
   Mitglieder ohne Zugriff auf das persönliche Postfach sehen weiter die Kopie des
   Sammelpostfachs. Der eindeutige Index `uq_message_inbound_header_id` gilt seit 0213 je
   Postfach (`coalesce(mailbox_id, nil)`), nichts wird gelöscht.
+- Rückmeldung 28.09.2026 ("Mehrfachauflistung der gleichen E-Mail"), untersuchte Ursachen:
+  - Behoben: Threadansicht (`GET /mail/messages/{id}/thread`), Mailverlauf des Tickets
+    (`GET /tickets/{id}/messages`, auch Anhangsliste und Download), `message_count` im
+    Ticket und die Kontakthistorie listeten jede verknüpfte Kopie, weil alle Kopien Thread,
+    Ticket und Kontakt teilen. Alle Sichten nutzen jetzt `duplicates.hide_copies` (dieselbe
+    Regel wie die Übersicht: führende Kopie, sonst die für den Nutzer lesbare Kopie).
+  - Behoben: Eigene gesendete Mail mit Kopie an ein eigenes Postfach (cc info@) kam über den
+    Abruf dieses Postfachs als neue Eingangsmail zurück und stand neben der gesendeten Mail
+    (die Prüfung verglich nur Eingangsmails). `duplicates.own_sent` erkennt gleiche Message-ID,
+    gleichen Betreff und eigenen Absender (Absender der gesendeten Mail oder Adresse ihres
+    Postfachs); `echo_of` speichert die Zustellung als verknüpfte, erledigte Kopie ohne Ticket,
+    Vorschlag oder Rechnungsweiterleitung.
+  - Behoben: Mail ohne Message-ID und ohne Date, zweimal von Gmail abgerufen (Abruf, Push,
+    Wiederholungsliste, Vollabruf), wurde doppelt gespeichert, weil der Ersatzschlüssel einen
+    Zeitstempel braucht. `duplicates.known_gmail_row` gibt bei gleicher Gmail-Kennung im
+    selben Postfach die gespeicherte Zeile zurück.
+  - Kein Fehler: zwei persönliche Postfächer (keins als Sammelpostfach markiert) werden
+    bereits verknüpft (frühere Kopie führt); eine Antwort im Thread ist eine eigene Mail; eine
+    Weiterleitung hat eigene Message-ID und eigenen Inhalt und bleibt eigene Mail; die
+    Listenabfrage hat keine Joins (Zuordnungsprüfung, Ticket, Labels nur als Unterabfragen),
+    Zeilen werden nicht vervielfacht. Gespeicherte Kopien werden nie gelöscht.
 - `POST /mail/maintenance/link-duplicates` (Administrator): rückwirkende Verknüpfung
   vorhandener Kopien, idempotent; Kopien mit verschiedenen Tickets werden nur gezählt
   (`ticket_conflicts`), nicht zusammengeführt.

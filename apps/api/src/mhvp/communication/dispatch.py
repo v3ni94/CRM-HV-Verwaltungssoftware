@@ -256,7 +256,13 @@ async def history(
         events: list[dict[str, Any]] = []
         if principal.has("communication:read"):
             for m in (
-                await session.scalars(select(Message).where(Message.contact_id == contact_id))
+                await session.scalars(
+                    # One entry per mail: linked copies from other own mailboxes share the
+                    # contact (feedback 28.09.2026).
+                    select(Message).where(
+                        Message.contact_id == contact_id, Message.duplicate_of_id.is_(None)
+                    )
+                )
             ).all():
                 events.append(
                     {
