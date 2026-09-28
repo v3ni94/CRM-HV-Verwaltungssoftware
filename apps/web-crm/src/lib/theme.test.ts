@@ -95,7 +95,7 @@ describe("setThemePreference / getThemePreference", () => {
     expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("evening");
     expect(getThemePreference()).toBe("evening");
     expect(fetchMock).toHaveBeenCalledWith(
-      "/api/v1/auth/me/preferences",
+      "/api/bff/auth/me/preferences",
       expect.objectContaining({ method: "PATCH", body: JSON.stringify({ theme: "evening" }) }),
     );
   });

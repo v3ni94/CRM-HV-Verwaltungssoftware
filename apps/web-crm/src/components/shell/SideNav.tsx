@@ -12,7 +12,7 @@ export type NavGroup = { label: string; items: NavItem[] };
 
 const STORAGE_KEY = "mhvp.nav.collapsed";
 const RAIL_KEY = "mhvp.nav.rail.collapsed";
-const PREFERENCES_ENDPOINT = "/api/v1/auth/me/preferences";
+const PREFERENCES_ENDPOINT = "/api/bff/auth/me/preferences";
 const SAVE_DEBOUNCE_MS = 500;
 
 function readJSON<T>(key: string, fallback: T): T {

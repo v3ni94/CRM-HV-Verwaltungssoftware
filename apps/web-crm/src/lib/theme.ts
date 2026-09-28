@@ -3,7 +3,8 @@
  * ruhig", evening mode is design B "Dunkel und präzise". The user picks day, evening or auto;
  * auto resolves to evening from 19:00 to 06:59 local time and is re-evaluated every minute.
  *
- * Storage: server side in ``app_user.ui_preferences.theme`` (PATCH /api/v1/auth/me/preferences)
+ * Storage: server side in ``app_user.ui_preferences.theme`` (PATCH /api/v1/auth/me/preferences
+ * through the BFF)
  * with a localStorage copy for the first paint. Parsing, storage, the inline script and the
  * external store are shared with the portal (@mhvp/ui/theme-mode); this file adds the CRM rules
  * (time based auto, server persistence).
@@ -25,7 +26,9 @@ export { DEFAULT_THEME, THEME_PREFERENCES, applyResolvedTheme, parseThemePrefere
 export const THEME_STORAGE_KEY = "mhvp-theme";
 export const EVENING_FROM_HOUR = 19;
 export const EVENING_UNTIL_HOUR = 7;
-const PREFERENCES_ENDPOINT = "/api/v1/auth/me/preferences";
+// Through the BFF: the API takes the bearer token only, which the BFF adds from the httpOnly
+// session cookie (a direct /api/v1 call from the browser never reached the account).
+const PREFERENCES_ENDPOINT = "/api/bff/auth/me/preferences";
 const MINUTE_MS = 60_000;
 
 export function isEveningHour(date: Date): boolean {

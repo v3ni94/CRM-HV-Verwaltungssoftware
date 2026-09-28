@@ -202,6 +202,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^auth/sessions/${ID}$`) },
   { method: "GET", pattern: /^auth\/trusted-devices$/ },
   { method: "DELETE", pattern: new RegExp(`^auth/trusted-devices/${ID}$`) },
+  // Own UI preferences (theme, expanded navigation groups): PATCH /auth/me/preferences.
+  { method: "PATCH", pattern: /^auth\/me\/preferences$/ },
   // Optional second factor (operator 26.09.2026, M2-01): confirm and disable; the setup with
   // its QR code runs through /api/session/totp/setup.
   { method: "POST", pattern: /^auth\/totp\/(confirm|disable)$/ },

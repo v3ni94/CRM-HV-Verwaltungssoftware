@@ -61,7 +61,7 @@ describe("SideNav", () => {
     expect(toggle).toHaveAttribute("aria-expanded", "true");
     vi.advanceTimersByTime(600);
     expect(window.fetch).toHaveBeenCalledWith(
-      "/api/v1/auth/me/preferences",
+      "/api/bff/auth/me/preferences",
       expect.objectContaining({ method: "PATCH" }),
     );
     const body = JSON.parse((window.fetch as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]?.body as string);
