@@ -17,6 +17,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.40.2",
+    date: "28.09.2026",
+    title: "Übersetzungen korrigiert",
+    changes: [
+      "Übersetzungen korrigiert: Auswahllisten im Vertragsformular (Zahlweise, Zeitanteilsregel, Betragsbasis), Felder und Zustellstatus der Automationen, SLA-Reiter, Signaturvorlage, Lernphase und Kostenübersicht der KI zeigen jetzt deutsche Bezeichnungen statt technischer Schlüssel.",
+      "Der Hilfetext zur Zahlweise im Vertragsformular beschreibt jetzt Vorschüssig und Nachschüssig statt der Zahlungsintervalle.",
+      "Umlaute in den Immoware24-Ansichten korrigiert (zum Beispiel Zurück, Läufe, übernehmen).",
+      "Fehlende oder falsche Übersetzungen lassen die Tests jetzt fehlschlagen und werden zusätzlich statisch geprüft (scripts/check_i18n_usage.py im Lint).",
+    ],
+  },
+  {
     version: "1.40.1",
     date: "28.09.2026",
     title: "Gespeicherte Darstellung, stabile Tests",

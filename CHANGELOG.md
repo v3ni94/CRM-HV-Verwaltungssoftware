@@ -5,6 +5,13 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.40.2 (28.09.2026) Übersetzungen korrigiert
+
+- Übersetzungen korrigiert: Auswahllisten im Vertragsformular (Zahlweise, Zeitanteilsregel, Betragsbasis), Felder und Zustellstatus der Automationen, SLA-Reiter, Signaturvorlage, Lernphase und Kostenübersicht der KI zeigen jetzt deutsche Bezeichnungen statt technischer Schlüssel.
+- Der Hilfetext zur Zahlweise im Vertragsformular beschreibt jetzt Vorschüssig und Nachschüssig statt der Zahlungsintervalle.
+- Umlaute in den Immoware24-Ansichten korrigiert (zum Beispiel Zurück, Läufe, übernehmen).
+- Fehlende oder falsche Übersetzungen lassen die Tests jetzt fehlschlagen und werden zusätzlich statisch geprüft (scripts/check_i18n_usage.py im Lint).
+
 ## 1.40.1 (28.09.2026) Gespeicherte Darstellung, stabile Tests
 
 - Darstellung im CRM: Die Wahl Tag, Abend oder Automatisch sowie die aufgeklappten Menügruppen werden jetzt tatsächlich im Benutzerkonto gespeichert und gelten auf allen Geräten; bisher galt nur die Kopie im jeweiligen Browser.
