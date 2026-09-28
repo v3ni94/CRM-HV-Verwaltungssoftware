@@ -100,3 +100,13 @@ ohne Archivierung. Regeln seit Migration `0158_message_archive_status`:
   (Betreiber, `docs/OPEN_QUESTIONS.md` M20-05). Bis dahin gilt nur das Sicherheitsnetz.
 - Aktives Beenden des Watch beim Entfernen eines Postfachs (`GmailClient.stop`) ist vorbereitet,
   aber nicht angebunden.
+
+## Nachtrag 28.09.2026 (Rückkanal M20-08, Fix 1.42.2)
+
+- Erledigt gilt für alle Kopien einer Mail in den eigenen Postfächern
+  (`services.complete_message` über `gmail_state.complete_group`); die versteckte Kopie im
+  Sammelpostfach zählt beim automatischen Ticketabschluss nie als offene Mail. Wartungslauf
+  `POST /mail/maintenance/align-copies` für Altbestand.
+- Die Gegenrichtung (Archivierung in Gmail erledigt die Mail in der Plattform) ist Regel
+  [M20-08](M20-08-gmail-rueckkanal-erledigt.md): das Sammelpostfach entscheidet, eigene
+  Archivierungen dieser Regel lösen dort nie eine Erledigung aus.

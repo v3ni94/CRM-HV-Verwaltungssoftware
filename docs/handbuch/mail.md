@@ -81,6 +81,51 @@ verbinden; nach der erneuten Zustimmung werden die offenen Archivierungen automa
 nachgeholt. Beim Zusammenführen von Tickets wandern die Mails zum Zielticket und werden mit
 dessen Abschluss archiviert.
 
+## Erledigt aus Gmail
+
+Seit 1.43.0 liest die Plattform, was im Gmail Postfach mit einer Mail geschieht: archiviert,
+in den Papierkorb verschoben, als Spam eingestuft, endgültig gelöscht oder wieder in den
+Posteingang gelegt. Je Postfachkopie steht das in der Maildetailansicht (wer, wann, welches
+Postfach), die Mailübersicht zeigt den Abgleichstand (synchron, abweichend, ausstehend, in
+Gmail gelöscht) als Kennzeichen und als Filter.
+
+Regel für info@ und timo@: Geht eine Mail an das Sammelpostfach info@ und an das persönliche
+Postfach timo@, entscheidet das Sammelpostfach. Archiviert nur timo@, bleibt die Mail in der
+Plattform offen und zeigt "abweichend". Erst wenn auch info@ archiviert hat, gilt die Mail als
+erledigt. Ohne Sammelpostfach müssen alle Postfächer archiviert haben.
+
+Stufen unter Einstellungen, Mandant, Erledigt aus Gmail übernehmen: Aus, Nur anzeigen
+(Standard, nichts ändert den Status) und Übernehmen. Übernehmen ist erst nach dem
+protokollierten Test des Gmail Verhaltens wählbar (`docs/integrations/gmail.md`). Im Modus
+Übernehmen gilt:
+
+- Papierkorb zählt wie Archiv (abschaltbar). Spam entscheidet nie. Endgültig gelöschte Mails
+  gelten als erledigt, das Original bleibt gespeichert, das Ticket bleibt offen und erhält
+  einen Hinweis.
+- Wiederherstellen in Gmail öffnet die Mail wieder; liegt der Ticketabschluss innerhalb des
+  Wiedereröffnungsfensters, wird auch das Ticket wieder in Bearbeitung gesetzt, sonst bleibt
+  es geschlossen und die Mail erscheint wieder in der Übersicht.
+- Beruhigungsfrist (Standard zehn Minuten): Rückgängig, Zurückstellen oder Papierkorb in zwei
+  Schritten lösen erst nach Ablauf einen Statuswechsel aus.
+- Latenz: Änderungen werden per Push sofort, sonst spätestens nach fünf Minuten erkannt; ein
+  stündlicher Abgleich mit dem Posteingang fängt verpasste Änderungen auf. Unter
+  Einstellungen, Postfächer gibt es eine Vorschau des Abgleichs ohne Wirkung.
+- Arbeitslabels: Mails, die in Gmail unter einem eingetragenen Label (zum Beispiel Warten)
+  abgelegt werden, bleiben offen.
+- Ticket automatisch abschließen (eigener Schalter): nur ohne offene Mails, Aufträge,
+  unversendete Antworten, offene Vorschläge, Zuordnungsprüfungen und Rechnungsverarbeitung
+  und nur bei nicht zugewiesenen Tickets, mit internem Kommentar und Benachrichtigung. Jede
+  Ablehnung steht mit Grund im Ticketverlauf.
+- Automatik zurücknehmen: der Knopf in der Maildetailansicht hebt eine automatische
+  Erledigung auf und setzt das Ticket ohne Fensterprüfung wieder in Bearbeitung.
+- Zurück in den Gmail Posteingang: die Plattform legt eine im CRM wieder geöffnete Mail nur
+  mit dem Mandantenschalter in Gmail zurück (Standard aus).
+
+Hinweis: Gmail nennt keinen Urheber einer Archivierung. Bei gemeinsam genutztem info@ ist im
+CRM nicht erkennbar, wer archiviert hat. Empfehlung: Gmail Delegierung je Mitarbeiter statt
+gemeinsamem Passwort. Vor dem Umschalten auf Übernehmen sind Gmail Filter mit "Posteingang
+überspringen" zu prüfen: gefilterte Mails gelten als archiviert.
+
 ## Telefonassistenz (Hallo Heidi)
 
 Gesprächsprotokolle der KI-Telefonassistenz kommen als Mail ins Postfach und werden als

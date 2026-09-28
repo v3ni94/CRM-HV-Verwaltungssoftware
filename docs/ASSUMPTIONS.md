@@ -853,3 +853,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `mhvp.dataquality`, `POST/PUT/PATCH /properties`, `GET /data-quality/report`, `POST /data-quality/check`, CRM Objekt, Kontakt und Ticketformulare, `/einstellungen/datenqualitaet` |
 | Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
 | Datum | 28.09.2026 |
+
+## A-074
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Rückkanal Gmail zu Plattform (Regel M20-08): (1) Das Sammelpostfach entscheidet über die Erledigung; mehrere Sammelpostfächer entscheiden gemeinsam (UND); ohne Sammelpostfach müssen alle Kopien archiviert sein. (2) Papierkorb zählt wie Archiv, endgültiges Löschen erledigt die Mail ohne Ticketabschluss. (3) Spam entscheidet nie und blockiert nicht. (4) Standardstufe `record_only`; Beruhigungsfrist 600 Sekunden; Karenz des Abgleichs 300 Sekunden; Abgleich stündlich, 90 Tage rückwirkend, höchstens 200 Einzelabfragen je Lauf. (5) Gmail nennt keinen Urheber einer Archivierung; bei gemeinsam genutztem Postfach ist der Nutzer nicht erkennbar. (6) Eine Wiederherstellung in Gmail außerhalb des Wiedereröffnungsfensters lässt das Ticket geschlossen und hält nur die Mail offen; nie ein Folgeticket. (7) Ein wieder geöffnetes Ticket ist in Bearbeitung und damit vor einem erneuten automatischen Abschluss geschützt, solange `gmail_close_assigned_tickets` aus ist. |
+| Begründung | Betreiberstandard vom 28.09.2026 (info@ und timo@); die Werte sind konservativ gewählt, damit Rückgängig, Zurückstellen und Doppelbearbeitung keine Fehlabschlüsse erzeugen. |
+| Kennzeichnung | unkritisch (kein Geldfluss, keine Rechtsfrist; Beschäftigtendatenschutz und Löschkonzept als offene Punkte M20-08-Q7 und M20-08-Q8) |
+| Betroffene Bereiche | `mhvp.communication.gmail_state`, `mhvp.communication.gmail_done`, `PATCH /tenant/settings`, `/mail/messages`, `/mail/mailboxes`, CRM Mailübersicht, Maildetail, Einstellungen Mandant und Postfächer |
+| Überprüfung spätestens bei Meilenstein | vor dem Umschalten auf `done` beim Mandanten HVM (Spike, Abschnitt 13 der Regel) |
+| Datum | 28.09.2026 |

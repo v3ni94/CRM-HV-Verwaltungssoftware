@@ -183,6 +183,81 @@ verbinden), Punkt 2 nur Zeilen mit `pending` jünger als 15 Minuten, Punkt 4 die
 Tasks `mhvp.communication.archive_message`, `archive_messages`, `archive_ticket_messages`,
 `archive_retry`, `archive_retry_all` und die Warteschlange `mail`.
 
+## Rückkanal Gmail zu Plattform (M20-08, 28.09.2026)
+
+Der Verlaufsabruf fordert alle vier Verlaufstypen ohne `labelId` an; Labeländerungen zu
+INBOX, TRASH und SPAM sowie Löschungen werden je Postfachkopie gespeichert
+(`message.gmail_state`, `gmail_state_by`, `gmail_state_history_id`). Eigene Archivierungen
+setzen vorher `gmail_expected_state` und speichern nachher `archive_history_id`. Details in
+`docs/rules/M20-08-gmail-rueckkanal-erledigt.md`.
+
+### Spike: Protokollvorlage (Freigabekriterium für den Modus Übernehmen)
+
+Testkonto, kein Produktivpostfach. Nach Punkt 1 bis 4 mit Ergebnis "bestanden" bestätigt
+ein Administrator den Spike mit `POST /tenant/settings/gmail-spike-confirm` und
+`protocol_ref` (Verweis auf dieses Protokoll); erst dann ist `gmail_done_sync_mode = done`
+wählbar.
+
+| Nr | Frage | Datum | Postfach | Ergebnis |
+| --- | --- | --- | --- | --- |
+| 1 | `history.list` ohne `labelId` liefert `labelsRemoved` mit INBOX nach Archivierung im Web, am Handy (Wischgeste) und per Filter "Posteingang überspringen"; Eintragsform bei Papierkorb (ein oder zwei Einträge), Untrash, Snooze, Undo | | | offen |
+| 2 | `messages.modify` liefert `historyId`; Verhältnis zur Kennung des zugehörigen Verlaufseintrags (gleich, kleiner, größer) | | | offen |
+| 3 | `messagesAdded[].message.labelIds` ist im Verlauf enthalten | | | offen |
+| 4 | Watch mit `labelIds=["INBOX"]`, `INCLUDE` pusht bei Labelentfernung | | | offen |
+| 5 | Kontingent: Verlaufsseiten je Tag an einem aktiven Postfach ohne `labelId`; Abgleichaufrufe je Lauf | | | offen |
+
+Freigabe des Modus Übernehmen beim Mandanten HVM: nach dem Spike, nach einem Tag Nur anzeigen
+mit Sichtprüfung der Zuordnung Nutzer gegen Plattform (`fallback_attributions` nahe null) und
+nach freigegebenem Vorschaubericht des Erstabgleichs.
+
+### Diagnose-SQL (unter dem Mandantenkontext)
+
+```sql
+SELECT set_config('app.tenant_id', '<tenant_id>', false);
+-- Zustände je Postfach
+SELECT mb.address, m.gmail_state, m.gmail_state_by, count(*)
+FROM message m JOIN mailbox mb ON mb.id = m.mailbox_id
+WHERE m.direction = 'in' AND m.gmail_message_id IS NOT NULL
+GROUP BY 1, 2, 3 ORDER BY 1, 2, 3;
+-- Laufende Zähler des Rückkanals je Postfach (Warnschwelle fallback_attributions > 20 in 24 h)
+SELECT address, sync_back_enabled, gmail_last_sync_at, gmail_state_reconcile_status,
+       gmail_state_reconcile_counts, gmail_sync_back_counts
+FROM mailbox WHERE kind = 'gmail' AND deleted_at IS NULL;
+-- Ereignisse einer Mail
+SELECT occurred_at, type, payload FROM domain_event
+WHERE entity_type = 'message' AND entity_id = '<message_id>' ORDER BY occurred_at;
+-- Doppelzeilen, die den eindeutigen Index uq_message_mailbox_gmail_id verhindern
+SELECT mailbox_id, gmail_message_id, count(*) FROM message
+WHERE gmail_message_id IS NOT NULL AND direction = 'in'
+GROUP BY 1, 2 HAVING count(*) > 1;
+```
+
+### Bereinigung von Doppelzeilen (vor dem zweiten Lauf der Migration 0224)
+
+Nichts wird gelöscht: die jüngere Doppelzeile verliert ihre Gmail-Kennung und wird als Kopie
+mit der älteren verknüpft, danach `make migrate` erneut (die Migration legt den Index an,
+sobald keine Doppelzeilen mehr vorhanden sind).
+
+```sql
+SELECT set_config('app.tenant_id', '<tenant_id>', false);
+WITH d AS (
+  SELECT id, row_number() OVER (PARTITION BY mailbox_id, gmail_message_id ORDER BY created_at) AS n,
+         first_value(id) OVER (PARTITION BY mailbox_id, gmail_message_id ORDER BY created_at) AS keep
+  FROM message WHERE gmail_message_id IS NOT NULL AND direction = 'in'
+)
+UPDATE message m SET gmail_message_id = NULL, duplicate_of_id = coalesce(m.duplicate_of_id, d.keep)
+FROM d WHERE d.id = m.id AND d.n > 1;
+```
+
+### Betriebskennzahlen und Warnschwelle
+
+`GET /mail/mailboxes` liefert je Postfach `gmail_last_sync_at`, `gmail_state_reconciled_at`,
+`gmail_state_reconcile_status`, `gmail_state_reconcile_counts` (checked, archived, trashed,
+spam, deleted, returned, unchanged, deferred, own, grace) und `gmail_sync_back_counts`
+(events, done, reopened, ignored_own, ignored_replay, unknown). `sync_back_warning` ist
+gesetzt bei mehr als 20 Rückfallzuordnungen, einem fehlgeschlagenen Abgleich oder einem
+letzten erfolgreichen Abruf, der älter als 30 Minuten ist; das Postfach zeigt den Hinweis.
+
 ## Tests
 
 `apps/api/tests/unit/test_gmail_push.py` (Umschlag, OIDC gegen lokalen Schlüssel, Fälligkeit

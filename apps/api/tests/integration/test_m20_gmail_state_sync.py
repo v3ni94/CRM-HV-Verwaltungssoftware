@@ -77,7 +77,7 @@ class StateFake:
         self.history_id = 1000
         self.token_ok = True
         # Set once the client requests every history type (M20-08 back channel).
-        self.strict_history = False
+        self.strict_history = True
 
     def account(self, token: str) -> Account:
         return self.accounts.setdefault(token, Account())
@@ -601,3 +601,796 @@ def test_align_copies_repairs_older_rows_idempotently(
     again = _ok(client.post(f"{M}/maintenance/align-copies", headers=case.h))
     assert again["changed"] == 0
     assert len(case.domain_events("message.copy_aligned", [copy["id"]])) == 1
+
+
+# Rückkanal (M20-08) ---------------------------------------------------------------------------
+
+
+def _states(
+    case: Case, rows: dict[str, dict[str, Any]]
+) -> dict[str, tuple[str | None, str | None, str]]:
+    return {
+        name: (m["gmail_state"], m["gmail_state_by"], m["status"])
+        for name, m in ((n, case.message(r["id"])) for n, r in rows.items())
+    }
+
+
+def _effects(case: Case, message_id: str) -> list[str]:
+    return [
+        str(e["payload"]["effect"])
+        for e in case.events(message_id)
+        if e["type"] == "message.gmail_state_changed"
+    ]
+
+
+def test_personal_archive_notes_and_collective_archive_completes(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    """E01 then E03 in mode done: the personal copy only records, the collective copy
+    completes the group; no ticket close while gmail_done_closes_ticket is off."""
+    case = Case(client, settings, world, fake, "e1")
+    case.mode("done")
+    rows = case.mail(f"Sammelpostfach entscheidet {RUN}")
+    lead, copy = rows["timo"], rows["info"]
+    ticket_id = str(lead["ticket_id"])
+    assert lead["gmail_sync"]["state"] == "synchron"
+
+    fake.archive(case.tokens["timo"], lead["gmail_message_id"])
+    case.sync("timo")
+    states = _states(case, rows)
+    assert states["timo"] == ("archived", "user", "assigned")
+    assert states["info"] == ("inbox", "user", "assigned")
+    detail = case.message(lead["id"])
+    assert detail["gmail_sync"]["state"] == "abweichend"
+    copies = {c["mailbox_address"]: c for c in detail["gmail_sync"]["copies"]}
+    assert copies[case.address("info")]["authoritative"] is True
+    assert copies[case.address("timo")]["authoritative"] is False
+    assert _effects(case, lead["id"]) == ["ignored_personal"]
+    assert case.ticket_events(ticket_id, "auto_close_skipped") == []
+
+    fake.archive(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    states = _states(case, rows)
+    assert states["timo"] == ("archived", "user", "done")
+    assert states["info"] == ("archived", "user", "done")
+    detail = case.message(lead["id"])
+    assert detail["done_source"] == "gmail"
+    assert detail["gmail_sync"]["state"] == "synchron"
+    # The personal copy was already archived by the user: no own archiving for it.
+    assert fake.account(case.tokens["timo"]).modify_bodies == []
+    assert len(case.domain_events("message.completed", [lead["id"]])) == 1
+    assert case.ticket(ticket_id)["status"] != "done"
+    skipped = case.ticket_events(ticket_id, "auto_close_skipped")
+    assert [e["data"]["reason"] for e in skipped] == ["ticket_close_disabled"]
+    assert "done" in _effects(case, copy["id"])
+
+
+def test_collective_first_archives_personal_copy_and_echo_is_own_action(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "e2")
+    case.mode("done")
+    rows = case.mail(f"Echo eigene Aktion {RUN}")
+    lead, copy = rows["timo"], rows["info"]
+    fake.archive(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    after = case.message(lead["id"])
+    assert after["status"] == "done"
+    # The personal copy left the inbox through the platform (inline job) with the history id.
+    timo = fake.account(case.tokens["timo"])
+    assert timo.modify_bodies == [
+        (lead["gmail_message_id"], {"removeLabelIds": ["INBOX", "UNREAD"]})
+    ]
+    assert after["archive_status"] == "archived"
+    assert after["gmail_expected_state"] == "archived"
+    assert after["gmail_state"] == "archived"
+    assert after["gmail_state_by"] == "platform"
+    # The echo of that modify call in the next run is an own action, nothing changes.
+    case.sync("timo")
+    assert "ignored_own" in _effects(case, lead["id"])
+    assert len(case.domain_events("message.completed", [lead["id"]])) == 1
+    assert case.message(lead["id"])["gmail_sync"]["state"] == "synchron"
+
+
+def test_without_collective_mailbox_every_personal_copy_must_be_archived(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    """E04 and E05: no collective mailbox, so both personal copies decide together."""
+    case = Case(client, settings, world, fake, "e4", collective=(), personal=("timo", "kollege"))
+    case.mode("done")
+    rows = case.mail(f"Ohne Sammelpostfach {RUN}")
+    fake.archive(case.tokens["timo"], rows["timo"]["gmail_message_id"])
+    case.sync("timo")
+    assert case.message(rows["timo"]["id"])["status"] != "done"
+    assert _effects(case, rows["timo"]["id"]) == ["noted"]
+    fake.archive(case.tokens["kollege"], rows["kollege"]["gmail_message_id"])
+    case.sync("kollege")
+    assert case.message(rows["timo"]["id"])["status"] == "done"
+    assert case.message(rows["kollege"]["id"])["status"] == "done"
+
+    single = case.mail(f"Einzige Kopie {RUN}", boxes=("timo",))
+    fake.archive(case.tokens["timo"], single["timo"]["gmail_message_id"])
+    case.sync("timo")
+    assert case.message(single["timo"]["id"])["done_source"] == "gmail"
+
+
+def test_two_collective_mailboxes_both_must_archive(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "e3", collective=("info", "post"))
+    case.mode("done")
+    rows = case.mail(f"Zwei Sammelpostfaecher {RUN}")
+    fake.archive(case.tokens["info"], rows["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(rows["timo"]["id"])["status"] != "done"
+    fake.archive(case.tokens["post"], rows["post"]["gmail_message_id"])
+    case.sync("post")
+    assert case.message(rows["timo"]["id"])["status"] == "done"
+    # The personal copy left the inbox with the group (own action).
+    assert [m for m, _ in fake.account(case.tokens["timo"]).modify_bodies] == [
+        rows["timo"]["gmail_message_id"]
+    ]
+
+
+def test_record_only_and_off_never_change_status(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "ro")
+    case.mode("record_only")
+    rows = case.mail(f"Nur vermerken {RUN}")
+    fake.archive(case.tokens["info"], rows["info"]["gmail_message_id"])
+    case.sync("info")
+    after = case.message(rows["info"]["id"])
+    assert (after["gmail_state"], after["gmail_state_by"], after["status"]) == (
+        "archived",
+        "user",
+        "assigned",
+    )
+    assert _effects(case, rows["info"]["id"]) == ["noted"]
+    assert case.message(rows["timo"]["id"])["gmail_sync"]["state"] == "abweichend"
+
+    case.mode("off")
+    fake.archive(case.tokens["timo"], rows["timo"]["gmail_message_id"])
+    result = case.sync("timo")
+    assert result["state_events"] == 0
+    assert case.message(rows["timo"]["id"])["gmail_state"] == "inbox"
+    assert case.message(rows["timo"]["id"])["gmail_sync"]["state"] == "aus"
+    # Switching on later does not apply the old event (cursor moved on).
+    case.mode("done")
+    case.sync("timo")
+    assert case.message(rows["timo"]["id"])["status"] == "assigned"
+
+    # Mode done without the confirmed spike is refused.
+    _sql(
+        settings,
+        world.tenant_a,
+        "UPDATE tenant_settings SET gmail_spike_confirmed_at = NULL, "
+        "gmail_done_sync_mode = 'record_only' RETURNING 1",
+    )
+    refused = client.patch(SETTINGS, json={"gmail_done_sync_mode": "done"}, headers=case.h)
+    assert refused.status_code == 422
+    assert refused.json()["code"] == "MHVP-COMM-0007"
+
+
+def test_mailbox_switch_off_only_records(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "sw")
+    case.mode("done")
+    box = case.boxes["info"]
+    _ok(
+        client.patch(
+            f"{M}/mailboxes/{box['id']}", json={"sync_back_enabled": False}, headers=case.h
+        )
+    )
+    rows = case.mail(f"Rueckkanal aus {RUN}")
+    fake.archive(case.tokens["info"], rows["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(rows["info"]["id"])["gmail_state"] == "archived"
+    assert case.message(rows["timo"]["id"])["status"] == "assigned"
+    assert _effects(case, rows["info"]["id"]) == ["skipped_mailbox"]
+    boxes = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=case.h))}
+    assert boxes[box["id"]]["sync_back_enabled"] is False
+    assert boxes[box["id"]]["gmail_last_sync_at"]
+
+
+def test_trash_spam_and_permanent_delete(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "tr")
+    case.mode("done")
+    # Trash in one entry completes the group (done_on_trash default true).
+    one = case.mail(f"Papierkorb eins {RUN}")
+    fake.trash(case.tokens["info"], one["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(one["info"]["id"])["gmail_state"] == "trashed"
+    assert case.message(one["timo"]["id"])["done_source"] == "gmail"
+    # Trash in two entries within one run: one folded event.
+    two = case.mail(f"Papierkorb zwei {RUN}")
+    fake.trash(case.tokens["info"], two["info"]["gmail_message_id"], two_entries=True)
+    case.sync("info")
+    events = [
+        e["payload"]
+        for e in case.events(two["info"]["id"])
+        if e["type"] == "message.gmail_state_changed"
+    ]
+    assert len(events) == 1
+    assert (events[0]["to"], events[0]["coalesced"]) == ("trashed", 2)
+    assert case.message(two["timo"]["id"])["status"] == "done"
+    # Untrash without INBOX: archived, nothing reopens; with INBOX: reopened.
+    fake.untrash(case.tokens["info"], two["info"]["gmail_message_id"], inbox=False)
+    case.sync("info")
+    assert case.message(two["info"]["id"])["gmail_state"] == "archived"
+    assert case.message(two["timo"]["id"])["status"] == "done"
+    fake.restore(case.tokens["info"], two["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(two["timo"]["id"])["status"] == "assigned"
+    assert case.message(two["timo"]["id"])["done_source"] is None
+
+    # done_on_trash off: trash only notes.
+    case.patch_settings(gmail_done_on_trash=False)
+    three = case.mail(f"Papierkorb drei {RUN}")
+    fake.trash(case.tokens["info"], three["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(three["timo"]["id"])["status"] == "assigned"
+    assert _effects(case, three["info"]["id"]) == ["noted"]
+    case.patch_settings(gmail_done_on_trash=True)
+
+    # Spam never decides.
+    four = case.mail(f"Spam {RUN}")
+    fake.spam(case.tokens["info"], four["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(four["info"]["id"])["gmail_state"] == "spam"
+    assert case.message(four["timo"]["id"])["status"] == "assigned"
+    assert _effects(case, four["info"]["id"]) == ["ignored_spam"]
+
+    # Permanent delete from the inbox: mail done, ticket never closed, comment K3, row kept.
+    case.patch_settings(gmail_done_closes_ticket=True)
+    five = case.mail(f"Geloescht {RUN}")
+    fake.delete(case.tokens["info"], five["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(five["info"]["id"])["gmail_state"] == "deleted"
+    assert case.message(five["timo"]["id"])["status"] == "done"
+    ticket_id = str(five["timo"]["ticket_id"])
+    assert case.ticket(ticket_id)["status"] != "done"
+    assert any(c["body"].startswith("Hinweis: Die Mail") for c in case.comments(ticket_id))
+    assert case.message(five["info"]["id"])["document_id"]
+    # Delete of an already trashed copy only changes the state.
+    fake.delete(case.tokens["info"], one["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(one["info"]["id"])["gmail_state"] == "deleted"
+    assert len(case.domain_events("message.completed", [one["timo"]["id"]])) == 1
+
+
+def test_ticket_auto_close_and_refusals(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "tc")
+    case.mode("done", gmail_done_closes_ticket=True)
+    rows = case.mail(f"Ticket schliessen {RUN}", thread="th-close")
+    lead, copy = rows["timo"], rows["info"]
+    ticket_id = str(lead["ticket_id"])
+    # A sent reply in the Gmail thread without a stored row: K1 carries the hint.
+    fake.add(
+        case.tokens["info"],
+        "sent-reply",
+        _eml("info@example.com", "AW", f"<sent-{RUN}@x>"),
+        thread="th-close",
+        labels=("SENT",),
+    )
+    fake.archive(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    ticket = case.ticket(ticket_id)
+    assert ticket["status"] == "done"
+    assert ticket["resolved_by"] is None
+    status_events = case.ticket_events(ticket_id, "status")
+    last = status_events[-1]
+    assert last["user_id"] is None
+    assert last["data"]["source"] == "gmail"
+    assert last["data"]["auto_close"] is True
+    assert last["data"]["mailbox_address"] == case.address("info")
+    comments = case.comments(ticket_id)
+    k1 = next(c for c in comments if c["body"].startswith("Automatisch erledigt"))
+    assert k1["internal"] is True
+    assert k1["author_user_id"] is None
+    assert "1 gesendete Antworten" in k1["body"]
+    events = case.domain_events("ticket.status_changed", [ticket_id])
+    assert events[-1]["source"] == "gmail"
+
+    # Refusals: assigned ticket with notification, waiting status, open mails, keep open label.
+    assigned = case.mail(f"Zugewiesen {RUN}")
+    t_assigned = str(assigned["timo"]["ticket_id"])
+    _ok(
+        client.patch(
+            f"{T}/{t_assigned}",
+            json={"assignee_user_id": str(world.users["gsclerk"])},
+            headers=case.h,
+        )
+    )
+    fake.archive(case.tokens["info"], assigned["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.ticket(t_assigned)["status"] != "done"
+    assert case.message(assigned["timo"]["id"])["status"] == "done"
+    reasons = [e["data"]["reason"] for e in case.ticket_events(t_assigned, "auto_close_skipped")]
+    assert reasons == ["assigned_in_progress"]
+    notified = _sql(
+        settings,
+        world.tenant_a,
+        "SELECT kind FROM notification WHERE user_id = :u AND entity_id = :t",
+        {"u": world.users["gsclerk"], "t": t_assigned},
+    )
+    assert ("ticket.auto_close_blocked",) in [tuple(r) for r in notified]
+
+    waiting = case.mail(f"Wartet {RUN}")
+    t_waiting = str(waiting["timo"]["ticket_id"])
+    _ok(client.patch(f"{T}/{t_waiting}", json={"status": "in_progress"}, headers=case.h))
+    _ok(client.patch(f"{T}/{t_waiting}", json={"status": "waiting"}, headers=case.h))
+    fake.archive(case.tokens["info"], waiting["info"]["gmail_message_id"])
+    case.sync("info")
+    assert [e["data"]["reason"] for e in case.ticket_events(t_waiting, "auto_close_skipped")] == [
+        "status_waiting"
+    ]
+
+    first = case.mail(f"Zwei Mails {RUN}", thread="th-two")
+    t_two = str(first["timo"]["ticket_id"])
+    second = case.mail(f"Zwei Mails Nachtrag {RUN}", thread="th-two")
+    assert second["timo"]["ticket_id"] == first["timo"]["ticket_id"]
+    fake.archive(case.tokens["info"], first["info"]["gmail_message_id"])
+    case.sync("info")
+    assert [e["data"]["reason"] for e in case.ticket_events(t_two, "auto_close_skipped")] == [
+        "open_mails"
+    ]
+    # Both remaining copies archived in one run: exactly one status event, no refusal.
+    fake.archive(case.tokens["info"], second["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.ticket(t_two)["status"] == "done"
+    assert len(case.ticket_events(t_two, "auto_close_skipped")) == 1
+
+    case.patch_settings(gmail_keep_open_labels=["Warten"])
+    labelled = case.mail(f"Arbeitslabel {RUN}")
+    t_label = str(labelled["timo"]["ticket_id"])
+    fake.add_label(case.tokens["info"], labelled["info"]["gmail_message_id"], "Warten")
+    fake.archive(case.tokens["info"], labelled["info"]["gmail_message_id"])
+    case.sync("info")
+    after = case.message(labelled["info"]["id"])
+    assert after["gmail_state"] == "archived"
+    assert after["gmail_keep_open_label"] == "Warten"
+    assert case.message(labelled["timo"]["id"])["status"] == "assigned"
+    assert case.ticket(t_label)["status"] != "done"
+    assert _effects(case, labelled["info"]["id"]) == ["ignored_keep_open"]
+
+
+def test_reopen_from_gmail_inside_and_outside_window(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "rw")
+    case.mode("done", gmail_done_closes_ticket=True)
+    rows = case.mail(f"Wieder oeffnen {RUN}")
+    lead, copy = rows["timo"], rows["info"]
+    ticket_id = str(lead["ticket_id"])
+    fake.archive(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    assert case.ticket(ticket_id)["status"] == "done"
+    assert case.message(lead["id"])["archive_status"] == "archived"
+
+    fake.restore(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    after = case.message(lead["id"])
+    assert (
+        after["status"],
+        after["done_source"],
+        after["archive_status"],
+        after["archived_at"],
+    ) == ("assigned", None, None, None)
+    assert after["gmail_reopened_at"]
+    reopened = case.domain_events("message.reopened", [lead["id"]])
+    assert reopened[-1]["previous_status"] == "done"
+    assert reopened[-1]["previous_done_source"] == "gmail"
+    assert reopened[-1]["previous_archive_status"] == "archived"
+    assert case.ticket(ticket_id)["status"] == "in_progress"
+    ev = case.ticket_events(ticket_id, "reopened")[-1]
+    assert ev["data"]["reason"] == "gmail_unarchive"
+    assert any(c["body"].startswith("Automatisch wieder ge") for c in case.comments(ticket_id))
+    # The personal copy is still archived (platform never writes back on Gmail events).
+    assert case.message(lead["id"])["gmail_state"] == "archived"
+    assert fake.account(case.tokens["timo"]).untrashed == []
+    # Done again archives again; the reopened ticket is in progress and therefore protected
+    # (assigned_in_progress) until gmail_close_assigned_tickets is on.
+    fake.archive(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    assert case.message(lead["id"])["status"] == "done"
+    assert case.ticket(ticket_id)["status"] == "in_progress"
+    assert case.ticket_events(ticket_id, "auto_close_skipped")[-1]["data"]["reason"] == (
+        "assigned_in_progress"
+    )
+
+    # Outside the window: ticket stays closed, mail visible in the default list.
+    _ok(
+        client.patch(
+            f"{T}/{ticket_id}",
+            json={"status": "done", "resolution": {"kind": "auskunft_erteilt"}},
+            headers=case.h,
+        )
+    )
+    _sql(
+        settings,
+        world.tenant_a,
+        "UPDATE ticket SET resolved_at = now() - interval '40 days' WHERE id = :t RETURNING 1",
+        {"t": ticket_id},
+    )
+    fake.restore(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    assert case.ticket(ticket_id)["status"] == "done"
+    skipped = case.ticket_events(ticket_id, "reopen_skipped")[-1]
+    assert skipped["data"]["reason"] == "window_elapsed"
+    assert any(c["body"].startswith("Hinweis: Die Mail") for c in case.comments(ticket_id))
+    listed = {m["id"] for m in _ok(client.get(f"{M}/messages", headers=case.h))}
+    assert lead["id"] in listed
+    assert case.message(lead["id"])["status"] == "assigned"
+
+    # Reopen switch off: only a note.
+    case.patch_settings(gmail_reopen_on_unarchive=False)
+    fake.archive(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    fake.restore(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    assert case.message(lead["id"])["status"] == "done"
+    # A restore of a personal copy never reopens (E11).
+    case.patch_settings(gmail_reopen_on_unarchive=True)
+    fake.archive(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    fake.restore(case.tokens["timo"], lead["gmail_message_id"])
+    case.sync("timo")
+    assert case.message(lead["id"])["status"] == "done"
+    assert _effects(case, lead["id"])[-1] == "ignored_personal"
+
+
+def test_settle_period_waits_for_a_stable_state(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    from mhvp.communication.gmail_done import settle_due
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+
+    def run_settle() -> dict[str, int]:
+        async def run() -> dict[str, int]:
+            engine = create_app_engine(settings)
+            try:
+                factory = create_session_factory(engine)
+                async with tenant_transaction(factory, world.tenant_a) as s:
+                    return await settle_due(s, settings)
+            finally:
+                await engine.dispose()
+
+        return asyncio.run(run())
+
+    case = Case(client, settings, world, fake, "st")
+    case.mode("done")
+    case.patch_settings(gmail_settle_seconds=600)
+    rows = case.mail(f"Beruhigung {RUN}")
+    fake.archive(case.tokens["info"], rows["info"]["gmail_message_id"])
+    case.sync("info")
+    lead = case.message(rows["timo"]["id"])
+    assert lead["status"] == "assigned"
+    assert lead["gmail_settle_until"]
+    assert lead["gmail_sync"]["state"] == "ausstehend"
+    assert _effects(case, rows["info"]["id"]) == ["settle_pending"]
+    assert run_settle()["done"] == 0
+    assert case.message(rows["timo"]["id"])["status"] == "assigned"
+    _sql(
+        settings,
+        world.tenant_a,
+        "UPDATE message SET gmail_settle_until = now() - interval '1 second' "
+        "WHERE id = :id RETURNING 1",
+        {"id": lead["id"]},
+    )
+    assert run_settle()["done"] == 1
+    assert case.message(rows["timo"]["id"])["done_source"] == "gmail"
+
+    # Undo before the period ends: nothing closes.
+    other = case.mail(f"Beruhigung Undo {RUN}")
+    fake.archive(case.tokens["info"], other["info"]["gmail_message_id"])
+    case.sync("info")
+    fake.restore(case.tokens["info"], other["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(other["timo"]["id"])["gmail_settle_until"] is None
+    _sql(
+        settings,
+        world.tenant_a,
+        "UPDATE message SET gmail_settle_until = now() - interval '1 second' "
+        "WHERE id = :id RETURNING 1",
+        {"id": other["timo"]["id"]},
+    )
+    counts = run_settle()
+    assert (counts["done"], counts["noted"]) == (0, 1)
+    assert case.message(other["timo"]["id"])["status"] == "assigned"
+
+
+def test_replay_is_ignored_and_push_uses_the_same_path(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    from mhvp.communication.tasks import gmail_push_sync_once
+
+    case = Case(client, settings, world, fake, "rp")
+    case.mode("done")
+    rows = case.mail(f"Replay {RUN}")
+    before = _sql(
+        settings,
+        world.tenant_a,
+        "SELECT gmail_history_id FROM mailbox WHERE id = :id",
+        {"id": case.boxes["info"]["id"]},
+    )[0][0]
+    fake.archive(case.tokens["info"], rows["info"]["gmail_message_id"])
+    # Push job (labelsRemoved only) walks the same path as the beat sync.
+    totals = asyncio.run(gmail_push_sync_once(settings, case.address("info"), "1"))
+    assert totals["mailboxes"] == 1
+    assert case.message(rows["timo"]["id"])["status"] == "done"
+    # Cursor set back: the same entry again is a replay.
+    _sql(
+        settings,
+        world.tenant_a,
+        "UPDATE mailbox SET gmail_history_id = :h WHERE id = :id RETURNING 1",
+        {"h": before, "id": case.boxes["info"]["id"]},
+    )
+    case.sync("info")
+    assert _effects(case, rows["info"]["id"]) == ["done", "ignored_replay"]
+    assert len(case.domain_events("message.completed", [rows["timo"]["id"]])) == 1
+    # Budget: noise entries do not consume the batch; a label event behind them is applied.
+    state = client.app.state  # type: ignore[attr-defined]
+    state.settings = state.settings.model_copy(update={"gmail_sync_batch": 2})
+    try:
+        noisy = case.mail(f"Rauschen {RUN}")
+        for _ in range(5):
+            fake.noise(case.tokens["info"], noisy["info"]["gmail_message_id"])
+        fake.archive(case.tokens["info"], noisy["info"]["gmail_message_id"])
+        result = case.sync("info")
+        assert result["remaining"] == 0
+        assert case.message(noisy["timo"]["id"])["status"] == "done"
+    finally:
+        state.settings = state.settings.model_copy(update={"gmail_sync_batch": 50})
+
+
+def test_ingest_initial_state_and_late_copy_of_done_group(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "in")
+    case.mode("done")
+    # A mail that a filter moved past the inbox: never fetched (no INBOX in messagesAdded).
+    fake.add(
+        case.tokens["info"],
+        "filtered",
+        _eml("x@example.com", "Gefiltert", f"<f-{RUN}@x>"),
+        labels=("Ablage",),
+    )
+    assert case.sync("info")["created"] == 0
+    # Late copy of a done group leaves the inbox with the group.
+    rows = case.mail(f"Verspaetete Kopie {RUN}", boxes=("timo",))
+    fake.archive(case.tokens["timo"], rows["timo"]["gmail_message_id"])
+    case.sync("timo")
+    assert case.message(rows["timo"]["id"])["status"] == "done"
+    gid = f"late{RUN}"
+    fake.add(
+        case.tokens["info"],
+        gid,
+        _eml(
+            f"in{RUN}@example.com",
+            f"Verspaetete Kopie {RUN}",
+            f"<in-1-{RUN}@x>",
+            to=case.address("info"),
+        ),
+    )
+    case.sync("info")
+    late = case.row(gid)
+    assert late["duplicate_of_id"] == rows["timo"]["id"]
+    assert late["status"] == "done"
+    assert late["done_source"] == "gmail"
+    assert late["archive_status"] == "archived"
+    assert [m for m, _ in fake.account(case.tokens["info"]).modify_bodies] == [gid]
+
+
+def test_reconcile_after_expired_history_and_preview(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "rc")
+    case.mode("done")
+    case.patch_settings(gmail_reconcile_grace_seconds=60)
+    rows = case.mail(f"Abgleich {RUN}")
+    gone = case.mail(f"Abgleich geloescht {RUN}")
+    back = case.mail(f"Abgleich zurueck {RUN}")
+    info = fake.account(case.tokens["info"])
+    # Changes without history entries: archived in Gmail, deleted in Gmail, and a copy the
+    # platform archived that came back into the inbox.
+    info.labels[rows["info"]["gmail_message_id"]].discard("INBOX")
+    del info.labels[gone["info"]["gmail_message_id"]]
+    _ok(client.patch(f"{M}/messages/{back['timo']['id']}", json={"status": "done"}, headers=case.h))
+    info.labels[back["info"]["gmail_message_id"]].add("INBOX")
+    _sql(
+        settings,
+        world.tenant_a,
+        "UPDATE message SET created_at = now() - interval '10 minutes', "
+        "gmail_state_at = now() - interval '10 minutes', archive_attempted_at = NULL "
+        "WHERE mailbox_id = :b RETURNING 1",
+        {"b": case.boxes["info"]["id"]},
+    )
+    reader = bearer(login(client, world, "gsreader"))
+    assert (
+        client.post(
+            f"{M}/mailboxes/{case.boxes['info']['id']}/reconcile-state",
+            json={"preview": True},
+            headers=reader,
+        ).status_code
+        == 403
+    )
+    preview = _ok(
+        client.post(
+            f"{M}/mailboxes/{case.boxes['info']['id']}/reconcile-state",
+            json={"preview": True},
+            headers=case.h,
+        )
+    )
+    assert (preview["would_archive"], preview["would_delete"], preview["would_reopen"]) == (
+        1,
+        1,
+        1,
+    )
+    assert {s["action"] for s in preview["samples"]} == {"archived", "deleted", "returned"}
+    assert case.message(rows["timo"]["id"])["status"] == "assigned"  # preview wrote nothing
+
+    info.expire_history = True
+    calls_before = len(info.calls)
+    case.sync("info")
+    info.expire_history = False
+    calls = info.calls[calls_before:]
+    # Stamp (profile) before the listing of the reconcile.
+    profile = next(i for i, c in enumerate(calls) if c.startswith("GET") and "/profile" in c)
+    listing = next(i for i, c in enumerate(calls) if "labelIds=INBOX" in c)
+    assert profile < listing
+    assert case.message(rows["timo"]["id"])["done_source"] == "reconcile"
+    assert case.message(rows["info"]["id"])["gmail_state_by"] == "reconcile"
+    assert case.message(gone["info"]["id"])["gmail_state"] == "deleted"
+    assert case.message(back["timo"]["id"])["status"] == "assigned"
+    boxes = {b["id"]: b for b in _ok(client.get(f"{M}/mailboxes", headers=case.h))}
+    box = boxes[case.boxes["info"]["id"]]
+    assert box["gmail_state_reconcile_status"] == "done"
+    assert box["gmail_state_reconciled_at"]
+    assert box["gmail_state_reconcile_counts"]["archived"] == 1
+
+
+def test_restore_inbox_and_revert_decision(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "rs")
+    case.mode("done", gmail_done_closes_ticket=True)
+    rows = case.mail(f"Zuruecklegen {RUN}")
+    lead, copy = rows["timo"], rows["info"]
+    ticket_id = str(lead["ticket_id"])
+    fake.trash(case.tokens["info"], copy["gmail_message_id"])
+    case.sync("info")
+    assert case.ticket(ticket_id)["status"] == "done"
+    # Switch off: endpoint refuses, PATCH back to assigned touches Gmail not at all.
+    refused = client.post(f"{M}/messages/{lead['id']}/restore-inbox", headers=case.h)
+    assert refused.status_code == 422
+    assert refused.json()["code"] == "MHVP-COMM-0006"
+    _ok(client.patch(f"{M}/messages/{lead['id']}", json={"status": "assigned"}, headers=case.h))
+    assert case.message(copy["id"])["status"] == "assigned"
+    assert fake.account(case.tokens["info"]).untrashed == []
+    # Switch on: revert restores the copies (untrash for the trashed one, INBOX for both).
+    _ok(client.patch(f"{M}/messages/{lead['id']}", json={"status": "done"}, headers=case.h))
+    case.patch_settings(gmail_restore_inbox_on_reopen=True)
+    result = _ok(
+        client.post(f"{M}/messages/{lead['id']}/revert-gmail-decision", json={}, headers=case.h)
+    )
+    assert result == {"message_reopened": True, "ticket_reopened": True}
+    assert case.ticket(ticket_id)["status"] == "in_progress"
+    assert case.ticket_events(ticket_id, "reverted")[-1]["data"]["message_id"] == lead["id"]
+    assert fake.account(case.tokens["info"]).untrashed == [copy["gmail_message_id"]]
+    assert (copy["gmail_message_id"], {"addLabelIds": ["INBOX"]}) in fake.account(
+        case.tokens["info"]
+    ).modify_bodies
+    after = case.message(copy["id"])
+    assert (after["archive_status"], after["gmail_state"], after["gmail_expected_state"]) == (
+        "restored",
+        "inbox",
+        "inbox",
+    )
+    # The echo of the restore is an own action.
+    case.sync("info")
+    assert _effects(case, copy["id"])[-1] == "ignored_own"
+    assert case.message(lead["id"])["status"] == "assigned"
+    # Nothing automatic to revert: 422.
+    _ok(client.patch(f"{M}/messages/{lead['id']}", json={"status": "done"}, headers=case.h))
+    again = client.post(f"{M}/messages/{lead['id']}/revert-gmail-decision", json={}, headers=case.h)
+    assert again.status_code == 422
+    assert again.json()["code"] == "MHVP-COMM-0009"
+
+
+def test_tenant_separation_and_copy_visibility(
+    client: TestClient, settings: Any, world: World, fake: StateFake, reset_settings: None
+) -> None:
+    case = Case(client, settings, world, fake, "ts")
+    case.mode("done")
+    rows = case.mail(f"Rechte {RUN}")
+    lead = rows["timo"]
+    # Same Gmail id in a mailbox of another tenant: untouched by the event of tenant A.
+    hb = bearer(login(client, world, "gsbadmin"))
+    other = _ok(
+        client.post(
+            f"{M}/mailboxes",
+            json={"address": case.address("info"), "kind": "gmail", "secret": f"rt-b-{RUN}"},
+            headers=hb,
+        ),
+        201,
+    )
+    _ok(client.patch(f"{M}/mailboxes/{other['id']}", json={"enabled": True}, headers=hb))
+    _ok(client.post(f"{M}/mailboxes/{other['id']}/sync", headers=hb))
+    fake.add(
+        f"rt-b-{RUN}",
+        rows["info"]["gmail_message_id"],
+        _eml(f"b{RUN}@example.com", f"Mandant B {RUN}", f"<b-{RUN}@x>"),
+    )
+    _ok(client.post(f"{M}/mailboxes/{other['id']}/sync", headers=hb))
+    fake.archive(case.tokens["info"], rows["info"]["gmail_message_id"])
+    case.sync("info")
+    assert case.message(lead["id"])["status"] == "done"
+    b_rows = _ok(client.get(f"{M}/messages", headers=hb))
+    b_row = next(m for m in b_rows if m["subject"] == f"Mandant B {RUN}")
+    assert b_row["status"] != "done"
+    assert b_row["gmail_state"] == "inbox"
+    # A member without access to timo@ sees the collective copy in detail and timo@ hidden.
+    clerk = bearer(login(client, world, "gsclerk"))
+    _ok(
+        client.patch(
+            f"{M}/mailboxes/{case.boxes['info']['id']}", json={"is_default": True}, headers=case.h
+        )
+    )
+    seen = _ok(client.get(f"{M}/messages/{rows['info']['id']}", headers=clerk))
+    copies = {c["mailbox_address"]: c for c in seen["gmail_sync"]["copies"]}
+    assert copies[case.address("info")]["visible"] is True
+    assert copies[case.address("timo")] == {
+        "mailbox_address": case.address("timo"),
+        "visible": False,
+    }
+    assert client.get(f"{M}/messages/{lead['id']}/sync-events", headers=clerk).status_code == 404
+    assert client.get(f"{M}/messages/{lead['id']}/sync-events", headers=hb).status_code == 404
+    assert len(case.events(lead["id"])) >= 1
+
+
+def test_gmail_tenant_settings_validation_and_event(
+    client: TestClient, settings: Any, world: World, reset_settings: None
+) -> None:
+    admin = bearer(login(client, world, "gsadmin"))
+    reader = bearer(login(client, world, "gsreader"))
+    current = _ok(client.get(SETTINGS, headers=admin))
+    assert current["gmail_done_sync_mode"] == "record_only"
+    assert current["gmail_settle_seconds"] == 600
+    assert current["gmail_reconcile_grace_seconds"] == 300
+    assert current["gmail_keep_open_labels"] == []
+    for bad in (
+        {"gmail_settle_seconds": 3601},
+        {"gmail_reconcile_grace_seconds": 59},
+        {"gmail_keep_open_labels": ["INBOX"]},
+        {"gmail_keep_open_labels": ["CATEGORY_UPDATES"]},
+        {"gmail_keep_open_labels": [f"L{i}" for i in range(21)]},
+        {"gmail_done_sync_mode": "maybe"},
+    ):
+        assert client.patch(SETTINGS, json=bad, headers=admin).status_code == 422, bad
+    assert (
+        client.patch(SETTINGS, json={"gmail_settle_seconds": 0}, headers=reader).status_code == 403
+    )
+    out = _ok(
+        client.patch(
+            SETTINGS,
+            json={"gmail_settle_seconds": 0, "gmail_keep_open_labels": ["Warten", "Rückfrage"]},
+            headers=admin,
+        )
+    )
+    assert out["gmail_settle_seconds"] == 0
+    assert out["gmail_keep_open_labels"] == ["Warten", "Rückfrage"]
+    changes = _sql(
+        settings,
+        world.tenant_a,
+        "SELECT a.changes FROM audit_log a JOIN domain_event e ON e.id = a.event_id "
+        "WHERE e.type = 'tenant_settings.updated' ORDER BY e.occurred_at DESC, e.id DESC LIMIT 1",
+    )[0][0]
+    assert changes["gmail_settle_seconds"] == {"old": 600, "new": 0}
+    assert changes["gmail_keep_open_labels"]["new"] == ["Warten", "Rückfrage"]
