@@ -19,14 +19,12 @@ database.
 from __future__ import annotations
 
 import re
-import uuid
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from decimal import Decimal
 from itertools import combinations
 from typing import Any
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.banking import allocation
@@ -34,6 +32,11 @@ from mhvp.banking import allocation
 SOURCE_RULE = "rule"
 SOURCE_MATCH = "match"
 SOURCE_AI = "ai"
+
+# Version of the stage 1 engine (this module). Stored with every decision snapshot
+# (``posting_decision.engine_version``); a change restarts the measurement windows of the
+# automation levels (plan M12 3.1 no. 10). Bump on every change of ``propose``.
+ENGINE_VERSION = "2026.09.28-1"
 
 KIND_FULL = "full"
 KIND_PARTIAL = "partial"
@@ -102,7 +105,9 @@ def _word_in(needle: str | None, haystack: str) -> bool:
 
 
 def rule_matches(match: dict[str, Any], tx: dict[str, Any]) -> bool:
-    """Same criteria as ``mhvp.banking.matching.rule_matches`` on plain dicts."""
+    """Match criteria of a bank rule on plain dicts (IBAN fingerprint, name, purpose pattern,
+    amount range). The single implementation: ``mhvp.banking.matching.rule_matches`` adds the
+    legal entity check and delegates here (consolidated 28.09.2026, plan M12 S0)."""
     amount = _dec(tx["amount"])
     if match.get("counterpart_iban_fingerprint") and match[
         "counterpart_iban_fingerprint"
@@ -432,133 +437,10 @@ def best(proposals: list[Proposal]) -> Proposal | None:
 # Database side ----------------------------------------------------------------------------
 
 
-async def _is_deposit_item(session: AsyncSession, item: dict[str, Any], contract: Any) -> bool:
-    """Best effort ``is_deposit`` for a receivable open item (M12-01 remainder, operator
-    22.09.2026 Kontierungsagent finding): ``OpenItem`` has no Forderungsart distinguishing a
-    deposit demand from rent or Hausgeld (``OpenItemKind`` is only receivable/payable, and the
-    ``component`` column is never populated by ``_apply_open_items``). Derived instead over the
-    contract's own deposit demand: an open (not yet fully settled) ``Deposit`` of the same
-    contract whose ``amount_due`` matches the item exactly. Documented as an assumption, not a
-    stored Merkmal; see docs/ASSUMPTIONS.md."""
-    if item["kind"] != "receivable" or contract is None:
-        return False
-    from mhvp.contracts.models import Deposit
-
-    rows = await session.scalars(
-        select(Deposit).where(
-            Deposit.contract_id == contract.id,
-            Deposit.status == "open",
-            Deposit.amount_due == item["amount"],
-        )
-    )
-    return rows.first() is not None
-
-
 async def stage1_for_transaction(session: AsyncSession, tx: Any) -> list[Proposal]:
     """Assemble rules, open items and payables of the ledger of the transaction's legal entity
-    and run ``propose``. Read only."""
-    from mhvp.accounting import services as acc
-    from mhvp.accounting.models import Invoice, JournalEntry, LedgerAccount
-    from mhvp.banking.matching import ledger_for
-    from mhvp.banking.models import BankRule, RuleState
-    from mhvp.contacts.models import ContactBankAccount, PartyMember
-    from mhvp.contracts.models import Contract, SepaMandate
+    (``mhvp.banking.features.collect``) and run ``propose``. Read only."""
+    from mhvp.banking import features as feats
 
-    ledger, _bank = await ledger_for(session, tx)
-    rule_rows = (
-        await session.scalars(
-            select(BankRule).where(
-                BankRule.legal_entity_id == tx.legal_entity_id,
-                BankRule.approval_state.in_([RuleState.APPROVED, RuleState.ACTIVE]),
-            )
-        )
-    ).all()
-    accounts_by_id: dict[uuid.UUID, LedgerAccount] = {}
-    rules = []
-    for r in rule_rows:
-        number = None
-        if r.action.get("account_id"):
-            acct = await session.get(LedgerAccount, uuid.UUID(str(r.action["account_id"])))
-            number = acct.number if acct else None
-        rules.append(
-            {
-                "id": str(r.id),
-                "name": r.name,
-                "match": r.match,
-                "action": {"kind": r.action.get("kind"), "account_number": number},
-                "priority": r.priority,
-                "approval_state": r.approval_state.value,
-                "max_amount": r.max_amount,
-            }
-        )
-    tx_dict = {
-        "amount": tx.amount,
-        "purpose": tx.purpose,
-        "counterpart_name": tx.counterpart_name,
-        "counterpart_iban_fingerprint": tx.counterpart_iban_fingerprint,
-        "mandate_reference": tx.mandate_reference,
-        "end_to_end_id": tx.end_to_end_id,
-        "transaction_code": tx.transaction_code,
-    }
-    items: list[dict[str, Any]] = []
-    payables: list[dict[str, Any]] = []
-    for item in await acc.open_items(session, ledger, tx.booking_date):
-        if item["kind"] == "payable":
-            invoice = await session.scalar(
-                select(Invoice).where(Invoice.journal_entry_id == item["journal_entry_id"])
-            )
-            payables.append(
-                {
-                    "id": item["id"],
-                    "remaining": abs(item["remaining"]),
-                    "number": invoice.number if invoice else None,
-                    "payee_iban_fingerprint": invoice.payee_iban_fingerprint if invoice else None,
-                    "account_number": item["account_number"],
-                }
-            )
-            continue
-        account = accounts_by_id.get(item["account_id"])
-        if account is None:
-            account = await session.get(LedgerAccount, item["account_id"])
-            if account is not None:
-                accounts_by_id[item["account_id"]] = account
-        contract = await session.get(Contract, item["contract_id"]) if item["contract_id"] else None
-        mandate_ref = None
-        if contract is not None and contract.sepa_mandate_id:
-            mandate = await session.get(SepaMandate, contract.sepa_mandate_id)
-            mandate_ref = mandate.reference if mandate else None
-        fingerprints: list[str] = []
-        if account is not None and account.party_id is not None:
-            fingerprints = [
-                fp
-                for fp in await session.scalars(
-                    select(ContactBankAccount.iban_fingerprint)
-                    .join(PartyMember, PartyMember.contact_id == ContactBankAccount.contact_id)
-                    .where(PartyMember.party_id == account.party_id)
-                )
-                if fp
-            ]
-        entry = await session.get(JournalEntry, item["journal_entry_id"])
-        items.append(
-            {
-                "id": item["id"],
-                "kind": item["kind"],
-                "remaining": item["remaining"],
-                "due_date": item["due_date"] or item["booking_date"],
-                "reference": entry.reference if entry is not None else None,
-                "contract_number": contract.number if contract else None,
-                "contract_id": str(contract.id) if contract else None,
-                "mandate_reference": mandate_ref,
-                "party_iban_fingerprints": fingerprints,
-                "account_number": item["account_number"],
-                "debtor_key": str(account.party_id) if account and account.party_id else None,
-                # No dedicated Forderungsart/kind on OpenItem distinguishes a deposit demand from
-                # rent or Hausgeld (OpenItemKind only knows receivable/payable; ``component`` is
-                # never populated, see accounting/services.py:_apply_open_items). Derived instead
-                # over the contract's own deposit demand (mhvp.contracts.models.Deposit): an open,
-                # still due deposit of the same contract and exact amount (see docs/ASSUMPTIONS.md,
-                # entry "posting_proposal is_deposit"). This is a heuristic, not a stored Merkmal.
-                "is_deposit": await _is_deposit_item(session, item, contract),
-            }
-        )
-    return propose(tx_dict, rules, items, payables)
+    collected = await feats.collect(session, tx)
+    return propose(collected.tx, collected.rules, collected.open_items, collected.payables)

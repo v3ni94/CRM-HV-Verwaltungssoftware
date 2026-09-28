@@ -29,7 +29,7 @@ from mhvp.accounting.models import (
     OpenItem,
     OpenItemKind,
 )
-from mhvp.banking import allocation
+from mhvp.banking import allocation, posting_proposal
 from mhvp.banking.models import BankRule, BankTransaction, RuleState, TransactionStatus
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -169,28 +169,20 @@ def unambiguous(found: list[Candidate], amount: Decimal) -> Candidate | None:
 
 
 def rule_matches(rule: BankRule, tx: BankTransaction) -> bool:
-    m = rule.match
+    """A rule matches a transaction of its own legal entity (B01) when the match criteria of
+    ``posting_proposal.rule_matches`` hold; one implementation for the runner and stage 1
+    (consolidated 28.09.2026, plan M12 S0)."""
     if rule.legal_entity_id != tx.legal_entity_id:
         return False
-    if (
-        m.get("counterpart_iban_fingerprint")
-        and m["counterpart_iban_fingerprint"] != tx.counterpart_iban_fingerprint
-    ):
-        return False
-    if (
-        m.get("name_contains")
-        and m["name_contains"].lower() not in (tx.counterpart_name or "").lower()
-    ):
-        return False
-    if m.get("purpose_regex"):
-        try:
-            if not re.search(m["purpose_regex"], tx.purpose or "", re.IGNORECASE):
-                return False
-        except re.error:
-            return False
-    if m.get("amount_min") is not None and tx.amount < Decimal(str(m["amount_min"])):
-        return False
-    return not (m.get("amount_max") is not None and tx.amount > Decimal(str(m["amount_max"])))
+    return posting_proposal.rule_matches(
+        rule.match,
+        {
+            "amount": tx.amount,
+            "purpose": tx.purpose,
+            "counterpart_name": tx.counterpart_name,
+            "counterpart_iban_fingerprint": tx.counterpart_iban_fingerprint,
+        },
+    )
 
 
 async def lock_for_booking(session: AsyncSession, tx_id: uuid.UUID) -> BankTransaction:
@@ -331,8 +323,12 @@ async def book_payment(
     a counter account, never against the partner bank account (``MHVP-BANK-0020``), and the
     partner is left untouched. Callers lock with :func:`lock_for_booking`."""
     pair = await _transfer_partner(session, tx) if tx.transfer_pair_id is not None else None
-    # A pair half whose posting was reversed is bookable again; everything else unchanged.
-    reopened = pair is not None and tx.journal_entry_id is not None
+    # A transaction whose posting was reversed (B03) is bookable again, once: the reversal
+    # closed the first posting and the new posting is the correction (ADR 0013, Storno plus
+    # Neubuchung). A pair half is checked by ``_transfer_partner``; everything else unchanged.
+    reopened = tx.journal_entry_id is not None and (
+        pair is not None or await _effective_entry(session, tx.journal_entry_id) is None
+    )
     if not reopened and (
         tx.status in (TransactionStatus.BOOKED, TransactionStatus.IGNORED) or tx.journal_entry_id
     ):
