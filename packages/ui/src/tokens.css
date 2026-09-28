@@ -97,6 +97,11 @@
   --mhvp-color-progress-label-bg: #ffe8a8;
   --mhvp-color-progress-label-fg: #6b4d00;
 
+  /* App header height (M31): one row of 56 px on phones, 64 px from the sm breakpoint (see
+   * the media rule below). Sticky elements under the header (table heads, section bars,
+   * scroll margins) offset by this variable instead of a hard coded value. */
+  --mhvp-header-h: 3.5rem;
+
   /* Focus ring (consistent across inputs, buttons, links, cards) */
   --mhvp-focus-ring-color: var(--mhvp-color-accent-strong);
   --mhvp-focus-ring-width: 2px;
@@ -180,6 +185,13 @@
 
   /* Chevron of custom styled selects, coloured with the muted text colour per mode. */
   --mhvp-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236b6c6f' stroke-width='1.5'%3E%3Cpath d='M5.5 7.5 10 12l4.5-4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* Header height from the Tailwind sm breakpoint (640 px): the header row grows to 64 px. */
+@media (min-width: 640px) {
+  :root {
+    --mhvp-header-h: 4rem;
+  }
 }
 
 /* Evening mode (design B, "Dunkel und praezise"): set explicitly by the theme script and switch

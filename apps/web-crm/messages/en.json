@@ -10518,5 +10518,11 @@
     },
     "readOnly": "Ticking needs the permission properties:update.",
     "startedAt": "started on {date}"
+  },
+  "Ui": {
+    "close": "Close",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "stepProgress": "Step {n} of {total}"
   }
 }

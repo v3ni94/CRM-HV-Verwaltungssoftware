@@ -10518,5 +10518,11 @@
     },
     "readOnly": "Zum Abhaken ist das Recht properties:update erforderlich.",
     "startedAt": "gestartet am {date}"
+  },
+  "Ui": {
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "cancel": "Abbrechen",
+    "stepProgress": "Schritt {n} von {total}"
   }
 }
