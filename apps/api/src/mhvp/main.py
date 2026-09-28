@@ -65,6 +65,7 @@ from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolv
 from mhvp.core.security_headers import SecurityHeadersMiddleware
 from mhvp.core.storage import create_s3_client
 from mhvp.core.versioning import ApiVersionMiddleware, mark_deprecated_routes
+from mhvp.dataquality.routers import router as data_quality_router
 from mhvp.documents.intake_routers import router as documents_intake_router
 from mhvp.documents.paperless_webhook import router as paperless_webhook_router
 from mhvp.documents.routers import router as documents_router
@@ -248,6 +249,7 @@ def create_app(
     app.include_router(vollimport_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)
     app.include_router(workspace_router, prefix=API_PREFIX)
+    app.include_router(data_quality_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
     app.include_router(accounting_router, prefix=API_PREFIX)
     app.include_router(accounting_intake_router, prefix=API_PREFIX)

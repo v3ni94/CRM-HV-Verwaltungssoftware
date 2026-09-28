@@ -202,6 +202,7 @@ async def create_property(
     body: s.PropertyIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> s.PropertyOut:
     async with tenant_tx(request, principal) as session:
+        svc.check_postcode(body.country, body.postal_code)
         await svc.check_catalog(session, "property_type", body.property_type_code)
         data = body.model_dump()
         data["custom_fields"] = await svc.check_custom_fields(
@@ -252,6 +253,8 @@ async def update_property(
     async with tenant_tx(request, principal) as session:
         prop = await _get(session, Property, property_id)
         _check_version(if_match, prop.version)
+        if (body.postal_code, body.country) != (prop.postal_code, prop.country):
+            svc.check_postcode(body.country, body.postal_code)
         if body.management_type != prop.management_type:
             raise svc.invalid(
                 "Die Verwaltungsart kann nach Anlage nicht geändert werden (Rechtsträger, 6.9.1)."

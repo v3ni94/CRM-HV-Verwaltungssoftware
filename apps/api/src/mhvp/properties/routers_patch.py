@@ -64,6 +64,8 @@ async def patch_property(
         prop = await _get(session, Property, property_id)
         _check_version(if_match, prop.version)
         merged: s.PropertyIn = _merge(s.PropertyIn, prop, body)
+        if (merged.postal_code, merged.country) != (prop.postal_code, prop.country):
+            svc.check_postcode(merged.country, merged.postal_code)
         if merged.management_type != prop.management_type:
             raise svc.invalid(
                 "Die Verwaltungsart kann nach Anlage nicht geändert werden (Rechtsträger, 6.9.1)."

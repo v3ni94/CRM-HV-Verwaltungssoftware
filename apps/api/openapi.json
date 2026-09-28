@@ -13479,6 +13479,183 @@
         "title": "DataKind",
         "type": "string"
       },
+      "DataQualityCheckIn": {
+        "additionalProperties": false,
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "entity": {
+            "enum": [
+              "property",
+              "contact",
+              "deadline"
+            ],
+            "title": "Entity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity"
+        ],
+        "title": "DataQualityCheckIn",
+        "type": "object"
+      },
+      "DataQualityCheckOut": {
+        "properties": {
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/DataQualityFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "findings"
+        ],
+        "title": "DataQualityCheckOut",
+        "type": "object"
+      },
+      "DataQualityFinding": {
+        "properties": {
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "rule": {
+            "title": "Rule",
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "error",
+              "warning",
+              "hint"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "rule",
+          "field",
+          "severity",
+          "message"
+        ],
+        "title": "DataQualityFinding",
+        "type": "object"
+      },
+      "DataQualityReportItem": {
+        "properties": {
+          "entity_id": {
+            "title": "Entity Id",
+            "type": "string"
+          },
+          "entity_type": {
+            "enum": [
+              "property",
+              "contact",
+              "ticket"
+            ],
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/DataQualityFinding"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "entity_type",
+          "entity_id",
+          "label",
+          "findings"
+        ],
+        "title": "DataQualityReportItem",
+        "type": "object"
+      },
+      "DataQualityReportOut": {
+        "properties": {
+          "generated_on": {
+            "format": "date",
+            "title": "Generated On",
+            "type": "string"
+          },
+          "sections": {
+            "items": {
+              "$ref": "#/components/schemas/DataQualityReportSection"
+            },
+            "title": "Sections",
+            "type": "array"
+          },
+          "sections_omitted": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Sections Omitted",
+            "type": "array"
+          }
+        },
+        "required": [
+          "generated_on",
+          "sections"
+        ],
+        "title": "DataQualityReportOut",
+        "type": "object"
+      },
+      "DataQualityReportSection": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/DataQualityReportItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "key": {
+            "enum": [
+              "properties",
+              "contacts",
+              "contact_emails",
+              "deadlines"
+            ],
+            "title": "Key",
+            "type": "string"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "key",
+          "total",
+          "items"
+        ],
+        "title": "DataQualityReportSection",
+        "type": "object"
+      },
       "DatevImportIn": {
         "additionalProperties": false,
         "properties": {
@@ -67545,6 +67722,93 @@
         "summary": "Zusatzfeld ändern",
         "tags": [
           "Kataloge"
+        ]
+      }
+    },
+    "/api/v1/data-quality/check": {
+      "post": {
+        "description": "Advisory check without side effects; warnings never block saving. Only ES-01 is also\nenforced by the property endpoints.",
+        "operationId": "check_api_v1_data_quality_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DataQualityCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataQualityCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entwurf gegen Erfassungsstandards prüfen",
+        "tags": [
+          "Datenqualität"
+        ]
+      }
+    },
+    "/api/v1/data-quality/report": {
+      "get": {
+        "operationId": "report_api_v1_data_quality_report_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 1000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DataQualityReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Datenqualität: Verstöße gegen Erfassungsstandards",
+        "tags": [
+          "Datenqualität"
         ]
       }
     },

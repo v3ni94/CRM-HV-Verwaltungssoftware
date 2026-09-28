@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact, Party, PartyMember, PartyRole
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
+from mhvp.dataquality.rules import postcode_error
 from mhvp.properties.models import (
     AllocationKey,
     AllocationKeyTemplate,
@@ -52,6 +53,26 @@ ACCOUNT_OWNERS: dict[BankAccountKind, set[LegalEntityKind]] = {
 
 def invalid(detail: str) -> ProblemError:
     return ProblemError(ErrorCodes.VALIDATION, detail=detail)
+
+
+def check_postcode(country: str | None, postal_code: str | None) -> None:
+    """ES-01 (docs/rules/ES-erfassungsstandards.md): hard check of the German postcode on the
+    API. Endpoints call it on create and when postcode or country change, so stored legacy
+    values stay readable and editable in their other fields."""
+    error = postcode_error(country, postal_code)
+    if error:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=error,
+            errors=[
+                FieldError(
+                    location=["body", "postal_code"],
+                    field="postal_code",
+                    code="postcode_invalid",
+                    message=error,
+                )
+            ],
+        )
 
 
 def hoa_name(prop: Property) -> str:

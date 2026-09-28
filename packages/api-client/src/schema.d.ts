@@ -5110,6 +5110,44 @@ export interface paths {
         patch: operations["update_custom_field_api_v1_custom_fields__field_id__patch"];
         trace?: never;
     };
+    "/api/v1/data-quality/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Entwurf gegen Erfassungsstandards prüfen
+         * @description Advisory check without side effects; warnings never block saving. Only ES-01 is also
+         *     enforced by the property endpoints.
+         */
+        post: operations["check_api_v1_data_quality_check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/data-quality/report": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Datenqualität: Verstöße gegen Erfassungsstandards */
+        get: operations["report_api_v1_data_quality_report_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/deletion-proposals": {
         parameters: {
             query?: never;
@@ -21773,6 +21811,75 @@ export interface components {
          * @enum {string}
          */
         DataKind: "documents" | "consumption" | "billing_result" | "billing_unit_data";
+        /** DataQualityCheckIn */
+        DataQualityCheckIn: {
+            /** Data */
+            data?: {
+                [key: string]: unknown;
+            };
+            /**
+             * Entity
+             * @enum {string}
+             */
+            entity: "property" | "contact" | "deadline";
+        };
+        /** DataQualityCheckOut */
+        DataQualityCheckOut: {
+            /** Findings */
+            findings: components["schemas"]["DataQualityFinding"][];
+        };
+        /** DataQualityFinding */
+        DataQualityFinding: {
+            /** Field */
+            field: string | null;
+            /** Message */
+            message: string;
+            /** Rule */
+            rule: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "error" | "warning" | "hint";
+        };
+        /** DataQualityReportItem */
+        DataQualityReportItem: {
+            /** Entity Id */
+            entity_id: string;
+            /**
+             * Entity Type
+             * @enum {string}
+             */
+            entity_type: "property" | "contact" | "ticket";
+            /** Findings */
+            findings: components["schemas"]["DataQualityFinding"][];
+            /** Label */
+            label: string;
+        };
+        /** DataQualityReportOut */
+        DataQualityReportOut: {
+            /**
+             * Generated On
+             * Format: date
+             */
+            generated_on: string;
+            /** Sections */
+            sections: components["schemas"]["DataQualityReportSection"][];
+            /** Sections Omitted */
+            sections_omitted?: string[];
+        };
+        /** DataQualityReportSection */
+        DataQualityReportSection: {
+            /** Items */
+            items: components["schemas"]["DataQualityReportItem"][];
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "properties" | "contacts" | "contact_emails" | "deadlines";
+            /** Total */
+            total: number;
+        };
         /** DatevImportIn */
         DatevImportIn: {
             /** Content */
@@ -44833,6 +44940,70 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CustomFieldOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_api_v1_data_quality_check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DataQualityCheckIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataQualityCheckOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    report_api_v1_data_quality_report_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DataQualityReportOut"];
                 };
             };
             /** @description Validation Error */
