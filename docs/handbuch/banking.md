@@ -55,6 +55,28 @@ Zuordnen und buchen verlangt eine Bestätigung des Betrags. Ohne passenden offen
 lässt sich der Umsatz nur mit Begründung (mindestens 3 Zeichen) als Ignorieren
 markieren.
 
+## Entscheidungsprotokoll und Ablehnen (lernender Buchhalter)
+
+Mit dem Mandantenschalter Lernender Buchhalter (Standard aus, Einstellungen des Mandanten,
+nur mit Freigaberecht und Recht zur Mandantenkonfiguration, mit Grund) merkt sich die
+Plattform je Bankumsatz, welche Vorschläge angezeigt wurden und was die Person daraus
+gemacht hat: unverändert übernommen, geändert (mit Abweichung bei Posten, Gegenkonto oder
+Skonto), abgelehnt mit Grund, ignoriert mit Grund oder nach einem Storno neu gebucht. Das
+Protokoll ist nur Nachweis: es bucht nichts, es ändert keine Buchung und es öffnet keine
+Freigabestufe. Die Aktivierung setzt die Datenschutzprüfung des Betreibers voraus
+(offene Frage M12-06), bis dahin bleibt der Schalter aus.
+
+Ablehnen: Passt kein Vorschlag, lehnt die Person die Vorschläge mit einem Grund von
+mindestens drei Zeichen ab. Der Umsatz bleibt offen und kann später gebucht oder ignoriert
+werden. Ein ignorierter Umsatz lässt sich mit Grund wieder eröffnen. Ein gebuchter Umsatz
+wird nie geändert, sondern storniert (mit Grundcode, zum Beispiel falscher Posten oder
+falscher Betrag) und einmal neu gebucht.
+
+Veralteter Vorschlag: Ändern sich die Fakten (neuer offener Posten, freigegebene Regel),
+erneuert die Plattform den Vorschlag im Hintergrund. Eine Buchung, die sich noch auf den
+alten Vorschlag bezieht, wird mit dem Hinweis Vorschlag veraltet abgewiesen; nach dem Neuladen
+der Vorschläge kann die Person erneut entscheiden.
+
 ## Zahlungsaufträge
 
 Zahlungsaufträge (Menü Bank, Zahlungsaufträge) durchlaufen eine Freigabe durch zwei

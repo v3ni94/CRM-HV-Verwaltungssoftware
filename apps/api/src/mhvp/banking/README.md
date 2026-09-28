@@ -152,6 +152,51 @@ Vorschlag oder Entwurf, nichts löst eine Zahlung aus.
 - Migration `0197_payment_submission`; Regel `docs/rules/M15-01-pain-versions.md`; Runbook
   `docs/runbooks/zahllauf-test.md`; Test `tests/integration/test_m15_payment_submission.py`.
 
+## Lernender Buchhalter: Entscheidungsprotokoll (ADR 0013, rule M12-04, plan M12 S0 and S1)
+
+Ground truth for every later learning step, behind `tenant_settings.learning_bookkeeper_enabled`
+(default off; `GET`/`PUT /banking/learning`, accounting:approve plus tenant_settings:update,
+reason, event `tenant.learning_bookkeeper_changed`). With the switch off nothing is written and
+booking, ignoring and rejecting behave as before. Nothing here posts automatically.
+
+* `features.py`: `collect(session, tx)` assembles the stage 1 input (transaction, approved and
+  active rules, open receivables with evidence, open payables) of the ledger of the
+  transaction's legal entity; `Features.hash()` is the canonical SHA-256 over it including
+  `RULE_VERSION`; `summary()` is the minimised stored form (no names, no purpose, no plain
+  IBAN). `posting_proposal.stage1_for_transaction` delegates here; `ENGINE_VERSION` lives in
+  `posting_proposal`.
+* `proposals.py`: table `posting_decision` (RLS, one pending row per transaction, guard
+  trigger `mhvp_posting_decision_guard`: close once, never rewrite, never delete).
+  `compute_for_run` (Celery task `mhvp.banking.compute_proposals`, queued after the commit of
+  the file and CSV import through `core.db.tenancy.after_commit`, called by the finAPI and
+  FinTS tasks after their own commit; inline with `Settings.ai_inline`) snapshots every open
+  transaction of a sync run, idempotent per run; a changed `features_hash` expires the old row
+  and opens a new round. `record_booking` (called by `_book`) closes the round as
+  `accepted_unchanged` or `modified` with the diff of `decisions.py` against the chosen
+  proposal (`BookIn.proposal_id`, `chosen`; choosing another proposal is a choice, not a
+  modification), `record_rejection` (`POST /transactions/{id}/reject`, reason mandatory,
+  transaction stays open, next round opened, optional `ai_proposal_id` closes the AI proposal
+  through `mhvp.ai.examples.record_rejection`), `record_ignore` (`POST .../ignore`) and
+  `record_reversal` (counter example rows). `POST .../reopen` makes an ignored transaction
+  open again with a reason. A stale `proposal_id` is refused with 409 `MHVP-BANK-0021`.
+  `GET /transactions/{id}/decisions` lists the rounds; `GET .../posting-proposals` names the
+  pending round under `learning`. Tax advisor scope (M18-05) applies to the new endpoints.
+* `events_consumer.py`: watermark job (`banking_event_watermark`, beat task
+  `mhvp.banking.process_events`, pattern `automation.services.process_tenant`) for
+  `journal_entry.reversed` (counter example row, transaction back to `new`, fresh snapshot,
+  event `bank_transaction.posting_reversed`), `bank_transaction.reviewed` and
+  `contact.deleted` (pending snapshots recomputed). Accounting never imports banking.
+* `event_types.py`: names of the bank rule lifecycle events (`bank_rule.proposed`,
+  `approved`, `activated`, `disabled`; `superseded` and `downgraded` reserved for S5 and S6)
+  and the decision events.
+* Reversal reason code: `accounting.services.reverse(..., reason_code=ReversalReason.X)` and
+  `journal_entry.reversal_reason_code` (B03); `matching.book_payment` accepts a transaction
+  whose effective posting was reversed for exactly one new posting.
+* `matching.rule_matches` delegates to `posting_proposal.rule_matches` (one implementation
+  plus the legal entity check). Migration 0232. Tests `tests/unit/test_posting_decision_diff.py`,
+  `tests/integration/test_m12_posting_decisions.py`. Operator decisions M12-05 to M12-08 in
+  `docs/OPEN_QUESTIONS.md`; the data protection review M12-06 blocks the switch in production.
+
 ## Kennzahlen des Bankabgleichs (A45, Abnahme M12)
 
 `matching_metrics.py` computes coverage (automatically and unambiguously assigned and posted

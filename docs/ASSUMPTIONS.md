@@ -1,6 +1,6 @@
 # Annahmen
 
-Stand: 26.09.2026 (A-048, A-049 und A-052 ergänzt). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
+Stand: 28.09.2026 (A-077 bis A-079 ergänzt; zuvor 26.09.2026 mit A-048, A-049 und A-052). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
 
 Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Keine dieser Annahmen berührt Geld, Forderungsbestand, Datenschutz, gesetzliche Fristen oder Beweiserhalt. Solche Punkte wären nach Regel 3 offene Fragen und stehen in `docs/OPEN_QUESTIONS.md`. Jede Annahme wird spätestens beim genannten Meilenstein überprüft und bei Bestätigung oder Widerlegung hier fortgeschrieben.
 
@@ -885,4 +885,37 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Kennzeichnung | unkritisch (kein Geldfluss, keine Rechtsfrist, keine Sperre) |
 | Betroffene Bereiche | `mhvp.workspace.deadlines`, `mhvp.workspace.deadline_routers`, CRM Fristen, Einstellungen Fristtypen, Vertrag beenden, Objektseite, Mieterhöhungsfall |
 | Überprüfung spätestens bei Meilenstein | Entscheidung WS-01-Q1 und WS-01-Q2 |
+| Datum | 28.09.2026 |
+
+## A-077
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Schwellen und Fenster des lernenden Buchhalters (ADR 0013, Fahrplan M12 Abschnitt 3.3 und 3.4) sind Produktschutz-Standards ohne empirische Basis: Stufe L1 ab 20 Entscheidungen in 90 Tagen und precision_manual 0,95; Stufe L2 nach 30 Tagen L1, 50 Entscheidungen, 0,98; Stufe L3 nach 60 Tagen L2, 100 Automatikbuchungen, Fehlerquote 0,005; Regelvorschlag ab 5 gleichen bestätigten Entscheidungen (tenant_settings.bank_rule_proposal_threshold, Bereich 2 bis 50, folgt in S5); Konfidenz einer Regel 0,9 mal 0,5 hoch Widersprüche der letzten 90 Tage; Historie Stufe 1d 0,4 plus 0,1 je konsistentem Fall, Deckel 0,85, Mindestnachweis zwei; Verfall von Regeln ohne Treffer nach 180 Tagen. Je Mandant nur nach oben veränderbar. In S0 und S1 sind noch keine dieser Schwellen wirksam; jede Runde des Entscheidungsprotokolls trägt fest die Stufe L0. |
+| Begründung | Der Fahrplan legt die Werte vorab fest (Regel 0.1.8: Sollwerte vor dem Ergebnis), eine empirische Grundlage entsteht erst mit dem anonymisierten HVM-Testbestand (M12-02) und dem Entscheidungsprotokoll; bis dahin ist konservativ besser als kalibriert. |
+| Kennzeichnung | unkritisch, solange keine Stufe über L0 aktiv ist (kein Geldfluss); vor Aktivierung von L1 bis L3 mit dem Testbestand neu bewerten und nie als Rechtsanforderung darstellen |
+| Betroffene Bereiche | `mhvp.banking.proposals` (Feld `level`), spätere Module `levels.py`, `learning.py`, `verifiers.py`, `docs/rules/M12-04-lernender-buchhalter.md` |
+| Überprüfung spätestens bei Meilenstein | S4 (Stufe L1) und vor dem G1-Antrag |
+| Datum | 28.09.2026 |
+
+## A-078
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Merkmale und Snapshot des Entscheidungsprotokolls (`mhvp.banking.features`, Regel M12-04): (1) Der Merkmalshash umfasst Umsatz (Betrag, Buchungstag, Zweck, Gegenname, IBAN-Fingerabdruck, Mandats- und End-to-End-Referenz, Gläubiger-ID, Transaktionscode), die freigegebenen und aktiven Regeln des Rechtsträgers, die offenen Forderungen mit Nachweismerkmalen und die offenen Verbindlichkeiten zum Buchungstag; jede Änderung dieser Fakten macht einen offenen Snapshot veraltet (Zustand expired, neue Runde). (2) Gespeichert wird nur eine minimierte Zusammenfassung (Betrag, Richtung, Buchungstag, IBAN-Fingerabdruck, Kennungen von Regeln, Posten und Rechnungen, Vorhandensein von Mandats- und End-to-End-Referenz, Transaktionscode); Gegenname und Verwendungszweck stehen nur am Umsatz selbst. (3) Der Buchungstext zählt beim Diff nicht als Änderung, gewertet werden Posten, Beträge, Gegenkonto und Skonto. (4) Ohne gewählten Vorschlag gilt der Vorschlag mit der höchsten Konfidenz als Referenz; die Wahl eines anderen Vorschlags ist Wahl, keine Änderung. (5) Massenbestätigungen werden mit Kennzeichen bulk erfasst und zählen später mit geringerem Gewicht. |
+| Begründung | Ein Snapshot ist nur als Grundwahrheit brauchbar, wenn erkennbar ist, ob die Person dieselben Fakten sah wie das System (Hash), und wenn der Speicher so wenig Personenbezug wie möglich trägt (M12-06). |
+| Kennzeichnung | unkritisch (kein Geldfluss, nur Protokoll); Datenschutz über M12-06 gesperrt |
+| Betroffene Bereiche | `mhvp.banking.features`, `mhvp.banking.decisions`, `mhvp.banking.proposals`, `posting_decision` |
+| Überprüfung spätestens bei Meilenstein | S3 (Gedächtnis Stufe 1d) und Datenschutzprüfung M12-06 |
+| Datum | 28.09.2026 |
+
+## A-079
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Ereignisverbrauch und Grundcodes (ADR 0013, B03): (1) Der Watermark-Job `mhvp.banking.process_events` läuft jede Minute mit 5 Sekunden Nachlauf und verarbeitet höchstens 500 Ereignisse je Mandant und Lauf; die erste Ausführung positioniert nur den Wasserstand, ältere Ereignisse sind Verlauf. (2) Ein Storno im Buchungskreis setzt den zugehörigen Bankumsatz auf offen; die Satznummer bleibt als Verlauf am Umsatz, eine zweite Neubuchung ist erst nach erneutem Storno möglich. (3) Bankrückgaben (`payments.record_return`) erzeugen kein Ereignis `journal_entry.reversed` und setzen den ursprünglichen Ausgang nicht zurück. (4) Der Grundcode eines Stornos ist eine geschlossene Liste (input_error, wrong_assignment, wrong_amount, wrong_date, duplicate, bank_return, run_reversal, automation_error, other) mit Standard other für bestehende Aufrufer. (5) Generische Gegenpartei-Namen (Liste je Mandant) und die Werktagslogik der Nachkontrolle (nächster Werktag nach dem bundeseinheitlichen Kalender, ohne Landesfeiertage) werden erst mit S5 und S6 eingeführt und dann hier ergänzt. |
+| Begründung | Buchungskreis und Bankseite dürfen sich nicht gegenseitig importieren; die asynchrone Verarbeitung mit Wasserstand ist das bestehende Muster (M9-02) und hält die Buchungstransaktion frei von Bankseiteneffekten. |
+| Kennzeichnung | unkritisch (Storno und Neubuchung bleiben Handlungen einer Person; kein Geldfluss durch den Job) |
+| Betroffene Bereiche | `mhvp.banking.events_consumer`, `mhvp.banking.tasks`, `mhvp.accounting.services.reverse`, `mhvp.banking.matching.book_payment` |
+| Überprüfung spätestens bei Meilenstein | S6 (Runner und Nachkontrolle) |
 | Datum | 28.09.2026 |
