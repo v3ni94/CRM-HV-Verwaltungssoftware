@@ -3017,7 +3017,9 @@
       "predecessorHint": "The email arrived after the reopening period had ended; the previous ticket stays closed.",
       "successors": "{count, plural, one {Follow up ticket} other {Follow up tickets}}",
       "successorsHint": "New emails for this closed ticket are handled in the follow up ticket."
-    }
+    },
+    "dueOnConfirmPast": "Confirm past date",
+    "dueOnDiscard": "Discard"
   },
   "Automation": {
     "title": "Automation",
@@ -4059,7 +4061,8 @@
     },
     "bankAccountsLedger": "Ledger account",
     "bankAccountsNoLedger": "no ledger account",
-    "buildingOfUnit": "Building"
+    "buildingOfUnit": "Building",
+    "namePlaceholder": "Street number, postcode city"
   },
   "AiChat": {
     "title": "AI assistant",
@@ -4421,6 +4424,10 @@
     "ruleProposals": {
       "title": "Rule proposals",
       "description": "Proposals from repeated manual assignments per sender. Active only once accepted."
+    },
+    "dataQuality": {
+      "title": "Data quality",
+      "description": "Records deviating from the entry standard, with a link to fix them."
     }
   },
   "Members": {
@@ -9626,5 +9633,61 @@
     "documentSent": "{name} (already sent)",
     "sendDocument": "Send document",
     "attachmentQueued": "Document is scheduled."
+  },
+  "EntryStandards": {
+    "softTitle": "Entry standard hints",
+    "softFooter": "These hints do not prevent saving.",
+    "reportLink": "Open the data quality report",
+    "applySuggestion": "Apply suggestion",
+    "pastConfirm": "The date lies in the past. I explicitly confirm this date.",
+    "pastConfirmPrompt": "The deadline lies in the past. Save anyway?",
+    "assigneeHint": "Without a responsible person the deadline appears in the data quality report. Please assign a responsible person after creating it.",
+    "rules": {
+      "ES-01": "A German postcode must consist of exactly five digits.",
+      "ES-02": {
+        "street": "Street is missing; automatic matching needs it.",
+        "house_number": "House number is missing; automatic matching needs it.",
+        "postal_code": "Postcode is missing; automatic matching needs it.",
+        "city": "City is missing; automatic matching needs it."
+      },
+      "ES-03": "The house number is in the street field; please move it to the house number field.",
+      "ES-04": {
+        "suggest": "Standard property name: street number, postcode city. Suggestion: {suggestion}",
+        "plain": "Standard property name: street number, postcode city. Please complete the address first."
+      },
+      "ES-05": "Last name and first name belong in separate fields; the display name is derived automatically.",
+      "ES-06": "The last name field probably contains first and last name; please move the first name.",
+      "ES-07": "The name contains a company element; please record it as a company.",
+      "ES-08": {
+        "first_name": "First name is missing.",
+        "company_name": "Company name is missing."
+      },
+      "ES-09": "The deadline lies in the past.",
+      "ES-10": "No responsible person is set for this deadline.",
+      "ES-11": "Owner or tenant without an email address; incoming mail cannot be matched automatically."
+    }
+  },
+  "DataQuality": {
+    "breadcrumb": "Settings",
+    "title": "Data quality",
+    "intro": "Records deviating from the entry standard. Nothing is changed automatically; open the record via the link and correct it.",
+    "generatedOn": "As of {date}",
+    "empty": "No deviations found.",
+    "count": "{shown} of {total}",
+    "open": "Open",
+    "omitted": "Hidden without permission: {sections}",
+    "loadError": "The report could not be loaded.",
+    "severity": {
+      "error": "Error",
+      "warning": "Warning",
+      "hint": "Hint"
+    },
+    "sections": {
+      "properties": "Properties with incomplete or deviating address",
+      "contacts": "Contacts with probably swapped or misplaced names",
+      "contact_emails": "Owners and tenants without an email address",
+      "deadlines": "Deadlines without a responsible person"
+    },
+    "handbook": "The standards are described in the handbook under Erfassungsstandards."
   }
 }

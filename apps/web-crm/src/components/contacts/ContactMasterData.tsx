@@ -6,8 +6,10 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 
 import { EditableSection } from "@/components/common/EditableSection";
+import { EntryHints } from "@/components/common/EntryHints";
 import { InlineField, type InlineOption } from "@/components/common/InlineField";
 import { useAutosave } from "@/components/common/useAutosave";
+import { checkContact } from "@/lib/entry-standards";
 
 export type ContactMasterDataValues = {
   id: string;
@@ -98,6 +100,10 @@ export function ContactMasterData({ contact, canEdit }: { contact: ContactMaster
           testId="contact-is-consumer"
         />
         <InlineField {...field("notes")} label={tf("notes")} type="textarea" rows={4} className="flex flex-col gap-1 sm:col-span-2" />
+      </div>
+      {/* Entry standards ES-05 to ES-08 on the stored values; hints only. */}
+      <div className="mt-3">
+        <EntryHints findings={checkContact(values).filter((f) => f.severity !== "hint")} testId="contact-master-hints" />
       </div>
     </EditableSection>
   );

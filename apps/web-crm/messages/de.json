@@ -3017,7 +3017,9 @@
       "predecessorHint": "Die E-Mail ist nach Ablauf der Wiedereröffnungsfrist eingegangen; das Vorgängerticket bleibt abgeschlossen.",
       "successors": "{count, plural, one {Folgevorgang} other {Folgevorgänge}}",
       "successorsHint": "Neue E-Mails zu diesem abgeschlossenen Ticket werden im Folgevorgang bearbeitet."
-    }
+    },
+    "dueOnConfirmPast": "Vergangenes Datum bestätigen",
+    "dueOnDiscard": "Verwerfen"
   },
   "Automation": {
     "title": "Automatisierung",
@@ -4059,7 +4061,8 @@
     },
     "bankAccountsLedger": "Sachkonto",
     "bankAccountsNoLedger": "kein Sachkonto",
-    "buildingOfUnit": "Gebäude"
+    "buildingOfUnit": "Gebäude",
+    "namePlaceholder": "Straße Hausnummer, PLZ Ort"
   },
   "AiChat": {
     "title": "KI-Assistent",
@@ -4421,6 +4424,10 @@
     "ruleProposals": {
       "title": "Regelvorschläge",
       "description": "Vorschläge aus wiederholten manuellen Zuordnungen je Absender. Aktiv erst nach Annahme."
+    },
+    "dataQuality": {
+      "title": "Datenqualität",
+      "description": "Datensätze, die vom Erfassungsstandard abweichen, mit Link zur Korrektur."
     }
   },
   "Members": {
@@ -9626,5 +9633,61 @@
     "documentSent": "{name} (bereits gesendet)",
     "sendDocument": "Dokument senden",
     "attachmentQueued": "Dokument ist eingeplant."
+  },
+  "EntryStandards": {
+    "softTitle": "Hinweise zum Erfassungsstandard",
+    "softFooter": "Die Hinweise verhindern das Speichern nicht.",
+    "reportLink": "Zum Bericht Datenqualität",
+    "applySuggestion": "Vorschlag übernehmen",
+    "pastConfirm": "Das Datum liegt in der Vergangenheit. Ich bestätige das Datum ausdrücklich.",
+    "pastConfirmPrompt": "Das Fristdatum liegt in der Vergangenheit. Trotzdem speichern?",
+    "assigneeHint": "Ohne verantwortliche Person erscheint die Frist im Bericht Datenqualität. Bitte nach dem Anlegen eine zuständige Person zuweisen.",
+    "rules": {
+      "ES-01": "Die Postleitzahl muss in Deutschland aus genau fünf Ziffern bestehen.",
+      "ES-02": {
+        "street": "Straße fehlt; die automatische Zuordnung braucht sie.",
+        "house_number": "Hausnummer fehlt; die automatische Zuordnung braucht sie.",
+        "postal_code": "Postleitzahl fehlt; die automatische Zuordnung braucht sie.",
+        "city": "Ort fehlt; die automatische Zuordnung braucht ihn."
+      },
+      "ES-03": "Die Hausnummer steht im Feld Straße; bitte in das Feld Hausnummer übernehmen.",
+      "ES-04": {
+        "suggest": "Objektname nach Standard: Straße Hausnummer, PLZ Ort. Vorschlag: {suggestion}",
+        "plain": "Objektname nach Standard: Straße Hausnummer, PLZ Ort. Bitte zuerst die Anschrift vollständig erfassen."
+      },
+      "ES-05": "Nachname und Vorname gehören in getrennte Felder; die Anzeige Name, Vorname entsteht automatisch.",
+      "ES-06": "Im Feld Nachname steht vermutlich Vorname und Nachname; bitte den Vornamen in das Feld Vorname übernehmen.",
+      "ES-07": "Der Name enthält einen Firmenbestandteil; bitte als Firma erfassen.",
+      "ES-08": {
+        "first_name": "Vorname fehlt.",
+        "company_name": "Firmenname fehlt."
+      },
+      "ES-09": "Das Fristdatum liegt in der Vergangenheit.",
+      "ES-10": "Für die Frist ist keine verantwortliche Person eingetragen.",
+      "ES-11": "Eigentümer oder Mieter ohne E-Mail-Adresse; eingehende Mails können nicht automatisch zugeordnet werden."
+    }
+  },
+  "DataQuality": {
+    "breadcrumb": "Einstellungen",
+    "title": "Datenqualität",
+    "intro": "Datensätze, die vom Erfassungsstandard abweichen. Es wird nichts automatisch geändert; bitte den Datensatz über den Link öffnen und korrigieren.",
+    "generatedOn": "Stand {date}",
+    "empty": "Keine Abweichungen gefunden.",
+    "count": "{shown} von {total}",
+    "open": "Öffnen",
+    "omitted": "Ohne Berechtigung ausgeblendet: {sections}",
+    "loadError": "Der Bericht konnte nicht geladen werden.",
+    "severity": {
+      "error": "Fehler",
+      "warning": "Warnung",
+      "hint": "Hinweis"
+    },
+    "sections": {
+      "properties": "Objekte mit unvollständiger oder abweichender Anschrift",
+      "contacts": "Kontakte mit vermutlich vertauschten oder falsch erfassten Namen",
+      "contact_emails": "Eigentümer und Mieter ohne E-Mail-Adresse",
+      "deadlines": "Fristen ohne verantwortliche Person"
+    },
+    "handbook": "Die Standards sind im Handbuch unter Erfassungsstandards beschrieben."
   }
 }

@@ -4,7 +4,9 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { EntryHints } from "@/components/common/EntryHints";
 import { bff } from "@/lib/bff";
+import { checkProperty } from "@/lib/entry-standards";
 import { ui } from "@/lib/ui";
 
 const EMPTY = { number: "", name: "", management_type: "hoa", street: "", house_number: "", postal_code: "", city: "", state: "" };
@@ -18,7 +20,10 @@ export function PropertyCreate() {
   const [error, setError] = useState<string | null>(null);
   const set = (k: keyof typeof f) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setF((p) => ({ ...p, [k]: e.target.value }));
-  const valid = /^\d{3}$/.test(f.number) && f.name.trim().length >= 2;
+  // Entry standards (ES-01 to ES-04): only an invalid German postcode blocks, the rest are hints.
+  const touched = [f.name, f.street, f.house_number, f.postal_code, f.city].some((v) => v.trim() !== "");
+  const findings = touched ? checkProperty(f) : [];
+  const valid = /^\d{3}$/.test(f.number) && f.name.trim().length >= 2 && !findings.some((x) => x.severity === "error");
   const submit = async () => {
     setBusy(true);
     setError(null);
@@ -34,7 +39,7 @@ export function PropertyCreate() {
   const field = (k: keyof typeof f) => (
     <label className="flex flex-col gap-1">
       <span className={ui.label}>{t(`fields.${k}`)}</span>
-      <input className={ui.input} value={f[k]} onChange={set(k)} />
+      <input className={ui.input} value={f[k]} onChange={set(k)} placeholder={k === "name" ? t("namePlaceholder") : undefined} inputMode={k === "postal_code" ? "numeric" : undefined} />
     </label>
   );
   return (
@@ -60,6 +65,9 @@ export function PropertyCreate() {
         {field("state")}
       </div>
       <p className="mt-2 text-xs text-muted">{t("createHint")}</p>
+      <div className="mt-2">
+        <EntryHints findings={findings} testId="property-create-hints" onApplySuggestion={(name) => setF((p) => ({ ...p, name }))} />
+      </div>
       <button type="button" className={`${ui.primary} ${ui.actionFull} mt-3`} disabled={busy || !valid} onClick={submit}>
         {t("createButton")}
       </button>

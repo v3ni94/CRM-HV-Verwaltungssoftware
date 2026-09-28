@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 
 import { ResolutionDialog, isClosingStatus } from "@/components/tickets/ResolutionDialog";
 import { bff } from "@/lib/bff";
+import { isPastDate } from "@/lib/entry-standards";
 import { ui } from "@/lib/ui";
 
 export const STATUSES = ["new", "in_progress", "waiting", "done", "closed", "rejected"] as const;
@@ -36,6 +37,7 @@ type TemplateSummary = {
   checklist: { key: string; label: string; required: boolean }[];
   extra_fields: { key: string; label: string; required: boolean }[];
   active: boolean;
+  default_assignee_user_id?: string | null;
 };
 
 export function TicketCreate() {
@@ -45,6 +47,7 @@ export function TicketCreate() {
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState("normal");
   const [dueOn, setDueOn] = useState("");
+  const [pastConfirmed, setPastConfirmed] = useState(false);
   const [templates, setTemplates] = useState<TemplateSummary[]>([]);
   const [templateId, setTemplateId] = useState("");
   const [busy, setBusy] = useState(false);
@@ -57,6 +60,9 @@ export function TicketCreate() {
   }, []);
 
   const selected = templates.find((tpl) => tpl.id === templateId);
+  const te = useTranslations("EntryStandards");
+  // ES-09: a due date in the past needs an explicit confirmation; ES-10 is a hint only.
+  const pastDue = isPastDate(dueOn);
 
   const create = async () => {
     setBusy(true);
@@ -110,17 +116,33 @@ export function TicketCreate() {
         </label>
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("dueOn")}</span>
-          <input type="date" className={ui.input} value={dueOn} onChange={(e) => setDueOn(e.target.value)} title={t("dueOnHint")} />
+          <input
+            type="date"
+            className={ui.input}
+            value={dueOn}
+            onChange={(e) => {
+              setDueOn(e.target.value);
+              setPastConfirmed(false);
+            }}
+            title={t("dueOnHint")}
+          />
         </label>
         <button
           type="button"
           className={`${ui.primary} ${ui.actionFull}`}
           onClick={create}
-          disabled={busy || (title.trim().length < 3 && !selected)}
+          disabled={busy || (title.trim().length < 3 && !selected) || (pastDue && !pastConfirmed)}
         >
           {t("create")}
         </button>
       </div>
+      {pastDue ? (
+        <label className={`${ui.warning} flex items-center gap-2`}>
+          <input type="checkbox" checked={pastConfirmed} onChange={(e) => setPastConfirmed(e.target.checked)} />
+          {te("pastConfirm")}
+        </label>
+      ) : null}
+      {dueOn && !selected?.default_assignee_user_id ? <p className="text-xs text-muted">{te("assigneeHint")}</p> : null}
       {selected && (selected.checklist.some((c) => c.required) || selected.extra_fields.some((f) => f.required)) ? (
         <p className="text-xs text-muted">
           {selected.checklist
@@ -165,6 +187,8 @@ export function TicketEdit({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [closing, setClosing] = useState<string | null>(null);
+  const [pendingDue, setPendingDue] = useState<string | null>(null);
+  const te = useTranslations("EntryStandards");
   const send = async (path: string, method: string, body: unknown) => {
     setBusy(true);
     setError(null);
@@ -208,11 +232,18 @@ export function TicketEdit({
             <input
               type="date"
               className={ui.input}
-              value={dueOn ?? ""}
+              value={pendingDue ?? dueOn ?? ""}
               disabled={busy}
               title={t("dueOnHint")}
               onChange={(e) => {
-                if (e.target.value) void send("", "PATCH", { due_on: e.target.value });
+                const next = e.target.value;
+                if (!next) return;
+                // ES-09: a date in the past is only saved after an explicit confirmation.
+                if (isPastDate(next)) setPendingDue(next);
+                else {
+                  setPendingDue(null);
+                  void send("", "PATCH", { due_on: next });
+                }
               }}
             />
             {dueOn ? (
@@ -223,6 +254,24 @@ export function TicketEdit({
           </span>
         </label>
       </div>
+      {pendingDue ? (
+        <div role="status" className={`${ui.warning} flex flex-wrap items-center gap-2`}>
+          <span>{te("rules.ES-09")}</span>
+          <button
+            type="button"
+            className={ui.buttonSm}
+            disabled={busy}
+            onClick={async () => {
+              if (await send("", "PATCH", { due_on: pendingDue })) setPendingDue(null);
+            }}
+          >
+            {t("dueOnConfirmPast")}
+          </button>
+          <button type="button" className={ui.buttonSm} onClick={() => setPendingDue(null)}>
+            {t("dueOnDiscard")}
+          </button>
+        </div>
+      ) : null}
       {closing ? (
         <ResolutionDialog
           status={closing}

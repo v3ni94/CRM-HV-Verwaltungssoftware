@@ -468,6 +468,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
 
   // --- Kataloge und Felder ---------------------------------------------------------------
   {
+    id: "datenqualitaet",
+    title: "Datenqualität",
+    breadcrumb: [ROOT, "Datenqualität"],
+    href: "/einstellungen/datenqualitaet",
+    keywords: ["datenqualität", "erfassungsstandard", "stammdaten", "dubletten", "fehlende e-mail", "postleitzahl"],
+    permission: ["contacts:read"],
+  },
+  {
     id: "kataloge",
     title: "Kataloge",
     breadcrumb: [ROOT, "Kataloge"],

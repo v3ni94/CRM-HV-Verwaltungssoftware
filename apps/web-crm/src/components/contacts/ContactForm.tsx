@@ -12,7 +12,9 @@ import {
   type FieldErrors,
 } from "react-hook-form";
 
+import { EntryHints } from "@/components/common/EntryHints";
 import { bff } from "@/lib/bff";
+import { checkContact } from "@/lib/entry-standards";
 import {
   ADDRESS_LABELS,
   CHANNELS,
@@ -121,6 +123,14 @@ export function ContactForm(props: Props) {
   const [saving, setSaving] = useState(false);
   const [uploadingMandate, setUploadingMandate] = useState<number | null>(null);
   const kind = watch("kind");
+  // Entry standards ES-05 to ES-08: hints only, saving stays possible.
+  const nameFindings = checkContact({
+    kind,
+    first_name: watch("first_name"),
+    last_name: watch("last_name"),
+    company_name: watch("company_name"),
+  });
+  const nameTouched = [watch("first_name"), watch("last_name"), watch("company_name")].some((v) => typeof v === "string" && v.trim() !== "");
   const bankAccounts = watch("bank_accounts");
   // PUT without bank_accounts keeps them; they are shown masked and edited separately.
   const bankKept = !!existing && existing.bank_accounts.length > 0;
@@ -221,6 +231,11 @@ export function ContactForm(props: Props) {
             <Text name="letter_salutation" label={t("letterSalutation")} register={register} errors={errors} className="sm:col-span-2" />
           </>
         )}
+        {nameTouched && nameFindings.length ? (
+          <div className="sm:col-span-4">
+            <EntryHints findings={nameFindings} testId="contact-name-hints" />
+          </div>
+        ) : null}
         <Text name="position" label={t("position")} register={register} errors={errors} />
         <Text name="language" label={t("language")} register={register} errors={errors} />
         <div>

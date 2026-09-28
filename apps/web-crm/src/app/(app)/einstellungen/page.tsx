@@ -34,6 +34,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/schnittstellen/messdienstleister", title: tm("card.title"), description: tm("card.description"), show: can("metering_data:read") },
     { href: "/einstellungen/webhooks", title: tw("card.title"), description: tw("card.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/weg", title: t("weg.title"), description: t("weg.description"), show: can("accounting:read") },
+    { href: "/einstellungen/datenqualitaet", title: t("dataQuality.title"), description: t("dataQuality.description"), show: can("contacts:read") },
     { href: "/einstellungen/kataloge", title: t("catalogs.title"), description: t("catalogs.description"), show: can("properties:read") },
     { href: "/einstellungen/felder", title: t("customFields.title"), description: t("customFields.description"), show: can("properties:read") },
     { href: "/einstellungen/kautionszinsen", title: t("depositRates.title"), description: t("depositRates.description"), show: can("contracts:read") },

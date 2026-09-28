@@ -5,8 +5,10 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 
 import { EditableSection } from "@/components/common/EditableSection";
+import { EntryHints } from "@/components/common/EntryHints";
 import { InlineField, type InlineValue } from "@/components/common/InlineField";
 import { useAutosave } from "@/components/common/useAutosave";
+import { checkProperty, postcodeInvalid } from "@/lib/entry-standards";
 import { formatDecimal } from "@/lib/format";
 
 export type PropertyMaster = {
@@ -54,6 +56,10 @@ export function PropertyMasterData({ property, canEdit }: { property: PropertyMa
   const field = (name: keyof PropertyMaster) => ({ name, value: current[name] as InlineValue, onSave: autosave.save, state: autosave.fieldState(name) });
   const gardenUses = ["none", "yes", "partial"].map((v) => ({ value: v, label: tm(`gardenUses.${v}`) }));
   const areaCheck = nonNegative(tm("invalidArea"));
+  const te = useTranslations("EntryStandards");
+  // ES-01 is hard (also on the API); the other entry standards are shown as hints only.
+  const postcodeCheck = (v: unknown) => (typeof v === "string" && postcodeInvalid(current.country, v) ? te("rules.ES-01") : null);
+  const findings = checkProperty(current).filter((f) => f.severity !== "error");
   return (
     <EditableSection
       title={tm("title")}
@@ -71,7 +77,7 @@ export function PropertyMasterData({ property, canEdit }: { property: PropertyMa
         <InlineField {...field("property_type_code")} label={tm("propertyTypeCode")} type="select" catalog="property_type" />
         <InlineField {...field("street")} label={t("fields.street")} maxLength={200} />
         <InlineField {...field("house_number")} label={t("fields.house_number")} maxLength={20} />
-        <InlineField {...field("postal_code")} label={t("fields.postal_code")} maxLength={20} />
+        <InlineField {...field("postal_code")} label={t("fields.postal_code")} maxLength={20} validate={postcodeCheck} />
         <InlineField {...field("city")} label={t("fields.city")} maxLength={100} />
         <InlineField {...field("state")} label={t("fields.state")} />
         <InlineField {...field("municipality_code")} label={tm("municipalityCode")} />
@@ -94,6 +100,9 @@ export function PropertyMasterData({ property, canEdit }: { property: PropertyMa
         <InlineField {...field("garden_notes")} label={tm("gardenNotes")} type="textarea" className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3" />
         <InlineField {...field("renovation_notes")} label={tm("renovationNotes")} type="textarea" className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3" />
         <InlineField {...field("notes")} label={tm("notes")} type="textarea" className="flex flex-col gap-1 sm:col-span-2 lg:col-span-3" />
+      </div>
+      <div className="mt-3">
+        <EntryHints findings={findings} testId="property-master-hints" />
       </div>
     </EditableSection>
   );
