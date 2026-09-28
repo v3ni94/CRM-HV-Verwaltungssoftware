@@ -466,21 +466,25 @@ async def signature_for_user(
     the e-mail line is omitted."""
     if user_id is None:
         return None
+    # Hotfix 27.09.2026: only the display name of ``app_user``, never the whole entity. Loading
+    # ``User`` decrypts ``totp_secret``, which is sealed in the platform scope; in this tenant
+    # session the scope is the tenant, so every user with a second factor got a CryptoError
+    # (500 "Interner Fehler") on Antworten, Vorschlag übernehmen, ticket reply and preview.
     row = (
         await session.execute(
-            select(Membership, User)
+            select(Membership, User.display_name)
             .join(User, User.id == Membership.user_id)
             .where(Membership.tenant_id == tenant_id, Membership.user_id == user_id)
         )
     ).first()
     if row is None:
         return None
-    membership, user = row
+    membership, display_name = row
     settings = await session.scalar(
         select(TenantSettings).where(TenantSettings.tenant_id == tenant_id)
     )
     return render_signature(
-        display_name=user.display_name,
+        display_name=display_name or "",
         # Never ``user.email``: the login address is shared by all tenants of the user.
         email=email,
         position=membership.position,

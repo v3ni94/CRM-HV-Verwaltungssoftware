@@ -97,3 +97,17 @@ def test_build_reply_all_no_from_and_no_reply_to_yields_empty_to() -> None:
     )
     assert to == []
     assert cc == ["a@example.com"]
+
+
+def test_build_reply_all_skips_null_and_blank_entries() -> None:
+    """Hotfix 27.09.2026: NULL or blank array entries of stored rows never raise."""
+    stored: list[str] = [None, "", "  ", " A@B.DE "]  # type: ignore[list-item]
+    to, cc = mail.build_reply_all(
+        from_address=" mieter@example.com ",
+        reply_to="",
+        to_addresses=stored,
+        cc_addresses=[None, "mieter@example.com"],  # type: ignore[list-item]
+        own_addresses={None, "info@example.com"},  # type: ignore[arg-type]
+    )
+    assert to == ["mieter@example.com"]
+    assert cc == ["A@B.DE"]

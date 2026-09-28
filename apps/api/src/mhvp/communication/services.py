@@ -815,8 +815,9 @@ async def ticket_participants(
         if m.direction == "in" and m.from_address and include_thread_senders:
             addresses.add(m.from_address.lower())
         elif m.direction == "out" and m.status == "sent":
-            addresses.update(a.lower() for a in (m.to_addresses or []))
-            addresses.update(a.lower() for a in (m.cc_addresses or []))
+            # NULL entries of stored arrays are skipped (hotfix 27.09.2026).
+            addresses.update(a.lower() for a in (m.to_addresses or []) if a)
+            addresses.update(a.lower() for a in (m.cc_addresses or []) if a)
     return addresses
 
 

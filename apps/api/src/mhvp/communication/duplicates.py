@@ -232,6 +232,8 @@ def copy_of(
         direction="in",
         mailbox_id=mailbox_id,
         from_address=primary.from_address,
+        # The copy answers to the same Reply-To as the leading copy (hotfix 27.09.2026).
+        reply_to=primary.reply_to,
         to_addresses=list(primary.to_addresses),
         cc_addresses=list(primary.cc_addresses),
         subject=primary.subject,

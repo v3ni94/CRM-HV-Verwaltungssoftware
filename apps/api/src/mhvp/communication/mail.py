@@ -133,15 +133,18 @@ def build_reply_all(
     (``own_addresses``, alle Adressen, Groß-/Kleinschreibung ignoriert) und ohne Duplikate von
     ``To`` oder untereinander. Reihenfolge bleibt stabil, die erste Nennung einer Adresse
     gewinnt."""
-    own_lower = {a.lower() for a in own_addresses}
-    to = reply_to or from_address
+    # Hotfix 27.09.2026: stored arrays may hold NULL or blank entries (rows from older imports
+    # or maintenance); they are skipped instead of raising on ``.lower()``.
+    own_lower = {a.strip().lower() for a in own_addresses if a}
+    to = (reply_to or "").strip() or (from_address or "").strip() or None
     to_list = [to] if to else []
     to_lower = {to.lower()} if to else set()
     seen = set(to_lower)
     cc: list[str] = []
-    for addr in [*(to_addresses or []), *(cc_addresses or [])]:
+    for raw in [*(to_addresses or []), *(cc_addresses or [])]:
+        addr = (raw or "").strip()
         low = addr.lower()
-        if low in own_lower or low in seen:
+        if not addr or low in own_lower or low in seen:
             continue
         seen.add(low)
         cc.append(addr)

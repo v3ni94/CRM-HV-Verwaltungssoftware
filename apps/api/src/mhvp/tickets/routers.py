@@ -837,8 +837,9 @@ async def _reply_context(
     unverified_sender: str | None = None
     if inbound is not None and inbound.direction == "out":
         # Antwort auf eine eigene ausgehende Mail: dieselben Empfänger erneut anschreiben.
-        to_addresses = list(inbound.to_addresses)
-        cc_addresses = list(inbound.cc_addresses or [])
+        # NULL or blank entries of stored arrays are skipped (hotfix 27.09.2026).
+        to_addresses = [a for a in (inbound.to_addresses or []) if a and a.strip()]
+        cc_addresses = [a for a in (inbound.cc_addresses or []) if a and a.strip()]
     elif inbound is not None and inbound.from_address:
         sender = inbound.from_address
         # Vorbelegung nur mit einem am Ticket beteiligten Absender (Review 26.09.2026, H5):
