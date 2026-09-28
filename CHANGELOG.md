@@ -5,6 +5,14 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.41.0 (28.09.2026) Anbindung Schadenbearbeiter
+
+- Neue Anbindung an den Schadenbearbeiter (Schadenstool) unter Einstellungen, Schnittstellen, Schadenbearbeiter: Basisadresse, Integrationstoken, HMAC- und Webhook-Geheimnis verschlüsselt, Aktivierung erst nach eingetragenem AVV, Verbindungstest; standardmäßig ausgeschaltet.
+- Ticketdetail: Ticket an den Schadenbearbeiter übergeben, ausgewählte Kommentare und Dokumente senden, Status des Schadenbearbeiters anzeigen; interne Notizen werden nie gesendet.
+- Statuswechsel verknüpfter Tickets werden an den Schadenbearbeiter übermittelt, Kommentare und Anhänge des Schadenbearbeiters kommen per Webhook und Abgleich alle 15 Minuten ins Ticket.
+- Vorhandene Schadentickets übernehmen: Liste mit Vorschlag für Objekt und Ticket, Übernahme nur nach Bestätigung.
+- Ausgehende Warteschlange mit Wiederholungen, Beachtung des Anfragelimits und Hinweis Token ungültig; Webhook mit Signaturprüfung, Zeitfenster fünf Minuten und Schutz gegen doppelte Ereignisse (Migration 0222).
+
 ## 1.40.4 (28.09.2026) Lernregeln respektieren Entscheidungen der Mitglieder
 
 - Angenommene Lernregeln für Thema und Bearbeiter füllen nur noch leere Felder und überschreiben keine Entscheidung eines Mitglieds mehr, auch wenn der Regellauf erst später stattfindet; es entsteht dann keine Benachrichtigung. Von Hand angelegte Regeln der Verwaltung setzen Ticketfelder weiterhin wie bisher.
