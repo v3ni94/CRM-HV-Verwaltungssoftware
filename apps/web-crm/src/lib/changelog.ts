@@ -21,6 +21,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "28.09.2026",
     title: "Lern-Workflow, Folgevorgänge und durchgängiges Design",
     changes: [
+      "Abnahmefälle Anhang D: Rückverfolgbarkeit aller 58 Fälle in docs/acceptance/D-cases.md mit zugeordnetem Test und Stand der Automatisierung; neue Tests für D04, D05, D07 und D24 über den Bankimport mit geschlossenen Freigabestufen; keine Abnahme erteilt, die Abnahme durch den Betreiber steht für alle Fälle aus.",
       "Postfach: \"Antworten\" und \"Vorschlag übernehmen\" zeigen bei Nutzern mit eingeschaltetem zweiten Faktor (TOTP) keinen \"Interner Fehler\" mehr; die Signatur liest nur noch den Anzeigenamen des Nutzers. Dasselbe gilt für Einreichen, Ticketantwort und Signaturvorschau.",
       "Leere Einträge in gespeicherten Empfängerlisten führen nicht mehr zum Abbruch beim Antworten, und Kopien im Sammelpostfach antworten an die Reply-To-Adresse.",
       "Lern-Workflow: Nach fünf gleichen manuellen Zuordnungen für denselben Absender ohne Widerspruch schlägt die Plattform eine Regel vor; aktiv wird sie erst nach ausdrücklicher Annahme.",
