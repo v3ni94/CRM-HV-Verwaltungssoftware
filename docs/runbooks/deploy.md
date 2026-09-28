@@ -15,4 +15,6 @@ network (`infra/compose.prod.yaml`).
 
 Own server without Traefik: see `server-setup.md` (`infra/compose.edge.yaml`). Without registry
 access (fallback): `DEPLOY_BUILD=1` builds on the server. Missing server data: M9-01.
+Manual release directly on the production server in `/opt/mhvp` (local images, `./mhvp.sh`
+wrapper, verified backup, rollback hints): `infra/scripts/release.sh`, see `release.md`.
 Monitoring and alerts after the deployment: `monitoring.md`.

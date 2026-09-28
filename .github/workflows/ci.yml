@@ -296,9 +296,16 @@ jobs:
           rm -f .env infra/.env
           docker compose -p mhvp -f infra/compose.yaml -f infra/compose.prod.yaml config -q
           ACME_EMAIL=ci@example.invalid docker compose -p mhvp-edge -f infra/compose.edge.yaml config -q
-          bash -n scripts/*.sh
+          bash -n scripts/*.sh infra/scripts/*.sh
           MHVP_ENV=staging MHVP_TRAEFIK_PREFIX=mhvp-staging MHVP_HOST_CRM=crm.staging.mueller-holding.ag \
             docker compose -p mhvp-staging -f infra/compose.yaml -f infra/compose.prod.yaml config -q
+      # Manual server release (docs/runbooks/release.md): stub based tests, shellcheck when present.
+      - name: Release script
+        run: |
+          if command -v shellcheck > /dev/null; then
+            shellcheck infra/scripts/release.sh infra/scripts/tests/test-release.sh
+          fi
+          bash infra/scripts/tests/test-release.sh
 
   images:
     needs: [api, web]
