@@ -37,6 +37,7 @@ sind.
 | Technischer Sachbearbeiter | Objekte und Dokumente schreiben, Kontakte lesen, Tickets, Kommunikation |
 | Hausmeister | Objekte lesen, Tickets |
 | Nur Lesezugriff, Nur Lesezugriff Stammdaten, Support | lesend |
+| Freigabe | zweite Person der Vier-Augen-Freigabe von Bankverbindungen (`contacts:approve`); Kontakte, Objekte, Verträge, Dokumente lesen; keine Schreibrechte auf Stammdaten |
 | Steuerberater | Buchhaltung lesen und exportieren, begrenzt auf gewählte Rechtsträger |
 
 Wichtig: Die Freigaberechte `contacts:approve` (IBAN), `contracts:approve` (Importverträge,

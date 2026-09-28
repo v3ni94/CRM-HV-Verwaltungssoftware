@@ -1,10 +1,11 @@
 # Handlungsanweisung: Bankverbindung neu anlegen oder ändern
 
-Stand: 28.09.2026. Gilt für Bankverbindungen von Kontakten (Eigentümer, Mieter, Dienstleister).
-Bankkonten der Gemeinschaft oder des Eigentümers (Rechtsträger) siehe Abschnitt Konten der
-Rechtsträger. Regel: `docs/rules/M3-02-sepa-mandate.md`; Entscheidung M5-01 in
-`docs/OPEN_QUESTIONS.md` (umgesetzt am 26.09.2026). Erfassungsregeln:
-[Erfassungsstandards](erfassungsstandards.md).
+Stand: 28.09.2026 (Nachtrag: Bankverbindungen am bestehenden Kontakt, Rolle Freigabe). Gilt für
+Bankverbindungen von Kontakten (Eigentümer, Mieter, Dienstleister) und für die Kontakte der
+Rechtsträger (Gemeinschaft, Eigentümer, Verwaltung). Angebundene Bankkonten der Rechtsträger
+siehe Abschnitt Konten der Rechtsträger. Regel: `docs/rules/M3-02-sepa-mandate.md`;
+Entscheidung M5-01 in `docs/OPEN_QUESTIONS.md` (umgesetzt am 26.09.2026), Nachtrag M5-04
+(28.09.2026). Erfassungsregeln: [Erfassungsstandards](erfassungsstandards.md).
 
 ## Zweck
 
@@ -24,9 +25,11 @@ Rückfrage vermerken.
 ## Voraussetzungen
 
 - Erfassen: `contacts:create` (neuer Kontakt) beziehungsweise `contacts:update`.
-- Freigeben oder Ablehnen: `contacts:approve`, in der Vorbelegung nur Mandantenadministrator und
-  Administrator. Die freigebende Person muss eine andere sein als die erfassende; ein zweites
-  Benutzerkonto derselben Person zählt nicht. Plattformadministratoren geben keine IBAN frei.
+- Freigeben oder Ablehnen: `contacts:approve`, in der Vorbelegung Mandantenadministrator,
+  Administrator und die Systemrolle Freigabe (nur Freigabe und Lesen, keine Schreibrechte auf
+  Stammdaten; gedacht für die Buchhaltung, Zuweisung unter Einstellungen, Benutzer). Die
+  freigebende Person muss eine andere sein als die erfassende; ein zweites Benutzerkonto
+  derselben Person zählt nicht. Plattformadministratoren geben keine IBAN frei.
 - Nachweis im Original (Schreiben mit Unterschrift, unterschriebenes Mandat, Vermerk über die
   Rückfrage).
 
@@ -51,22 +54,52 @@ sonst in der Mieter- oder Eigentümerakte.
 
 Speichern. Die Bankverbindung steht im Status zur Freigabe.
 
-### 2b. Bestehender Kontakt: neue oder geänderte IBAN
+### 2b. Bestehender Kontakt: Bankverbindung hinzufügen
 
-Die Oberfläche erlaubt an einem bestehenden Kontakt keine neue Bankverbindung: im Formular
-Kontakt bearbeiten erscheinen vorhandene Bankverbindungen nur maskiert mit dem Hinweis
-Bankverbindungen bleiben beim Speichern unverändert. Wege:
+Kontaktseite, Reiter Bankverbindungen, Schaltfläche Bankverbindung hinzufügen (Recht
+`contacts:update`). Felder wie unter 2a: IBAN (Prüfziffer wird sofort geprüft), BIC, Bank,
+Kontoinhaber, Bezeichnung, Kontotyp, Standardkonto, Gültig ab, Gültig bis. Speichern. Die
+Bankverbindung steht im Status zur Freigabe; die übrigen Bankverbindungen des Kontakts bleiben
+unverändert. Ein SEPA-Mandat wird an der bestehenden Bankverbindung geführt (Abschnitt 4).
 
-1. Vorschlag aus dem Portal: Hat der Kontakt die IBAN oder ein Mandat über das Portal
-   mitgeteilt, erscheint sie auf der Kontaktseite unter Vorschläge aus dem Portal
-   (Stammdatenänderungen, Art Bankverbindung, oder SEPA-Lastschriftmandate). Nachweis prüfen,
-   Übernehmen. Die IBAN steht danach im Status zur Freigabe.
-2. Schnittstelle: Eine Person mit Schnittstellenzugang schreibt die Bankverbindungen des
-   Kontakts neu (`PUT /api/v1/contacts/{id}` mit vollständiger Liste `bank_accounts`). Bekannte
-   IBAN behalten ihren Freigabestand, jede neue IBAN steht im Status zur Freigabe. Konten, auf
-   die ein SEPA-Mandat verweist, lassen sich auf diesem Weg nicht ersetzen.
-3. Solange keiner der beiden Wege verfügbar ist: Ticket zum Kontakt mit Nachweis an den
-   Administrator; keine IBAN im Notizfeld oder in Ticketnotizen erfassen.
+Das Formular Kontakt bearbeiten zeigt vorhandene Bankverbindungen weiterhin nur maskiert und
+lässt sie unverändert; Bankverbindungen werden ausschließlich im Reiter Bankverbindungen
+gepflegt.
+
+### 2c. Bestehender Kontakt: IBAN ändern (neue Version)
+
+Reiter Bankverbindungen, an der freigegebenen Bankverbindung Ändern. Das Formular ist mit
+Bank, BIC, Kontoinhaber, Bezeichnung und Kontotyp der bisherigen Bankverbindung vorbelegt; neue
+IBAN und Gültig ab eintragen (Gültig ab muss nach dem Gültig ab der bisherigen liegen).
+Speichern. Die neue IBAN steht im Status zur Freigabe und trägt den Hinweis ersetzt
+(bisherige IBAN). Bis zur Freigabe bleibt die bisherige Bankverbindung unverändert gültig.
+Mit der Freigabe endet die bisherige Bankverbindung am Tag vor dem neuen Gültig ab und gibt
+das Kennzeichen Standardkonto an die neue Version ab. Die bisherige IBAN bleibt als Historie
+sichtbar und wird nie überschrieben. Bei aktivem SEPA-Mandat auf der bisherigen
+Bankverbindung entsteht mit der Freigabe ein angehefteter Vermerk; das Mandat wird nicht
+automatisch widerrufen (Abschnitt 4).
+
+Je Bankverbindung ist nur eine offene Änderung möglich; eine zweite Änderung oder Beendigung
+wird abgewiesen, bis die erste entschieden ist.
+
+### 2d. Bestehender Kontakt: Bankverbindung beenden
+
+Reiter Bankverbindungen, an der freigegebenen Bankverbindung Beenden: Gültig bis und Vermerk
+(zum Beispiel Rückfrage beim Kontakt), Beendigung speichern. Zwei Fälle:
+
+- Sofort wirksam: die erfassende Person hat `contacts:approve` und der Kontakt ist kein
+  Rechtsträger. Hinweis Bankverbindung beendet zum Datum.
+- Zur Freigabe: die erfassende Person hat kein `contacts:approve`, oder der Kontakt ist ein
+  Rechtsträger (Mitglied der Partei einer Gemeinschaft, eines Vermieters oder eines
+  SEV-Eigentümers, oder Kontakttyp Verwaltung). Die Bankverbindung zeigt Beendigung zum Datum
+  zur Freigabe; eine zweite Person bestätigt oder lehnt ab (Abschnitt 3). Die eigene
+  Erfassung zeigt selbst beantragt, Freigabe durch eine andere Person.
+
+Weitere Wege bleiben bestehen: Vorschlag aus dem Portal (Reiter Portal-Freigaben, Nachweis
+prüfen, Übernehmen, IBAN danach zur Freigabe) und Schnittstelle (`POST
+/api/v1/contacts/{id}/bank-accounts`, `.../replace`, `.../end`; `PUT /api/v1/contacts/{id}`
+mit vollständiger Liste `bank_accounts` schreibt alle Bankverbindungen neu und ist nur für
+Schnittstellenzugänge gedacht). Keine IBAN im Notizfeld oder in Ticketnotizen erfassen.
 
 ### 3. Freigabe durch eine zweite Person
 
@@ -74,11 +107,16 @@ Bankverbindungen bleiben beim Speichern unverändert. Wege:
 Bankverbindungen, Abschnitt Freigabe:
 
 1. Nachweis öffnen und IBAN, Kontoinhaber und Kontakt vergleichen.
-2. Freigeben: Hinweis IBAN freigegeben.
+2. Freigeben: Hinweis IBAN freigegeben. Bei einer neuen Version (Hinweis ersetzt) endet damit
+   die bisherige Bankverbindung am Tag vor dem neuen Gültig ab.
 3. Oder Ablehnen: Begründung der Ablehnung (Pflicht), Ablehnung bestätigen. Die Begründung wird
    protokolliert.
+4. Offene Beendigung (Beendigung zum Datum zur Freigabe): Vermerk lesen, Bestätigen oder
+   Ablehnen mit Begründung. Erst mit der Bestätigung erhält die Bankverbindung Gültig bis.
 
-Die eigene Erfassung zeigt selbst erfasst, Freigabe durch eine andere Person.
+Die eigene Erfassung zeigt selbst erfasst beziehungsweise selbst beantragt, Freigabe durch
+eine andere Person. Die Kachel Bankverbindungen auf der Startseite zählt offene IBAN und
+offene Beendigungen zusammen.
 
 ### 4. Folgeschritte
 
@@ -90,11 +128,20 @@ Die eigene Erfassung zeigt selbst erfasst, Freigabe durch eine andere Person.
 
 ## Konten der Rechtsträger
 
-Konten der Gemeinschaft oder des Eigentümers werden unter Einstellungen, Bank (finAPI) oder
-FinTS lesend angebunden und auf der Objektseite im Abschnitt Bankkonten des Objekts zugeordnet
-(Als Standard setzen, Standard des Rechtsträgers). Für diese Konten gibt es keine
-Vier-Augen-Freigabe der IBAN in der Software; die Anmeldung erfolgt über das Formular der Bank.
-Neue Konten und Standardkonten sind organisatorisch durch die Geschäftsführung freizugeben.
+Zwei Ebenen:
+
+1. Bankverbindungen am Kontakt des Rechtsträgers (Gemeinschaft, Vermieter, SEV-Eigentümer,
+   Verwaltung selbst): Erfassung, Änderung und Beendigung wie oben über die Kontaktseite. Jede
+   Änderung, auch die Beendigung und auch durch eine Person mit `contacts:approve`, wartet auf
+   eine zweite Person (Vier-Augen-Prinzip in der Software erzwungen). Als Rechtsträger
+   erkennt die Software Kontakte, die Mitglied der Partei eines Rechtsträgers sind oder den
+   Kontakttyp Verwaltung tragen.
+2. Angebundene Bankkonten: Konten der Gemeinschaft oder des Eigentümers werden unter
+   Einstellungen, Bank (finAPI) oder FinTS lesend angebunden und auf der Objektseite im
+   Abschnitt Bankkonten des Objekts zugeordnet (Als Standard setzen, Standard des
+   Rechtsträgers). Die Anmeldung erfolgt über das Formular der Bank. Für Zuordnung und
+   Standardkonto gibt es weiterhin keine Vier-Augen-Freigabe in der Software; sie sind
+   organisatorisch durch die Geschäftsführung freizugeben (`docs/OPEN_QUESTIONS.md` M5-04).
 
 ## Zu verknüpfende Datensätze
 
@@ -114,8 +161,10 @@ mit Fälligkeit anlegen.
 | Schritt | Wer | Durch die Software erzwungen |
 | --- | --- | --- |
 | Neue oder geänderte IBAN eines Kontakts | zweite Person mit `contacts:approve` | ja |
+| Beendigung einer Bankverbindung durch eine Person ohne `contacts:approve` | zweite Person mit `contacts:approve` | ja |
+| Beendigung einer Bankverbindung am Kontakt eines Rechtsträgers | zweite Person mit `contacts:approve` | ja |
 | Abweichende IBAN auf Rechnung | nur nach Rückruf beim Aussteller, gesondert protokolliert | ja |
-| Konto eines Rechtsträgers | Geschäftsführung | nein |
+| Angebundenes Bankkonto eines Rechtsträgers (Zuordnung, Standardkonto) | Geschäftsführung | nein |
 
 ## Checkliste
 
@@ -131,14 +180,21 @@ mit Fälligkeit anlegen.
 - IBAN ungültig: Eingabe ohne Leerzeichen mit Länderpräfix wiederholen.
 - Freigabe abgewiesen: dieselbe Person hat erfasst, oder die Bankverbindung wartet nicht mehr auf
   Freigabe.
+- Für diese Bankverbindung wartet bereits eine Änderung auf Freigabe: die offene neue Version
+  oder Beendigung zuerst entscheiden.
+- Diese IBAN ist beim Kontakt bereits hinterlegt: vorhandene Bankverbindung verwenden.
+- Bankverbindung ist bereits beendet: beendete oder abgelehnte Bankverbindungen sind nicht
+  änderbar, neue Bankverbindung hinzufügen.
 - Lastschrift nutzt die neue IBAN nicht: Freigabe fehlt.
 - IBAN aus KI-Vorschlag übernommen: KI-Vorschläge enthalten nie eine Übernahme von Bankdaten.
 
 ## Lücken in der Software
 
-- Keine Oberfläche, um an einem bestehenden Kontakt eine Bankverbindung hinzuzufügen, zu ändern
-  oder zu beenden; nur Portalvorschlag oder Schnittstelle.
-- Keine Vier-Augen-Freigabe für Bankkonten der Rechtsträger.
-- `contacts:approve` in der Vorbelegung nur bei Administratorrollen; für die Buchhaltung ist eine
-  eigene Rolle anzulegen, wenn sie freigeben soll.
-- Kein Feld für den Rückfragevermerk an der Bankverbindung (nur Vermerk beim Mandat).
+- Angebundene Bankkonten der Rechtsträger (Zuordnung, Standardkonto) ohne Vier-Augen-Freigabe
+  in der Software (`docs/OPEN_QUESTIONS.md` M5-04).
+- Kein Feld für den Rückfragevermerk an der Bankverbindung selbst (Vermerk nur beim Mandat und
+  bei der Beendigung); Rückfrage bis dahin als Ticket oder Notiz am Kontakt ohne IBAN.
+
+Geschlossen am 28.09.2026: Oberfläche zum Hinzufügen, Ändern und Beenden am bestehenden
+Kontakt; Vier-Augen-Freigabe für Bankverbindungen der Rechtsträger-Kontakte; Systemrolle
+Freigabe.

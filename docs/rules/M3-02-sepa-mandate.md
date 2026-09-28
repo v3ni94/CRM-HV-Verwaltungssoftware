@@ -63,6 +63,48 @@ Frage M5-01, Umsetzung vor G2.
 - Die KI darf keine Freigabe erteilen; KI-Importe und Ticketvorschläge legen Konten nur als
   `pending` an.
 
+### Nachtrag 28.09.2026: Bankverbindungen am bestehenden Kontakt (CRM), Rechtsträger, Rolle Freigabe
+
+Typ: Produktschutz. Änderungsgrund: Handbuch `anleitung-bankverbindung.md`, Lücken
+Bankverbindung (keine Oberfläche am bestehenden Kontakt, keine Vier-Augen-Freigabe für
+Rechtsträger, `contacts:approve` nur in Administratorrollen). Migration 0225.
+
+- `POST /contacts/{id}/bank-accounts` (`contacts:update`) legt eine Bankverbindung am
+  bestehenden Kontakt an, immer `pending` mit `requested_by`; die übrigen Konten bleiben
+  unverändert. Gleiche IBAN am selben Kontakt: `MHVP-CONT-0003`.
+- Änderung der IBAN nur als neue Version: `POST /contacts/{id}/bank-accounts/{konto}/replace`
+  legt eine neue Zeile `pending` mit `replaces_account_id` an. Die bisherige Zeile wird nie
+  überschrieben; erst mit der Freigabe der neuen Version erhält sie `valid_to` am Tag vor dem
+  neuen `valid_from` und gibt das Standardkonto ab. Bei aktivem SEPA-Mandat auf der abgelösten
+  Zeile entsteht mit der Freigabe der Vermerk `contact.mandate_iban_changed` (kein
+  automatischer Widerruf). `valid_from` der neuen Version muss nach dem der bisherigen liegen
+  (422); beendete oder abgelehnte Konten sind nicht änderbar (`MHVP-CONT-0001`); je Konto
+  höchstens eine offene Änderung (`MHVP-CONT-0002`).
+- Beenden: `POST /contacts/{id}/bank-accounts/{konto}/end` setzt `valid_to`. Sofort wirksam
+  nur, wenn die erfassende Person `contacts:approve` hat, kein Plattformadministrator ist und
+  der Kontakt kein Rechtsträger ist. Sonst entsteht eine offene Änderung
+  (`contact_bank_account_change`, Art `end`, Status `pending`, `bank_account.end_requested`),
+  die eine zweite Person mit `contacts:approve` über
+  `.../changes/{änderung}/approve` oder `/reject` (Begründung) entscheidet
+  (`bank_account.end_approved`, `bank_account.end_rejected`). Erfassende Person,
+  Plattformzugriff und Aufruf ohne Benutzer entscheiden nie (`GATE_FOUR_EYES`).
+- Rechtsträger im Sinne dieser Regel: ein Kontakt, der Mitglied der Partei eines
+  `legal_entity` ist (GdWE, Vermieter, SEV-Eigentümer) oder den Kontakttyp `manager`
+  (Verwaltung selbst) trägt (`services.is_legal_entity_contact`). Neue und geänderte IBAN
+  brauchen unabhängig davon immer die zweite Person (Absatz oben).
+- Nicht erfasst: Bankkonten, die über die Bankanbindung (finAPI, FinTS) angebunden und dem
+  Rechtsträger zugeordnet werden (`bank_account_assignment`); dort bleibt die organisatorische
+  Freigabe der Geschäftsführung (`docs/OPEN_QUESTIONS.md` M5-04).
+- Systemrolle `approver` (Anzeigename Freigabe): `contacts:approve` sowie Lesen von
+  Kontakten, Objekten, Verträgen, Dokumenten und Mandanteneinstellungen; keine Schreibrechte
+  auf Stammdaten. `ensure_system_roles` (Provisionierung und `sync_roles`) legt die Rolle bei
+  bestehenden Mandanten nach.
+- Startseite, Spalte Freigaben: die Kachel Bankverbindungen zählt offene IBAN und offene
+  Änderungen.
+- Abnahme: `apps/api/tests/integration/test_contact_bank_accounts_crm.py` (feste Sollwerte:
+  Ablösung endet die alte Zeile am 30.09.2026 bei neuem Gültig ab 01.10.2026),
+  `apps/web-crm/src/components/contacts/BankAccount*.test.tsx`.
+
 
 ## Portalstufe: digitales Mandat als Vorschlag (Nachtrag 27.09.2026)
 

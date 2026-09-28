@@ -31,6 +31,38 @@ UNION ALL statement; `GET /parties` loads the members of all parties in one quer
 existing UNION ALL statement, so the contacts list shows "IBAN wartet auf Freigabe" without a
 query per contact. Rule addendum in `docs/rules/M19-05.md`.
 
+## Bank accounts on an existing contact (CRM screen, addendum 28.09.2026, migration 0225)
+
+Handbook gap "Bankverbindung" (`docs/handbuch/anleitung-bankverbindung.md`). Services in
+`services.py`, endpoints in `routers.py`, all under `/contacts/{id}/bank-accounts`:
+
+- `POST .../bank-accounts` (`contacts:update`): `add_bank_account` creates one pending row
+  (`requested_by`, event `bank_account.pending` with `source: crm`) without rewriting the
+  other accounts; `is_default` clears the previous default; same IBAN on the contact is
+  `MHVP-CONT-0003`. The IBAN suffix is appended to `search_text`.
+- `POST .../{account}/replace` (`contacts:update`): same service with `replaces`; the new
+  version carries `replaces_account_id` and never a default flag. On release
+  `decide_bank_account` ends the old row (`valid_to` = new `valid_from` minus one day), hands
+  over `is_default` and returns the mandate reference of an active mandate on the old row so
+  the router adds the M3-02 note (`_note_mandate_iban_changed`). IBAN history stays.
+- `POST .../{account}/end` (`contacts:update`): `end_bank_account` applies `valid_to` at once
+  only for a tenant user with `contacts:approve` on a contact that is no legal entity
+  (`is_legal_entity_contact`: party member of a `legal_entity` or contact type `manager`);
+  otherwise it stores `ContactBankAccountChange` (table `contact_bank_account_change`, RLS,
+  kind `end`, one pending per account) and emits `bank_account.end_requested`.
+- `POST .../{account}/changes/{change}/approve|reject` (`contacts:approve`):
+  `decide_bank_account_change`, four eyes as for the IBAN (`_check_second_person`), events
+  `bank_account.end_approved` / `bank_account.end_rejected`. `BankAccountOut.pending_change`
+  carries the open change; `replaces_account_id` the replaced row.
+- Guards: `MHVP-CONT-0001` (ended or rejected account), `MHVP-CONT-0002` (a replacement or
+  end is still pending, or the account itself is pending).
+- `PUT /contacts/{id}` with `bank_accounts` still rewrites all rows (ids regenerate); pending
+  changes cascade away and `replaces_account_id` is not carried. The CRM form omits
+  `bank_accounts` on edit, so this only concerns API clients.
+- System role `approver` ("Freigabe") in `mhvp.core.auth.permissions`: `contacts:approve`
+  plus read scopes, added to existing tenants by `ensure_system_roles`.
+- Tests: `tests/integration/test_contact_bank_accounts_crm.py`.
+
 ## Authorised representatives and delivery rule (addendum 26.09.2026)
 
 `ContactRelation` of kind `representative` carries `delivery_mode` (`both`, default;
