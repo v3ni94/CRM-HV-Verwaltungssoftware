@@ -35,6 +35,11 @@ CATEGORIES: tuple[tuple[str, str, str], ...] = (
     ("photo", "Foto", "06_Sonstiges"),
     ("identification", "Legitimationsunterlage", "01_Legitimationsunterlagen"),
     ("other", "Sonstiges", "06_Sonstiges"),
+    # Package F (handbook Objektordner, 28.09.2026): the tenant and owner files of 11.2 get
+    # their own standard categories so an upload can be filed there without the objektakte
+    # routing. Appended last so the sort order of existing tenants stays unchanged.
+    ("tenant_file", "Mieterakte", "04_Mieterakte"),
+    ("owner_file", "Eigentümerakte", "05_Eigentümerakte"),
 )
 
 # Free letter: subject and text are entered per letter, nothing is prefilled.

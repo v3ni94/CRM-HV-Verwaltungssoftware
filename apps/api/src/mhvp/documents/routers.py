@@ -627,6 +627,43 @@ async def list_categories(
         return [s.CategoryOut.model_validate(r) for r in rows]
 
 
+@router.get("/document-folders", summary="Ordnerstruktur der Objektakte")
+async def list_document_folders(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    """Package F (handbook Objektordner): the six standard folders of 11.2 with their filing
+    rule, the tenant's categories per folder and, for 04 and 05, the subfolders known from the
+    objektakte takeover. Read only; the CRM never invents subfolder names."""
+    from mhvp.documents.folders import folder_structure
+
+    async with tenant_tx(request, principal) as session:
+        return await folder_structure(session)
+
+
+@router.post(
+    "/document-categories/ensure-defaults",
+    summary="Fehlende Standardkategorien ergänzen",
+)
+async def ensure_default_categories(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> list[s.CategoryOut]:
+    """Adds the standard categories a tenant does not have yet (idempotent, never changes an
+    existing row); needed for tenants created before ``tenant_file`` and ``owner_file``
+    (Package F). Returns the full list afterwards."""
+    from mhvp.documents.defaults import ensure_document_defaults
+
+    async with tenant_tx(request, principal) as session:
+        await ensure_document_defaults(session, principal.tenant_id)
+        rows = (
+            await session.scalars(
+                select(DocumentCategory).order_by(
+                    DocumentCategory.sort_order, DocumentCategory.name
+                )
+            )
+        ).all()
+        return [s.CategoryOut.model_validate(r) for r in rows]
+
+
 @router.post("/document-categories", status_code=201, summary="Kategorie anlegen")
 async def create_category(
     body: s.CategoryIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
