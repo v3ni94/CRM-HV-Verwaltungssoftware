@@ -11,13 +11,22 @@ import {
 import { safeNext, withNext } from "@/lib/next-path";
 
 // Node.js runtime: the API address (MHVP_API_INTERNAL_URL) is read at runtime.
+// Files of public/ (logo, favicon, touch icon) are left out of the matcher: the login page
+// shows the logo before any session exists (operator report 28.09.2026: /logo-mhag.png was
+// redirected to /anmelden). Only one path segment with a static file extension is excluded;
+// the app has no top level dynamic route, so no page or API route can match it.
 export const config = {
-  matcher: ["/((?!_next/|favicon.ico|api/health).*)"],
+  matcher: [
+    "/((?!_next/|favicon.ico|api/health|[^/]+\\.(?:png|svg|ico|jpg|jpeg|webp|gif|avif|woff2?|webmanifest)$).*)",
+  ],
   runtime: "nodejs",
 };
 
 const PATH_HEADER = "x-mhvp-path";
-const PUBLIC = [/^\/$/, /^\/anmelden(\/|$)/, /^\/api\/session\//];
+/** A file directly under public/, same rule as the matcher exclusion above. Kept here as well
+ *  so the decision is testable and holds if the matcher is ever widened again. */
+const STATIC_ASSET = /^\/[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:png|svg|ico|jpg|jpeg|webp|gif|avif|woff2?|webmanifest)$/;
+const PUBLIC = [/^\/$/, /^\/anmelden(\/|$)/, /^\/api\/session\//, STATIC_ASSET];
 
 function unauthenticated(request: NextRequest): NextResponse {
   if (request.nextUrl.pathname.startsWith("/api/")) {
