@@ -4449,27 +4449,6 @@ export interface paths {
         patch: operations["patch_contact_api_v1_contacts__contact_id__patch"];
         trace?: never;
     };
-    "/api/v1/contacts/{contact_id}/bank-accounts": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Bankverbindung an bestehendem Kontakt hinzufügen (zur Freigabe)
-         * @description The account starts as ``pending``; a second person with ``contacts:approve`` releases
-         *     it (M5-01). Same rules as on ``POST /contacts``, without rewriting the other accounts.
-         */
-        post: operations["add_bank_account_api_v1_contacts__contact_id__bank_accounts_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/approve": {
         parameters: {
             query?: never;
@@ -4481,61 +4460,6 @@ export interface paths {
         put?: never;
         /** Bankverbindung freigeben (Vier-Augen-Prinzip, zweite Person) */
         post: operations["approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/changes/{change_id}/approve": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Änderung an Bankverbindung bestätigen (Vier-Augen-Prinzip, zweite Person) */
-        post: operations["approve_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__approve_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/changes/{change_id}/reject": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Änderung an Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person) */
-        post: operations["reject_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__reject_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/end": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Bankverbindung beenden (Gültig bis), Vier-Augen-Prinzip bei Rechtsträgern
-         * @description Applied at once when the caller holds ``contacts:approve`` and the contact is no legal
-         *     entity; otherwise the answer carries ``pending_change`` for a second person.
-         */
-        post: operations["end_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__end_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4570,28 +4494,6 @@ export interface paths {
         put?: never;
         /** Bankverbindung ablehnen (Vier-Augen-Prinzip, zweite Person) */
         post: operations["reject_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__reject_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/contacts/{contact_id}/bank-accounts/{account_id}/replace": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Bankverbindung ändern: neue Version mit neuer IBAN (zur Freigabe)
-         * @description Creates the new version as a pending row that points to the replaced account
-         *     (``replaces_account_id``). On release the old row gets ``valid_to`` the day before the new
-         *     ``valid_from`` and hands over the default flag; its IBAN history stays.
-         */
-        post: operations["replace_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__replace_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -4994,36 +4896,9 @@ export interface paths {
         put?: never;
         /**
          * Eigentümerwechsel
-         * @description Ends the current ownership the day before the title transfer (D16, D17), creates the
-         *     new ownership and, with ``carry_over_amounts``, copies the standing amounts valid on the
-         *     title transfer date to the new contract from that date on (factual carry over, no split of
-         *     the annual statement: rule W07 and release point P01 stay open). Open receivables stay with
-         *     the seller (6.9.2, D15).
+         * @description Ends the current ownership the day before the title transfer (D16, D17).
          */
         post: operations["ownership_transfer_api_v1_contracts__contract_id__ownership_transfer_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/contracts/{contract_id}/ownership-transfer/preview": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Eigentümerwechsel: Vorschau
-         * @description Shows what the transfer on the date would do: the current ownership ends the day before,
-         *     the new one starts on the date, and the listed standing amounts (payments, payment schedule,
-         *     allocation values valid on the date) are carried over from the date on. Read only. The
-         *     annual statement is not split between seller and acquirer (rule W07, release point P01).
-         */
-        get: operations["ownership_transfer_preview_api_v1_contracts__contract_id__ownership_transfer_preview_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -5675,6 +5550,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/document-categories/ensure-defaults": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Fehlende Standardkategorien ergänzen
+         * @description Adds the standard categories a tenant does not have yet (idempotent, never changes an
+         *     existing row); needed for tenants created before ``tenant_file`` and ``owner_file``
+         *     (Package F). Returns the full list afterwards.
+         */
+        post: operations["ensure_default_categories_api_v1_document_categories_ensure_defaults_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/document-categories/{category_id}": {
         parameters: {
             query?: never;
@@ -5695,6 +5592,28 @@ export interface paths {
          *     it to existing documents without a profile.
          */
         patch: operations["patch_category_api_v1_document_categories__category_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/document-folders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Ordnerstruktur der Objektakte
+         * @description Package F (handbook Objektordner): the six standard folders of 11.2 with their filing
+         *     rule, the tenant's categories per folder and, for 04 and 05, the subfolders known from the
+         *     objektakte takeover. Read only; the CRM never invents subfolder names.
+         */
+        get: operations["list_document_folders_api_v1_document_folders_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/document-templates": {
@@ -6305,6 +6224,32 @@ export interface paths {
         get: operations["hints_api_v1_handover_protocols__protocol_id__hints_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/meters/transfer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Zählerstände aus dem Protokoll in die Zählerstände der Einheit übernehmen
+         * @description Package F (handbook Mieterwechsel): each protocol meter row with a value becomes one
+         *     ``meter_reading`` of the matching meter of the unit (by ``meter_id`` or meter number), dated
+         *     with the row's reading date or the handover date, source ``manual`` with the protocol
+         *     number as note. Rows already taken over are reported and never duplicated. Needs
+         *     ``contracts:update`` and, because readings are master data, ``properties:update``. Works
+         *     on completed protocols too (the usual case), not on cancelled ones. Requires
+         *     ``confirm=true``.
+         */
+        post: operations["transfer_meters_api_v1_handover_protocols__protocol_id__meters_transfer_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8814,8 +8759,6 @@ export interface paths {
         /**
          * Import zurücknehmen
          * @description Removes what is not bound by later data; kept items carry the reason (10.1 step 5).
-         *     A confirmed chat action (contact change, note, ticket) registers no items; its run is not
-         *     undoable here, otherwise the log would record a rollback that reverted nothing (0.1.7).
          */
         post: operations["undo_import_api_v1_imports__import_id__undo_post"];
         delete?: never;
@@ -10293,28 +10236,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/mail/mailboxes/{mailbox_id}/reconcile-state": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Abgleich der Gmail Zustände (Rückkanal M20-08): Vorschau oder Lauf
-         * @description ``preview=true`` vergleicht synchron und schreibt nichts (Zähler und bis zu 50
-         *     Beispiele); sonst wird der Abgleich in die Warteschlange ``mail`` gestellt (202), inline
-         *     ohne Worker. 409, solange ein Abgleich läuft.
-         */
-        post: operations["reconcile_mailbox_state_api_v1_mail_mailboxes__mailbox_id__reconcile_state_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/mail/mailboxes/{mailbox_id}/sync": {
         parameters: {
             query?: never;
@@ -10346,29 +10267,6 @@ export interface paths {
          */
         put: operations["put_mailbox_users_api_v1_mail_mailboxes__mailbox_id__users_put"];
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/mail/maintenance/align-copies": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Wartung: Status der Kopien an die führende Kopie angleichen
-         * @description Bestandsfix 1.42.2: Kopien derselben Mail in weiteren eigenen Postfächern, deren Status
-         *     von der führenden Kopie abweicht (Erledigt vor dem Fix nur auf der angeklickten Kopie),
-         *     übernehmen den Status der führenden Kopie. Je Zeile ein Ereignis ``message.copy_aligned``
-         *     mit dem vorherigen Status; idempotent, nichts wird gelöscht.
-         */
-        post: operations["align_copies_api_v1_mail_maintenance_align_copies_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10813,49 +10711,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/mail/messages/{message_id}/restore-inbox": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Mail in den Gmail Posteingang zurücklegen (Rückkanal M20-08)
-         * @description Öffnet die Gruppe wieder und legt archivierte oder gelöschte Kopien in den Posteingang
-         *     zurück; 422 ``GMAIL_RESTORE_DISABLED``, solange der Mandantenschalter aus ist.
-         */
-        post: operations["restore_inbox_api_v1_mail_messages__message_id__restore_inbox_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/mail/messages/{message_id}/revert-gmail-decision": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Automatik zurücknehmen (Rückkanal M20-08, P05)
-         * @description Hebt eine automatische Erledigung aus Gmail auf: Mail offen, Ticket ohne Fensterprüfung
-         *     wieder in Bearbeitung, Ereignis ``reverted``. 422, wenn nichts automatisch entschieden
-         *     wurde (``done_source`` nicht gmail und Ticket nicht durch den Rückkanal geschlossen).
-         */
-        post: operations["revert_gmail_decision_api_v1_mail_messages__message_id__revert_gmail_decision_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/mail/messages/{message_id}/submit": {
         parameters: {
             query?: never;
@@ -10884,27 +10739,6 @@ export interface paths {
         put?: never;
         /** KI-Vorschlag neu berechnen */
         post: operations["recompute_suggestion_api_v1_mail_messages__message_id__suggest_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/mail/messages/{message_id}/sync-events": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Abgleichereignisse der Mail mit Gmail (Rückkanal M20-08)
-         * @description Ereignisse ``message.gmail_state_changed``, ``message.completed``, ``message.reopened``
-         *     und ``message.gmail_restore_requested`` aller Kopien der Gruppe, älteste zuerst.
-         */
-        get: operations["message_sync_events_api_v1_mail_messages__message_id__sync_events_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11045,46 +10879,6 @@ export interface paths {
         /** Eigene Position und Durchwahl setzen */
         put: operations["put_signature_profile_api_v1_mail_signature_profile_put"];
         post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/maintenance/{item_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Wartung ändern */
-        patch: operations["patch_maintenance_api_v1_maintenance__item_id__patch"];
-        trace?: never;
-    };
-    "/api/v1/maintenance/{item_id}/done": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Wartung als erledigt erfassen
-         * @description Records the completion date. With ``interval_months`` the item stays open and its due
-         *     date moves to ``done_on`` plus the interval (rule C2-01); without an interval the item is
-         *     closed and a second completion is refused (409 ``MHVP-PROP-0005``). The interval is an
-         *     operator entry; no inspection cycle is assumed by the platform.
-         */
-        post: operations["complete_maintenance_api_v1_maintenance__item_id__done_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11581,23 +11375,6 @@ export interface paths {
         head?: never;
         /** Einheitenzuordnung ändern */
         patch: operations["patch_unit_assignment_api_v1_metering_unit_assignments__unit_assignment_id__patch"];
-        trace?: never;
-    };
-    "/api/v1/meters/{meter_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Zähler ändern (ohne Nummer, siehe Zählerwechsel) */
-        patch: operations["patch_meter_api_v1_meters__meter_id__patch"];
         trace?: never;
     };
     "/api/v1/meters/{meter_id}/changes": {
@@ -14496,50 +14273,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/properties/{property_id}/allocation-keys/{key_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /**
-         * Umlageschlüssel ändern
-         * @description Name, unit, kind, sort order and the operator entered ``expected_total`` (C1). The code
-         *     stays immutable; the sum check against ``expected_total`` is a warning in the CRM only.
-         */
-        patch: operations["update_key_api_v1_properties__property_id__allocation_keys__key_id__patch"];
-        trace?: never;
-    };
-    "/api/v1/properties/{property_id}/allocation-summary": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Schlüsselwerte aller Einheiten zum Stichtag mit Summen je Schlüssel
-         * @description Matrix for the CRM (C1): every key of the property with the sum of the unit values valid
-         *     at ``as_of`` (default today, Europe/Berlin), the units in natural order and the single
-         *     values. ``difference`` is ``total - expected_total`` for information only; a deviation is
-         *     shown as a warning and never blocks an entry.
-         */
-        get: operations["allocation_summary_api_v1_properties__property_id__allocation_summary_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/properties/{property_id}/bank-account-options": {
         parameters: {
             query?: never;
@@ -14665,23 +14398,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/properties/{property_id}/contacts/{assignment_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Ansprechpartner ändern (Kategorie, Zeitraum, Portalsichtbarkeit) */
-        patch: operations["patch_property_contact_api_v1_properties__property_id__contacts__assignment_id__patch"];
         trace?: never;
     };
     "/api/v1/properties/{property_id}/dms-documents": {
@@ -16632,28 +16348,6 @@ export interface paths {
         patch: operations["patch_settings_api_v1_tenant_settings_patch"];
         trace?: never;
     };
-    "/api/v1/tenant/settings/gmail-spike-confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Spike des Gmail Rückkanals als bestanden vermerken
-         * @description Rule M20-08, Abschnitt 13: der Modus ``done`` ist erst nach dem protokollierten Test des
-         *     Gmail Verhaltens (``docs/integrations/gmail.md``) erlaubt. ``protocol_ref`` verweist auf
-         *     das Protokoll; Zeitpunkt und Nutzer werden protokolliert (``tenant_settings.updated``).
-         */
-        post: operations["confirm_gmail_spike_api_v1_tenant_settings_gmail_spike_confirm_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/tenant/webhook-deliveries/{delivery_id}/redeliver": {
         parameters: {
             query?: never;
@@ -17669,26 +17363,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/workspace/assignable-users": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Aktive Mitglieder als Verantwortliche (ES-10)
-         * @description Names only, for the responsible person select; no roles or contact data.
-         */
-        get: operations["assignable_users_api_v1_workspace_assignable_users_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/workspace/bulk": {
         parameters: {
             query?: never;
@@ -17813,62 +17487,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/workspace/checklists": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Checklisten eines Objekts (Verwalterwechsel) */
-        get: operations["list_checklists_api_v1_workspace_checklists_get"];
-        put?: never;
-        /** Checkliste für ein Objekt starten */
-        post: operations["start_checklist_api_v1_workspace_checklists_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace/checklists/templates": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Vorlagen der Checklisten */
-        get: operations["checklist_templates_api_v1_workspace_checklists_templates_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace/checklists/{checklist_id}/items/{code}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Schritt abhaken oder zurücksetzen
-         * @description Records date and user of the tick; when every step is done the checklist closes,
-         *     resetting a step reopens it.
-         */
-        post: operations["tick_checklist_item_api_v1_workspace_checklists__checklist_id__items__code__post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/workspace/dashboard": {
         parameters: {
             query?: never;
@@ -17901,93 +17519,6 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace/deadline-entries": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Eigene Fristen (WS-01) */
-        get: operations["list_deadline_entries_api_v1_workspace_deadline_entries_get"];
-        put?: never;
-        /** Frist aus Ticket, Vertrag, Einheit oder Objekt anlegen */
-        post: operations["create_deadline_entry_api_v1_workspace_deadline_entries_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace/deadline-entries/compute": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Fälligkeit aus Fristtyp und Auslöser (Orientierung) */
-        get: operations["compute_deadline_api_v1_workspace_deadline_entries_compute_get"];
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace/deadline-entries/{entry_id}/done": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Frist als erledigt markieren */
-        post: operations["finish_deadline_entry_api_v1_workspace_deadline_entries__entry_id__done_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace/deadline-types": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Fristtypen des Mandanten (WS-01, Dauer zu verifizieren) */
-        get: operations["list_deadline_types_api_v1_workspace_deadline_types_get"];
-        put?: never;
-        /** Fristtyp anlegen */
-        post: operations["create_deadline_type_api_v1_workspace_deadline_types_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace/deadline-types/{type_id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        /** Fristtyp ändern */
-        patch: operations["update_deadline_type_api_v1_workspace_deadline_types__type_id__patch"];
         trace?: never;
     };
     "/api/v1/workspace/deadlines": {
@@ -18079,27 +17610,6 @@ export interface paths {
         get: operations["get_job_settings_api_v1_workspace_job_settings_get"];
         /** Schalter der Tagesjobs ändern */
         put: operations["put_job_settings_api_v1_workspace_job_settings_put"];
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/api/v1/workspace/notice-period": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Kündigungsfrist als Orientierung (zu verifizieren)
-         * @description The contract model carries no notice period field today (ASSUMPTIONS), so the values
-         *     are entered; a contract id only adds its end date for the comparison hint.
-         */
-        get: operations["notice_period_api_v1_workspace_notice_period_get"];
-        put?: never;
         post?: never;
         delete?: never;
         options?: never;
@@ -18475,8 +17985,6 @@ export interface components {
             code: string;
             /** Default Value */
             default_value?: number | string | null;
-            /** Expected Total */
-            expected_total?: number | string | null;
             kind: components["schemas"]["AllocationKind"];
             /** Meter Type Code */
             meter_type_code?: string | null;
@@ -18496,8 +18004,6 @@ export interface components {
             code: string;
             /** Default Value */
             default_value?: string | null;
-            /** Expected Total */
-            expected_total?: string | null;
             kind: components["schemas"]["AllocationKind"];
             /** Meter Type Code */
             meter_type_code?: string | null;
@@ -18517,8 +18023,6 @@ export interface components {
             code: string;
             /** Default Value */
             default_value?: string | null;
-            /** Expected Total */
-            expected_total?: string | null;
             /**
              * Id
              * Format: uuid
@@ -18540,119 +18044,10 @@ export interface components {
             unit_of_measure: string;
         };
         /**
-         * AllocationKeyPatch
-         * @description Editable fields of an allocation key; the code is immutable because rows and imports
-         *     reference it (C1).
-         */
-        AllocationKeyPatch: {
-            /** Default Value */
-            default_value?: number | string | null;
-            /** Expected Total */
-            expected_total?: number | string | null;
-            kind?: components["schemas"]["AllocationKind"] | null;
-            /** Meter Type Code */
-            meter_type_code?: string | null;
-            /** Name */
-            name?: string | null;
-            /** Sort Order */
-            sort_order?: number | null;
-            /** Unit Of Measure */
-            unit_of_measure?: string | null;
-        };
-        /**
          * AllocationKind
          * @enum {string}
          */
         AllocationKind: "static" | "consumption" | "fixed_amount" | "fixed_share";
-        /**
-         * AllocationSummaryKeyOut
-         * @description One key of the property with the sum of the unit values valid at the reference date.
-         */
-        AllocationSummaryKeyOut: {
-            /** Code */
-            code: string;
-            /** Difference */
-            difference: string | null;
-            /** Expected Total */
-            expected_total: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            kind: components["schemas"]["AllocationKind"];
-            /** Name */
-            name: string;
-            /** Total */
-            total: string | null;
-            /** Unit Of Measure */
-            unit_of_measure: string;
-            /** Units With Value */
-            units_with_value: number;
-            /** Units Without Value */
-            units_without_value: number;
-        };
-        /**
-         * AllocationSummaryOut
-         * @description Key values of all units of a property at one reference date, with sums per key
-         *     (C1). The CRM shows a deviation from ``expected_total`` as a warning; the API never
-         *     blocks on it.
-         */
-        AllocationSummaryOut: {
-            /**
-             * As Of
-             * Format: date
-             */
-            as_of: string;
-            /** Keys */
-            keys: components["schemas"]["AllocationSummaryKeyOut"][];
-            /** Units */
-            units: components["schemas"]["AllocationSummaryUnitOut"][];
-            /** Values */
-            values: components["schemas"]["AllocationSummaryValueOut"][];
-        };
-        /** AllocationSummaryUnitOut */
-        AllocationSummaryUnitOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Is Fictional */
-            is_fictional: boolean;
-            /** Label */
-            label: string | null;
-            /** Number */
-            number: string;
-        };
-        /** AllocationSummaryValueOut */
-        AllocationSummaryValueOut: {
-            /**
-             * Allocation Key Id
-             * Format: uuid
-             */
-            allocation_key_id: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            source: components["schemas"]["ValueSource"];
-            /**
-             * Unit Id
-             * Format: uuid
-             */
-            unit_id: string;
-            /**
-             * Valid From
-             * Format: date
-             */
-            valid_from: string;
-            /** Valid To */
-            valid_to: string | null;
-            /** Value */
-            value: string;
-        };
         /** AllocationValueIn */
         AllocationValueIn: {
             /**
@@ -18939,16 +18334,6 @@ export interface components {
             property_id: string;
             /** @default general */
             purpose: components["schemas"]["AccountPurpose"];
-        };
-        /** AssignableUserOut */
-        AssignableUserOut: {
-            /** Display Name */
-            display_name: string;
-            /**
-             * User Id
-             * Format: uuid
-             */
-            user_id: string;
         };
         /** AssigneeIn */
         AssigneeIn: {
@@ -19362,69 +18747,10 @@ export interface components {
          * @enum {string}
          */
         BankAccountApproval: "pending" | "approved" | "rejected";
-        /**
-         * BankAccountChangeKind
-         * @description Pending changes on an existing bank account that keep the row (migration 0225).
-         *     An IBAN change is not a change kind: it is a new row with ``replaces_account_id``.
-         * @enum {string}
-         */
-        BankAccountChangeKind: "end";
-        /** BankAccountChangeOut */
-        BankAccountChangeOut: {
-            /**
-             * Bank Account Id
-             * Format: uuid
-             */
-            bank_account_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Decided At */
-            decided_at: string | null;
-            /** Decided By */
-            decided_by: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            kind: components["schemas"]["BankAccountChangeKind"];
-            /** Note */
-            note: string | null;
-            /** Rejected Reason */
-            rejected_reason: string | null;
-            /** Requested By */
-            requested_by: string | null;
-            status: components["schemas"]["BankAccountApproval"];
-            /**
-             * Valid To
-             * Format: date
-             */
-            valid_to: string;
-        };
         /** BankAccountDecisionIn */
         BankAccountDecisionIn: {
             /** Reason */
             reason?: string | null;
-        };
-        /**
-         * BankAccountEndIn
-         * @description End an existing bank account (``valid_to``); four eyes when the contact is a legal
-         *     entity or the requester holds no ``contacts:approve``.
-         */
-        BankAccountEndIn: {
-            /**
-             * Note
-             * @description Vermerk, zum Beispiel Rückfrage beim Kontakt
-             */
-            note?: string | null;
-            /**
-             * Valid To
-             * Format: date
-             */
-            valid_to: string;
         };
         /**
          * BankAccountKind
@@ -22757,136 +22083,6 @@ export interface components {
             /** Valid From */
             valid_from: string | null;
         };
-        /** DeadlineComputeOut */
-        DeadlineComputeOut: {
-            /** Due On */
-            due_on: string | null;
-            /** Duration Days */
-            duration_days: number | null;
-            /** Duration Months */
-            duration_months: number | null;
-            /**
-             * Note
-             * @default Orientierung, zu verifizieren. Die Dauer stammt aus dem Fristtypkatalog des Mandanten beziehungsweise der Eingabe, nicht aus einer rechtlichen Regel (M1-09).
-             */
-            note: string;
-            /**
-             * Trigger On
-             * Format: date
-             */
-            trigger_on: string;
-            /**
-             * Type Id
-             * Format: uuid
-             */
-            type_id: string;
-            /**
-             * Verify
-             * @default true
-             */
-            verify: boolean;
-        };
-        /** DeadlineEntryIn */
-        DeadlineEntryIn: {
-            /** Due On */
-            due_on?: string | null;
-            /** Note */
-            note?: string | null;
-            /** Responsible User Id */
-            responsible_user_id?: string | null;
-            /**
-             * Source Id
-             * Format: uuid
-             */
-            source_id: string;
-            /** Source Type */
-            source_type: string;
-            /** Title */
-            title?: string | null;
-            /**
-             * Trigger On
-             * Format: date
-             */
-            trigger_on: string;
-            /**
-             * Type Id
-             * Format: uuid
-             */
-            type_id: string;
-        };
-        /** DeadlineEntryOut */
-        DeadlineEntryOut: {
-            /** Contract Id */
-            contract_id: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Done At */
-            done_at: string | null;
-            /** Done By */
-            done_by: string | null;
-            /** Due Computed */
-            due_computed: boolean;
-            /**
-             * Due On
-             * Format: date
-             */
-            due_on: string;
-            /** Href */
-            href?: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Note */
-            note: string | null;
-            /** Property Id */
-            property_id: string | null;
-            /** Responsible Name */
-            responsible_name?: string | null;
-            /** Responsible User Id */
-            responsible_user_id: string | null;
-            /**
-             * Source Id
-             * Format: uuid
-             */
-            source_id: string;
-            /** Source Type */
-            source_type: string;
-            /** Status */
-            status: string;
-            /** Ticket Id */
-            ticket_id: string | null;
-            /** Title */
-            title: string;
-            /**
-             * Trigger On
-             * Format: date
-             */
-            trigger_on: string;
-            /**
-             * Type Id
-             * Format: uuid
-             */
-            type_id: string;
-            /**
-             * Type Name
-             * @default
-             */
-            type_name: string;
-            /** Unit Id */
-            unit_id: string | null;
-            /**
-             * Verify
-             * @default true
-             */
-            verify: boolean;
-            /** Warnings */
-            warnings?: string[];
-        };
         /** DeadlineOut */
         DeadlineOut: {
             /** Done At */
@@ -22927,71 +22123,6 @@ export interface components {
              * Format: date-time
              */
             updated_at: string;
-        };
-        /** DeadlineTypeIn */
-        DeadlineTypeIn: {
-            /** Code */
-            code: string;
-            /** Duration Days */
-            duration_days?: number | null;
-            /** Duration Months */
-            duration_months?: number | null;
-            /** Name */
-            name: string;
-            /** Responsible Role */
-            responsible_role?: string | null;
-            /** Source Note */
-            source_note?: string | null;
-            /** Trigger */
-            trigger: string;
-        };
-        /** DeadlineTypeOut */
-        DeadlineTypeOut: {
-            /** Code */
-            code: string;
-            /** Duration Days */
-            duration_days: number | null;
-            /** Duration Months */
-            duration_months: number | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Is Active */
-            is_active: boolean;
-            /** Is System */
-            is_system: boolean;
-            /** Name */
-            name: string;
-            /** Responsible Role */
-            responsible_role: string | null;
-            /** Source Note */
-            source_note: string | null;
-            /** Trigger */
-            trigger: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
-        /** DeadlineTypePatch */
-        DeadlineTypePatch: {
-            /** Duration Days */
-            duration_days?: number | null;
-            /** Duration Months */
-            duration_months?: number | null;
-            /** Is Active */
-            is_active?: boolean | null;
-            /** Name */
-            name?: string | null;
-            /** Responsible Role */
-            responsible_role?: string | null;
-            /** Source Note */
-            source_note?: string | null;
-            /** Trigger */
-            trigger?: string | null;
         };
         /** DebtorAccountOut */
         DebtorAccountOut: {
@@ -24924,11 +24055,6 @@ export interface components {
             open: boolean;
             /** Scopes */
             scopes: string[];
-        };
-        /** GmailSpikeConfirmIn */
-        GmailSpikeConfirmIn: {
-            /** Protocol Ref */
-            protocol_ref: string;
         };
         /** GoogleCalendarPatchIn */
         GoogleCalendarPatchIn: {
@@ -27267,32 +26393,11 @@ export interface components {
             kind?: string | null;
             /** Secret */
             secret?: string | null;
-            /** Sync Back Enabled */
-            sync_back_enabled?: boolean | null;
         };
         /** MailboxUsersIn */
         MailboxUsersIn: {
             /** User Ids */
             user_ids: string[];
-        };
-        /**
-         * MaintenanceDoneIn
-         * @description Completion of a maintenance item (C2). With an interval the next due date is
-         *     ``done_on`` plus ``interval_months`` (day clamped to the month end) and the item stays
-         *     open; without an interval the item is closed.
-         */
-        MaintenanceDoneIn: {
-            /**
-             * Done On
-             * Format: date
-             */
-            done_on: string;
-        };
-        /** MaintenanceDoneOut */
-        MaintenanceDoneOut: {
-            item: components["schemas"]["MaintenanceOut"];
-            /** Next Due Date */
-            next_due_date: string | null;
         };
         /** MaintenanceIn */
         MaintenanceIn: {
@@ -27317,8 +26422,6 @@ export interface components {
         MaintenanceKind: "modernization" | "maintenance" | "inspection" | "warranty";
         /** MaintenanceOut */
         MaintenanceOut: {
-            /** Done At */
-            done_at?: string | null;
             /** Due Date */
             due_date?: string | null;
             /**
@@ -27329,8 +26432,6 @@ export interface components {
             /** Interval Months */
             interval_months?: number | null;
             kind: components["schemas"]["MaintenanceKind"];
-            /** Last Done On */
-            last_done_on?: string | null;
             /** Provider Relation Id */
             provider_relation_id?: string | null;
             /** Remind Before */
@@ -27339,25 +26440,6 @@ export interface components {
             status: string;
             /** Title */
             title: string;
-            /** Unit Id */
-            unit_id?: string | null;
-        };
-        /**
-         * MaintenancePatch
-         * @description Partial update of a maintenance item (C2); status and completion only via ``/done``.
-         */
-        MaintenancePatch: {
-            /** Due Date */
-            due_date?: string | null;
-            /** Interval Months */
-            interval_months?: number | null;
-            kind?: components["schemas"]["MaintenanceKind"] | null;
-            /** Provider Relation Id */
-            provider_relation_id?: string | null;
-            /** Remind Before */
-            remind_before?: string | null;
-            /** Title */
-            title?: string | null;
             /** Unit Id */
             unit_id?: string | null;
         };
@@ -28126,8 +27208,6 @@ export interface components {
             notes?: string | null;
             /** Number */
             number: string;
-            /** Property Id */
-            property_id?: string | null;
             /**
              * Remote Readable
              * @default false
@@ -28144,32 +27224,15 @@ export interface components {
             valid_to?: string | null;
         };
         /**
-         * MeterPatch
-         * @description Partial update of a meter (C2). The number is not part of it: a replaced device is
-         *     recorded as Zählerwechsel (``POST /meters/{id}/changes``), which keeps the history.
+         * MeterTransferIn
+         * @description Zählerstände übernehmen: the caller confirms that meter readings are created.
          */
-        MeterPatch: {
-            /** Calibration Due Date */
-            calibration_due_date?: string | null;
-            connection?: components["schemas"]["MeterConnection"] | null;
-            /** Location */
-            location?: string | null;
-            /** Malo Id */
-            malo_id?: string | null;
-            /** Meter Type Code */
-            meter_type_code?: string | null;
-            /** Name */
-            name?: string | null;
-            /** Notes */
-            notes?: string | null;
-            /** Remote Readable */
-            remote_readable?: boolean | null;
-            /** Unit Id */
-            unit_id?: string | null;
-            /** Valid From */
-            valid_from?: string | null;
-            /** Valid To */
-            valid_to?: string | null;
+        MeterTransferIn: {
+            /**
+             * Confirm
+             * @default false
+             */
+            confirm: boolean;
         };
         /** MeteringConnectionIn */
         MeteringConnectionIn: {
@@ -28520,39 +27583,6 @@ export interface components {
             valid_from?: string | null;
             /** Valid To */
             valid_to?: string | null;
-        };
-        /** NoticePeriodOut */
-        NoticePeriodOut: {
-            /** Contract End Covers */
-            contract_end_covers?: boolean | null;
-            /** Contract End Date */
-            contract_end_date?: string | null;
-            /** Days */
-            days: number;
-            /**
-             * End On
-             * Format: date
-             */
-            end_on: string;
-            /** Months */
-            months: number;
-            /**
-             * Note
-             * @default Orientierung, zu verifizieren. Die Kündigungsfrist stammt aus dem Vertrag oder der Eingabe, nicht aus einer rechtlichen Regel; die Prüfung blockiert nichts (M1-09).
-             */
-            note: string;
-            /**
-             * Termination On
-             * Format: date
-             */
-            termination_on: string;
-            /** To Month End */
-            to_month_end: boolean;
-            /**
-             * Verify
-             * @default true
-             */
-            verify: boolean;
         };
         /**
          * NotificationOut
@@ -29043,39 +28073,16 @@ export interface components {
              */
             period_to: string;
         };
-        /**
-         * OwnershipTransferIn
-         * @description Eigentümerwechsel (D16, D17): either the party of the acquirer or a contact whose own
-         *     party (single member, role primary) is looked up or created. The standing amounts of the
-         *     current ownership (payments, payment schedule, allocation values valid on the title
-         *     transfer date) are carried over to the new ownership as a factual copy from that date on
-         *     when ``carry_over_amounts`` is set. Nothing here splits an annual statement between
-         *     seller and acquirer (rule W07, release point P01 stay open).
-         */
+        /** OwnershipTransferIn */
         OwnershipTransferIn: {
             acquisition_kind: components["schemas"]["AcquisitionKind"];
             /** Benefit Burden Date */
             benefit_burden_date?: string | null;
             /**
-             * Carry Over Amounts
-             * @description Sollbeträge, Zahlungsplan und Umlagewerte ab dem Eigentumsübergang übernehmen
-             * @default true
+             * New Party Id
+             * Format: uuid
              */
-            carry_over_amounts: boolean;
-            /**
-             * Document Id
-             * @description Nachweis (z. B. Grundbuchauszug), wird mit dem neuen Vertrag verknüpft
-             */
-            document_id?: string | null;
-            /**
-             * New Contact Id
-             * @description Erwerber als Kontakt; die Vertragspartei wird ermittelt
-             */
-            new_contact_id?: string | null;
-            /** New Party Id */
-            new_party_id?: string | null;
-            /** Notes */
-            notes?: string | null;
+            new_party_id: string;
             /**
              * Sev Enabled
              * @default false
@@ -29086,51 +28093,6 @@ export interface components {
              * @default false
              */
             special_succession_liability: boolean;
-            /**
-             * Title Transfer Date
-             * Format: date
-             */
-            title_transfer_date: string;
-        };
-        /**
-         * OwnershipTransferPreviewOut
-         * @description What ``POST /contracts/{id}/ownership-transfer`` would do on the given date.
-         */
-        OwnershipTransferPreviewOut: {
-            /** Allocation Values */
-            allocation_values: components["schemas"]["ContractAllocationValueOut"][];
-            /**
-             * Contract Id
-             * Format: uuid
-             */
-            contract_id: string;
-            /**
-             * New Start Date
-             * Format: date
-             */
-            new_start_date: string;
-            /**
-             * Old End Date
-             * Format: date
-             */
-            old_end_date: string;
-            /**
-             * Party Id
-             * Format: uuid
-             */
-            party_id: string;
-            /** Party Name */
-            party_name: string | null;
-            /** Payments */
-            payments: components["schemas"]["PaymentOut"][];
-            /** Schedules */
-            schedules: components["schemas"]["ScheduleOut"][];
-            /**
-             * Statement Split
-             * @default not_implemented
-             * @constant
-             */
-            statement_split: "not_implemented";
             /**
              * Title Transfer Date
              * Format: date
@@ -29987,72 +28949,6 @@ export interface components {
          * @enum {string}
          */
         Priority: "low" | "normal" | "high" | "urgent" | "immediate";
-        /** PropertyChecklistIn */
-        PropertyChecklistIn: {
-            /**
-             * Kind
-             * @default manager_change
-             */
-            kind: string;
-            /** Note */
-            note?: string | null;
-            /**
-             * Property Id
-             * Format: uuid
-             */
-            property_id: string;
-        };
-        /** PropertyChecklistItemIn */
-        PropertyChecklistItemIn: {
-            /** Done */
-            done: boolean;
-        };
-        /** PropertyChecklistItemOut */
-        PropertyChecklistItemOut: {
-            /** Code */
-            code: string;
-            /** Done At */
-            done_at?: string | null;
-            /** Done By */
-            done_by?: string | null;
-            /** Done By Name */
-            done_by_name?: string | null;
-            /** Label */
-            label: string;
-        };
-        /** PropertyChecklistOut */
-        PropertyChecklistOut: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Done At */
-            done_at: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Items */
-            items: components["schemas"]["PropertyChecklistItemOut"][];
-            /** Kind */
-            kind: string;
-            /** Note */
-            note: string | null;
-            /**
-             * Property Id
-             * Format: uuid
-             */
-            property_id: string;
-            /** Status */
-            status: string;
-            /**
-             * Updated At
-             * Format: date-time
-             */
-            updated_at: string;
-        };
         /** PropertyChoice */
         PropertyChoice: {
             /**
@@ -30103,8 +28999,6 @@ export interface components {
              * Format: uuid
              */
             contact_id: string;
-            /** Contact Name */
-            contact_name?: string | null;
             /**
              * Id
              * Format: uuid
@@ -30119,21 +29013,6 @@ export interface components {
             valid_to?: string | null;
             /** Visible In Portal For */
             visible_in_portal_for?: string[];
-        };
-        /**
-         * PropertyContactPatch
-         * @description Partial update of a contact person assignment (C2). The contact itself is immutable:
-         *     a wrong person is ended (``valid_to``) and assigned anew.
-         */
-        PropertyContactPatch: {
-            /** Category Code */
-            category_code?: string | null;
-            /** Valid From */
-            valid_from?: string | null;
-            /** Valid To */
-            valid_to?: string | null;
-            /** Visible In Portal For */
-            visible_in_portal_for?: string[] | null;
         };
         /** PropertyIn */
         PropertyIn: {
@@ -31095,14 +29974,6 @@ export interface components {
             /** Changed */
             changed: number;
         };
-        /** ReconcileStateIn */
-        ReconcileStateIn: {
-            /**
-             * Preview
-             * @default false
-             */
-            preview: boolean;
-        };
         /**
          * ReconciliationNoteIn
          * @description Explained difference of the cash flow reconciliation (W04): signed amount that bridges
@@ -31855,11 +30726,6 @@ export interface components {
             booking_date?: string | null;
             /** Reason */
             reason: string;
-        };
-        /** RevertGmailDecisionIn */
-        RevertGmailDecisionIn: {
-            /** Event Id */
-            event_id?: string | null;
         };
         /**
          * ReviewStatus
@@ -33432,52 +32298,6 @@ export interface components {
             branding: components["schemas"]["Branding"];
             company: components["schemas"]["CompanyData"];
             /**
-             * Gmail Close Assigned Tickets
-             * @default false
-             */
-            gmail_close_assigned_tickets: boolean;
-            /**
-             * Gmail Done Closes Ticket
-             * @default false
-             */
-            gmail_done_closes_ticket: boolean;
-            /**
-             * Gmail Done On Trash
-             * @default true
-             */
-            gmail_done_on_trash: boolean;
-            /**
-             * Gmail Done Sync Mode
-             * @default record_only
-             */
-            gmail_done_sync_mode: string;
-            /** Gmail Keep Open Labels */
-            gmail_keep_open_labels?: string[];
-            /**
-             * Gmail Reconcile Grace Seconds
-             * @default 300
-             */
-            gmail_reconcile_grace_seconds: number;
-            /**
-             * Gmail Reopen On Unarchive
-             * @default true
-             */
-            gmail_reopen_on_unarchive: boolean;
-            /**
-             * Gmail Restore Inbox On Reopen
-             * @default false
-             */
-            gmail_restore_inbox_on_reopen: boolean;
-            /**
-             * Gmail Settle Seconds
-             * @default 600
-             */
-            gmail_settle_seconds: number;
-            /** Gmail Spike Confirmed At */
-            gmail_spike_confirmed_at?: string | null;
-            /** Gmail Spike Protocol Ref */
-            gmail_spike_protocol_ref?: string | null;
-            /**
              * Mail Approval Mode
              * @default external_only
              */
@@ -33527,24 +32347,6 @@ export interface components {
             ai_learning_examples_retention_months?: number | null;
             branding?: components["schemas"]["Branding"] | null;
             company?: components["schemas"]["CompanyData"] | null;
-            /** Gmail Close Assigned Tickets */
-            gmail_close_assigned_tickets?: boolean | null;
-            /** Gmail Done Closes Ticket */
-            gmail_done_closes_ticket?: boolean | null;
-            /** Gmail Done On Trash */
-            gmail_done_on_trash?: boolean | null;
-            /** Gmail Done Sync Mode */
-            gmail_done_sync_mode?: string | null;
-            /** Gmail Keep Open Labels */
-            gmail_keep_open_labels?: string[] | null;
-            /** Gmail Reconcile Grace Seconds */
-            gmail_reconcile_grace_seconds?: number | null;
-            /** Gmail Reopen On Unarchive */
-            gmail_reopen_on_unarchive?: boolean | null;
-            /** Gmail Restore Inbox On Reopen */
-            gmail_restore_inbox_on_reopen?: boolean | null;
-            /** Gmail Settle Seconds */
-            gmail_settle_seconds?: number | null;
             /** Mail Approval Mode */
             mail_approval_mode?: string | null;
             /** Metering Module Enabled */
@@ -35031,8 +33833,6 @@ export interface components {
             /** Mandate Signed On */
             mandate_signed_on: string | null;
             mandate_status: components["schemas"]["ContactMandateStatus"];
-            /** @description Offene Änderung (Beendigung), die eine zweite Person freigeben muss. */
-            pending_change?: components["schemas"]["BankAccountChangeOut"] | null;
             /**
              * Rejected At
              * @description Zeitpunkt der Ablehnung; nur bei approval_status rejected.
@@ -35048,11 +33848,6 @@ export interface components {
              * @description Begründung der zweiten Person bei Ablehnung (M5-01).
              */
             rejected_reason?: string | null;
-            /**
-             * Replaces Account Id
-             * @description Bankverbindung, die diese neue Version nach Freigabe ablöst (IBAN-Änderung über die CRM-Oberfläche); die alte erhält dann Gültig bis.
-             */
-            replaces_account_id?: string | null;
             /** Requested By */
             requested_by?: string | null;
             /** Sepa Enabled */
@@ -44748,41 +43543,6 @@ export interface operations {
             };
         };
     };
-    add_bank_account_api_v1_contacts__contact_id__bank_accounts_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contact_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     approve_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__approve_post: {
         parameters: {
             query?: never;
@@ -44796,116 +43556,6 @@ export interface operations {
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    approve_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__approve_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contact_id: string;
-                account_id: string;
-                change_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    reject_bank_account_change_api_v1_contacts__contact_id__bank_accounts__account_id__changes__change_id__reject_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contact_id: string;
-                account_id: string;
-                change_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: {
-            content: {
-                "application/json": components["schemas"]["BankAccountDecisionIn"] | null;
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    end_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__end_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contact_id: string;
-                account_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["BankAccountEndIn"];
             };
         };
         responses: {
@@ -44979,42 +43629,6 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    replace_bank_account_api_v1_contacts__contact_id__bank_accounts__account_id__replace_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                contact_id: string;
-                account_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["mhvp__contacts__schemas__BankAccountIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -45966,39 +44580,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ContractOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    ownership_transfer_preview_api_v1_contracts__contract_id__ownership_transfer_preview_get: {
-        parameters: {
-            query: {
-                title_transfer_date: string;
-            };
-            header?: never;
-            path: {
-                contract_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["OwnershipTransferPreviewOut"];
                 };
             };
             /** @description Validation Error */
@@ -47382,6 +45963,26 @@ export interface operations {
             };
         };
     };
+    ensure_default_categories_api_v1_document_categories_ensure_defaults_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CategoryOut"][];
+                };
+            };
+        };
+    };
     patch_category_api_v1_document_categories__category_id__patch: {
         parameters: {
             query?: never;
@@ -47413,6 +46014,28 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_document_folders_api_v1_document_folders_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
                 };
             };
         };
@@ -48757,6 +47380,43 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transfer_meters_api_v1_handover_protocols__protocol_id__meters_transfer_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeterTransferIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -57452,43 +56112,6 @@ export interface operations {
             };
         };
     };
-    reconcile_mailbox_state_api_v1_mail_mailboxes__mailbox_id__reconcile_state_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                mailbox_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ReconcileStateIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     sync_mailbox_now_api_v1_mail_mailboxes__mailbox_id__sync_post: {
         parameters: {
             query?: never;
@@ -57559,28 +56182,6 @@ export interface operations {
             };
         };
     };
-    align_copies_api_v1_mail_maintenance_align_copies_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: number;
-                    };
-                };
-            };
-        };
-    };
     link_duplicates_api_v1_mail_maintenance_link_duplicates_post: {
         parameters: {
             query?: never;
@@ -57621,8 +56222,6 @@ export interface operations {
                 page?: number;
                 /** @description Einträge je Seite (max. 200); ohne Angabe gilt limit (erste Seite) */
                 page_size?: number | null;
-                /** @description Abgleichstand mit Gmail (Rückkanal M20-08) */
-                sync_state?: string | null;
             };
             header?: never;
             path?: never;
@@ -58468,76 +57067,6 @@ export interface operations {
             };
         };
     };
-    restore_inbox_api_v1_mail_messages__message_id__restore_inbox_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                message_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    revert_gmail_decision_api_v1_mail_messages__message_id__revert_gmail_decision_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                message_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["RevertGmailDecisionIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     submit_api_v1_mail_messages__message_id__submit_post: {
         parameters: {
             query?: never;
@@ -58591,39 +57120,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    message_sync_events_api_v1_mail_messages__message_id__sync_events_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                message_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    }[];
                 };
             };
             /** @description Validation Error */
@@ -59001,76 +57497,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SignatureProfileOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_maintenance_api_v1_maintenance__item_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MaintenancePatch"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MaintenanceOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    complete_maintenance_api_v1_maintenance__item_id__done_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                item_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MaintenanceDoneIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MaintenanceDoneOut"];
                 };
             };
             /** @description Validation Error */
@@ -60195,41 +58621,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnitAssignmentOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_meter_api_v1_meters__meter_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                meter_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["MeterPatch"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MeterOut"];
                 };
             };
             /** @description Validation Error */
@@ -66202,75 +64593,6 @@ export interface operations {
             };
         };
     };
-    update_key_api_v1_properties__property_id__allocation_keys__key_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                property_id: string;
-                key_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["AllocationKeyPatch"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AllocationKeyOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    allocation_summary_api_v1_properties__property_id__allocation_summary_get: {
-        parameters: {
-            query?: {
-                as_of?: string | null;
-            };
-            header?: never;
-            path: {
-                property_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AllocationSummaryOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     list_account_options_api_v1_properties__property_id__bank_account_options_get: {
         parameters: {
             query?: {
@@ -66613,42 +64935,6 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PropertyContactOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    patch_property_contact_api_v1_properties__property_id__contacts__assignment_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                property_id: string;
-                assignment_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PropertyContactPatch"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -71095,39 +69381,6 @@ export interface operations {
             };
         };
     };
-    confirm_gmail_spike_api_v1_tenant_settings_gmail_spike_confirm_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["GmailSpikeConfirmIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["TenantSettingsOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     redeliver_endpoint_api_v1_tenant_webhook_deliveries__delivery_id__redeliver_post: {
         parameters: {
             query?: never;
@@ -73520,26 +71773,6 @@ export interface operations {
             };
         };
     };
-    assignable_users_api_v1_workspace_assignable_users_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["AssignableUserOut"][];
-                };
-            };
-        };
-    };
     bulk_api_v1_workspace_bulk_post: {
         parameters: {
             query?: never;
@@ -73813,128 +72046,6 @@ export interface operations {
             };
         };
     };
-    list_checklists_api_v1_workspace_checklists_get: {
-        parameters: {
-            query: {
-                property_id: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PropertyChecklistOut"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    start_checklist_api_v1_workspace_checklists_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PropertyChecklistIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PropertyChecklistOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    checklist_templates_api_v1_workspace_checklists_templates_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": {
-                        [key: string]: components["schemas"]["PropertyChecklistItemOut"][];
-                    };
-                };
-            };
-        };
-    };
-    tick_checklist_item_api_v1_workspace_checklists__checklist_id__items__code__post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                checklist_id: string;
-                code: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["PropertyChecklistItemIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["PropertyChecklistOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
     dashboard_api_v1_workspace_dashboard_get: {
         parameters: {
             query?: never;
@@ -73978,224 +72089,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_deadline_entries_api_v1_workspace_deadline_entries_get: {
-        parameters: {
-            query?: {
-                source_type?: string | null;
-                source_id?: string | null;
-                status?: string;
-                limit?: number;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeadlineEntryOut"][];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    create_deadline_entry_api_v1_workspace_deadline_entries_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeadlineEntryIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeadlineEntryOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    compute_deadline_api_v1_workspace_deadline_entries_compute_get: {
-        parameters: {
-            query: {
-                type_id: string;
-                trigger_on: string;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeadlineComputeOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    finish_deadline_entry_api_v1_workspace_deadline_entries__entry_id__done_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                entry_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeadlineEntryOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    list_deadline_types_api_v1_workspace_deadline_types_get: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeadlineTypeOut"][];
-                };
-            };
-        };
-    };
-    create_deadline_type_api_v1_workspace_deadline_types_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeadlineTypeIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeadlineTypeOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    update_deadline_type_api_v1_workspace_deadline_types__type_id__patch: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                type_id: string;
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["DeadlineTypePatch"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["DeadlineTypeOut"];
                 };
             };
             /** @description Validation Error */
@@ -74410,41 +72303,6 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["JobSettingsOut"];
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
-    };
-    notice_period_api_v1_workspace_notice_period_get: {
-        parameters: {
-            query: {
-                termination_on: string;
-                months?: number;
-                days?: number;
-                to_month_end?: boolean;
-                contract_id?: string | null;
-            };
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["NoticePeriodOut"];
                 };
             };
             /** @description Validation Error */
