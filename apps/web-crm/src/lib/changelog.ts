@@ -17,6 +17,19 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.40.3",
+    date: "28.09.2026",
+    title: "Korrekturen aus der Prüfung vom 28.09.2026",
+    changes: [
+      "Folgevorgänge, die in ihren abgeschlossenen Vorgänger zurückgeführt wurden, blockieren keine weiteren Mails mehr; jede weitere Mail des Vorgangs wird eingelesen, statt den Mailabruf mit einem Fehler anzuhalten. Beim Zusammenführen eines Folgetickets in seinen Vorgänger wird die Folgeverknüpfung gelöst und im Verlauf festgehalten.",
+      "Vor dem Anlegen eines Folgetickets wird ein vorhandenes Folgeticket berücksichtigt: es erhält die Mail, wird innerhalb seiner Frist wieder geöffnet oder führt entlang der Kette weiter.",
+      "Antwort aus dem Ticket: eine abweichende Reply-To-Adresse wird nur dann Empfänger, wenn sie am Ticket beteiligt ist; sonst bleibt der geprüfte Absender Empfänger, und die Adresse wird nur zur ausdrücklichen Auswahl angeboten.",
+      "Antworten an alle setzt nie eine eigene Postfachadresse als Empfänger; bei eigener Reply-To-Adresse gilt der Absender, bei eigenem Absender der erste fremde ursprüngliche Empfänger.",
+      "Umbuchungen (Regel B08, D04): Wurde eine Hälfte vor dem Import des zweiten Auszugs gegen Geldtransit gebucht, ist die zweite Hälfte gegen Geldtransit buchbar und gleicht es aus; eine Buchung gegen das Partnerbankkonto wird mit MHVP-BANK-0020 abgelehnt, die Meldung nennt das Konto der Partnerbuchung und den Weg über das Storno.",
+      "Migration 0221 korrigiert den Namen der Prüfbedingung für die Wiedereröffnungsfrist.",
+    ],
+  },
+  {
     version: "1.40.2",
     date: "28.09.2026",
     title: "Übersetzungen korrigiert",
