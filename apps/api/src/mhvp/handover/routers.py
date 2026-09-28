@@ -227,6 +227,12 @@ class CompleteIn(_In):
     force: bool = False
 
 
+class MeterTransferIn(_In):
+    """Zählerstände übernehmen: the caller confirms that meter readings are created."""
+
+    confirm: bool = False
+
+
 class VersionIn(_In):
     reason: str = Field(min_length=3, max_length=2000)
 
@@ -270,6 +276,35 @@ async def _get(session: Any, protocol_id: uuid.UUID) -> HandoverProtocol:
     return row
 
 
+async def _contract_summary(session: Any, contract_id: uuid.UUID | None) -> dict[str, Any] | None:
+    """Linked contract for the screens (Package F): number, kind, party name, term."""
+    if contract_id is None:
+        return None
+    from mhvp.contacts.models import Party
+    from mhvp.contracts.models import Contract
+
+    contract = await session.get(Contract, contract_id)
+    if contract is None:
+        return None
+    party = await session.get(Party, contract.party_id)
+    return {
+        "id": contract.id,
+        "number": contract.number,
+        "kind": contract.kind.value if hasattr(contract.kind, "value") else contract.kind,
+        "party_name": party.name if party else None,
+        "start_date": contract.start_date,
+        "end_date": contract.end_date,
+        "unit_id": contract.unit_id,
+    }
+
+
+async def _require_contract(session: Any, contract_id: uuid.UUID) -> None:
+    from mhvp.contracts.models import Contract
+
+    if await session.get(Contract, contract_id) is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Vertrag nicht gefunden.")
+
+
 async def _full_out(session: Any, p: HandoverProtocol) -> dict[str, Any]:
     await _fresh(session, p)
     full = await svc.load_full(session, p)
@@ -281,6 +316,7 @@ async def _full_out(session: Any, p: HandoverProtocol) -> dict[str, Any]:
         item["portal_access"] = await portal_access_of(session, p, item["contact_id"])
     out["signatures"] = [_row(x) for x in full["signatures"]]
     out["documents"] = full["documents"]
+    out["contract"] = await _contract_summary(session, p.contract_id)
     out["hints"] = svc.completion_hints(full)
     out["versions"] = [
         {
@@ -418,10 +454,7 @@ async def create_protocol(
                 values = await svc.prefill(session, listing.unit_id)
             values["listing_id"] = listing.id
         if body.contract_id:
-            from mhvp.contracts.models import Contract
-
-            if await session.get(Contract, body.contract_id) is None:
-                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Vertrag nicht gefunden.")
+            await _require_contract(session, body.contract_id)
             values["contract_id"] = body.contract_id
         p = HandoverProtocol(
             tenant_id=principal.tenant_id,
@@ -459,6 +492,8 @@ async def patch_protocol(
         changes = body.model_dump(exclude_unset=True)
         if "unit_id" in changes and changes["unit_id"] and changes["unit_id"] != p.unit_id:
             changes = {**(await svc.prefill(session, changes["unit_id"])), **changes}
+        if changes.get("contract_id"):
+            await _require_contract(session, changes["contract_id"])
         for key, value in changes.items():
             if isinstance(value, str):
                 value = value.strip() or None
@@ -726,6 +761,49 @@ async def hints(
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
         return {"hints": svc.completion_hints(await svc.load_full(session, p))}
+
+
+@router.post(
+    "/protocols/{protocol_id}/meters/transfer",
+    summary="Zählerstände aus dem Protokoll in die Zählerstände der Einheit übernehmen",
+)
+async def transfer_meters(
+    protocol_id: uuid.UUID,
+    body: MeterTransferIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Package F (handbook Mieterwechsel): each protocol meter row with a value becomes one
+    ``meter_reading`` of the matching meter of the unit (by ``meter_id`` or meter number), dated
+    with the row's reading date or the handover date, source ``manual`` with the protocol
+    number as note. Rows already taken over are reported and never duplicated. Needs
+    ``contracts:update`` and, because readings are master data, ``properties:update``. Works
+    on completed protocols too (the usual case), not on cancelled ones. Requires
+    ``confirm=true``."""
+    if not principal.has("properties:update"):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, developer_message="Missing permission properties:update."
+        )
+    if not body.confirm:
+        raise ProblemError(ErrorCodes.HANDOVER_TRANSFER_NOT_CONFIRMED)
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        if p.status == "cancelled":
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Ein storniertes Protokoll wird nicht übernommen."
+            )
+        result = await svc.transfer_meter_readings(session, p, principal.user_id)
+        if not result["created"] and not result["already_transferred"]:
+            raise ProblemError(ErrorCodes.HANDOVER_TRANSFER_NOTHING)
+        await _event(
+            session,
+            principal,
+            "handover.meters.transferred",
+            p,
+            created=[str(x["meter_reading_id"]) for x in result["created"]],
+            skipped=len(result["skipped"]),
+        )
+        return result
 
 
 async def _render(session: Any, request: Request, p: HandoverProtocol, *, draft: bool) -> bytes:

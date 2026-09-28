@@ -797,6 +797,22 @@ class ErrorCodes:
         "Für dieses Objekt ist bereits eine Checkliste dieser Art offen",
         "An open property checklist of this kind exists; finish it before starting another.",
     )
+    # Übergabeprotokoll (M30, Package F): Zählerstände in die Stammdaten übernehmen.
+    HANDOVER_TRANSFER_NOT_CONFIRMED = ErrorCode(
+        "MHVP-HDOV-0001",
+        422,
+        "Übernahme der Zählerstände nicht bestätigt",
+        "POST .../meters/transfer needs confirm=true; the takeover creates meter readings.",
+    )
+    HANDOVER_TRANSFER_NOTHING = ErrorCode(
+        "MHVP-HDOV-0002",
+        409,
+        "Keine Zählerstände übernehmbar",
+        (
+            "No protocol meter could be matched to a meter of the unit or property, or every "
+            "matched row was already taken over; nothing was created."
+        ),
+    )
     # M20-04 Vier-Augen-Prinzip beim Mailversand (mhvp.communication.mail_approval).
     MAIL_APPROVAL_FOUR_EYES = ErrorCode(
         "MHVP-COMM-0001",

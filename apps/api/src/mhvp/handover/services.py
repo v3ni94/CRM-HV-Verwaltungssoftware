@@ -431,3 +431,109 @@ def pdf_filename(protocol: HandoverProtocol) -> str:
 
 def now() -> datetime:
     return datetime.now(UTC)
+
+
+# Zählerstände übernehmen (Package F, handbook Mieterwechsel step 2) --------------------------
+
+
+def _normalised_number(value: str | None) -> str:
+    return re.sub(r"[\s\-_/.]", "", value or "").casefold()
+
+
+async def transfer_meter_readings(
+    session: AsyncSession, protocol: HandoverProtocol, actor: uuid.UUID | None
+) -> dict[str, Any]:
+    """Creates one ``meter_reading`` (source ``manual``, note with the protocol number) per
+    protocol meter row that is not yet taken over and can be matched to a meter of the
+    protocol's unit (or the property's common meters).
+
+    Matching: ``meter_id`` when the row carries one, else the meter number (whitespace,
+    dashes, dots and slashes ignored, case insensitive) among the meters of the unit and the
+    common meters of the property. Rows without value, without matchable meter or with an
+    ambiguous number are reported as skipped and left untouched. The reading date is the
+    row's ``read_on``, else the handover date; without either the row is skipped. The link
+    ``handover_meter.meter_reading_id`` makes a second call a no-op for those rows.
+    """
+    from mhvp.properties.models import Meter, MeterReading, ReadingSource
+
+    rows = list(
+        (
+            await session.scalars(
+                select(HandoverMeter)
+                .where(HandoverMeter.protocol_id == protocol.id)
+                .order_by(HandoverMeter.sort_order, HandoverMeter.created_at)
+            )
+        ).all()
+    )
+    candidates: list[Meter] = []
+    if protocol.property_id is not None:
+        query = select(Meter).where(Meter.property_id == protocol.property_id)
+        if protocol.unit_id is not None:
+            query = query.where((Meter.unit_id == protocol.unit_id) | (Meter.unit_id.is_(None)))
+        else:
+            query = query.where(Meter.unit_id.is_(None))
+        candidates = list((await session.scalars(query.order_by(Meter.number))).all())
+    by_id = {m.id: m for m in candidates}
+    by_number: dict[str, list[Meter]] = {}
+    for m in candidates:
+        by_number.setdefault(_normalised_number(m.number), []).append(m)
+
+    created: list[dict[str, Any]] = []
+    skipped: list[dict[str, Any]] = []
+    already: list[dict[str, Any]] = []
+    for row in rows:
+        label = row.custom_type or row.meter_type or ""
+        item = {"item_id": row.id, "number": row.number, "meter_type": label}
+        if row.meter_reading_id is not None:
+            already.append({**item, "meter_reading_id": row.meter_reading_id})
+            continue
+        if row.value is None:
+            skipped.append({**item, "reason": "no_value"})
+            continue
+        day = row.read_on or protocol.handover_date
+        if day is None:
+            skipped.append({**item, "reason": "no_date"})
+            continue
+        meter: Meter | None = None
+        if row.meter_id is not None:
+            meter = by_id.get(row.meter_id)
+            if meter is None:
+                skipped.append({**item, "reason": "meter_not_in_unit"})
+                continue
+        else:
+            key = _normalised_number(row.number)
+            matches = by_number.get(key, []) if key else []
+            if len(matches) == 1:
+                meter = matches[0]
+            elif len(matches) > 1:
+                skipped.append({**item, "reason": "ambiguous_number"})
+                continue
+            else:
+                skipped.append({**item, "reason": "no_meter"})
+                continue
+        reading = MeterReading(
+            tenant_id=protocol.tenant_id,
+            meter_id=meter.id,
+            read_at=day,
+            value=row.value,
+            source=ReadingSource.MANUAL,
+            notes=f"Übergabeprotokoll {protocol.number}",
+            created_by=actor,
+        )
+        session.add(reading)
+        await session.flush()
+        row.meter_reading_id = reading.id
+        row.meter_id = meter.id
+        row.updated_by = actor
+        created.append(
+            {
+                **item,
+                "meter_id": meter.id,
+                "meter_number": meter.number,
+                "meter_reading_id": reading.id,
+                "read_at": day,
+                "value": row.value,
+            }
+        )
+    await session.flush()
+    return {"created": created, "skipped": skipped, "already_transferred": already}

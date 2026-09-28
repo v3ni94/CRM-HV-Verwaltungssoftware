@@ -180,6 +180,14 @@ class HandoverMeter(IdMixin, TimestampMixin, TenantMixin, Base):
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
+    # Set by "Zählerstände übernehmen" (Package F): the meter_reading created from this row.
+    # A row with a reading is never taken over again (idempotent takeover).
+    meter_reading_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("meter_reading.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
 
 
 class HandoverRoom(IdMixin, TimestampMixin, TenantMixin, Base):
