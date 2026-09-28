@@ -11051,6 +11051,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/maintenance/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Wartung ändern */
+        patch: operations["patch_maintenance_api_v1_maintenance__item_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/maintenance/{item_id}/done": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Wartung als erledigt erfassen
+         * @description Records the completion date. With ``interval_months`` the item stays open and its due
+         *     date moves to ``done_on`` plus the interval (rule C2-01); without an interval the item is
+         *     closed and a second completion is refused (409 ``MHVP-PROP-0005``). The interval is an
+         *     operator entry; no inspection cycle is assumed by the platform.
+         */
+        post: operations["complete_maintenance_api_v1_maintenance__item_id__done_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/metering/assignments": {
         parameters: {
             query?: never;
@@ -11541,6 +11581,23 @@ export interface paths {
         head?: never;
         /** Einheitenzuordnung ändern */
         patch: operations["patch_unit_assignment_api_v1_metering_unit_assignments__unit_assignment_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/meters/{meter_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Zähler ändern (ohne Nummer, siehe Zählerwechsel) */
+        patch: operations["patch_meter_api_v1_meters__meter_id__patch"];
         trace?: never;
     };
     "/api/v1/meters/{meter_id}/changes": {
@@ -14608,6 +14665,23 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/contacts/{assignment_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Ansprechpartner ändern (Kategorie, Zeitraum, Portalsichtbarkeit) */
+        patch: operations["patch_property_contact_api_v1_properties__property_id__contacts__assignment_id__patch"];
         trace?: never;
     };
     "/api/v1/properties/{property_id}/dms-documents": {
@@ -26812,6 +26886,25 @@ export interface components {
             /** User Ids */
             user_ids: string[];
         };
+        /**
+         * MaintenanceDoneIn
+         * @description Completion of a maintenance item (C2). With an interval the next due date is
+         *     ``done_on`` plus ``interval_months`` (day clamped to the month end) and the item stays
+         *     open; without an interval the item is closed.
+         */
+        MaintenanceDoneIn: {
+            /**
+             * Done On
+             * Format: date
+             */
+            done_on: string;
+        };
+        /** MaintenanceDoneOut */
+        MaintenanceDoneOut: {
+            item: components["schemas"]["MaintenanceOut"];
+            /** Next Due Date */
+            next_due_date: string | null;
+        };
         /** MaintenanceIn */
         MaintenanceIn: {
             /** Due Date */
@@ -26835,6 +26928,8 @@ export interface components {
         MaintenanceKind: "modernization" | "maintenance" | "inspection" | "warranty";
         /** MaintenanceOut */
         MaintenanceOut: {
+            /** Done At */
+            done_at?: string | null;
             /** Due Date */
             due_date?: string | null;
             /**
@@ -26845,6 +26940,8 @@ export interface components {
             /** Interval Months */
             interval_months?: number | null;
             kind: components["schemas"]["MaintenanceKind"];
+            /** Last Done On */
+            last_done_on?: string | null;
             /** Provider Relation Id */
             provider_relation_id?: string | null;
             /** Remind Before */
@@ -26853,6 +26950,25 @@ export interface components {
             status: string;
             /** Title */
             title: string;
+            /** Unit Id */
+            unit_id?: string | null;
+        };
+        /**
+         * MaintenancePatch
+         * @description Partial update of a maintenance item (C2); status and completion only via ``/done``.
+         */
+        MaintenancePatch: {
+            /** Due Date */
+            due_date?: string | null;
+            /** Interval Months */
+            interval_months?: number | null;
+            kind?: components["schemas"]["MaintenanceKind"] | null;
+            /** Provider Relation Id */
+            provider_relation_id?: string | null;
+            /** Remind Before */
+            remind_before?: string | null;
+            /** Title */
+            title?: string | null;
             /** Unit Id */
             unit_id?: string | null;
         };
@@ -27621,6 +27737,8 @@ export interface components {
             notes?: string | null;
             /** Number */
             number: string;
+            /** Property Id */
+            property_id?: string | null;
             /**
              * Remote Readable
              * @default false
@@ -27633,6 +27751,34 @@ export interface components {
              * Format: date
              */
             valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /**
+         * MeterPatch
+         * @description Partial update of a meter (C2). The number is not part of it: a replaced device is
+         *     recorded as Zählerwechsel (``POST /meters/{id}/changes``), which keeps the history.
+         */
+        MeterPatch: {
+            /** Calibration Due Date */
+            calibration_due_date?: string | null;
+            connection?: components["schemas"]["MeterConnection"] | null;
+            /** Location */
+            location?: string | null;
+            /** Malo Id */
+            malo_id?: string | null;
+            /** Meter Type Code */
+            meter_type_code?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Notes */
+            notes?: string | null;
+            /** Remote Readable */
+            remote_readable?: boolean | null;
+            /** Unit Id */
+            unit_id?: string | null;
+            /** Valid From */
+            valid_from?: string | null;
             /** Valid To */
             valid_to?: string | null;
         };
@@ -29469,6 +29615,8 @@ export interface components {
              * Format: uuid
              */
             contact_id: string;
+            /** Contact Name */
+            contact_name?: string | null;
             /**
              * Id
              * Format: uuid
@@ -29483,6 +29631,21 @@ export interface components {
             valid_to?: string | null;
             /** Visible In Portal For */
             visible_in_portal_for?: string[];
+        };
+        /**
+         * PropertyContactPatch
+         * @description Partial update of a contact person assignment (C2). The contact itself is immutable:
+         *     a wrong person is ended (``valid_to``) and assigned anew.
+         */
+        PropertyContactPatch: {
+            /** Category Code */
+            category_code?: string | null;
+            /** Valid From */
+            valid_from?: string | null;
+            /** Valid To */
+            valid_to?: string | null;
+            /** Visible In Portal For */
+            visible_in_portal_for?: string[] | null;
         };
         /** PropertyIn */
         PropertyIn: {
@@ -58363,6 +58526,76 @@ export interface operations {
             };
         };
     };
+    patch_maintenance_api_v1_maintenance__item_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenancePatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    complete_maintenance_api_v1_maintenance__item_id__done_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceDoneIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceDoneOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_assignments_api_v1_metering_assignments_get: {
         parameters: {
             query?: {
@@ -59474,6 +59707,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["UnitAssignmentOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_meter_api_v1_meters__meter_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meter_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MeterPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MeterOut"];
                 };
             };
             /** @description Validation Error */
@@ -65857,6 +66125,42 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_property_contact_api_v1_properties__property_id__contacts__assignment_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                assignment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyContactPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };

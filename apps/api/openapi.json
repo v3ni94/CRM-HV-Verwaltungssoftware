@@ -28120,6 +28120,47 @@
         "title": "MailboxUsersIn",
         "type": "object"
       },
+      "MaintenanceDoneIn": {
+        "additionalProperties": false,
+        "description": "Completion of a maintenance item (C2). With an interval the next due date is\n``done_on`` plus ``interval_months`` (day clamped to the month end) and the item stays\nopen; without an interval the item is closed.",
+        "properties": {
+          "done_on": {
+            "format": "date",
+            "title": "Done On",
+            "type": "string"
+          }
+        },
+        "required": [
+          "done_on"
+        ],
+        "title": "MaintenanceDoneIn",
+        "type": "object"
+      },
+      "MaintenanceDoneOut": {
+        "properties": {
+          "item": {
+            "$ref": "#/components/schemas/MaintenanceOut"
+          },
+          "next_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Next Due Date"
+          }
+        },
+        "required": [
+          "item",
+          "next_due_date"
+        ],
+        "title": "MaintenanceDoneOut",
+        "type": "object"
+      },
       "MaintenanceIn": {
         "additionalProperties": false,
         "properties": {
@@ -28213,6 +28254,18 @@
       },
       "MaintenanceOut": {
         "properties": {
+          "done_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Done At"
+          },
           "due_date": {
             "anyOf": [
               {
@@ -28245,6 +28298,18 @@
           },
           "kind": {
             "$ref": "#/components/schemas/MaintenanceKind"
+          },
+          "last_done_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Done On"
           },
           "provider_relation_id": {
             "anyOf": [
@@ -28300,6 +28365,98 @@
           "status"
         ],
         "title": "MaintenanceOut",
+        "type": "object"
+      },
+      "MaintenancePatch": {
+        "additionalProperties": false,
+        "description": "Partial update of a maintenance item (C2); status and completion only via ``/done``.",
+        "properties": {
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "interval_months": {
+            "anyOf": [
+              {
+                "maximum": 240.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interval Months"
+          },
+          "kind": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MaintenanceKind"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider_relation_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Relation Id"
+          },
+          "remind_before": {
+            "anyOf": [
+              {
+                "pattern": "^(14d|1m|3m|6m)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remind Before"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          }
+        },
+        "title": "MaintenancePatch",
         "type": "object"
       },
       "MajorityRuleIn": {
@@ -30407,6 +30564,18 @@
             "title": "Number",
             "type": "string"
           },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
           "remote_readable": {
             "default": false,
             "title": "Remote Readable",
@@ -30449,6 +30618,139 @@
           "id"
         ],
         "title": "MeterOut",
+        "type": "object"
+      },
+      "MeterPatch": {
+        "additionalProperties": false,
+        "description": "Partial update of a meter (C2). The number is not part of it: a replaced device is\nrecorded as Zählerwechsel (``POST /meters/{id}/changes``), which keeps the history.",
+        "properties": {
+          "calibration_due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Calibration Due Date"
+          },
+          "connection": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MeterConnection"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
+          "malo_id": {
+            "anyOf": [
+              {
+                "maxLength": 33,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Malo Id"
+          },
+          "meter_type_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meter Type Code"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "notes": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notes"
+          },
+          "remote_readable": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Readable"
+          },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "title": "MeterPatch",
         "type": "object"
       },
       "MeteringConnectionIn": {
@@ -35622,6 +35924,17 @@
             "title": "Contact Id",
             "type": "string"
           },
+          "contact_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Name"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -35659,6 +35972,63 @@
           "id"
         ],
         "title": "PropertyContactOut",
+        "type": "object"
+      },
+      "PropertyContactPatch": {
+        "additionalProperties": false,
+        "description": "Partial update of a contact person assignment (C2). The contact itself is immutable:\na wrong person is ended (``valid_to``) and assigned anew.",
+        "properties": {
+          "category_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Code"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          },
+          "visible_in_portal_for": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Visible In Portal For"
+          }
+        },
+        "title": "PropertyContactPatch",
         "type": "object"
       },
       "PropertyIn": {
@@ -87749,6 +88119,113 @@
         ]
       }
     },
+    "/api/v1/maintenance/{item_id}": {
+      "patch": {
+        "operationId": "patch_maintenance_api_v1_maintenance__item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenancePatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wartung ändern",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/maintenance/{item_id}/done": {
+      "post": {
+        "description": "Records the completion date. With ``interval_months`` the item stays open and its due\ndate moves to ``done_on`` plus the interval (rule C2-01); without an interval the item is\nclosed and a second completion is refused (409 ``MHVP-PROP-0005``). The interval is an\noperator entry; no inspection cycle is assumed by the platform.",
+        "operationId": "complete_maintenance_api_v1_maintenance__item_id__done_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceDoneIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceDoneOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wartung als erledigt erfassen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/metering/assignments": {
       "get": {
         "operationId": "list_assignments_api_v1_metering_assignments_get",
@@ -89746,6 +90223,59 @@
         "summary": "Einheitenzuordnung ändern",
         "tags": [
           "Messdienstleister"
+        ]
+      }
+    },
+    "/api/v1/meters/{meter_id}": {
+      "patch": {
+        "operationId": "patch_meter_api_v1_meters__meter_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meter_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meter Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MeterPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MeterOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zähler ändern (ohne Nummer, siehe Zählerwechsel)",
+        "tags": [
+          "Objekte"
         ]
       }
     },
@@ -99243,6 +99773,69 @@
           }
         },
         "summary": "Ansprechpartner zuordnen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/contacts/{assignment_id}": {
+      "patch": {
+        "operationId": "patch_property_contact_api_v1_properties__property_id__contacts__assignment_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyContactPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ansprechpartner ändern (Kategorie, Zeitraum, Portalsichtbarkeit)",
         "tags": [
           "Objekte"
         ]
