@@ -11,6 +11,7 @@ import { UnitMasterData, type UnitMaster } from "@/components/properties/UnitMas
 import { MeterChangesPanel, VacancyValuesPanel, type MeterChangeRow, type VacancyValueRow } from "@/components/properties/UnitPanels";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DeadlineCreatePanel } from "@/components/workspace/DeadlineCreatePanel";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { formatDate, formatDecimal, formatEur } from "@/lib/format";
 import { getMe } from "@/lib/me";
@@ -65,6 +66,7 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
   ).flat();
   const canEdit = me.data?.permissions.includes("properties:update") ?? false;
   const canTransfer = me.data?.permissions.includes("contracts:update") ?? false;
+  const permissions = me.data?.permissions ?? [];
   const links: EntityLink[] = [
     { type: "property", id: propertyId, label: property.data?.number ?? null },
     { type: "building", id: unit.data.building_id, parentId: propertyId, label: building.data?.name ?? null },
@@ -163,6 +165,9 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
       </section>
       <h2 className={ui.h2}>{t("title")}</h2>
       <Prospects unitId={unitId} rows={rows} names={names} />
+      {permissions.includes("tickets:read") ? (
+        <DeadlineCreatePanel sourceType="unit" sourceId={unitId} canCreate={permissions.includes("tickets:create")} canUpdate={permissions.includes("tickets:update")} />
+      ) : null}
       <TicketsSection tickets={(tickets.data ?? []) as TicketSummary[]} />
       <AuditLogPanel entityType="unit" entityId={unitId} />
     </div>

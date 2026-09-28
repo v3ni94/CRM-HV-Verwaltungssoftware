@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import { NoticePeriodHint } from "@/components/contracts/NoticePeriodHint";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { fieldPath, type Problem } from "@/lib/problem";
@@ -1143,6 +1144,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
               <input className={ui.input} type="date" value={termMoveOut} onChange={(e) => setTermMoveOut(e.target.value)} />
             </Field>
           </div>
+          <NoticePeriodHint contractId={contract.id} terminationDate={termDate} endDate={termEnd} />
           {meters.length > 0 ? (
             <fieldset className={ui.sectionGap} data-testid="termination-meter-readings">
               <legend className={ui.h2}>{tc("termination.meterReadings")}</legend>

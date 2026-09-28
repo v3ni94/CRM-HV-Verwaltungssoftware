@@ -67,6 +67,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Tagesübersicht, Fristenliste und Schalter der Tagesjobs (A40, A41).
   { method: "GET", pattern: /^workspace\/(digest|deadlines|job-settings)$/ },
   { method: "PUT", pattern: /^workspace\/job-settings$/ },
+  // Deadline types, entries, notice period and property checklists (rule WS-01).
+  { method: "GET", pattern: /^workspace\/(deadline-types|deadline-entries|deadline-entries\/compute|assignable-users|notice-period|checklists|checklists\/templates)$/ },
+  { method: "POST", pattern: /^workspace\/(deadline-types|deadline-entries|checklists)$/ },
+  { method: "PATCH", pattern: new RegExp(`^workspace/deadline-types/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^workspace/deadline-entries/${ID}/done$`) },
+  { method: "POST", pattern: new RegExp(`^workspace/checklists/${ID}/items/[a-z0-9_]+$`) },
   // Dienstleisterverträge (M9-06): Liste, Anlegen, Ändern, Löschen (contracts:*).
   { method: "GET", pattern: /^service-contracts$/ },
   { method: "POST", pattern: /^service-contracts$/ },

@@ -1425,7 +1425,8 @@
       "note_follow_up": "Follow up",
       "meeting": "Owners' meeting",
       "ticket_due": "Ticket deadline",
-      "appointment": "Appointment"
+      "appointment": "Appointment",
+      "custom_deadline": "Custom deadline (type)"
     },
     "openSource": "Open source",
     "status": {
@@ -1442,7 +1443,9 @@
       "save": "Save",
       "saved": "Saved.",
       "error": "Saving failed."
-    }
+    },
+    "typesLink": "Manage deadline types",
+    "entriesTitle": "Custom deadlines"
   },
   "Accounting": {
     "title": "Accounting",
@@ -2625,7 +2628,17 @@
     "capPercent": "Cap",
     "capSource": "Source",
     "letter": "Letter (draft)",
-    "letterNote": "Draft with placeholders. Legal review before sending; sending only after G3."
+    "letterNote": "Draft with placeholders. Legal review before sending; sending only after G3.",
+    "receipt": {
+      "title": "Access date",
+      "label": "Letter received by the tenant on",
+      "current": "Recorded: {date}",
+      "none": "No access date recorded yet.",
+      "save": "Record access date",
+      "saved": "Access date saved.",
+      "hint": "Basis of the deadline calculation. Until release gate G3 the letter is sent outside the software; the access date may be recorded here. Deadlines must be verified.",
+      "error": "The access date could not be saved."
+    }
   },
   "Prospects": {
     "title": "Prospects",
@@ -4801,6 +4814,10 @@
     "dataQuality": {
       "title": "Data quality",
       "description": "Records deviating from the entry standard, with a link to fix them."
+    },
+    "deadlineTypes": {
+      "title": "Deadline types",
+      "description": "Catalogue of deadline types with trigger, duration and responsible role, to be verified."
     }
   },
   "Members": {
@@ -10310,5 +10327,133 @@
       "deadlines": "Deadlines without a responsible person"
     },
     "handbook": "The standards are described in the handbook under Erfassungsstandards."
+  },
+  "DeadlineTypes": {
+    "title": "Deadline types",
+    "settings": "Settings",
+    "intro": "Catalogue of the tenant's deadline types. Duration and responsibility are entered by the operator; there are no defaults and no legal statement. Every computed due date must be verified.",
+    "verify": "to be verified",
+    "empty": "No deadline types.",
+    "loadError": "The deadline types could not be loaded.",
+    "column": {
+      "name": "Name",
+      "code": "Code",
+      "trigger": "Trigger",
+      "duration": "Duration",
+      "role": "Responsible role",
+      "note": "Source of the duration",
+      "active": "Active"
+    },
+    "trigger": {
+      "termination_received": "Termination received",
+      "handover_done": "Handover done",
+      "rent_increase_access": "Rent increase letter received",
+      "management_start": "Start of management",
+      "management_end": "End of management",
+      "contract_end": "Contract end",
+      "manual": "Date entered"
+    },
+    "noDuration": "no duration entered",
+    "months": "{count} months",
+    "days": "{count} days",
+    "system": "System type",
+    "inactive": "inactive",
+    "form": {
+      "create": "Create deadline type",
+      "edit": "Edit deadline type",
+      "name": "Name",
+      "code": "Code (lowercase, digits, underscore)",
+      "trigger": "Trigger",
+      "durationMonths": "Duration in months (to be verified)",
+      "durationDays": "Duration in days (to be verified)",
+      "role": "Responsible role",
+      "noRole": "no role",
+      "note": "Source of the duration (contract, legal advice), to be verified",
+      "active": "Active",
+      "save": "Save",
+      "cancel": "Cancel",
+      "saved": "Saved.",
+      "error": "Saving failed.",
+      "editAction": "Edit",
+      "durationHint": "Without a duration the due date is entered when the deadline is created. No legal value is preset."
+    },
+    "readOnly": "Maintaining the catalogue needs the permission tenant_settings:update."
+  },
+  "DeadlineEntries": {
+    "title": "Deadlines",
+    "verify": "to be verified",
+    "empty": "No open deadlines.",
+    "loadError": "The deadlines could not be loaded.",
+    "column": {
+      "due": "Due",
+      "type": "Type",
+      "title": "Reference",
+      "responsible": "Responsible",
+      "trigger": "Trigger on",
+      "status": "Status",
+      "source": "Source"
+    },
+    "openSource": "Open source",
+    "computed": "computed",
+    "entered": "entered",
+    "noResponsible": "no responsible person (ES-10)",
+    "done": "Done",
+    "doneAt": "done on {date}",
+    "status": {
+      "open": "open",
+      "done": "done"
+    },
+    "showDone": "Show done",
+    "create": {
+      "title": "Create deadline",
+      "type": "Deadline type",
+      "chooseType": "Choose a type",
+      "triggerOn": "Trigger date",
+      "dueOn": "Due date",
+      "dueComputed": "Computed from the type: {date} (to be verified). Leave empty to use this value.",
+      "dueRequired": "The type has no duration. Please enter the due date.",
+      "responsible": "Responsible person",
+      "noResponsible": "no person",
+      "responsibleHint": "Entry standard ES-10: create deadlines with a responsible person.",
+      "entryTitle": "Title (optional)",
+      "note": "Note (optional)",
+      "submit": "Create deadline",
+      "created": "Deadline created. It appears in the deadline list and the calendar.",
+      "error": "The deadline could not be created.",
+      "legal": "Orientation only, no legal deadline calculation. Duration from the type catalogue or the entry, to be verified."
+    }
+  },
+  "NoticePeriod": {
+    "title": "Check notice period (orientation)",
+    "intro": "The contract has no notice period field. Enter the period; the end is computed as orientation and blocks nothing.",
+    "terminationOn": "Termination received on",
+    "months": "Period in months",
+    "days": "additional days",
+    "toMonthEnd": "to the end of the month",
+    "compute": "Compute",
+    "result": "Computed end: {date}",
+    "verify": "to be verified",
+    "covers": "The entered contract end {date} is not before the computed end.",
+    "before": "The entered contract end {date} lies before the computed end. Please check; the entry is not blocked.",
+    "legal": "The notice period must be checked legally (lawyer). The computation only adds the entered period.",
+    "error": "The computation could not be fetched.",
+    "missingDate": "Enter the date the termination was received."
+  },
+  "ManagerChecklist": {
+    "title": "Checklist manager change",
+    "intro": "Steps of the property takeover from the handbook page Verwalterwechsel. Every step is ticked with date and user.",
+    "start": "Start checklist",
+    "started": "Checklist started.",
+    "none": "No checklist has been started for this property yet.",
+    "loadError": "The checklist could not be loaded.",
+    "error": "The change could not be saved.",
+    "progress": "{done} of {total} steps done",
+    "doneBy": "{name}, {date}",
+    "status": {
+      "open": "open",
+      "done": "completed"
+    },
+    "readOnly": "Ticking needs the permission properties:update.",
+    "startedAt": "started on {date}"
   }
 }

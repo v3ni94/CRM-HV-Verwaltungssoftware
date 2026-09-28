@@ -15,6 +15,7 @@ import { LegalEntityBankAccounts } from "@/components/properties/LegalEntityBank
 import { MaintenancePanel, type MaintenanceRow } from "@/components/properties/MaintenancePanel";
 import { MetersPanel, type MeterRow } from "@/components/properties/MetersPanel";
 import { OwnersDetails } from "@/components/properties/OwnersDetails";
+import { ManagerChangeChecklist } from "@/components/properties/ManagerChangeChecklist";
 import { PropertyMasterData, type PropertyMaster } from "@/components/properties/PropertyMasterData";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
 import { PropertyTermination, type Termination } from "@/components/properties/PropertyTermination";
@@ -36,6 +37,7 @@ import { UnitsTable } from "@/components/properties/UnitsTable";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { StatusChip } from "@/components/ui/StatusChip";
+import { DeadlineCreatePanel } from "@/components/workspace/DeadlineCreatePanel";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -287,6 +289,16 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       <PropertyNotices propertyId={propertyId} />
       <PropertyMeteringTab property={{ id: data.id, number: data.number, name: data.name, street: data.street, house_number: data.house_number, postal_code: data.postal_code, city: data.city }} permissions={me.data?.permissions ?? []} />
       <CompletenessPanel propertyId={propertyId} />
+      <ManagerChangeChecklist propertyId={propertyId} canEdit={canEdit} />
+      {me.data?.permissions.includes("tickets:read") ? (
+        <DeadlineCreatePanel
+          sourceType="property"
+          sourceId={propertyId}
+          defaultTypeCode="verwalterwechsel"
+          canCreate={me.data?.permissions.includes("tickets:create") ?? false}
+          canUpdate={me.data?.permissions.includes("tickets:update") ?? false}
+        />
+      ) : null}
       <TicketsSection tickets={ticketRows} />
       <AuditLogPanel entityType="property" entityId={propertyId} />
     </div>

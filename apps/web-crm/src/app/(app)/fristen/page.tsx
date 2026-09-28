@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DeadlineEntriesPanel } from "@/components/workspace/DeadlineEntriesPanel";
 import { DeadlinesTable, type Deadline } from "@/components/workspace/DeadlinesTable";
 import { JobSettingsForm, type JobSettings } from "@/components/workspace/JobSettingsForm";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
@@ -26,6 +27,8 @@ const KINDS = [
   "note_follow_up",
   "meeting",
   "ticket_due",
+  // Rule WS-01: user created deadlines from the type catalogue.
+  "custom_deadline",
   // Manual calendar entries with reminders (recurring ones per occurrence), computed on read.
   "appointment",
 ];
@@ -53,6 +56,8 @@ export default async function DeadlinesPage({ searchParams }: { searchParams: Pr
   const rows = response.ok ? ((await response.json()) as Deadline[]) : null;
   const settings = settingsResponse.ok ? ((await settingsResponse.json()) as JobSettings) : null;
   const canManage = me.data?.permissions.includes("tenant_settings:update") ?? false;
+  const canReadEntries = me.data?.permissions.includes("tickets:read") ?? false;
+  const canUpdateEntries = me.data?.permissions.includes("tickets:update") ?? false;
 
   return (
     <div className={ui.pageGap}>
@@ -100,6 +105,7 @@ export default async function DeadlinesPage({ searchParams }: { searchParams: Pr
       ) : (
         <DeadlinesTable rows={rows} />
       )}
+      {canReadEntries ? <DeadlineEntriesPanel canUpdate={canUpdateEntries} canManageTypes={canManage} /> : null}
       {canManage && settings ? <JobSettingsForm initial={settings} /> : null}
     </div>
   );

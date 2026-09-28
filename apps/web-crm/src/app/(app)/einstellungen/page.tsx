@@ -38,6 +38,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/kataloge", title: t("catalogs.title"), description: t("catalogs.description"), show: can("properties:read") },
     { href: "/einstellungen/felder", title: t("customFields.title"), description: t("customFields.description"), show: can("properties:read") },
     { href: "/einstellungen/kautionszinsen", title: t("depositRates.title"), description: t("depositRates.description"), show: can("contracts:read") },
+    { href: "/einstellungen/fristtypen", title: t("deadlineTypes.title"), description: t("deadlineTypes.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/sla", title: t("sla.title"), description: t("sla.description"), show: can("sla:read") },
     {
       href: "/einstellungen/ticketvorlagen",

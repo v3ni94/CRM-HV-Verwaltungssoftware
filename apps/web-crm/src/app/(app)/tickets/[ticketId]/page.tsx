@@ -22,6 +22,7 @@ import { TicketProposals } from "@/components/tickets/TicketProposals";
 import { TicketMailSection } from "@/components/tickets/TicketMailSection";
 import { TicketWorkOrders, type TicketWorkOrderRow } from "@/components/tickets/TicketWorkOrders";
 import { SafeText } from "@/components/ui/SafeText";
+import { DeadlineCreatePanel } from "@/components/workspace/DeadlineCreatePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
@@ -145,6 +146,12 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
             checklist={checklist}
             extraFieldDefs={extraFieldDefs}
             extraFieldValues={extraFieldValues}
+          />
+          <DeadlineCreatePanel
+            sourceType="ticket"
+            sourceId={ticketId}
+            canCreate={me.data?.permissions.includes("tickets:create") ?? false}
+            canUpdate={me.data?.permissions.includes("tickets:update") ?? false}
           />
         </>
       )}

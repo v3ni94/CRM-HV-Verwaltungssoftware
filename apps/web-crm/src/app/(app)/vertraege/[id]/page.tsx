@@ -12,6 +12,7 @@ import { DepositPanel } from "@/components/contracts/DepositPanel";
 import { OwnershipTransfer } from "@/components/contracts/OwnershipTransfer";
 import { RentInvoicePanel } from "@/components/contracts/RentInvoicePanel";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DeadlineCreatePanel } from "@/components/workspace/DeadlineCreatePanel";
 import { getMe } from "@/lib/me";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -28,6 +29,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
   const { hinweis } = await searchParams;
   const [me, ctx] = await Promise.all([getMe(), loadContractContext(id)]);
   const canUpdate = (me.data?.permissions ?? []).includes("contracts:update");
+  const permissions = me.data?.permissions ?? [];
 
   if (!ctx) {
     return (
@@ -174,6 +176,9 @@ export default async function ContractDetailPage({ params, searchParams }: { par
         <DepositPanel deposits={deposits} settlements={settlements} rates={rates} contractEndDate={contract.end_date} canUpdate={canUpdate} contractId={contract.id} />
       ) : null}
       {contract.kind === "tenancy" ? <RentInvoicePanel contractId={contract.id} vatOption={contract.vat_option} canUpdate={canUpdate} /> : null}
+      {permissions.includes("tickets:read") ? (
+        <DeadlineCreatePanel sourceType="contract" sourceId={contract.id} canCreate={permissions.includes("tickets:create")} canUpdate={permissions.includes("tickets:update")} />
+      ) : null}
       <AuditLogPanel entityType="contract" entityId={contract.id} />
     </div>
   );

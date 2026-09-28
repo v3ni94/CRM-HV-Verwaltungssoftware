@@ -534,6 +534,16 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["contracts:read"],
   },
 
+  // --- Fristtypen (rule WS-01) ------------------------------------------------------------------
+  {
+    id: "fristtypen",
+    title: "Fristtypen, Auslöser, Dauer und verantwortliche Rolle",
+    breadcrumb: [ROOT, "Fristtypen"],
+    href: "/einstellungen/fristtypen",
+    keywords: ["frist", "fristtyp", "verwalterwechsel", "kautionsabrechnung", "mieterhöhung", "kündigungsfrist", "vorfrist", "dauer"],
+    permission: ["tenant_settings:read"],
+  },
+
   // --- SLA -----------------------------------------------------------------------------------
   {
     id: "sla",

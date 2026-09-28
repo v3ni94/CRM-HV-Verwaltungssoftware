@@ -1,9 +1,12 @@
 import { getTranslations } from "next-intl/server";
 
 import { RentIncreaseActions } from "@/components/letting/RentIncreaseForms";
+import { RentIncreaseReceipt } from "@/components/letting/RentIncreaseReceipt";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { DeadlineCreatePanel } from "@/components/workspace/DeadlineCreatePanel";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -24,7 +27,8 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
   const { caseId } = await params;
   const t = await getTranslations("RentIncrease");
   const api = serverApi();
-  const [{ data, error, response }, letter] = await Promise.all([
+  const [me, { data, error, response }, letter] = await Promise.all([
+    getMe(),
     api.GET("/api/v1/letting/rent-increases/{case_id}", { params: { path: { case_id: caseId } } }),
     api.GET("/api/v1/letting/rent-increases/{case_id}/letter", { params: { path: { case_id: caseId } } }),
   ]);
@@ -33,6 +37,8 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
   const check = data.check as Check;
   const stat = check.statutory;
   const draft = letter.data as { text?: string } | undefined;
+  const permissions = me.data?.permissions ?? [];
+  const receivedOn = data.received_on ? String(data.received_on) : null;
   return (
     <div className="flex flex-col gap-4">
       <PageHeader
@@ -119,6 +125,17 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
             {draft.text}
           </pre>
         </section>
+      ) : null}
+      <RentIncreaseReceipt caseId={caseId} status={String(data.status)} receivedOn={receivedOn} canRecord={permissions.includes("contracts:approve")} />
+      {permissions.includes("tickets:read") ? (
+        <DeadlineCreatePanel
+          sourceType="rent_increase_case"
+          sourceId={caseId}
+          defaultTriggerOn={receivedOn}
+          defaultTypeCode="mieterhoehung"
+          canCreate={permissions.includes("tickets:create")}
+          canUpdate={permissions.includes("tickets:update")}
+        />
       ) : null}
       <RentIncreaseActions id={caseId} status={String(data.status)} />
     </div>

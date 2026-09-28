@@ -1425,7 +1425,8 @@
       "note_follow_up": "Wiedervorlage",
       "meeting": "Eigentümerversammlung",
       "ticket_due": "Ticketfrist",
-      "appointment": "Termin"
+      "appointment": "Termin",
+      "custom_deadline": "Eigene Frist (Fristtyp)"
     },
     "openSource": "Zur Quelle",
     "status": {
@@ -1442,7 +1443,9 @@
       "save": "Speichern",
       "saved": "Gespeichert.",
       "error": "Speichern fehlgeschlagen."
-    }
+    },
+    "typesLink": "Fristtypen pflegen",
+    "entriesTitle": "Eigene Fristen"
   },
   "Accounting": {
     "title": "Buchhaltung",
@@ -2625,7 +2628,17 @@
     "capPercent": "Kappungsgrenze",
     "capSource": "Quelle",
     "letter": "Schreiben (Entwurf)",
-    "letterNote": "Entwurf mit Platzhaltern. Vor Versand rechtlich prüfen; Versand nur nach G3."
+    "letterNote": "Entwurf mit Platzhaltern. Vor Versand rechtlich prüfen; Versand nur nach G3.",
+    "receipt": {
+      "title": "Zugangsdatum",
+      "label": "Zugang des Schreibens beim Mieter",
+      "current": "Erfasst: {date}",
+      "none": "Noch kein Zugangsdatum erfasst.",
+      "save": "Zugangsdatum erfassen",
+      "saved": "Zugangsdatum gespeichert.",
+      "hint": "Grundlage der Fristberechnung. Der Versand selbst wird bis Freigabestufe G3 außerhalb der Software vorgenommen; das Zugangsdatum darf hier erfasst werden. Fristen sind zu verifizieren.",
+      "error": "Das Zugangsdatum konnte nicht gespeichert werden."
+    }
   },
   "Prospects": {
     "title": "Interessenten",
@@ -4801,6 +4814,10 @@
     "dataQuality": {
       "title": "Datenqualität",
       "description": "Datensätze, die vom Erfassungsstandard abweichen, mit Link zur Korrektur."
+    },
+    "deadlineTypes": {
+      "title": "Fristtypen",
+      "description": "Katalog der Fristtypen mit Auslöser, Dauer und verantwortlicher Rolle, zu verifizieren."
     }
   },
   "Members": {
@@ -10310,5 +10327,133 @@
       "deadlines": "Fristen ohne verantwortliche Person"
     },
     "handbook": "Die Standards sind im Handbuch unter Erfassungsstandards beschrieben."
+  },
+  "DeadlineTypes": {
+    "title": "Fristtypen",
+    "settings": "Einstellungen",
+    "intro": "Katalog der Fristtypen des Mandanten. Dauer und Verantwortung trägt der Betreiber ein; es gibt keine Vorgabewerte und keine rechtliche Aussage. Jede berechnete Fälligkeit ist zu verifizieren.",
+    "verify": "zu verifizieren",
+    "empty": "Keine Fristtypen vorhanden.",
+    "loadError": "Die Fristtypen konnten nicht geladen werden.",
+    "column": {
+      "name": "Bezeichnung",
+      "code": "Code",
+      "trigger": "Auslöser",
+      "duration": "Dauer",
+      "role": "Verantwortliche Rolle",
+      "note": "Quelle der Dauer",
+      "active": "Aktiv"
+    },
+    "trigger": {
+      "termination_received": "Zugang der Kündigung",
+      "handover_done": "Übergabe erfolgt",
+      "rent_increase_access": "Zugang des Mieterhöhungsschreibens",
+      "management_start": "Verwaltungsbeginn",
+      "management_end": "Verwaltungsende",
+      "contract_end": "Vertragsende",
+      "manual": "Datum wird eingetragen"
+    },
+    "noDuration": "keine Dauer hinterlegt",
+    "months": "{count} Monate",
+    "days": "{count} Tage",
+    "system": "Systemtyp",
+    "inactive": "deaktiviert",
+    "form": {
+      "create": "Fristtyp anlegen",
+      "edit": "Fristtyp bearbeiten",
+      "name": "Bezeichnung",
+      "code": "Code (Kleinbuchstaben, Ziffern, Unterstrich)",
+      "trigger": "Auslöser",
+      "durationMonths": "Dauer in Monaten (zu verifizieren)",
+      "durationDays": "Dauer in Tagen (zu verifizieren)",
+      "role": "Verantwortliche Rolle",
+      "noRole": "keine Rolle",
+      "note": "Quelle der Dauer (Vertrag, Rechtsrat), zu verifizieren",
+      "active": "Aktiv",
+      "save": "Speichern",
+      "cancel": "Abbrechen",
+      "saved": "Gespeichert.",
+      "error": "Speichern fehlgeschlagen.",
+      "editAction": "Bearbeiten",
+      "durationHint": "Ohne Dauer wird die Fälligkeit beim Anlegen der Frist eingetragen. Ein gesetzlicher Wert wird nicht vorgegeben."
+    },
+    "readOnly": "Zum Pflegen ist das Recht tenant_settings:update erforderlich."
+  },
+  "DeadlineEntries": {
+    "title": "Fristen",
+    "verify": "zu verifizieren",
+    "empty": "Keine offenen Fristen.",
+    "loadError": "Die Fristen konnten nicht geladen werden.",
+    "column": {
+      "due": "Fälligkeit",
+      "type": "Fristtyp",
+      "title": "Bezug",
+      "responsible": "Verantwortlich",
+      "trigger": "Auslöser am",
+      "status": "Status",
+      "source": "Quelle"
+    },
+    "openSource": "Zur Quelle",
+    "computed": "berechnet",
+    "entered": "eingetragen",
+    "noResponsible": "ohne Verantwortlichen (ES-10)",
+    "done": "Erledigt",
+    "doneAt": "erledigt am {date}",
+    "status": {
+      "open": "offen",
+      "done": "erledigt"
+    },
+    "showDone": "Erledigte anzeigen",
+    "create": {
+      "title": "Frist anlegen",
+      "type": "Fristtyp",
+      "chooseType": "Fristtyp wählen",
+      "triggerOn": "Auslösedatum",
+      "dueOn": "Fälligkeit",
+      "dueComputed": "Aus dem Fristtyp berechnet: {date} (zu verifizieren). Leer lassen, um diesen Wert zu übernehmen.",
+      "dueRequired": "Der Fristtyp hat keine Dauer. Fälligkeit bitte eintragen.",
+      "responsible": "Verantwortliche Person",
+      "noResponsible": "keine Person",
+      "responsibleHint": "Erfassungsstandard ES-10: Fristen mit verantwortlicher Person anlegen.",
+      "entryTitle": "Bezeichnung (optional)",
+      "note": "Notiz (optional)",
+      "submit": "Frist anlegen",
+      "created": "Frist angelegt. Sie erscheint in der Fristenliste und im Kalender.",
+      "error": "Die Frist konnte nicht angelegt werden.",
+      "legal": "Orientierung, keine rechtliche Fristberechnung. Dauer aus dem Fristtypkatalog oder der Eingabe, zu verifizieren."
+    }
+  },
+  "NoticePeriod": {
+    "title": "Kündigungsfrist prüfen (Orientierung)",
+    "intro": "Der Vertrag enthält kein Feld für die Kündigungsfrist. Frist eintragen, das Ende wird als Orientierung berechnet und blockiert nichts.",
+    "terminationOn": "Zugang der Kündigung",
+    "months": "Frist in Monaten",
+    "days": "zusätzliche Tage",
+    "toMonthEnd": "zum Monatsende",
+    "compute": "Berechnen",
+    "result": "Rechnerisches Ende: {date}",
+    "verify": "zu verifizieren",
+    "covers": "Das eingetragene Vertragsende {date} liegt nicht vor dem rechnerischen Ende.",
+    "before": "Das eingetragene Vertragsende {date} liegt vor dem rechnerischen Ende. Bitte prüfen, die Erfassung wird nicht blockiert.",
+    "legal": "Die Kündigungsfrist ist rechtlich zu prüfen (Rechtsanwalt). Die Berechnung addiert nur die eingetragene Frist.",
+    "error": "Die Berechnung konnte nicht abgerufen werden.",
+    "missingDate": "Zugang der Kündigung eintragen."
+  },
+  "ManagerChecklist": {
+    "title": "Checkliste Verwalterwechsel",
+    "intro": "Schritte der Objektübernahme aus der Handlungsanweisung Verwalterwechsel. Jeder Schritt wird mit Datum und Benutzer abgehakt.",
+    "start": "Checkliste starten",
+    "started": "Checkliste gestartet.",
+    "none": "Für dieses Objekt wurde noch keine Checkliste gestartet.",
+    "loadError": "Die Checkliste konnte nicht geladen werden.",
+    "error": "Die Änderung konnte nicht gespeichert werden.",
+    "progress": "{done} von {total} Schritten erledigt",
+    "doneBy": "{name}, {date}",
+    "status": {
+      "open": "offen",
+      "done": "abgeschlossen"
+    },
+    "readOnly": "Zum Abhaken ist das Recht properties:update erforderlich.",
+    "startedAt": "gestartet am {date}"
   }
 }
