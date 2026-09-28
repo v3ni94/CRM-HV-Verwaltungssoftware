@@ -641,18 +641,29 @@ AUTO_CLOSE_NOTE = "Per E-Mail erledigt"
 
 
 async def complete_message(
-    session: AsyncSession, settings: Settings, message: Message, actor_user_id: uuid.UUID | None
+    session: AsyncSession,
+    settings: Settings,
+    message: Message,
+    actor_user_id: uuid.UUID | None,
+    *,
+    source: str = "user",
 ) -> dict[str, Any]:
     """Side effects of setting an inbound mail to ``done`` (operator 26.09.2026):
 
-    1. the mail is archived at Gmail after the commit (mailbox switch "Erledigt archiviert");
+    1. every copy of the mail in the own mailboxes (``duplicates.group_members``, fix
+       1.42.2) is set to ``done`` as well and archived at Gmail after the commit (mailbox
+       switch "Erledigt archiviert"), so the hidden copy in the collective mailbox leaves
+       the inbox with the leading copy;
     2. when the mail belongs to a ticket and afterwards no inbound mail of that ticket is
        open and no work order of the ticket is open, the ticket is set to ``done`` via
        ``transition_status`` with the resolution kind ``auskunft_erteilt`` and the note
        "Per E-Mail erledigt" (author = the user who completed the mail); the status event
        carries ``data.auto_close = true`` and the closing archives the remaining mails.
        When the kind is disabled in the tenant's list, or a completion check fails, the
-       ticket stays open and a ``auto_close_skipped`` event names the reason.
+       ticket stays open and a ``auto_close_skipped`` event names the reason. Hidden
+       copies never count as open mails (they share the status of their leading copy).
+
+    ``source`` is ``user`` (single action) or ``bulk`` (bulk action).
 
     Returns ``{"archive": bool, "ticket_closed": bool, "reason": str | None}``."""
     from mhvp.core.db.tenancy import after_commit
@@ -662,11 +673,18 @@ async def complete_message(
 
     result: dict[str, Any] = {"archive": False, "ticket_closed": False, "reason": None}
     tenant_id = message.tenant_id
-    if mark_archive_pending(message):
-        message_id = message.id
+    members = await duplicates.group_members(session, message) or [message]
+    group_ids = [m.id for m in members]
+    pending_ids: list[uuid.UUID] = []
+    for member in members:
+        if member.status != "done":
+            member.status = "done"
+        if mark_archive_pending(member):
+            pending_ids.append(member.id)
+    if pending_ids:
 
         async def _archive() -> None:
-            await enqueue_archive_for_message(session, settings, tenant_id, message_id)
+            await enqueue_archive_for_messages(session, settings, tenant_id, pending_ids)
 
         after_commit(session, _archive)
         result["archive"] = True
@@ -684,7 +702,8 @@ async def complete_message(
             Message.ticket_id == ticket.id,
             Message.direction == "in",
             Message.status != "done",
-            Message.id != message.id,
+            Message.duplicate_of_id.is_(None),
+            Message.id.not_in(group_ids),
         )
     )
     if open_mails:

@@ -1067,6 +1067,21 @@ async def link_duplicates(
         return await duplicates.link_existing(session)
 
 
+@router.post(
+    "/maintenance/align-copies",
+    summary="Wartung: Status der Kopien an die führende Kopie angleichen",
+)
+async def align_copies(
+    request: Request, principal: TenantPrincipal = Depends(ADMIN)
+) -> dict[str, int]:
+    """Bestandsfix 1.42.2: Kopien derselben Mail in weiteren eigenen Postfächern, deren Status
+    von der führenden Kopie abweicht (Erledigt vor dem Fix nur auf der angeklickten Kopie),
+    übernehmen den Status der führenden Kopie. Je Zeile ein Ereignis ``message.copy_aligned``
+    mit dem vorherigen Status; idempotent, nichts wird gelöscht."""
+    async with tenant_tx(request, principal) as session:
+        return await duplicates.align_copies(session, principal.user_id)
+
+
 @router.post("/messages/bulk", summary="Sammelaktion: mehrere Nachrichten erledigen")
 async def bulk_messages(
     body: MailBulkIn,

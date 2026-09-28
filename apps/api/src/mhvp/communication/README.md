@@ -348,6 +348,14 @@ Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen
   Mitglieder ohne Zugriff auf das persönliche Postfach sehen weiter die Kopie des
   Sammelpostfachs. Der eindeutige Index `uq_message_inbound_header_id` gilt seit 0213 je
   Postfach (`coalesce(mailbox_id, nil)`), nichts wird gelöscht.
+- Kopiengruppe und Erledigt (fix 1.42.2): `services.complete_message` setzt `done` auf
+  jede Kopie der Gruppe (`duplicates.group_members`) und fordert die Gmail-Archivierung für
+  jede Kopie mit Gmail-Kennung an; `open_mails` der Ticketprüfung zählt nur führende Kopien
+  (`duplicate_of_id IS NULL`, Gruppe der erledigten Mail ausgenommen), damit die versteckte
+  Kopie im Sammelpostfach den automatischen Ticketabschluss nie blockiert. Wartung
+  `POST /mail/maintenance/align-copies` (ADMIN, idempotent): Kopien mit abweichendem Status
+  übernehmen den Status der führenden Kopie, je Zeile Ereignis `message.copy_aligned` mit
+  `previous_status`. Echos eigener gesendeter Mails bleiben unverändert.
 - Rückmeldung 28.09.2026 ("Mehrfachauflistung der gleichen E-Mail"), untersuchte Ursachen:
   - Behoben: Threadansicht (`GET /mail/messages/{id}/thread`), Mailverlauf des Tickets
     (`GET /tickets/{id}/messages`, auch Anhangsliste und Download), `message_count` im

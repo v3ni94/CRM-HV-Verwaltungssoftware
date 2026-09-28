@@ -429,6 +429,46 @@ async def share_case(session: AsyncSession, row: Message) -> None:
         m.property_id = m.property_id or property_id
 
 
+async def align_copies(session: AsyncSession, actor_user_id: uuid.UUID | None) -> dict[str, int]:
+    """Maintenance (fix 1.42.2): a copy whose status differs from its leading copy takes the
+    status of the leading copy (``done`` set before the fix only reached the copy the user
+    clicked). One ``message.copy_aligned`` event per changed row with ``previous_status``;
+    idempotent, nothing is deleted."""
+    from mhvp.core.events import emit
+
+    leading = aliased(Message)
+    rows = (
+        await session.execute(
+            select(Message, leading.status)
+            .join(leading, leading.id == Message.duplicate_of_id)
+            .where(Message.direction == "in", Message.status != leading.status)
+            .order_by(Message.created_at)
+        )
+    ).all()
+    changed = 0
+    for copy, lead_status in rows:
+        if (copy.classification or {}).get("own_sent_echo"):
+            continue  # an echo of an own sent mail is always done, its lead is the sent row
+        previous = copy.status
+        copy.status = lead_status
+        changed += 1
+        await emit(
+            session,
+            tenant_id=copy.tenant_id,
+            type="message.copy_aligned",
+            entity_type="message",
+            entity_id=copy.id,
+            actor_user_id=actor_user_id,
+            payload={
+                "previous_status": previous,
+                "status": lead_status,
+                "leading_message_id": str(copy.duplicate_of_id),
+            },
+        )
+    await session.flush()
+    return {"changed": changed}
+
+
 async def link_existing(session: AsyncSession) -> dict[str, int]:
     """Maintenance for mails stored before this rule: groups inbound copies of the same
     mail across different mailboxes and links them. Counts ``groups``, ``linked`` and
