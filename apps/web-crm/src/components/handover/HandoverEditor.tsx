@@ -10,6 +10,8 @@ import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { HandoverAppointmentButton } from "./HandoverAppointmentButton";
+import { HandoverContractLink } from "./HandoverContractLink";
+import { HandoverMeterTransfer } from "./HandoverMeterTransfer";
 import { HelperAccessSection } from "./HelperAccessSection";
 import { PortalAccessBox } from "./PortalAccessBox";
 import { SignaturePad } from "./SignaturePad";
@@ -453,13 +455,33 @@ export function HandoverEditor({ initial }: { initial: Full }) {
       </nav>
 
       {tab === "object" ? (
-        <ProtocolForm
-          p={p}
-          fields={OBJECT_FIELDS}
-          onSave={patchProtocol}
-          disabled={locked}
-          t={t}
-          id="object"
+        <>
+          <ProtocolForm
+            p={p}
+            fields={OBJECT_FIELDS}
+            onSave={patchProtocol}
+            disabled={locked}
+            t={t}
+            id="object"
+          />
+          <HandoverContractLink
+            base={base}
+            unitId={p.unit_id}
+            contract={p.contract}
+            disabled={locked}
+            onChanged={reload}
+            onError={setError}
+          />
+        </>
+      ) : null}
+      {tab === "meters" ? (
+        <HandoverMeterTransfer
+          base={base}
+          meters={p.meters}
+          hasUnit={Boolean(p.unit_id)}
+          cancelled={p.status === "cancelled"}
+          onChanged={reload}
+          onError={setError}
         />
       ) : null}
       {tab === "deposit" ? (

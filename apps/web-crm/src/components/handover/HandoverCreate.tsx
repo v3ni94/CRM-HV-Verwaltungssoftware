@@ -7,12 +7,13 @@ import { useEffect, useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+import { contractLabel, type ContractOption } from "./HandoverContractLink";
 import type { Kind } from "./types";
 
 type Option = { id: string; label: string };
 
-/** Übergabeprotokoll anlegen (M30): kind plus optional property and unit; the address is
- *  prefilled on the server and stays editable in the protocol. */
+/** Übergabeprotokoll anlegen (M30): kind plus optional property, unit and contract (Package F);
+ *  the address is prefilled on the server and stays editable in the protocol. */
 export function HandoverCreate({ properties }: { properties: Option[] }) {
   const t = useTranslations("Handover.create");
   const router = useRouter();
@@ -20,6 +21,8 @@ export function HandoverCreate({ properties }: { properties: Option[] }) {
   const [propertyId, setPropertyId] = useState("");
   const [units, setUnits] = useState<Option[]>([]);
   const [unitId, setUnitId] = useState("");
+  const [contracts, setContracts] = useState<ContractOption[]>([]);
+  const [contractId, setContractId] = useState("");
   const [manual, setManual] = useState(false);
   const [manualFields, setManualFields] = useState({
     street: "",
@@ -59,12 +62,28 @@ export function HandoverCreate({ properties }: { properties: Option[] }) {
     };
   }, [propertyId]);
 
+  useEffect(() => {
+    setContractId("");
+    setContracts([]);
+    if (!unitId) return;
+    let active = true;
+    bff<ContractOption[]>(
+      `/api/bff/contracts?unit_id=${encodeURIComponent(unitId)}&limit=200`,
+    ).then((res) => {
+      if (active && res.ok) setContracts(res.data);
+    });
+    return () => {
+      active = false;
+    };
+  }, [unitId]);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setBusy(true);
     setError(null);
     const body: Record<string, unknown> = { kind };
     if (!manual && unitId) body.unit_id = unitId;
+    if (!manual && unitId && contractId) body.contract_id = contractId;
     const res = await bff<{ id: string }>("/api/bff/handover/protocols", {
       method: "POST",
       body: JSON.stringify(body),
@@ -175,6 +194,27 @@ export function HandoverCreate({ properties }: { properties: Option[] }) {
                 </option>
               ))}
             </select>
+          </div>
+          <div className="md:col-span-2">
+            <label htmlFor="contract" className={ui.label}>
+              {t("contract")}
+            </label>
+            <select
+              id="contract"
+              className={ui.input}
+              value={contractId}
+              onChange={(e) => setContractId(e.target.value)}
+              disabled={!unitId}
+              data-testid="handover-contract"
+            >
+              <option value="">{t("noContract")}</option>
+              {contracts.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {contractLabel(c)}
+                </option>
+              ))}
+            </select>
+            <p className={ui.help}>{t("contractHelp")}</p>
           </div>
         </div>
       ) : (

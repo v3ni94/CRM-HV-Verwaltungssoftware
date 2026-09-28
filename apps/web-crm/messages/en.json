@@ -6003,7 +6003,10 @@
         "externalObjectNumber": "External property number (optional)",
         "ownerName": "Owner / landlord (optional)",
         "help": "Free entry for a property that is not kept in the portfolio. All details remain editable in the protocol."
-      }
+      },
+      "contract": "Contract",
+      "noContract": "Without contract reference",
+      "contractHelp": "Contracts of the chosen unit. The link can be changed in the protocol under Object."
     },
     "steps": "Sections",
     "tabs": {
@@ -6343,7 +6346,40 @@
       "linkTitle": "Invitation link (text and QR code)",
       "qrAlt": "QR code of the invitation link"
     },
-    "appointmentCreatedLink": "Open appointment on {date} in calendar"
+    "appointmentCreatedLink": "Open appointment on {date} in calendar",
+    "contractLink": {
+      "title": "Linked contract",
+      "none": "No contract linked.",
+      "choose": "Contract of the unit",
+      "noContract": "No link",
+      "save": "Save link",
+      "needsUnit": "Choose a unit from the portfolio first to link a contract.",
+      "help": "The link assigns the protocol to the tenancy contract (tenant change). It changes no contract data.",
+      "kinds": {
+        "tenancy": "Tenancy contract",
+        "ownership": "Ownership contract"
+      }
+    },
+    "meterTransfer": {
+      "title": "Take over meter readings",
+      "help": "Takes the readings of this protocol over as meter readings of the unit's meters (master data), dated with the protocol's reading date or the handover date and noted with the protocol number. Matched by the chosen meter or the meter number. Each reading is taken over once.",
+      "state": "{open} not yet taken over, {done} taken over.",
+      "needsUnit": "Without a unit from the portfolio there are no meters to take readings over to.",
+      "cancelled": "A cancelled protocol is not taken over.",
+      "action": "Take over meter readings",
+      "confirm": "Create {count} readings as meter readings of the unit? The takeover creates master data and can only be corrected there.",
+      "result": "{created} taken over, {skipped} skipped, {already} already taken over.",
+      "on": "on",
+      "meter": "meter",
+      "row": "row",
+      "reasons": {
+        "no_value": "no reading entered",
+        "no_date": "no reading date and no handover date",
+        "meter_not_in_unit": "chosen meter does not belong to the unit",
+        "ambiguous_number": "meter number occurs more than once in the unit, choose the meter in the row",
+        "no_meter": "no meter with this number in the unit"
+      }
+    }
   },
   "ImmowareSettings": {
     "title": "Immoware24 connection",
@@ -9514,7 +9550,33 @@
       "open": "Open document",
       "errors": {
         "missing": "Please choose a file and a property."
-      }
+      },
+      "category": "Category",
+      "categoryAuto": "from classification",
+      "contract": "Contract",
+      "noContract": "no contract",
+      "contact": "Contact",
+      "contactPlaceholder": "Name or company",
+      "contactSearch": "Search contact",
+      "contactRemove": "Remove contact",
+      "contactHits": "Hits"
+    },
+    "folders": {
+      "title": "Folder structure of the property file",
+      "intro": "Six standard folders per property (master prompt 11.2) with the handbook's filing rule, the categories pointing there and the subfolders of the tenant and owner files from the object takeover.",
+      "show": "Show structure",
+      "hide": "Hide structure",
+      "folder": "Folder",
+      "content": "Content (filing rule)",
+      "categories": "Categories",
+      "subfolders": "Subfolders",
+      "noCategory": "no category",
+      "noSubfolders": "none",
+      "subfoldersUnknown": "Names not yet taken over from the object takeover, to be verified",
+      "legalNote": "The filing rule is not checked by the software. Retention and deletion follow the retention profiles (draft, tax adviser review open).",
+      "missingStandard": "The standard categories tenant file (04) and owner file (05) are missing for this tenant.",
+      "ensure": "Add standard categories",
+      "ensured": "Missing standard categories were added."
     }
   },
   "RetentionSettings": {

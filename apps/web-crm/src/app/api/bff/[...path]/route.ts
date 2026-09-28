@@ -81,6 +81,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "DELETE", pattern: new RegExp(`^service-contracts/${ID}$`) },
   // Vertragsformular (A88): Anlage, neue Version, Beendigung, Zahlungsplan, Kaution, Mandatsverweis.
   { method: "POST", pattern: /^contracts$/ },
+  // Vertragsauswahl (Package F): Verträge je Einheit für Übergabeprotokoll und Dokumentupload (contracts:read).
+  { method: "GET", pattern: /^contracts$/ },
   // Freigabe der Importverträge vor der Sollstellung (Betreiberauftrag 26.09.2026).
   { method: "GET", pattern: /^contracts\/pending-approval$/ },
   { method: "POST", pattern: /^contracts\/approve$/ },
@@ -487,6 +489,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}$`) },
   { method: "PATCH", pattern: new RegExp(`^handover/protocols/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^handover/protocols/${ID}/hints$`) },
+  // Zählerstände übernehmen (Package F): Zählerstände des Protokolls in die Stammdaten der Einheit.
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/meters/transfer$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures|complete|versions|status|dispatches)$`) },
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures)/${ID}$`) },
   // Portalzugang eines Beteiligten (M30 Stufe 3): einrichten und beenden.
@@ -650,6 +654,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     pattern: new RegExp(`^integrations/objektakte/person-proposals/${ID}/(test-run|approve|reject)$`),
   },
   { method: "GET", pattern: /^document-categories$/ },
+  // Ordnerstruktur der Objektakte und fehlende Standardkategorien (Package F).
+  { method: "GET", pattern: /^document-folders$/ },
+  { method: "POST", pattern: /^document-categories\/ensure-defaults$/ },
   // SLA und Bereitschaft (M21 Übernahme aus dem Immoware Hub).
   { method: "GET", pattern: /^sla\/(rules|clocks|on-call|on-call\/current|alerts|calendar)$/ },
   { method: "GET", pattern: new RegExp(`^sla/rules/${ID}/steps$`) },

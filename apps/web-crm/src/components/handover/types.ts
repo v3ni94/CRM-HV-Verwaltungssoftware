@@ -21,6 +21,8 @@ export type Protocol = {
   current_step: string;
   property_id: string | null;
   unit_id: string | null;
+  /** Linked contract (Package F); the summary below carries number and party for the screens. */
+  contract_id?: string | null;
   street: string | null;
   house_number: string | null;
   postal_code: string | null;
@@ -102,7 +104,26 @@ export type Version = {
   change_reason: string | null;
 };
 
+/** Summary of the linked contract as /api/v1/handover/protocols/{id} returns it. */
+export type ContractSummary = {
+  id: string;
+  number: string;
+  kind: "tenancy" | "ownership" | string;
+  party_name: string | null;
+  start_date: string | null;
+  end_date: string | null;
+  unit_id: string | null;
+};
+
+/** Result of POST .../meters/transfer (Zählerstände übernehmen). */
+export type MeterTransferResult = {
+  created: { item_id: string; number: string | null; meter_type: string; meter_number: string; value: string; read_at: string }[];
+  skipped: { item_id: string; number: string | null; meter_type: string; reason: string }[];
+  already_transferred: { item_id: string; number: string | null; meter_type: string }[];
+};
+
 export type Full = Protocol & {
+  contract?: ContractSummary | null;
   participants: Item[];
   meters: Item[];
   rooms: Item[];

@@ -6004,7 +6004,10 @@
         "externalObjectNumber": "Externe Objektnummer (optional)",
         "ownerName": "Eigentümer / Vermieter (optional)",
         "help": "Freie Erfassung für ein Objekt, das nicht im Bestand geführt wird. Alle Angaben bleiben im Protokoll änderbar."
-      }
+      },
+      "contract": "Vertrag",
+      "noContract": "Ohne Vertragsbezug",
+      "contractHelp": "Verträge der gewählten Einheit. Die Verknüpfung lässt sich im Protokoll unter Objekt ändern."
     },
     "steps": "Abschnitte",
     "tabs": {
@@ -6343,6 +6346,39 @@
       "done": "Portalzugang eingerichtet.",
       "linkTitle": "Einladungslink (Text und QR-Code)",
       "qrAlt": "QR-Code des Einladungslinks"
+    },
+    "contractLink": {
+      "title": "Verknüpfter Vertrag",
+      "none": "Kein Vertrag verknüpft.",
+      "choose": "Vertrag der Einheit",
+      "noContract": "Keine Verknüpfung",
+      "save": "Verknüpfung speichern",
+      "needsUnit": "Zur Verknüpfung zuerst eine Einheit aus dem Bestand wählen.",
+      "help": "Die Verknüpfung ordnet das Protokoll dem Mietvertrag zu (Mieterwechsel). Sie ändert keine Vertragsdaten.",
+      "kinds": {
+        "tenancy": "Mietvertrag",
+        "ownership": "Eigentumsvertrag"
+      }
+    },
+    "meterTransfer": {
+      "title": "Zählerstände übernehmen",
+      "help": "Übernimmt die Zählerstände dieses Protokolls als Zählerstand der Zähler der Einheit (Stammdaten), mit Ablesedatum aus dem Protokoll oder dem Übergabedatum und dem Vermerk der Protokollnummer. Zuordnung über den gewählten Zähler oder die Zählernummer. Jeder Stand wird nur einmal übernommen.",
+      "state": "{open} noch nicht übernommen, {done} übernommen.",
+      "needsUnit": "Ohne Einheit aus dem Bestand gibt es keine Zähler, in die übernommen werden kann.",
+      "cancelled": "Ein storniertes Protokoll wird nicht übernommen.",
+      "action": "Zählerstände übernehmen",
+      "confirm": "{count} Zählerstände als Zählerstand der Einheit anlegen? Die Übernahme erzeugt Stammdaten und lässt sich nur dort korrigieren.",
+      "result": "{created} übernommen, {skipped} übersprungen, {already} bereits übernommen.",
+      "on": "am",
+      "meter": "Zähler",
+      "row": "Zeile",
+      "reasons": {
+        "no_value": "kein Zählerstand erfasst",
+        "no_date": "kein Ablesedatum und kein Übergabedatum",
+        "meter_not_in_unit": "gewählter Zähler gehört nicht zur Einheit",
+        "ambiguous_number": "Zählernummer mehrfach in der Einheit, bitte Zähler im Eintrag wählen",
+        "no_meter": "kein Zähler mit dieser Nummer in der Einheit"
+      }
     }
   },
   "ImmowareSettings": {
@@ -9514,7 +9550,33 @@
       "open": "Dokument öffnen",
       "errors": {
         "missing": "Bitte Datei und Objekt wählen."
-      }
+      },
+      "category": "Kategorie",
+      "categoryAuto": "aus der Klassifikation",
+      "contract": "Vertrag",
+      "noContract": "kein Vertrag",
+      "contact": "Kontakt",
+      "contactPlaceholder": "Name oder Firma",
+      "contactSearch": "Kontakt suchen",
+      "contactRemove": "Kontakt entfernen",
+      "contactHits": "Treffer"
+    },
+    "folders": {
+      "title": "Ordnerstruktur der Objektakte",
+      "intro": "Sechs Standardordner je Objekt (Master-Prompt 11.2) mit der Ablagevorgabe des Handbuchs, den Kategorien, die dorthin zeigen, und den Unterordnern der Mieter- und Eigentümerakte aus der Objektübernahme.",
+      "show": "Struktur anzeigen",
+      "hide": "Struktur ausblenden",
+      "folder": "Ordner",
+      "content": "Inhalt (Ablagevorgabe)",
+      "categories": "Kategorien",
+      "subfolders": "Unterordner",
+      "noCategory": "keine Kategorie",
+      "noSubfolders": "keine",
+      "subfoldersUnknown": "Bezeichnungen noch nicht aus der Objektübernahme übernommen, zu verifizieren",
+      "legalNote": "Die Ablagevorgabe wird von der Software nicht geprüft. Aufbewahrung und Löschung richten sich nach den Aufbewahrungsprofilen (Entwurf, Prüfung Steuerberatung offen).",
+      "missingStandard": "Die Standardkategorien Mieterakte (04) und Eigentümerakte (05) fehlen bei diesem Mandanten.",
+      "ensure": "Standardkategorien ergänzen",
+      "ensured": "Fehlende Standardkategorien wurden ergänzt."
     }
   },
   "RetentionSettings": {
