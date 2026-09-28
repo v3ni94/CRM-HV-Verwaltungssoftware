@@ -23,6 +23,20 @@ describe("TicketHistory", () => {
     expect(items[3]).toContain("sonstiges: foo: bar");
   });
 
+  it("shows the follow up entries with the number of the other ticket", () => {
+    renderIntl(
+      <TicketHistory
+        events={[
+          { id: "f1", kind: "follow_up_of", data: { ticket_id: "t-1", number: 412, window_days: 30 }, at: "2026-09-27T08:00:00Z" },
+          { id: "f2", kind: "follow_up_created", data: { ticket_id: "t-2", number: 500 }, at: "2026-09-27T08:00:01Z" },
+        ]}
+      />,
+    );
+    const items = screen.getAllByRole("listitem").map((li) => li.textContent);
+    expect(items[0]).toContain("Folgevorgang zu: #412");
+    expect(items[1]).toContain("Folgevorgang angelegt: #500");
+  });
+
   it("renders an empty hint without events", () => {
     renderIntl(<TicketHistory events={[]} />);
     expect(screen.getByText("Kein Verlauf.")).toBeInTheDocument();

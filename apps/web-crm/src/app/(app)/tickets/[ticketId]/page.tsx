@@ -12,6 +12,7 @@ import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvo
 import { TicketBoardPanel } from "@/components/tickets/TicketBoardPanel";
 import { TicketChecklist } from "@/components/tickets/TicketChecklist";
 import { TicketComments, type TicketCommentRow } from "@/components/tickets/TicketComments";
+import { TicketFollowUpLinks, type TicketRef } from "@/components/tickets/TicketFollowUpLinks";
 import { TicketEdit } from "@/components/tickets/TicketForms";
 import { TicketHistory, type TicketEventRow } from "@/components/tickets/TicketHistory";
 import { TicketMailAttachments, type TicketMailAttachment } from "@/components/tickets/TicketMailAttachments";
@@ -74,6 +75,15 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   ]);
   const sources = (mergedSources.data ?? []).map((s) => ({ id: String(s.id), number: Number(s.number), title: s.title ? String(s.title) : "" }));
   const canMerge = !mergedInto && data.status !== "closed";
+  // Folgevorgang (Regel M19-10): Vorgänger und Folgetickets kommen mit dem Ticketdetail.
+  const toRef = (r: { id: unknown; number: unknown; title?: unknown; status?: unknown }): TicketRef => ({
+    id: String(r.id),
+    number: Number(r.number),
+    title: r.title ? String(r.title) : null,
+    status: r.status ? String(r.status) : null,
+  });
+  const followUpOf = data.follow_up_of ? toRef(data.follow_up_of as Parameters<typeof toRef>[0]) : null;
+  const followUps = ((data.follow_ups ?? []) as Parameters<typeof toRef>[0][]).map(toRef);
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-4">
       <PageHeader breadcrumb={[{ href: "/tickets", label: t("title") }]} title={`#${String(data.number)} ${String(data.title ?? "")}`} />
@@ -115,6 +125,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           ))}
         </div>
       ) : null}
+      <TicketFollowUpLinks predecessor={followUpOf} successors={followUps} />
       {mergedInto ? null : (
         <>
           <SlaBadge ticketId={ticketId} canManage={canManageSla} />

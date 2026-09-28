@@ -111,6 +111,9 @@ class TenantSettingsOut(BaseModel):
     auto_posting_enabled: bool
     # M20-03 Notbremse: alle Ticketantworten mit Freigabe durch eine zweite Person (Standard aus).
     ticket_reply_approval_all: bool = False
+    # Regel M19-10: Wiedereröffnung per Mail nur bis so viele Kalendertage nach dem Abschluss,
+    # danach Folgeticket (Standard 30, 0 bedeutet immer Folgeticket).
+    ticket_reopen_window_days: int = 30
     # ADR 0010, M7-04: Lernbeispiele aus Ticketabschlüssen speichern (Standard aus).
     ai_learning_examples_enabled: bool = False
     # ADR 0010 Nachtrag 27.09.2026: Aufbewahrung der Lernbeispiele in Monaten (Standard 24).
@@ -135,6 +138,7 @@ class TenantSettingsPatch(BaseModel):
     company: CompanyData | None = None
     branding: Branding | None = None
     ticket_reply_approval_all: bool | None = None
+    ticket_reopen_window_days: int | None = Field(default=None, ge=0, le=3650)
     ai_learning_examples_enabled: bool | None = None
     ai_learning_examples_retention_months: int | None = Field(default=None, ge=1, le=120)
     metering_module_enabled: bool | None = None

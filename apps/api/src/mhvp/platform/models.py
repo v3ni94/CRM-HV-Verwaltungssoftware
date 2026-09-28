@@ -12,6 +12,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -309,7 +310,13 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     """Tenant configuration (section 5.2); JSON documents validated by pydantic schemas."""
 
     __tablename__ = "tenant_settings"
-    __table_args__ = (UniqueConstraint("tenant_id"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id"),
+        CheckConstraint(
+            "ticket_reopen_window_days BETWEEN 0 AND 3650",
+            name="ticket_reopen_window_days_range",
+        ),
+    )
 
     company: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     branding: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
@@ -397,6 +404,13 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     # ``tenant_settings.updated`` protokolliert.
     ticket_reply_approval_all: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    # Wiedereröffnungsfenster in Kalendertagen (Betreiberentscheidung 28.09.2026, Regel M19-10,
+    # Migration 0219): eine neue Mail öffnet ein abgeschlossenes Ticket nur wieder, wenn der
+    # Abschluss höchstens so viele Tage zurückliegt (Betreiberzeitzone); sonst entsteht ein
+    # Folgeticket mit Verweis auf den Vorgänger. Standard 30, 0 bedeutet immer Folgeticket.
+    ticket_reopen_window_days: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=30, server_default=text("30")
     )
     # Lernbeispiele aus Ticketabschlüssen (ADR 0010, M7-04, Regel M19-07, Migration 0134):
     # bei false wird beim Abschluss kein ``AiExample`` (Aufgabe ``ticket_resolution``)

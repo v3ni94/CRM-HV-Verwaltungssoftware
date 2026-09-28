@@ -192,6 +192,15 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * `transport.py`: shared mail transport of a mailbox: Gmail `send_raw` or SMTP; used after four eyes approval and by system mails
 * `postal_providers.py`, `postal.py`, `postal_tasks.py`: Brief- und Postversand mit Statusrückmeldung (M23-01, rule M23-01, `docs/integrations/postdienst.md`): provider neutral `PostalProvider`, manual outgoing mail list, LetterXpress adapter (LXP API v3), tenant settings with encrypted credentials and release flag (default off), postal job per dispatch with status history, dunning case delivery evidence, beat job `communication-postal-status-poll`
 
+## Mail to a finished ticket (rule M19-10, 28.09.2026)
+
+`attach_to_ticket` reopens a finished ticket only within `tenant_settings.ticket_reopen_window_days`
+calendar days after its completion (default 30); later mails create a follow-up ticket linked to
+the predecessor (`mhvp.tickets.follow_up`, `docs/rules/M19-10-folgevorgang.md`). `mail.parse`
+returns `auto_submitted` from the headers `Auto-Submitted` (not `no`), `X-Autoreply`,
+`X-Autorespond` and `Precedence: auto_reply`; `ingest_parsed` stores it as
+`classification.auto_submitted`, and such a mail never reopens a ticket or creates a follow-up.
+
 ## Antworten mit Anhängen (operator 27.09.2026)
 
 - `POST /mail/messages/{id}/reply-draft` legt je Eingangsmail genau einen offenen Entwurf an:

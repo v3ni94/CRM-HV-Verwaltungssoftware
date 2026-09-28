@@ -22,6 +22,8 @@ const KNOWN_KINDS = new Set([
   "mail_received",
   "merged_from",
   "merged_into",
+  "follow_up_of",
+  "follow_up_created",
   "invoice_attached",
 ]);
 
@@ -47,6 +49,8 @@ export function TicketHistory({ events }: { events: TicketEventRow[] }) {
         return d.routing ? t(`events.routing.${String(d.routing) === "template" ? "template" : "manual"}`) : "";
       case "merged_from":
       case "merged_into":
+      case "follow_up_of":
+      case "follow_up_created":
         return d.number ? `#${String(d.number)}` : "";
       case "invoice_attached":
         return "";

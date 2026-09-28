@@ -91,7 +91,21 @@ def parse(raw: bytes) -> dict[str, Any]:
         "received_at": received,
         "attachments": attachments,
         "inline_skipped": inline_skipped,
+        "auto_submitted": is_auto_submitted(msg),
     }
+
+
+def is_auto_submitted(msg: Any) -> bool:
+    """Automatic reply such as an out of office notice, detected only from the headers the
+    sending system sets (Regel M19-10): ``Auto-Submitted`` other than ``no`` (RFC 3834),
+    ``X-Autoreply`` or ``X-Autorespond`` present, or ``Precedence: auto_reply``. No guess from
+    the subject or the text; an undetected automatic reply is handled like any other mail."""
+    auto = str(msg["Auto-Submitted"] or "").split(";", 1)[0].strip().lower()
+    if auto and auto != "no":
+        return True
+    if msg["X-Autoreply"] is not None or msg["X-Autorespond"] is not None:
+        return True
+    return str(msg["Precedence"] or "").strip().lower() == "auto_reply"
 
 
 def is_inline_part(part: Any) -> bool:

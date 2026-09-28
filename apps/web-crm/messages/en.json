@@ -2955,7 +2955,9 @@
       "routing": {
         "template": "via template",
         "manual": "manual"
-      }
+      },
+      "follow_up_of": "follow up to",
+      "follow_up_created": "follow up created"
     },
     "noComments": "No comments.",
     "portalAuthor": "Portal user",
@@ -3006,7 +3008,13 @@
       "lastInbound": "Last message from the customer: {at}",
       "column": "Reaction"
     },
-    "linkedAllClosed": "All linked tickets are completed."
+    "linkedAllClosed": "All linked tickets are completed.",
+    "followUp": {
+      "predecessor": "Follow up to ticket",
+      "predecessorHint": "The email arrived after the reopening period had ended; the previous ticket stays closed.",
+      "successors": "{count, plural, one {Follow up ticket} other {Follow up tickets}}",
+      "successorsHint": "New emails for this closed ticket are handled in the follow up ticket."
+    }
   },
   "Automation": {
     "title": "Automation",
@@ -4562,6 +4570,16 @@
     "retentionInvalid": "Please enter a whole number between 1 and 120.",
     "retentionSave": "Save retention"
   },
+  "TicketReopenWindow": {
+    "title": "Reopening closed tickets by email",
+    "description": "When a new email arrives for a completed, closed or rejected ticket, the ticket is reopened only if it was closed at most this many calendar days ago. Otherwise a follow up ticket linked to the old one is created; property, unit and contact are taken over. Automatic replies such as out of office notices never reopen a ticket.",
+    "label": "Period in calendar days",
+    "hint": "Default 30 days, allowed 0 to 3650. With 0 every later email creates a follow up ticket. Every change is logged.",
+    "save": "Save period",
+    "saved": "Saved.",
+    "invalid": "Please enter a whole number between 0 and 3650.",
+    "readOnly": "Changing this requires the permission to update tenant settings."
+  },
   "DatevMappings": {
     "title": "DATEV account mapping",
     "description": "Assignment of CRM account numbers to the tax advisor's DATEV accounts. The batch export uses this mapping and stops while accounts with postings are unmapped.",
@@ -5217,8 +5235,7 @@
     "save": "Save",
     "saved": "Saved.",
     "autoFetch": "Daily automatic fetch",
-    "autoFetchHint": "Fetches transactions of assigned accounts once a day automatically (default: off). A manual \"Fetch transactions\" click is independent of this."
-,
+    "autoFetchHint": "Fetches transactions of assigned accounts once a day automatically (default: off). A manual \"Fetch transactions\" click is independent of this.",
     "setupFinTsLink": "Set up bank connection (FinTS, PIN/TAN)"
   },
   "BankAccounts": {

@@ -109,6 +109,29 @@ domain event `ticket.assigned` (payload `from`, `to`, `reason`, `number`). Used 
 * `GET /tickets?mine=true` matches primary and additional assignees, like `assignee_user_id`.
 * `TicketReplyIn.subject` is folded to a single line (header safety, N1).
 
+## Follow-up instead of reopening (`follow_up.py`, rule M19-10, migration 0219)
+
+Operator decision of 28.09.2026, taken by the lead within the mandate "alle Entscheidungen
+selbst abwägen". A new inbound mail for a finished ticket (`done`, `closed`, `rejected`),
+matched by thread or `TNR#` in `mhvp.communication.services.attach_to_ticket`:
+
+* The mail goes to the current end of the case (`current_ticket`, rows locked): a merged
+  ticket leads to its target, a finished ticket with a follow-up to that follow-up.
+* Closed at most `tenant_settings.ticket_reopen_window_days` calendar days ago (operator time
+  zone, default 30, boundary included, `within_reopen_window`): reopened as before.
+* Closed longer ago: stays closed; `create_ticket(..., follow_up_of=...)` creates a new mail
+  ticket with `follow_up_of_ticket_id`, property, unit and contact of the predecessor as preset
+  (`preset`), an internal comment and a history entry in both tickets (`follow_up_of`,
+  `follow_up_created`), the notification `ticket.follow_up_created` to the predecessor's
+  assignees and the domain event `ticket.follow_up_created`. At most one follow-up per ticket
+  (partial unique index `uq_ticket_follow_up_of`).
+* Automatic replies (`classification.auto_submitted`, headers only,
+  `mhvp.communication.mail.is_auto_submitted`) are attached without reopening and never create
+  a follow-up.
+* `GET /tickets/{id}` returns `follow_up_of_ticket_id`, `follow_up_of` (id, number, title,
+  status) and `follow_ups`; the CRM shows both links (`TicketFollowUpLinks`), the window is
+  edited under Einstellungen, Mandant (`TicketReopenWindow`).
+
 ## Further files (addendum 26.09.2026)
 
 Checked against the folder contents on 26.09.2026, the following files were not listed above:

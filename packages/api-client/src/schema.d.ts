@@ -31508,6 +31508,11 @@ export interface components {
              */
             tenant_id: string;
             /**
+             * Ticket Reopen Window Days
+             * @default 30
+             */
+            ticket_reopen_window_days: number;
+            /**
              * Ticket Reply Approval All
              * @default false
              */
@@ -31532,6 +31537,8 @@ export interface components {
             receivable_rules?: components["schemas"]["ReceivableRulesConfig"] | null;
             resolution_kinds?: components["schemas"]["ResolutionKindsConfig"] | null;
             signature_template?: components["schemas"]["SignatureTemplate"] | null;
+            /** Ticket Reopen Window Days */
+            ticket_reopen_window_days?: number | null;
             /** Ticket Reply Approval All */
             ticket_reply_approval_all?: boolean | null;
         };

@@ -177,6 +177,9 @@ async def ingest_parsed(
                 "attachments_rejected": rejected,
                 "inline_skipped": int(parsed.get("inline_skipped") or 0),
             }
+            # Automatische Antwort nach Kopfzeilen (Regel M19-10): öffnet kein
+            # abgeschlossenes Ticket wieder und legt kein Folgeticket an.
+            | ({"auto_submitted": True} if parsed.get("auto_submitted") else {})
         ),
         appointment_suggestions=clean_json(mail.appointments(parsed["body"], local_today())),
     )
@@ -830,37 +833,71 @@ async def _ticket_thread_id(session: AsyncSession, ticket_id: uuid.UUID) -> uuid
     return (first.thread_id or first.id) if first is not None else None
 
 
-_CLOSED_STATES = ("done", "closed", "rejected")
-
-
 async def attach_to_ticket(
     session: AsyncSession, row: Message, ticket_id: uuid.UUID, actor_user_id: uuid.UUID | None
 ) -> None:
-    """Hängt die eingehende Mail an das Ticket. Ein erledigtes, geschlossenes oder abgelehntes
-    Ticket wird dabei wieder geöffnet (Status ``in_progress``, Ereignis ``reopened``, SLA-Uhr
-    läuft weiter); Bearbeiter und Zuweiser erhalten eine interne Benachrichtigung
-    (Review 26.09.2026, H4)."""
+    """Hängt die eingehende Mail an das Ticket des Vorgangs (Regel M19-10,
+    ``mhvp.tickets.follow_up``): ein zusammengeführtes Ticket führt zum Ziel, ein
+    abgeschlossenes Ticket mit Folgeticket zum Folgeticket. Ein erledigtes, geschlossenes oder
+    abgelehntes Ticket wird wieder geöffnet (Status ``in_progress``, Ereignis ``reopened``,
+    SLA-Uhr läuft weiter), wenn der Abschluss höchstens ``ticket_reopen_window_days``
+    Kalendertage zurückliegt; sonst entsteht ein Folgeticket. Eine automatische Antwort
+    (Abwesenheitsnotiz) öffnet nie wieder und legt kein Folgeticket an. Bearbeiter und
+    Zuweiser erhalten eine interne Benachrichtigung (Review 26.09.2026, H4)."""
     from mhvp.sla.models import SlaClock
     from mhvp.sla.service import reopen_clock
-    from mhvp.tickets.models import Ticket, TicketAssignee, TicketEvent, TicketStatus
+    from mhvp.tickets import follow_up
+    from mhvp.tickets.models import TicketAssignee, TicketEvent, TicketStatus
     from mhvp.workspace.services import notify
 
+    ticket = await follow_up.current_ticket(session, ticket_id)
+    closed = ticket is not None and ticket.status.value in follow_up.CLOSED_STATES
+    auto_reply = bool((row.classification or {}).get("auto_submitted"))
+    if ticket is not None and closed and not auto_reply:
+        window = await follow_up.reopen_window_days(session, row.tenant_id)
+        if not follow_up.within_reopen_window(
+            follow_up.closed_at(ticket), datetime.now(UTC), window
+        ):
+            successor = await create_ticket(session, row, actor_user_id, follow_up_of=ticket)
+            await follow_up.record_follow_up(
+                session,
+                predecessor=ticket,
+                follow_up=successor,
+                message_id=row.id,
+                window_days=window,
+                actor_user_id=actor_user_id,
+            )
+            session.add(
+                TicketEvent(
+                    tenant_id=row.tenant_id,
+                    ticket_id=successor.id,
+                    kind="mail_received",
+                    data={"message_id": str(row.id), "from": row.from_address},
+                    user_id=actor_user_id,
+                )
+            )
+            await session.flush()
+            return
+    if ticket is not None:
+        ticket_id = ticket.id
     row.ticket_id = ticket_id
     if row.status == "new":
         row.status = "assigned"
     await duplicates.share_case(session, row)  # every copy of the mail joins the ticket
+    data: dict[str, Any] = {"message_id": str(row.id), "from": row.from_address}
+    if auto_reply:
+        data["auto_reply"] = True
     session.add(
         TicketEvent(
             tenant_id=row.tenant_id,
             ticket_id=ticket_id,
             kind="mail_received",
-            data={"message_id": str(row.id), "from": row.from_address},
+            data=data,
             user_id=actor_user_id,
         )
     )
-    ticket = await session.get(Ticket, ticket_id)
     reopened = False
-    if ticket is not None and ticket.status.value in _CLOSED_STATES:
+    if ticket is not None and closed and not auto_reply:
         previous = ticket.status.value
         ticket.status = TicketStatus.IN_PROGRESS
         ticket.resolved_at = None
@@ -908,16 +945,23 @@ async def attach_to_ticket(
             entity_type="ticket",
             entity_id=ticket_id,
             actor_user_id=actor_user_id,
-            payload={"message_id": str(row.id), "reopened": reopened},
+            payload={"message_id": str(row.id), "reopened": reopened, "auto_reply": auto_reply},
         )
     await session.flush()
 
 
 async def create_ticket(
-    session: AsyncSession, row: Message, actor_user_id: uuid.UUID | None
+    session: AsyncSession,
+    row: Message,
+    actor_user_id: uuid.UUID | None,
+    *,
+    follow_up_of: Any = None,
 ) -> Any:
-    """Ticket from an inbound mail; idempotent when the message already has one."""
+    """Ticket from an inbound mail; idempotent when the message already has one.
+    ``follow_up_of``: finished predecessor ticket (Regel M19-10); the new ticket points to it
+    and takes over its property, unit and contact as preset (``follow_up.preset``)."""
     from mhvp.core.numbering import next_number
+    from mhvp.tickets.follow_up import preset
     from mhvp.tickets.models import Priority, Ticket, TicketSource, TicketTemplate
     from mhvp.tickets.routers import SLA_HOURS
 
@@ -933,6 +977,11 @@ async def create_ticket(
         if row.classification.get("urgency") == "urgent"
         else (tpl.default_priority if tpl else Priority.NORMAL)
     )
+    assignment: dict[str, Any] = (
+        preset(follow_up_of, contact_id=row.contact_id, property_id=row.property_id)
+        if follow_up_of is not None
+        else {"contact_id": row.contact_id, "property_id": row.property_id}
+    )
     ticket = Ticket(
         tenant_id=row.tenant_id,
         created_by=actor_user_id,
@@ -946,12 +995,11 @@ async def create_ticket(
         priority=priority,
         team_id=tpl.default_team_id if tpl else None,
         assignee_user_id=tpl.default_assignee_user_id if tpl else None,
-        contact_id=row.contact_id,
         initiator_contact_id=row.contact_id,
-        property_id=row.property_id,
         source=TicketSource.EMAIL,
         sla_due_at=datetime.now(UTC)
         + timedelta(hours=(tpl.sla_hours if tpl and tpl.sla_hours else SLA_HOURS[priority])),
+        **assignment,
     )
     session.add(ticket)
     await session.flush()

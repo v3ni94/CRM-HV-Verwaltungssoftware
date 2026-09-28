@@ -43832,6 +43832,11 @@
             "title": "Tenant Id",
             "type": "string"
           },
+          "ticket_reopen_window_days": {
+            "default": 30,
+            "title": "Ticket Reopen Window Days",
+            "type": "integer"
+          },
           "ticket_reply_approval_all": {
             "default": false,
             "title": "Ticket Reply Approval All",
@@ -43967,6 +43972,19 @@
                 "type": "null"
               }
             ]
+          },
+          "ticket_reopen_window_days": {
+            "anyOf": [
+              {
+                "maximum": 3650.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Reopen Window Days"
           },
           "ticket_reply_approval_all": {
             "anyOf": [

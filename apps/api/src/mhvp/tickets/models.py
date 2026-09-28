@@ -128,6 +128,13 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
         # Listing by status (M4): ordered by number, and the assignee filter.
         Index("ix_ticket_status_number", "tenant_id", "status", "number"),
         Index("ix_ticket_assignee", "tenant_id", "assignee_user_id"),
+        Index(
+            "uq_ticket_follow_up_of",
+            "tenant_id",
+            "follow_up_of_ticket_id",
+            unique=True,
+            postgresql_where=text("follow_up_of_ticket_id IS NOT NULL"),
+        ),
     )
 
     number: Mapped[int] = mapped_column(Integer, nullable=False)
@@ -171,6 +178,11 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     time_spent_minutes: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     merged_into_ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
+    # Folgevorgang (Betreiberentscheidung 28.09.2026, Regel M19-10, Migration 0219): eine neue
+    # Mail zu einem länger als ``tenant_settings.ticket_reopen_window_days`` abgeschlossenen
+    # Ticket öffnet es nicht wieder, sondern legt ein Folgeticket an, das hierüber auf den
+    # Vorgänger verweist. Höchstens ein Folgeticket je Vorgänger (``uq_ticket_follow_up_of``).
+    follow_up_of_ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id")
     # Löschungssperre je Vorgang (M6-04, Migration 0175): solange gesetzt, wird kein an den
     # Vorgang gebundenes Dokument gelöscht (Rechtsstreit, Beweissicherung).
     retention_hold_reason: Mapped[str | None] = mapped_column(Text)

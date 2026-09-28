@@ -292,6 +292,7 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "resolved_at",
             "time_spent_minutes",
             "merged_into_ticket_id",
+            "follow_up_of_ticket_id",
             "resolution_kind",
             "resolution_note",
             "resolved_by",
@@ -2323,6 +2324,19 @@ async def get_ticket(
             )
             or 0
         )
+        # Folgevorgang (Regel M19-10): Vorgänger und Folgetickets mit Nummer und Titel.
+        predecessor = (
+            await session.get(Ticket, ticket.follow_up_of_ticket_id)
+            if ticket.follow_up_of_ticket_id
+            else None
+        )
+        successors = (
+            await session.scalars(
+                select(Ticket)
+                .where(Ticket.follow_up_of_ticket_id == ticket.id)
+                .order_by(Ticket.number)
+            )
+        ).all()
         names = await _user_names(
             session,
             [c.author_user_id for c in comments]
@@ -2358,12 +2372,18 @@ async def get_ticket(
             "work_orders": [_order_out(o) for o in orders],
             "assignees": [_assignee_out(a) for a in assignees],
             "message_count": message_count,
+            "follow_up_of": _ticket_ref(predecessor) if predecessor is not None else None,
+            "follow_ups": [_ticket_ref(t) for t in successors],
             # A55: documents linked to the ticket as attachments (portal photos, PDFs).
             "attachments": await ticket_attachments(session, ticket.id),
             # Attachments of the inbound mails with document metadata, one bundled query
             # (review 26.09.2026, M5); mailbox rights apply as in the mail view.
             "mail_attachments": await _mail_attachments(session, principal, ticket),
         }
+
+
+def _ticket_ref(t: Ticket) -> dict[str, Any]:
+    return {"id": t.id, "number": t.number, "title": t.title, "status": t.status}
 
 
 def _assignee_of(event: TicketEvent) -> uuid.UUID | None:

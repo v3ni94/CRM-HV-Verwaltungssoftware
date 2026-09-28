@@ -809,3 +809,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `mailbox.is_collective`, `message.duplicate_of_id`, `GET /mail/messages` (Felder `in_progress`, `handler_user_id`, `handler_display_name`, Parameter `include_duplicates`), `POST /mail/maintenance/link-duplicates`, CRM Postfachliste, `mhvp.communication.sync_retry`, `POST /mail/messages/{id}/forward-invoice`, Nachlaufjob `forward_queued` |
 | Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
 | Datum | 27.09.2026 |
+
+## A-070
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Folgevorgang statt Wiedereröffnung (Regel M19-10, Migration 0219, `mhvp.tickets.follow_up`): Die Frist `tenant_settings.ticket_reopen_window_days` (Standard 30) zählt Kalendertage in der Betreiberzeitzone zwischen dem Tag von `ticket.resolved_at` und dem Tag des Maileingangs, die Grenze zählt mit; Zeilen ohne `resolved_at` nutzen die letzte Änderung. Das Folgeticket übernimmt Objekt, Einheit und Kontakt des Vorgängers vor den Werten aus der Mail (die Mail füllt nur Lücken, eine Einheit nie ohne Objekt des Vorgängers), nicht aber Bearbeiter, Priorität, Vorlage oder Thema; diese folgen den Regeln eines neuen Mailtickets. Ein zusammengeführtes Ticket führt zum Zielticket, ein abgeschlossenes Ticket mit Folgeticket zum Folgeticket; je Ticket höchstens ein Folgeticket. Eine automatische Antwort wird ausschließlich an den Kopfzeilen `Auto-Submitted` (Wert nicht `no`), `X-Autoreply`, `X-Autorespond` oder `Precedence: auto_reply` erkannt, an das Ticket des Vorgangs gehängt und öffnet weder wieder noch legt sie ein Folgeticket an; Betreff und Text (zum Beispiel "Abwesenheitsnotiz") werden bewusst nicht ausgewertet, um keine echte Kundenmail zu verschlucken. |
+| Begründung | Betreiberentscheidung vom 28.09.2026 zur Frist (30 Tage, je Mandant änderbar), getroffen durch den Lead im Rahmen des Mandats "alle Entscheidungen selbst abwägen"; Zählweise, Vorbelegung und Erkennung automatischer Antworten sind nicht vorgegeben und rein organisatorisch. |
+| Kennzeichnung | unkritisch (kein Geldfluss, keine gesetzliche Frist, keine Löschung); Bestätigung der Zählweise und der Kopfzeilenliste durch den Betreiber |
+| Betroffene Bereiche | `POST /mail/ingest`, Gmail-Abruf, `GET /tickets/{id}` (`follow_up_of`, `follow_ups`, `follow_up_of_ticket_id`), `GET`/`PATCH /tenant/settings` (`ticket_reopen_window_days`), CRM Ticketdetail und Einstellungen Mandant |
+| Überprüfung spätestens bei Meilenstein | vor G5 (Drittmandanten) |
+| Datum | 28.09.2026 |

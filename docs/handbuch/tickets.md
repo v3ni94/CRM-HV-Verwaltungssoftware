@@ -181,9 +181,10 @@ Zuordnung eingehender Antworten: Antworten mit passenden Thread-Kopfzeilen lande
 automatisch im Ticket. Mails mit der Kennung TNR#<nummer> im Betreff werden dem Ticket
 zugeordnet, wenn der Absender am Ticket beteiligt ist; sonst zeigt das Postfach nur einen
 Vorschlag (mögliche Zuordnung zu TNR#...) und legt wie üblich ein neues Ticket an. Eine
-Kundenantwort an ein erledigtes oder geschlossenes Ticket öffnet es wieder (Status in
-Bearbeitung, Ereignis reopened); Bearbeiter und Zuweiser erhalten bei jedem Maileingang eine
-Benachrichtigung. Der Mailverlauf zeigt nur Mails aus Postfächern, für die der Benutzer
+Kundenantwort an ein erledigtes oder geschlossenes Ticket öffnet es innerhalb der Frist des
+Mandanten wieder (Status in Bearbeitung, Ereignis reopened), danach entsteht ein
+Folgevorgang (Abschnitt Wiedereröffnung); Bearbeiter und Zuweiser erhalten bei jedem
+Maileingang eine Benachrichtigung. Der Mailverlauf zeigt nur Mails aus Postfächern, für die der Benutzer
 freigeschaltet ist.
 
 Schritt für Schritt (Antwort mit Vorlage):
@@ -213,11 +214,24 @@ keine unvollständige Antwort hinausgeht.
 ### Wiedereröffnung
 
 Antwortet ein Kunde per Mail auf ein Ticket im Status erledigt, abgeschlossen oder
-abgelehnt, öffnet die Plattform das Ticket wieder: Status In Bearbeitung, Ereignis reopened
-im Verlauf, die SLA-Uhr läuft weiter, Bearbeiter und Zuweiser werden benachrichtigt. Die
-zuvor archivierten Mails des Tickets bleiben archiviert; die neue Mail liegt im Posteingang.
-Eine Wiedereröffnung von Hand erfolgt über den Status im Ticketdetail. Zusammengeführte
-Quelltickets werden nicht wiedereröffnet; eine Antwort darauf gehört zum Zielticket.
+abgelehnt, öffnet die Plattform das Ticket wieder, wenn der Abschluss höchstens 30
+Kalendertage zurückliegt (Frist je Mandant unter Einstellungen, Mandant, Wiedereröffnung
+abgeschlossener Tickets per E-Mail; der Tag des Abschlusses und der 30. Tag zählen mit):
+Status In Bearbeitung, Ereignis reopened im Verlauf, die SLA-Uhr läuft weiter, Bearbeiter
+und Zuweiser werden benachrichtigt. Die zuvor archivierten Mails des Tickets bleiben
+archiviert; die neue Mail liegt im Posteingang. Eine Wiedereröffnung von Hand erfolgt über
+den Status im Ticketdetail. Zusammengeführte Quelltickets werden nicht wiedereröffnet; eine
+Antwort darauf gehört zum Zielticket.
+
+Liegt der Abschluss länger zurück, bleibt das Ticket abgeschlossen und die Mail erhält ein
+neues Ticket, den Folgevorgang (Regel M19-10). Er übernimmt Objekt, Einheit und Kontakt des
+alten Tickets. Im neuen Ticket steht der Hinweis Folgevorgang zu Ticket mit Verweis auf das
+alte, im alten Ticket der Hinweis Folgevorgang mit Verweis auf das neue; beide Tickets
+erhalten dazu einen internen Kommentar und einen Eintrag im Verlauf, die Bearbeiter des
+alten Tickets eine Benachrichtigung. Weitere Mails im alten Mailverlauf landen danach im
+Folgevorgang. Automatische Antworten wie Abwesenheitsnotizen, die der Absender technisch als
+solche kennzeichnet, öffnen kein Ticket wieder und legen keinen Folgevorgang an; sie werden
+nur am Ticket abgelegt.
 
 ### Terminvorschläge des Dienstleisters
 

@@ -2955,7 +2955,9 @@
       "routing": {
         "template": "über Vorlage",
         "manual": "manuell"
-      }
+      },
+      "follow_up_of": "Folgevorgang zu",
+      "follow_up_created": "Folgevorgang angelegt"
     },
     "noComments": "Keine Kommentare.",
     "portalAuthor": "Portal",
@@ -3006,7 +3008,13 @@
       "lastInbound": "Letzte Nachricht des Kunden: {at}",
       "column": "Reaktion"
     },
-    "linkedAllClosed": "Alle verknüpften Tickets sind erledigt."
+    "linkedAllClosed": "Alle verknüpften Tickets sind erledigt.",
+    "followUp": {
+      "predecessor": "Folgevorgang zu Ticket",
+      "predecessorHint": "Die E-Mail ist nach Ablauf der Wiedereröffnungsfrist eingegangen; das Vorgängerticket bleibt abgeschlossen.",
+      "successors": "{count, plural, one {Folgevorgang} other {Folgevorgänge}}",
+      "successorsHint": "Neue E-Mails zu diesem abgeschlossenen Ticket werden im Folgevorgang bearbeitet."
+    }
   },
   "Automation": {
     "title": "Automatisierung",
@@ -4561,6 +4569,16 @@
     "retentionHint": "Beispiele, die älter sind, werden täglich gelöscht (Standard 24 Monate, 1 bis 120). Jeder Löschlauf wird im Ereignisprotokoll mit Anzahl vermerkt.",
     "retentionInvalid": "Bitte eine ganze Zahl zwischen 1 und 120 eingeben.",
     "retentionSave": "Aufbewahrung speichern"
+  },
+  "TicketReopenWindow": {
+    "title": "Wiedereröffnung abgeschlossener Tickets per E-Mail",
+    "description": "Geht zu einem erledigten, geschlossenen oder abgelehnten Ticket eine neue E-Mail ein, wird das Ticket nur wieder geöffnet, wenn der Abschluss höchstens so viele Kalendertage zurückliegt. Liegt er länger zurück, entsteht ein Folgeticket mit Verweis auf das alte Ticket; Objekt, Einheit und Kontakt werden übernommen. Automatische Antworten wie Abwesenheitsnotizen öffnen nie wieder.",
+    "label": "Frist in Kalendertagen",
+    "hint": "Standard 30 Tage, erlaubt 0 bis 3650. Bei 0 wird jede spätere E-Mail ein Folgeticket. Jede Änderung wird protokolliert.",
+    "save": "Frist speichern",
+    "saved": "Gespeichert.",
+    "invalid": "Bitte eine ganze Zahl zwischen 0 und 3650 eingeben.",
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
   },
   "DatevMappings": {
     "title": "DATEV-Kontenzuordnung",

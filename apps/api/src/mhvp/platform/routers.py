@@ -385,6 +385,7 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         sources=row.sources,
         auto_posting_enabled=row.auto_posting_enabled,
         ticket_reply_approval_all=row.ticket_reply_approval_all,
+        ticket_reopen_window_days=row.ticket_reopen_window_days,
         ai_learning_examples_enabled=row.ai_learning_examples_enabled,
         ai_learning_examples_retention_months=row.ai_learning_examples_retention_months,
         metering_module_enabled=row.metering_module_enabled,
@@ -429,6 +430,7 @@ async def patch_settings(
             "company": row.company,
             "branding": row.branding,
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
+            "ticket_reopen_window_days": row.ticket_reopen_window_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "metering_module_enabled": row.metering_module_enabled,
@@ -445,6 +447,9 @@ async def patch_settings(
         if body.ticket_reply_approval_all is not None:
             # M20-03 Notbremse: Änderung wird mit Nutzer im Ereignis protokolliert.
             row.ticket_reply_approval_all = body.ticket_reply_approval_all
+        if body.ticket_reopen_window_days is not None:
+            # Regel M19-10: Wiedereröffnungsfenster in Kalendertagen, Änderung protokolliert.
+            row.ticket_reopen_window_days = body.ticket_reopen_window_days
         if body.ai_learning_examples_enabled is not None:
             # ADR 0010, M7-04: Speicherung der Lernbeispiele je Mandant, Änderung protokolliert.
             row.ai_learning_examples_enabled = body.ai_learning_examples_enabled
@@ -476,6 +481,7 @@ async def patch_settings(
             "company": row.company,
             "branding": row.branding,
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
+            "ticket_reopen_window_days": row.ticket_reopen_window_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "metering_module_enabled": row.metering_module_enabled,
