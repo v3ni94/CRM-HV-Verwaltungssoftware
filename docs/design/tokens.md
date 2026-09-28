@@ -144,3 +144,19 @@ Bedienelemente: `focus-visible:ring-2 focus-visible:ring-focus`.
   freigegebenen Werten belegen und die Kontrasttabelle neu berechnen.
 - Die Farbe der Browserleiste im Kundenportal (`themeColor`) folgt der Einstellung des
   Betriebssystems, nicht einer manuellen Wahl Hell oder Dunkel.
+
+## Handy und Tablet (M31)
+
+- `--mhvp-header-h`: Höhe der Kopfzeile, 3,5 rem (56 px) unter `sm`, 4 rem (64 px) ab 640 px, in
+  `packages/ui/src/tokens.css` unter `:root`. Klebende Elemente unter der Kopfzeile (Tabellenkopf
+  `.mhvp-table thead th`, Abschnittsleisten `top-[var(--mhvp-header-h)]`, Sprungziele
+  `scroll-mt-[calc(var(--mhvp-header-h)+3rem)]`) rechnen mit diesem Wert, nie mit einer Zahl.
+  Der Tabellenkopf klebt nur, wenn die Tabelle mit der Seite scrollt; in einem Scrollwrapper
+  scrollt er mit.
+- Hover nur unter `@media (hover: hover)`: Zeilen Hover, Sticky Spalten Hover und `.mhvp-lift`
+  in `base.css`. Fokus und aktive Zustände bleiben auf allen Geräten.
+- Zeigervarianten statt Breitenvarianten für Zielgrößen: `pointer-coarse:` und `pointer-fine:`
+  (Tailwind 4.3.3, eingebaut, gestapelt mit `sm:`). Beispiel `min-h-11 sm:pointer-fine:min-h-10`.
+  Keine eigenen `@custom-variant`.
+- `data-rail` auf `html` (`expanded` oder `collapsed`, fehlt bei `auto`): verschiebt die linke
+  Kante der festen `BottomBar` (`.mhvp-bottom-bar`) ab `lg` auf die Railbreite.
