@@ -1,6 +1,7 @@
 """Unit test: gcal.GCalClient request building against httpx.MockTransport (M23-02)."""
 
 from datetime import UTC, datetime
+from typing import Any
 
 import httpx
 import pytest
@@ -154,3 +155,61 @@ def test_make_client_requires_refresh_token() -> None:
     box = Mailbox(address="info@example.com", kind="gmail")
     with pytest.raises(gcal.GCalError):
         gcal.make_client("cid", "secret", box)
+
+
+async def _list_error(token_status: int, api_status: int, api_body: Any) -> gcal.GCalError:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/token"):
+            if token_status != 200:
+                return httpx.Response(
+                    token_status, json={"error": "invalid_grant", "refresh": "secret-refresh"}
+                )
+            return _token_response(request)
+        return httpx.Response(api_status, json=api_body)
+
+    client = gcal.GCalClient(
+        "cid", "secret", "secret-refresh", transport=httpx.MockTransport(handler)
+    )
+    try:
+        with pytest.raises(gcal.GCalError) as info:
+            await client.list_events(
+                "primary", datetime(2026, 1, 1, tzinfo=UTC), datetime(2026, 1, 2, tzinfo=UTC)
+            )
+    finally:
+        await client.aclose()
+    return info.value
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("token_status", "api_status", "api_body", "kind"),
+    [
+        (400, 200, {}, gcal.AUTH),
+        (401, 200, {}, gcal.AUTH),
+        (503, 200, {}, gcal.UNAVAILABLE),
+        (200, 401, {}, gcal.AUTH),
+        (200, 403, {"error": {"errors": [{"reason": "insufficientPermissions"}]}}, gcal.AUTH),
+        (200, 403, {"error": {"errors": [{"reason": "rateLimitExceeded"}]}}, gcal.UNAVAILABLE),
+        (200, 404, {}, gcal.AUTH),
+        (200, 429, {}, gcal.UNAVAILABLE),
+        (200, 500, {}, gcal.UNAVAILABLE),
+        (200, 400, {}, gcal.REJECTED),
+    ],
+)
+async def test_errors_carry_kind_and_status_but_no_secret(
+    token_status: int, api_status: int, api_body: Any, kind: str
+) -> None:
+    error = await _list_error(token_status, api_status, api_body)
+    assert error.kind == kind
+    assert error.status == (token_status if token_status != 200 else api_status)
+    assert error.reconnect_required is (kind == gcal.AUTH)
+    assert "secret" not in str(error)
+    assert "invalid_grant" not in str(error)
+
+
+def test_missing_refresh_token_needs_reconnect() -> None:
+    from types import SimpleNamespace
+
+    with pytest.raises(gcal.GCalError) as info:
+        gcal.make_client("cid", "secret", SimpleNamespace(secret=None))  # type: ignore[arg-type]
+    assert info.value.kind == gcal.AUTH

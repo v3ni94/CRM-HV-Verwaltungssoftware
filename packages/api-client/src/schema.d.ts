@@ -19456,6 +19456,13 @@ export interface components {
             connected: boolean;
             /** Error */
             error?: string | null;
+            /** Error Code */
+            error_code?: string | null;
+            /**
+             * Reconnect Required
+             * @default false
+             */
+            reconnect_required: boolean;
             /** Source */
             source: string;
         };

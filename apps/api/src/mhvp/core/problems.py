@@ -741,6 +741,29 @@ class ErrorCodes:
             "the review and decide again."
         ),
     )
+    # Google Kalender (M23-02, hotfix 28.09.2026, mhvp.communication.gcal error kinds).
+    GOOGLE_CALENDAR_RECONNECT = ErrorCode(
+        "MHVP-COMM-0004",
+        409,
+        "Google-Kalender neu verbinden",
+        (
+            "The Google grant of the mailbox no longer works: the token endpoint refused the "
+            "refresh token (expired or revoked), the Calendar API answered 401 after the retry "
+            "or 403 without a rate limit reason (missing calendar scope), the configured "
+            "calendar is not visible to the account, or no refresh token is stored. Reconnect "
+            "the mailbox under Einstellungen, Postfächer. Never 401: that is the session's code."
+        ),
+    )
+    GOOGLE_CALENDAR_UNAVAILABLE = ErrorCode(
+        "MHVP-COMM-0005",
+        502,
+        "Kalender nicht erreichbar",
+        (
+            "Google Calendar answered with a rate limit (429, 403 rateLimitExceeded, "
+            "userRateLimitExceeded, quotaExceeded) or a server error, or could not be reached "
+            "at all. Transient: retry later, the stored grant is not affected."
+        ),
+    )
     # Lern-Workflow, rule proposals (rule M9-11, mhvp.automation.learning).
     RULE_PROPOSAL_NOT_OPEN = ErrorCode(
         "MHVP-AUTO-0001",

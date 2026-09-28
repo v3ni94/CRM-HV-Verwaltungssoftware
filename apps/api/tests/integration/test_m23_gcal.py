@@ -62,6 +62,9 @@ class FakeGCal:
         self._etag_seq = 0
         self.send_updates_seen: list[str] = []
         self.token_status = 200
+        # Status and JSON body the Calendar API answers with instead of the normal result.
+        self.api_status = 200
+        self.api_body: dict[str, Any] = {}
 
     def _next_etag(self) -> str:
         self._etag_seq += 1
@@ -87,6 +90,8 @@ class FakeGCal:
                 return httpx.Response(self.token_status, json={"error": "invalid_grant"})
             return httpx.Response(200, json={"access_token": "t", "expires_in": 3600})
         assert request.headers.get("Authorization") == "Bearer t"
+        if self.api_status != 200:
+            return httpx.Response(self.api_status, json=self.api_body)
         self.send_updates_seen.append(request.url.params.get("sendUpdates", ""))
         parts = path.split("/")
         # .../calendars/{cal}/events[/{event_id}]
@@ -421,7 +426,8 @@ def test_google_failure_keeps_the_rest_of_the_calendar(
         headers=admin,
     )
     assert resp.status_code == 409, resp.text
-    assert resp.json()["detail"] == "Token-Abruf fehlgeschlagen (HTTP 400)."
+    assert resp.json()["code"] == "MHVP-COMM-0004"
+    assert resp.json()["detail"].startswith("Token-Abruf fehlgeschlagen (HTTP 400).")
 
     # A healthy connection again: no error, Google items come back.
     fake.token_status = 200
@@ -430,3 +436,86 @@ def test_google_failure_keeps_the_rest_of_the_calendar(
     out2 = _ok(client.get(f"{W}/calendar", params={"start": today, "end": today}, headers=admin))
     assert any(i["title"] == f"Wieder da {RUN}" for i in out2["items"])
     assert all(n["error"] is None for n in out2["notices"])
+
+
+def test_google_errors_map_to_registered_problems(
+    client: TestClient, world: World, fake: FakeGCal
+) -> None:
+    """Hotfix 28.09.2026: a GCalError is a registered problem (ADR 0004), never a 500.
+    Expired or revoked grant: notice and writes carry MHVP-COMM-0004 with the reconnect hint
+    (409, not 401). Rate limit or Google server error: MHVP-COMM-0005 (502 on writes), no
+    reconnect hint. Neither the refresh token nor Google's answer body reaches the client."""
+    admin = bearer(login(client, world, "gcaladmin"))
+    _solo_default_mailbox(client, admin)
+    today = datetime.now(UTC).date().isoformat()
+    params = {"start": today, "end": today}
+    fake.add("primary", f"ok-{RUN}", f"Erreichbar {RUN}", today)
+
+    def notice() -> Any:
+        _ok(client.post(f"{W}/calendar/refresh", headers=admin))
+        out = _ok(client.get(f"{W}/calendar", params=params, headers=admin))
+        return out, next(n for n in out["notices"] if n["source"] == "default")
+
+    # Happy path: items, no error code.
+    out, n = notice()
+    assert any(i["title"] == f"Erreichbar {RUN}" for i in out["items"])
+    assert n["error"] is None
+    assert n["error_code"] is None
+    assert n["reconnect_required"] is False
+
+    # Revoked grant (token endpoint 400 invalid_grant): reconnect.
+    fake.token_status = 400
+    out, n = notice()
+    assert not any(i["source"] == "default" for i in out["items"])
+    assert n["error_code"] == "MHVP-COMM-0004"
+    assert n["reconnect_required"] is True
+    resp = client.post(
+        f"{W}/calendar",
+        json={"title": "Ortstermin", "starts_on": today, "target": "default"},
+        headers=admin,
+    )
+    assert resp.status_code == 409, resp.text
+    body = resp.json()
+    assert body["code"] == "MHVP-COMM-0004"
+    assert body["title"] == "Google-Kalender neu verbinden"
+    assert "Einstellungen, Postfächer" in body["detail"]
+    assert body["reconnect_required"] is True
+    assert "invalid_grant" not in resp.text
+    fake.token_status = 200
+
+    # Missing calendar scope (403 without a rate limit reason): reconnect as well.
+    fake.api_status = 403
+    fake.api_body = {"error": {"code": 403, "errors": [{"reason": "insufficientPermissions"}]}}
+    _, n = notice()
+    assert n["error_code"] == "MHVP-COMM-0004"
+    assert n["reconnect_required"] is True
+
+    # Rate limit (403 rateLimitExceeded) and server error (503): transient, no reconnect.
+    fake.api_body = {"error": {"code": 403, "errors": [{"reason": "rateLimitExceeded"}]}}
+    _, n = notice()
+    assert n["error_code"] == "MHVP-COMM-0005"
+    assert n["reconnect_required"] is False
+    fake.api_status = 503
+    fake.api_body = {"error": {"code": 503, "message": "backendError"}}
+    out, n = notice()
+    assert n["error_code"] == "MHVP-COMM-0005"
+    assert n["reconnect_required"] is False
+    assert n["error"] == "Kalender nicht lesbar (HTTP 503)."
+    resp = client.post(
+        f"{W}/calendar",
+        json={"title": "Ortstermin", "starts_on": today, "target": "default"},
+        headers=admin,
+    )
+    assert resp.status_code == 502, resp.text
+    body = resp.json()
+    assert body["code"] == "MHVP-COMM-0005"
+    assert body["title"] == "Kalender nicht erreichbar"
+    assert "reconnect_required" not in body
+    assert "backendError" not in resp.text
+
+    # Recovered: the calendar is complete again.
+    fake.api_status = 200
+    fake.api_body = {}
+    out, n = notice()
+    assert any(i["title"] == f"Erreichbar {RUN}" for i in out["items"])
+    assert n["error_code"] is None

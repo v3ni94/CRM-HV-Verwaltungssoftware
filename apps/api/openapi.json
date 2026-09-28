@@ -6592,6 +6592,22 @@
             ],
             "title": "Error"
           },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          },
+          "reconnect_required": {
+            "default": false,
+            "title": "Reconnect Required",
+            "type": "boolean"
+          },
           "source": {
             "title": "Source",
             "type": "string"

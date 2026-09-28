@@ -12,6 +12,7 @@ import { EventDetailDialog } from "@/components/calendar/EventDetailDialog";
 import { weekRange, WeekView } from "@/components/calendar/WeekView";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
+import type { Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export type CalendarItem = {
@@ -40,7 +41,26 @@ export type CalendarItem = {
   recurrence?: { frequency: string; interval: number; until: string | null } | null;
 };
 
-export type CalendarNotice = { source: "default" | "own"; address: string; connected: boolean; error?: string | null };
+export type CalendarNotice = {
+  source: "default" | "own";
+  address: string;
+  connected: boolean;
+  error?: string | null;
+  /** Registered problem code (ADR 0004): MHVP-COMM-0004 reconnect, MHVP-COMM-0005 transient. */
+  error_code?: string | null;
+  /** Only a new Google connection of the mailbox helps (expired or revoked grant, missing scope). */
+  reconnect_required?: boolean;
+};
+
+/** Problem code of a Google write whose grant no longer works (409, reconnect in the mailbox settings). */
+export const GOOGLE_RECONNECT_CODE = "MHVP-COMM-0004";
+const MAILBOX_SETTINGS = "/einstellungen/postfaecher";
+
+type CalendarError = { message: string; reconnect: boolean };
+
+function failure(result: { message: string; problem: Problem | null }): CalendarError {
+  return { message: result.message, reconnect: result.problem?.code === GOOGLE_RECONNECT_CODE };
+}
 export type CalendarOut = { items: CalendarItem[]; notices: CalendarNotice[] };
 
 function iso(d: Date): string {
@@ -72,7 +92,7 @@ export function CalendarView({
   const [view, setView] = useState<"month" | "week">("month");
   const [items, setItems] = useState<CalendarItem[]>([]);
   const [notices, setNotices] = useState<CalendarNotice[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<CalendarError | null>(null);
   const [visible, setVisible] = useState<Record<CalendarSource, boolean>>({ internal: true, default: true, own: true });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -97,7 +117,7 @@ export function CalendarView({
           setFocused(null);
         }
       }
-    } else setError(result.message);
+    } else setError(failure(result));
     // range is derived from year/month/anchor/view, listed explicitly below.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, month, anchor, view, focused]);
@@ -148,7 +168,7 @@ export function CalendarView({
         ? await bff(`/api/bff/workspace/calendar/${item.entity_id}`, { method: "DELETE" })
         : await bff(`/api/bff/workspace/calendar/google/${item.source}/${item.google_event_id}`, { method: "DELETE" });
     if (result.ok) await load();
-    else setError(result.message);
+    else setError(failure(result));
   }
 
   async function refresh() {
@@ -156,7 +176,7 @@ export function CalendarView({
     const result = await bff("/api/bff/workspace/calendar/refresh", { method: "POST" });
     setRefreshing(false);
     if (result.ok) await load();
-    else setError(result.message);
+    else setError(failure(result));
   }
 
   const hasDefaultMailbox = notices.some((n) => n.source === "default" && n.connected);
@@ -223,24 +243,39 @@ export function CalendarView({
       {unconnected.map((n) => (
         <p key={n.source} className={ui.notice}>
           {t("calendarNotConnectedHint", { address: n.address })}{" "}
-          <Link href="/einstellungen/postfaecher" className="underline">
+          <Link href={MAILBOX_SETTINGS} className="underline">
             {t("toMailboxSettings")}
           </Link>
         </p>
       ))}
 
-      {failing.map((n) => (
-        <p key={`error-${n.source}`} className={ui.notice} data-testid="calendar-sync-error">
-          {t("calendarSyncError", { address: n.address, error: n.error ?? "" })}{" "}
-          <Link href="/einstellungen/postfaecher" className="underline">
-            {t("toMailboxSettings")}
-          </Link>
-        </p>
-      ))}
+      {failing.map((n) =>
+        n.reconnect_required ? (
+          <p key={`error-${n.source}`} className={ui.notice} data-testid="calendar-sync-error">
+            {t("calendarReconnectRequired", { address: n.address, error: n.error ?? "" })}{" "}
+            <Link href={MAILBOX_SETTINGS} className="underline">
+              {t("reconnectMailbox")}
+            </Link>
+          </p>
+        ) : (
+          // Transient (rate limit, Google server error, network): retrying helps, reconnecting does not.
+          <p key={`error-${n.source}`} className={ui.notice} data-testid="calendar-sync-error">
+            {t("calendarSyncError", { address: n.address, error: n.error ?? "" })}
+          </p>
+        ),
+      )}
 
       {error ? (
         <p role="alert" className={ui.alert}>
-          {error}
+          {error.message}
+          {error.reconnect ? (
+            <>
+              {" "}
+              <Link href={MAILBOX_SETTINGS} className="underline">
+                {t("reconnectMailbox")}
+              </Link>
+            </>
+          ) : null}
         </p>
       ) : null}
 

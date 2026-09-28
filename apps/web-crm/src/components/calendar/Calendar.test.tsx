@@ -347,10 +347,17 @@ describe("CalendarView with Google sources", () => {
     );
   });
 
-  it("keeps the calendar and shows the reason when Google refuses a connected mailbox (operator 27.09.2026)", async () => {
+  it("keeps the calendar and asks to reconnect when the Google grant is revoked (operator 27.09.2026)", async () => {
     const failing = calendarResponse();
     failing.notices = [
-      { source: "default", address: "info@example.com", connected: true, error: "Token-Abruf fehlgeschlagen (HTTP 400)." } as never,
+      {
+        source: "default",
+        address: "info@example.com",
+        connected: true,
+        error: "Token-Abruf fehlgeschlagen (HTTP 400).",
+        error_code: "MHVP-COMM-0004",
+        reconnect_required: true,
+      } as never,
       { source: "own", address: "timo@muellerhv.de", connected: true },
     ];
     fetchMock.mockImplementation(() => Promise.resolve(jsonResponse(failing)));
@@ -359,6 +366,79 @@ describe("CalendarView with Google sources", () => {
     const hint = screen.getByTestId("calendar-sync-error");
     expect(hint).toHaveTextContent("info@example.com");
     expect(hint).toHaveTextContent("Token-Abruf fehlgeschlagen (HTTP 400).");
+    expect(hint).toHaveTextContent("neu mit Google verbinden");
+    expect(within(hint).getByRole("link", { name: "Postfach neu verbinden" })).toHaveAttribute("href", "/einstellungen/postfaecher");
     expect(screen.getAllByTestId("calendar-sync-error")).toHaveLength(1);
+  });
+
+  it("shows a transient Google failure without a reconnect link (hotfix 28.09.2026)", async () => {
+    const failing = calendarResponse();
+    failing.notices = [
+      {
+        source: "default",
+        address: "info@example.com",
+        connected: true,
+        error: "Kalender nicht lesbar (HTTP 503).",
+        error_code: "MHVP-COMM-0005",
+        reconnect_required: false,
+      } as never,
+      { source: "own", address: "timo@muellerhv.de", connected: true },
+    ];
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse(failing)));
+    renderIntl(<CalendarView initialYear={2026} initialMonth={8} />);
+    expect(await screen.findByText("Begehung")).toBeInTheDocument();
+    const hint = screen.getByTestId("calendar-sync-error");
+    expect(hint).toHaveTextContent("Kalender nicht lesbar (HTTP 503).");
+    expect(hint).toHaveTextContent("derzeit nicht erreichbar");
+    expect(within(hint).queryByRole("link")).toBeNull();
+  });
+
+  it("shows the problem of a failed Google write with a reconnect link instead of breaking", async () => {
+    fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "DELETE"
+          ? jsonResponse(
+              {
+                title: "Google-Kalender neu verbinden",
+                status: 409,
+                code: "MHVP-COMM-0004",
+                detail: "Token-Abruf fehlgeschlagen (HTTP 400). Bitte das Postfach unter Einstellungen, Postfächer neu mit Google verbinden.",
+              },
+              409,
+            )
+          : jsonResponse(calendarResponse()),
+      ),
+    );
+    renderIntl(<CalendarView initialYear={2026} initialMonth={8} />);
+    const row = (await screen.findByText("Standardtermin")).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Token-Abruf fehlgeschlagen (HTTP 400).");
+    expect(within(alert).getByRole("link", { name: "Postfach neu verbinden" })).toHaveAttribute("href", "/einstellungen/postfaecher");
+    expect(screen.getByText("Begehung")).toBeInTheDocument();
+  });
+
+  it("shows a transient write failure without a reconnect link", async () => {
+    fetchMock.mockImplementation((_url: string, init?: RequestInit) =>
+      Promise.resolve(
+        init?.method === "DELETE"
+          ? jsonResponse(
+              {
+                title: "Kalender nicht erreichbar",
+                status: 502,
+                code: "MHVP-COMM-0005",
+                detail: "Termin nicht löschbar (HTTP 503). Bitte später erneut versuchen.",
+              },
+              502,
+            )
+          : jsonResponse(calendarResponse()),
+      ),
+    );
+    renderIntl(<CalendarView initialYear={2026} initialMonth={8} />);
+    const row = (await screen.findByText("Standardtermin")).closest("li")!;
+    await userEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("Bitte später erneut versuchen.");
+    expect(within(alert).queryByRole("link")).toBeNull();
   });
 });

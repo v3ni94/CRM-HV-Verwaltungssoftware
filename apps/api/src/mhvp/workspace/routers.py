@@ -205,6 +205,11 @@ class CalendarNotice(BaseModel):
     # refresh token, missing calendar scope, Google unreachable). The rest of the calendar is
     # still returned (operator report 27.09.2026: a GCalError turned the whole page into 500).
     error: str | None = None
+    # Registered problem code of the failure (MHVP-COMM-0004 reconnect, MHVP-COMM-0005
+    # transient, MHVP-PLAT-0002 other refusal or missing OAuth client) and whether only a new
+    # Google connection of the mailbox helps (hotfix 28.09.2026).
+    error_code: str | None = None
+    reconnect_required: bool = False
 
 
 class CalendarOut(BaseModel):
@@ -1018,16 +1023,44 @@ async def _link_rows(
 
 
 GCAL_UNREACHABLE = "Google Kalender ist derzeit nicht erreichbar."
+GCAL_RECONNECT_HINT = "Bitte das Postfach unter Einstellungen, Postfächer neu mit Google verbinden."
+GCAL_RETRY_HINT = "Bitte später erneut versuchen."
+
+
+def _google_problem(exc: Exception) -> ProblemError:
+    """Registered problem for a failed Google calendar call (ADR 0004, hotfix 28.09.2026).
+
+    Expired or revoked grant, missing scope or refresh token: 409 MHVP-COMM-0004 with the
+    reconnect hint (never 401, which the CRM reads as an expired session). Rate limit, Google
+    server error or network failure: 502 MHVP-COMM-0005. Other refusals (event not found,
+    request not accepted) and a missing OAuth client stay 409 MHVP-PLAT-0002 with the reason.
+    The GCalError text carries the HTTP status only, never a token or response body.
+    """
+    if isinstance(exc, gcal.GCalError) and exc.kind == gcal.AUTH:
+        return ProblemError(
+            ErrorCodes.GOOGLE_CALENDAR_RECONNECT,
+            detail=f"{exc} {GCAL_RECONNECT_HINT}",
+            extensions={"reconnect_required": True},
+        )
+    if isinstance(exc, gcal.GCalError) and exc.kind == gcal.UNAVAILABLE:
+        return ProblemError(
+            ErrorCodes.GOOGLE_CALENDAR_UNAVAILABLE, detail=f"{exc} {GCAL_RETRY_HINT}"
+        )
+    if isinstance(exc, httpx.HTTPError):
+        return ProblemError(
+            ErrorCodes.GOOGLE_CALENDAR_UNAVAILABLE, detail=f"{GCAL_UNREACHABLE} {GCAL_RETRY_HINT}"
+        )
+    return ProblemError(ErrorCodes.CONFLICT, detail=str(exc))
 
 
 async def _write_client(session: Any, settings: Any, mailbox: Mailbox) -> gcal.GCalClient:
-    """Google client for a write; a missing OAuth client or refresh token is a 409 with the
-    reason instead of an unhandled 500 (operator report 27.09.2026)."""
+    """Google client for a write; a missing OAuth client or refresh token is a registered
+    problem with the reason instead of an unhandled 500 (operator report 27.09.2026)."""
     try:
         client_id, client_secret = await gmail.oauth_client(session, settings)
         return gcal.make_client(client_id, client_secret, mailbox)
     except (gcal.GCalError, gmail.GmailError) as exc:
-        raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
+        raise _google_problem(exc) from exc
 
 
 async def _fetch_google_items(
@@ -1062,13 +1095,23 @@ async def _fetch_google_items(
                 events = await client.list_events(mailbox.calendar_id, time_min, time_max)
             finally:
                 await client.aclose()
-        except (gcal.GCalError, gmail.GmailError) as exc:
-            log.warning("google_calendar_unavailable", extra={"mailbox_id": str(mailbox.id)})
-            notice.error = str(exc)
-            return [], notice
-        except httpx.HTTPError:
-            log.warning("google_calendar_unreachable", extra={"mailbox_id": str(mailbox.id)})
-            notice.error = GCAL_UNREACHABLE
+        except (gcal.GCalError, gmail.GmailError, httpx.HTTPError) as exc:
+            # The rest of the calendar stays; the notice carries the registered problem.
+            # Logged: mailbox, kind and upstream status only, never the message or a token.
+            problem = _google_problem(exc)
+            log.warning(
+                "google_calendar_unavailable",
+                extra={
+                    "mailbox_id": str(mailbox.id),
+                    "error_type": type(exc).__name__,
+                    "kind": getattr(exc, "kind", None),
+                    "upstream_status": getattr(exc, "status", None),
+                    "code": problem.error.code,
+                },
+            )
+            notice.error = GCAL_UNREACHABLE if isinstance(exc, httpx.HTTPError) else str(exc)
+            notice.error_code = problem.error.code
+            notice.reconnect_required = problem.error is ErrorCodes.GOOGLE_CALENDAR_RECONNECT
             return [], notice
         await redis.set(key, json.dumps(events), ex=GCAL_CACHE_TTL)
     links = await _link_rows(session, tenant_id, mailbox.id)
@@ -1310,10 +1353,8 @@ async def create_entry(
             event = await client.insert_event(
                 mailbox.calendar_id, _entry_body(body), send_updates="none"
             )
-        except gcal.GCalError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
-        except httpx.HTTPError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=GCAL_UNREACHABLE) from exc
+        except (gcal.GCalError, httpx.HTTPError) as exc:
+            raise _google_problem(exc) from exc
         finally:
             await client.aclose()
         start, _end = _event_dates(event)
@@ -1412,10 +1453,8 @@ async def send_invite(
                 {"attendees": link.attendees},
                 send_updates="all",
             )
-        except gcal.GCalError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
-        except httpx.HTTPError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=GCAL_UNREACHABLE) from exc
+        except (gcal.GCalError, httpx.HTTPError) as exc:
+            raise _google_problem(exc) from exc
         finally:
             await client.aclose()
         link.status = "invited"
@@ -1482,10 +1521,8 @@ async def patch_google_entry(
             event = await client.patch_event(
                 mailbox.calendar_id, event_id, patch, send_updates="none"
             )
-        except gcal.GCalError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
-        except httpx.HTTPError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=GCAL_UNREACHABLE) from exc
+        except (gcal.GCalError, httpx.HTTPError) as exc:
+            raise _google_problem(exc) from exc
         finally:
             await client.aclose()
         if link is not None:
@@ -1510,10 +1547,8 @@ async def delete_google_entry(
         client = await _write_client(session, settings, mailbox)
         try:
             await client.delete_event(mailbox.calendar_id, event_id, send_updates=send_updates)
-        except gcal.GCalError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
-        except httpx.HTTPError as exc:
-            raise ProblemError(ErrorCodes.CONFLICT, detail=GCAL_UNREACHABLE) from exc
+        except (gcal.GCalError, httpx.HTTPError) as exc:
+            raise _google_problem(exc) from exc
         finally:
             await client.aclose()
         if link is not None:
