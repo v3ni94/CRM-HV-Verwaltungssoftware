@@ -91,7 +91,10 @@ class RentIncreaseIn(LettingBaseIn):
 
 
 class RentIncreaseAction(LettingBaseIn):
-    action: str = Field(pattern="^(approve|send|consent|reject|apply|cancel)$")
+    # ``receipt`` records the access date (Zugangsdatum) of a letter sent outside the
+    # software while G3 keeps ``send`` locked; it changes no status (handbook Mieterhöhung,
+    # gap "Zugangsdatum nur über die Schnittstelle").
+    action: str = Field(pattern="^(approve|send|consent|reject|apply|cancel|receipt)$")
     document_id: uuid.UUID | None = None
     received_on: date | None = None
 
@@ -325,7 +328,28 @@ NEXT = {
     "reject": ({"sent"}, "rejected"),
     "apply": ({"consented"}, "applied"),
     "cancel": ({"draft", "approved"}, "cancelled"),
+    # Access date only; the status stays (None = keep).
+    "receipt": ({"draft", "approved", "sent"}, None),
 }
+
+
+async def _record_receipt(session: Any, case: RentIncreaseCase, received_on: date) -> None:
+    """Store the access date and, only with released rules, the derived deadline hints
+    (consent deadline, effective month); the rules stay drafts otherwise (M26-01)."""
+    from mhvp.letting.rentlaw import deadlines, released_rules
+
+    case.received_on = received_on
+    rules = await released_rules(session)
+    if "consent_months" in rules and "effective_month" in rules:
+        d = deadlines(received_on, int(rules["consent_months"]), int(rules["effective_month"]))
+        case.check = case.check | {
+            "consent_until": d["consent_until"].isoformat(),
+            "effective_from": d["effective_from"].isoformat(),
+        }
+        if case.effective_date < d["effective_from"]:
+            case.check = case.check | {
+                "deadline_flag": "Wirksamkeit liegt vor dem gesetzlichen Beginn."
+            }
 
 
 @router.post("/rent-increases/{case_id}/actions", summary="Prozessschritt")
@@ -368,24 +392,11 @@ async def rent_increase_action(
             case.legal_review_document_id = body.document_id
             case.sent_at = datetime.now(UTC)
             if body.received_on is not None:
-                from mhvp.letting.rentlaw import deadlines, released_rules
-
-                case.received_on = body.received_on
-                rules = await released_rules(session)
-                if "consent_months" in rules and "effective_month" in rules:
-                    d = deadlines(
-                        body.received_on,
-                        int(rules["consent_months"]),
-                        int(rules["effective_month"]),
-                    )
-                    case.check = case.check | {
-                        "consent_until": d["consent_until"].isoformat(),
-                        "effective_from": d["effective_from"].isoformat(),
-                    }
-                    if case.effective_date < d["effective_from"]:
-                        case.check = case.check | {
-                            "deadline_flag": "Wirksamkeit liegt vor dem gesetzlichen Beginn."
-                        }
+                await _record_receipt(session, case, body.received_on)
+        if body.action == "receipt":
+            if body.received_on is None:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Zugangsdatum fehlt.")
+            await _record_receipt(session, case, body.received_on)
         if body.action == "consent":
             if body.document_id is None:
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Nachweis der Zustimmung fehlt.")
@@ -423,16 +434,17 @@ async def rent_increase_action(
             await contract_services.add_payment(session, contract, new)
             await session.flush()
             case.new_payment_id = new.id
+        new_status = case.status if target is None else target
         await emit(
             session,
             tenant_id=principal.tenant_id,
-            type=f"rent_increase.{target}",
+            type=f"rent_increase.{body.action if target is None else target}",
             entity_type="rent_increase_case",
             entity_id=case.id,
             actor_user_id=principal.user_id,
-            payload={"from": case.status, "to": target},
+            payload={"from": case.status, "to": new_status},
         )
-        case.status = target
+        case.status = new_status
         await session.flush()
         return _case_out(case)
 
