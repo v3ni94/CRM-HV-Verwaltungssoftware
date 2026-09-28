@@ -7796,7 +7796,11 @@
       "ownership": "Eigentum (WEG)",
       "payment": "Zahlung und Sperren",
       "schedule": "Zahlungsplan (Sollstellungsschema)",
-      "deposit": "Kaution"
+      "deposit": "Kaution",
+      "amounts": "Sollbeträge"
+    },
+    "amounts": {
+      "help": "Miete, Vorauszahlungen oder Hausgeld gelten ab dem Vertragsbeginn ({date}) und werden nach dem Anlegen am Vertrag gespeichert. Spätere Änderungen erfasst die Vertragsseite als neuen Stand ab Datum."
     },
     "kinds": {
       "tenancy": "Mietvertrag",
@@ -7931,6 +7935,9 @@
       "checkFields": "Bitte die markierten Angaben prüfen.",
       "scheduleFailed": "Der Vertrag wurde angelegt, der Zahlungsplan jedoch nicht: {message}",
       "depositFailed": "Der Vertrag wurde angelegt, die Kaution jedoch nicht: {message}",
+      "amountFailed": "Der Vertrag wurde angelegt, der Sollbetrag {kind} jedoch nicht: {message}",
+      "amountRow": "Bitte je Sollbetrag Zahlungsart, Netto im Format 1.234,56 und USt in Prozent angeben.",
+      "amountKindTwice": "Jede Zahlungsart nur einmal; spätere Stände auf der Vertragsseite erfassen.",
       "effectiveDateRequired": "Bitte angeben, ab wann die Änderung gilt.",
       "effectiveDateAfterStart": "Die Änderung muss nach dem Vertragsbeginn gelten.",
       "effectiveDateBeforeEnd": "Die Änderung muss innerhalb der Laufzeit gelten."
@@ -9000,6 +9007,44 @@
     }
   },
   "contracts": {
+    "amounts": {
+      "title": "Sollbeträge",
+      "help": "Miete, Vorauszahlungen, Hausgeld, Rücklagenzuführung und weitere Zahlungsarten mit Gültigkeitszeitraum. Ein neuer Betrag gilt ab einem Datum und schließt den offenen Vorbetrag derselben Art am Vortag; frühere Stände bleiben unverändert. Das Erfassen bucht nichts: Sollstellungen entstehen im Sollstellungslauf der Buchhaltung, Abrechnungen bleiben bis zur Freigabestufe G3 Entwürfe.",
+      "formHelp": "Neuer Betrag ab Datum. Brutto wird aus Netto und Umsatzsteuer berechnet. Negative Beträge nur bei Mietminderung.",
+      "asOf": "Stichtag",
+      "total": "Summe je Monat ({count, plural, =1 {ein Betrag} other {# Beträge}})",
+      "current": "gültig",
+      "none": "Keine Sollbeträge am Vertrag erfasst.",
+      "noTypes": "Keine Zahlungsarten im Katalog des Mandanten (Einstellungen, Kataloge, Zahlungsarten).",
+      "kind": "Zahlungsart",
+      "net": "Netto",
+      "vat": "USt in %",
+      "gross": "Brutto",
+      "grossPending": "Brutto: Netto und USt angeben",
+      "validFrom": "Gültig ab",
+      "validTo": "Gültig bis",
+      "reason": "Grund",
+      "open": "offen",
+      "add": "Betrag erfassen",
+      "addRow": "Sollbetrag hinzufügen",
+      "remove": "Entfernen",
+      "reasons": {
+        "initial": "Erstbetrag",
+        "increase": "Erhöhung",
+        "index": "Indexanpassung",
+        "graduated": "Staffel",
+        "adjustment_from_statement": "Anpassung aus Abrechnung",
+        "other": "Sonstiges"
+      },
+      "errors": {
+        "required": "Zahlungsart und Gültig ab sind Pflicht.",
+        "amount": "Bitte den Nettobetrag im Format 1.234,56 angeben.",
+        "vat": "Bitte die Umsatzsteuer als Prozentsatz zwischen 0 und 100 angeben.",
+        "validFromRange": "Gültig ab muss in der Vertragslaufzeit liegen ({start} bis {end}).",
+        "validToOrder": "Gültig bis darf nicht vor Gültig ab liegen.",
+        "overlap": "Der Zeitraum überschneidet sich mit {kind} vom {from} bis {to}. Bitte den bestehenden Betrag befristen oder ein späteres Datum wählen."
+      }
+    },
     "allocation": {
       "title": "Eigenschaften (Umlagewerte)",
       "help": "Vertragsbezogene Umlagewerte wie Personen mit Zeitraum. Ein neuer Wert schließt den offenen Vorwert am Vortag, die Historie bleibt erhalten.",

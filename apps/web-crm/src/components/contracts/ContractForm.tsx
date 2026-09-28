@@ -10,6 +10,11 @@ import { formatDate, formatEur } from "@/lib/format";
 import { fieldPath, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
+import { type AmountRow, parseAmount, type PaymentTypeOption } from "./amounts";
+import { type AmountDraft, amountDraftBody, AmountsDraftFields } from "./AmountsPanel";
+
+export { parseAmount };
+
 /* ---------------------------------------------------------------------------------------
  * Types mirroring mhvp.contracts.schemas (ContractIn, ContractVersionIn, TerminationIn,
  * ScheduleIn, DepositIn, ContractOut). The API has no PATCH on a contract: changes after the
@@ -81,6 +86,9 @@ export type ContractOut = {
   approved_by?: string | null;
   approved_at?: string | null;
   schedules: ScheduleOut[];
+  /** Sollbeträge dieser Vertragsversion (PaymentOut); die Historie über alle Versionen liefert
+   *  GET /contracts/{id}/payments. */
+  payments?: AmountRow[];
   /** Anzeigekontext für die Vertragsliste (Rückmeldung 28.09.2026). */
   property_number?: string | null;
   property_name?: string | null;
@@ -107,19 +115,6 @@ const DUE_DAY_RULES: DueDayRule[] = ["day", "workday", "last_day", "day_next_mon
 const DEPOSIT_KINDS: DepositKind[] = ["cash", "savings_book", "insurance", "guarantee", "fixed_deposit", "letter_of_comfort", "other"];
 const ROLES = ["mieter", "eigentuemer"] as const;
 type Role = (typeof ROLES)[number] | "";
-
-/** "1.234,56" or "1234,56" or "1234.56" -> "1234.56" (string, no float); null when invalid. */
-export function parseAmount(input: string): string | null {
-  const raw = input.trim().replace(/\s|EUR|€/g, "");
-  if (!raw) return null;
-  let normalised: string;
-  if (raw.includes(",")) normalised = raw.replace(/\./g, "").replace(",", ".");
-  else if (/^\d+\.\d{1,2}$/.test(raw)) normalised = raw;
-  else normalised = raw.replace(/\./g, "");
-  if (!/^\d+(\.\d{1,2})?$/.test(normalised)) return null;
-  const [int, frac = ""] = normalised.split(".");
-  return `${int}.${frac.padEnd(2, "0")}`;
-}
 
 type FieldErrors = Record<string, string>;
 
@@ -410,6 +405,11 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
   const [notes, setNotes] = useState("");
   const [schedule, setSchedule] = useState<ScheduleState>({ enabled: false, interval: "monthly", due_day_rule: "day", due_day: "3", valid_from: today, valid_to: "", payment_mode: "advance", amount_basis: "per_month" });
   const [deposit, setDeposit] = useState<DepositState>({ enabled: false, kind: "cash", amount: "", installments: "1", valid_from: today, interest_rule: "" });
+  // Sollbeträge (Miete, Vorauszahlungen, Hausgeld, ...): recorded after the contract from the
+  // start date, reason "initial"; kinds from the tenant catalogue payment_type.
+  const [amounts, setAmounts] = useState<AmountDraft[]>([]);
+  const [amountErrors, setAmountErrors] = useState<Record<number, string>>({});
+  const [paymentTypes, setPaymentTypes] = useState<PaymentTypeOption[]>([]);
 
   const [errors, setErrors] = useState<FieldErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -453,6 +453,16 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
     };
   }, [party, directDebit]);
 
+  useEffect(() => {
+    let cancelled = false;
+    void bff<{ code: string; label: string }[]>("/api/bff/catalogs/payment_type").then((res) => {
+      if (!cancelled) setPaymentTypes(res.ok ? res.data.map((c) => ({ code: c.code, label: c.label })) : []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   function pickKind(next: ContractKind) {
     setKind(next);
     setRole(next === "tenancy" ? "mieter" : "eigentuemer");
@@ -490,6 +500,15 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
       const n = Number(deposit.installments);
       if (!Number.isInteger(n) || n < 1 || n > 12) e["installments"] = t("errors.installments");
     }
+    const perAmount: Record<number, string> = {};
+    const seenKinds = new Set<string>();
+    amounts.forEach((draft, index) => {
+      if (amountDraftBody(draft, startDate) === null) perAmount[index] = t("errors.amountRow");
+      else if (seenKinds.has(draft.payment_type_code)) perAmount[index] = t("errors.amountKindTwice");
+      seenKinds.add(draft.payment_type_code);
+    });
+    setAmountErrors(perAmount);
+    if (Object.keys(perAmount).length > 0) e["amounts"] = t("errors.amountRow");
     return e;
   }
 
@@ -557,6 +576,12 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
         }),
       });
       if (!d.ok) followUp.push(t("errors.depositFailed", { message: d.message }));
+    }
+    for (const draft of amounts) {
+      const body = amountDraftBody(draft, startDate);
+      if (!body) continue;
+      const a = await bff<AmountRow>(`/api/bff/contracts/${contract.id}/payments`, { method: "POST", body: JSON.stringify(body) });
+      if (!a.ok) followUp.push(t("errors.amountFailed", { kind: paymentTypes.find((p) => p.code === draft.payment_type_code)?.label ?? draft.payment_type_code, message: a.message }));
     }
     setBusy(false);
     const query = followUp.length ? `?hinweis=${encodeURIComponent(followUp.join(" "))}` : "";
@@ -734,6 +759,12 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
             <Check label={t("fields.allocationLossRisk")} checked={allocationLossRisk} onChange={setAllocationLossRisk} />
           </>
         ) : null}
+      </fieldset>
+
+      <fieldset className={ui.sectionGap}>
+        <legend className={ui.h2}>{t("sections.amounts")}</legend>
+        <p className={ui.help}>{t("amounts.help", { date: startDate ? formatDate(startDate) : t("choose") })}</p>
+        <AmountsDraftFields drafts={amounts} onChange={setAmounts} paymentTypes={paymentTypes} errors={amountErrors} />
       </fieldset>
 
       <fieldset className={ui.sectionGap}>

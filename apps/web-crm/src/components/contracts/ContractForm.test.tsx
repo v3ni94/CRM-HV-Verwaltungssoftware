@@ -59,6 +59,12 @@ function lookups(url: string): Response | null {
   if (url.includes("/legal-entities")) return jsonResponse([{ id: "le1", name: "Eigentümer A", kind: "owner" }]);
   if (url.startsWith("/api/bff/contacts?")) return jsonResponse({ items: [{ id: PARTY, display_name: "Erika Mustermann", roles: ["mieter"] }] });
   if (url.startsWith("/api/bff/sepa-mandates")) return jsonResponse([]);
+  if (url === "/api/bff/catalogs/payment_type") {
+    return jsonResponse([
+      { id: "pt1", catalog: "payment_type", code: "rent", label: "Miete", active: true, is_system: true },
+      { id: "pt2", catalog: "payment_type", code: "operating_cost_advance", label: "Betriebskosten-Vorauszahlung", active: true, is_system: true },
+    ]);
+  }
   return null;
 }
 
@@ -152,6 +158,56 @@ describe("ContractCreateForm", () => {
     });
     expect(JSON.parse(String(posts[1]![1]!.body))).toEqual({ interval: "monthly", due_day_rule: "day", due_day: 5, valid_from: "2026-10-01", valid_to: null, payment_mode: "arrears", amount_basis: "per_month" });
     expect(JSON.parse(String(posts[2]![1]!.body))).toMatchObject({ kind: "cash", amount_due: "1500.00", installments: 1 });
+  }, 20000);
+
+  it("records standing amounts from the start date after creating the contract and reports a failed one", async () => {
+    const paymentBodies: Record<string, unknown>[] = [];
+    fetchMock.mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (method === "POST" && url === "/api/bff/contracts") return jsonResponse({ ...contract, schedules: [] }, 201);
+      if (method === "POST" && url === `/api/bff/contracts/${CONTRACT}/payments`) {
+        const body = JSON.parse(String(init?.body)) as Record<string, unknown>;
+        paymentBodies.push(body);
+        if (body["payment_type_code"] === "operating_cost_advance") return jsonResponse({ title: "Konflikt", status: 409, detail: "Die Zahlung überschneidet sich mit einer bestehenden Zahlung." }, 409);
+        return jsonResponse({ id: "a1", contract_id: CONTRACT, currency: "EUR", valid_to: null, ...body }, 201);
+      }
+      return lookups(url) ?? jsonResponse({ title: "unerwartet" }, 500);
+    });
+    renderIntl(<ContractCreateForm properties={properties} />);
+    const user = await fillBase("tenancy");
+    await user.clear(screen.getByLabelText("Beginn"));
+    await user.type(screen.getByLabelText("Beginn"), "2026-10-01");
+
+    const addRow = await screen.findByRole("button", { name: "Sollbetrag hinzufügen" });
+    await waitFor(() => expect(addRow).toBeEnabled());
+    await user.click(addRow);
+    await user.click(addRow);
+    const first = within(screen.getByTestId("amount-draft-0"));
+    const second = within(screen.getByTestId("amount-draft-1"));
+    await user.type(first.getByLabelText("Netto"), "800,00");
+    expect(screen.getByTestId("amount-draft-gross-0")).toHaveTextContent("Brutto: 800,00 EUR");
+    // Same kind twice is rejected client side before any request.
+    await user.type(second.getByLabelText("Netto"), "150");
+    await user.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+    expect(await screen.findByText("Jede Zahlungsart nur einmal; spätere Stände auf der Vertragsseite erfassen.")).toBeInTheDocument();
+    expect(fetchMock.mock.calls.filter(([, i]) => i?.method === "POST")).toHaveLength(0);
+
+    await user.selectOptions(second.getByLabelText("Zahlungsart"), "operating_cost_advance");
+    await user.clear(second.getByLabelText("USt in %"));
+    await user.type(second.getByLabelText("USt in %"), "19");
+    expect(screen.getByTestId("amount-draft-gross-1")).toHaveTextContent("Brutto: 178,50 EUR");
+    await user.click(screen.getByRole("button", { name: "Vertrag anlegen" }));
+
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    expect(paymentBodies).toEqual([
+      { payment_type_code: "rent", net: "800.00", vat_percent: "0", gross: "800.00", valid_from: "2026-10-01", valid_to: null, reason: "initial" },
+      { payment_type_code: "operating_cost_advance", net: "150.00", vat_percent: "19", gross: "178.50", valid_from: "2026-10-01", valid_to: null, reason: "initial" },
+    ]);
+    // The contract exists; the failed amount is reported as a notice on the detail page.
+    const target = String(push.mock.calls[0]![0]);
+    expect(target.startsWith(`/vertraege/${CONTRACT}?hinweis=`)).toBe(true);
+    expect(decodeURIComponent(target)).toContain("der Sollbetrag Betriebskosten-Vorauszahlung jedoch nicht: Die Zahlung überschneidet sich mit einer bestehenden Zahlung.");
   }, 20000);
 
   it("creates an ownership with SEV in a hoa_with_sev property", async () => {

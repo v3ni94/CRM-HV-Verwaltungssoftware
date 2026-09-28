@@ -84,6 +84,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Eigentümerwechsel in der Oberfläche (operator 28.09.2026): Vorschau und Erfassung.
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/ownership-transfer/preview$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/ownership-transfer$`) },
+  // Sollbeträge (Miete, Vorauszahlungen, Hausgeld, ...) im CRM erfassen (Paket D, 28.09.2026):
+  // Historie über alle Versionen und neuer Betrag ab Datum (schließt den offenen Vorbetrag).
+  { method: "GET", pattern: new RegExp(`^contracts/${ID}/payments$`) },
+  { method: "POST", pattern: new RegExp(`^contracts/${ID}/payments$`) },
   // Vertragsbezogene Umlagewerte (P1, 4.5 Eigenschaften).
   { method: "GET", pattern: new RegExp(`^contracts/${ID}/allocation-values$`) },
   { method: "POST", pattern: new RegExp(`^contracts/${ID}/allocation-values$`) },

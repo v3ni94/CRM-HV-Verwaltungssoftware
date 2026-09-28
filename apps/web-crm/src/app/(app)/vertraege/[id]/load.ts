@@ -1,3 +1,4 @@
+import type { AmountRow, PaymentTypeOption } from "@/components/contracts/amounts";
 import type { AllocationKeyOption, AllocationValueOut } from "@/components/contracts/ContractAllocationValues";
 import type { TerminationReadingOut } from "@/components/contracts/ContractDebtorAccount";
 import type { ContractOut, MeterOption } from "@/components/contracts/ContractForm";
@@ -13,7 +14,7 @@ export async function loadContractContext(id: string) {
   redirectIfUnauthenticated(response);
   if (!response.ok) return null;
   const contract = (await response.json()) as ContractOut;
-  const [party, property, units, valuesRes, keysRes, mandatesRes, ledgersRes, metersRes, readingsRes] = await Promise.all([
+  const [party, property, units, valuesRes, keysRes, mandatesRes, ledgersRes, metersRes, readingsRes, paymentsRes, paymentTypesRes] = await Promise.all([
     serverFetch(`/api/v1/contacts/${contract.party_id}/name`),
     serverFetch(`/api/v1/properties/${contract.property_id}`),
     serverFetch(`/api/v1/properties/${contract.property_id}/units`),
@@ -24,7 +25,12 @@ export async function loadContractContext(id: string) {
     serverFetch("/api/v1/accounting/ledgers"),
     serverFetch(`/api/v1/properties/${contract.property_id}/meters`),
     serverFetch(`/api/v1/contracts/${id}/termination-readings`),
+    // Sollbeträge über alle Versionen und die Zahlungsarten des Mandanten (Paket D).
+    serverFetch(`/api/v1/contracts/${id}/payments`),
+    serverFetch("/api/v1/catalogs/payment_type"),
   ]);
+  const amounts = paymentsRes.ok ? ((await paymentsRes.json()) as AmountRow[]) : (contract.payments ?? []);
+  const paymentTypes = paymentTypesRes.ok ? ((await paymentTypesRes.json()) as { code: string; label: string }[]).map((c): PaymentTypeOption => ({ code: c.code, label: c.label })) : [];
   const allocationValues = valuesRes.ok ? ((await valuesRes.json()) as AllocationValueOut[]) : [];
   const allocationKeys = keysRes.ok ? ((await keysRes.json()) as AllocationKeyOption[]) : [];
   const mandates = mandatesRes.ok ? ((await mandatesRes.json()) as MandateOut[]) : [];
@@ -56,6 +62,8 @@ export async function loadContractContext(id: string) {
   }
   return {
     contract,
+    amounts,
+    paymentTypes,
     allocationValues,
     allocationKeys,
     mandates,

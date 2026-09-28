@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 
 import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
+import { AmountsPanel } from "@/components/contracts/AmountsPanel";
 import { ContractAllocationValues } from "@/components/contracts/ContractAllocationValues";
 import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAccount";
 import { ContractNotesSection } from "@/components/contracts/ContractNotesSection";
@@ -38,7 +39,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       </div>
     );
   }
-  const { contract, deposits, settlements, rates, partyName, propertyLabel, unitLabel, allocationValues, allocationKeys, mandates, ledger, meterLabels, terminationReadings, managementType } = ctx;
+  const { contract, amounts, paymentTypes, deposits, settlements, rates, partyName, propertyLabel, unitLabel, allocationValues, allocationKeys, mandates, ledger, meterLabels, terminationReadings, managementType } = ctx;
   const bool = (v: boolean) => (v ? t("yes") : t("no"));
 
   return (
@@ -140,6 +141,7 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       {contract.kind === "ownership" && !contract.end_date ? (
         <OwnershipTransfer contractId={contract.id} sevAllowed={managementType === "hoa_with_sev"} canUpdate={canUpdate} />
       ) : null}
+      <AmountsPanel contractId={contract.id} amounts={amounts} paymentTypes={paymentTypes} canUpdate={canUpdate} startDate={contract.start_date} endDate={contract.end_date} />
       <section className={ui.card}>
         <h2 className={ui.h2}>{t("page.schedules")}</h2>
         {contract.schedules.length === 0 ? (

@@ -7796,7 +7796,11 @@
       "ownership": "Ownership (HOA)",
       "payment": "Payment and blocks",
       "schedule": "Payment schedule",
-      "deposit": "Deposit"
+      "deposit": "Deposit",
+      "amounts": "Standing amounts"
+    },
+    "amounts": {
+      "help": "Rent, advance payments or HOA fee apply from the contract start ({date}) and are stored on the contract after creation. Later changes are recorded on the contract page as a new state from a date."
     },
     "kinds": {
       "tenancy": "Tenancy",
@@ -7931,6 +7935,9 @@
       "checkFields": "Please check the marked fields.",
       "scheduleFailed": "The contract was created, the schedule was not: {message}",
       "depositFailed": "The contract was created, the deposit was not: {message}",
+      "amountFailed": "The contract was created, the standing amount {kind} was not: {message}",
+      "amountRow": "Enter payment type, net in the format 1.234,56 and VAT in percent for each standing amount.",
+      "amountKindTwice": "Each payment type only once; later states are recorded on the contract page.",
       "effectiveDateRequired": "Please enter from when the change applies.",
       "effectiveDateAfterStart": "The change must apply after the contract start.",
       "effectiveDateBeforeEnd": "The change must apply within the term."
@@ -9000,6 +9007,44 @@
     }
   },
   "contracts": {
+    "amounts": {
+      "title": "Standing amounts",
+      "help": "Rent, advance payments, HOA fee, reserve contribution and other payment types with a validity period. A new amount applies from a date and closes the open previous amount of the same kind the day before; earlier states stay unchanged. Recording posts nothing: receivables come from the receivable run in accounting, statements stay drafts until release gate G3.",
+      "formHelp": "New amount from a date. Gross is computed from net and VAT. Negative amounts only for rent reductions.",
+      "asOf": "As of",
+      "total": "Total per month ({count, plural, =1 {one amount} other {# amounts}})",
+      "current": "current",
+      "none": "No standing amounts recorded for the contract.",
+      "noTypes": "No payment types in the tenant catalogue (Settings, Catalogues, Payment types).",
+      "kind": "Payment type",
+      "net": "Net",
+      "vat": "VAT in %",
+      "gross": "Gross",
+      "grossPending": "Gross: enter net and VAT",
+      "validFrom": "Valid from",
+      "validTo": "Valid to",
+      "reason": "Reason",
+      "open": "open",
+      "add": "Record amount",
+      "addRow": "Add standing amount",
+      "remove": "Remove",
+      "reasons": {
+        "initial": "Initial amount",
+        "increase": "Increase",
+        "index": "Index adjustment",
+        "graduated": "Graduated",
+        "adjustment_from_statement": "Adjustment from statement",
+        "other": "Other"
+      },
+      "errors": {
+        "required": "Payment type and valid from are required.",
+        "amount": "Enter the net amount in the format 1.234,56.",
+        "vat": "Enter VAT as a percentage between 0 and 100.",
+        "validFromRange": "Valid from must lie within the contract term ({start} to {end}).",
+        "validToOrder": "Valid to must not lie before valid from.",
+        "overlap": "The period overlaps {kind} from {from} to {to}. Limit the existing amount or choose a later date."
+      }
+    },
     "allocation": {
       "title": "Properties (allocation values)",
       "help": "Contract related allocation values such as persons with a period. A new value closes the open previous value the day before; the history is kept.",
