@@ -145,9 +145,7 @@ def test_replace_creates_new_version_and_ends_old_on_release(
 ) -> None:
     clerk = bearer(login(client, world, "cbclerk"))
     approver = bearer(login(client, world, "cbapprover"))
-    contact_id = _create(
-        client, clerk, "rep", bank_accounts=[_account(IBAN_A, is_default=True)]
-    )
+    contact_id = _create(client, clerk, "rep", bank_accounts=[_account(IBAN_A, is_default=True)])
     old = client.get(f"/api/v1/contacts/{contact_id}", headers=clerk).json()["bank_accounts"][0]
     assert (
         client.post(
@@ -177,9 +175,7 @@ def test_replace_creates_new_version_and_ends_old_on_release(
     # Old row untouched while pending; a second replacement is refused.
     accounts = {
         a["id"]: a
-        for a in client.get(f"/api/v1/contacts/{contact_id}", headers=clerk).json()[
-            "bank_accounts"
-        ]
+        for a in client.get(f"/api/v1/contacts/{contact_id}", headers=clerk).json()["bank_accounts"]
     }
     assert accounts[old["id"]]["valid_to"] is None
     assert accounts[old["id"]]["is_default"] is True
@@ -199,9 +195,7 @@ def test_replace_creates_new_version_and_ends_old_on_release(
     assert released.json()["is_default"] is True
     accounts = {
         a["id"]: a
-        for a in client.get(f"/api/v1/contacts/{contact_id}", headers=clerk).json()[
-            "bank_accounts"
-        ]
+        for a in client.get(f"/api/v1/contacts/{contact_id}", headers=clerk).json()["bank_accounts"]
     }
     assert accounts[old["id"]]["valid_to"] == "2026-09-30"  # day before new valid_from
     assert accounts[old["id"]]["is_default"] is False
@@ -209,17 +203,13 @@ def test_replace_creates_new_version_and_ends_old_on_release(
     assert accounts[new["id"]]["iban_masked"].endswith("5030")
 
 
-def test_end_direct_for_approver_and_four_eyes_for_clerk(
-    client: TestClient, world: World
-) -> None:
+def test_end_direct_for_approver_and_four_eyes_for_clerk(client: TestClient, world: World) -> None:
     clerk = bearer(login(client, world, "cbclerk"))
     clerk2 = bearer(login(client, world, "cbclerk2"))
     boss = bearer(login(client, world, "cbboss"))
     approver = bearer(login(client, world, "cbapprover"))
     approver2 = bearer(login(client, world, "cbapprover2"))
-    contact_id = _create(
-        client, clerk, "end", bank_accounts=[_account(IBAN_A), _account(IBAN_B)]
-    )
+    contact_id = _create(client, clerk, "end", bank_accounts=[_account(IBAN_A), _account(IBAN_B)])
     first, second = client.get(f"/api/v1/contacts/{contact_id}", headers=clerk).json()[
         "bank_accounts"
     ]
@@ -294,9 +284,7 @@ def test_end_direct_for_approver_and_four_eyes_for_clerk(
     assert bad_iban.status_code == 422, bad_iban.text
 
 
-def test_legal_entity_contact_always_needs_second_person(
-    client: TestClient, world: World
-) -> None:
+def test_legal_entity_contact_always_needs_second_person(client: TestClient, world: World) -> None:
     """The management company itself (contact type manager) is a legal entity: even a tenant
     admin only proposes the ending; the proposer never confirms (GATE_FOUR_EYES)."""
     boss = bearer(login(client, world, "cbboss"))
@@ -330,7 +318,8 @@ def test_legal_entity_contact_always_needs_second_person(
     assert proposed.status_code == 200, proposed.text
     assert proposed.json()["valid_to"] is None
     change = proposed.json()["pending_change"]
-    assert change is not None and change["requested_by"] == str(world.users["cbboss"])
+    assert change is not None
+    assert change["requested_by"] == str(world.users["cbboss"])
     decide = f"/api/v1/contacts/{contact_id}/bank-accounts/{account['id']}/changes/{change['id']}"
     own = client.post(f"{decide}/approve", headers=boss)
     assert own.status_code == 403, own.text
