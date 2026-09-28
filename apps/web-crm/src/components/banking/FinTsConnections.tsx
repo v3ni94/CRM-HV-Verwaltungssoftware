@@ -312,7 +312,7 @@ function InstituteSearch({ onSelect }: { onSelect: (inst: FinTsInstitute) => voi
                 role="option"
                 aria-selected={false}
                 disabled={!inst.connectable}
-                className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-surface disabled:opacity-60"
+                className="flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left text-sm hover:bg-surface-2 disabled:opacity-60"
                 onClick={() => onSelect(inst)}
               >
                 <span className="font-medium">{inst.name}</span>
@@ -385,7 +385,7 @@ export function FinTsConnectDialog({ onClose, onChanged }: { onClose: () => void
   }
 
   return (
-    <div role="dialog" aria-modal="true" aria-labelledby="fints-dialog-title" className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-black/40 p-4">
+    <div role="dialog" aria-modal="true" aria-labelledby="fints-dialog-title" className="fixed inset-0 z-40 flex items-start justify-center overflow-y-auto bg-scrim p-4">
       <div className={`${ui.card} mt-8 w-full max-w-xl`}>
         <div className="flex items-start justify-between gap-2">
           <h2 id="fints-dialog-title" className={ui.h2}>{t("connectTitle")}</h2>

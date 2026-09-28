@@ -54,6 +54,8 @@ export function SignaturePad({
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     ctx.scale(ratio, ratio);
+    // The signature is a document image: always ink on white paper in both appearance modes
+    // (same values as the --mhvp-color-paper and --mhvp-color-ink tokens), never themed.
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, rect.width, 180);
     ctx.lineWidth = 2.2;
@@ -222,7 +224,7 @@ export function SignaturePad({
       </div>
       <canvas
         ref={canvasRef}
-        className="h-[180px] w-full touch-none rounded-md border border-border bg-white"
+        className="h-[180px] w-full touch-none rounded-md border border-border bg-paper"
         aria-label={t("signature.canvas")}
         onPointerDown={down}
         onPointerMove={move}

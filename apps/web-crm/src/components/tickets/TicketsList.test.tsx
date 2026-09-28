@@ -90,10 +90,10 @@ describe("TicketsList traffic light (M19-09)", () => {
     expect(screen.getAllByTestId("attention-legend").length).toBeGreaterThan(0);
     const rows = screen.getAllByTestId("ticket-row");
     expect(rows.map((r) => r.getAttribute("data-attention"))).toEqual(["stale_96h", "stale_24h", "new", "closed", "none"]);
-    expect(rows[0]!.querySelector("td")!.className).toContain("border-l-red-600");
-    expect(rows[1]!.querySelector("td")!.className).toContain("border-l-orange-500");
-    expect(rows[2]!.querySelector("td")!.className).toContain("border-l-yellow-400");
-    expect(rows[3]!.querySelector("td")!.className).toContain("border-l-emerald-500");
+    expect(rows[0]!.querySelector("td")!.className).toContain("border-l-signal-critical");
+    expect(rows[1]!.querySelector("td")!.className).toContain("border-l-signal-warning");
+    expect(rows[2]!.querySelector("td")!.className).toContain("border-l-signal-attention");
+    expect(rows[3]!.querySelector("td")!.className).toContain("border-l-signal-ok");
     expect(rows[4]!.querySelector("td")!.className).toContain("border-l-transparent");
     // Labels appear on the card and the table row.
     expect(screen.getAllByText("Seit 4 Tagen ohne Reaktion").length).toBe(2);

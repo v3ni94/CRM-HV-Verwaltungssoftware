@@ -5,8 +5,8 @@ import { useEffect, useId, useRef, useState } from "react";
 import { statusDescriptor, type StatusDescriptor, type StatusDomain, type StatusIcon, type StatusTone } from "@/lib/status-labels";
 
 const toneClass: Record<StatusTone, string> = {
-  neutral: "bg-surface text-muted",
-  info: "bg-gold-soft text-fg",
+  neutral: "bg-muted-bg text-muted-fg",
+  info: "bg-info-bg text-info-fg",
   success: "bg-success-bg text-success-fg",
   warning: "bg-warning-bg text-warning-fg",
   danger: "bg-danger-bg text-danger-fg",
@@ -67,7 +67,7 @@ export function StatusChip({ domain, status, descriptor, label, explanation, cla
     return () => document.removeEventListener("mousedown", onDoc);
   }, [open]);
 
-  const base = `inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${toneClass[d.tone]} ${className}`;
+  const base = `inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${toneClass[d.tone]} ${className}`;
   if (!hint) {
     return (
       <span className={base} data-status={status ?? undefined}>
@@ -80,7 +80,7 @@ export function StatusChip({ domain, status, descriptor, label, explanation, cla
     <span ref={wrap} className="relative inline-flex">
       <button
         type="button"
-        className={`${base} cursor-help focus:outline-none focus:ring-2 focus:ring-gold/40`}
+        className={`${base} cursor-help focus:outline-none focus:ring-2 focus:ring-focus`}
         aria-describedby={`${id}-hint`}
         aria-expanded={open}
         data-status={status ?? undefined}
@@ -95,7 +95,7 @@ export function StatusChip({ domain, status, descriptor, label, explanation, cla
       <span
         id={`${id}-hint`}
         role="tooltip"
-        className={`absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-border bg-bg p-2 text-left text-xs font-normal text-fg shadow-lg ${open ? "" : "sr-only"}`}
+        className={`absolute left-0 top-full z-20 mt-1 w-64 rounded-lg border border-border bg-raised p-2 text-left text-xs font-normal text-fg shadow-lg ${open ? "" : "sr-only"}`}
       >
         {hint}
       </span>

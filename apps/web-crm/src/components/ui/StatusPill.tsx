@@ -1,11 +1,11 @@
 export type StatusPillVariant = "neutral" | "success" | "warning" | "danger" | "gold";
 
 const variantClass: Record<StatusPillVariant, string> = {
-  neutral: "bg-surface text-muted",
+  neutral: "bg-muted-bg text-muted-fg",
   success: "bg-success-bg text-success-fg",
   warning: "bg-warning-bg text-warning-fg",
   danger: "bg-danger-bg text-danger-fg",
-  gold: "bg-gold-soft text-fg",
+  gold: "bg-accent-soft text-fg",
 };
 
 /** Soft status pill with a leading dot (CI badge style). Purely presentational; callers map
@@ -21,7 +21,7 @@ export function StatusPill({
 }) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${variantClass[variant]} ${className}`}
+      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-semibold ${variantClass[variant]} ${className}`}
     >
       <span className="mhvp-dot" aria-hidden="true" />
       {label}

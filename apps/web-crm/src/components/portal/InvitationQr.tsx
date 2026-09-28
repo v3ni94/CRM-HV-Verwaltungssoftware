@@ -36,7 +36,7 @@ export function InvitationQr({ url, title, alt }: { url: string | null | undefin
       {dataUrl ? (
         // The QR image is generated locally as a data URL; next/image adds nothing here.
         // eslint-disable-next-line @next/next/no-img-element
-        <img src={dataUrl} width={180} height={180} alt={alt} className="mt-1 rounded bg-white p-1" />
+        <img src={dataUrl} width={180} height={180} alt={alt} className="mt-1 rounded bg-paper p-1" />
       ) : null}
     </div>
   );

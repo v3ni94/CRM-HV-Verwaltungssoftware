@@ -12,21 +12,22 @@ export type Attention = "none" | "new" | "stale_24h" | "stale_96h" | "closed";
 
 export const ATTENTION_LEVELS: Attention[] = ["stale_96h", "stale_24h", "new", "closed"];
 
-/** Left border colour per level: green closed, yellow new, orange 24 h, red 96 h. */
+/** Left border colour per level: green closed, yellow new, orange 24 h, red 96 h. Colours are
+ *  the signal tokens of @mhvp/ui (tuned per day and evening mode), never palette classes. */
 export const ATTENTION_BORDER: Record<Attention, string> = {
   none: "border-l-4 border-l-transparent",
-  new: "border-l-4 border-l-yellow-400",
-  stale_24h: "border-l-4 border-l-orange-500",
-  stale_96h: "border-l-4 border-l-red-600",
-  closed: "border-l-4 border-l-emerald-500",
+  new: "border-l-4 border-l-signal-attention",
+  stale_24h: "border-l-4 border-l-signal-warning",
+  stale_96h: "border-l-4 border-l-signal-critical",
+  closed: "border-l-4 border-l-signal-ok",
 };
 
 export const ATTENTION_DOT: Record<Attention, string> = {
   none: "bg-transparent",
-  new: "bg-yellow-400",
-  stale_24h: "bg-orange-500",
-  stale_96h: "bg-red-600",
-  closed: "bg-emerald-500",
+  new: "bg-signal-attention",
+  stale_24h: "bg-signal-warning",
+  stale_96h: "bg-signal-critical",
+  closed: "bg-signal-ok",
 };
 
 /** Unknown or missing values (old tickets, other API versions) map to "none". */

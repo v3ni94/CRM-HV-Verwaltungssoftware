@@ -59,7 +59,7 @@ describe("MyTicketsColumn", () => {
     const [first, second] = rows as [HTMLElement, HTMLElement];
     expect(first).toHaveAttribute("data-attention", "stale_96h");
     expect(within(first).getByRole("link")).toHaveAttribute("href", "/tickets/a");
-    expect(within(first).getByRole("link").className).toContain("border-l-red-600");
+    expect(within(first).getByRole("link").className).toContain("border-l-signal-critical");
     expect(within(first).getByText("fällig 28.09.2026")).toBeInTheDocument();
     expect(within(second).getByText("ohne Titel")).toBeInTheDocument();
     expect(screen.getByText("und 10 weitere")).toBeInTheDocument();

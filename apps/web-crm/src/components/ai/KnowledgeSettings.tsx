@@ -256,7 +256,7 @@ export function KnowledgeSettings({
             </div>
             <p className="mt-1 whitespace-pre-wrap text-sm text-muted">{entry.content}</p>
             {entry.status === "draft" && entry.rejection_reason ? (
-              <p className="mt-1 text-xs text-red-600">
+              <p className="mt-1 text-xs text-danger-fg">
                 {t("knowledge.rejectedHint", { reason: entry.rejection_reason })}
               </p>
             ) : null}
@@ -340,7 +340,7 @@ export function KnowledgeSettings({
                       const current = history.find((v) => v.id === historyFor) ?? entry;
                       if (!other) return null;
                       return (
-                        <div className="rounded-md bg-surface-muted p-2 font-mono text-xs">
+                        <div className="rounded-md bg-surface-2 p-2 font-mono text-xs">
                           <p className="mb-1 text-muted">
                             {t("knowledge.diffWith", { version: other.version ?? 1 })}
                           </p>
@@ -349,9 +349,9 @@ export function KnowledgeSettings({
                               key={idx}
                               className={
                                 row.kind === "add"
-                                  ? "bg-emerald-500/10 text-emerald-700"
+                                  ? "bg-success-bg text-success-fg"
                                   : row.kind === "del"
-                                    ? "bg-red-500/10 text-red-700 line-through"
+                                    ? "bg-danger-bg text-danger-fg line-through"
                                     : ""
                               }
                             >

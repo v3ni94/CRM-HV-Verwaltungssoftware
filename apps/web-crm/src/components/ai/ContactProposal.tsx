@@ -14,10 +14,10 @@ type Action = "create" | "link" | "skip";
 type RowChoice = { action: Action; contactId: string | null };
 
 const LIGHT: Record<ContactRow["status"], string> = {
-  new: "bg-green-600",
-  existing: "bg-yellow-500",
-  incomplete: "bg-orange-500",
-  invalid: "bg-red-600",
+  new: "bg-signal-ok",
+  existing: "bg-signal-attention",
+  incomplete: "bg-signal-warning",
+  invalid: "bg-signal-critical",
 };
 
 function defaultChoice(row: ContactRow): RowChoice {

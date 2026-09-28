@@ -157,7 +157,7 @@ export function SignatureProfile({
         <div className="mt-4 grid gap-3 lg:grid-cols-2">
           <div>
             <h3 className={ui.label}>{t("previewText")}</h3>
-            <pre className="mt-1 whitespace-pre-wrap rounded-md border border-border bg-surface p-3 text-xs" data-testid="signature-text">
+            <pre className="mt-1 whitespace-pre-wrap rounded-md border border-border bg-surface-2 p-3 text-xs" data-testid="signature-text">
               {preview.text}
             </pre>
           </div>
@@ -169,7 +169,7 @@ export function SignatureProfile({
             <iframe
               title={t("previewHtml")}
               sandbox=""
-              className="mt-1 h-56 w-full rounded-md border border-border bg-white"
+              className="mt-1 h-56 w-full rounded-md border border-border bg-paper"
               srcDoc={`<!doctype html><html><body style="margin:12px;background:#fff;">${preview.html}</body></html>`}
             />
           </div>
@@ -225,7 +225,7 @@ export function MemberPositionEditor({
     );
   }
   return (
-    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface p-2">
+    <div className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2">
       <PositionPicker value={value} catalogue={catalogue} onChange={setValue} idPrefix={`member-${membershipId}`} />
       <label className="flex flex-col gap-1 text-xs">
         <span className={ui.label}>{t("phone")}</span>

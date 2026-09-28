@@ -166,9 +166,9 @@ function SecondFactor({ initialEnabled }: { initialEnabled: boolean }) {
         <form onSubmit={(e) => void confirm(e)} className="flex flex-col gap-3 sm:max-w-sm">
           <p className="text-xs text-muted">{t("totpSetupHint")}</p>
           {/* eslint-disable-next-line @next/next/no-img-element -- server generated data URL */}
-          <img src={setup.qr} alt={t("totpQrAlt")} width={220} height={220} className="rounded bg-white p-1" />
+          <img src={setup.qr} alt={t("totpQrAlt")} width={220} height={220} className="rounded bg-paper p-1" />
           <p className={ui.label}>{t("totpSecretLabel")}</p>
-          <code data-testid="totp-secret" className="select-all break-all rounded bg-surface px-2 py-1 font-mono text-sm">
+          <code data-testid="totp-secret" className="select-all break-all rounded bg-surface-2 px-2 py-1 font-mono text-sm">
             {setup.secret}
           </code>
           <label className="flex flex-col gap-1">

@@ -104,7 +104,7 @@ function BucketChart({
         y1={padTop + plotH}
         x2={width - padLeft}
         y2={padTop + plotH}
-        stroke="var(--mhvp-color-border)"
+        stroke="var(--mhvp-color-chart-axis)"
         strokeWidth={1}
       />
       {buckets.map((b, i) => {
@@ -122,7 +122,7 @@ function BucketChart({
               width={barW}
               height={Math.max(createdH, b.created > 0 ? 2 : 0)}
               rx={4}
-              fill="var(--mhvp-color-muted)"
+              fill="var(--mhvp-color-chart-1)"
             />
             <rect
               x={resolvedX}
@@ -130,7 +130,7 @@ function BucketChart({
               width={barW}
               height={Math.max(resolvedH, b.resolved > 0 ? 2 : 0)}
               rx={4}
-              fill="var(--mhvp-color-gold)"
+              fill="var(--mhvp-color-chart-2)"
             />
             {b.created > 0 ? (
               <text
@@ -159,7 +159,7 @@ function BucketChart({
               y={height - 8}
               textAnchor="middle"
               fontSize={10}
-              fill="var(--mhvp-color-subtle)"
+              fill="var(--mhvp-color-chart-label)"
             >
               {bucketLabel(b.key, range)}
             </text>
@@ -238,7 +238,7 @@ export function TicketAnalytics() {
                 onClick={() => setRange(r)}
                 aria-pressed={range === r}
                 className={`px-3 py-1.5 text-sm transition duration-150 ${
-                  range === r ? "bg-accent text-accent-fg" : "bg-bg text-fg hover:bg-surface"
+                  range === r ? "bg-accent text-accent-fg" : "bg-surface text-fg hover:bg-surface-2"
                 }`}
               >
                 {t(`range.${r}`)}
@@ -295,11 +295,11 @@ export function TicketAnalytics() {
               <h3 className="text-sm font-semibold text-fg">{t("chartTitle")}</h3>
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5 text-xs text-muted">
-                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--mhvp-color-muted)" }} />
+                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-sm bg-chart-1" />
                   {t("chartCreated")}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-muted">
-                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--mhvp-color-gold)" }} />
+                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-sm bg-chart-2" />
                   {t("chartResolved")}
                 </span>
                 <button type="button" className={ui.buttonSm} onClick={() => setShowTable((v) => !v)}>
@@ -349,7 +349,7 @@ export function TicketAnalytics() {
                 <ul className="flex flex-col gap-1 sm:hidden">
                   {openTickets.map((tk) => (
                     <li key={tk.id} className={`min-w-0 ${ATTENTION_BORDER[asAttention(tk.attention)]}`} data-attention={asAttention(tk.attention)}>
-                      <Link href={`/tickets/${tk.id}`} className="flex min-w-0 flex-col gap-0.5 rounded-md px-2 py-1.5 text-sm hover:bg-surface">
+                      <Link href={`/tickets/${tk.id}`} className="flex min-w-0 flex-col gap-0.5 rounded-md px-2 py-1.5 text-sm hover:bg-surface-2">
                         <span className="min-w-0 truncate font-medium">
                           #{tk.number} {tk.title ?? ""}
                         </span>

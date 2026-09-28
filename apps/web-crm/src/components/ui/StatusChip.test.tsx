@@ -28,7 +28,7 @@ describe("StatusChip", () => {
 
   it("falls back to a neutral chip with the raw value and accepts overrides", () => {
     render(<StatusChip domain="mail" status="weird" />);
-    expect(screen.getByText("weird")).toHaveClass("bg-surface");
+    expect(screen.getByText("weird")).toHaveClass("bg-muted-bg");
     render(<StatusChip domain="gate" status="closed" label="G2: geschlossen" />);
     expect(screen.getByRole("button", { name: "G2: geschlossen" })).toBeInTheDocument();
   });

@@ -24,7 +24,7 @@ describe("TicketsSection (contact, property, unit tab)", () => {
     const rows = screen.getAllByTestId("section-ticket");
     expect(rows).toHaveLength(3);
     expect(rows.map((r) => r.getAttribute("data-attention"))).toEqual(["stale_24h", "new", "closed"]);
-    expect(rows[2]!.className).toContain("border-l-emerald-500");
+    expect(rows[2]!.className).toContain("border-l-signal-ok");
     expect(screen.getByText("Seit 30 Stunden ohne Reaktion")).toBeInTheDocument();
   });
 

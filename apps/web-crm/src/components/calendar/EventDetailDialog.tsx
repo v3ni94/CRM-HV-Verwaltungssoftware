@@ -44,7 +44,7 @@ export function EventDetailDialog({ item, onClose, onSent }: { item: CalendarEve
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-fg/40 p-4" role="dialog" aria-modal="true" aria-label={t("eventDetails")}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4" role="dialog" aria-modal="true" aria-label={t("eventDetails")}>
       <div className={`${ui.card} flex w-full max-w-md flex-col gap-3`}>
         <h2 className="text-sm font-semibold">{item.title}</h2>
         <p className="text-sm text-muted">{formatDate(item.date)}</p>

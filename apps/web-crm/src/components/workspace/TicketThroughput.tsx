@@ -188,8 +188,8 @@ function ThroughputChart({ buckets, unit, t }: { buckets: Bucket[]; unit: Unit; 
           const y = PAD_TOP + plotH - (tick / max) * plotH;
           return (
             <g key={tick}>
-              <line x1={PAD_LEFT} x2={CHART_W - PAD_RIGHT} y1={y} y2={y} stroke="var(--mhvp-color-border-soft)" strokeWidth={1} />
-              <text x={PAD_LEFT - 6} y={y + 3} textAnchor="end" fontSize={10} fill="var(--mhvp-color-subtle)">
+              <line x1={PAD_LEFT} x2={CHART_W - PAD_RIGHT} y1={y} y2={y} stroke="var(--mhvp-color-chart-grid)" strokeWidth={1} />
+              <text x={PAD_LEFT - 6} y={y + 3} textAnchor="end" fontSize={10} fill="var(--mhvp-color-chart-label)">
                 {tick}
               </text>
             </g>
@@ -227,17 +227,17 @@ function ThroughputChart({ buckets, unit, t }: { buckets: Bucket[]; unit: Unit; 
                 </text>
               ) : null}
               {i % labelEvery === 0 ? (
-                <text x={groupX} y={CHART_H - 8} textAnchor="middle" fontSize={10} fill="var(--mhvp-color-subtle)">
+                <text x={groupX} y={CHART_H - 8} textAnchor="middle" fontSize={10} fill="var(--mhvp-color-chart-label)">
                   {bucketLabel(b.start, unit)}
                 </text>
               ) : null}
             </g>
           );
         })}
-        <line x1={PAD_LEFT} x2={CHART_W - PAD_RIGHT} y1={PAD_TOP + plotH} y2={PAD_TOP + plotH} stroke="var(--mhvp-color-border)" strokeWidth={1} />
+        <line x1={PAD_LEFT} x2={CHART_W - PAD_RIGHT} y1={PAD_TOP + plotH} y2={PAD_TOP + plotH} stroke="var(--mhvp-color-chart-axis)" strokeWidth={1} />
       </svg>
       {active ? (
-        <div role="status" className="pointer-events-none absolute right-2 top-2 rounded-md border border-border bg-bg px-2 py-1 text-xs shadow-card">
+        <div role="status" className="pointer-events-none absolute right-2 top-2 rounded-md border border-border bg-raised px-2 py-1 text-xs shadow-lg">
           <span className="font-medium">{bucketLabel(active.start, unit)}</span>
           <span className="ml-2 text-muted">{t("created")}: {active.tickets_created}</span>
           <span className="ml-2 text-muted">{t("closed")}: {active.tickets_closed}</span>
@@ -269,8 +269,8 @@ function BacklogChart({ buckets, unit, t }: { buckets: Bucket[]; unit: Unit; t: 
       <svg viewBox={`0 0 ${CHART_W} ${CHART_H}`} role="img" aria-label={t("chartBacklog")} className="h-auto w-full">
         {ticks.map((tick) => (
           <g key={tick}>
-            <line x1={PAD_LEFT} x2={CHART_W - PAD_RIGHT} y1={y(tick)} y2={y(tick)} stroke="var(--mhvp-color-border-soft)" strokeWidth={1} />
-            <text x={PAD_LEFT - 6} y={y(tick) + 3} textAnchor="end" fontSize={10} fill="var(--mhvp-color-subtle)">
+            <line x1={PAD_LEFT} x2={CHART_W - PAD_RIGHT} y1={y(tick)} y2={y(tick)} stroke="var(--mhvp-color-chart-grid)" strokeWidth={1} />
+            <text x={PAD_LEFT - 6} y={y(tick) + 3} textAnchor="end" fontSize={10} fill="var(--mhvp-color-chart-label)">
               {tick}
             </text>
           </g>
@@ -279,9 +279,9 @@ function BacklogChart({ buckets, unit, t }: { buckets: Bucket[]; unit: Unit; t: 
         {buckets.map((b, i) => (
           <g key={b.key}>
             <rect x={PAD_LEFT + i * step} y={PAD_TOP} width={step} height={plotH} fill="transparent" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
-            {hover === i ? <circle cx={x(i)} cy={y(b.backlog_end)} r={5} fill="var(--mhvp-color-fg)" stroke="var(--mhvp-color-bg)" strokeWidth={2} pointerEvents="none" /> : null}
+            {hover === i ? <circle cx={x(i)} cy={y(b.backlog_end)} r={5} fill="var(--mhvp-color-fg)" stroke="var(--mhvp-color-surface)" strokeWidth={2} pointerEvents="none" /> : null}
             {i % labelEvery === 0 ? (
-              <text x={x(i)} y={CHART_H - 8} textAnchor="middle" fontSize={10} fill="var(--mhvp-color-subtle)">
+              <text x={x(i)} y={CHART_H - 8} textAnchor="middle" fontSize={10} fill="var(--mhvp-color-chart-label)">
                 {bucketLabel(b.start, unit)}
               </text>
             ) : null}
@@ -292,10 +292,10 @@ function BacklogChart({ buckets, unit, t }: { buckets: Bucket[]; unit: Unit; t: 
             {last.backlog_end}
           </text>
         ) : null}
-        <line x1={PAD_LEFT} x2={CHART_W - PAD_RIGHT} y1={PAD_TOP + plotH} y2={PAD_TOP + plotH} stroke="var(--mhvp-color-border)" strokeWidth={1} />
+        <line x1={PAD_LEFT} x2={CHART_W - PAD_RIGHT} y1={PAD_TOP + plotH} y2={PAD_TOP + plotH} stroke="var(--mhvp-color-chart-axis)" strokeWidth={1} />
       </svg>
       {active ? (
-        <div role="status" className="pointer-events-none absolute right-2 top-2 rounded-md border border-border bg-bg px-2 py-1 text-xs shadow-card">
+        <div role="status" className="pointer-events-none absolute right-2 top-2 rounded-md border border-border bg-raised px-2 py-1 text-xs shadow-lg">
           <span className="font-medium">{bucketLabel(active.start, unit)}</span>
           <span className="ml-2 text-muted">{t("kpi.backlog_end")}: {active.backlog_end}</span>
         </div>
@@ -369,7 +369,7 @@ export function TicketThroughput() {
               type="button"
               onClick={() => setRange(r)}
               aria-pressed={range === r}
-              className={`px-3 py-1.5 text-sm transition duration-150 ${range === r ? "bg-accent text-accent-fg" : "bg-bg text-fg hover:bg-surface"}`}
+              className={`px-3 py-1.5 text-sm transition duration-150 ${range === r ? "bg-accent text-accent-fg" : "bg-surface text-fg hover:bg-surface-2"}`}
             >
               {t(`range.${r}`)}
             </button>
@@ -378,7 +378,7 @@ export function TicketThroughput() {
             type="button"
             onClick={() => setRange("custom")}
             aria-pressed={range === "custom"}
-            className={`px-3 py-1.5 text-sm transition duration-150 ${range === "custom" ? "bg-accent text-accent-fg" : "bg-bg text-fg hover:bg-surface"}`}
+            className={`px-3 py-1.5 text-sm transition duration-150 ${range === "custom" ? "bg-accent text-accent-fg" : "bg-surface text-fg hover:bg-surface-2"}`}
           >
             {t("range.custom")}
           </button>
@@ -465,11 +465,11 @@ export function TicketThroughput() {
               <h3 className="text-sm font-semibold text-fg">{t("chartThroughput")}</h3>
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5 text-xs text-muted">
-                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--mhvp-color-muted)" }} />
+                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-sm bg-chart-1" />
                   {t("created")}
                 </span>
                 <span className="flex items-center gap-1.5 text-xs text-muted">
-                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-sm" style={{ background: "var(--mhvp-color-gold)" }} />
+                  <span aria-hidden className="inline-block h-2.5 w-2.5 rounded-sm bg-chart-2" />
                   {t("closed")}
                 </span>
                 <button type="button" className={ui.buttonSm} onClick={() => setShowTable((v) => !v)} aria-pressed={showTable}>

@@ -121,7 +121,7 @@ export function CreateEventDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-fg/40 p-4" role="dialog" aria-modal="true" aria-label={t("addEntry")}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4" role="dialog" aria-modal="true" aria-label={t("addEntry")}>
       <form onSubmit={submit} className={`${ui.card} flex w-full max-w-md flex-col gap-3`}>
         <h2 className="text-sm font-semibold">{t("addEntry")}</h2>
         <label className="flex flex-col gap-1">

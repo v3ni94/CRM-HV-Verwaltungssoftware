@@ -12,6 +12,6 @@ describe("StatusPill", () => {
 
   it("defaults to the neutral variant", () => {
     render(<StatusPill label="Unbekannt" />);
-    expect(screen.getByText("Unbekannt").closest("span")).toHaveClass("bg-surface");
+    expect(screen.getByText("Unbekannt").closest("span")).toHaveClass("bg-muted-bg");
   });
 });
