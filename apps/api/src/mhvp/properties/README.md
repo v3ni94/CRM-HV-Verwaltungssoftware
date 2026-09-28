@@ -95,3 +95,23 @@ changed fields, merge them into the current record, validate with the `PUT` sche
   `0004`. Rule `docs/rules/M4-05-objekt-deaktivieren.md`, handbook
   `docs/handbuch/objekte-einheiten.md` (Verwaltung beenden).
 
+
+## Stammdaten in der Oberfläche (package C1, 28.09.2026)
+
+* `AllocationKey.expected_total` (migration 0227, `NUMERIC(20,8)`, nullable, no default): the
+  operator entered reference sum of a key within the property, for example the total of the
+  Miteigentumsanteile per Teilungserklärung. Nothing derives from it; the CRM compares the
+  sum of the unit values with it and shows a warning only (`docs/OPEN_QUESTIONS.md` C1-01).
+* `PATCH /properties/{id}/allocation-keys/{kid}` (`properties:update`, `AllocationKeyPatch`):
+  name, unit of measure, kind, meter type, sort order and `expected_total`; the code is
+  immutable (422 when sent). A key of another property answers 404.
+* `GET /properties/{id}/allocation-summary?as_of=` (`properties:read`,
+  `AllocationSummaryOut`): every key with `total` (sum of the unit values valid at `as_of`,
+  default today Europe/Berlin), `expected_total`, `difference` (`total - expected_total`,
+  `null` without an expected total), `units_with_value`, `units_without_value`; the units in
+  natural order and the single values. Decimals are serialised in plain notation.
+* CRM: `BuildingsCreate`, `UnitsCreate` (unit number unique per property checked before
+  saving, the API keeps the 409) and `AllocationKeysPanel` on the property page; handbook
+  `docs/handbuch/anleitung-stammdaten.md`.
+* Tests: `tests/integration/test_c1_allocation_summary.py` (fixed sums 750 and 1000 against
+  an expected total of 1000, PATCH validation, 403 caretaker, second tenant 404, 401).

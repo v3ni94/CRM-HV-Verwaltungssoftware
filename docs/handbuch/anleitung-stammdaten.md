@@ -50,15 +50,56 @@ Objektseite (Klick auf das Objekt in der Objektliste):
 
 ## Gebäude und Einheiten
 
-- Neuanlage nur über den Import ([Objekte und Einheiten aus der Immoware24-Objektliste](import-objektdaten.md))
-  oder die Schnittstelle. Die Oberfläche hat dafür kein Formular.
-- Einheit ändern: Objektseite, Tabelle Einheiten, Klick auf die Einheit. Im Abschnitt
-  Stammdaten der Einheit Nummer, Bezeichnung, Art, Lage, Etage, Flächen, Zimmer, Ausstattung,
-  Anschrift, Untergemeinschaft, Umsatzsteuer bei Leerstand, Provision, Kaution direkt ändern.
-- Flächen und Schlüsselwerte wirken auf Abrechnungen. Schlüsselwerte werden mit
-  Gültigkeitszeitraum geführt; eine Änderung nie rückwirkend eintragen, ohne dass die Grundlage
-  (zum Beispiel Aufmaß, Beschluss) als Dokument an der Einheit abgelegt ist.
-- Umlagewerte bei Leerstand: Abschnitt Umlagewerte bei Leerstand der Einheitenseite.
+### Gebäude anlegen
+
+Objektseite, Abschnitt Gebäude, Schaltfläche Gebäude anlegen: Bezeichnung (Pflicht), Straße,
+Hausnummer, Adresszusatz, Baujahr, Geschosse, Anlegen. Steht die Hausnummer im Feld Straße,
+erscheint der Hinweis nach Erfassungsstandard ES-03; er sperrt nicht. Flächen, Bauweise,
+Energieausweis und weitere Angaben danach auf der Gebäudeseite pflegen (Klick auf den
+Gebäudenamen). Voraussetzung ist `properties:create`; bei beendeten Objekten fehlt die
+Schaltfläche. Daneben bleiben der Import
+([Objekte und Einheiten aus der Immoware24-Objektliste](import-objektdaten.md)) und die
+Schnittstelle.
+
+### Einheit anlegen
+
+Objektseite, Abschnitt Einheiten, Schaltfläche Einheit anlegen (auch auf der Gebäudeseite mit
+vorbelegtem Gebäude): Gebäude, Nummer und Art sind Pflicht; Bezeichnung, Lage, Etage,
+Wohnfläche, Gesamtfläche und Zimmer optional (Dezimalzahlen mit Komma, zum Beispiel 65,5).
+Die Nummer muss im Objekt eindeutig sein; das Formular meldet eine bereits vergebene Nummer
+vor dem Speichern, die Schnittstelle lehnt Dubletten ab. Nach dem Anlegen führt der Link
+Einheit öffnen auf die Einheitenseite. Ohne Gebäude im Objekt zuerst ein Gebäude anlegen.
+
+### Einheit ändern
+
+Objektseite, Tabelle Einheiten, Klick auf die Einheit. Im Abschnitt Stammdaten der Einheit
+Nummer, Bezeichnung, Art, Lage, Etage, Flächen, Zimmer, Ausstattung, Anschrift,
+Untergemeinschaft, Umsatzsteuer bei Leerstand, Provision, Kaution direkt ändern.
+
+### Umlageschlüssel und Schlüsselwerte
+
+Objektseite, Abschnitt Umlageschlüssel und Schlüsselwerte:
+
+1. Stichtag wählen (Vorbelegung heute). Die Tabelle zeigt je Schlüssel Maßeinheit, Art,
+   Sollsumme, Summe der Einheitenwerte zum Stichtag, Abweichung und die Zahl der Einheiten
+   ohne Wert.
+2. Sollsumme je Schlüssel eintragen und Speichern (zum Beispiel die Summe der
+   Miteigentumsanteile laut Teilungserklärung). Die Sollsumme ist ein Betreiberwert ohne
+   Vorgabe und zu verifizieren; ohne Sollsumme (zum Beispiel Personen) bleibt das Feld leer.
+3. Weicht die Summe von der Sollsumme ab, erscheint die Summenprüfung als Warnung. Sie
+   sperrt nichts; Grundlage (Teilungserklärung, Aufmaß, Beschluss) und Gültigkeitszeiträume
+   prüfen und den fehlenden oder falschen Wert erfassen.
+4. Schlüsselwert erfassen: Einheit, Umlageschlüssel, Wert, Gültig ab (Pflicht), Gültig bis
+   (optional), Wert speichern. Ein neuer Wert schließt den offenen Vorwert am Vortag, die
+   Historie bleibt erhalten. Eine Änderung nie rückwirkend eintragen, ohne dass die Grundlage
+   als Dokument an der Einheit abgelegt ist.
+5. Umlageschlüssel anlegen: Kürzel (Großbuchstaben, Ziffern, Unterstrich, im Objekt
+   eindeutig, danach nicht änderbar), Bezeichnung, Maßeinheit, Art, Sollsumme.
+
+Die Matrix Werte je Einheit zeigt zum Stichtag nur Schlüssel mit Werten oder Sollsumme;
+Alle Schlüssel anzeigen blendet die übrigen ein. Flächen und Schlüsselwerte wirken auf
+Abrechnungen; die Abrechnung liest sie erst nach den Freigaben G3 und G4. Umlagewerte bei
+Leerstand: Abschnitt Umlagewerte bei Leerstand der Einheitenseite.
 
 ## Kontakte
 
@@ -127,6 +168,7 @@ erscheint als Typ Wiedervorlage in der Fristenliste.
 - [ ] Nachweis der Änderung abgelegt
 - [ ] Änderung in Immoware24 nachgezogen, solange Immoware24 führt
 - [ ] Bei Flächen oder Schlüsselwerten: Gültigkeitsbeginn und Grundlage dokumentiert
+- [ ] Summenprüfung der Umlageschlüssel ohne Abweichung oder Abweichung geklärt
 
 ## Häufige Fehler
 
@@ -138,7 +180,9 @@ erscheint als Typ Wiedervorlage in der Fristenliste.
 
 ## Lücken in der Software
 
-- Gebäude, Einheiten und Schlüsselwerte ohne Anlageformular.
+- Umlageschlüssel: Kürzel, Bezeichnung, Maßeinheit und Art bestehender Schlüssel nur über die
+  Schnittstelle änderbar (`PATCH /properties/{id}/allocation-keys/{kid}`); in der Oberfläche
+  nur die Sollsumme. Löschen von Schlüsseln und Werten nicht vorgesehen.
 - Objekteigentümer (Mietverwaltung), Ansprechpartner, Zähler, Wartungen und Zusatzfelder nur
   über Import oder Schnittstelle pflegbar.
 - Neue Bankverbindung an einem bestehenden Kontakt nicht in der Oberfläche erfassbar (siehe

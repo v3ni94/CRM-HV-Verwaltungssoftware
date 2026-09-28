@@ -148,10 +148,14 @@ Wohnfläche). Muster für die gängigen Schlüssel stehen bereit. Schlüsselwert
 Einheit mit Gültigkeitszeitraum erfasst; die Historie bleibt erhalten. Eine
 Umsatzsteueroption wird ebenfalls mit Zeitraum geführt.
 
-Die Anlage von Gebäuden, Einheiten und Schlüsselwerten erfolgt derzeit über die
-Datenübernahme (Berichte Objekte und Einheiten) oder die Schnittstelle; ein eigenes
-Formular in der Oberfläche gibt es dafür noch nicht. Bestehende Gebäude und Einheiten werden
-auf ihrer Seite direkt bearbeitet.
+Gebäude und Einheiten werden auf der Objektseite angelegt (Schaltflächen Gebäude anlegen und
+Einheit anlegen, letztere auch auf der Gebäudeseite); Einheitennummern sind je Objekt
+eindeutig. Der Abschnitt Umlageschlüssel und Schlüsselwerte der Objektseite zeigt je
+Schlüssel die Sollsumme (Betreiberwert, zu verifizieren) und die Summe der Einheitenwerte zum
+Stichtag, warnt bei Abweichung ohne zu sperren und nimmt neue Werte mit Zeitraum sowie neue
+Schlüssel auf. Ablauf in der [Handlungsanweisung Stammdaten](anleitung-stammdaten.md).
+Daneben bleiben die Datenübernahme (Berichte Objekte und Einheiten) und die Schnittstelle.
+Bestehende Gebäude und Einheiten werden auf ihrer Seite direkt bearbeitet.
 
 ## Objekteigentümer und Rechtsträger
 
