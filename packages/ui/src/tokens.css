@@ -4,9 +4,11 @@
  *
  * Principles
  * - Two named themes, not a light/dark inversion: day (data-theme="day", the default) and
- *   evening (data-theme="evening"). The user picks Tag, Abend or Automatisch; automatic mode
- *   resolves to evening from 19 to 7 o'clock local time (apps/web-crm/src/lib/theme.ts) and
- *   sets the attribute explicitly, so no component reads prefers-color-scheme directly.
+ *   evening (data-theme="evening"). The user picks the mode or automatic (shared core in
+ *   packages/ui/src/theme-mode.ts); automatic resolves per app, in the web CRM to evening from
+ *   19 to 7 o'clock local time (apps/web-crm/src/lib/theme.ts), in the portal to the operating
+ *   system preference (apps/web-portal/src/lib/theme.ts). The script always sets the attribute
+ *   explicitly, so no component or stylesheet reads prefers-color-scheme directly.
  * - Colour only as meaning: semantic tokens success, warning, danger, info, muted, accent.
  *   The accent (orange #E6A83C in both themes) marks interactive state and active navigation
  *   only, never running text.
@@ -180,9 +182,10 @@
   --mhvp-select-chevron: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='none' stroke='%236b6c6f' stroke-width='1.5'%3E%3Cpath d='M5.5 7.5 10 12l4.5-4.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
 }
 
-/* Evening mode (design B, "Dunkel und praezise"): set explicitly by the theme switch
- * (apps/web-crm/src/lib/theme.ts), never inferred from prefers-color-scheme, so a printed
- * document or an OS dark mode preference never silently changes the product theme. */
+/* Evening mode (design B, "Dunkel und praezise"): set explicitly by the theme script and switch
+ * of each app (packages/ui/src/theme-mode.ts), never by a prefers-color-scheme media query in
+ * CSS, so a printed document never silently changes the product theme. The portal's automatic
+ * mode reads the OS preference in that script and writes the attribute like a manual choice. */
 :root[data-theme="evening"] {
   color-scheme: dark;
   --mhvp-color-bg: #0f1115;

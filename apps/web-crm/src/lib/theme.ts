@@ -4,115 +4,77 @@
  * auto resolves to evening from 19:00 to 06:59 local time and is re-evaluated every minute.
  *
  * Storage: server side in ``app_user.ui_preferences.theme`` (PATCH /api/v1/auth/me/preferences)
- * with a localStorage copy for the first paint. Every stored value is parsed tolerantly
- * (lesson of incident 1.35.1): unknown values fall back to auto, never throw.
+ * with a localStorage copy for the first paint. Parsing, storage, the inline script and the
+ * external store are shared with the portal (@mhvp/ui/theme-mode); this file adds the CRM rules
+ * (time based auto, server persistence).
  */
-export type ThemePreference = "day" | "evening" | "auto";
-export type ResolvedTheme = "day" | "evening";
+import {
+  DEFAULT_THEME,
+  THEME_PREFERENCES,
+  applyResolvedTheme,
+  createThemeStore,
+  parseThemePreference,
+  themeBootScript,
+  type ResolvedTheme,
+  type ThemePreference,
+} from "@mhvp/ui/theme-mode";
+
+export type { ResolvedTheme, ThemePreference };
+export { DEFAULT_THEME, THEME_PREFERENCES, applyResolvedTheme, parseThemePreference };
 
 export const THEME_STORAGE_KEY = "mhvp-theme";
-export const THEME_PREFERENCES = ["day", "evening", "auto"] as const;
-export const DEFAULT_THEME: ThemePreference = "auto";
 export const EVENING_FROM_HOUR = 19;
 export const EVENING_UNTIL_HOUR = 7;
 const PREFERENCES_ENDPOINT = "/api/v1/auth/me/preferences";
-
-/** Tolerant parsing: accepts the current values, maps the legacy light/dark/system values of
- *  versions up to 1.36.x and returns the default for anything else (null, JSON, numbers). */
-export function parseThemePreference(raw: unknown): ThemePreference {
-  if (typeof raw !== "string") return DEFAULT_THEME;
-  const value = raw.trim().toLowerCase();
-  if (value === "day" || value === "light") return "day";
-  if (value === "evening" || value === "dark") return "evening";
-  return DEFAULT_THEME;
-}
+const MINUTE_MS = 60_000;
 
 export function isEveningHour(date: Date): boolean {
   const hour = date.getHours();
   return hour >= EVENING_FROM_HOUR || hour < EVENING_UNTIL_HOUR;
 }
 
-export function resolveTheme(preference: ThemePreference, now: Date = new Date()): ResolvedTheme {
-  if (preference === "auto") return isEveningHour(now) ? "evening" : "day";
-  return preference;
+function persistToServer(preference: ThemePreference): void {
+  void fetch(PREFERENCES_ENDPOINT, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    credentials: "include",
+    body: JSON.stringify({ theme: preference }),
+  }).catch(() => {
+    /* offline or session expired: the local copy keeps this browser consistent */
+  });
 }
 
-export function applyResolvedTheme(theme: ResolvedTheme): void {
-  if (typeof document === "undefined") return;
-  document.documentElement.setAttribute("data-theme", theme);
-}
+export const crmThemeStore = createThemeStore({
+  storageKey: THEME_STORAGE_KEY,
+  resolveAuto: (now) => (isEveningHour(now) ? "evening" : "day"),
+  watchAuto: (onChange) => {
+    const timer = setInterval(onChange, MINUTE_MS);
+    return () => clearInterval(timer);
+  },
+  persist: persistToServer,
+});
 
-export function readStoredPreference(): ThemePreference {
-  try {
-    return parseThemePreference(window.localStorage.getItem(THEME_STORAGE_KEY));
-  } catch {
-    return DEFAULT_THEME;
-  }
-}
+const EVENING_HOUR_EXPRESSION = `(function(){var h=new Date().getHours();return h>=${EVENING_FROM_HOUR}||h<${EVENING_UNTIL_HOUR}})()`;
 
-function writeStoredPreference(preference: ThemePreference): void {
-  try {
-    window.localStorage.setItem(THEME_STORAGE_KEY, preference);
-  } catch {
-    /* storage unavailable: the server copy still holds the choice */
-  }
-}
-
-/** Inline script for the root layout: applies the stored preference before the first paint.
- *  Mirrors parseThemePreference and resolveTheme; any error leaves the day theme in place. */
-export const THEME_SCRIPT = `try{var p="auto";try{var s=localStorage.getItem("${THEME_STORAGE_KEY}");s=typeof s==="string"?s.trim().toLowerCase():"";if(s==="day"||s==="light")p="day";else if(s==="evening"||s==="dark")p="evening"}catch(e){}var h=new Date().getHours();document.documentElement.setAttribute("data-theme",p==="auto"?(h>=${EVENING_FROM_HOUR}||h<${EVENING_UNTIL_HOUR}?"evening":"day"):p)}catch(e){}`;
+/** Inline script for the root layout: applies the stored preference before the first paint. */
+export const THEME_SCRIPT = themeBootScript(THEME_STORAGE_KEY, EVENING_HOUR_EXPRESSION);
 
 /** Script emitted by the app shell with the server side preference: overrides a stale or
  *  missing local copy before the page content paints (new device, other browser). */
 export function serverThemeScript(preference: unknown): string {
   const value = parseThemePreference(preference);
-  return `try{localStorage.setItem("${THEME_STORAGE_KEY}","${value}")}catch(e){}try{var h=new Date().getHours();document.documentElement.setAttribute("data-theme","${value}"==="auto"?(h>=${EVENING_FROM_HOUR}||h<${EVENING_UNTIL_HOUR}?"evening":"day"):"${value}")}catch(e){}`;
+  return `try{localStorage.setItem(${JSON.stringify(THEME_STORAGE_KEY)},"${value}")}catch(e){}try{document.documentElement.setAttribute("data-theme","${value}"==="auto"?(${EVENING_HOUR_EXPRESSION}?"evening":"day"):"${value}")}catch(e){}`;
 }
 
-// Small external store so the header switch and the profile switch stay in sync.
-type Listener = () => void;
-const listeners = new Set<Listener>();
-let current: ThemePreference | null = null;
-
-export function getThemePreference(): ThemePreference {
-  if (current === null) current = typeof window === "undefined" ? DEFAULT_THEME : readStoredPreference();
-  return current;
+export function resolveTheme(preference: ThemePreference, now: Date = new Date()): ResolvedTheme {
+  return crmThemeStore.resolve(preference, now);
 }
 
-export function getServerThemePreference(): ThemePreference {
-  return DEFAULT_THEME;
-}
-
-export function subscribeTheme(listener: Listener): () => void {
-  listeners.add(listener);
-  return () => {
-    listeners.delete(listener);
-  };
-}
-
+export const readStoredPreference = crmThemeStore.readStored;
+export const getThemePreference = crmThemeStore.get;
+export const getServerThemePreference = crmThemeStore.getServer;
+export const subscribeTheme = crmThemeStore.subscribe;
 /** Sets the preference: applies it, stores it locally and on the server (best effort). */
-export function setThemePreference(preference: ThemePreference, options: { persist?: boolean } = {}): void {
-  const value = parseThemePreference(preference);
-  current = value;
-  applyResolvedTheme(resolveTheme(value));
-  writeStoredPreference(value);
-  listeners.forEach((listener) => listener());
-  if (options.persist === false) return;
-  try {
-    void fetch(PREFERENCES_ENDPOINT, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      credentials: "include",
-      body: JSON.stringify({ theme: value }),
-    }).catch(() => {
-      /* offline or session expired: the local copy keeps this browser consistent */
-    });
-  } catch {
-    /* fetch unavailable */
-  }
-}
-
+export const setThemePreference = crmThemeStore.set;
 /** For tests: forget the cached preference. */
-export function resetThemeStore(): void {
-  current = null;
-}
+export const resetThemeStore = crmThemeStore.reset;
