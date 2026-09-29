@@ -50,8 +50,8 @@ async def _world(settings: Any) -> World:
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
     try:
-        a, _ = await services.provision_tenant(factory, slug=f"pf-{RUN}", name=f"Flows {RUN}")
-        b, _ = await services.provision_tenant(factory, slug=f"pf2-{RUN}", name=f"Flows2 {RUN}")
+        a, _ = await services.provision_tenant(factory, slug=f"pfl-{RUN}", name=f"Flows {RUN}")
+        b, _ = await services.provision_tenant(factory, slug=f"pfl2-{RUN}", name=f"Flows2 {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, role, tenant in [
             ("pfadmin", "tenant_admin", a),

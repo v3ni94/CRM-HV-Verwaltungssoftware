@@ -27502,6 +27502,11 @@ export interface components {
             /** Tenant Id */
             tenant_id?: string | null;
         };
+        /** MailApplyProcessIn */
+        MailApplyProcessIn: {
+            /** Process Code */
+            process_code?: string | null;
+        };
         /** MailAppointmentIn */
         MailAppointmentIn: {
             /** Index */
@@ -33946,6 +33951,11 @@ export interface components {
          * @enum {string}
          */
         TextStatus: "extracted" | "pending" | "none";
+        /** TicketApplyProcessIn */
+        TicketApplyProcessIn: {
+            /** Process Code */
+            process_code: string;
+        };
         /** TicketHoldOut */
         TicketHoldOut: {
             /** Retention Hold Reason */
@@ -35226,11 +35236,6 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
-        /** ApplyProcessIn */
-        mhvp__communication__routers__ApplyProcessIn: {
-            /** Process Code */
-            process_code?: string | null;
-        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /**
@@ -35550,11 +35555,6 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to?: string | null;
-        };
-        /** ApplyProcessIn */
-        mhvp__tickets__routers__ApplyProcessIn: {
-            /** Process Code */
-            process_code: string;
         };
     };
     responses: never;
@@ -59163,7 +59163,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__communication__routers__ApplyProcessIn"];
+                "application/json": components["schemas"]["MailApplyProcessIn"];
             };
         };
         responses: {
@@ -73195,7 +73195,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__tickets__routers__ApplyProcessIn"];
+                "application/json": components["schemas"]["TicketApplyProcessIn"];
             };
         };
         responses: {

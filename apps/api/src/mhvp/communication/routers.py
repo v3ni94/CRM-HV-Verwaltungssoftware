@@ -1444,7 +1444,7 @@ async def to_ticket(
         return {"ticket_id": ticket.id, "number": ticket.number, "priority": ticket.priority.value}
 
 
-class ApplyProcessIn(BaseModel):
+class MailApplyProcessIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     # Ohne Angabe gilt der Vorschlag (KI-Vorschlag, sonst Schlüsselworterkennung).
@@ -1458,7 +1458,7 @@ class ApplyProcessIn(BaseModel):
 )
 async def apply_process(
     message_id: uuid.UUID,
-    body: ApplyProcessIn,
+    body: MailApplyProcessIn,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:

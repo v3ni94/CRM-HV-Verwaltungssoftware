@@ -29076,6 +29076,25 @@
         "title": "MagicLinkRequestIn",
         "type": "object"
       },
+      "MailApplyProcessIn": {
+        "additionalProperties": false,
+        "properties": {
+          "process_code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Code"
+          }
+        },
+        "title": "MailApplyProcessIn",
+        "type": "object"
+      },
       "MailAppointmentIn": {
         "additionalProperties": false,
         "properties": {
@@ -48326,6 +48345,22 @@
         "title": "TextStatus",
         "type": "string"
       },
+      "TicketApplyProcessIn": {
+        "additionalProperties": false,
+        "properties": {
+          "process_code": {
+            "maxLength": 32,
+            "minLength": 2,
+            "title": "Process Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "process_code"
+        ],
+        "title": "TicketApplyProcessIn",
+        "type": "object"
+      },
       "TicketHoldOut": {
         "properties": {
           "retention_hold_reason": {
@@ -52778,25 +52813,6 @@
         "title": "ProviderOut",
         "type": "object"
       },
-      "mhvp__communication__routers__ApplyProcessIn": {
-        "additionalProperties": false,
-        "properties": {
-          "process_code": {
-            "anyOf": [
-              {
-                "maxLength": 32,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Process Code"
-          }
-        },
-        "title": "ApplyProcessIn",
-        "type": "object"
-      },
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -53807,22 +53823,6 @@
           "id"
         ],
         "title": "ProviderOut",
-        "type": "object"
-      },
-      "mhvp__tickets__routers__ApplyProcessIn": {
-        "additionalProperties": false,
-        "properties": {
-          "process_code": {
-            "maxLength": 32,
-            "minLength": 2,
-            "title": "Process Code",
-            "type": "string"
-          }
-        },
-        "required": [
-          "process_code"
-        ],
-        "title": "ApplyProcessIn",
         "type": "object"
       }
     }
@@ -89430,7 +89430,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__communication__routers__ApplyProcessIn"
+                "$ref": "#/components/schemas/MailApplyProcessIn"
               }
             }
           },
@@ -110749,7 +110749,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__tickets__routers__ApplyProcessIn"
+                "$ref": "#/components/schemas/TicketApplyProcessIn"
               }
             }
           },

@@ -524,7 +524,7 @@ async def _assert_process_code_free(
 # Prozesskatalog (Regel M19-11) --------------------------------------------------------------
 
 
-class ApplyProcessIn(_In):
+class TicketApplyProcessIn(_In):
     process_code: str = Field(min_length=2, max_length=32)
 
 
@@ -574,7 +574,7 @@ async def seed_process_catalogue(
 @router.post("/tickets/{ticket_id}/apply-process", summary="Prozessflow auf Ticket anwenden")
 async def apply_process_to_ticket(
     ticket_id: uuid.UUID,
-    body: ApplyProcessIn,
+    body: TicketApplyProcessIn,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
