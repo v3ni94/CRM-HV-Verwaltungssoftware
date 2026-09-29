@@ -7,6 +7,7 @@ import { useState } from "react";
 import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
 import { SUBJECT_KINDS } from "@/components/settings/MajorityRulesAdmin";
 import { bff } from "@/lib/bff";
+import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 type Key = { id: string; code: string; name: string };
@@ -180,6 +181,100 @@ export function HoaItemForm({
   );
 }
 
+type ApplyRow = {
+  unit_number: string;
+  component: string;
+  owner: string | null;
+  contract_number: string | null;
+  current: string | null;
+  new: string;
+  action: "create" | "unchanged" | "zero" | "no_contract";
+};
+type ApplyPreview = {
+  valid_from: string;
+  snapshot_hash: string | null;
+  applied_at: string | null;
+  can_apply: boolean;
+  rows: ApplyRow[];
+  counts: { create: number; unchanged: number; zero: number; no_contract: number };
+  posted_months: number;
+};
+
+/** Wirtschaftsplan into the payment plans (rule W02): preview of the standing amounts per
+ *  ownership contract from the start date, then the confirmed takeover with the snapshot
+ *  hash. The API demands a second person (not the plan's creator); the rows are contract
+ *  master data, the receivable run reads them only behind G1. */
+export function PlanApplyPreview({ id, snapshotHash }: { id: string; snapshotHash: string | null }) {
+  const t = useTranslations("HoaWork");
+  const { busy, error, call } = useCall();
+  const [preview, setPreview] = useState<ApplyPreview | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [applied, setApplied] = useState<number | null>(null);
+  const load = async () => {
+    setLoadError(null);
+    const res = await bff<ApplyPreview>(`/api/bff/hoa/plans/${id}/apply/preview`);
+    if (res.ok) setPreview(res.data);
+    else setLoadError(res.message);
+  };
+  const apply = async () => {
+    if (!preview) return;
+    const res = await call<{ payments_created: number }>(`plans/${id}/apply`, { confirm: true, snapshot_hash: preview.snapshot_hash ?? snapshotHash }, t("confirmApply"));
+    if (res) setApplied(res.payments_created);
+  };
+  return (
+    <div className="flex w-full flex-col gap-2" data-testid="plan-apply-preview">
+      {!preview ? (
+        <button type="button" className={ui.primary} onClick={() => void load()} data-testid="plan-apply-load">
+          {t("preview")}
+        </button>
+      ) : (
+        <>
+          <p className={ui.subtitle}>{t("previewTitle")}</p>
+          <p className={ui.help}>{t("previewIntro")}</p>
+          <div className="overflow-x-auto">
+            <table className="mhvp-table">
+              <thead>
+                <tr>
+                  <th>{t("unit")}</th>
+                  <th>{t("owner")}</th>
+                  <th>{t("component")}</th>
+                  <th className="num">{t("current")}</th>
+                  <th className="num">{t("new", { date: formatDate(preview.valid_from) })}</th>
+                  <th>{t("action")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {preview.rows.map((r) => (
+                  <tr key={`${r.unit_number}-${r.component}`} data-testid={`plan-apply-row-${r.unit_number}-${r.component}`}>
+                    <td>{r.unit_number}</td>
+                    <td>{r.owner ?? ""}</td>
+                    <td>{t(`components.${r.component}`)}</td>
+                    <td className="num">{r.current ? formatEur(r.current) : ""}</td>
+                    <td className="num">{formatEur(r.new)}</td>
+                    <td>{t(`actions.${r.action}`)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <p className="text-xs text-muted">{t("counts", preview.counts)}</p>
+          {preview.posted_months > 0 ? <p className={ui.notice}>{t("postedMonths", { count: preview.posted_months })}</p> : null}
+          {preview.applied_at ? <p className={ui.success}>{t("alreadyApplied", { date: formatDate(preview.applied_at.slice(0, 10)) })}</p> : null}
+          {applied !== null ? <p className={ui.success}>{t("applied", { count: applied })}</p> : null}
+          {preview.can_apply && applied === null ? (
+            <div className={ui.formActions}>
+              <button type="button" className={ui.primary} onClick={() => void apply()} disabled={busy} data-testid="plan-apply-confirm">
+                {t("confirmApplyPreview")}
+              </button>
+            </div>
+          ) : null}
+        </>
+      )}
+      <ErrorLine error={loadError ?? error} />
+    </div>
+  );
+}
+
 /** Status steps for plan or statement. "Beschluss" records the resolution bound to the current
  *  snapshot hash (W06) and moves to resolved in one step. Issue, due and post need G4 (API). */
 export function HoaSteps({
@@ -237,11 +332,7 @@ export function HoaSteps({
             </button>
           </>
         ) : null}
-        {target === "plan" && status === "resolved" ? (
-          <button type="button" className={ui.primary} onClick={() => call(`${base}/apply`, undefined, t("confirmApply"))} disabled={busy}>
-            {t("apply")}
-          </button>
-        ) : null}
+        {target === "plan" && status === "resolved" ? <PlanApplyPreview id={id} snapshotHash={snapshotHash} /> : null}
         {target === "statement" && status === "resolved" ? (
           <button type="button" className={ui.primary} onClick={() => call(`${base}/transition`, { target: "issued" })} disabled={busy}>
             {t("issue")}
