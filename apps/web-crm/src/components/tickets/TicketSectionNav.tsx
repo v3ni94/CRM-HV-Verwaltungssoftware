@@ -9,6 +9,7 @@ export const TICKET_SECTIONS = [
   "bearbeiten",
   "checkliste",
   "mail",
+  "lexoffice",
   "anhaenge",
   "auftraege",
   "vorschlaege",
