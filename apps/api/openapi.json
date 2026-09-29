@@ -10405,6 +10405,36 @@
         "title": "ConsumptionIn",
         "type": "object"
       },
+      "ConsumptionInfoRunIn": {
+        "additionalProperties": false,
+        "properties": {
+          "month": {
+            "description": "Any day of the month to generate (first day is stored).",
+            "format": "date",
+            "title": "Month",
+            "type": "string"
+          }
+        },
+        "required": [
+          "month"
+        ],
+        "title": "ConsumptionInfoRunIn",
+        "type": "object"
+      },
+      "ConsumptionInfoSettingsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "ConsumptionInfoSettingsIn",
+        "type": "object"
+      },
       "ConsumptionOut": {
         "properties": {
           "external_ref": {
@@ -49863,6 +49893,21 @@
           "company": {
             "$ref": "#/components/schemas/CompanyData"
           },
+          "consumption_info_enabled": {
+            "default": false,
+            "title": "Consumption Info Enabled",
+            "type": "boolean"
+          },
+          "consumption_info_notifications_enabled": {
+            "default": false,
+            "title": "Consumption Info Notifications Enabled",
+            "type": "boolean"
+          },
+          "consumption_info_template_verified": {
+            "default": false,
+            "title": "Consumption Info Template Verified",
+            "type": "boolean"
+          },
           "gmail_close_assigned_tickets": {
             "default": false,
             "title": "Gmail Close Assigned Tickets",
@@ -50053,6 +50098,39 @@
                 "type": "null"
               }
             ]
+          },
+          "consumption_info_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumption Info Enabled"
+          },
+          "consumption_info_notifications_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumption Info Notifications Enabled"
+          },
+          "consumption_info_template_verified": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Consumption Info Template Verified"
           },
           "gmail_close_assigned_tickets": {
             "anyOf": [
@@ -101981,6 +102059,77 @@
         ]
       }
     },
+    "/api/v1/portal/consumption-info": {
+      "get": {
+        "operationId": "list_own_api_v1_portal_consumption_info_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Own Api V1 Portal Consumption Info Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Verbrauchsinformationen (Monate)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/consumption-info/{info_id}": {
+      "get": {
+        "operationId": "get_own_api_v1_portal_consumption_info__info_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "info_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Info Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Own Api V1 Portal Consumption Info  Info Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eigene Verbrauchsinformation eines Monats",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/documents": {
       "get": {
         "operationId": "documents_api_v1_portal_documents_get",
@@ -105891,6 +106040,162 @@
         "summary": "Gebäude anlegen",
         "tags": [
           "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/consumption-info": {
+      "get": {
+        "operationId": "list_consumption_info_api_v1_properties__property_id__consumption_info_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Consumption Info Api V1 Properties  Property Id  Consumption Info Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verbrauchsinformationen des Objekts (Monate, fehlende Daten)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/consumption-info/run": {
+      "post": {
+        "description": "Generates the missing rows of the month for every unit of the property; stored months\nare skipped (idempotent). Needs both switches (tenant and property).",
+        "operationId": "run_month_api_v1_properties__property_id__consumption_info_run_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumptionInfoRunIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Run Month Api V1 Properties  Property Id  Consumption Info Run Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verbrauchsinformation für einen Monat erzeugen (manuell)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/consumption-info/settings": {
+      "put": {
+        "operationId": "put_settings_api_v1_properties__property_id__consumption_info_settings_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConsumptionInfoSettingsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Settings Api V1 Properties  Property Id  Consumption Info Settings Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objektschalter der Verbrauchsinformation",
+        "tags": [
+          "Abrechnung"
         ]
       }
     },

@@ -14184,6 +14184,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/consumption-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigene Verbrauchsinformationen (Monate) */
+        get: operations["list_own_api_v1_portal_consumption_info_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/consumption-info/{info_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eigene Verbrauchsinformation eines Monats */
+        get: operations["get_own_api_v1_portal_consumption_info__info_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/documents": {
         parameters: {
             query?: never;
@@ -15445,6 +15479,61 @@ export interface paths {
         put?: never;
         /** Gebäude anlegen */
         post: operations["create_building_api_v1_properties__property_id__buildings_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/consumption-info": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verbrauchsinformationen des Objekts (Monate, fehlende Daten) */
+        get: operations["list_consumption_info_api_v1_properties__property_id__consumption_info_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/consumption-info/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verbrauchsinformation für einen Monat erzeugen (manuell)
+         * @description Generates the missing rows of the month for every unit of the property; stored months
+         *     are skipped (idempotent). Needs both switches (tenant and property).
+         */
+        post: operations["run_month_api_v1_properties__property_id__consumption_info_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/consumption-info/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Objektschalter der Verbrauchsinformation */
+        put: operations["put_settings_api_v1_properties__property_id__consumption_info_settings_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -22324,6 +22413,20 @@ export interface components {
             hot_water_kind: string;
             /** Note */
             note?: string | null;
+        };
+        /** ConsumptionInfoRunIn */
+        ConsumptionInfoRunIn: {
+            /**
+             * Month
+             * Format: date
+             * @description Any day of the month to generate (first day is stored).
+             */
+            month: string;
+        };
+        /** ConsumptionInfoSettingsIn */
+        ConsumptionInfoSettingsIn: {
+            /** Enabled */
+            enabled: boolean;
         };
         /** ConsumptionOut */
         ConsumptionOut: {
@@ -35149,6 +35252,21 @@ export interface components {
             branding: components["schemas"]["Branding"];
             company: components["schemas"]["CompanyData"];
             /**
+             * Consumption Info Enabled
+             * @default false
+             */
+            consumption_info_enabled: boolean;
+            /**
+             * Consumption Info Notifications Enabled
+             * @default false
+             */
+            consumption_info_notifications_enabled: boolean;
+            /**
+             * Consumption Info Template Verified
+             * @default false
+             */
+            consumption_info_template_verified: boolean;
+            /**
              * Gmail Close Assigned Tickets
              * @default false
              */
@@ -35249,6 +35367,12 @@ export interface components {
             ai_learning_examples_retention_months?: number | null;
             branding?: components["schemas"]["Branding"] | null;
             company?: components["schemas"]["CompanyData"] | null;
+            /** Consumption Info Enabled */
+            consumption_info_enabled?: boolean | null;
+            /** Consumption Info Notifications Enabled */
+            consumption_info_notifications_enabled?: boolean | null;
+            /** Consumption Info Template Verified */
+            consumption_info_template_verified?: boolean | null;
             /** Gmail Close Assigned Tickets */
             gmail_close_assigned_tickets?: boolean | null;
             /** Gmail Done Closes Ticket */
@@ -67244,6 +67368,61 @@ export interface operations {
             };
         };
     };
+    list_own_api_v1_portal_consumption_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    get_own_api_v1_portal_consumption_info__info_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                info_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     documents_api_v1_portal_documents_get: {
         parameters: {
             query?: never;
@@ -69860,6 +70039,113 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["BuildingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_consumption_info_api_v1_properties__property_id__consumption_info_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_month_api_v1_properties__property_id__consumption_info_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsumptionInfoRunIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_settings_api_v1_properties__property_id__consumption_info_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsumptionInfoSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
