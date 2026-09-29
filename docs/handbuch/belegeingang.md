@@ -147,6 +147,18 @@ Buchen ist eine Änderung nur noch über eine Stornierung und gegebenenfalls ein
 Buchung möglich, nie durch Überschreiben. Produktive Buchführung bleibt bis zur
 Freigabestufe G1 gesperrt (siehe CLAUDE.md, Freigabestufen).
 
+## Kontovorschläge aus dem Verlauf
+
+Mit dem Mandantenschalter Lernender Buchhalter zeigt die Prüfansicht nach Wahl von
+Buchungskreis und Aussteller je Rechnungsposition bis zu drei Sachkonten aus dem Verlauf:
+Konten, die auf bestätigten Rechnungen desselben Ausstellers in diesem Buchungskreis standen
+oder die eine Person bei seinen Bankumsätzen gewählt hat, mit Anzahl, letztem Datum und Grund
+(gleicher Positionstext, gleiche Position). Übernehmen setzt nur das Sachkonto der Position;
+nichts ist vorausgewählt. Umlagefähigkeit, Betriebskostenart, § 35a und Umsatzsteuer werden
+nie aus dem Vorschlag übernommen. Beim Anlegen der Rechnung hält die Plattform fest, ob das
+vorgeschlagene Konto übernommen oder geändert wurde. Ohne Schalter erscheint der Bereich
+nicht.
+
 ## Was ist Vorschlag, was verbindlich
 
 KI-Erfassung, Objekthinweis, Ausstellerkandidaten und alle Hinweise der Prüfschritte

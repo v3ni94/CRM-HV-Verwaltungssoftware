@@ -1,6 +1,6 @@
 # Annahmen
 
-Stand: 28.09.2026 (A-077 bis A-079 ergänzt; zuvor 26.09.2026 mit A-048, A-049 und A-052). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
+Stand: 29.09.2026 (A-080 ergänzt; zuvor 28.09.2026 mit A-074 bis A-079; zuvor 26.09.2026 mit A-048, A-049 und A-052). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
 
 Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Keine dieser Annahmen berührt Geld, Forderungsbestand, Datenschutz, gesetzliche Fristen oder Beweiserhalt. Solche Punkte wären nach Regel 3 offene Fragen und stehen in `docs/OPEN_QUESTIONS.md`. Jede Annahme wird spätestens beim genannten Meilenstein überprüft und bei Bestätigung oder Widerlegung hier fortgeschrieben.
 
@@ -919,3 +919,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `mhvp.banking.events_consumer`, `mhvp.banking.tasks`, `mhvp.accounting.services.reverse`, `mhvp.banking.matching.book_payment` |
 | Überprüfung spätestens bei Meilenstein | S6 (Runner und Nachkontrolle) |
 | Datum | 28.09.2026 |
+
+## A-080
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Gedächtnis Stufe 1d und Kreditorverlauf (`mhvp.banking.history`, Fahrplan M12 S3 und S7): (1) Je Vorschlag werden höchstens die 20 jüngsten bestätigten Entscheidungen von Personen derselben Gegenpartei (IBAN-Fingerabdruck oder Gläubiger-ID), desselben Rechtsträgers und derselben Richtung gelesen; das Muster ist die Menge der Gegenkonten der Buchung ohne das Bankkonto. (2) Konfidenz 0,4 plus 0,1 je konsistentem Fall (Massenbestätigung 0,05), Deckel 0,85, mal 0,5 je Widerspruch (Storno desselben Musters, anderes Muster), mindestens zwei konsistente Fälle, nie eindeutig; das zuletzt gewählte Muster gilt als Referenz. (3) Periodizität wird nur genannt (mindestens drei datierte Fälle, alle Abstände höchstens 7 Tage vom Medianabstand, Klassen monatlich, zweimonatlich, vierteljährlich, halbjährlich, jährlich) und löst nichts aus. (4) Ein Vertrag hinter dem ersten ausgeglichenen Posten einer Entscheidung, der vor dem Buchungstag endete, schließt den Fall aus; dasselbe gilt für Regeln mit Vertragsbindung. (5) Eine verknüpfte gebuchte Rechnung ergibt die Quelle invoice mit Kreditorenkonto, offenem Posten und Kostenkonten der Positionen (Konfidenz nach match_basis: Betrag und Rechnungsnummer 0,9, durch eine Person 0,9, Betrag und IBAN 0,7; eindeutig nur bei vollem Restbetrag und nicht bei Betrag und IBAN allein); mehrere verknüpfte Rechnungen ergeben unklar. (6) Die End-to-End-Referenz eines eigenen Zahlungsauftrags derselben Rechnung oder desselben Postens zählt als starkes Nachweismerkmal des Verbindlichkeitsabgleichs; Buchungstexte von Sachkonten sind nur ein Hinweis (0,3) und nur bei genau einem passenden Konto; ein erkanntes Transferpaar schlägt das Bankkonto der Partnerseite vor (0,9, nie eindeutig). (7) Belegeingang: je Rechnungsposition höchstens drei Konten aus den 50 jüngsten Rechnungen des Ausstellers im Buchungskreis (Dubletten und ersetzte Versionen ausgenommen) und den Gegenkonten seiner bestätigten Bankbuchungen; Reihenfolge gleicher Positionstext, gleiche Position, Häufigkeit; Umlagefähigkeit, Kostenart, § 35a und Umsatzsteuer werden nie übernommen. |
+| Begründung | Der Fahrplan legt Basis, Schritt, Deckel und Mindestnachweis fest (Regel 0.1.8); Lesegrenzen, Gewichte von Widersprüchen und Massenbestätigungen, Toleranz der Periodizität und die Rangfolge im Belegeingang sind Produktschutz-Standards ohne empirische Basis und werden mit dem Testbestand M12-02 neu bewertet. |
+| Kennzeichnung | unkritisch (nur Vorschläge, kein Geldfluss, keine Buchung; nur mit Mandantenschalter `learning_bookkeeper_enabled` sichtbar, Datenschutzauflagen unter M12-06) |
+| Betroffene Bereiche | `mhvp.banking.history`, `mhvp.banking.posting_proposal`, `mhvp.banking.features`, `GET /banking/transactions/{id}/posting-proposals`, `GET /receipts/drafts/{id}` mit `ledger_id` und `provider_contact_id`, `POST /receipts/drafts/{id}/confirm`, CRM Belegeingang (Quelle Verlauf) |
+| Überprüfung spätestens bei Meilenstein | S5 (Regelvorschläge) und Testbestand M12-02 |
+| Datum | 29.09.2026 |

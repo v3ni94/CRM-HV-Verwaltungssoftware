@@ -77,6 +77,16 @@ erneuert die Plattform den Vorschlag im Hintergrund. Eine Buchung, die sich noch
 alten Vorschlag bezieht, wird mit dem Hinweis Vorschlag veraltet abgewiesen; nach dem Neuladen
 der Vorschläge kann die Person erneut entscheiden.
 
+Verlauf: Mit dem Schalter zeigt die Plattform ab der zweiten bestätigten Buchung derselben
+Gegenpartei (gleiche IBAN oder Gläubiger-ID, gleicher Rechtsträger, gleiche Richtung) das
+zuletzt gewählte Konto als Vorschlag Verlauf mit dem Hinweis zuletzt n mal so gebucht, k
+Widersprüche und den Verweisen auf die Journalsätze. Ein Storno zählt sofort als Widerspruch
+und senkt die Konfidenz. Ist eine gebuchte Rechnung mit dem Umsatz verknüpft, erscheint
+ihre Kontierung (Kreditorenkonto, Kostenkonten der Positionen) als Vorschlag Rechnung.
+Regelmäßigkeit (etwa monatlich) wird nur als Begründung genannt. Ein Vertrag, der vor dem
+Buchungstag endete, schließt Regel und Verlauf aus. Alle diese Vorschläge sind nie
+eindeutig und werden nie vorausgewählt; gebucht wird nur durch die Person.
+
 ## Zahlungsaufträge
 
 Zahlungsaufträge (Menü Bank, Zahlungsaufträge) durchlaufen eine Freigabe durch zwei
