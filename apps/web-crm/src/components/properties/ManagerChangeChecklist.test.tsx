@@ -16,6 +16,7 @@ const LIST: Checklist = {
   items: [
     { code: "management_type", label: "Verwaltungsart vor Anlage geklärt", done_at: "2026-09-28T10:05:00Z", done_by: "u1", done_by_name: "Anna Beispiel" },
     { code: "property_created", label: "Objekt angelegt, Verwaltungsbeginn eingetragen", done_at: null, done_by: null, done_by_name: null },
+    { code: "completeness", label: "Vollständigkeit geprüft, Nachforderungsschreiben freigegeben und versandt, Kopie abgelegt", done_at: null, done_by: null, done_by_name: null },
   ],
 };
 
@@ -51,12 +52,13 @@ describe("ManagerChangeChecklist", () => {
     lists = [LIST];
     renderIntl(<ManagerChangeChecklist propertyId={PROPERTY} canEdit />);
     expect(await screen.findByText("Anna Beispiel, 28.09.2026")).toBeInTheDocument();
-    expect(screen.getByText("offen · 1 von 2 Schritten erledigt")).toBeInTheDocument();
+    expect(screen.getByText("offen · 1 von 3 Schritten erledigt")).toBeInTheDocument();
+    expect(screen.getByTestId("checklist-letter-link")).toHaveAttribute("href", "#objektakte-letter");
     expect(screen.getByTestId("checklist-item-management_type")).toBeChecked();
     await userEvent.click(screen.getByTestId("checklist-item-property_created"));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith(`/checklists/${LIST.id}/items/property_created`))).toBe(true));
     expect(calls.find((c) => c.url.includes("/items/"))?.body).toEqual({ done: true });
-    expect(await screen.findByText("abgeschlossen · 2 von 2 Schritten erledigt")).toBeInTheDocument();
+    expect(await screen.findByText("2 von 3 Schritten erledigt", { exact: false })).toBeInTheDocument();
   });
 
   it("is read only without properties:update", async () => {

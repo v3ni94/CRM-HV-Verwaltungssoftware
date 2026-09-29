@@ -5,6 +5,7 @@ on values entered with their source; it never states that an increase is lawful.
 demand is a legally relevant statement and needs G3 plus a documented legal review (M26-01)."""
 
 import copy
+import html
 import io
 import re
 import secrets
@@ -24,6 +25,7 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
+from mhvp.documents.letter_records import LetterRecordIn
 from mhvp.documents.models import Document, DocumentLink
 from mhvp.letting import flow_import as flow
 from mhvp.letting import openimmo, openimmo_import, openimmo_schema
@@ -44,6 +46,7 @@ from mhvp.letting.models import (
 )
 from mhvp.letting.prospect_texts import list_templates, template_by_id
 from mhvp.platform.models import Tenant, User
+from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/letting", tags=["letting"])
 READ = require_permission("contracts:read")
@@ -319,6 +322,181 @@ async def rent_increase_letter(
         address = ", ".join(x for x in [street, city] if x) or "[Anschrift]"
         label = (unit.label or unit.number) if unit else "[Einheit]"
         return letter_text(case, label, address)
+
+
+class RentIncreaseLetterPdfIn(LetterRecordIn):
+    """Letter on the letterhead; the recipient is the primary contact of the tenant party
+    unless ``contact_id`` names another member of it."""
+
+    contact_id: uuid.UUID | None = None
+
+
+async def _case_context(session: Any, case: RentIncreaseCase) -> tuple[Any, Any, Any, str, str]:
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import Property, Unit
+
+    contract = await session.get(Contract, case.contract_id)
+    unit = await session.get(Unit, contract.unit_id) if contract else None
+    prop = await session.get(Property, unit.property_id) if unit else None
+    parts = [prop.street, prop.house_number] if prop else []
+    street = " ".join(x for x in parts if x)
+    places = [prop.postal_code, prop.city] if prop else []
+    city = " ".join(x for x in places if x)
+    address = ", ".join(x for x in [street, city] if x) or "[Anschrift]"
+    label = (unit.label or unit.number) if unit else "[Einheit]"
+    return contract, unit, prop, label, address
+
+
+@router.post(
+    "/rent-increases/{case_id}/letter/pdf",
+    status_code=201,
+    summary="Mieterhöhungsschreiben auf dem Briefbogen ablegen (PDF, Versandnachweis, Ticket)",
+)
+async def rent_increase_letter_pdf(
+    case_id: uuid.UUID,
+    body: RentIncreaseLetterPdfIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """The letter of ``GET .../letter`` on the tenant letterhead, filed as a generated
+    document of the case, contract, unit, property and tenant, with an optional ticket link
+    and a dispatch record (channel, date, user, reference). The platform sends nothing: the
+    process step ``send`` (status ``sent``) stays behind G3, a mail draft leaves only through
+    the mail approval, and the portal channel is refused while G3 is closed. Until the legal
+    review is documented the PDF carries the draft marking."""
+    from mhvp.contacts.models import PartyMember, PartyRole
+    from mhvp.documents import letter_records
+    from mhvp.documents import services as doc_services
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.letters import Letter
+    from mhvp.letting.rentlaw import letter_body
+
+    if body.dispatch is not None and body.dispatch.channel == "portal":
+        await ensure_release_gate_open(
+            ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver
+        )
+    blobs = BlobStore(request.app.state.settings)
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(RentIncreaseCase, case_id)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if case.status in ("cancelled", "rejected"):
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail=f"Kein Schreiben im Status {case.status}."
+            )
+        contract, unit, prop, label, address = await _case_context(session, case)
+        if contract is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Mietvertrag fehlt.")
+        members = list(
+            await session.scalars(
+                select(PartyMember)
+                .where(PartyMember.party_id == contract.party_id)
+                .order_by(PartyMember.role, PartyMember.created_at)
+            )
+        )
+        member_ids = {m.contact_id for m in members}
+        if body.contact_id is not None:
+            if body.contact_id not in member_ids:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Der Empfänger gehört nicht zur Mietpartei."
+                )
+            contact_id = body.contact_id
+        else:
+            primary = next((m for m in members if m.role is PartyRole.PRIMARY), None)
+            if primary is None:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Die Mietpartei hat keinen Hauptkontakt."
+                )
+            contact_id = primary.contact_id
+        head = await doc_services.letterhead(session, blobs)
+        contact, recipient_lines, data = await doc_services.recipient(session, contact_id)
+        subject, lines, placeholders = letter_body(case, label, address)
+        letter_date = body.letter_date or local_today()
+        paragraphs = [html.escape(str(data["anrede"]))]
+        block: list[str] = []
+        for line in lines:
+            if line == "":
+                if block:
+                    paragraphs.append("<br/>".join(html.escape(x) for x in block))
+                    block = []
+            else:
+                block.append(line)
+        if block:
+            paragraphs.append("<br/>".join(html.escape(x) for x in block))
+        draft = case.legal_review_document_id is None
+        letter = Letter(
+            recipient_lines=recipient_lines,
+            subject=html.escape(subject),
+            body="\n\n".join(paragraphs),
+            letter_date=letter_date,
+            info=[
+                ("Mietvertrag", contract.number),
+                ("Status", f"Fall {case.status}, {'Entwurf' if draft else 'rechtlich geprüft'}"),
+            ],
+            signatory=[s for s in (str(head.company.get("name", "")),) if s],
+            draft_notice=(
+                "ENTWURF, vor Versand rechtlich zu prüfen (M26-01); Versand hinter G3"
+                if draft
+                else None
+            ),
+        )
+        links: list[tuple[str, uuid.UUID]] = [
+            ("rent_increase_case", case.id),
+            ("contract", contract.id),
+            ("contact", contact.id),
+        ]
+        if unit is not None:
+            links.append(("unit", unit.id))
+        if prop is not None:
+            links.append(("property", prop.id))
+        document = await letter_records.store_letter(
+            session,
+            blobs,
+            principal=principal,
+            head=head,
+            letter=letter,
+            title=(
+                f"Mieterhöhungsschreiben {contract.number}, {contact.display_name}"
+                + (" (Entwurf)" if draft else "")
+            ),
+            filename=f"{letter_date.isoformat()}_mieterhoehung_{contract.number}.pdf",
+            links=links,
+        )
+        if body.ticket_id is not None:
+            await letter_records.link_ticket(
+                session,
+                principal=principal,
+                document=document,
+                ticket_id=body.ticket_id,
+                note=f"Mieterhöhungsschreiben auf Briefbogen abgelegt: {document.title}",
+            )
+        dispatch = None
+        if body.dispatch is not None:
+            dispatch = await letter_records.record_dispatch(
+                session,
+                principal=principal,
+                document=document,
+                contact_id=contact.id,
+                record=body.dispatch,
+                entity_type="rent_increase_case",
+                entity_id=case.id,
+            )
+        return {
+            "case_id": case.id,
+            "status": case.status,
+            "document_id": document.id,
+            "title": document.title,
+            "filename": document.filename,
+            "contact_id": contact.id,
+            "ticket_id": body.ticket_id,
+            "draft": draft,
+            "placeholders": placeholders,
+            "dispatch": letter_records.dispatch_out(dispatch),
+            "hinweis": (
+                "Das Schreiben ist abgelegt. Der Prozessschritt Versand erfassen bleibt hinter "
+                "G3; die Plattform versendet nichts (E-Mail nur über die Mailfreigabe)."
+            ),
+        }
 
 
 NEXT = {

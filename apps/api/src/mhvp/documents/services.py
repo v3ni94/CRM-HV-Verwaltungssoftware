@@ -41,7 +41,7 @@ from mhvp.handover.models import (
     HandoverRoom,
 )
 from mhvp.hoa.models import HoaInsuranceClaim, HoaLoan, HoaMeasure
-from mhvp.letting.models import Listing
+from mhvp.letting.models import Listing, RentIncreaseCase
 from mhvp.objektakte.drive_quota import drive_http_client
 from mhvp.platform.models import TenantSettings
 from mhvp.properties.models import Building, LegalEntity, Property, Unit
@@ -65,6 +65,8 @@ LINKABLE: dict[str, Any] = {
     # Listings (M26-02): images and attachments of an advertisement; the OpenImmo export reads
     # image documents linked with entity_type "listing".
     "listing": Listing,
+    # Rent increase letters on the letterhead (M12 gaps, 29.09.2026).
+    "rent_increase_case": RentIncreaseCase,
     # Tickets (A55): photos of a damage report from the portal and other attachments.
     "ticket": Ticket,
     # Work orders (A58): photos of the execution documented by the provider in the portal.

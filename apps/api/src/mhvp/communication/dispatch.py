@@ -139,6 +139,14 @@ async def _create(
     return row
 
 
+async def create_dispatch(
+    session: Any, principal: TenantPrincipal, item: DispatchIn, batch: str | None
+) -> Dispatch:
+    """Public entry for letters filed elsewhere (``mhvp.documents.letter_records``): same
+    rules as the dispatch endpoints, one row per document and recipient."""
+    return await _create(session, principal, item, batch)
+
+
 async def expand_items(session: Any, items: list[DispatchIn]) -> list[DispatchIn]:
     """One item per resolved recipient (delivery rule of representatives), without repeats
     of the same document and contact. An explicit channel of the item also applies to the
