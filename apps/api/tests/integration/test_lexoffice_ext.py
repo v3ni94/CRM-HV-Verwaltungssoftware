@@ -937,8 +937,8 @@ def test_invoice_copy_verification_fetch_and_recipient_lock(
     assert draft.cc_addresses == []
     assert draft.author_approval_required is True
     assert str(draft.mailbox_id) == mailbox["id"]
-    assert draft.subject.startswith("Ihre Rechnung RE-1019")
-    assert f"TNR#{ticket['number']}" in draft.subject
+    assert (draft.subject or "").startswith("Ihre Rechnung RE-1019")
+    assert f"TNR#{ticket['number']}" in (draft.subject or "")
     assert "1.234,56 EUR" in (draft.body or "")
     assert "15.09.2026" in (draft.body or "")
     assert [str(d) for d in draft.attachment_document_ids] == [done["document_id"]]

@@ -68,6 +68,7 @@ System
 
 - [Einstellungen (Benutzer, Rollen, Postfächer mit Telefonassistenz, DMS, SLA, KI, Wissen, Telefonie, Portalformulare, Automatisierung, WEG, Kautionszinsen, DATEV)](einstellungen.md)
 - [Kataloge und benutzerdefinierte Felder](kataloge.md)
+- [Lexware Office (Organisationen je Gesellschaft, Kontakte zuordnen, Rechnungskopien, Rechnungsentwürfe, Dauerrechnungen)](lexware-office.md)
 - [Messdienstleister (Verbindungen, Einrichtungsassistent, Zuordnungsübersicht, CSV, Objektreiter, Einheitenzuordnung, Abruf)](messdienstleister.md)
 - [Verfahrensdokumentation (GoBD-orientierter Entwurf für den Steuerberater)](verfahrensdokumentation.md)
 - [Plattform (Mandanten, Preisstruktur, Freigabe G5, Onboarding Drittmandanten, Export)](plattform.md)

@@ -327,3 +327,10 @@ abzustimmen.
 - **Anruf-Mail wurde nicht als Anruf erkannt**: Absendermuster oder Kennwort passen nicht,
   oder das Kennwort steht nur im Text ohne beschriftete Rufnummer; Einstellungen, Postfächer,
   Telefonassistenz prüfen.
+
+## Rechnungskopie aus Lexware Office
+
+Bittet ein Kontakt um eine bereits gestellte Rechnung, entsteht am Ticket eine Anfrage mit der
+erkannten Rechnungsnummer; nach Prüfung des Empfängers wird die Rechnungsdatei abgerufen und
+ein Antwortentwurf an die bekannte Adresse erstellt (zweite Freigabe). Details in
+[Lexware Office](lexware-office.md).

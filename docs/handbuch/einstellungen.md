@@ -280,3 +280,9 @@ Kontenrahmen genehmigt.
 Unter Buchhaltung, DATEV steht zusätzlich die formale Prüfung des Buchungsstapels
 (Prüfbericht je Export, Testdatei für den Importtest, Prüfung beliebiger Dateien); siehe
 [DATEV-Importtest](datev-importtest.md).
+
+## Lexware Office
+
+Organisationen je Gesellschaft mit API Schlüssel, AVV, Postfach und Schaltern, Zuordnung der
+Rechnungsarten, Kontaktabgleich, Warteschlange und vorbereitete Dauerrechnungen unter
+Schnittstellen, Lexware Office; siehe [Lexware Office](lexware-office.md).

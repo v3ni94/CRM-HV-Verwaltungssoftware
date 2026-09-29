@@ -941,3 +941,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `apps/web-crm/src/components/banking/*`, `/bank`, `/bank/regeln`, `/bank/abstimmung`, BFF-Allowlist |
 | Überprüfung spätestens bei Meilenstein | Plan M12 Schritt S4 (Klassenrouter und Ein-Klick-Übernahme) |
 | Datum | 28.09.2026 |
+
+## A-082
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Lexware Office (Regel INT-LEXO-01): (1) Die Postanschrift (`label=postal`, sonst die primäre Anschrift) ist die Rechnungsadresse in Lexware Office. (2) Die primäre E-Mail und das primäre Telefon werden nach Label zugeordnet (`work` zu `business`, `mobile`, `fax`, `private`, sonst `other`); beim Aktualisieren wird die Liste ersetzt, die in Lexware Office bereits belegt ist. (3) Warteschlangeneinträge in Endzuständen werden nach 90 Tagen gelöscht. (4) Die verwaltende Gesellschaft (`LegalEntityKind.MANAGER`) ist für die Rechnungsart Hausverwaltung vorbelegt; Makler und Beratung werden vom Betreiber zugeordnet. (5) Eine Standardkonfiguration ohne Gesellschaft bleibt als Alias der bisherigen Endpunkte bestehen. |
+| Begründung | Die Herstellerdokumentation kennt je Kontakt genau eine Rechnungs und Lieferadresse und Listen je Art; ohne eine Zuordnung kann keine Änderung übertragen werden. Die Fristen und Vorbelegungen sind Betriebsentscheidungen ohne Geldbezug. |
+| Kennzeichnung | unkritisch (kein Geldfluss, keine Rechtsfrist; Bankdaten sind ausgeschlossen) |
+| Betroffene Bereiche | `mhvp.integrations.lexoffice_ext`, Migration 0233, Einstellungen Schnittstellen Lexware Office |
+| Überprüfung spätestens bei Meilenstein | Freigabe ADR 0013 (docs/OPEN_QUESTIONS.md LEXO-06, LEXO-09, LEXO-12) |
+| Datum | 29.09.2026 |

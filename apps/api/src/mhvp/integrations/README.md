@@ -6,11 +6,23 @@ External accounting/CRM integrations that are neither banking (`mhvp.banking`) n
 * Milestone: M13-lexoffice (docs/MASTER-PROMPT.md section 13.3).
 * Specification: docs/integrations/lexoffice.md (binding endpoint list, source status,
   open points), `docs/rules/` (none registered yet, see module doc for the rationale).
-* Status: settings page (`/integrations/lexoffice/config`, `/test`, `/runs`), explicit,
-  protocolled export of invoices/contacts (`/export/invoices`, `/export/contacts`, gated by
-  release gate G1 and the per tenant feature flag, default off) and explicit import of
-  vouchers as `ReceiptDraft` (`/import/receipts`, no gate, no posting). No automatism: every
-  export/import is one logged call, never a schedule or a trigger.
+* Status: settings page (`/integrations/lexoffice/config`, `/test`, `/runs` as aliases of the
+  tenant default config; `/configs` per legal entity), explicit, protocolled export of
+  invoices/contacts (`/export/invoices`, `/export/contacts`, gated by release gate G1 and the
+  per tenant feature flag, default off) and explicit import of vouchers as `ReceiptDraft`
+  (`/import/receipts`, no gate, no posting). Export and import stay one logged call each.
+  The extension `lexoffice_ext` (rule INT-LEXO-01, ADR 0013) adds an outbound queue that a
+  Celery job processes every minute: rows are written only by person triggered actions
+  (applied contact change, review decision, accepted invoice copy, invoice draft) and each
+  row re-checks the config switches before any call. No autonomous creation, no finalize.
+* `lexoffice_async.py`: `LexofficeAsyncClient` with typed errors, redacted issue parsing,
+  organisation check and pinned binary download; `lexoffice_ext/`: `services` (configs,
+  connection test, queue, worker loop), `payloads` (contact snapshot, create and merge,
+  invoice draft), `sync` (post apply hook and contact handlers), `matching` (name and e mail
+  matching with review), `invoice_copy` (request, lookup, verification, fetch, recipient
+  lock), `invoice_drafts` (drafts by invoice kind, recurring preparation), `ratelimit`,
+  `tasks`, `routers`, `schemas`. Tests: `tests/lexoffice_fake.py`,
+  `tests/unit/test_lexoffice_*.py`, `tests/integration/test_lexoffice_ext.py`.
 * `lexoffice.py`: `LexofficeClient` (httpx, fake transport in tests), calls only the
   endpoints listed in docs/integrations/lexoffice.md. It never builds the request body for a
   voucher or contact itself (the exact field schema is not fully documented, see that file's
