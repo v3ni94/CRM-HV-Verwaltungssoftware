@@ -682,6 +682,18 @@ function ItemForm({
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<File[]>([]);
   const [jobs, setJobs] = useState<PhotoJob[]>([]);
+  // Set once the new entry is posted: a second Save (after a failed upload) patches it
+  // instead of creating a duplicate.
+  const [createdId, setCreatedId] = useState<string | null>(null);
+  const targetId = item ? item.id : createdId;
+
+  async function uploadPending(id: string, files: File[]): Promise<boolean> {
+    setJobs((jobs) => [...jobs.filter((j) => j.status !== "failed" || !files.some((f) => `${f.name}-${f.size}-${f.lastModified}` === j.key)), ...jobsOf(files)]);
+    const failed = await uploadPhotos(base, section, id, files, setJobs, t("photos.unsupported"));
+    setPending(failed);
+    return failed.length === 0;
+  }
+
   return (
     <form
       className="flex flex-col gap-3"
@@ -689,8 +701,8 @@ function ItemForm({
         e.preventDefault();
         setBusy(true);
         onError(null);
-        const res = await bff<Item>(item ? `${base}/${section}/${item.id}` : `${base}/${section}`, {
-          method: item ? "PATCH" : "POST",
+        const res = await bff<Item>(targetId ? `${base}/${section}/${targetId}` : `${base}/${section}`, {
+          method: targetId ? "PATCH" : "POST",
           body: JSON.stringify(toBody(form, fields)),
         });
         if (!res.ok) {
@@ -698,20 +710,12 @@ function ItemForm({
           onError(res.message);
           return;
         }
-        const createdId = item ? item.id : res.data.id;
-        if (pending.length > 0 && createdId) {
-          setJobs(jobsOf(pending));
-          const failed = await uploadPhotos(base, section, createdId, pending, setJobs, t("photos.unsupported"));
-          if (failed.length > 0) {
-            // The entry is saved; the failed files stay listed for a retry from the card.
-            setBusy(false);
-            setPending([]);
-            await onDone();
-            return;
-          }
-        }
+        const id = targetId ?? res.data.id;
+        if (!item) setCreatedId(id);
+        // Capture first: the entry exists before its photos are uploaded one by one.
+        const complete = pending.length === 0 || (id ? await uploadPending(id, pending) : false);
         setBusy(false);
-        await onDone();
+        if (complete) await onDone();
       }}
     >
       <Fields
@@ -730,6 +734,14 @@ function ItemForm({
           <PhotoPicker
             onFiles={(list) => setPending((files) => [...files, ...list])}
             jobs={jobs.length > 0 ? jobs : jobsOf(pending)}
+            onRetry={(job) => {
+              const file = pending.find((f) => `${f.name}-${f.size}-${f.lastModified}` === job.key);
+              if (file && targetId) {
+                void uploadPending(targetId, [file]).then(async (ok) => {
+                  if (ok) await onDone();
+                });
+              }
+            }}
             disabled={busy}
           />
         </div>

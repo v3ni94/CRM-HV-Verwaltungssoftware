@@ -29,7 +29,7 @@ test("PWA manifest is linked and describes MH Portal", async ({ page, request })
   const manifest = (await response.json()) as { name: string; icons: { src: string }[]; display: string };
   expect(manifest.name).toBe("MH Portal");
   expect(manifest.display).toBe("standalone");
-  expect(manifest.icons.map((i) => i.src)).toEqual(["/icons/icon-192.png", "/icons/icon-512.png"]);
+  expect(manifest.icons.map((i) => i.src)).toEqual(["/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-512-maskable.png"]);
   for (const icon of manifest.icons) expect((await request.get(icon.src)).status()).toBe(200);
 });
 

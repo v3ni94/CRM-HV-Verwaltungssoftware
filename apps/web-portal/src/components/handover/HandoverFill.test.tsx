@@ -160,6 +160,34 @@ describe("HandoverFill on phone and tablet (M31 WP5)", () => {
     expect(form.get("item_id")).toBe("0192abcd-0000-7000-8000-000000000099");
   });
 
+  it("keeps the saved entry after a failed upload and retries without a duplicate POST", async () => {
+    let uploads = 0;
+    const posts: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      if (method === "POST") posts.push(url);
+      if (method === "POST" && url.endsWith("/meters")) return jsonResponse({ id: "0192abcd-0000-7000-8000-000000000098" }, 201);
+      if (method === "POST" && url.endsWith("/documents")) {
+        uploads += 1;
+        return uploads === 1
+          ? jsonResponse({ title: "Upload fehlgeschlagen", status: 502, detail: "Speicher nicht erreichbar" }, 502)
+          : jsonResponse({ id: "doc" }, 201);
+      }
+      return jsonResponse(protocol({ current_step: "meters" }));
+    });
+    renderIntl(<HandoverFill initial={protocol({ current_step: "meters" })} />);
+    await userEvent.click(screen.getByText("Zähler hinzufügen"));
+    await userEvent.type(screen.getByLabelText("Zählernummer"), "4711");
+    await userEvent.upload(screen.getByTestId("photo-input-gallery"), new File(["x"], "zaehler.jpg", { type: "image/jpeg" }));
+    await userEvent.click(screen.getByText("Speichern"));
+    await waitFor(() => expect(screen.getByText("Fehlgeschlagen")).toBeInTheDocument());
+    // The form stays open with the failed file; Erneut versuchen uploads again, no second POST of the entry.
+    await userEvent.click(screen.getByRole("button", { name: "Erneut versuchen" }));
+    await waitFor(() => expect(uploads).toBe(2));
+    expect(posts.filter((u) => u.endsWith("/meters"))).toHaveLength(1);
+  });
+
   it("names the right consequence when removing a photo (version 1 deletes, later versions keep the file)", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}, 200));
     const doc = { id: "doc1", title: "Zähler", filename: "z.jpg", mime_type: "image/jpeg", size: 1, kind: "photo" as const, section: "meters", item_id: "m1", created_at: "2026-09-20T10:00:00Z" };
