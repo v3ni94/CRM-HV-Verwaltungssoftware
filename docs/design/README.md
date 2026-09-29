@@ -48,7 +48,9 @@ Gruppen starten eingeklappt, geöffnete bleiben auf jedem Gerät offen), Fokus a
 Tab bleibt im Panel, Fokus kehrt zum Auslöser zurück, Mandantenwechsel bei mehr als einem Mandanten.
 
 Kopfzeile: eine Zeile von 56 px (64 px ab `sm`), Token `--mhvp-header-h`, Safe Area oben in der
-Kopfzeile selbst. `main` schneidet mit `overflow-x-clip`, deshalb prüft Playwright Überlauf
+Kopfzeile selbst. Kein `flex-wrap`, deshalb wird der Inhalt unter `lg` reduziert statt umgebrochen:
+Mandantenwechsel und der Text der Glocke erst ab `lg` (darunter im Drawer beziehungsweise als
+Symbol), Suchpille ab `sm` schrumpfbar und erst ab `md` 14 rem breit. `main` schneidet mit `overflow-x-clip`, deshalb prüft Playwright Überlauf
 elementweise (`getBoundingClientRect().right`).
 
 ### Zielgrößen nach Zeiger, nicht nach Breite

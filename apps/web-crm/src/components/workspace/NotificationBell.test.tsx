@@ -15,7 +15,7 @@ afterEach(() => vi.unstubAllGlobals());
 /** M31 phone layout of the bell; the behaviour (unread count, mark as read) stays covered in
  *  Workspace.test.tsx. */
 describe("NotificationBell (M31)", () => {
-  it("is a 44 px round button with an accessible name and a label visible from sm", async () => {
+  it("is a 44 px round button with an accessible name and a label visible from lg", async () => {
     fetchMock.mockImplementation(() =>
       Promise.resolve(jsonResponse([{ id: "n1", kind: "custom", title: "Neu", body: null, href: null, read_at: null, created_at: "2026-09-28T08:00:00Z" }])),
     );
@@ -23,7 +23,9 @@ describe("NotificationBell (M31)", () => {
     const button = screen.getByRole("button", { name: "Benachrichtigungen" });
     expect(button).toHaveClass("h-11", "w-11", "sm:w-auto", "sm:pointer-fine:h-9");
     const label = screen.getByText("Benachrichtigungen", { selector: "span" });
-    expect(label).toHaveClass("hidden", "sm:inline");
+    // label from lg only: between sm and lg the one row header must fit a 768 px tablet
+    expect(label).toHaveClass("hidden", "lg:inline");
+    expect(label.className).not.toMatch(/(^|\s)(sm|md):inline/);
     expect(await screen.findByTestId("unread-count")).toHaveTextContent("1");
     await userEvent.click(button);
     const popover = document.getElementById("notifications") as HTMLElement;

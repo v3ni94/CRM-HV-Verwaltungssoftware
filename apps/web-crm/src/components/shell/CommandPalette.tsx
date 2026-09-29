@@ -213,11 +213,12 @@ export function CommandPalette({
 
   return (
     <>
-      {/* Round 44 px icon below sm, the labelled pill from sm (44 px on touch), shortcut hint
-          from lg (M31). */}
+      {/* Round 44 px icon below sm, the labelled pill from sm (44 px on touch, may shrink so
+          the one row header never overflows a 768 px tablet), 14 rem wide from md, shortcut
+          hint from lg (M31). */}
       <button
         type="button"
-        className="inline-flex h-11 min-h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full border border-border bg-surface text-sm text-muted shadow-xs transition duration-150 hover:border-accent hover:text-fg focus:outline-none focus:ring-2 focus:ring-focus sm:h-auto sm:w-auto sm:min-w-56 sm:justify-between sm:px-3.5 sm:py-2 sm:pointer-fine:min-h-0"
+        className="inline-flex h-11 min-h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-full border border-border bg-surface text-sm text-muted shadow-xs transition duration-150 hover:border-accent hover:text-fg focus:outline-none focus:ring-2 focus:ring-focus sm:h-auto sm:w-auto sm:min-w-0 sm:shrink sm:justify-between sm:px-3.5 sm:py-2 sm:pointer-fine:min-h-0 md:min-w-56"
         onClick={(e) => show(e.currentTarget)}
         aria-keyshortcuts="Control+K Meta+K"
         aria-label={t("palette.open")}
@@ -227,7 +228,7 @@ export function CommandPalette({
             <circle cx="8.5" cy="8.5" r="5" />
             <path d="m16 16-3.2-3.2" strokeLinecap="round" />
           </svg>
-          <span className="hidden sm:flex" data-testid="palette-label">
+          <span className="hidden whitespace-nowrap sm:flex" data-testid="palette-label">
             {t("search")}
           </span>
         </span>

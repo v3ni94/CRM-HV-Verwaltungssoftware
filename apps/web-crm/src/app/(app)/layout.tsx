@@ -154,9 +154,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             userKey={me?.user_id ?? me?.email ?? ""}
           />
           <div className="ml-auto flex min-w-0 items-center gap-2">
-            <div className="hidden sm:block">
-              <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
-            </div>
+            {/* Visible from lg (TenantSwitcher header variant); the drawer carries it below. */}
+            <TenantSwitcher tenants={ctx.tenants} current={ctx.tenantId} />
             <NotificationBell />
             <UserMenu name={me?.display_name || me?.email || ""} email={me?.email ?? undefined} />
           </div>

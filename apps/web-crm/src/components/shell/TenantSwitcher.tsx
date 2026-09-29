@@ -29,9 +29,14 @@ export function TenantSwitcher({
   const [busy, setBusy] = useState(false);
   const active = tenants.find((tenant) => tenant.id === current);
 
+  // Header variant: visible from lg only. Between sm and lg the one row header has no room for
+  // the intrinsic width of the select next to search, bell and avatar (768 px tablet, two
+  // tenants overflowed the right edge); the drawer carries the switcher below lg.
+  const headerOnly = variant === "header" ? "hidden lg:" : "";
+
   if (tenants.length < 2) {
     return (
-      <span className="inline-flex items-center rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium text-fg shadow-xs">
+      <span className={`${headerOnly}inline-flex items-center rounded-full border border-border bg-surface px-3 py-1.5 text-sm font-medium text-fg shadow-xs`}>
         {active?.name ?? ""}
       </span>
     );
@@ -51,7 +56,7 @@ export function TenantSwitcher({
   }
 
   return (
-    <div className={variant === "drawer" ? "flex flex-col gap-1" : "flex items-center gap-2"}>
+    <div className={variant === "drawer" ? "flex flex-col gap-1" : `${headerOnly}flex items-center gap-2`} data-testid={variant === "drawer" ? undefined : "header-tenant"}>
       <label htmlFor={variant === "drawer" ? "tenant-switcher-drawer" : "tenant-switcher"} className="sr-only">
         {t("switchTenant")}
       </label>

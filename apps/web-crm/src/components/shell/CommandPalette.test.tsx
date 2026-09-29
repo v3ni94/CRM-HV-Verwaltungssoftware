@@ -79,7 +79,10 @@ describe("CommandPalette", () => {
   it("collapses to a 44 px icon on phones and opens as a full screen with a close button (M31)", async () => {
     setup();
     const trigger = screen.getByRole("button", { name: "Suche und Befehle öffnen" });
-    expect(trigger).toHaveClass("h-11", "w-11", "sm:w-auto", "sm:min-w-56");
+    expect(trigger).toHaveClass("h-11", "w-11", "sm:w-auto", "sm:min-w-0", "sm:shrink", "md:min-w-56");
+    // the pill may shrink from sm so the header never overflows a 768 px tablet
+    expect(trigger.className).not.toContain("sm:min-w-56");
+    expect(screen.getByTestId("palette-label")).toHaveClass("whitespace-nowrap");
     expect(screen.getByTestId("palette-label")).toHaveClass("hidden", "sm:flex");
     expect(screen.getByText("Strg+K")).toHaveClass("hidden", "lg:inline");
     await userEvent.click(trigger);

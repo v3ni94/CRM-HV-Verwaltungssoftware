@@ -64,8 +64,9 @@ export function NotificationBell() {
 
   return (
     <div className="relative">
-      {/* Round 44 px icon below sm, the labelled pill from sm (36 px with a mouse as before,
-          44 px on touch), M31. */}
+      {/* Round 44 px icon below sm, a pill from sm (36 px with a mouse as before, 44 px on
+          touch), the text label from lg only so the one row header fits a 768 px tablet
+          (M31). */}
       <button
         type="button"
         className="relative inline-flex h-11 w-11 items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-medium text-fg transition duration-150 hover:border-gold hover:bg-surface-2 focus:outline-none focus:ring-2 focus:ring-focus sm:w-auto sm:px-3 sm:pointer-fine:h-9"
@@ -78,7 +79,7 @@ export function NotificationBell() {
           <path d="M5 8a5 5 0 0 1 10 0v3.2l1.2 2.3H3.8L5 11.2Z" strokeLinejoin="round" />
           <path d="M8.3 15.5a1.8 1.8 0 0 0 3.4 0" strokeLinecap="round" />
         </svg>
-        <span className="hidden sm:inline">{t("notifications")}</span>
+        <span className="hidden lg:inline">{t("notifications")}</span>
         {items.length > 0 ? (
           <span
             className="absolute -right-0.5 -top-0.5 inline-flex h-4.5 min-w-4.5 items-center justify-center rounded-full bg-accent px-1 text-xs font-semibold text-accent-fg sm:static"
