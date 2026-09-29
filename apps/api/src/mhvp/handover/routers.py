@@ -14,7 +14,8 @@ from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, File, Form, Query, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, Header, Query, Request, UploadFile
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 from sqlalchemy import func, or_, select
@@ -30,7 +31,14 @@ from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRo
 from mhvp.handover import pdf as pdf_renderer
 from mhvp.handover import services as svc
 from mhvp.handover.images import ImageSanitizeError, output_mime_type, sanitize_image, thumbnail
-from mhvp.handover.models import STATUSES, STEPS, HandoverProtocol, HandoverSignature
+from mhvp.handover.models import (
+    STATUSES,
+    STEPS,
+    HandoverClientWrite,
+    HandoverProtocol,
+    HandoverSignature,
+)
+from mhvp.platform.models import TenantSettings
 from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/handover", tags=["handover"])
@@ -371,6 +379,148 @@ async def _event(
     )
 
 
+# Offline capture (rule M30-10, ADR 0016) ---------------------------------------------------
+
+# The durable key of the offline queue lives in ``handover_client_write`` (no TTL, scoped by
+# tenant through RLS). It is a separate header on purpose: the generic ``Idempotency-Key``
+# middleware (``mhvp.core.idempotency``) also replays 4xx answers for 24 hours, which would
+# freeze a refusal (switch off, lock) although the condition may have changed.
+IdempotencyKey = Annotated[
+    str | None,
+    Header(
+        alias="X-Handover-Client-Key",
+        min_length=8,
+        max_length=64,
+        pattern=r"^[A-Za-z0-9._:-]+$",
+        description="Key of a queued offline write (rule M30-10); a replay with the same key "
+        "returns the stored answer instead of writing twice. Only accepted answers are stored, "
+        "a refusal (403, 409, 422) is not.",
+    ),
+]
+CapturedAt = Annotated[
+    str | None,
+    Header(
+        alias="X-Captured-At",
+        max_length=40,
+        description="Device time of capture (ISO 8601 with offset) of a queued offline item. "
+        "Stored as a value reported by the device, never as proof; needs "
+        "tenant_settings.handover_offline_enabled.",
+    ),
+]
+BaseUpdatedAt = Annotated[
+    str | None,
+    Header(
+        alias="X-Base-Updated-At",
+        max_length=40,
+        description="updated_at of the server copy the queued change was based on; an older "
+        "value than the current row answers 409 MHVP-HDOV-0004 with the server state.",
+    ),
+]
+
+
+class ClientWrite:
+    """Parsed offline headers of one write (all optional; absent for online writes)."""
+
+    def __init__(
+        self, key: str | None, captured_at: str | None, base_updated_at: str | None
+    ) -> None:
+        self.key = key
+        self.captured_at = _parse_header_time(captured_at, "X-Captured-At")
+        self.base_updated_at = _parse_header_time(base_updated_at, "X-Base-Updated-At")
+
+    @property
+    def queued(self) -> bool:
+        return self.captured_at is not None
+
+
+def _parse_header_time(value: str | None, name: str) -> datetime | None:
+    if value is None or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.strip().replace("Z", "+00:00"))
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=f"{name} ist kein Zeitpunkt.") from exc
+    if parsed.tzinfo is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=f"{name} braucht eine Zeitzone.")
+    return parsed.astimezone(UTC)
+
+
+async def _replayed(session: Any, cw: ClientWrite) -> HandoverClientWrite | None:
+    """The stored answer of an earlier write with the same key (RLS scopes the tenant)."""
+    if cw.key is None:
+        return None
+    row: HandoverClientWrite | None = await session.scalar(
+        select(HandoverClientWrite).where(HandoverClientWrite.client_key == cw.key)
+    )
+    return row
+
+
+async def _require_offline_allowed(
+    session: Any, principal: TenantPrincipal, cw: ClientWrite
+) -> None:
+    """A queued item (X-Captured-At) needs the tenant switch; online writes are unaffected."""
+    if not cw.queued:
+        return
+    settings = await session.scalar(
+        select(TenantSettings).where(TenantSettings.tenant_id == principal.tenant_id)
+    )
+    if settings is None or not settings.handover_offline_enabled:
+        raise ProblemError(ErrorCodes.HANDOVER_OFFLINE_DISABLED)
+
+
+def _require_base_current(row: Any, cw: ClientWrite) -> None:
+    """Conflict when the server row changed after the copy the queued change was based on."""
+    if cw.base_updated_at is None:
+        return
+    current = getattr(row, "updated_at", None)
+    if current is not None and current > cw.base_updated_at + timedelta(seconds=1):
+        raise ProblemError(
+            ErrorCodes.HANDOVER_OFFLINE_CONFLICT,
+            detail="Der Datensatz wurde auf dem Server zwischenzeitlich geändert. Bitte "
+            "beide Stände vergleichen und entscheiden.",
+            extensions={"server": jsonable_encoder(_row(row))},
+        )
+
+
+async def _record_write(
+    session: Any,
+    principal: TenantPrincipal,
+    p: HandoverProtocol,
+    cw: ClientWrite,
+    *,
+    method: str,
+    path: str,
+    status_code: int,
+    response: dict[str, Any] | None,
+) -> None:
+    if cw.key is None:
+        return
+    session.add(
+        HandoverClientWrite(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            protocol_id=p.id,
+            client_key=cw.key,
+            method=method,
+            path=path[:300],
+            captured_at=cw.captured_at,
+            status_code=status_code,
+            response=jsonable_encoder(response) if response is not None else None,
+        )
+    )
+    await session.flush()
+
+
+def _event_offline(cw: ClientWrite) -> dict[str, Any]:
+    """Additive event payload of a queued item: the device time as reported value."""
+    if not cw.queued:
+        return {}
+    return {
+        "captured_at": cw.captured_at.isoformat() if cw.captured_at else None,
+        "idempotency_key": cw.key,
+    }
+
+
 # Protocols -------------------------------------------------------------------------------
 
 
@@ -515,13 +665,21 @@ async def patch_protocol(
     body: ProtocolPatch,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
+    idempotency_key: IdempotencyKey = None,
+    captured_at: CapturedAt = None,
+    base_updated_at: BaseUpdatedAt = None,
 ) -> dict[str, Any]:
+    cw = ClientWrite(idempotency_key, captured_at, base_updated_at)
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
+        if (replay := await _replayed(session, cw)) is not None:
+            return dict(replay.response or {})
+        await _require_offline_allowed(session, principal, cw)
         svc.require_unlocked(p)
         changes = body.model_dump(exclude_unset=True)
         if any(k not in svc.CONTENT_FREE_FIELDS for k in changes):
             await svc.require_content_unlocked(session, p)
+        _require_base_current(p, cw)
         if "unit_id" in changes and changes["unit_id"] and changes["unit_id"] != p.unit_id:
             changes = {**(await svc.prefill(session, changes["unit_id"])), **changes}
         if changes.get("contract_id"):
@@ -534,8 +692,21 @@ async def patch_protocol(
         if p.status == "draft" and any(k not in ("current_step",) for k in changes):
             p.status = "in_progress"
         await _fresh(session, p)
-        await _event(session, principal, "handover.updated", p, fields=sorted(changes))
-        return _protocol_out(p)
+        await _event(
+            session, principal, "handover.updated", p, fields=sorted(changes), **_event_offline(cw)
+        )
+        out = _protocol_out(p)
+        await _record_write(
+            session,
+            principal,
+            p,
+            cw,
+            method="PATCH",
+            path=request.url.path,
+            status_code=200,
+            response=out,
+        )
+        return out
 
 
 # Documents (photos, attachments) -----------------------------------------------------------
@@ -552,7 +723,10 @@ async def upload_document(
     item_id: uuid.UUID | None = Form(default=None),
     title: str | None = Form(default=None, max_length=300),
     principal: TenantPrincipal = Depends(UPDATE),
+    idempotency_key: IdempotencyKey = None,
+    captured_at: CapturedAt = None,
 ) -> dict[str, Any]:
+    cw = ClientWrite(idempotency_key, captured_at, None)
     limit = request.app.state.settings.document_max_bytes
     data = await file.read(limit + 1)
     mime = (file.content_type or "application/octet-stream").split(";")[0].strip()
@@ -568,6 +742,9 @@ async def upload_document(
     mime = output_mime_type(mime)  # A72: HEIC is stored as JPEG
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
+        if (replay := await _replayed(session, cw)) is not None:
+            return dict(replay.response or {})
+        await _require_offline_allowed(session, principal, cw)
         await svc.require_content_unlocked(session, p)
         links: list[tuple[str, uuid.UUID, LinkRole]] = [
             ("handover_protocol", p.id, LinkRole.ATTACHMENT)
@@ -595,9 +772,27 @@ async def upload_document(
             links=links,
             created_by=principal.user_id,
         )
-        await _event(session, principal, "handover.document.added", p, document_id=str(document.id))
+        await _event(
+            session,
+            principal,
+            "handover.document.added",
+            p,
+            document_id=str(document.id),
+            **_event_offline(cw),
+        )
         docs = await svc.documents_of(session, p.id)
-        return next(d for d in docs if d["id"] == document.id)
+        out = next(d for d in docs if d["id"] == document.id)
+        await _record_write(
+            session,
+            principal,
+            p,
+            cw,
+            method="POST",
+            path=request.url.path,
+            status_code=201,
+            response=out,
+        )
+        return out
 
 
 @router.get(
@@ -724,7 +919,10 @@ async def add_signature(
     body: SignatureIn,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
+    idempotency_key: IdempotencyKey = None,
+    captured_at: CapturedAt = None,
 ) -> dict[str, Any]:
+    cw = ClientWrite(idempotency_key, captured_at, None)
     match = _PNG.match(body.image)
     if not match:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Keine gültige Unterschrift übermittelt.")
@@ -736,6 +934,9 @@ async def add_signature(
         raise ProblemError(ErrorCodes.VALIDATION, detail="Unterschriftsdaten ungültig.")
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
+        if (replay := await _replayed(session, cw)) is not None:
+            return dict(replay.response or {})
+        await _require_offline_allowed(session, principal, cw)
         svc.require_unlocked(p)
         if body.participant_id:
             existing = await session.scalar(
@@ -775,6 +976,7 @@ async def add_signature(
             document_id=document.id,
             sha256=hashlib.sha256(png).hexdigest(),
             signed_at=signed_at,
+            signed_at_device=cw.captured_at,
             signed_location=body.signed_location,
             comment=body.comment,
         )
@@ -782,8 +984,21 @@ async def add_signature(
         if p.status in ("draft", "in_progress"):
             p.status = "signature_pending"
         await _fresh(session, sig)
-        await _event(session, principal, "handover.signed", p, signature_id=str(sig.id))
-        return _row(sig)
+        await _event(
+            session, principal, "handover.signed", p, signature_id=str(sig.id), **_event_offline(cw)
+        )
+        out = _row(sig)
+        await _record_write(
+            session,
+            principal,
+            p,
+            cw,
+            method="POST",
+            path=request.url.path,
+            status_code=201,
+            response=out,
+        )
+        return out
 
 
 @router.delete(
@@ -2014,11 +2229,17 @@ async def create_item(
     section: str,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
+    idempotency_key: IdempotencyKey = None,
+    captured_at: CapturedAt = None,
 ) -> dict[str, Any]:
+    cw = ClientWrite(idempotency_key, captured_at, None)
     model, schema = _section(section)
     body = await _body(request, schema)
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
+        if (replay := await _replayed(session, cw)) is not None:
+            return dict(replay.response or {})
+        await _require_offline_allowed(session, principal, cw)
         await _require_section_writable(session, p, section)
         data = body.model_dump()
         await _validate_refs(session, section, p, data)
@@ -2028,17 +2249,38 @@ async def create_item(
                 **{k: v for k, v in data.items() if v not in (None, "")},
             }
         row = model(
-            tenant_id=principal.tenant_id, protocol_id=p.id, created_by=principal.user_id, **data
+            tenant_id=principal.tenant_id,
+            protocol_id=p.id,
+            created_by=principal.user_id,
+            captured_at=cw.captured_at,
+            **data,
         )
         session.add(row)
         if p.status == "draft":
             p.status = "in_progress"
         await _fresh(session, row)
-        await _event(session, principal, f"handover.{section}.added", p, item_id=str(row.id))
+        await _event(
+            session,
+            principal,
+            f"handover.{section}.added",
+            p,
+            item_id=str(row.id),
+            **_event_offline(cw),
+        )
         out = _row(row)
         if section == "participants":
             out["role_label"] = svc.role_label(out["role"], p.kind)
             out["portal_access"] = await portal_access_of(session, p, row.contact_id)
+        await _record_write(
+            session,
+            principal,
+            p,
+            cw,
+            method="POST",
+            path=request.url.path,
+            status_code=201,
+            response=out,
+        )
         return out
 
 
@@ -2101,26 +2343,51 @@ async def patch_item(
     item_id: uuid.UUID,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
+    idempotency_key: IdempotencyKey = None,
+    captured_at: CapturedAt = None,
+    base_updated_at: BaseUpdatedAt = None,
 ) -> dict[str, Any]:
+    cw = ClientWrite(idempotency_key, captured_at, base_updated_at)
     model, schema = _section(section)
     body = await _body(request, schema)
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
+        if (replay := await _replayed(session, cw)) is not None:
+            return dict(replay.response or {})
+        await _require_offline_allowed(session, principal, cw)
         await _require_section_writable(session, p, section)
         row = await session.get(model, item_id)
         if row is None or row.protocol_id != p.id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        _require_base_current(row, cw)
         data = body.model_dump(exclude_unset=True)
         await _validate_refs(session, section, p, data)
         for key, value in data.items():
             setattr(row, key, value)
         row.updated_by = principal.user_id
         await _fresh(session, row)
-        await _event(session, principal, f"handover.{section}.updated", p, item_id=str(row.id))
+        await _event(
+            session,
+            principal,
+            f"handover.{section}.updated",
+            p,
+            item_id=str(row.id),
+            **_event_offline(cw),
+        )
         out = _row(row)
         if section == "participants":
             out["role_label"] = svc.role_label(out["role"], p.kind)
             out["portal_access"] = await portal_access_of(session, p, row.contact_id)
+        await _record_write(
+            session,
+            principal,
+            p,
+            cw,
+            method="PATCH",
+            path=request.url.path,
+            status_code=200,
+            response=out,
+        )
         return out
 
 
@@ -2133,15 +2400,38 @@ async def delete_item(
     item_id: uuid.UUID,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
+    idempotency_key: IdempotencyKey = None,
+    captured_at: CapturedAt = None,
 ) -> Response:
+    cw = ClientWrite(idempotency_key, captured_at, None)
     model, _ = _section(section)
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
+        if await _replayed(session, cw) is not None:
+            return Response(status_code=204)
+        await _require_offline_allowed(session, principal, cw)
         await _require_section_writable(session, p, section)
         row = await session.get(model, item_id)
         if row is None or row.protocol_id != p.id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await session.delete(row)
         await session.flush()
-        await _event(session, principal, f"handover.{section}.deleted", p, item_id=str(item_id))
+        await _event(
+            session,
+            principal,
+            f"handover.{section}.deleted",
+            p,
+            item_id=str(item_id),
+            **_event_offline(cw),
+        )
+        await _record_write(
+            session,
+            principal,
+            p,
+            cw,
+            method="DELETE",
+            path=request.url.path,
+            status_code=204,
+            response=None,
+        )
     return Response(status_code=204)

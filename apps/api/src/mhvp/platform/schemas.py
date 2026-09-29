@@ -132,6 +132,8 @@ class TenantSettingsOut(BaseModel):
     auto_posting_outgoing_enabled: bool = False
     # Messdienstleister module switch (default off).
     metering_module_enabled: bool = False
+    # Offline Erfassung des Übergabeprotokolls (rule M30-10, ADR 0016, default off).
+    handover_offline_enabled: bool = False
     # Rule H03: Verbrauchsinformation monthly job, notifications and template verification
     # (all default off; tenants see nothing until the template is verified).
     consumption_info_enabled: bool = False
@@ -211,6 +213,7 @@ class TenantSettingsPatch(BaseModel):
     bank_rule_proposal_threshold: int | None = Field(default=None, ge=2, le=50)
     bank_rule_recurring_threshold: int | None = Field(default=None, ge=2, le=50)
     metering_module_enabled: bool | None = None
+    handover_offline_enabled: bool | None = None
     consumption_info_enabled: bool | None = None
     consumption_info_notifications_enabled: bool | None = None
     consumption_info_template_verified: bool | None = None

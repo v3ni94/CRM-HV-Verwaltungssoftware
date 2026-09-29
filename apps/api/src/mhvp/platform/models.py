@@ -503,6 +503,13 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     metering_module_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # Offline Erfassung des Übergabeprotokolls (rule M30-10, ADR 0016, migration 0245): with
+    # true the CRM editor queues changes on the device while offline and the API accepts
+    # queued items with X-Captured-At. Default off (operator decision 28.09.2026 with the data
+    # protection conditions of the ADR).
+    handover_offline_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     # Verbrauchsinformation nach § 6a HeizkostenV (rule H03, migration 0238): monthly job per
     # tenant (default off), portal notification (default off) and the operator's confirmation
     # that the template content was verified; tenants see nothing before that confirmation.

@@ -7178,6 +7178,47 @@
       "entry": "{date}, {user}: {reason}",
       "invalidated": "{count} signature(s) no longer valid",
       "unknownUser": "Unknown user"
+    },
+    "offline": {
+      "offlineTitle": "No connection. Offline capture active.",
+      "onlineTitle": "Connection is back.",
+      "pending": "{count, plural, one {# change waits for the sync.} other {# changes wait for the sync.}}",
+      "hint": "Changes and photos are kept encrypted on this device and sent in capture order once the connection is back. Do not reload the page and do not log out, the waiting changes would be lost.",
+      "lost": "{count, plural, one {# local draft was unreadable after the reload and was deleted.} other {# local drafts were unreadable after the reload and were deleted.}}",
+      "syncing": "Sync running.",
+      "failed": "Sync stopped: {message} The remaining changes stay on the device.",
+      "syncNow": "Sync now",
+      "discard": "Delete local drafts",
+      "pendingItem": "Waiting for sync",
+      "deviceTime": "Device time {at} (reported by the device)",
+      "conflict": {
+        "title": "Server state is newer",
+        "captured": "Captured on the device: {at} (reported by the device)",
+        "server": "State on the server",
+        "mine": "My change (device)",
+        "keepServer": "Keep server state",
+        "keepMine": "Apply my change"
+      },
+      "log": {
+        "title": "Sync log ({count})",
+        "captured": "captured {at}",
+        "kind": {
+          "patch_protocol": "Protocol fields",
+          "create_item": "New entry",
+          "patch_item": "Entry changed",
+          "delete_item": "Entry deleted",
+          "document": "Photo or attachment",
+          "signature": "Signature"
+        },
+        "result": {
+          "ok": "sent",
+          "conflict": "conflict",
+          "failed": "refused",
+          "offline": "no connection",
+          "discarded": "discarded",
+          "kept": "queued again"
+        }
+      }
     }
   },
   "ImmowareSettings": {
@@ -11962,5 +12003,17 @@
     "knownByIban": "Counterparty by IBAN: {name} (no proof).",
     "knownByName": "Counterparty by name: {name} (no proof).",
     "linkToProperty": "Link to the property as creditor"
+  },
+  "HandoverOfflineSwitch": {
+    "title": "Offline capture of handover protocols",
+    "description": "With the switch the editor on a phone or tablet keeps changes and photos encrypted on the device while offline and sends them in capture order once the connection is back. The key lives only in the memory of the session; logout, session end or a page reload delete the waiting changes. Device times are stored as reported by the device.",
+    "risk": "Operator decision of 28.09.2026 with data protection conditions (ADR 0016, rule M30-10). Without the switch nothing is stored on the device.",
+    "label": "Enable offline capture",
+    "status": {
+      "on": "On",
+      "off": "Off"
+    },
+    "saved": "Saved.",
+    "readOnly": "Requires the right to change tenant settings."
   }
 }

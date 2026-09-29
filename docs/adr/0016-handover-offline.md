@@ -1,7 +1,8 @@
 # ADR 0016: Offline capture of handover protocols on phone and tablet
 
-- Status: Proposed (operator request 28.09.2026; not part of M31 WP2, own package pending the
-  data protection decisions below)
+- Status: Accepted (operator decision 28.09.2026: "vollständig offline" with the data
+  protection conditions below; implemented 29.09.2026 as rule M30-10 behind the tenant switch
+  `handover_offline_enabled`, default off)
 - Date: 2026-09-29
 
 ## Context
@@ -21,7 +22,16 @@ evidence locks the productive action until a released rule exists. This ADR desc
 requested mode so it can be built as its own work package once the operator, together with
 data protection advice, has decided the open points.
 
-## Decision (proposed)
+## Decision
+
+The operator chose the full offline mode on 28.09.2026 under these conditions, which are
+binding for the implementation (rule M30-10): queue of pending changes and photos in
+IndexedDB encrypted at rest with a key held only in memory for the session (derived per
+login, never persisted); deletion of the queue on logout and after a successful sync; device
+timestamps recorded as "vom Gerät gemeldet" on every queued item; conflict handling on sync
+(server state newer: show both and ask); a visible offline banner with the count of pending
+items; a sync log per protocol; no photos or protocol data in the service worker cache; a
+tenant switch `handover_offline_enabled` (default off).
 
 Offline capture is built as a separate package with these elements, all behind a per tenant
 feature flag (default off, ADR 0003 style):
@@ -50,20 +60,46 @@ feature flag (default off, ADR 0003 style):
    reported so the server can detect edits after a signature (M30-09 applies on replay).
 6. Scope: CRM only (staff users); the portal keeps online only. No money paths are touched.
 
-## Consequences
+## Implementation (29.09.2026)
 
-- Open data protection points to decide before implementation (owner operator with data
-  protection advice; no gate, but the feature stays off until decided): retention of the
-  encrypted queue on lost devices; whether photos may be held locally at all or only their
-  references; the maximum age of a queued draft; whether replay needs a second confirmation
-  by the user; logging of replays as events (6.9.6).
-- Evidence: the operator's legal advice on M30-02 (evidential value of the signature image)
-  has to cover device timestamps and delayed uploads.
-- Tests required: queue order, replay stop on 409 and 422, encryption key gone after logout
-  (queue unreadable), deletion on logout and after replay, no plain text in IndexedDB,
-  Playwright flow with network off and on.
-- Until then: online only with the offline notice and retry (M31 WP2), which is the state
-  delivered on 29.09.2026.
+- Client (`apps/web-crm/src/components/handover/offline/`): AES-GCM 256 key generated in
+  memory on first use after the login, non extractable, never stored; IndexedDB holds only
+  the random record id and the sequence number in plain text, everything else is sealed;
+  the queue is wiped on logout and session end (401, `pagehide`), after a successful replay
+  per protocol and by "Lokale Entwürfe löschen"; the banner shows the connection state and
+  the count of pending items; the replay maps temporary ids to server ids; a conflict opens
+  a sheet with both states; a sync log per protocol lives in the session memory.
+- Server: `handover_client_write` ledger (RLS, unique per tenant and key, no TTL) with the
+  headers `X-Handover-Client-Key`, `X-Captured-At`, `X-Base-Updated-At`; `captured_at` on
+  the section rows, `signed_at_device` on signatures, both printed or shown as reported by
+  the device; 403 MHVP-HDOV-0003 without the tenant switch, 409 MHVP-HDOV-0004 with the
+  server state on a conflict; lock rules M30-01 and M30-09 unchanged on replay.
+- The header is deliberately not the generic `Idempotency-Key`: that middleware replays 4xx
+  answers for 24 hours, which would freeze a refusal although the switch or the version has
+  changed since.
+
+## Consequences and residual risks
+
+- Key only in memory: a page reload or a closed tab while offline loses the key and with it
+  the queued changes (they are discarded on the next read and reported as "verworfen").
+  The banner tells the person not to reload and not to log out while changes wait. A
+  passphrase prompt was considered and rejected: typed on a shared tablet it is weaker than
+  the in memory key, and without persisting it in some form it would not survive the
+  reload either.
+- Device time is a claimed value: `captured_at` and `signed_at_device` can be wrong or
+  manipulated on the device; the server time of the replay stays the reference and the PDF
+  prints both. The operator's legal advice on M30-02 (evidential value of the signature
+  image) has to cover device timestamps and delayed uploads; open in OPEN_QUESTIONS M30-02.
+- Sealed records stay in IndexedDB between the capture and the wipe; on a lost or stolen
+  device they are unreadable without the key, but the storage itself is not wiped by the
+  platform. The retention on lost devices and a maximum age of queued drafts remain
+  operator decisions (documented as conditions in M30-07, no gate).
+- Deleting photos or signatures, completion, cancellation, new versions and dispatch stay
+  online only; the portal stays online only.
+- Tests delivered: queue order, dedupe, sealed storage, wipe and lost key (vitest), replay
+  with conflict and id mapping (vitest), editor flow offline to online (vitest), server
+  switch, ledger, lock, conflict, 403 and tenant separation (pytest). Not delivered: a
+  Playwright flow with the network switched off and on (open point).
 
 ## Alternatives considered
 

@@ -518,6 +518,12 @@ def render(
                 f"{_esc(fmt_datetime(sig.signed_at))}"
                 + (f", {_esc(sig.signed_location)}" if sig.signed_location else "")
                 + (
+                    f"<br/>Gerätezeit {_esc(fmt_datetime(device))} (vom Gerät gemeldet, "
+                    "Übertragung nach Wiederherstellung der Verbindung)"
+                    if (device := getattr(sig, "signed_at_device", None))
+                    else ""
+                )
+                + (
                     f"<br/><b>Vor der Änderung vom {_esc(fmt_datetime(invalid))} geleistet, "
                     "gilt nicht mehr; erneute Unterschrift erforderlich.</b>"
                     if invalid

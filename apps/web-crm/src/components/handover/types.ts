@@ -56,6 +56,8 @@ export type Protocol = {
   completed_at: string | null;
   archived_at: string | null;
   pdf_document_id: string | null;
+  /** Server time of the last change; base of X-Base-Updated-At on an offline replay (M30-10). */
+  updated_at?: string;
   locked: boolean;
   finalized: boolean;
   address: string;
@@ -85,6 +87,8 @@ export type Doc = {
   created_at: string;
   /** Derived preview path of the API (M30-08), null for signatures, PDFs and non images. */
   thumbnail_url?: string | null;
+  /** Waiting in the offline queue of this device (M30-10), not yet on the server. */
+  _pending?: boolean;
 };
 
 export type Signature = {
@@ -99,6 +103,10 @@ export type Signature = {
   /** Set by "Änderung nach Unterschrift" (M30-09): given before the change, has to be repeated. */
   invalidated_at?: string | null;
   invalidated_change_id?: string | null;
+  /** Device time of an offline capture (M30-10), reported by the device, never proof. */
+  signed_at_device?: string | null;
+  /** Waiting in the offline queue of this device (M30-10), not yet on the server. */
+  _pending?: boolean;
 };
 
 /** History entry "Änderung nach Unterschrift" (M30-09). */

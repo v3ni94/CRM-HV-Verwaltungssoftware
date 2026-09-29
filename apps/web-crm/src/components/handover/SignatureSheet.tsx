@@ -4,7 +4,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
 import { Sheet } from "@/components/ui/Sheet";
-import { bff } from "@/lib/bff";
+import { bff, type BffResult } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 import { SignatureCanvas, participantName, type SignatureCanvasHandle } from "./SignaturePad";
@@ -18,13 +18,15 @@ export type SignatureSheetProps = {
   /** Participant to sign for; null for an additional person (free entry). */
   participant: Item | null;
   onSaved: () => Promise<void> | void;
+  /** Sends the signature body; the editor passes its offline aware `send` (M30-10). */
+  submit?: (body: Record<string, unknown>) => Promise<BffResult<Signature>>;
 };
 
 /** Full screen signature per participant (M31 WP2): consent text, prefilled name and role
  *  (editable), place, the hint to hand over the device, a tall canvas and the footer with
  *  undo, clear and save. On success the sheet closes; on an error (409 included) the strokes
  *  stay and the message is shown. */
-export function SignatureSheet({ open, onClose, protocolId, kind, participant, onSaved }: SignatureSheetProps) {
+export function SignatureSheet({ open, onClose, protocolId, kind, participant, onSaved, submit }: SignatureSheetProps) {
   const t = useTranslations("Handover");
   const [handle, setHandle] = useState<SignatureCanvasHandle | null>(null);
   const [name, setName] = useState("");
@@ -47,16 +49,14 @@ export function SignatureSheet({ open, onClose, protocolId, kind, participant, o
     }
     setBusy(true);
     setMessage(null);
-    const res = await bff<Signature>(`/api/bff/handover/protocols/${protocolId}/signatures`, {
-      method: "POST",
-      body: JSON.stringify({
-        image: handle.toDataURL(),
-        signer_name: name || null,
-        signer_role: role || null,
-        participant_id: participant?.id ?? null,
-        signed_location: location || null,
-      }),
-    });
+    const body = {
+      image: handle.toDataURL(),
+      signer_name: name || null,
+      signer_role: role || null,
+      participant_id: participant?.id ?? null,
+      signed_location: location || null,
+    };
+    const res = submit ? await submit(body) : await bff<Signature>(`/api/bff/handover/protocols/${protocolId}/signatures`, { method: "POST", body: JSON.stringify(body) });
     setBusy(false);
     if (res.ok) {
       await onSaved();

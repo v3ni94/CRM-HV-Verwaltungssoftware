@@ -35,14 +35,20 @@ export function PhotoStrip({ docs, itemTitle, onRemove }: PhotoStripProps) {
               onClick={() => setOpenAt(index)}
               aria-label={`${t("photos.open")}: ${d.title}`}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- protected same-origin blob, no optimizer */}
-              <img
-                src={`/api/handover-files/${(d.thumbnail_url ?? `/api/v1/documents/${d.id}/content`).replace(/^\/api\/v1\//, "")}`}
-                alt={d.title}
-                className="h-24 w-24 object-cover"
-                loading="lazy"
-                decoding="async"
-              />
+              {d._pending ? (
+                <span className="flex h-24 w-24 items-center justify-center bg-surface-2 px-1 text-center text-xs text-muted" data-testid="photo-pending">
+                  {t("offline.pendingItem")}
+                </span>
+              ) : (
+                /* eslint-disable-next-line @next/next/no-img-element -- protected same-origin blob, no optimizer */
+                <img
+                  src={`/api/handover-files/${(d.thumbnail_url ?? `/api/v1/documents/${d.id}/content`).replace(/^\/api\/v1\//, "")}`}
+                  alt={d.title}
+                  className="h-24 w-24 object-cover"
+                  loading="lazy"
+                  decoding="async"
+                />
+              )}
             </button>
             {onRemove ? (
               <button

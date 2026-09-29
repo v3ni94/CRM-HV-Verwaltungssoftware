@@ -7178,6 +7178,47 @@
       "entry": "{date}, {user}: {reason}",
       "invalidated": "{count} Unterschrift(en) gelten nicht mehr",
       "unknownUser": "Unbekannter Bearbeiter"
+    },
+    "offline": {
+      "offlineTitle": "Keine Verbindung. Offline Erfassung aktiv.",
+      "onlineTitle": "Verbindung wieder da.",
+      "pending": "{count, plural, one {# Änderung wartet auf den Abgleich.} other {# Änderungen warten auf den Abgleich.}}",
+      "hint": "Änderungen und Fotos werden verschlüsselt auf diesem Gerät zwischengespeichert und nach Wiederherstellung der Verbindung in der Reihenfolge der Erfassung übertragen. Die Seite nicht neu laden und nicht abmelden, sonst gehen die wartenden Änderungen verloren.",
+      "lost": "{count, plural, one {# lokaler Entwurf war nach dem Neuladen nicht mehr lesbar und wurde gelöscht.} other {# lokale Entwürfe waren nach dem Neuladen nicht mehr lesbar und wurden gelöscht.}}",
+      "syncing": "Abgleich läuft.",
+      "failed": "Abgleich angehalten: {message} Die übrigen Änderungen bleiben auf dem Gerät.",
+      "syncNow": "Jetzt abgleichen",
+      "discard": "Lokale Entwürfe löschen",
+      "pendingItem": "Wartet auf Abgleich",
+      "deviceTime": "Gerätezeit {at} (vom Gerät gemeldet)",
+      "conflict": {
+        "title": "Serverstand ist neuer",
+        "captured": "Erfasst am Gerät: {at} (vom Gerät gemeldet)",
+        "server": "Stand auf dem Server",
+        "mine": "Meine Änderung (Gerät)",
+        "keepServer": "Serverstand behalten",
+        "keepMine": "Meine Änderung übernehmen"
+      },
+      "log": {
+        "title": "Abgleichsprotokoll ({count})",
+        "captured": "erfasst {at}",
+        "kind": {
+          "patch_protocol": "Protokollfelder",
+          "create_item": "Neuer Eintrag",
+          "patch_item": "Eintrag geändert",
+          "delete_item": "Eintrag gelöscht",
+          "document": "Foto oder Anhang",
+          "signature": "Unterschrift"
+        },
+        "result": {
+          "ok": "übertragen",
+          "conflict": "Konflikt",
+          "failed": "abgelehnt",
+          "offline": "keine Verbindung",
+          "discarded": "verworfen",
+          "kept": "erneut eingereiht"
+        }
+      }
     }
   },
   "ImmowareSettings": {
@@ -11962,5 +12003,17 @@
     "knownByIban": "Gegenpartei laut IBAN: {name} (kein Beweis).",
     "knownByName": "Gegenpartei laut Name: {name} (kein Beweis).",
     "linkToProperty": "Als Kreditor mit dem Objekt verknüpfen"
+  },
+  "HandoverOfflineSwitch": {
+    "title": "Offline Erfassung Übergabeprotokoll",
+    "description": "Mit dem Schalter speichert der Editor am Handy oder Tablet Änderungen und Fotos ohne Verbindung verschlüsselt auf dem Gerät und überträgt sie nach Wiederherstellung der Verbindung in der Reihenfolge der Erfassung. Der Schlüssel liegt nur im Speicher der Sitzung; Abmelden, Sitzungsende oder Neuladen der Seite löschen die wartenden Änderungen. Gerätezeiten werden als vom Gerät gemeldet gespeichert.",
+    "risk": "Betreiberentscheidung vom 28.09.2026 mit Datenschutzauflagen (ADR 0016, Regel M30-10). Ohne den Schalter wird nichts auf dem Gerät gespeichert.",
+    "label": "Offline Erfassung aktivieren",
+    "status": {
+      "on": "Aktiv",
+      "off": "Aus"
+    },
+    "saved": "Gespeichert.",
+    "readOnly": "Nur mit dem Recht Mandanteneinstellungen ändern."
   }
 }

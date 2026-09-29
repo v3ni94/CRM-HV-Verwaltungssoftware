@@ -949,6 +949,25 @@ class ErrorCodes:
             "matched row was already taken over; nothing was created."
         ),
     )
+    # Offline Erfassung (rule M30-10, ADR 0016): queued items need the tenant switch.
+    HANDOVER_OFFLINE_DISABLED = ErrorCode(
+        "MHVP-HDOV-0003",
+        403,
+        "Offline Erfassung für diesen Mandanten nicht freigegeben",
+        (
+            "The request carries X-Captured-At (a queued offline item) but "
+            "tenant_settings.handover_offline_enabled is false."
+        ),
+    )
+    HANDOVER_OFFLINE_CONFLICT = ErrorCode(
+        "MHVP-HDOV-0004",
+        409,
+        "Datensatz wurde auf dem Server zwischenzeitlich geändert",
+        (
+            "X-Base-Updated-At is older than the server row; the current server state is in "
+            "the extension 'server' so the client can show both and ask."
+        ),
+    )
     # M20-04 Vier-Augen-Prinzip beim Mailversand (mhvp.communication.mail_approval).
     MAIL_APPROVAL_FOUR_EYES = ErrorCode(
         "MHVP-COMM-0001",

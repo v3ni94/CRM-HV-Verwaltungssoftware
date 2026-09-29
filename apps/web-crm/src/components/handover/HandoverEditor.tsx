@@ -11,13 +11,15 @@ import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { downscale } from "@/lib/image-downscale";
 import { ui } from "@/lib/ui";
-import { useOnline } from "@/lib/useOnline";
 
 import { HandoverAppointmentButton } from "./HandoverAppointmentButton";
 import { HandoverContractLink } from "./HandoverContractLink";
 import { HandoverMeterTransfer } from "./HandoverMeterTransfer";
 import { HandoverSummary } from "./HandoverSummary";
 import { HelperAccessSection } from "./HelperAccessSection";
+import { OfflineBanner } from "./offline/OfflineBanner";
+import { SyncPanel } from "./offline/SyncPanel";
+import { fileToDocumentOp, type Send, SendContext, useHandoverOffline, useSend } from "./offline/useHandoverOffline";
 import { PhotoPicker } from "./PhotoPicker";
 import { PhotoStrip } from "./PhotoStrip";
 import { PortalAccessBox } from "./PortalAccessBox";
@@ -107,6 +109,11 @@ function toBody(form: Record<string, string | boolean>, fields: FieldDef[]): Rec
     else body[f.name] = v;
   }
   return body;
+}
+
+/** Temporary id of an item created while offline (M30-10); replaced by the server id on replay. */
+function tempItemId(): string {
+  return `tmp-${globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2)}`;
 }
 
 /** A save failed because the API was unreachable or broke (status 0 or 5xx): the value stays
@@ -224,13 +231,17 @@ function StatusDot({ state, t }: { state: "attention" | "filled" | "empty"; t: (
  * M30-09: once a valid signature exists the content steps are read only until the action
  * "Änderung nach Unterschrift" records a reason (the API answers 409 otherwise).
  */
-export function HandoverEditor({ initial }: { initial: Full }) {
+/** Step editor of an open protocol (M31 WP2). With `offlineEnabled` (tenant switch
+ *  handover_offline_enabled, rule M30-10) changes made without connection wait in the
+ *  encrypted queue of this page session and are replayed in order once the connection is
+ *  back; the view shows the server copy plus the queued changes. */
+export function HandoverEditor({ initial, offlineEnabled = false }: { initial: Full; offlineEnabled?: boolean }) {
   const t = useTranslations("Handover");
   const router = useRouter();
-  const online = useOnline();
   const { guard } = useDirtyGuardState();
   const { confirm, confirmSheet } = useConfirm();
-  const [p, setP] = useState<Full>(initial);
+  const offline = useHandoverOffline(initial, offlineEnabled);
+  const { online, view: p, setServer: setP, send } = offline;
   const [tab, setTab] = useState<Tab>(initial.locked ? "summary" : STEPS.includes(initial.current_step as Tab) ? (initial.current_step as Tab) : "object");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -256,16 +267,13 @@ export function HandoverEditor({ initial }: { initial: Full }) {
   }, [tab]);
 
   async function reload() {
-    const res = await bff<Full>(base);
-    if (res.ok) {
-      setP(res.data);
-      guard.reset();
-    }
+    await offline.reload();
+    guard.reset();
   }
 
   async function patchProtocol(body: Record<string, unknown>): Promise<number> {
     setError(null);
-    const res = await bff(base, { method: "PATCH", body: JSON.stringify(body) });
+    const res = await send({ kind: "patch_protocol", body, baseUpdatedAt: p.updated_at ?? null });
     if (!res.ok) {
       setError(res.message);
       return res.status;
@@ -293,7 +301,7 @@ export function HandoverEditor({ initial }: { initial: Full }) {
     setTab(next);
     setInfo(null);
     if (!locked) {
-      const res = await bff(base, { method: "PATCH", body: JSON.stringify({ current_step: next }) });
+      const res = await send({ kind: "patch_protocol", body: { current_step: next }, baseUpdatedAt: null });
       if (!res.ok) setInfo(t("stepSaveFailed"));
     }
   }
@@ -398,6 +406,7 @@ export function HandoverEditor({ initial }: { initial: Full }) {
 
   return (
     <DirtyGuardContext.Provider value={guard}>
+      <SendContext.Provider value={send}>
       <div className="flex flex-col gap-4" data-testid="handover-editor">
         <div className="flex flex-wrap items-center gap-2">
           <span className={p.finalized ? ui.badgeSuccess : p.status === "cancelled" ? ui.badgeDanger : ui.badgeGold}>{t(`statusLabel.${p.status}`)}</span>
@@ -446,11 +455,14 @@ export function HandoverEditor({ initial }: { initial: Full }) {
             <textarea id="change-reason" className={ui.input} rows={3} value={changeReason} onChange={(e) => setChangeReason(e.target.value)} required />
           </div>
         </Sheet>
-        {!online ? (
+        {offline.enabled ? (
+          <OfflineBanner offline={offline} />
+        ) : !online ? (
           <p role="status" className={ui.warning} data-testid="offline-notice">
             {t("offlineNotice")}
           </p>
         ) : null}
+        <SyncPanel offline={offline} />
         {error ? (
           <p role="alert" className={ui.alert}>
             {error}
@@ -510,10 +522,14 @@ export function HandoverEditor({ initial }: { initial: Full }) {
                         {s.signer_role ? t(`roles.${s.signer_role}`) : ""} · {formatDateTime(s.signed_at)}
                       </div>
                       {s.invalidated_at ? <div className={`${ui.badgeWarning} mt-1`}>{t("signature.invalidated", { date: formatDateTime(s.invalidated_at) })}</div> : null}
-                      {/* eslint-disable-next-line @next/next/no-img-element -- protected same-origin blob, no optimizer */}
-                      <img src={`/api/handover-files/documents/${s.document_id}/content`} alt="" className="mt-2 max-h-20 rounded border border-border bg-paper" />
+                      {s._pending ? <div className={`${ui.badgeWarning} mt-1`}>{t("offline.pendingItem")}</div> : null}
+                      {s.signed_at_device ? <div className="text-xs text-muted">{t("offline.deviceTime", { at: formatDateTime(s.signed_at_device) })}</div> : null}
+                      {!s._pending ? (
+                        /* eslint-disable-next-line @next/next/no-img-element -- protected same-origin blob, no optimizer */
+                        <img src={`/api/handover-files/documents/${s.document_id}/content`} alt="" className="mt-2 max-h-20 rounded border border-border bg-paper" />
+                      ) : null}
                     </div>
-                    {!locked ? (
+                    {!locked && !s._pending ? (
                       <button
                         type="button"
                         className={ui.buttonSm}
@@ -548,7 +564,7 @@ export function HandoverEditor({ initial }: { initial: Full }) {
                 </button>
               </div>
             ) : null}
-            <SignatureSheet open={signFor !== undefined} onClose={() => setSignFor(undefined)} protocolId={p.id} kind={p.kind} participant={signFor ?? null} onSaved={reload} />
+            <SignatureSheet open={signFor !== undefined} onClose={() => setSignFor(undefined)} protocolId={p.id} kind={p.kind} participant={signFor ?? null} onSaved={reload} submit={(body) => send({ kind: "signature", body })} />
           </div>
         ) : null}
         {tab === "summary" ? (
@@ -621,6 +637,7 @@ export function HandoverEditor({ initial }: { initial: Full }) {
         </div>
         {confirmSheet}
       </div>
+      </SendContext.Provider>
     </DirtyGuardContext.Provider>
   );
 }
@@ -706,6 +723,7 @@ function SectionList({
   const fields = FIELDS[section];
   const tRole = (r: string) => (r ? t(`roles.${r}`) : "");
   const withPhotos = PHOTO_SECTIONS.includes(section);
+  const send = useSend(base);
 
   async function searchContacts() {
     const res = await bff<{ items?: { id: string; display_name: string }[] } | { id: string; display_name: string }[]>(`/api/bff/contacts?q=${encodeURIComponent(contactQuery)}&page_size=10`);
@@ -713,7 +731,7 @@ function SectionList({
   }
 
   async function addFromContact(contactId: string) {
-    const res = await bff(`${base}/participants`, { method: "POST", body: JSON.stringify({ contact_id: contactId, role: "other" }) });
+    const res = await send({ kind: "create_item", section: "participants", tempId: tempItemId(), body: { contact_id: contactId, role: "other" } });
     if (res.ok) {
       setContacts([]);
       setContactQuery("");
@@ -724,7 +742,7 @@ function SectionList({
   async function remove(item: Item) {
     const ok = await confirm({ title: t("delete"), text: t("confirmDelete"), confirmLabel: t("delete"), danger: true });
     if (!ok) return;
-    const res = await bff(`${base}/${section}/${item.id}`, { method: "DELETE" });
+    const res = await send({ kind: "delete_item", section, itemId: item.id });
     if (res.ok) await onChanged();
     else onError(res.message);
   }
@@ -835,18 +853,15 @@ type PendingFile = { file: File; state: UploadState };
 
 /** Sequential upload of the picked photos of one entry (FormData with file, section and
  *  item_id); each file gets its own state line. Files are downscaled client side first. */
-async function uploadFiles(base: string, section: Section, itemId: string, files: PendingFile[], update: (next: PendingFile[]) => void, only?: number): Promise<PendingFile[]> {
+async function uploadFiles(send: Send, section: Section, itemId: string, files: PendingFile[], update: (next: PendingFile[]) => void, only?: number): Promise<PendingFile[]> {
   let current = [...files];
   for (let i = 0; i < current.length; i += 1) {
     if (only !== undefined && i !== only) continue;
     if (current[i]!.state === "done") continue;
     current = current.map((f, j) => (j === i ? { ...f, state: "uploading" } : f));
     update(current);
-    const data = new FormData();
-    data.append("file", await downscale(current[i]!.file));
-    data.append("section", section);
-    data.append("item_id", itemId);
-    const res = await bff(`${base}/documents`, { method: "POST", body: data });
+    const small = await downscale(current[i]!.file);
+    const res = await send(await fileToDocumentOp(small, current[i]!.file.name, section, itemId));
     current = current.map((f, j) => (j === i ? { ...f, state: res.ok ? "done" : "failed" } : f));
     update(current);
   }
@@ -895,6 +910,7 @@ function ItemForm({
   t: (key: string) => string;
 }) {
   const guard = useDirtyGuard();
+  const send = useSend(base);
   const id = item ? item.id : `new-${section}`;
   const [form, setForm] = useState<Record<string, string | boolean>>(() => Object.fromEntries(fields.map((f) => [f.name, item ? valueOf(item, f) : f.type === "checkbox" ? false : ""])));
   const [busy, setBusy] = useState(false);
@@ -916,10 +932,10 @@ function ItemForm({
     onError(null);
     let targetId = createdId;
     if (!targetId) {
-      const res = await bff<{ id: string }>(item ? `${base}/${section}/${item.id}` : `${base}/${section}`, {
-        method: item ? "PATCH" : "POST",
-        body: JSON.stringify(toBody(form, fields)),
-      });
+      const body = toBody(form, fields);
+      const res = await send<{ id: string }>(
+        item ? { kind: "patch_item", section, itemId: item.id, body, baseUpdatedAt: typeof item.updated_at === "string" ? item.updated_at : null } : { kind: "create_item", section, tempId: tempItemId(), body },
+      );
       if (!res.ok) {
         setBusy(false);
         setRetry(isRetryable(res.status));
@@ -931,7 +947,7 @@ function ItemForm({
     }
     if (captureFirst && photos.length) {
       const pending: PendingFile[] = uploads ?? photos.map((file) => ({ file, state: "waiting" }));
-      const result = await uploadFiles(base, section, targetId, pending, setUploads);
+      const result = await uploadFiles(send, section, targetId, pending, setUploads);
       setBusy(false);
       if (result.some((f) => f.state === "failed")) return;
     } else setBusy(false);
@@ -941,7 +957,7 @@ function ItemForm({
   async function retryOne(index: number) {
     if (!uploads || !createdId) return;
     setBusy(true);
-    const result = await uploadFiles(base, section, createdId, uploads, setUploads, index);
+    const result = await uploadFiles(send, section, createdId, uploads, setUploads, index);
     setBusy(false);
     if (!result.some((f) => f.state === "failed")) await finish();
   }
@@ -1023,11 +1039,12 @@ function Photos({
   const [picked, setPicked] = useState<File[]>([]);
   const [uploads, setUploads] = useState<PendingFile[] | null>(null);
   const [busy, setBusy] = useState(false);
+  const send = useSend(base);
 
   async function run(files: PendingFile[], only?: number) {
     setBusy(true);
     onError(null);
-    const result = await uploadFiles(base, section, itemId, files, setUploads, only);
+    const result = await uploadFiles(send, section, itemId, files, setUploads, only);
     setBusy(false);
     if (result.some((f) => f.state === "failed")) return;
     setUploads(null);
@@ -1087,14 +1104,14 @@ function Attachments({
 }) {
   const { confirm, confirmSheet } = useConfirm();
   const [busy, setBusy] = useState(false);
+  const send = useSend(base);
   const docs = p.documents.filter((d) => d.kind === "attachment" || (d.kind === "photo" && !d.item_id));
   async function upload(files: FileList | null) {
     if (!files?.length) return;
     setBusy(true);
     for (const file of Array.from(files)) {
-      const data = new FormData();
-      data.append("file", file.type.startsWith("image/") ? await downscale(file) : file);
-      const res = await bff(`${base}/documents`, { method: "POST", body: data });
+      const small = file.type.startsWith("image/") ? await downscale(file) : file;
+      const res = await send(await fileToDocumentOp(small, file.name, null, null));
       if (!res.ok) onError(res.message);
     }
     setBusy(false);

@@ -70,6 +70,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M30-07](M30-07.md) | Übergabeprotokoll: Vertragsverknüpfung und Übernahme der Zählerstände | M30 | implemented, not accepted |
 | [M30-08](M30-08-fotos-thumbnails.md) | Übergabeprotokoll: Vorschaubilder als abgeleitete Ansicht, kein Speicherobjekt, kein Browser Cache | M30, M31 WP2 | implemented, not accepted |
 | [M30-09](M30-09-aenderung-nach-unterschrift.md) | Übergabeprotokoll: Inhaltssperre nach der ersten Unterschrift, Änderung nur mit Grund, Unterschriften erneut | M30, M31 WP2, Betreiberentscheidung 28.09.2026 | implemented, not accepted |
+| [M30-10](M30-10-offline-erfassung.md) | Übergabeprotokoll: Offline Erfassung mit verschlüsselter Warteschlange auf dem Gerät, Schlüssel nur im Speicher, Löschung bei Abmeldung, Gerätezeiten als gemeldete Werte, Dublette je Schlüssel, Konfliktfrage, Schalter je Mandant | M30, M31, ADR 0016, Betreiberentscheidung 28.09.2026 | implemented, not accepted |
 | [M11-finapi-dedup](M11-finapi-dedup.md) | finAPI Umsatzabgleich (Bankreferenz vorrangig, D05) | M11 | implemented, not accepted |
 | [M11-finapi-authorization](M11-finapi-authorization.md) | finAPI: Recht `banking:approve`, unzugeordnete Konten verborgen | M11 | implemented, not accepted |
 | [M11-05](M11-05-credentials-never-in-crm.md) | Zugangsdaten nie im CRM (Bank-WebForm) | M11 | implemented, not accepted |

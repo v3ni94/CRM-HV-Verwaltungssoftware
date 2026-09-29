@@ -23,6 +23,9 @@ export default async function HandoverDetailPage({ params }: { params: Promise<{
   if (response.status === 404) notFound();
   if (!data) throw new Error(String(error));
   const protocol = data as unknown as Full;
+  // Tenant switch of the offline capture (rule M30-10, default off); a failed read keeps it off.
+  const settings = await api.GET("/api/v1/tenant/settings");
+  const offlineEnabled = Boolean((settings.data as { handover_offline_enabled?: boolean } | undefined)?.handover_offline_enabled);
   return (
     <div className="flex flex-col gap-5 pb-24">
       <PageHeader
@@ -33,7 +36,7 @@ export default async function HandoverDetailPage({ params }: { params: Promise<{
           { href: "/makler/uebergabe", label: t("title") },
         ]}
       />
-      {protocol.locked ? <HandoverLockedView initial={protocol} /> : <HandoverEditor initial={protocol} />}
+      {protocol.locked ? <HandoverLockedView initial={protocol} /> : <HandoverEditor initial={protocol} offlineEnabled={offlineEnabled} />}
     </div>
   );
 }
