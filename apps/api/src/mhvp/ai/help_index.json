@@ -443,6 +443,25 @@
  },
  {
   "kind": "page",
+  "title": "Erledigt aus Gmail übernehmen",
+  "source": "Einstellungen",
+  "href": "/einstellungen/mandant#gmail-done-sync-title",
+  "keywords": [
+   "Gmail",
+   "archiviert",
+   "erledigt",
+   "Rückkanal",
+   "Sammelpostfach",
+   "papierkorb",
+   "wiederherstellen"
+  ],
+  "permission": [
+   "tenant_settings:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Messdienstleister-Modul",
   "source": "Einstellungen",
   "href": "/einstellungen/mandant#metering-module-switch-title",
@@ -1204,6 +1223,26 @@
  },
  {
   "kind": "page",
+  "title": "Fristtypen, Auslöser, Dauer und verantwortliche Rolle",
+  "source": "Einstellungen",
+  "href": "/einstellungen/fristtypen",
+  "keywords": [
+   "frist",
+   "fristtyp",
+   "verwalterwechsel",
+   "kautionsabrechnung",
+   "mieterhöhung",
+   "kündigungsfrist",
+   "vorfrist",
+   "dauer"
+  ],
+  "permission": [
+   "tenant_settings:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "SLA und Bereitschaft",
   "source": "Einstellungen",
   "href": "/einstellungen/sla",
@@ -1672,7 +1711,7 @@
   "href": "/kontakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Erfassen: contacts:create (neuer Kontakt) beziehungsweise contacts:update. - Freigeben oder Ablehnen: contacts:approve, in der Vorbelegung nur Mandantenadministrator und Administrator. Die freigebende Person muss eine andere sein als die erfassende; ein zweites Benutzerkonto de",
+  "excerpt": "- Erfassen: contacts:create (neuer Kontakt) beziehungsweise contacts:update. - Freigeben oder Ablehnen: contacts:approve, in der Vorbelegung Mandantenadministrator, Administrator und die Systemrolle Freigabe (nur Freigabe und Lesen, keine Schreibrechte auf Stammdaten; gedacht für",
   "file": "docs/handbuch/anleitung-bankverbindung.md"
  },
  {
@@ -1692,7 +1731,7 @@
   "href": "/kontakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "Konten der Gemeinschaft oder des Eigentümers werden unter Einstellungen, Bank (finAPI) oder FinTS lesend angebunden und auf der Objektseite im Abschnitt Bankkonten des Objekts zugeordnet (Als Standard setzen, Standard des Rechtsträgers). Für diese Konten gibt es keine Vier-Augen-",
+  "excerpt": "Zwei Ebenen: 1. Bankverbindungen am Kontakt des Rechtsträgers (Gemeinschaft, Vermieter, SEV-Eigentümer, Verwaltung selbst): Erfassung, Änderung und Beendigung wie oben über die Kontaktseite. Jede Änderung, auch die Beendigung und auch durch eine Person mit contacts:approve, warte",
   "file": "docs/handbuch/anleitung-bankverbindung.md"
  },
  {
@@ -1722,7 +1761,7 @@
   "href": "/kontakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "Schritt Wer Durch die Software erzwungen --- --- --- Neue oder geänderte IBAN eines Kontakts zweite Person mit contacts:approve ja Abweichende IBAN auf Rechnung nur nach Rückruf beim Aussteller, gesondert protokolliert ja Konto eines Rechtsträgers Geschäftsführung nein",
+  "excerpt": "Schritt Wer Durch die Software erzwungen --- --- --- Neue oder geänderte IBAN eines Kontakts zweite Person mit contacts:approve ja Beendigung einer Bankverbindung durch eine Person ohne contacts:approve zweite Person mit contacts:approve ja Beendigung einer Bankverbindung am Kont",
   "file": "docs/handbuch/anleitung-bankverbindung.md"
  },
  {
@@ -1742,7 +1781,7 @@
   "href": "/kontakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- IBAN ungültig: Eingabe ohne Leerzeichen mit Länderpräfix wiederholen. - Freigabe abgewiesen: dieselbe Person hat erfasst, oder die Bankverbindung wartet nicht mehr auf Freigabe. - Lastschrift nutzt die neue IBAN nicht: Freigabe fehlt. - IBAN aus KI-Vorschlag übernommen: KI-Vors",
+  "excerpt": "- IBAN ungültig: Eingabe ohne Leerzeichen mit Länderpräfix wiederholen. - Freigabe abgewiesen: dieselbe Person hat erfasst, oder die Bankverbindung wartet nicht mehr auf Freigabe. - Für diese Bankverbindung wartet bereits eine Änderung auf Freigabe: die offene neue Version oder B",
   "file": "docs/handbuch/anleitung-bankverbindung.md"
  },
  {
@@ -1752,7 +1791,7 @@
   "href": "/kontakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Keine Oberfläche, um an einem bestehenden Kontakt eine Bankverbindung hinzuzufügen, zu ändern oder zu beenden; nur Portalvorschlag oder Schnittstelle. - Keine Vier-Augen-Freigabe für Bankkonten der Rechtsträger. - contacts:approve in der Vorbelegung nur bei Administratorrollen;",
+  "excerpt": "- Angebundene Bankkonten der Rechtsträger (Zuordnung, Standardkonto) ohne Vier-Augen-Freigabe in der Software (docs/OPENQUESTIONS.md M5-04). - Kein Feld für den Rückfragevermerk an der Bankverbindung selbst (Vermerk nur beim Mandat und bei der Beendigung); Rückfrage bis dahin als",
   "file": "docs/handbuch/anleitung-bankverbindung.md"
  },
  {
@@ -1812,7 +1851,7 @@
   "href": "/objekte",
   "keywords": [],
   "permission": null,
-  "excerpt": "Datensatz Was --- --- Einheit Grundbuchauszug, Kaufvertragsauszug, Erbschein Vertrag (alt) endet automatisch; keine Änderung der offenen Posten Vertrag (neu) Erwerber, Erwerbsart, Stichtage Kontakt Erwerber Legitimation, Mandat, Vollmacht Kontakt Veräußerer bleibt erhalten; nicht",
+  "excerpt": "Datensatz Was --- --- Einheit Grundbuchauszug, Kaufvertragsauszug, Erbschein Vertrag (alt) endet automatisch; keine Änderung der offenen Posten Vertrag (neu) Erwerber, Erwerbsart, Stichtage, übernommene Sollbeträge, Nachweis, Notiz Kontakt Erwerber Legitimation, Mandat, Vollmacht",
   "file": "docs/handbuch/anleitung-eigentuemerwechsel.md"
  },
  {
@@ -1832,7 +1871,7 @@
   "href": "/objekte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- [ ] Nachweis des Eigentumsübergangs abgelegt - [ ] Erwerber angelegt, Dublettenprüfung beachtet - [ ] Eigentümerwechsel mit Eigentumsübergang, Nutzen und Lasten, Erwerbsart erfasst - [ ] Sonderrechtsnachfolge geprüft und gekennzeichnet - [ ] Hausgeld und Zahlungsplan am neuen V",
+  "excerpt": "- [ ] Nachweis des Eigentumsübergangs abgelegt - [ ] Erwerber angelegt, Dublettenprüfung beachtet - [ ] Eigentümerwechsel mit Eigentumsübergang, Nutzen und Lasten, Erwerbsart erfasst - [ ] Sonderrechtsnachfolge geprüft und gekennzeichnet - [ ] Sollbeträge übernommen oder am neuen",
   "file": "docs/handbuch/anleitung-eigentuemerwechsel.md"
  },
  {
@@ -1852,7 +1891,7 @@
   "href": "/objekte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Keine Schaltfläche Eigentümerwechsel in der Oberfläche; nur Schnittstelle. - Sollbeträge (Hausgeld, Rücklage) werden nicht auf den neuen Vertrag übertragen und sind in der Oberfläche nicht direkt erfassbar. - Regel W07 (Adressierung der Abrechnungsspitze, Schuldner) nicht freig",
+  "excerpt": "- Sollbeträge sind am Vertrag in der Oberfläche nicht direkt änderbar; abweichende Beträge nach dem Wechsel über WEG, Vorschüsse übernehmen oder die Schnittstelle erfassen. - Regel W07 (Adressierung der Abrechnungsspitze, Schuldner) nicht freigegeben, P01 offen. - Kein Fristtyp E",
   "file": "docs/handbuch/anleitung-eigentuemerwechsel.md"
  },
  {
@@ -1922,7 +1961,7 @@
   "href": "/vermietung/mieterhoehung",
   "keywords": [],
   "permission": null,
-  "excerpt": "Für Mieterhöhungen gibt es keinen Fristtyp in der Fristenliste. Von Hand anlegen: - Ticket zur Einheit, Titel Mieterhöhung <Einheit, Fälligkeit auf das Ende der Zustimmungsfrist. Die Frist ist rechtlich zu prüfen durch Rechtsanwalt [Platzhalter]; Vorfrist mindestens 7 Tage. - Kal",
+  "excerpt": "Auf der Fallseite, Abschnitt Fristen, Frist anlegen: Fristtyp Mieterhöhung (Auslöser Zugang des Mieterhöhungsschreibens) ist vorbelegt, das Auslösedatum wird aus dem Zugangsdatum übernommen. Fälligkeit aus der Dauer des Fristtyps (Einstellungen, Fristtypen, zu verifizieren) oder ",
   "file": "docs/handbuch/anleitung-mieterhoehung.md"
  },
  {
@@ -1962,7 +2001,7 @@
   "href": "/vermietung/mieterhoehung",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Versand erfassen bis G3 gesperrt; die Schritte Zustimmung und Übernahme sind damit im CRM nicht erreichbar, die neue Miete muss bis dahin im führenden System gepflegt werden. - Zugangsdatum (Grundlage der Fristberechnung) nur über die Schnittstelle erfassbar, nicht in der Oberf",
+  "excerpt": "- Versand erfassen bis G3 gesperrt; die Schritte Zustimmung und Übernahme des Falls sind damit im CRM nicht erreichbar. Die neue Miete lässt sich nach Zustimmung des Mieters von Hand auf der Vertragsseite im Abschnitt Sollbeträge als neuer Stand ab Wirksam ab mit Grund Erhöhung e",
   "file": "docs/handbuch/anleitung-mieterhoehung.md"
  },
  {
@@ -2032,7 +2071,7 @@
   "href": "/vertraege",
   "keywords": [],
   "permission": null,
-  "excerpt": "Datensatz Was --- --- Einheit Kündigung, Übergabeprotokolle (über Objekt und Einheit), Mietvertrag Vertrag alt Vertragsende, Zählerstände zur Beendigung, Kautionsabrechnung Vertrag neu Zahlungsplan, Kaution, Umlagewerte, SEPA-Mandat Kontakt alt und neu Ticket, Bankverbindung, Por",
+  "excerpt": "Datensatz Was --- --- Einheit Kündigung, Übergabeprotokolle (über Objekt und Einheit), Mietvertrag, Zählerstände aus dem Protokoll Vertrag alt Vertragsende, Übergabeprotokoll Rückgabe (Verknüpfung), Zählerstände zur Beendigung nur bei fehlender Übernahme, Kautionsabrechnung Vertr",
   "file": "docs/handbuch/anleitung-mieterwechsel.md"
  },
  {
@@ -2042,7 +2081,7 @@
   "href": "/vertraege",
   "keywords": [],
   "permission": null,
-  "excerpt": "Automatisch: Vertragsende, Kündigung, Auszug, Einzug aus den Vertragsdaten. Zusätzlich von Hand: Ticket Fälligkeit für die Kautionsabrechnung; die Frist dafür ist rechtlich zu prüfen durch Rechtsanwalt [Platzhalter]. Vorfrist mindestens 7 Tage.",
+  "excerpt": "Automatisch: Vertragsende, Kündigung, Auszug, Einzug aus den Vertragsdaten. Zusätzlich auf der Vertragsseite, Abschnitt Fristen, Frist anlegen: Fristtyp Kautionsabrechnung (Auslöser Übergabe erfolgt), Auslösedatum der Rückgabe, verantwortliche Person. Die Fälligkeit wird aus der ",
   "file": "docs/handbuch/anleitung-mieterwechsel.md"
  },
  {
@@ -2062,7 +2101,7 @@
   "href": "/vertraege",
   "keywords": [],
   "permission": null,
-  "excerpt": "- [ ] Kündigung abgelegt, Frist geprüft - [ ] Vertrag beendet mit Vertragsende, Kündigungsdatum, Grund, Auszug - [ ] Zählerstände zur Beendigung erfasst - [ ] Rückgabeprotokoll abgeschlossen und abgelegt - [ ] Kautionsabrechnung als Entwurf und PDF abgelegt - [ ] Messdienstleiste",
+  "excerpt": "- [ ] Kündigung abgelegt, Frist geprüft - [ ] Vertrag beendet mit Vertragsende, Kündigungsdatum, Grund, Auszug - [ ] Rückgabeprotokoll mit dem Vertrag verknüpft, abgeschlossen und abgelegt - [ ] Zählerstände aus dem Protokoll übernommen (übersprungene Zeilen geprüft) - [ ] Kautio",
   "file": "docs/handbuch/anleitung-mieterwechsel.md"
  },
  {
@@ -2072,7 +2111,7 @@
   "href": "/vertraege",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Mieter im bestehenden Vertrag getauscht: Vertragspartner ist fest, ein neuer Mieter ist ein neuer Vertrag. - Zählerstände nur im Protokoll erfasst. - Kautionsabrechnung vor dem Vertragsende datiert: wird abgelehnt. - Einbehalte über dem Guthaben: wird abgelehnt, Nachforderung i",
+  "excerpt": "- Mieter im bestehenden Vertrag getauscht: Vertragspartner ist fest, ein neuer Mieter ist ein neuer Vertrag. - Zählerstände nur im Protokoll erfasst und nicht übernommen: Block Zählerstände übernehmen im Abschnitt Zähler nutzen; übersprungene Zeilen (kein Zähler, mehrdeutige Numm",
   "file": "docs/handbuch/anleitung-mieterwechsel.md"
  },
  {
@@ -2082,7 +2121,7 @@
   "href": "/vertraege",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Übergabeprotokoll ohne Verknüpfung zum Vertrag in der Oberfläche. - Zählerstände aus dem Protokoll werden nicht in die Zählerstände der Einheit übernommen. - Keine Prüfung der Kündigungsfrist, kein Fristtyp für die Kautionsabrechnung. - Sollbeträge (Miete, Vorauszahlungen) am V",
+  "excerpt": "- Übergabeprotokoll und Vertrag (28.09.2026 geschlossen): Vertragsauswahl beim Anlegen und Block Verknüpfter Vertrag im Abschnitt Objekt. - Zählerstände aus dem Protokoll (28.09.2026 geschlossen): Block Zählerstände übernehmen im Abschnitt Zähler. Offen bleibt die Zuordnung eines",
   "file": "docs/handbuch/anleitung-mieterwechsel.md"
  },
  {
@@ -2132,7 +2171,7 @@
   "href": "/objektakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "1. Verwaltung, DMS, Suche im Archiv (Seite Dokumentsuche), Abschnitt Dokument hochladen. 2. Datei wählen, Objekt wählen, Einheit wählen (bei Mieter- oder Eigentümerunterlagen immer), sonst ganzes Objekt. 3. Titel nach Erfassungsstandards, zum Beispiel WE 05, Mietvertrag, Müller, ",
+  "excerpt": "1. Verwaltung, DMS, Suche im Archiv (Seite Dokumentsuche), Abschnitt Dokument hochladen. 2. Datei wählen, Objekt wählen, Einheit wählen (bei Mieter- oder Eigentümerunterlagen immer), sonst ganzes Objekt. 3. Kategorie wählen (zum Beispiel Mieterakte); ohne Auswahl ergibt sie sich ",
   "file": "docs/handbuch/anleitung-objektordner.md"
  },
  {
@@ -2172,7 +2211,7 @@
   "href": "/objektakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- [ ] Angabe als Stammdatum eingetragen, Dokument nur als Nachweis - [ ] Objekt und bei Personenunterlagen Einheit gewählt - [ ] Titel nach Erfassungsstandards - [ ] Ordner in Drive geprüft (04 und 05 insbesondere) - [ ] Sichtbarkeit im Portal bewusst gesetzt - [ ] Keine Dublette",
+  "excerpt": "- [ ] Angabe als Stammdatum eingetragen, Dokument nur als Nachweis - [ ] Objekt und bei Personenunterlagen Einheit, Kategorie Mieterakte oder Eigentümerakte, Vertrag und Kontakt gewählt - [ ] Titel nach Erfassungsstandards - [ ] Ordner in Drive geprüft (04 und 05 insbesondere) - ",
   "file": "docs/handbuch/anleitung-objektordner.md"
  },
  {
@@ -2182,7 +2221,7 @@
   "href": "/objektakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Upload ohne Einheit: Mieterunterlage landet nicht in der Mieterakte. - Mietvertrag als Kategorie Vertrag gespiegelt und in 02Stammakte vergessen. - Datei direkt in Drive abgelegt: im CRM nicht verknüpft; über DMS, Objekt, Als CRM-Dokumente verknüpfen nachholen. - Personalauswei",
+  "excerpt": "- Upload ohne Einheit: Mieterunterlage landet nicht in der Mieterakte. - Mietvertrag mit Kategorie Vertrag statt Mieterakte hochgeladen: landet über die Spiegelung in 02Stammakte; Kategorie auf der Dokumentseite ändern. - Datei direkt in Drive abgelegt: im CRM nicht verknüpft; üb",
   "file": "docs/handbuch/anleitung-objektordner.md"
  },
  {
@@ -2192,7 +2231,7 @@
   "href": "/objektakte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Keine Standardkategorie für 04Mieterakte und 05Eigentümerakte; Zuordnung hängt an der Ablage über die Objektübernahme. - Die elf Unterordner der Mieter- und Eigentümerakte sind im CRM nicht beschrieben. - Kein Upload mit direkter Verknüpfung zu Vertrag oder Kontakt in der Dokum",
+  "excerpt": "- Standardkategorien Mieterakte (04) und Eigentümerakte (05) (28.09.2026 geschlossen), Upload mit Kategorie, Vertrag und Kontakt (28.09.2026 geschlossen), Ordnerstruktur im CRM beschrieben (28.09.2026 geschlossen). - Die Bezeichnungen der elf Unterordner erscheinen im CRM erst na",
   "file": "docs/handbuch/anleitung-objektordner.md"
  },
  {
@@ -2242,7 +2281,7 @@
   "href": "/objekte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Neuanlage nur über den Import (Objekte und Einheiten aus der Immoware24-Objektliste) oder die Schnittstelle. Die Oberfläche hat dafür kein Formular. - Einheit ändern: Objektseite, Tabelle Einheiten, Klick auf die Einheit. Im Abschnitt Stammdaten der Einheit Nummer, Bezeichnung,",
+  "excerpt": "Gebäude anlegen Objektseite, Abschnitt Gebäude, Schaltfläche Gebäude anlegen: Bezeichnung (Pflicht), Straße, Hausnummer, Adresszusatz, Baujahr, Geschosse, Anlegen. Steht die Hausnummer im Feld Straße, erscheint der Hinweis nach Erfassungsstandard ES-03; er sperrt nicht. Flächen, ",
   "file": "docs/handbuch/anleitung-stammdaten.md"
  },
  {
@@ -2302,7 +2341,7 @@
   "href": "/objekte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Gebäude, Einheiten und Schlüsselwerte ohne Anlageformular. - Objekteigentümer (Mietverwaltung), Ansprechpartner, Zähler, Wartungen und Zusatzfelder nur über Import oder Schnittstelle pflegbar. - Neue Bankverbindung an einem bestehenden Kontakt nicht in der Oberfläche erfassbar ",
+  "excerpt": "- Umlageschlüssel: Kürzel, Bezeichnung, Maßeinheit und Art bestehender Schlüssel nur über die Schnittstelle änderbar (PATCH /properties/{id}/allocation-keys/{kid}); in der Oberfläche nur die Sollsumme. Löschen von Schlüsseln und Werten nicht vorgesehen. - Zählerstände (Ablesungen",
   "file": "docs/handbuch/anleitung-stammdaten.md"
  },
  {
@@ -2412,7 +2451,7 @@
   "href": "/objekte",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Keine Oberfläche zum Anlegen von Gebäuden, Einheiten und Umlageschlüsselwerten; nur Import oder Schnittstelle. - Kein Fristtyp und keine Checkliste Verwalterwechsel; Ersatz über Ticket und Kalender. - Ansprechpartner des Objekts (Beirat) nicht in der Oberfläche pflegbar. - Pfli",
+  "excerpt": "- Keine Oberfläche zum Anlegen von Gebäuden, Einheiten und Umlageschlüsselwerten; nur Import oder Schnittstelle. - Dauer des Fristtyps Verwalterwechsel noch nicht hinterlegt (WS-01-Q1); bis dahin Fälligkeit je Frist von Hand eintragen. - Ansprechpartner des Objekts (Beirat) nicht",
   "file": "docs/handbuch/anleitung-verwalterwechsel.md"
  },
  {
@@ -2792,7 +2831,7 @@
   "href": "/bank",
   "keywords": [],
   "permission": null,
-  "excerpt": "Menü Bank, Bankregeln. Die Seite zeigt oben den Automatikschalter des Mandanten nur lesend (Standard ausgeschaltet); das Einschalten setzt die offene Betreiberentscheidung zur Automatik vor G1 (ADR 0013) und den Automatiklauf mit Nachkontrolle voraus (BK2-03). Regel vorschlagen: ",
+  "excerpt": "Menü Bank, Bankregeln. Die Seite zeigt oben den Automatikschalter des Mandanten nur lesend (Standard ausgeschaltet); das Einschalten setzt die offene Betreiberentscheidung zur Automatik vor G1 (ADR 0014) und den Automatiklauf mit Nachkontrolle voraus (BK2-03). Regel vorschlagen: ",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -2833,6 +2872,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Nach Verbunden löst Umsätze abrufen einen Hintergrundlauf aus (Abruf eingereiht). Ein automatischer, zeitgesteuerter Abruf findet nicht statt; jeder Abruf muss ausgelöst werden.",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zuordnung",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bankverbindung dauerhaft mit einem Buchungskreis oder Objekt verknüpfen (Zuordnen, ID des internen Kontos). Je Umsatz zeigt die Spalte Vorschläge mögliche offene Posten; Zuordnen und buchen verlangt eine Bestätigung des Betrags. Ohne passenden offenen Posten lässt sich der Umsatz",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Entscheidungsprotokoll und Ablehnen (lernender Buchhalter)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Mit dem Mandantenschalter Lernender Buchhalter (Standard aus, Einstellungen des Mandanten, nur mit Freigaberecht und Recht zur Mandantenkonfiguration, mit Grund) merkt sich die Plattform je Bankumsatz, welche Vorschläge angezeigt wurden und was die Person daraus gemacht hat: unve",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -2993,6 +3052,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Rechnung freigeben verlangt eine zweite Person, die die geprüfte Version bestätigt. Buchen legt die Buchung endgültig fest (Buchen? Korrektur nur per Storno); nach dem Buchen ist eine Änderung nur noch über eine Stornierung und gegebenenfalls eine neue Buchung möglich, nie durch ",
+  "file": "docs/handbuch/belegeingang.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kontovorschläge aus dem Verlauf",
+  "source": "Handbuch: Belegeingang",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Mit dem Mandantenschalter Lernender Buchhalter zeigt die Prüfansicht nach Wahl von Buchungskreis und Aussteller je Rechnungsposition bis zu drei Sachkonten aus dem Verlauf: Konten, die auf bestätigten Rechnungen desselben Ausstellers in diesem Buchungskreis standen oder die eine ",
   "file": "docs/handbuch/belegeingang.md"
  },
  {
@@ -3473,6 +3542,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Einstellungen, Kautionszinsen: Zinssatz je Kalenderjahr in Prozent (bis fünf Nachkommastellen, Komma oder Punkt) mit Vermerk für Quelle und Datum. Lesen mit dem Recht Verträge lesen, Pflege mit dem Recht Mandanteneinstellungen ändern. Ein bestehendes Jahr wird beim Speichern über",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Fristtypen",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Einstellungen, Fristtypen (Lesen mit tenantsettings:read, Pflege mit tenantsettings:update). Je Fristtyp: Bezeichnung, Code, Auslöser (Zugang der Kündigung, Übergabe erfolgt, Zugang des Mieterhöhungsschreibens, Verwaltungsbeginn, Verwaltungsende, Vertragsende oder Datum wird eing",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -4237,6 +4316,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Erledigt aus Gmail",
+  "source": "Handbuch: Mail",
+  "href": "/mail",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Seit 1.43.0 liest die Plattform, was im Gmail Postfach mit einer Mail geschieht: archiviert, in den Papierkorb verschoben, als Spam eingestuft, endgültig gelöscht oder wieder in den Posteingang gelegt. Je Postfachkopie steht das in der Maildetailansicht (wer, wann, welches Postfa",
+  "file": "docs/handbuch/mail.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Telefonassistenz (Hallo Heidi)",
   "source": "Handbuch: Mail",
   "href": "/mail",
@@ -4542,7 +4631,7 @@
   "href": "/objekte",
   "keywords": [],
   "permission": null,
-  "excerpt": "Über die Schnittstelle stehen je Objekt außerdem bereit: Zähler mit Zählerständen, Dienstleisterverhältnisse, Wartungen und Prüfpflichten mit Vorlaufzeit, ein Katalog für Ausstattungsmerkmale und frei definierbare Zusatzfelder. In der Oberfläche sichtbar sind davon die offenen Wa",
+  "excerpt": "Zähler, Wartungen und Prüfpflichten sowie Zusatzfelder werden seit dem 28.09.2026 auf der Objektseite gepflegt (Handlungsanweisung Stammdaten, Abschnitte Zähler, Wartungen und Zusatzfelder). Über die Schnittstelle stehen je Objekt außerdem bereit: Zählerstände (Ablesungen), Diens",
   "file": "docs/handbuch/objekte-einheiten.md"
  },
  {
@@ -5162,7 +5251,7 @@
   "href": "/vertraege",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Vertragsversionen: Änderungen werden als neue Version mit Gültigkeitsbeginn erfasst; die Historie bleibt lesbar. - Vertrag beenden: Enddatum, Datum der Kündigungserklärung und Grund. Das Ende erscheint im Kalender und auf der Startseite. - Eigentümerwechsel: Der neue Eigentümer",
+  "excerpt": "- Vertragsversionen: Änderungen werden als neue Version mit Gültigkeitsbeginn erfasst; die Historie bleibt lesbar. - Vertrag beenden: Enddatum, Datum der Kündigungserklärung und Grund. Das Ende erscheint im Kalender und auf der Startseite. - Eigentümerwechsel: Abschnitt Eigentüme",
   "file": "docs/handbuch/vertraege.md"
  },
  {
@@ -5172,7 +5261,7 @@
   "href": "/vertraege",
   "keywords": [],
   "permission": null,
-  "excerpt": "Je Vertrag werden Zahlungsarten mit Netto, Brutto und Gültigkeitsbeginn erfasst, zum Beispiel Miete 500,00 EUR ab 01.01.2024 oder Hausgeld und Erhaltungsrücklage aus dem beschlossenen Wirtschaftsplan (Kapitel WEG, Vorschüsse übernehmen). Die Zahlungshistorie zeigt alle Stände mit",
+  "excerpt": "Je Vertrag werden Zahlungsarten mit Netto, Umsatzsteuer, Brutto und Gültigkeitszeitraum erfasst, zum Beispiel Miete 500,00 EUR ab 01.01.2024, Betriebskosten- und Heizkostenvorauszahlung, Hausgeld und Erhaltungsrücklage (aus dem beschlossenen Wirtschaftsplan, Kapitel WEG, Vorschüs",
   "file": "docs/handbuch/vertraege.md"
  },
  {
