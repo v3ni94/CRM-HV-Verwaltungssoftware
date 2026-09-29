@@ -600,7 +600,7 @@ async def get_conversation(
         )
 
 
-# Prompt version of tasks started outside the chat (rule AI-LOOKUP-01: v2 of answer_question
+# Prompt version of tasks started outside the chat (rule AI-LOOKUP-01: v3 of answer_question
 # is the chat persona with platform hits and chat actions; other callers keep v1).
 NON_CHAT_PROMPT: dict[AiTask, str] = {AiTask.ANSWER_QUESTION: "v1"}
 
@@ -746,6 +746,9 @@ async def send_message(
         if task is AiTask.ANSWER_QUESTION and body.context_entity_type:
             context["entity_type"] = body.context_entity_type
             context["entity_id"] = str(body.context_entity_id) if body.context_entity_id else None
+        if task is AiTask.ANSWER_QUESTION and body.area:
+            context["area"] = body.area
+            context["sub_area"] = body.sub_area
         ref: dict[str, Any] = {
             "instruction": body.content,
             "document_ids": [str(d) for d in body.document_ids],
@@ -761,7 +764,14 @@ async def send_message(
                 if body.context_entity_type and body.context_entity_id
                 else None
             )
-            found = await lookup.run(session, principal.permissions, body.content, focus)
+            found = await lookup.run(
+                session,
+                principal.permissions,
+                body.content,
+                focus,
+                area=body.area,
+                sub_area=body.sub_area,
+            )
             ref["lookup"] = found
             # Without documents:read the question is answered without document search.
             ref["rag"] = rag
@@ -1140,6 +1150,51 @@ async def _apply_chat_action(
                 payload={"note_id": str(note.id), "proposal_id": str(proposal.id)},
             )
             summary |= {"contact_id": str(contact_id), "note_id": str(note.id)}
+        elif kind in ("calendar_create", "deadline_create"):
+            # Internal entry of the confirmer's own calendar (``POST /workspace/calendar``,
+            # target internal): never a Google event, never an invitation (rule M23-05).
+            from mhvp.workspace.models import CalendarEntry
+
+            when = edit.entry_date or date.fromisoformat(str(data["date"]))
+            time_ = edit.entry_time or data.get("time")
+            title = (edit.title or str(data["title"])).strip()
+            modified = bool(
+                when.isoformat() != data["date"]
+                or (time_ or None) != data.get("time")
+                or title != data["title"]
+            )
+            notes = [p for p in (data.get("description"), f"Uhrzeit {time_}" if time_ else "") if p]
+            names = [str(x.get("label") or "") for x in data.get("participants") or []]
+            if names:
+                notes.append("Teilnehmer (nicht eingeladen): " + ", ".join(n for n in names if n))
+            notes.append(f"Aus dem KI-Assistenten, Vorschlag {proposal.id}")
+            entry = CalendarEntry(
+                tenant_id=principal.tenant_id,
+                owner_user_id=principal.user_id,
+                created_by=principal.user_id,
+                title=title,
+                starts_on=when,
+                ends_on=None,
+                all_day=not time_,
+                shared=False,
+                notes="\n".join(notes)[:4000],
+                property_id=chat_actions.uuid_or_none(data.get("property_id")),
+                source_type="manual",
+                category="appointment",
+                reminders=list(data.get("reminders") or []),
+            )
+            session.add(entry)
+            await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="calendar_entry.created",
+                entity_type="calendar_entry",
+                entity_id=entry.id,
+                actor_user_id=principal.user_id,
+                payload={"proposal_id": str(proposal.id), "kind": kind},
+            )
+            summary |= {"calendar_entry_id": str(entry.id), "date": when.isoformat()}
         else:
             modified = bool(
                 (edit.title and edit.title != data.get("title"))

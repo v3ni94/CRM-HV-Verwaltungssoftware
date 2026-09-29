@@ -20883,6 +20883,10 @@ export interface components {
         ChatActionApplyIn: {
             /** Description */
             description?: string | null;
+            /** Entry Date */
+            entry_date?: string | null;
+            /** Entry Time */
+            entry_time?: string | null;
             /** Note */
             note?: string | null;
             /** Title */
@@ -20912,7 +20916,7 @@ export interface components {
              * Type
              * @enum {string}
              */
-            type: "contact" | "property" | "unit" | "contract" | "ticket" | "page" | "handbook";
+            type: "contact" | "property" | "unit" | "contract" | "ticket" | "page" | "handbook" | "calendar_entry" | "deadline" | "document" | "resolution" | "meeting" | "rent_increase" | "work_order" | "bank_transaction" | "open_items";
         };
         /** CheckOut */
         CheckOut: {
@@ -28426,12 +28430,14 @@ export interface components {
         };
         /** MessageIn */
         MessageIn: {
+            /** Area */
+            area?: string | null;
             /** Content */
             content: string;
             /** Context Entity Id */
             context_entity_id?: string | null;
             /** Context Entity Type */
-            context_entity_type?: ("contact" | "property" | "hoa" | "unit" | "contract" | "ticket" | "handover" | "mail") | null;
+            context_entity_type?: ("contact" | "property" | "hoa" | "unit" | "contract" | "ticket" | "handover" | "mail" | "document" | "meeting" | "rent_increase" | "work_order" | "calendar_entry" | "invoice" | "order" | "ledger" | "statement" | "dunning_run" | "import_run" | "settings") | null;
             /** Document Ids */
             document_ids?: string[];
             /**
@@ -28439,6 +28445,8 @@ export interface components {
              * @description Seitenname im CRM
              */
             page?: string | null;
+            /** Sub Area */
+            sub_area?: string | null;
             /**
              * Task
              * @enum {string}

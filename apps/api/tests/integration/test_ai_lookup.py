@@ -346,7 +346,7 @@ def test_with_provider_model_answers_from_masked_hits(
     assert "Gefunden (1)" in answer["content"]
     assert _hrefs(answer["links"]) == {f"/kontakte/{records['contact']}"}
     assert fake.calls[-1]["system"].startswith("Du bist der Assistent im CRM")
-    assert run["prompt_version"] == "v2"
+    assert run["prompt_version"] == "v3"
 
 
 def _answer(text: str, action: dict[str, Any] | None = None) -> dict[str, Any]:

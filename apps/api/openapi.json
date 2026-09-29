@@ -7865,6 +7865,30 @@
             ],
             "title": "Description"
           },
+          "entry_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Date"
+          },
+          "entry_time": {
+            "anyOf": [
+              {
+                "pattern": "^([01]\\d|2[0-3]):[0-5]\\d$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Entry Time"
+          },
           "note": {
             "anyOf": [
               {
@@ -7922,7 +7946,16 @@
               "contract",
               "ticket",
               "page",
-              "handbook"
+              "handbook",
+              "calendar_entry",
+              "deadline",
+              "document",
+              "resolution",
+              "meeting",
+              "rent_increase",
+              "work_order",
+              "bank_transaction",
+              "open_items"
             ],
             "title": "Type",
             "type": "string"
@@ -31523,6 +31556,19 @@
       "MessageIn": {
         "additionalProperties": false,
         "properties": {
+          "area": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z][a-zA-Z]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Area"
+          },
           "content": {
             "maxLength": 10000,
             "minLength": 1,
@@ -31552,7 +31598,19 @@
                   "contract",
                   "ticket",
                   "handover",
-                  "mail"
+                  "mail",
+                  "document",
+                  "meeting",
+                  "rent_increase",
+                  "work_order",
+                  "calendar_entry",
+                  "invoice",
+                  "order",
+                  "ledger",
+                  "statement",
+                  "dunning_run",
+                  "import_run",
+                  "settings"
                 ],
                 "type": "string"
               },
@@ -31583,6 +31641,19 @@
             ],
             "description": "Seitenname im CRM",
             "title": "Page"
+          },
+          "sub_area": {
+            "anyOf": [
+              {
+                "maxLength": 40,
+                "pattern": "^[a-z][a-zA-Z0-9]*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sub Area"
           },
           "task": {
             "enum": [

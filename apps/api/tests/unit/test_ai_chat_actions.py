@@ -199,3 +199,85 @@ def test_rejected_chat_action_example_is_stored_masked() -> None:
     ]
     assert masked["note"] == "IBAN [IBAN]"
     assert proposed["changes"][0]["new"] == "0221 9998877"  # the proposal itself is untouched
+
+
+def test_calendar_entry_needs_intent_and_a_plausible_date() -> None:
+    """A calendar entry is proposed only when the user asks for it and the model's date is
+    valid and near; participants are contact hits, the property a property hit."""
+    from datetime import timedelta
+
+    from mhvp.workspace.services import local_today
+
+    today = local_today()
+    action = {
+        "kind": "calendar_create",
+        "refs": [CONTACT, PROPERTY],
+        "title": "Übergabe mit Kowalski",
+        "date": (today + timedelta(days=3)).isoformat(),
+        "time": "10:00",
+        "appointment_kind": "uebergabe",
+        "reason": "Nutzer bittet um den Termin",
+    }
+    payload, note = chat_actions.build(
+        _run("Trag bitte den Übergabetermin mit Kowalski ein", action)
+    )
+    assert note is None
+    assert payload == {
+        "kind": "calendar_create",
+        "title": "Übergabe mit Kowalski",
+        "date": (today + timedelta(days=3)).isoformat(),
+        "time": "10:00",
+        "appointment_kind": "uebergabe",
+        "participants": [{"contact_id": CONTACT, "label": "Jan Kowalski"}],
+        "property_id": PROPERTY,
+        "property_label": "893 Lindenhof",
+        "description": None,
+        "reminders": [],
+        "reason": "Nutzer bittet um den Termin",
+    }
+    # A question is no request for an entry (an injected action is dropped).
+    assert chat_actions.build(_run("Welche Termine habe ich morgen?", action)) == (None, None)
+    # Date missing, unparsable or far away: the user is asked for it.
+    for bad in (None, "morgen", "2019-01-01", (today + timedelta(days=3000)).isoformat()):
+        payload, note = chat_actions.build(_run("Trag den Termin ein", {**action, "date": bad}))
+        assert payload is None
+        assert note == "Bitte nennen Sie das Datum des Termins (TT.MM.JJJJ) in Ihrer Nachricht."
+    # Unknown time format falls back to all day; unknown kind to "sonstiges".
+    payload, _ = chat_actions.build(
+        _run("Trag den Termin ein", {**action, "time": "zehn Uhr", "appointment_kind": "x"})
+    )
+    assert payload is not None
+    assert payload["time"] is None
+    assert payload["appointment_kind"] == "sonstiges"
+    # Bank words in the title are refused like everywhere else.
+    assert chat_actions.build(
+        _run("Trag den Termin ein: IBAN Abgleich", {**action, "title": "IBAN prüfen"})
+    ) == (None, chat_actions.BANK_REFUSAL)
+
+
+def test_deadline_entry_carries_reminders_and_no_time() -> None:
+    from datetime import timedelta
+
+    from mhvp.workspace.services import local_today
+
+    when = (local_today() + timedelta(days=10)).isoformat()
+    action = {
+        "kind": "deadline_create",
+        "refs": [],
+        "title": "Frist Widerspruch",
+        "date": when,
+        "time": "09:00",
+    }
+    payload, note = chat_actions.build(_run("Trag die Frist Widerspruch ein", action))
+    assert note is None
+    assert payload is not None
+    assert payload["kind"] == "deadline_create"
+    assert payload["reminders"] == ["1d", "7d"]
+    assert payload["time"] is None
+    assert payload["appointment_kind"] is None
+    assert chat_actions.build(_run("Trag die Frist ein", {**action, "title": ""})) == (
+        None,
+        "Für die Frist fehlt eine Bezeichnung.",
+    )
+    assert chat_actions.build(_run("Wann läuft die Frist ab?", action)) == (None, None)
+    assert chat_actions.PERMISSIONS["deadline_create"] == "ai:create"

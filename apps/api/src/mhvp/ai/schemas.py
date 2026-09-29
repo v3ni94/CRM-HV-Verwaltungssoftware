@@ -139,7 +139,24 @@ class ChatLink(BaseModel):
     """Record or page link of a platform lookup answer (mhvp.ai.lookup, rule AI-LOOKUP-01).
     Produced by the platform from permission checked queries, never by the model."""
 
-    type: Literal["contact", "property", "unit", "contract", "ticket", "page", "handbook"]
+    type: Literal[
+        "contact",
+        "property",
+        "unit",
+        "contract",
+        "ticket",
+        "page",
+        "handbook",
+        "calendar_entry",
+        "deadline",
+        "document",
+        "resolution",
+        "meeting",
+        "rent_increase",
+        "work_order",
+        "bank_transaction",
+        "open_items",
+    ]
     id: str
     label: str
     href: str = Field(description="CRM path, e.g. /kontakte/{id}")
@@ -179,11 +196,36 @@ class MessageIn(_In):
     # Page context of the CRM chat bubble (answer_question): the record open on the page, so
     # the lookup starts from it and the answer stays on it (rule AI-LOOKUP-01).
     context_entity_type: (
-        Literal["contact", "property", "hoa", "unit", "contract", "ticket", "handover", "mail"]
+        Literal[
+            "contact",
+            "property",
+            "hoa",
+            "unit",
+            "contract",
+            "ticket",
+            "handover",
+            "mail",
+            "document",
+            "meeting",
+            "rent_increase",
+            "work_order",
+            "calendar_entry",
+            "invoice",
+            "order",
+            "ledger",
+            "statement",
+            "dunning_run",
+            "import_run",
+            "settings",
+        ]
         | None
     ) = None
     context_entity_id: uuid.UUID | None = None
     page: str | None = Field(default=None, max_length=200, description="Seitenname im CRM")
+    # Menu item and sub page open in the CRM (chat-suggestions.ts): select the area tools of
+    # the lookup (``mhvp.ai.lookup_tools.AREA_MAP``) and reach the model as context.
+    area: str | None = Field(default=None, max_length=40, pattern=r"^[a-z][a-zA-Z]*$")
+    sub_area: str | None = Field(default=None, max_length=40, pattern=r"^[a-z][a-zA-Z0-9]*$")
 
 
 class RunOut(_Out):
@@ -297,6 +339,9 @@ class ChatActionApplyIn(_In):
     note: str | None = Field(default=None, max_length=20_000)
     title: str | None = Field(default=None, max_length=300)
     description: str | None = Field(default=None, max_length=20_000)
+    # calendar_create and deadline_create: the confirmer may correct date and time.
+    entry_date: date | None = None
+    entry_time: str | None = Field(default=None, pattern=r"^([01]\d|2[0-3]):[0-5]\d$")
 
 
 class ApplyIn(_In):

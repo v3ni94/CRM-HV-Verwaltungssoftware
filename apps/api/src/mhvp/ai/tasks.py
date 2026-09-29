@@ -209,7 +209,9 @@ class ChatAction(_Out):
     """Vorgeschlagene Änderung aus dem Chat; die Plattform prüft sie und legt nur einen
     Vorschlag an, den ein Mensch bestätigt (nie Bankverbindungen)."""
 
-    kind: Literal["contact_change", "contact_note", "ticket_create"]
+    kind: Literal[
+        "contact_change", "contact_note", "ticket_create", "calendar_create", "deadline_create"
+    ]
     refs: list[str] = Field(
         description="IDs der betroffenen Treffer der Plattformsuche (Kontakt, Objekt, Einheit)"
     )
@@ -217,6 +219,13 @@ class ChatAction(_Out):
     note: str | None = None
     title: str | None = None
     description: str | None = None
+    # calendar_create und deadline_create: Datum und Uhrzeit aus der Nachricht des Nutzers.
+    date: str | None = Field(default=None, description="Datum JJJJ-MM-TT aus der Nachricht")
+    time: str | None = Field(default=None, description="Uhrzeit HH:MM, sonst null (ganztägig)")
+    appointment_kind: str | None = Field(
+        default=None,
+        description="Terminart: uebergabe, besichtigung, telefonat, vor_ort, sonstiges",
+    )
     reason: str = Field(default="", description="kurz, warum diese Änderung vorgeschlagen wird")
 
 

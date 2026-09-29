@@ -20,13 +20,20 @@ proposal through ``POST /ai/proposals/{id}/apply``:
   only mentions them or contains an IBAN; they stay with the four eyes release in the contact
   file,
 - a new ticket and a contact note carry the text the model drafted; the human sees and confirms
-  it together with the model's reason.
+  it together with the model's reason,
+- a calendar entry or a deadline entry (``calendar_create``, ``deadline_create``) becomes an
+  internal entry of the confirmer's own CRM calendar (``workspace.CalendarEntry``, target
+  internal): date and time must be valid and in a plausible window, participants are contact
+  hits of this run and are only noted, never invited (no Google event, no mail, rule M23-05);
+  a deadline entry carries reminders and appears in the deadline list as an appointment. It is
+  orientation only, never a legal deadline calculation (M1-09).
 """
 
 from __future__ import annotations
 
 import re
 import uuid
+from datetime import date, timedelta
 from typing import Any
 
 from mhvp.ai import lookup
@@ -54,11 +61,31 @@ CHANGE_INTENT = re.compile(
 )
 NOTE_INTENT = re.compile(r"notiz|notier|vermerk|festhalten|halte .*fest|hinterleg", re.I)
 TICKET_INTENT = re.compile(r"ticket|vorgang|aufgabe|anleg|erstell|\bleg(e|en|t)?\b.*\ban\b", re.I)
+# The user asks for a calendar or deadline entry: a time word plus a creating verb, or the
+# words "Termin" / "Frist" with "eintragen", "anlegen", "vormerken", "einplanen", "notieren".
+CALENDAR_INTENT = re.compile(
+    r"(termin|besichtigung|übergabe|telefonat|ortstermin).{0,160}?"
+    r"(eintrag|anleg|erstell|vormerk|einplan|notier|block|reservier|vereinbar)"
+    r"|\b(trag|leg|plan|merk).{0,160}?(termin|besichtigung|übergabe).{0,160}?\b(ein|an|vor)\b",
+    re.I | re.S,
+)
+DEADLINE_INTENT = re.compile(
+    r"(frist|wiedervorlage|erinnerung).{0,160}?(eintrag|anleg|erstell|vormerk|notier|setz)"
+    r"|\b(trag|leg|merk|setz).{0,160}?(frist|wiedervorlage|erinnerung).{0,160}?\b(ein|an|vor)\b",
+    re.I | re.S,
+)
 INTENT = {
     "contact_change": CHANGE_INTENT,
     "contact_note": NOTE_INTENT,
     "ticket_create": TICKET_INTENT,
+    "calendar_create": CALENDAR_INTENT,
+    "deadline_create": DEADLINE_INTENT,
 }
+APPOINTMENT_KINDS = ("uebergabe", "besichtigung", "telefonat", "vor_ort", "sonstiges")
+DEADLINE_REMINDERS = ["1d", "7d"]  # reminder codes of ``workspace.jobs.REMINDER_OFFSET_DAYS``
+PAST_DAYS = 30  # a date further back than this is refused (typo in the model output)
+FUTURE_DAYS = 5 * 365
+_TIME = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
 FIELD_LABELS = {
     "salutation": "die Anrede",
     "title": "den Titel",
@@ -74,6 +101,10 @@ PERMISSIONS = {
     "contact_change": "contacts:update",
     "contact_note": "contacts:update",
     "ticket_create": "tickets:create",
+    # Own calendar entries need membership only (``POST /workspace/calendar``); ``ai:create``
+    # is what every chat caller holds.
+    "calendar_create": "ai:create",
+    "deadline_create": "ai:create",
 }
 
 
@@ -102,6 +133,67 @@ def mentions_bank(*texts: str | None) -> bool:
 def _stated(value: str, instruction: str) -> bool:
     """The new value appears in the user's message (case and whitespace insensitive)."""
     return lookup.flat(value).lower() in lookup.flat(instruction).lower()
+
+
+def plausible_date(value: object, today: date) -> date | None:
+    """ISO date of the model output inside the window the platform accepts; the human sees and
+    may correct it before confirming."""
+    try:
+        parsed = date.fromisoformat(str(value or "")[:10])
+    except ValueError:
+        return None
+    if parsed < today - timedelta(days=PAST_DAYS) or parsed > today + timedelta(days=FUTURE_DAYS):
+        return None
+    return parsed
+
+
+def _entry(
+    run: AiTaskRun, action: dict[str, Any], found: dict[str, Any] | None, deadline: bool
+) -> tuple[dict[str, Any] | None, str | None]:
+    """Payload of a calendar or deadline entry: title, date, optional time, participants
+    (contact hits, noted only), property hit; nothing is written here."""
+    from mhvp.workspace.services import local_today
+
+    title = str(action.get("title") or "").strip()
+    if not title:
+        return None, (
+            "Für die Frist fehlt eine Bezeichnung."
+            if deadline
+            else "Für den Termin fehlt eine Bezeichnung."
+        )
+    when = plausible_date(action.get("date"), local_today())
+    if when is None:
+        return None, (
+            "Bitte nennen Sie das Datum der Frist (TT.MM.JJJJ) in Ihrer Nachricht."
+            if deadline
+            else "Bitte nennen Sie das Datum des Termins (TT.MM.JJJJ) in Ihrer Nachricht."
+        )
+    time_ = str(action.get("time") or "").strip() or None
+    if time_ is not None and not _TIME.match(time_):
+        time_ = None
+    refs = [str(r) for r in action.get("refs") or []]
+    participants = [
+        {"contact_id": h["id"], "label": h["label"]}
+        for r in refs
+        if (h := _hit(found, r, "contact")) is not None
+    ][:10]
+    prop = _hits(found, refs, "property")
+    kind = str(action.get("appointment_kind") or "sonstiges")
+    if kind not in APPOINTMENT_KINDS:
+        kind = "sonstiges"
+    return {
+        "kind": "deadline_create" if deadline else "calendar_create",
+        "title": title[:300],
+        "date": when.isoformat(),
+        "time": None if deadline else time_,
+        "appointment_kind": None if deadline else kind,
+        "participants": participants,
+        "property_id": prop["id"] if prop else None,
+        "property_label": prop["label"] if prop else None,
+        "description": str(action.get("description") or "").strip()[:4000] or None,
+        "reminders": DEADLINE_REMINDERS if deadline else [],
+        "reason": str(action.get("reason") or "")[:500],
+    }, None
 
 
 def _dropped(run: AiTaskRun, kind: str | None, why: str) -> tuple[None, None]:
@@ -133,6 +225,10 @@ def build(run: AiTaskRun) -> tuple[dict[str, Any] | None, str | None]:
         return _dropped(run, kind, "no change intent in the user's message")
     refs = [str(r) for r in action.get("refs") or []]
     contact = _hits(found, refs, "contact")
+    if kind in ("calendar_create", "deadline_create"):
+        if mentions_bank(instruction, str(action.get("title") or "")):
+            return None, BANK_REFUSAL
+        return _entry(run, action, found, deadline=kind == "deadline_create")
     if kind == "contact_change":
         changes = [c for c in action.get("changes") or [] if c.get("field")]
         if mentions_bank(instruction) or any(

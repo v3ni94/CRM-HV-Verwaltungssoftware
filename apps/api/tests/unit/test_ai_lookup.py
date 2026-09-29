@@ -194,3 +194,79 @@ def test_strip_context_removes_the_page_hint_only() -> None:
     assert lookup.strip_context(hint + "Neue Nr.") == "Neue Nr."
     assert lookup.strip_context("Context: the user is on the Bank page. Hi") == "Hi"
     assert lookup.strip_context("Ohne Kontext: bitte") == "Ohne Kontext: bitte"
+
+
+def test_parse_date_range_flags_and_area_tools() -> None:
+    """Expected by hand for today 29.09.2026 (Tuesday): "heute" is that day, "nächste Woche"
+    is Monday 05.10. to Sunday 11.10., "in den nächsten 7 Tagen" ends 06.10.; dates, day
+    counts and flag words never become search terms."""
+    from datetime import date
+
+    from mhvp.ai import lookup_tools
+
+    today = date(2026, 9, 29)
+    q = lookup.parse("Welche Termine habe ich heute?", today=today)
+    assert q.range == (today, today)
+    assert q.terms == []
+    assert "calendar" in q.intents
+    q = lookup.parse("Freien Termin nächste Woche finden", today=today)
+    assert q.range == (date(2026, 10, 5), date(2026, 10, 11))
+    assert q.flags == {"free"}
+    assert q.terms == []
+    q = lookup.parse("Übergabetermine in den nächsten 7 Tagen", today=today)
+    assert q.range == (today, date(2026, 10, 6))
+    assert q.flags == {"handover"}
+    assert q.terms == []
+    q = lookup.parse("Welche Fristen sind überfällig?", today=today)
+    assert q.flags == {"overdue"}
+    assert "deadlines" in q.intents
+    assert q.range is None
+    q = lookup.parse("Termine vom 12.10.2026 bis 14.10.2026 mit Kowalski", today=today)
+    assert q.range == (date(2026, 10, 12), date(2026, 10, 14))
+    assert q.terms == ["kowalski"]
+    assert lookup.parse("Nicht zugeordnete Umsätze", today=today).flags == {"unmatched"}
+    assert "bank_transactions" in lookup.parse("Nicht zugeordnete Umsätze", today=today).intents
+    assert "open_items" in lookup.parse("Was schuldet Kowalski?", today=today).intents
+    assert "reserve" in lookup.parse("Stand der Erhaltungsrücklage", today=today).intents
+    assert lookup_tools.tools_of_area("calendar", None) == ["calendar"]
+    assert lookup_tools.tools_of_area("hoa", "meeting") == ["resolutions", "meetings", "reserve"]
+    assert lookup_tools.tools_of_area("bank", None) == ["bank_transactions", "open_items"]
+    assert lookup_tools.tools_of_area(None, None) == []
+    assert lookup_tools.tools_of_area("unknown", None) == []
+    assert lookup_tools.eur("1234.5") == "1.234,50 EUR"
+    assert lookup_tools.eur("-0.4") == "-0,40 EUR"
+    assert lookup_tools.eur(None) == "0,00 EUR"
+
+
+def test_prompt_and_answer_text_carry_area_and_facts() -> None:
+    result = {
+        "terms": [],
+        "area": "calendar",
+        "sub_area": None,
+        "tools": [{"tool": "calendar", "label": "Termine", "permitted": True, "count": 0}],
+        "links": [],
+        "facts": ["Keine Termine im CRM-Kalender vom 29.09.2026 bis 29.09.2026."],
+    }
+    prompt = lookup.prompt_text(result)
+    assert prompt.startswith("Geöffneter Bereich im CRM: calendar\n")
+    assert "- Keine Termine im CRM-Kalender" in prompt
+    answer = lookup.answer_text(result)
+    assert "keinen Suchbegriff" not in answer
+    assert "• Keine Termine im CRM-Kalender" in answer
+    capped = lookup.prompt_text(
+        {
+            **result,
+            "links": [
+                {
+                    "type": "contact",
+                    "id": str(i),
+                    "label": f"K{i}",
+                    "href": "/kontakte/x",
+                    "detail": "",
+                }
+                for i in range(5)
+            ],
+        },
+        max_links=2,
+    )
+    assert capped.count("[contact ") == 2
