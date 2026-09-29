@@ -919,3 +919,29 @@ class DatevAccountMapping(IdMixin, TimestampMixin, TenantMixin, Base):
         Boolean, nullable=False, default=True, server_default=text("true")
     )
     valid_from: Mapped[date | None] = mapped_column(Date)
+
+
+class G1AcceptanceStatus(StrEnum):
+    OPEN = "open"
+    PASSED = "passed"
+    FAILED = "failed"
+
+
+class G1AcceptanceItem(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Operator's result per item of the G1 opening checklist (M12-09, migration 0242).
+
+    ``item_key`` is an annex D case id (``D04``) or a manual checklist key (``vat_review``).
+    The row records who accepted what and when for the opening page; it opens no gate and
+    replaces no domain check (ADR 0003).
+    """
+
+    __tablename__ = "g1_acceptance"
+    __table_args__ = (UniqueConstraint("tenant_id", "item_key"),)
+
+    item_key: Mapped[str] = mapped_column(String(32), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(8), nullable=False, default=G1AcceptanceStatus.OPEN.value, server_default="open"
+    )
+    confirmed_on: Mapped[date | None] = mapped_column(Date)
+    confirmed_by_name: Mapped[str | None] = mapped_column(String(200))
+    note: Mapped[str | None] = mapped_column(Text)
