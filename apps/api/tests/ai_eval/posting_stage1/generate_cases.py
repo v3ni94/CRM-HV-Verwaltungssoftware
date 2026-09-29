@@ -1,7 +1,14 @@
-"""Generator of the independent stage 1 test set (M12-02): 200 synthetic bank transactions
+"""Generator of the independent stage 1 test set (M12-02): 240 synthetic bank transactions
 with expected postings, written by class. Deterministic (seeded), no real data. Run with
 ``python -m tests.ai_eval.posting_stage1.generate_cases`` from ``apps/api``; the JSON is
-committed so the expectations stay fixed and reviewable."""
+committed so the expectations stay fixed and reviewable.
+
+Classes of stage 1d (plan M12 S3, 28.09.2026): ``history`` (memory of the same counterparty,
+including contradictions, reversals, ended contracts and the minimum of two cases),
+``recurring_expense`` (monthly outgoing payments, periodicity as explanation),
+``linked_invoice`` (account assignment from a linked posted invoice, own payment order by
+end-to-end id) and ``transfer_pair`` (recognised transfer between own accounts). The
+expectations were written before the implementation ran (rule 0.1.8)."""
 
 from __future__ import annotations
 
@@ -309,8 +316,293 @@ def build() -> list[dict[str, Any]]:
                 open_items=items,
             )
         )
-    assert len(cases) == 200, len(cases)
-    assert len({c["id"] for c in cases}) == 200
+    cases.extend(_stage1d_cases(rng, amt))
+    assert len(cases) == 240, len(cases)
+    assert len({c["id"] for c in cases}) == 240
+    return cases
+
+
+def _hist(
+    n: int,
+    day: str,
+    amount: str,
+    accounts: list[str],
+    *,
+    reversed_: bool = False,
+    bulk: bool = False,
+    contract_end: str | None = None,
+    key: str = "iban",
+) -> dict[str, Any]:
+    """One confirmed decision of a person in the history of the counterparty (S3)."""
+    return {
+        "decision_id": f"dec-{n}",
+        "journal_entry_id": f"je-{n}",
+        "label": f"2026-{n}",
+        "booking_date": day,
+        "decided_at": f"{day}T10:00:00+00:00",
+        "amount": amount,
+        "accounts": accounts,
+        "text": "Buchung",
+        "reversed": reversed_,
+        "bulk": bulk,
+        "key": key,
+        "contract_end": contract_end,
+    }
+
+
+def _stage1d_cases(rng: random.Random, amt: Any) -> list[dict[str, Any]]:
+    """40 cases of the stage 1d sources (history, invoice, transfer pair), fixed expectations.
+
+    Confidence of the history source (assumption A-074): 0,4 plus 0,1 per consistent case
+    (bulk 0,05), cap 0,85, times 0,5 per contradiction, at least two consistent cases, never
+    unambiguous; the periodicity is an explanation only."""
+    cases: list[dict[str, Any]] = []
+    months = [f"2026-0{m}-05" for m in range(1, 8)]
+
+    # 6 incoming from a payer with a consistent history of two to five cases: the history
+    # names the debtor account; the open item on that account with the payment amount is
+    # the split. Expected confidence 0.6, 0.7, 0.8, 0.85, 0.85 (n = 2 to 5), then 0.6.
+    for i in range(6):
+        n = 2 + (i % 5) if i < 5 else 2
+        a = amt(300, 900)
+        history = [_hist(k, months[k], a, ["10001"]) for k in range(n)]
+        items = [_item(1, a, contract="MV-H1", fp="fp-other", account="10001")]
+        expected = _exp("history", "history", ["oi-1"], account_number="10001")
+        expected["confidence"] = [0.6, 0.7, 0.8, 0.85, 0.85, 0.6][i]
+        cases.append(
+            _case(
+                f"verlauf-{i:02d}",
+                "history",
+                {
+                    **_tx(a, "Ueberweisung", STRANGER),
+                    "booking_date": "2026-06-05",
+                    "history": history,
+                },
+                expected,
+                open_items=items,
+            )
+        )
+    # 3 with one contradiction (another account once): confidence halves (3 consistent: 0.35).
+    for i in range(3):
+        a = amt(300, 900)
+        history = [_hist(k, months[k], a, ["10001"]) for k in range(3)]
+        history.insert(1, _hist(9, "2026-01-20", a, ["10002"]))
+        expected = _exp("history", "history", [], account_number="10001")
+        expected["confidence"] = 0.35
+        cases.append(
+            _case(
+                f"verlauf-widerspruch-{i:02d}",
+                "history",
+                {**_tx(a, None, STRANGER), "booking_date": "2026-06-05", "history": history},
+                expected,
+            )
+        )
+    # 3 with a reversed booking of the same pattern: counter example, confidence halves.
+    for i in range(3):
+        a = amt(300, 900)
+        history = [_hist(k, months[k], a, ["10001"]) for k in range(2)]
+        history.append(_hist(8, "2026-03-05", a, ["10001"], reversed_=True))
+        expected = _exp("history", "history", [], account_number="10001")
+        expected["confidence"] = 0.3
+        cases.append(
+            _case(
+                f"verlauf-storno-{i:02d}",
+                "history",
+                {**_tx(a, None, STRANGER), "booking_date": "2026-06-05", "history": history},
+                expected,
+            )
+        )
+    # 2 with bulk confirmations only: two bulk cases weigh 0.1 together (0.5 confidence).
+    for i in range(2):
+        a = amt(300, 900)
+        history = [_hist(k, months[k], a, ["10001"], bulk=True) for k in range(2)]
+        expected = _exp("history", "history", [], account_number="10001")
+        expected["confidence"] = 0.5
+        cases.append(
+            _case(
+                f"verlauf-masse-{i:02d}",
+                "history",
+                {**_tx(a, None, STRANGER), "booking_date": "2026-06-05", "history": history},
+                expected,
+            )
+        )
+    # 3 without enough evidence (one case) and 3 with an ended contract: no history proposal;
+    # the deterministic match is the only proposal (unclear, nothing else fits).
+    for i in range(3):
+        a = amt(300, 900)
+        cases.append(
+            _case(
+                f"verlauf-einzelfall-{i:02d}",
+                "history",
+                {
+                    **_tx(a, None, STRANGER),
+                    "booking_date": "2026-06-05",
+                    "history": [_hist(0, months[0], a, ["10001"])],
+                },
+                {**_exp("match", "unclear"), "no_source": "history"},
+            )
+        )
+    for i in range(3):
+        a = amt(300, 900)
+        history = [_hist(k, months[k], a, ["10001"], contract_end="2026-05-31") for k in range(3)]
+        cases.append(
+            _case(
+                f"verlauf-vertragsende-{i:02d}",
+                "history",
+                {**_tx(a, None, STRANGER), "booking_date": "2026-06-05", "history": history},
+                {**_exp("match", "unclear"), "no_source": "history"},
+            )
+        )
+
+    # 6 recurring outgoing payments (monthly, four to five cases, amounts drift a little):
+    # history names the cost account, confidence 0.8 (n = 4) or 0.85 (n = 5), periodicity as
+    # explanation. 2 with a creditor id as key instead of the IBAN.
+    for i in range(6):
+        n = 4 if i % 2 else 5
+        base = Decimal(amt(80, 400))
+        history = [
+            _hist(
+                k,
+                months[k],
+                str(-(base + Decimal(k))),
+                ["4210"],
+                key="creditor_id" if i >= 4 else "iban",
+            )
+            for k in range(n)
+        ]
+        expected = _exp("history", "history", [], account_number="4210")
+        expected["confidence"] = 0.8 if n == 4 else 0.85
+        expected["periodic"] = "monatlich"
+        cases.append(
+            _case(
+                f"dauerausgang-{i:02d}",
+                "recurring_expense",
+                {
+                    **_tx(str(-(base + Decimal(n))), f"{CREDITORS[i % 4]} Abschlag", f"cred-h{i}"),
+                    "booking_date": months[n] if n < 5 else "2026-06-05",
+                    "creditor_id": "DE98ZZZ09999999999" if i >= 4 else None,
+                    "history": history,
+                },
+                expected,
+            )
+        )
+    # 2 irregular outgoing (gaps 10 and 120 days): history yes, no periodicity.
+    for i in range(2):
+        a = amt(80, 400)
+        history = [
+            _hist(k, day, "-" + a, ["4210"])
+            for k, day in enumerate(["2026-01-05", "2026-01-15", "2026-05-15"])
+        ]
+        expected = _exp("history", "history", [], account_number="4210")
+        expected["confidence"] = 0.7
+        expected["periodic"] = None
+        cases.append(
+            _case(
+                f"dauerausgang-unregelmaessig-{i:02d}",
+                "recurring_expense",
+                {
+                    **_tx("-" + a, "Abschlag", f"cred-i{i}"),
+                    "booking_date": "2026-06-05",
+                    "history": history,
+                },
+                expected,
+            )
+        )
+
+    # 6 outgoing with a linked posted invoice: 4 linked by amount and number (unambiguous,
+    # 0.9), 2 by amount and IBAN (0.7, review). 2 with an own payment order by end-to-end id
+    # (the payable match gains the end-to-end score and becomes unambiguous).
+    for i in range(6):
+        a = amt(100, 2000)
+        number = f"RE-2026-{500 + i}"
+        basis = "amount_and_number" if i < 4 else "amount_and_iban"
+        linked = {
+            "invoice_id": f"inv-l{i}",
+            "number": number,
+            "gross": a,
+            "posted": True,
+            "match_basis": basis,
+            "creditor_account_number": "70001",
+            "open_item_id": "inv-1",
+            "remaining": a,
+            "lines": [
+                {
+                    "account_number": "4210",
+                    "name": "Reinigung",
+                    "net": "100.00",
+                    "text": "Reinigung",
+                },
+                {"account_number": "4310", "name": "Material", "net": "20.00", "text": "Material"},
+            ],
+        }
+        expected = _exp(
+            "invoice",
+            "invoice",
+            ["inv-1"],
+            unambiguous=basis == "amount_and_number",
+            account_number="70001",
+        )
+        expected["confidence"] = 0.9 if basis == "amount_and_number" else 0.7
+        cases.append(
+            _case(
+                f"rechnungsbezug-{i:02d}",
+                "linked_invoice",
+                {
+                    **_tx("-" + a, f"{number} Zahlung" if i < 4 else "Zahlung", f"cred-l{i}"),
+                    "booking_date": "2026-06-05",
+                    "linked_invoices": [linked],
+                },
+                expected,
+                payables=[_payable(1, a, number, f"cred-l{i}")],
+            )
+        )
+    for i in range(2):
+        a = amt(100, 2000)
+        number = f"RE-2026-{600 + i}"
+        payables = [
+            _payable(1, a, number, "cred-e2e"),
+            _payable(2, a, f"RE-2026-{700 + i}", "cred-e2e"),
+        ]
+        payables[0]["invoice_id"] = f"inv-e{i}"
+        cases.append(
+            _case(
+                f"zahlungsauftrag-{i:02d}",
+                "linked_invoice",
+                {
+                    **_tx("-" + a, "Zahlung", "cred-e2e"),
+                    "booking_date": "2026-06-05",
+                    "end_to_end_id": f"E2E-{i}",
+                    "payment_order": {
+                        "id": f"po-{i}",
+                        "end_to_end_id": f"E2E-{i}",
+                        "invoice_id": f"inv-e{i}",
+                        "open_item_id": "inv-1",
+                    },
+                },
+                _exp("match", "invoice", ["inv-1"], unambiguous=True),
+                payables=payables,
+            )
+        )
+
+    # 4 transfer pairs (two incoming, two outgoing): the partner bank account is proposed.
+    for i in range(4):
+        a = amt(500, 5000)
+        cases.append(
+            _case(
+                f"transfer-{i:02d}",
+                "transfer_pair",
+                {
+                    **_tx(a if i % 2 else "-" + a, "Umbuchung Ruecklage", "fp-own"),
+                    "booking_date": "2026-06-05",
+                    "transfer_pair": {
+                        "partner_transaction_id": f"tx-p{i}",
+                        "partner_account_number": "1210",
+                    },
+                },
+                _exp("match", "transfer", [], account_number="1210"),
+            )
+        )
+    assert len(cases) == 40, len(cases)
     return cases
 
 

@@ -10456,5 +10456,2889 @@
    ],
    "rule_id": "rule-1"
   }
+ },
+ {
+  "id": "verlauf-00",
+  "class": "history",
+  "tx": {
+   "amount": "535.8",
+   "purpose": "Ueberweisung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "535.8",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "535.8",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [
+   {
+    "id": "oi-1",
+    "kind": "receivable",
+    "remaining": "535.8",
+    "due_date": "2026-03-01",
+    "reference": null,
+    "contract_number": "MV-H1",
+    "mandate_reference": null,
+    "party_iban_fingerprints": [
+     "fp-other"
+    ],
+    "account_number": "10001",
+    "debtor_key": "d-1",
+    "is_deposit": false
+   }
+  ],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [
+    "oi-1"
+   ],
+   "account_number": "10001",
+   "confidence": 0.6
+  }
+ },
+ {
+  "id": "verlauf-01",
+  "class": "history",
+  "tx": {
+   "amount": "540.99",
+   "purpose": "Ueberweisung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "540.99",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "540.99",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "540.99",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [
+   {
+    "id": "oi-1",
+    "kind": "receivable",
+    "remaining": "540.99",
+    "due_date": "2026-03-01",
+    "reference": null,
+    "contract_number": "MV-H1",
+    "mandate_reference": null,
+    "party_iban_fingerprints": [
+     "fp-other"
+    ],
+    "account_number": "10001",
+    "debtor_key": "d-1",
+    "is_deposit": false
+   }
+  ],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [
+    "oi-1"
+   ],
+   "account_number": "10001",
+   "confidence": 0.7
+  }
+ },
+ {
+  "id": "verlauf-02",
+  "class": "history",
+  "tx": {
+   "amount": "726.25",
+   "purpose": "Ueberweisung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "726.25",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "726.25",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "726.25",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "726.25",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [
+   {
+    "id": "oi-1",
+    "kind": "receivable",
+    "remaining": "726.25",
+    "due_date": "2026-03-01",
+    "reference": null,
+    "contract_number": "MV-H1",
+    "mandate_reference": null,
+    "party_iban_fingerprints": [
+     "fp-other"
+    ],
+    "account_number": "10001",
+    "debtor_key": "d-1",
+    "is_deposit": false
+   }
+  ],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [
+    "oi-1"
+   ],
+   "account_number": "10001",
+   "confidence": 0.8
+  }
+ },
+ {
+  "id": "verlauf-03",
+  "class": "history",
+  "tx": {
+   "amount": "605.27",
+   "purpose": "Ueberweisung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "605.27",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "605.27",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "605.27",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "605.27",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-4",
+     "journal_entry_id": "je-4",
+     "label": "2026-4",
+     "booking_date": "2026-05-05",
+     "decided_at": "2026-05-05T10:00:00+00:00",
+     "amount": "605.27",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [
+   {
+    "id": "oi-1",
+    "kind": "receivable",
+    "remaining": "605.27",
+    "due_date": "2026-03-01",
+    "reference": null,
+    "contract_number": "MV-H1",
+    "mandate_reference": null,
+    "party_iban_fingerprints": [
+     "fp-other"
+    ],
+    "account_number": "10001",
+    "debtor_key": "d-1",
+    "is_deposit": false
+   }
+  ],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [
+    "oi-1"
+   ],
+   "account_number": "10001",
+   "confidence": 0.85
+  }
+ },
+ {
+  "id": "verlauf-04",
+  "class": "history",
+  "tx": {
+   "amount": "475.13",
+   "purpose": "Ueberweisung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "475.13",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "475.13",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "475.13",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "475.13",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-4",
+     "journal_entry_id": "je-4",
+     "label": "2026-4",
+     "booking_date": "2026-05-05",
+     "decided_at": "2026-05-05T10:00:00+00:00",
+     "amount": "475.13",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-5",
+     "journal_entry_id": "je-5",
+     "label": "2026-5",
+     "booking_date": "2026-06-05",
+     "decided_at": "2026-06-05T10:00:00+00:00",
+     "amount": "475.13",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [
+   {
+    "id": "oi-1",
+    "kind": "receivable",
+    "remaining": "475.13",
+    "due_date": "2026-03-01",
+    "reference": null,
+    "contract_number": "MV-H1",
+    "mandate_reference": null,
+    "party_iban_fingerprints": [
+     "fp-other"
+    ],
+    "account_number": "10001",
+    "debtor_key": "d-1",
+    "is_deposit": false
+   }
+  ],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [
+    "oi-1"
+   ],
+   "account_number": "10001",
+   "confidence": 0.85
+  }
+ },
+ {
+  "id": "verlauf-05",
+  "class": "history",
+  "tx": {
+   "amount": "797.43",
+   "purpose": "Ueberweisung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "797.43",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "797.43",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [
+   {
+    "id": "oi-1",
+    "kind": "receivable",
+    "remaining": "797.43",
+    "due_date": "2026-03-01",
+    "reference": null,
+    "contract_number": "MV-H1",
+    "mandate_reference": null,
+    "party_iban_fingerprints": [
+     "fp-other"
+    ],
+    "account_number": "10001",
+    "debtor_key": "d-1",
+    "is_deposit": false
+   }
+  ],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [
+    "oi-1"
+   ],
+   "account_number": "10001",
+   "confidence": 0.6
+  }
+ },
+ {
+  "id": "verlauf-widerspruch-00",
+  "class": "history",
+  "tx": {
+   "amount": "803.65",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "803.65",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-9",
+     "journal_entry_id": "je-9",
+     "label": "2026-9",
+     "booking_date": "2026-01-20",
+     "decided_at": "2026-01-20T10:00:00+00:00",
+     "amount": "803.65",
+     "accounts": [
+      "10002"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "803.65",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "803.65",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "10001",
+   "confidence": 0.35
+  }
+ },
+ {
+  "id": "verlauf-widerspruch-01",
+  "class": "history",
+  "tx": {
+   "amount": "529.84",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "529.84",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-9",
+     "journal_entry_id": "je-9",
+     "label": "2026-9",
+     "booking_date": "2026-01-20",
+     "decided_at": "2026-01-20T10:00:00+00:00",
+     "amount": "529.84",
+     "accounts": [
+      "10002"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "529.84",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "529.84",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "10001",
+   "confidence": 0.35
+  }
+ },
+ {
+  "id": "verlauf-widerspruch-02",
+  "class": "history",
+  "tx": {
+   "amount": "361.47",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "361.47",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-9",
+     "journal_entry_id": "je-9",
+     "label": "2026-9",
+     "booking_date": "2026-01-20",
+     "decided_at": "2026-01-20T10:00:00+00:00",
+     "amount": "361.47",
+     "accounts": [
+      "10002"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "361.47",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "361.47",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "10001",
+   "confidence": 0.35
+  }
+ },
+ {
+  "id": "verlauf-storno-00",
+  "class": "history",
+  "tx": {
+   "amount": "496.51",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "496.51",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "496.51",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-8",
+     "journal_entry_id": "je-8",
+     "label": "2026-8",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "496.51",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": true,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "10001",
+   "confidence": 0.3
+  }
+ },
+ {
+  "id": "verlauf-storno-01",
+  "class": "history",
+  "tx": {
+   "amount": "808.56",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "808.56",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "808.56",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-8",
+     "journal_entry_id": "je-8",
+     "label": "2026-8",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "808.56",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": true,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "10001",
+   "confidence": 0.3
+  }
+ },
+ {
+  "id": "verlauf-storno-02",
+  "class": "history",
+  "tx": {
+   "amount": "789.96",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "789.96",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "789.96",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-8",
+     "journal_entry_id": "je-8",
+     "label": "2026-8",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "789.96",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": true,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "10001",
+   "confidence": 0.3
+  }
+ },
+ {
+  "id": "verlauf-masse-00",
+  "class": "history",
+  "tx": {
+   "amount": "626.14",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "626.14",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": true,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "626.14",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": true,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "10001",
+   "confidence": 0.5
+  }
+ },
+ {
+  "id": "verlauf-masse-01",
+  "class": "history",
+  "tx": {
+   "amount": "308.87",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "308.87",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": true,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "308.87",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": true,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "10001",
+   "confidence": 0.5
+  }
+ },
+ {
+  "id": "verlauf-einzelfall-00",
+  "class": "history",
+  "tx": {
+   "amount": "503.29",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "503.29",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "unclear",
+   "open_item_ids": [],
+   "no_source": "history"
+  }
+ },
+ {
+  "id": "verlauf-einzelfall-01",
+  "class": "history",
+  "tx": {
+   "amount": "735.57",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "735.57",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "unclear",
+   "open_item_ids": [],
+   "no_source": "history"
+  }
+ },
+ {
+  "id": "verlauf-einzelfall-02",
+  "class": "history",
+  "tx": {
+   "amount": "574.02",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "574.02",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "unclear",
+   "open_item_ids": [],
+   "no_source": "history"
+  }
+ },
+ {
+  "id": "verlauf-vertragsende-00",
+  "class": "history",
+  "tx": {
+   "amount": "575.18",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "575.18",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "575.18",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "575.18",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "unclear",
+   "open_item_ids": [],
+   "no_source": "history"
+  }
+ },
+ {
+  "id": "verlauf-vertragsende-01",
+  "class": "history",
+  "tx": {
+   "amount": "489.42",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "489.42",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "489.42",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "489.42",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "unclear",
+   "open_item_ids": [],
+   "no_source": "history"
+  }
+ },
+ {
+  "id": "verlauf-vertragsende-02",
+  "class": "history",
+  "tx": {
+   "amount": "893.12",
+   "purpose": null,
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-stranger",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "893.12",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "893.12",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "893.12",
+     "accounts": [
+      "10001"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": "2026-05-31"
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "unclear",
+   "open_item_ids": [],
+   "no_source": "history"
+  }
+ },
+ {
+  "id": "dauerausgang-00",
+  "class": "recurring_expense",
+  "tx": {
+   "amount": "-221.51",
+   "purpose": "Stadtwerke Abschlag",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-h0",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "creditor_id": null,
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "-216.51",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "-217.51",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "-218.51",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "-219.51",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-4",
+     "journal_entry_id": "je-4",
+     "label": "2026-4",
+     "booking_date": "2026-05-05",
+     "decided_at": "2026-05-05T10:00:00+00:00",
+     "amount": "-220.51",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "4210",
+   "confidence": 0.85,
+   "periodic": "monatlich"
+  }
+ },
+ {
+  "id": "dauerausgang-01",
+  "class": "recurring_expense",
+  "tx": {
+   "amount": "-171.58",
+   "purpose": "Gebäudereinigung Nord Abschlag",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-h1",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-05-05",
+   "creditor_id": null,
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "-167.58",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "-168.58",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "-169.58",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "-170.58",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "4210",
+   "confidence": 0.8,
+   "periodic": "monatlich"
+  }
+ },
+ {
+  "id": "dauerausgang-02",
+  "class": "recurring_expense",
+  "tx": {
+   "amount": "-152.09",
+   "purpose": "Aufzugtechnik Meyer Abschlag",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-h2",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "creditor_id": null,
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "-147.09",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "-148.09",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "-149.09",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "-150.09",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-4",
+     "journal_entry_id": "je-4",
+     "label": "2026-4",
+     "booking_date": "2026-05-05",
+     "decided_at": "2026-05-05T10:00:00+00:00",
+     "amount": "-151.09",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "4210",
+   "confidence": 0.85,
+   "periodic": "monatlich"
+  }
+ },
+ {
+  "id": "dauerausgang-03",
+  "class": "recurring_expense",
+  "tx": {
+   "amount": "-278.95",
+   "purpose": "Gärtnerei Grün Abschlag",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-h3",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-05-05",
+   "creditor_id": null,
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "-274.95",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "-275.95",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "-276.95",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "-277.95",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "4210",
+   "confidence": 0.8,
+   "periodic": "monatlich"
+  }
+ },
+ {
+  "id": "dauerausgang-04",
+  "class": "recurring_expense",
+  "tx": {
+   "amount": "-193.93",
+   "purpose": "Stadtwerke Abschlag",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-h4",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "creditor_id": "DE98ZZZ09999999999",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "-188.93",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "-189.93",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "-190.93",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "-191.93",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-4",
+     "journal_entry_id": "je-4",
+     "label": "2026-4",
+     "booking_date": "2026-05-05",
+     "decided_at": "2026-05-05T10:00:00+00:00",
+     "amount": "-192.93",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "4210",
+   "confidence": 0.85,
+   "periodic": "monatlich"
+  }
+ },
+ {
+  "id": "dauerausgang-05",
+  "class": "recurring_expense",
+  "tx": {
+   "amount": "-317.28",
+   "purpose": "Gebäudereinigung Nord Abschlag",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-h5",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-05-05",
+   "creditor_id": "DE98ZZZ09999999999",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "-313.28",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-02-05",
+     "decided_at": "2026-02-05T10:00:00+00:00",
+     "amount": "-314.28",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-03-05",
+     "decided_at": "2026-03-05T10:00:00+00:00",
+     "amount": "-315.28",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-3",
+     "journal_entry_id": "je-3",
+     "label": "2026-3",
+     "booking_date": "2026-04-05",
+     "decided_at": "2026-04-05T10:00:00+00:00",
+     "amount": "-316.28",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "creditor_id",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "4210",
+   "confidence": 0.8,
+   "periodic": "monatlich"
+  }
+ },
+ {
+  "id": "dauerausgang-unregelmaessig-00",
+  "class": "recurring_expense",
+  "tx": {
+   "amount": "-121.61",
+   "purpose": "Abschlag",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-i0",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "-121.61",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-01-15",
+     "decided_at": "2026-01-15T10:00:00+00:00",
+     "amount": "-121.61",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-05-15",
+     "decided_at": "2026-05-15T10:00:00+00:00",
+     "amount": "-121.61",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "4210",
+   "confidence": 0.7,
+   "periodic": null
+  }
+ },
+ {
+  "id": "dauerausgang-unregelmaessig-01",
+  "class": "recurring_expense",
+  "tx": {
+   "amount": "-180.99",
+   "purpose": "Abschlag",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-i1",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "history": [
+    {
+     "decision_id": "dec-0",
+     "journal_entry_id": "je-0",
+     "label": "2026-0",
+     "booking_date": "2026-01-05",
+     "decided_at": "2026-01-05T10:00:00+00:00",
+     "amount": "-180.99",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-1",
+     "journal_entry_id": "je-1",
+     "label": "2026-1",
+     "booking_date": "2026-01-15",
+     "decided_at": "2026-01-15T10:00:00+00:00",
+     "amount": "-180.99",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    },
+    {
+     "decision_id": "dec-2",
+     "journal_entry_id": "je-2",
+     "label": "2026-2",
+     "booking_date": "2026-05-15",
+     "decided_at": "2026-05-15T10:00:00+00:00",
+     "amount": "-180.99",
+     "accounts": [
+      "4210"
+     ],
+     "text": "Buchung",
+     "reversed": false,
+     "bulk": false,
+     "key": "iban",
+     "contract_end": null
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "history",
+   "kind": "history",
+   "open_item_ids": [],
+   "account_number": "4210",
+   "confidence": 0.7,
+   "periodic": null
+  }
+ },
+ {
+  "id": "rechnungsbezug-00",
+  "class": "linked_invoice",
+  "tx": {
+   "amount": "-868.76",
+   "purpose": "RE-2026-500 Zahlung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-l0",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "linked_invoices": [
+    {
+     "invoice_id": "inv-l0",
+     "number": "RE-2026-500",
+     "gross": "868.76",
+     "posted": true,
+     "match_basis": "amount_and_number",
+     "creditor_account_number": "70001",
+     "open_item_id": "inv-1",
+     "remaining": "868.76",
+     "lines": [
+      {
+       "account_number": "4210",
+       "name": "Reinigung",
+       "net": "100.00",
+       "text": "Reinigung"
+      },
+      {
+       "account_number": "4310",
+       "name": "Material",
+       "net": "20.00",
+       "text": "Material"
+      }
+     ]
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [
+   {
+    "id": "inv-1",
+    "remaining": "868.76",
+    "number": "RE-2026-500",
+    "payee_iban_fingerprint": "cred-l0",
+    "account_number": "60001"
+   }
+  ],
+  "expected": {
+   "source": "invoice",
+   "kind": "invoice",
+   "open_item_ids": [
+    "inv-1"
+   ],
+   "unambiguous": true,
+   "account_number": "70001",
+   "confidence": 0.9
+  }
+ },
+ {
+  "id": "rechnungsbezug-01",
+  "class": "linked_invoice",
+  "tx": {
+   "amount": "-1833.51",
+   "purpose": "RE-2026-501 Zahlung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-l1",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "linked_invoices": [
+    {
+     "invoice_id": "inv-l1",
+     "number": "RE-2026-501",
+     "gross": "1833.51",
+     "posted": true,
+     "match_basis": "amount_and_number",
+     "creditor_account_number": "70001",
+     "open_item_id": "inv-1",
+     "remaining": "1833.51",
+     "lines": [
+      {
+       "account_number": "4210",
+       "name": "Reinigung",
+       "net": "100.00",
+       "text": "Reinigung"
+      },
+      {
+       "account_number": "4310",
+       "name": "Material",
+       "net": "20.00",
+       "text": "Material"
+      }
+     ]
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [
+   {
+    "id": "inv-1",
+    "remaining": "1833.51",
+    "number": "RE-2026-501",
+    "payee_iban_fingerprint": "cred-l1",
+    "account_number": "60001"
+   }
+  ],
+  "expected": {
+   "source": "invoice",
+   "kind": "invoice",
+   "open_item_ids": [
+    "inv-1"
+   ],
+   "unambiguous": true,
+   "account_number": "70001",
+   "confidence": 0.9
+  }
+ },
+ {
+  "id": "rechnungsbezug-02",
+  "class": "linked_invoice",
+  "tx": {
+   "amount": "-1494.22",
+   "purpose": "RE-2026-502 Zahlung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-l2",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "linked_invoices": [
+    {
+     "invoice_id": "inv-l2",
+     "number": "RE-2026-502",
+     "gross": "1494.22",
+     "posted": true,
+     "match_basis": "amount_and_number",
+     "creditor_account_number": "70001",
+     "open_item_id": "inv-1",
+     "remaining": "1494.22",
+     "lines": [
+      {
+       "account_number": "4210",
+       "name": "Reinigung",
+       "net": "100.00",
+       "text": "Reinigung"
+      },
+      {
+       "account_number": "4310",
+       "name": "Material",
+       "net": "20.00",
+       "text": "Material"
+      }
+     ]
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [
+   {
+    "id": "inv-1",
+    "remaining": "1494.22",
+    "number": "RE-2026-502",
+    "payee_iban_fingerprint": "cred-l2",
+    "account_number": "60001"
+   }
+  ],
+  "expected": {
+   "source": "invoice",
+   "kind": "invoice",
+   "open_item_ids": [
+    "inv-1"
+   ],
+   "unambiguous": true,
+   "account_number": "70001",
+   "confidence": 0.9
+  }
+ },
+ {
+  "id": "rechnungsbezug-03",
+  "class": "linked_invoice",
+  "tx": {
+   "amount": "-1316.69",
+   "purpose": "RE-2026-503 Zahlung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-l3",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "linked_invoices": [
+    {
+     "invoice_id": "inv-l3",
+     "number": "RE-2026-503",
+     "gross": "1316.69",
+     "posted": true,
+     "match_basis": "amount_and_number",
+     "creditor_account_number": "70001",
+     "open_item_id": "inv-1",
+     "remaining": "1316.69",
+     "lines": [
+      {
+       "account_number": "4210",
+       "name": "Reinigung",
+       "net": "100.00",
+       "text": "Reinigung"
+      },
+      {
+       "account_number": "4310",
+       "name": "Material",
+       "net": "20.00",
+       "text": "Material"
+      }
+     ]
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [
+   {
+    "id": "inv-1",
+    "remaining": "1316.69",
+    "number": "RE-2026-503",
+    "payee_iban_fingerprint": "cred-l3",
+    "account_number": "60001"
+   }
+  ],
+  "expected": {
+   "source": "invoice",
+   "kind": "invoice",
+   "open_item_ids": [
+    "inv-1"
+   ],
+   "unambiguous": true,
+   "account_number": "70001",
+   "confidence": 0.9
+  }
+ },
+ {
+  "id": "rechnungsbezug-04",
+  "class": "linked_invoice",
+  "tx": {
+   "amount": "-1150.72",
+   "purpose": "Zahlung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-l4",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "linked_invoices": [
+    {
+     "invoice_id": "inv-l4",
+     "number": "RE-2026-504",
+     "gross": "1150.72",
+     "posted": true,
+     "match_basis": "amount_and_iban",
+     "creditor_account_number": "70001",
+     "open_item_id": "inv-1",
+     "remaining": "1150.72",
+     "lines": [
+      {
+       "account_number": "4210",
+       "name": "Reinigung",
+       "net": "100.00",
+       "text": "Reinigung"
+      },
+      {
+       "account_number": "4310",
+       "name": "Material",
+       "net": "20.00",
+       "text": "Material"
+      }
+     ]
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [
+   {
+    "id": "inv-1",
+    "remaining": "1150.72",
+    "number": "RE-2026-504",
+    "payee_iban_fingerprint": "cred-l4",
+    "account_number": "60001"
+   }
+  ],
+  "expected": {
+   "source": "invoice",
+   "kind": "invoice",
+   "open_item_ids": [
+    "inv-1"
+   ],
+   "unambiguous": false,
+   "account_number": "70001",
+   "confidence": 0.7
+  }
+ },
+ {
+  "id": "rechnungsbezug-05",
+  "class": "linked_invoice",
+  "tx": {
+   "amount": "-1485.17",
+   "purpose": "Zahlung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-l5",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "linked_invoices": [
+    {
+     "invoice_id": "inv-l5",
+     "number": "RE-2026-505",
+     "gross": "1485.17",
+     "posted": true,
+     "match_basis": "amount_and_iban",
+     "creditor_account_number": "70001",
+     "open_item_id": "inv-1",
+     "remaining": "1485.17",
+     "lines": [
+      {
+       "account_number": "4210",
+       "name": "Reinigung",
+       "net": "100.00",
+       "text": "Reinigung"
+      },
+      {
+       "account_number": "4310",
+       "name": "Material",
+       "net": "20.00",
+       "text": "Material"
+      }
+     ]
+    }
+   ]
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [
+   {
+    "id": "inv-1",
+    "remaining": "1485.17",
+    "number": "RE-2026-505",
+    "payee_iban_fingerprint": "cred-l5",
+    "account_number": "60001"
+   }
+  ],
+  "expected": {
+   "source": "invoice",
+   "kind": "invoice",
+   "open_item_ids": [
+    "inv-1"
+   ],
+   "unambiguous": false,
+   "account_number": "70001",
+   "confidence": 0.7
+  }
+ },
+ {
+  "id": "zahlungsauftrag-00",
+  "class": "linked_invoice",
+  "tx": {
+   "amount": "-1221.39",
+   "purpose": "Zahlung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-e2e",
+   "mandate_reference": null,
+   "end_to_end_id": "E2E-0",
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "payment_order": {
+    "id": "po-0",
+    "end_to_end_id": "E2E-0",
+    "invoice_id": "inv-e0",
+    "open_item_id": "inv-1"
+   }
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [
+   {
+    "id": "inv-1",
+    "remaining": "1221.39",
+    "number": "RE-2026-600",
+    "payee_iban_fingerprint": "cred-e2e",
+    "account_number": "60001",
+    "invoice_id": "inv-e0"
+   },
+   {
+    "id": "inv-2",
+    "remaining": "1221.39",
+    "number": "RE-2026-700",
+    "payee_iban_fingerprint": "cred-e2e",
+    "account_number": "60002"
+   }
+  ],
+  "expected": {
+   "source": "match",
+   "kind": "invoice",
+   "open_item_ids": [
+    "inv-1"
+   ],
+   "unambiguous": true
+  }
+ },
+ {
+  "id": "zahlungsauftrag-01",
+  "class": "linked_invoice",
+  "tx": {
+   "amount": "-1236.61",
+   "purpose": "Zahlung",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "cred-e2e",
+   "mandate_reference": null,
+   "end_to_end_id": "E2E-1",
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "payment_order": {
+    "id": "po-1",
+    "end_to_end_id": "E2E-1",
+    "invoice_id": "inv-e1",
+    "open_item_id": "inv-1"
+   }
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [
+   {
+    "id": "inv-1",
+    "remaining": "1236.61",
+    "number": "RE-2026-601",
+    "payee_iban_fingerprint": "cred-e2e",
+    "account_number": "60001",
+    "invoice_id": "inv-e1"
+   },
+   {
+    "id": "inv-2",
+    "remaining": "1236.61",
+    "number": "RE-2026-701",
+    "payee_iban_fingerprint": "cred-e2e",
+    "account_number": "60002"
+   }
+  ],
+  "expected": {
+   "source": "match",
+   "kind": "invoice",
+   "open_item_ids": [
+    "inv-1"
+   ],
+   "unambiguous": true
+  }
+ },
+ {
+  "id": "transfer-00",
+  "class": "transfer_pair",
+  "tx": {
+   "amount": "-3582.93",
+   "purpose": "Umbuchung Ruecklage",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-own",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "transfer_pair": {
+    "partner_transaction_id": "tx-p0",
+    "partner_account_number": "1210"
+   }
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "transfer",
+   "open_item_ids": [],
+   "account_number": "1210"
+  }
+ },
+ {
+  "id": "transfer-01",
+  "class": "transfer_pair",
+  "tx": {
+   "amount": "799.27",
+   "purpose": "Umbuchung Ruecklage",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-own",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "transfer_pair": {
+    "partner_transaction_id": "tx-p1",
+    "partner_account_number": "1210"
+   }
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "transfer",
+   "open_item_ids": [],
+   "account_number": "1210"
+  }
+ },
+ {
+  "id": "transfer-02",
+  "class": "transfer_pair",
+  "tx": {
+   "amount": "-3830.2",
+   "purpose": "Umbuchung Ruecklage",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-own",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "transfer_pair": {
+    "partner_transaction_id": "tx-p2",
+    "partner_account_number": "1210"
+   }
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "transfer",
+   "open_item_ids": [],
+   "account_number": "1210"
+  }
+ },
+ {
+  "id": "transfer-03",
+  "class": "transfer_pair",
+  "tx": {
+   "amount": "1987.5",
+   "purpose": "Umbuchung Ruecklage",
+   "counterpart_name": "Zahler",
+   "counterpart_iban_fingerprint": "fp-own",
+   "mandate_reference": null,
+   "end_to_end_id": null,
+   "transaction_code": null,
+   "booking_date": "2026-06-05",
+   "transfer_pair": {
+    "partner_transaction_id": "tx-p3",
+    "partner_account_number": "1210"
+   }
+  },
+  "rules": [],
+  "open_items": [],
+  "payables": [],
+  "expected": {
+   "source": "match",
+   "kind": "transfer",
+   "open_item_ids": [],
+   "account_number": "1210"
+  }
  }
 ]
