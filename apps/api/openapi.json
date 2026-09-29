@@ -3573,6 +3573,181 @@
         "title": "BackfillOut",
         "type": "object"
       },
+      "BalanceImportOut": {
+        "properties": {
+          "balances": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OpeningBalancesOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "errors": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Errors",
+            "type": "array"
+          }
+        },
+        "required": [
+          "balances",
+          "errors"
+        ],
+        "title": "BalanceImportOut",
+        "type": "object"
+      },
+      "BalanceLineIn": {
+        "additionalProperties": false,
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "amount": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Amount"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "kind",
+          "account_id",
+          "amount"
+        ],
+        "title": "BalanceLineIn",
+        "type": "object"
+      },
+      "BalanceLineOut": {
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_name": {
+            "title": "Account Name",
+            "type": "string"
+          },
+          "account_number": {
+            "title": "Account Number",
+            "type": "string"
+          },
+          "amount": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Amount",
+            "type": "string"
+          },
+          "due_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Date"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "property_bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Bank Account Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "account_id",
+          "account_number",
+          "account_name",
+          "amount",
+          "text",
+          "property_bank_account_id",
+          "due_date"
+        ],
+        "title": "BalanceLineOut",
+        "type": "object"
+      },
       "BandSegment": {
         "additionalProperties": false,
         "description": "Segment of the letterhead colour band as share of the page width (M6).",
@@ -4762,6 +4937,37 @@
           "file"
         ],
         "title": "Body_import_objektdaten_api_v1_imports_immoware24_lists_objektdaten_post",
+        "type": "object"
+      },
+      "Body_import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post": {
+        "properties": {
+          "cutoff_date": {
+            "format": "date",
+            "title": "Cutoff Date",
+            "type": "string"
+          },
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "cutoff_date",
+          "file"
+        ],
+        "title": "Body_import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post",
         "type": "object"
       },
       "Body_import_preview_api_v1_metering_assignments_import_preview_post": {
@@ -14709,6 +14915,28 @@
         "title": "CustomResolutionKind",
         "type": "object"
       },
+      "CutoffIn": {
+        "additionalProperties": false,
+        "properties": {
+          "migration_cutoff": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Cutoff"
+          }
+        },
+        "required": [
+          "migration_cutoff"
+        ],
+        "title": "CutoffIn",
+        "type": "object"
+      },
       "DataKind": {
         "enum": [
           "documents",
@@ -15903,72 +16131,6 @@
         ],
         "title": "Decision",
         "type": "string"
-      },
-      "DecisionIn": {
-        "properties": {
-          "action": {
-            "enum": [
-              "accept_candidate",
-              "set_manually",
-              "reject",
-              "snooze"
-            ],
-            "title": "Action",
-            "type": "string"
-          },
-          "candidate_index": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Candidate Index"
-          },
-          "category_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category Id"
-          },
-          "document_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Type"
-          },
-          "snoozed_until": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Snoozed Until"
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "title": "DecisionIn",
-        "type": "object"
       },
       "DeductionIn": {
         "additionalProperties": false,
@@ -25238,6 +25400,53 @@
         "title": "JobSettingsOut",
         "type": "object"
       },
+      "JournalColumnsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "object"
+          }
+        },
+        "required": [
+          "columns"
+        ],
+        "title": "JournalColumnsIn",
+        "type": "object"
+      },
+      "JournalColumnsOut": {
+        "properties": {
+          "columns": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Columns",
+            "type": "object"
+          },
+          "customised": {
+            "title": "Customised",
+            "type": "boolean"
+          },
+          "fields": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Fields",
+            "type": "array"
+          }
+        },
+        "required": [
+          "columns",
+          "customised",
+          "fields"
+        ],
+        "title": "JournalColumnsOut",
+        "type": "object"
+      },
       "JournalEntryIn": {
         "additionalProperties": false,
         "properties": {
@@ -25364,6 +25573,156 @@
           "lines"
         ],
         "title": "JournalEntryIn",
+        "type": "object"
+      },
+      "JournalEntryOut": {
+        "properties": {
+          "booking_date": {
+            "format": "date",
+            "title": "Booking Date",
+            "type": "string"
+          },
+          "credit_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Credit Total",
+            "type": "string"
+          },
+          "debit_total": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Debit Total",
+            "type": "string"
+          },
+          "document_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Ref"
+          },
+          "fiscal_year": {
+            "title": "Fiscal Year",
+            "type": "integer"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "reconciled": {
+            "title": "Reconciled",
+            "type": "boolean"
+          },
+          "reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "source_entry_id": {
+            "title": "Source Entry Id",
+            "type": "string"
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "year_complete": {
+            "title": "Year Complete",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "source",
+          "source_entry_id",
+          "booking_date",
+          "fiscal_year",
+          "text",
+          "reference",
+          "document_ref",
+          "year_complete",
+          "reconciled",
+          "debit_total",
+          "credit_total",
+          "lines"
+        ],
+        "title": "JournalEntryOut",
+        "type": "object"
+      },
+      "JournalImportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "source_file_id": {
+            "format": "uuid",
+            "title": "Source File Id",
+            "type": "string"
+          },
+          "year": {
+            "maximum": 2100.0,
+            "minimum": 2000.0,
+            "title": "Year",
+            "type": "integer"
+          },
+          "year_complete": {
+            "default": false,
+            "title": "Year Complete",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "source_file_id",
+          "year"
+        ],
+        "title": "JournalImportIn",
+        "type": "object"
+      },
+      "JournalOut": {
+        "properties": {
+          "entries": {
+            "items": {
+              "$ref": "#/components/schemas/JournalEntryOut"
+            },
+            "title": "Entries",
+            "type": "array"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "summary",
+          "entries"
+        ],
+        "title": "JournalOut",
         "type": "object"
       },
       "KnowledgeEntryIn": {
@@ -25960,6 +26319,49 @@
           "legal_entity_id"
         ],
         "title": "LedgerIn",
+        "type": "object"
+      },
+      "LedgerMigrationOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "leading_system": {
+            "title": "Leading System",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "migration_cutoff": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Migration Cutoff"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "legal_entity_id",
+          "leading_system",
+          "migration_cutoff"
+        ],
+        "title": "LedgerMigrationOut",
         "type": "object"
       },
       "LedgerOut": {
@@ -35907,6 +36309,191 @@
         "title": "OpenItemNoticeIn",
         "type": "object"
       },
+      "OpeningBalancesIn": {
+        "additionalProperties": false,
+        "properties": {
+          "cutoff_date": {
+            "format": "date",
+            "title": "Cutoff Date",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/BalanceLineIn"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "cutoff_date",
+          "lines"
+        ],
+        "title": "OpeningBalancesIn",
+        "type": "object"
+      },
+      "OpeningBalancesOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "cutoff_date": {
+            "format": "date",
+            "title": "Cutoff Date",
+            "type": "string"
+          },
+          "entered_via": {
+            "title": "Entered Via",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "journal_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Journal Entry Id"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/BalanceLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "posted_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Posted At"
+          },
+          "release_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Comment"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "released_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released By"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "total_credit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Credit",
+            "type": "string"
+          },
+          "total_debit": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Debit",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ledger_id",
+          "cutoff_date",
+          "status",
+          "entered_via",
+          "note",
+          "created_by",
+          "created_at",
+          "released_by",
+          "released_at",
+          "release_comment",
+          "posted_at",
+          "journal_entry_id",
+          "total_debit",
+          "total_credit",
+          "lines"
+        ],
+        "title": "OpeningBalancesOut",
+        "type": "object"
+      },
       "OrderIn": {
         "additionalProperties": false,
         "properties": {
@@ -43702,6 +44289,95 @@
         "title": "ReconcileStateIn",
         "type": "object"
       },
+      "ReconciliationLineOut": {
+        "properties": {
+          "deviates": {
+            "title": "Deviates",
+            "type": "boolean"
+          },
+          "difference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Difference"
+          },
+          "hint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hint"
+          },
+          "key": {
+            "title": "Key",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "ledger_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Id"
+          },
+          "metric": {
+            "title": "Metric",
+            "type": "string"
+          },
+          "platform": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Platform"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "metric",
+          "key",
+          "label",
+          "source",
+          "platform",
+          "difference",
+          "deviates",
+          "hint"
+        ],
+        "title": "ReconciliationLineOut",
+        "type": "object"
+      },
       "ReconciliationNoteIn": {
         "additionalProperties": false,
         "description": "Explained difference of the cash flow reconciliation (W04): signed amount that bridges\nthe costs booked in the year to the distributed costs, with the reason.",
@@ -43857,6 +44533,25 @@
           "lines"
         ],
         "title": "ReconciliationReportOut",
+        "type": "object"
+      },
+      "ReconciliationRunIn": {
+        "additionalProperties": false,
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          }
+        },
+        "title": "ReconciliationRunIn",
         "type": "object"
       },
       "RecurrenceIn": {
@@ -45159,111 +45854,6 @@
           "reason"
         ],
         "title": "ReportLineOut",
-        "type": "object"
-      },
-      "ReportListOut": {
-        "properties": {
-          "as_of": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "As Of"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "sources": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Sources",
-            "type": "array"
-          },
-          "totals": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Totals",
-            "type": "object"
-          },
-          "trigger": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trigger"
-          }
-        },
-        "required": [
-          "id",
-          "created_at",
-          "as_of",
-          "trigger",
-          "totals",
-          "sources"
-        ],
-        "title": "ReportListOut",
-        "type": "object"
-      },
-      "ReportOut": {
-        "properties": {
-          "accounts": {
-            "items": {
-              "$ref": "#/components/schemas/ReportLineOut"
-            },
-            "title": "Accounts",
-            "type": "array"
-          },
-          "ledger_id": {
-            "format": "uuid",
-            "title": "Ledger Id",
-            "type": "string"
-          },
-          "period_from": {
-            "format": "date",
-            "title": "Period From",
-            "type": "string"
-          },
-          "period_to": {
-            "format": "date",
-            "title": "Period To",
-            "type": "string"
-          },
-          "unmapped_count": {
-            "title": "Unmapped Count",
-            "type": "integer"
-          },
-          "used_unmapped_count": {
-            "title": "Used Unmapped Count",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "ledger_id",
-          "period_from",
-          "period_to",
-          "unmapped_count",
-          "used_unmapped_count",
-          "accounts"
-        ],
-        "title": "ReportOut",
         "type": "object"
       },
       "ReportType": {
@@ -49399,6 +49989,117 @@
           "tenant_id"
         ],
         "title": "SwitchRequest",
+        "type": "object"
+      },
+      "SwitchRequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "title": "SwitchRequestIn",
+        "type": "object"
+      },
+      "SwitchRequestOut": {
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "decided_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided At"
+          },
+          "decided_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decided By"
+          },
+          "decision_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decision Comment"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "report_id": {
+            "format": "uuid",
+            "title": "Report Id",
+            "type": "string"
+          },
+          "requested_by": {
+            "format": "uuid",
+            "title": "Requested By",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "ledger_id",
+          "report_id",
+          "status",
+          "comment",
+          "requested_by",
+          "created_at",
+          "decided_by",
+          "decided_at",
+          "decision_comment"
+        ],
+        "title": "SwitchRequestOut",
         "type": "object"
       },
       "SyncJobIn": {
@@ -55863,6 +56564,50 @@
         "title": "WorkspaceBulkIn",
         "type": "object"
       },
+      "mhvp__accounting__datev_mapping_routers__ReportOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ReportLineOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "unmapped_count": {
+            "title": "Unmapped Count",
+            "type": "integer"
+          },
+          "used_unmapped_count": {
+            "title": "Used Unmapped Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "period_from",
+          "period_to",
+          "unmapped_count",
+          "used_unmapped_count",
+          "accounts"
+        ],
+        "title": "ReportOut",
+        "type": "object"
+      },
       "mhvp__ai__schemas__ProviderIn": {
         "additionalProperties": false,
         "properties": {
@@ -56583,6 +57328,323 @@
           "name"
         ],
         "title": "TenantOut",
+        "type": "object"
+      },
+      "mhvp__imports__migration_routers__DecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "title": "DecisionIn",
+        "type": "object"
+      },
+      "mhvp__imports__migration_routers__ReportListOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "compared": {
+            "title": "Compared",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "deviations": {
+            "title": "Deviations",
+            "type": "integer"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "total_difference": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Difference",
+            "type": "string"
+          },
+          "zero_difference": {
+            "title": "Zero Difference",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "created_at",
+          "created_by",
+          "as_of",
+          "zero_difference",
+          "compared",
+          "deviations",
+          "total_difference",
+          "document_id"
+        ],
+        "title": "ReportListOut",
+        "type": "object"
+      },
+      "mhvp__imports__migration_routers__ReportOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "compared": {
+            "title": "Compared",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "deviations": {
+            "title": "Deviations",
+            "type": "integer"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReconciliationLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "total_difference": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Difference",
+            "type": "string"
+          },
+          "zero_difference": {
+            "title": "Zero Difference",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "created_at",
+          "created_by",
+          "as_of",
+          "zero_difference",
+          "compared",
+          "deviations",
+          "total_difference",
+          "document_id",
+          "summary",
+          "lines"
+        ],
+        "title": "ReportOut",
+        "type": "object"
+      },
+      "mhvp__imports__reconciliation_routers__ReportListOut": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Totals",
+            "type": "object"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "as_of",
+          "trigger",
+          "totals",
+          "sources"
+        ],
+        "title": "ReportListOut",
+        "type": "object"
+      },
+      "mhvp__objektakte__review_routers__DecisionIn": {
+        "properties": {
+          "action": {
+            "enum": [
+              "accept_candidate",
+              "set_manually",
+              "reject",
+              "snooze"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "candidate_index": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Index"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "DecisionIn",
         "type": "object"
       },
       "mhvp__platform__schemas__TenantOut": {
@@ -57656,7 +58718,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ReportOut"
+                  "$ref": "#/components/schemas/mhvp__accounting__datev_mapping_routers__ReportOut"
                 }
               }
             },
@@ -87190,6 +88252,976 @@
         ]
       }
     },
+    "/api/v1/imports/migration/journal-columns": {
+      "get": {
+        "operationId": "journal_columns_api_v1_imports_migration_journal_columns_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalColumnsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Spaltenzuordnung des Journal-Exports",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      },
+      "put": {
+        "operationId": "put_journal_columns_api_v1_imports_migration_journal_columns_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JournalColumnsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalColumnsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Spaltenzuordnung des Journal-Exports speichern",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/ledgers/{ledger_id}": {
+      "get": {
+        "operationId": "get_ledger_api_v1_imports_migration_ledgers__ledger_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerMigrationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buchungskreis: Stichtag und führendes System",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/ledgers/{ledger_id}/cutoff": {
+      "put": {
+        "operationId": "put_cutoff_api_v1_imports_migration_ledgers__ledger_id__cutoff_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CutoffIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LedgerMigrationOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Migrationsstichtag des Buchungskreises",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/ledgers/{ledger_id}/journal": {
+      "get": {
+        "operationId": "get_journal_api_v1_imports_migration_ledgers__ledger_id__journal_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "maximum": 2000,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JournalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Migrationsjournal des Buchungskreises",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      },
+      "post": {
+        "operationId": "import_journal_api_v1_imports_migration_ledgers__ledger_id__journal_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/JournalImportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Journal Api V1 Imports Migration Ledgers  Ledger Id  Journal Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Journal-Export als Migrationsjournal übernehmen",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/ledgers/{ledger_id}/opening-balances": {
+      "get": {
+        "operationId": "list_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OpeningBalancesOut"
+                  },
+                  "title": "Response List Opening Balances Api V1 Imports Migration Ledgers  Ledger Id  Opening Balances Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eröffnungssalden des Buchungskreises",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      },
+      "put": {
+        "operationId": "put_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OpeningBalancesIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpeningBalancesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eröffnungssalden erfassen (Formular)",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/ledgers/{ledger_id}/opening-balances/import": {
+      "post": {
+        "operationId": "import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BalanceImportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eröffnungssalden aus einer Saldenliste (CSV) übernehmen",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/ledgers/{ledger_id}/switch-requests": {
+      "post": {
+        "operationId": "request_switch_api_v1_imports_migration_ledgers__ledger_id__switch_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwitchRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwitchRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wechsel des führenden Systems beantragen (G1, Nulldifferenz)",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/opening-balances/{balance_id}": {
+      "get": {
+        "operationId": "get_opening_balances_api_v1_imports_migration_opening_balances__balance_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "balance_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Balance Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpeningBalancesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eröffnungssalden",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/opening-balances/{balance_id}/post": {
+      "post": {
+        "operationId": "post_opening_balances_api_v1_imports_migration_opening_balances__balance_id__post_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "balance_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Balance Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpeningBalancesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eröffnungssalden buchen (Quelle migration, nur nach Freigabe und mit Stichtag)",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/opening-balances/{balance_id}/release": {
+      "post": {
+        "operationId": "release_opening_balances_api_v1_imports_migration_opening_balances__balance_id__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "balance_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Balance Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__imports__migration_routers__DecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpeningBalancesOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Eröffnungssalden freigeben (zweite Person)",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/properties/{property_id}/reconciliation": {
+      "get": {
+        "operationId": "list_reports_api_v1_imports_migration_properties__property_id__reconciliation_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/mhvp__imports__migration_routers__ReportListOut"
+                  },
+                  "title": "Response List Reports Api V1 Imports Migration Properties  Property Id  Reconciliation Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgleichberichte des Objekts",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      },
+      "post": {
+        "operationId": "run_reconciliation_api_v1_imports_migration_properties__property_id__reconciliation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReconciliationRunIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__imports__migration_routers__ReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgleich mit Nulldifferenzprüfung ausführen und als Dokument ablegen",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/reconciliation/{report_id}": {
+      "get": {
+        "operationId": "get_report_api_v1_imports_migration_reconciliation__report_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__imports__migration_routers__ReportOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgleichbericht",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/reconciliation/{report_id}/pdf": {
+      "get": {
+        "operationId": "get_report_pdf_api_v1_imports_migration_reconciliation__report_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Abgleichbericht (PDF)",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/status": {
+      "get": {
+        "operationId": "status_api_v1_imports_migration_status_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Status Api V1 Imports Migration Status Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Migrationsstatus je Objekt",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/switch-requests": {
+      "get": {
+        "operationId": "list_switch_requests_api_v1_imports_migration_switch_requests_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ledger Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/SwitchRequestOut"
+                  },
+                  "title": "Response List Switch Requests Api V1 Imports Migration Switch Requests Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Anträge auf Wechsel des führenden Systems",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/switch-requests/{request_id}/approve": {
+      "post": {
+        "operationId": "approve_switch_api_v1_imports_migration_switch_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__imports__migration_routers__DecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwitchRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wechsel freigeben (zweite Person)",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
+    "/api/v1/imports/migration/switch-requests/{request_id}/reject": {
+      "post": {
+        "operationId": "reject_switch_api_v1_imports_migration_switch_requests__request_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__imports__migration_routers__DecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SwitchRequestOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wechsel ablehnen",
+        "tags": [
+          "Migration Immoware24"
+        ]
+      }
+    },
     "/api/v1/imports/reconciliation-reports": {
       "get": {
         "operationId": "list_reports_api_v1_imports_reconciliation_reports_get",
@@ -87213,7 +89245,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/ReportListOut"
+                    "$ref": "#/components/schemas/mhvp__imports__reconciliation_routers__ReportListOut"
                   },
                   "title": "Response List Reports Api V1 Imports Reconciliation Reports Get",
                   "type": "array"
@@ -100193,7 +102225,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/DecisionIn"
+                "$ref": "#/components/schemas/mhvp__objektakte__review_routers__DecisionIn"
               }
             }
           },

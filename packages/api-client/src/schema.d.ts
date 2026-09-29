@@ -9266,6 +9266,299 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/migration/journal-columns": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Spaltenzuordnung des Journal-Exports */
+        get: operations["journal_columns_api_v1_imports_migration_journal_columns_get"];
+        /** Spaltenzuordnung des Journal-Exports speichern */
+        put: operations["put_journal_columns_api_v1_imports_migration_journal_columns_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/ledgers/{ledger_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Buchungskreis: Stichtag und führendes System */
+        get: operations["get_ledger_api_v1_imports_migration_ledgers__ledger_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/ledgers/{ledger_id}/cutoff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Migrationsstichtag des Buchungskreises */
+        put: operations["put_cutoff_api_v1_imports_migration_ledgers__ledger_id__cutoff_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/ledgers/{ledger_id}/journal": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Migrationsjournal des Buchungskreises */
+        get: operations["get_journal_api_v1_imports_migration_ledgers__ledger_id__journal_get"];
+        put?: never;
+        /** Journal-Export als Migrationsjournal übernehmen */
+        post: operations["import_journal_api_v1_imports_migration_ledgers__ledger_id__journal_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/ledgers/{ledger_id}/opening-balances": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eröffnungssalden des Buchungskreises */
+        get: operations["list_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_get"];
+        /** Eröffnungssalden erfassen (Formular) */
+        put: operations["put_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/ledgers/{ledger_id}/opening-balances/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Eröffnungssalden aus einer Saldenliste (CSV) übernehmen */
+        post: operations["import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/ledgers/{ledger_id}/switch-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Wechsel des führenden Systems beantragen (G1, Nulldifferenz) */
+        post: operations["request_switch_api_v1_imports_migration_ledgers__ledger_id__switch_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/opening-balances/{balance_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Eröffnungssalden */
+        get: operations["get_opening_balances_api_v1_imports_migration_opening_balances__balance_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/opening-balances/{balance_id}/post": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Eröffnungssalden buchen (Quelle migration, nur nach Freigabe und mit Stichtag) */
+        post: operations["post_opening_balances_api_v1_imports_migration_opening_balances__balance_id__post_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/opening-balances/{balance_id}/release": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Eröffnungssalden freigeben (zweite Person) */
+        post: operations["release_opening_balances_api_v1_imports_migration_opening_balances__balance_id__release_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/properties/{property_id}/reconciliation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgleichberichte des Objekts */
+        get: operations["list_reports_api_v1_imports_migration_properties__property_id__reconciliation_get"];
+        put?: never;
+        /** Abgleich mit Nulldifferenzprüfung ausführen und als Dokument ablegen */
+        post: operations["run_reconciliation_api_v1_imports_migration_properties__property_id__reconciliation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/reconciliation/{report_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgleichbericht */
+        get: operations["get_report_api_v1_imports_migration_reconciliation__report_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/reconciliation/{report_id}/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Abgleichbericht (PDF) */
+        get: operations["get_report_pdf_api_v1_imports_migration_reconciliation__report_id__pdf_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Migrationsstatus je Objekt */
+        get: operations["status_api_v1_imports_migration_status_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/switch-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Anträge auf Wechsel des führenden Systems */
+        get: operations["list_switch_requests_api_v1_imports_migration_switch_requests_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/switch-requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Wechsel freigeben (zweite Person) */
+        post: operations["approve_switch_api_v1_imports_migration_switch_requests__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/migration/switch-requests/{request_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Wechsel ablehnen */
+        post: operations["reject_switch_api_v1_imports_migration_switch_requests__request_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/imports/reconciliation-reports": {
         parameters: {
             query?: never;
@@ -20686,6 +20979,57 @@ export interface components {
             /** Scanned */
             scanned: number;
         };
+        /** BalanceImportOut */
+        BalanceImportOut: {
+            balances: components["schemas"]["OpeningBalancesOut"] | null;
+            /** Errors */
+            errors: string[];
+        };
+        /** BalanceLineIn */
+        BalanceLineIn: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Amount */
+            amount: number | string;
+            /** Due Date */
+            due_date?: string | null;
+            /** Kind */
+            kind: string;
+            /** Property Bank Account Id */
+            property_bank_account_id?: string | null;
+            /** Text */
+            text?: string | null;
+        };
+        /** BalanceLineOut */
+        BalanceLineOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Account Name */
+            account_name: string;
+            /** Account Number */
+            account_number: string;
+            /** Amount */
+            amount: string;
+            /** Due Date */
+            due_date: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Property Bank Account Id */
+            property_bank_account_id: string | null;
+            /** Text */
+            text: string | null;
+        };
         /**
          * BandSegment
          * @description Segment of the letterhead colour band as share of the page width (M6).
@@ -21122,6 +21466,18 @@ export interface components {
              * @default false
              */
             skip_handed_over: boolean;
+        };
+        /** Body_import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post */
+        Body_import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post: {
+            /**
+             * Cutoff Date
+             * Format: date
+             */
+            cutoff_date: string;
+            /** File */
+            file: string;
+            /** Note */
+            note?: string | null;
         };
         /** Body_import_preview_api_v1_metering_assignments_import_preview_post */
         Body_import_preview_api_v1_metering_assignments_import_preview_post: {
@@ -24104,6 +24460,11 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** CutoffIn */
+        CutoffIn: {
+            /** Migration Cutoff */
+            migration_cutoff: string | null;
+        };
         /**
          * DataKind
          * @enum {string}
@@ -24508,22 +24869,6 @@ export interface components {
          * @enum {string}
          */
         Decision: "pending" | "accepted" | "modified" | "rejected";
-        /** DecisionIn */
-        DecisionIn: {
-            /**
-             * Action
-             * @enum {string}
-             */
-            action: "accept_candidate" | "set_manually" | "reject" | "snooze";
-            /** Candidate Index */
-            candidate_index?: number | null;
-            /** Category Id */
-            category_id?: string | null;
-            /** Document Type */
-            document_type?: string | null;
-            /** Snoozed Until */
-            snoozed_until?: string | null;
-        };
         /** DeductionIn */
         DeductionIn: {
             /** Amount */
@@ -27562,6 +27907,26 @@ export interface components {
             /** Digest Mail Enabled */
             digest_mail_enabled: boolean;
         };
+        /** JournalColumnsIn */
+        JournalColumnsIn: {
+            /** Columns */
+            columns: {
+                [key: string]: string;
+            };
+        };
+        /** JournalColumnsOut */
+        JournalColumnsOut: {
+            /** Columns */
+            columns: {
+                [key: string]: string;
+            };
+            /** Customised */
+            customised: boolean;
+            /** Fields */
+            fields: {
+                [key: string]: unknown;
+            }[];
+        };
         /** JournalEntryIn */
         JournalEntryIn: {
             /** Accrual Date */
@@ -27590,6 +27955,72 @@ export interface components {
             text: string;
             /** Value Date */
             value_date?: string | null;
+        };
+        /** JournalEntryOut */
+        JournalEntryOut: {
+            /**
+             * Booking Date
+             * Format: date
+             */
+            booking_date: string;
+            /** Credit Total */
+            credit_total: string;
+            /** Debit Total */
+            debit_total: string;
+            /** Document Ref */
+            document_ref: string | null;
+            /** Fiscal Year */
+            fiscal_year: number;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lines */
+            lines: {
+                [key: string]: unknown;
+            }[];
+            /** Reconciled */
+            reconciled: boolean;
+            /** Reference */
+            reference: string | null;
+            /** Source */
+            source: string;
+            /** Source Entry Id */
+            source_entry_id: string;
+            /** Text */
+            text: string;
+            /** Year Complete */
+            year_complete: boolean;
+        };
+        /** JournalImportIn */
+        JournalImportIn: {
+            /**
+             * Source File Id
+             * Format: uuid
+             */
+            source_file_id: string;
+            /** Year */
+            year: number;
+            /**
+             * Year Complete
+             * @default false
+             */
+            year_complete: boolean;
+        };
+        /** JournalOut */
+        JournalOut: {
+            /** Entries */
+            entries: components["schemas"]["JournalEntryOut"][];
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
         };
         /** KnowledgeEntryIn */
         KnowledgeEntryIn: {
@@ -27772,6 +28203,25 @@ export interface components {
             migration_cutoff?: string | null;
             /** Template Id */
             template_id?: string | null;
+        };
+        /** LedgerMigrationOut */
+        LedgerMigrationOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Leading System */
+            leading_system: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /** Migration Cutoff */
+            migration_cutoff: string | null;
+            /** Name */
+            name: string;
         };
         /** LedgerOut */
         LedgerOut: {
@@ -30976,6 +31426,65 @@ export interface components {
             /** Notice Received On */
             notice_received_on: string | null;
         };
+        /** OpeningBalancesIn */
+        OpeningBalancesIn: {
+            /**
+             * Cutoff Date
+             * Format: date
+             */
+            cutoff_date: string;
+            /** Lines */
+            lines: components["schemas"]["BalanceLineIn"][];
+            /** Note */
+            note?: string | null;
+        };
+        /** OpeningBalancesOut */
+        OpeningBalancesOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /**
+             * Cutoff Date
+             * Format: date
+             */
+            cutoff_date: string;
+            /** Entered Via */
+            entered_via: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Journal Entry Id */
+            journal_entry_id: string | null;
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /** Lines */
+            lines: components["schemas"]["BalanceLineOut"][];
+            /** Note */
+            note: string | null;
+            /** Posted At */
+            posted_at: string | null;
+            /** Release Comment */
+            release_comment: string | null;
+            /** Released At */
+            released_at: string | null;
+            /** Released By */
+            released_by: string | null;
+            /** Status */
+            status: string;
+            /** Total Credit */
+            total_credit: string;
+            /** Total Debit */
+            total_debit: string;
+        };
         /** OrderIn */
         OrderIn: {
             /** Ids */
@@ -33515,6 +34024,27 @@ export interface components {
              */
             preview: boolean;
         };
+        /** ReconciliationLineOut */
+        ReconciliationLineOut: {
+            /** Deviates */
+            deviates: boolean;
+            /** Difference */
+            difference: string | null;
+            /** Hint */
+            hint: string | null;
+            /** Key */
+            key: string;
+            /** Label */
+            label: string;
+            /** Ledger Id */
+            ledger_id: string | null;
+            /** Metric */
+            metric: string;
+            /** Platform */
+            platform: string | null;
+            /** Source */
+            source: string | null;
+        };
         /**
          * ReconciliationNoteIn
          * @description Explained difference of the cash flow reconciliation (W04): signed amount that bridges
@@ -33577,6 +34107,11 @@ export interface components {
             trigger: string | null;
             /** Warnings */
             warnings: string[];
+        };
+        /** ReconciliationRunIn */
+        ReconciliationRunIn: {
+            /** As Of */
+            as_of?: string | null;
         };
         /**
          * RecurrenceIn
@@ -33989,55 +34524,6 @@ export interface components {
             unmapped: boolean;
             /** Unmapped Lines */
             unmapped_lines: number;
-        };
-        /** ReportListOut */
-        ReportListOut: {
-            /** As Of */
-            as_of: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Sources */
-            sources: {
-                [key: string]: unknown;
-            }[];
-            /** Totals */
-            totals: {
-                [key: string]: number;
-            };
-            /** Trigger */
-            trigger: string | null;
-        };
-        /** ReportOut */
-        ReportOut: {
-            /** Accounts */
-            accounts: components["schemas"]["ReportLineOut"][];
-            /**
-             * Ledger Id
-             * Format: uuid
-             */
-            ledger_id: string;
-            /**
-             * Period From
-             * Format: date
-             */
-            period_from: string;
-            /**
-             * Period To
-             * Format: date
-             */
-            period_to: string;
-            /** Unmapped Count */
-            unmapped_count: number;
-            /** Used Unmapped Count */
-            used_unmapped_count: number;
         };
         /**
          * ReportType
@@ -35444,6 +35930,49 @@ export interface components {
              * Format: uuid
              */
             tenant_id: string;
+        };
+        /** SwitchRequestIn */
+        SwitchRequestIn: {
+            /** Comment */
+            comment?: string | null;
+        };
+        /** SwitchRequestOut */
+        SwitchRequestOut: {
+            /** Comment */
+            comment: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Decided At */
+            decided_at: string | null;
+            /** Decided By */
+            decided_by: string | null;
+            /** Decision Comment */
+            decision_comment: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /**
+             * Report Id
+             * Format: uuid
+             */
+            report_id: string;
+            /**
+             * Requested By
+             * Format: uuid
+             */
+            requested_by: string;
+            /** Status */
+            status: string;
         };
         /** SyncJobIn */
         SyncJobIn: {
@@ -37400,6 +37929,30 @@ export interface components {
             /** Tag */
             tag?: string | null;
         };
+        /** ReportOut */
+        mhvp__accounting__datev_mapping_routers__ReportOut: {
+            /** Accounts */
+            accounts: components["schemas"]["ReportLineOut"][];
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /**
+             * Period From
+             * Format: date
+             */
+            period_from: string;
+            /**
+             * Period To
+             * Format: date
+             */
+            period_to: string;
+            /** Unmapped Count */
+            unmapped_count: number;
+            /** Used Unmapped Count */
+            used_unmapped_count: number;
+        };
         /** ProviderIn */
         mhvp__ai__schemas__ProviderIn: {
             /**
@@ -37607,6 +38160,128 @@ export interface components {
             id: string;
             /** Name */
             name: string;
+        };
+        /** DecisionIn */
+        mhvp__imports__migration_routers__DecisionIn: {
+            /** Comment */
+            comment?: string | null;
+        };
+        /** ReportListOut */
+        mhvp__imports__migration_routers__ReportListOut: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Compared */
+            compared: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /** Deviations */
+            deviations: number;
+            /** Document Id */
+            document_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Total Difference */
+            total_difference: string;
+            /** Zero Difference */
+            zero_difference: boolean;
+        };
+        /** ReportOut */
+        mhvp__imports__migration_routers__ReportOut: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Compared */
+            compared: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /** Deviations */
+            deviations: number;
+            /** Document Id */
+            document_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lines */
+            lines: components["schemas"]["ReconciliationLineOut"][];
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /** Total Difference */
+            total_difference: string;
+            /** Zero Difference */
+            zero_difference: boolean;
+        };
+        /** ReportListOut */
+        mhvp__imports__reconciliation_routers__ReportListOut: {
+            /** As Of */
+            as_of: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+            /** Trigger */
+            trigger: string | null;
+        };
+        /** DecisionIn */
+        mhvp__objektakte__review_routers__DecisionIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "accept_candidate" | "set_manually" | "reject" | "snooze";
+            /** Candidate Index */
+            candidate_index?: number | null;
+            /** Category Id */
+            category_id?: string | null;
+            /** Document Type */
+            document_type?: string | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
         };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
@@ -38177,7 +38852,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReportOut"];
+                    "application/json": components["schemas"]["mhvp__accounting__datev_mapping_routers__ReportOut"];
                 };
             };
             /** @description Validation Error */
@@ -57597,6 +58272,677 @@ export interface operations {
             };
         };
     };
+    journal_columns_api_v1_imports_migration_journal_columns_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalColumnsOut"];
+                };
+            };
+        };
+    };
+    put_journal_columns_api_v1_imports_migration_journal_columns_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JournalColumnsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalColumnsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_ledger_api_v1_imports_migration_ledgers__ledger_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerMigrationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_cutoff_api_v1_imports_migration_ledgers__ledger_id__cutoff_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CutoffIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LedgerMigrationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_journal_api_v1_imports_migration_ledgers__ledger_id__journal_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JournalOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_journal_api_v1_imports_migration_ledgers__ledger_id__journal_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JournalImportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningBalancesOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OpeningBalancesIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningBalancesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": components["schemas"]["Body_import_opening_balances_api_v1_imports_migration_ledgers__ledger_id__opening_balances_import_post"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BalanceImportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_switch_api_v1_imports_migration_ledgers__ledger_id__switch_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ledger_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SwitchRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwitchRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_opening_balances_api_v1_imports_migration_opening_balances__balance_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                balance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningBalancesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    post_opening_balances_api_v1_imports_migration_opening_balances__balance_id__post_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                balance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningBalancesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    release_opening_balances_api_v1_imports_migration_opening_balances__balance_id__release_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                balance_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__imports__migration_routers__DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OpeningBalancesOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_reports_api_v1_imports_migration_properties__property_id__reconciliation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__imports__migration_routers__ReportListOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_reconciliation_api_v1_imports_migration_properties__property_id__reconciliation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReconciliationRunIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__imports__migration_routers__ReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_api_v1_imports_migration_reconciliation__report_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["mhvp__imports__migration_routers__ReportOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_report_pdf_api_v1_imports_migration_reconciliation__report_id__pdf_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                report_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    status_api_v1_imports_migration_status_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    list_switch_requests_api_v1_imports_migration_switch_requests_get: {
+        parameters: {
+            query?: {
+                ledger_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwitchRequestOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_switch_api_v1_imports_migration_switch_requests__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__imports__migration_routers__DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwitchRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_switch_api_v1_imports_migration_switch_requests__request_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__imports__migration_routers__DecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SwitchRequestOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_reports_api_v1_imports_reconciliation_reports_get: {
         parameters: {
             query?: {
@@ -57614,7 +58960,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ReportListOut"][];
+                    "application/json": components["schemas"]["mhvp__imports__reconciliation_routers__ReportListOut"][];
                 };
             };
             /** @description Validation Error */
@@ -66129,7 +67475,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["DecisionIn"];
+                "application/json": components["schemas"]["mhvp__objektakte__review_routers__DecisionIn"];
             };
         };
         responses: {
