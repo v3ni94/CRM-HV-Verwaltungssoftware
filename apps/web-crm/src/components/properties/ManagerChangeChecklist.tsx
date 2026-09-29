@@ -100,6 +100,11 @@ export function ManagerChangeChecklist({ propertyId, canEdit }: { propertyId: st
                   {item.done_at ? (
                     <span className="text-xs text-muted">{t("doneBy", { name: item.done_by_name ?? "", date: formatDate(item.done_at.slice(0, 10)) })}</span>
                   ) : null}
+                  {item.code === "completeness" ? (
+                    <a href="#objektakte-letter" className={`${ui.buttonSm} mt-1 w-fit`} data-testid="checklist-letter-link">
+                      {t("letterLink")}
+                    </a>
+                  ) : null}
                 </span>
               </li>
             ))}

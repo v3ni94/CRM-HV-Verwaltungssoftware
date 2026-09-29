@@ -470,9 +470,10 @@ def _date(value: Any) -> str:
     return f"{d:%d.%m.%Y}"
 
 
-def letter_text(case: Any, unit_label: str, address: str) -> dict[str, Any]:
-    """Draft of the tenant letter (§ 558 BGB) from the case data. Draft only; the operator
-    checks it legally before use. Unknown facts stay as visible placeholders."""
+def letter_body(case: Any, unit_label: str, address: str) -> tuple[str, list[str], list[str]]:
+    """Subject, body lines and placeholders of the tenant letter (§ 558 BGB) from the case
+    data, without sender, recipient and closing. Unknown facts stay as visible placeholders;
+    the letter is a draft until the legal review is documented (M26-01)."""
     check = case.check or {}
     stat = check.get("statutory") or {}
     placeholders: list[str] = []
@@ -481,17 +482,8 @@ def letter_text(case: Any, unit_label: str, address: str) -> dict[str, Any]:
         placeholders.append(label)
         return f"[{label}]"
 
+    subject = f"Mieterhöhungsverlangen nach § 558 BGB für die Wohnung {unit_label}, {address}"
     lines = [
-        "ENTWURF, vor Versand rechtlich zu prüfen",
-        "",
-        ph("Vermieter mit Anschrift"),
-        "",
-        ph("Mieter mit Anschrift"),
-        "",
-        f"Mieterhöhungsverlangen nach § 558 BGB für die Wohnung {unit_label}, {address}",
-        "",
-        "Sehr geehrte Damen und Herren,",
-        "",
         f"die Nettokaltmiete für die von Ihnen gemietete Wohnung beträgt derzeit "
         f"{_eur(case.current_rent)} monatlich. Wir bitten Sie, einer Erhöhung der Nettokaltmiete "
         f"auf {_eur(case.target_rent)} monatlich ab dem {_date(case.effective_date)} "
@@ -535,14 +527,40 @@ def letter_text(case: Any, unit_label: str, address: str) -> dict[str, Any]:
     else:
         until = ph("Frist nach Zugang")
         lines.append(f"Wir bitten Sie, Ihre Zustimmung bis zum {until} zu erklären.")
-    lines += [
-        "Die Erhöhung wird nur mit Ihrer Zustimmung wirksam.",
+    lines.append("Die Erhöhung wird nur mit Ihrer Zustimmung wirksam.")
+    attachments = "Anlagen: " + (
+        "Mietspiegelauszug" if case.justification == "mietspiegel" else ph("Anlagen")
+    )
+    return subject, [*lines, "", attachments], placeholders
+
+
+def letter_text(case: Any, unit_label: str, address: str) -> dict[str, Any]:
+    """Draft of the tenant letter (§ 558 BGB) as plain text. Draft only; the operator checks
+    it legally before use. Unknown facts stay as visible placeholders."""
+    subject, body, placeholders = letter_body(case, unit_label, address)
+    placeholders = [
+        "Vermieter mit Anschrift",
+        "Mieter mit Anschrift",
+        *placeholders,
+        "Name und Funktion",
+    ]
+    lines = [
+        "ENTWURF, vor Versand rechtlich zu prüfen",
+        "",
+        "[Vermieter mit Anschrift]",
+        "",
+        "[Mieter mit Anschrift]",
+        "",
+        subject,
+        "",
+        "Sehr geehrte Damen und Herren,",
+        "",
+        *body[:-2],
         "",
         "Mit freundlichen Grüßen",
         "",
-        ph("Name und Funktion"),
+        "[Name und Funktion]",
         "",
-        "Anlagen: "
-        + ("Mietspiegelauszug" if case.justification == "mietspiegel" else ph("Anlagen")),
+        body[-1],
     ]
     return {"status": "draft", "text": "\n".join(lines), "placeholders": placeholders}

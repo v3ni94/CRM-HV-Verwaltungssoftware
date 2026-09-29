@@ -8,7 +8,10 @@ letter templates, PDF letters and serial letters.
 * Files: `models.py`, `schemas.py`, `routers.py`, `services.py` (store, link, retention,
   letter context), `blobs.py` (S3 originals), `text.py` (text layer, type checks), `dms.py`
   (store protocol and adapters), `tasks.py` (mirror job), `letters.py` (placeholders, DIN 5008
-  PDF), `defaults.py` (categories, free letter).
+  PDF), `defaults.py` (categories, free letter), `letter_records.py` (letters on the letterhead
+  filed as documents with ticket link and dispatch record, M12 gaps 29.09.2026: used by the
+  Nachforderungsschreiben and the rent increase letter; nothing is sent, a mail draft leaves
+  only through the mail approval).
 * Tests: `apps/api/tests/integration/test_m6_documents.py`, `apps/api/tests/unit/test_m6_documents.py`.
 * Locks: deletion only with a released retention profile; nothing is sent from here.
 * Retention: standard profiles per tenant are seeded as drafts by `defaults.py` (operator

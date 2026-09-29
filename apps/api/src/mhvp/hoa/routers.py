@@ -381,14 +381,143 @@ async def transition_plan(
         return _plan_out(plan)
 
 
+class PlanApplyIn(HoaBaseIn):
+    """Confirmation of the preview: ``snapshot_hash`` must be the plan's current hash."""
+
+    confirm: bool = False
+    snapshot_hash: str | None = Field(default=None, max_length=64)
+
+
+APPLY_STATUSES = (StatementStatus.RESOLVED, StatementStatus.ISSUED, StatementStatus.DUE)
+
+
+async def _plan_apply_preview(session: AsyncSession, plan: EconomicPlan) -> dict[str, Any]:
+    """Rows of the takeover (rule W02): per unit and component the ownership contract at
+    ``valid_from``, the amount standing on it that day and the resolved monthly amount.
+    Action ``create`` (new standing amount from ``valid_from``), ``unchanged`` (the same
+    amount already starts on ``valid_from``), ``zero`` (nothing resolved), ``no_contract``
+    (no owner at ``valid_from``, the unit is skipped and listed). ``posted_months`` counts
+    receivable items already posted for months from ``valid_from`` on: they are never
+    charged again by this step (W02, R04); an adjustment is a bookkeeping correction behind
+    G1."""
+    from mhvp.accounting.models import ItemStatus, ReceivableItem
+    from mhvp.contacts.models import Party
+    from mhvp.contracts.models import ContractPayment
+
+    rows: list[dict[str, Any]] = []
+    posted_months = 0
+    for unit in (plan.snapshot or {}).get("units", []):
+        unit_id = uuid.UUID(unit["unit_id"])
+        contract = await calc.owner_at(session, unit_id, plan.valid_from)
+        party_name = None
+        if contract is not None:
+            party_name = await session.scalar(
+                select(Party.name).where(Party.id == contract.party_id)
+            )
+        for component, amount in unit["monthly"].items():
+            new = Decimal(amount)
+            row: dict[str, Any] = {
+                "unit_id": str(unit_id),
+                "unit_number": unit["unit_number"],
+                "component": component,
+                "contract_id": contract.id if contract else None,
+                "contract_number": contract.number if contract else None,
+                "owner": party_name,
+                "current": None,
+                "new": str(new),
+                "valid_from": plan.valid_from,
+            }
+            if contract is None:
+                row["action"] = "no_contract"
+            elif new <= 0:
+                row["action"] = "zero"
+            else:
+                current = await session.scalar(
+                    select(ContractPayment)
+                    .where(
+                        ContractPayment.contract_id == contract.id,
+                        ContractPayment.payment_type_code == component,
+                        ContractPayment.valid_from <= plan.valid_from,
+                        (ContractPayment.valid_to.is_(None))
+                        | (ContractPayment.valid_to >= plan.valid_from),
+                    )
+                    .order_by(ContractPayment.valid_from.desc())
+                    .limit(1)
+                )
+                row["current"] = str(current.gross) if current else None
+                unchanged = (
+                    current is not None
+                    and current.valid_from == plan.valid_from
+                    and current.gross == new
+                )
+                row["action"] = "unchanged" if unchanged else "create"
+                posted_months += int(
+                    await session.scalar(
+                        select(func.count())
+                        .select_from(ReceivableItem)
+                        .where(
+                            ReceivableItem.contract_id == contract.id,
+                            ReceivableItem.payment_type_code == component,
+                            ReceivableItem.status == ItemStatus.POSTED,
+                            ReceivableItem.period_month >= plan.valid_from,
+                        )
+                    )
+                    or 0
+                )
+            rows.append(row)
+    counts = {
+        k: sum(1 for r in rows if r["action"] == k)
+        for k in ("create", "unchanged", "zero", "no_contract")
+    }
+    return {
+        "plan_id": plan.id,
+        "status": plan.status.value,
+        "valid_from": plan.valid_from,
+        "snapshot_hash": plan.snapshot_hash,
+        "applied_at": plan.applied_at,
+        "can_apply": plan.applied_at is None and plan.status in APPLY_STATUSES,
+        "rows": rows,
+        "counts": counts,
+        "posted_months": posted_months,
+        "gates": {
+            "payment_rows": "Stammdaten des Vertrags, keine Freigabestufe (wie Sollbeträge im CRM)",
+            "posting": "Sollstellung liest die Zeilen erst mit G1 (Buchhaltung)",
+        },
+        "hinweis": (
+            "Vorschau; die Übernahme legt je Vertrag und Komponente einen Sollbetrag ab "
+            "Wirksamkeitsbeginn an und schließt den vorherigen am Vortag. Bestätigung durch "
+            "eine zweite Person (nicht der Ersteller des Plans)."
+        ),
+    }
+
+
+@router.get(
+    "/plans/{plan_id}/apply/preview", summary="Vorschau der Übernahme in die Zahlungspläne (W02)"
+)
+async def plan_apply_preview(
+    plan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        plan = await session.get(EconomicPlan, plan_id)
+        if plan is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return await _plan_apply_preview(session, plan)
+
+
 @router.post(
     "/plans/{plan_id}/apply", summary="Beschlossene Vorschüsse als Vertragszahlungen übernehmen"
 )
 async def apply_plan(
-    plan_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+    plan_id: uuid.UUID,
+    request: Request,
+    body: PlanApplyIn | None = None,
+    principal: TenantPrincipal = Depends(APPROVE),
 ) -> dict[str, Any]:
-    """Only after the resolution; creates monthly payments per ownership contract from valid_from
-    (W02: the draft changes nothing; no double charge of months already posted)."""
+    """Only after the resolution, only with the confirmed preview (``confirm`` and the
+    current ``snapshot_hash``) and only by a second person (not the plan's creator). Creates
+    the standing monthly amounts per ownership contract from ``valid_from`` (rule W02: the
+    draft changes nothing; months already posted are never charged again). Idempotent: an
+    applied plan returns unchanged, rows already standing are skipped."""
     from mhvp.contracts.models import ContractPayment, PaymentReason
     from mhvp.contracts.services import add_payment
 
@@ -397,37 +526,50 @@ async def apply_plan(
         if plan is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if plan.applied_at is not None:
-            return _plan_out(plan)
-        if plan.status not in (
-            StatementStatus.RESOLVED,
-            StatementStatus.ISSUED,
-            StatementStatus.DUE,
-        ):
+            return _plan_out(plan) | {"payments_created": 0, "already_applied": True}
+        if plan.status not in APPLY_STATUSES:
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Vorschüsse erst nach Beschluss (W02, W06)."
             )
+        if body is None or not body.confirm:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Die Vorschau der Übernahme ist zu bestätigen (confirm).",
+            )
+        if body.snapshot_hash != plan.snapshot_hash:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Die Vorschau gehört zu einem anderen Stand des Plans (snapshot_hash).",
+            )
+        if plan.created_by == principal.user_id:
+            raise ProblemError(
+                ErrorCodes.GATE_FOUR_EYES,
+                detail="Die Übernahme muss eine andere Person als der Ersteller bestätigen.",
+            )
+        preview = await _plan_apply_preview(session, plan)
         created = 0
-        for unit in (plan.snapshot or {}).get("units", []):
-            contract = await calc.owner_at(session, uuid.UUID(unit["unit_id"]), plan.valid_from)
+        for row in preview["rows"]:
+            if row["action"] != "create":
+                continue
+            contract = await calc.owner_at(session, uuid.UUID(row["unit_id"]), plan.valid_from)
             if contract is None:
                 continue
-            for component, amount in unit["monthly"].items():
-                if Decimal(amount) <= 0:
-                    continue
-                await add_payment(
-                    session,
-                    contract,
-                    ContractPayment(
-                        tenant_id=principal.tenant_id,
-                        contract_id=contract.id,
-                        payment_type_code=component,
-                        net=Decimal(amount),
-                        gross=Decimal(amount),
-                        valid_from=plan.valid_from,
-                        reason=PaymentReason.ADJUSTMENT_FROM_STATEMENT,
-                    ),
-                )
-                created += 1
+            amount = Decimal(row["new"])
+            await add_payment(
+                session,
+                contract,
+                ContractPayment(
+                    tenant_id=principal.tenant_id,
+                    created_by=principal.user_id,
+                    contract_id=contract.id,
+                    payment_type_code=row["component"],
+                    net=amount,
+                    gross=amount,
+                    valid_from=plan.valid_from,
+                    reason=PaymentReason.ADJUSTMENT_FROM_STATEMENT,
+                ),
+            )
+            created += 1
         plan.applied_at = datetime.now(UTC)
         await emit(
             session,
@@ -436,10 +578,19 @@ async def apply_plan(
             entity_type="economic_plan",
             entity_id=plan.id,
             actor_user_id=principal.user_id,
-            payload={"payments": created},
+            payload={
+                "payments": created,
+                "snapshot_hash": plan.snapshot_hash,
+                "counts": preview["counts"],
+                "posted_months": preview["posted_months"],
+            },
         )
         await session.flush()
-        return _plan_out(plan) | {"payments_created": created}
+        return _plan_out(plan) | {
+            "payments_created": created,
+            "counts": preview["counts"],
+            "posted_months": preview["posted_months"],
+        }
 
 
 # Annual statement -----------------------------------------------------------------------

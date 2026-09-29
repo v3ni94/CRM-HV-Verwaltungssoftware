@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { LetterRecordForm } from "@/components/documents/LetterRecordForm";
 import { RentIncreaseActions } from "@/components/letting/RentIncreaseForms";
 import { RentIncreaseReceipt } from "@/components/letting/RentIncreaseReceipt";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -26,6 +27,7 @@ type Check = { statutory?: Statutory; increase: string; increase_percent: string
 export default async function RentIncreasePage({ params }: { params: Promise<{ caseId: string }> }) {
   const { caseId } = await params;
   const t = await getTranslations("RentIncrease");
+  const tLetter = await getTranslations("LetterRecord");
   const api = serverApi();
   const [me, { data, error, response }, letter] = await Promise.all([
     getMe(),
@@ -125,6 +127,15 @@ export default async function RentIncreasePage({ params }: { params: Promise<{ c
             {draft.text}
           </pre>
         </section>
+      ) : null}
+      {!["cancelled", "rejected"].includes(String(data.status)) ? (
+        <LetterRecordForm
+          path={`letting/rent-increases/${caseId}/letter/pdf`}
+          recipient={{ kind: "fixed", label: tLetter("recipientTenant") }}
+          portalLocked
+          canCreate={permissions.includes("contracts:approve")}
+          requiredPermission="contracts:approve"
+        />
       ) : null}
       <RentIncreaseReceipt caseId={caseId} status={String(data.status)} receivedOn={receivedOn} canRecord={permissions.includes("contracts:approve")} />
       {permissions.includes("tickets:read") ? (

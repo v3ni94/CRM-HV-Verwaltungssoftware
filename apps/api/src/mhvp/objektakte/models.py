@@ -491,3 +491,50 @@ class ObjektaktePreviewImportRun(IdMixin, TimestampMixin, TenantMixin, Base):
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     error: Mapped[str | None] = mapped_column(String(1000))
+
+
+class ObjektakteExportStatus(StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    DONE = "done"
+    FAILED = "failed"
+
+
+class ObjektakteExport(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Export of a property's Objektakte for the successor manager (M12 gaps, 29.09.2026,
+    migration 0246): one ZIP per run, produced by the Celery job
+    ``mhvp.objektakte.export_property`` and filed as a generated document of the property.
+    ``requested_by`` confirmed the personal data note (``personal_data_acknowledged``); every
+    download is a domain event ``objektakte_export.downloaded``. ``counts`` holds the numbers
+    of documents and rows per sheet; the ZIP content itself is only in the document blob."""
+
+    __tablename__ = "objektakte_export"
+    __table_args__ = (Index("ix_objektakte_export_property", "tenant_id", "property_id"),)
+
+    property_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("property.id", ondelete="CASCADE"), nullable=False
+    )
+    status: Mapped[ObjektakteExportStatus] = mapped_column(
+        _enum_col(ObjektakteExportStatus, "objektakte_export_status"),
+        nullable=False,
+        default=ObjektakteExportStatus.QUEUED,
+        server_default=ObjektakteExportStatus.QUEUED.value,
+    )
+    requested_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    personal_data_acknowledged: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    note: Mapped[str | None] = mapped_column(String(1000))
+    document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("document.id", ondelete="SET NULL")
+    )
+    counts: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    error: Mapped[str | None] = mapped_column(String(1000))
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    download_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    last_downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
+import { LetterRecordForm } from "@/components/documents/LetterRecordForm";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -16,13 +17,17 @@ type Completeness = {
 
 /** M35 Stufe 3 part 4 (Vollständigkeitsprüfung): additive Karte auf der Objektseite, zeigt
  * fehlende Pflichtunterlagen je Verwaltungsart und erzeugt bei Bedarf einen
- * Nachforderungsschreiben-Entwurf (nur Text, wird nie automatisch versendet). */
-export function CompletenessPanel({ propertyId }: { propertyId: string }) {
+ * Nachforderungsschreiben-Entwurf (nur Text, wird nie automatisch versendet). Mit
+ * `canCreateLetter` (documents:create) zusätzlich das Schreiben auf dem Briefbogen als PDF
+ * mit Versandnachweis und Ticketbezug (M12 Lücken, 29.09.2026); der Versand selbst bleibt
+ * außerhalb der Plattform beziehungsweise hinter der Mailfreigabe. */
+export function CompletenessPanel({ propertyId, canCreateLetter = false }: { propertyId: string; canCreateLetter?: boolean }) {
   const t = useTranslations("Objektakte");
   const [result, setResult] = useState<Completeness | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [showLetter, setShowLetter] = useState(false);
 
   useEffect(() => {
     void (async () => {
@@ -72,13 +77,26 @@ export function CompletenessPanel({ propertyId }: { propertyId: string }) {
               </li>
             ))}
           </ul>
-          <div>
+          <div className="flex flex-wrap gap-2">
             <button type="button" className={ui.buttonSm} onClick={() => void requestDraft()} disabled={busy}>
               {t("completeness.draftAction")}
+            </button>
+            <button type="button" className={ui.buttonSm} onClick={() => setShowLetter((v) => !v)} data-testid="completeness-letter-toggle">
+              {t("completeness.letterAnchor")}
             </button>
           </div>
         </>
       )}
+      <div id="objektakte-letter">
+        {showLetter && result.missing.length > 0 ? (
+          <LetterRecordForm
+            path={`objektakte/properties/${propertyId}/completeness/nachforderungsschreiben/pdf`}
+            recipient={{ kind: "search" }}
+            canCreate={canCreateLetter}
+            requiredPermission="documents:create"
+          />
+        ) : null}
+      </div>
       {result.satisfied.length > 0 ? (
         <p className="text-xs text-muted">
           {t("completeness.satisfiedCount", { count: result.satisfied.length })}

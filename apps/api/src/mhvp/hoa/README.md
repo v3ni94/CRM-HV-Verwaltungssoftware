@@ -65,3 +65,12 @@ Checked against the folder contents on 26.09.2026, the following files were not 
   column `hoa_statement.loan_allocation`); `calculate` adds the block `loans` and the per unit
   shares `loan_interest_share` and `loan_repayment_share` (rule M24-03, information only, the
   result stays unchanged). Tests: `tests/integration/test_m24_asset_report.py`.
+
+## Addendum 29.09.2026 (W02 takeover, M12 gaps)
+
+* `routers.py`: `GET /hoa/plans/{id}/apply/preview` and `POST /hoa/plans/{id}/apply` with
+  `confirm` and `snapshot_hash`: standing amounts per ownership contract from `valid_from`,
+  second person (not the plan's creator), idempotent, posted months counted and never charged
+  again. Rule `docs/rules/W02-wirtschaftsplan.md`; the rows are contract master data, the
+  receivable run behind G1 reads them. Test: `tests/integration/test_m12_letters_plan_export.py`.
+

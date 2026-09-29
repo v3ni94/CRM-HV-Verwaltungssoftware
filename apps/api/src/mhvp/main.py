@@ -102,6 +102,7 @@ from mhvp.metering.routers import router as metering_router
 from mhvp.objektakte.ai_call_routers import router as objektakte_ai_call_router
 from mhvp.objektakte.completeness_routers import router as objektakte_completeness_router
 from mhvp.objektakte.dms_routers import router as objektakte_dms_router
+from mhvp.objektakte.export_routers import router as objektakte_export_router
 from mhvp.objektakte.lists_routers import router as objektakte_lists_router
 from mhvp.objektakte.local_model_routers import router as objektakte_local_model_router
 from mhvp.objektakte.previews_routers import router as objektakte_previews_router
@@ -321,6 +322,7 @@ def create_app(
     app.include_router(objektakte_sync_router, prefix=API_PREFIX)
     app.include_router(objektakte_review_router, prefix=API_PREFIX)
     app.include_router(objektakte_completeness_router, prefix=API_PREFIX)
+    app.include_router(objektakte_export_router, prefix=API_PREFIX)
     app.include_router(objektakte_rules_router, prefix=API_PREFIX)
     app.include_router(receipts_router, prefix=API_PREFIX)
     app.include_router(objektakte_ai_call_router, prefix=API_PREFIX)

@@ -2926,7 +2926,24 @@
       "saved": "Deadline saved."
     },
     "subjectKind": "Resolution subject",
-    "subjectKindNone": "not specified"
+    "subjectKindNone": "not specified",
+    "previewTitle": "Takeover into the payment plans (W02)",
+    "preview": "Preview advances",
+    "previewIntro": "Per unit and component the standing amount from the start date. The rows are contract master data (no release gate); the receivable run reads them only with G1. Confirmation by a second person, not the plan's creator.",
+    "current": "Current",
+    "new": "New from {date}",
+    "action": "Action",
+    "actions": {
+      "create": "create",
+      "unchanged": "unchanged",
+      "zero": "no amount",
+      "no_contract": "no ownership contract"
+    },
+    "postedMonths": "Months already posted from the start date: {count}. They are never charged again; an adjustment is a bookkeeping correction behind G1.",
+    "confirmApplyPreview": "Confirm preview and apply",
+    "applied": "Applied: {count} standing amounts created.",
+    "alreadyApplied": "Already applied on {date}.",
+    "counts": "{create} create, {unchanged} unchanged, {no_contract} without ownership contract"
   },
   "RentIncrease": {
     "title": "Rent increases",
@@ -7458,7 +7475,8 @@
       "complete": "All required documents are present.",
       "draftAction": "Draft a follow-up request letter",
       "satisfiedCount": "{count, plural, one {# required document present} other {# required documents present}}",
-      "draftLabel": "Draft (not sent)"
+      "draftLabel": "Draft (not sent)",
+      "letterAnchor": "Letterhead PDF with dispatch record"
     },
     "rules": {
       "title": "Classification rules",
@@ -11927,7 +11945,8 @@
       "done": "completed"
     },
     "readOnly": "Ticking needs the permission properties:update.",
-    "startedAt": "started on {date}"
+    "startedAt": "started on {date}",
+    "letterLink": "Follow-up letter on letterhead"
   },
   "Ui": {
     "close": "Close",
@@ -12015,5 +12034,69 @@
     },
     "saved": "Saved.",
     "readOnly": "Requires the right to change tenant settings."
+  },
+  "LetterRecord": {
+    "title": "Letter on letterhead and dispatch record",
+    "intro": "Renders the letter on the stored letterhead as PDF, files it as a document and records the dispatch (channel, date, user, tracking reference). The platform sends nothing: post outside, e-mail only through the mail approval.",
+    "recipient": "Recipient",
+    "recipientSearch": "Search contact (at least 2 characters)",
+    "recipientClear": "Clear selection",
+    "recipientTenant": "Primary contact of the tenant party",
+    "letterDate": "Letter date",
+    "ticket": "Link ticket",
+    "ticketNone": "No ticket",
+    "record": "Record dispatch",
+    "channel": "Channel",
+    "channels": {
+      "none": "File only, no dispatch record",
+      "post": "Post",
+      "email": "E-mail (draft for mail approval)",
+      "portal": "Portal"
+    },
+    "sentOn": "Dispatch date",
+    "evidenceKind": "Evidence",
+    "evidence": {
+      "none": "None",
+      "registered_mail": "Registered mail",
+      "courier": "Courier",
+      "hand_delivery": "Hand delivery",
+      "email_log": "Mail log",
+      "portal_read": "Portal read",
+      "other": "Other"
+    },
+    "evidenceRef": "Tracking number or reference",
+    "create": "File PDF",
+    "creating": "Rendering",
+    "created": "Filed: {title}",
+    "openDocument": "Open document",
+    "dispatchRecorded": "Dispatch recorded: {channel}, status {status}",
+    "portalGate": "Portal delivery needs release gate G3.",
+    "recipientRequired": "Please choose a recipient.",
+    "readOnly": "Filing needs the permission {permission}."
+  },
+  "ObjektakteExport": {
+    "title": "Property file export for the successor",
+    "intro": "Assembles the property file as ZIP: documents per category, master data sheets (units, owners, tenants, contracts, meters), open items and handover log. The export runs in the background and is filed as a document of the property; every download is logged.",
+    "requiresTermination": "The export is available once the termination of the management is recorded.",
+    "start": "Prepare export",
+    "confirmTitle": "Confirm export",
+    "note": "Note (optional)",
+    "acknowledge": "I have read the personal data note; the export is handed only to the successor manager over a secured channel.",
+    "confirm": "Start export",
+    "cancel": "Cancel",
+    "started": "Export started, the ZIP appears here when done.",
+    "runs": "Exports",
+    "none": "No export yet.",
+    "status": {
+      "queued": "queued",
+      "running": "running",
+      "done": "done",
+      "failed": "failed"
+    },
+    "download": "Download ZIP",
+    "downloads": "{count, plural, =0 {not downloaded yet} one {# download} other {# downloads}}",
+    "counts": "{documents} documents, {units} units, {owners} owners, {tenants} tenants, {open_items} open items",
+    "readOnly": "The export needs the permissions properties:update and documents:read.",
+    "refresh": "Refresh"
   }
 }

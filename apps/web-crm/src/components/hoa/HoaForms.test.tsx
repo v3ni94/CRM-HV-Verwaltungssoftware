@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { HoaSteps, MajorityRules, MeetingPanel } from "./HoaForms";
+import { HoaSteps, MajorityRules, MeetingPanel, PlanApplyPreview } from "./HoaForms";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh, push: vi.fn() }) }));
@@ -37,6 +37,54 @@ describe("HoaSteps", () => {
     renderIntl(<HoaSteps target="statement" id={ST} status="due" legalEntityId={LE} snapshotHash={null} />);
     await userEvent.click(screen.getByText("Ergebnis buchen"));
     expect(await screen.findByRole("alert")).toHaveTextContent("G4");
+  });
+});
+
+describe("PlanApplyPreview", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const PLAN = "0192abcd-0000-7000-8000-000000000030";
+  const preview = {
+    valid_from: "2027-01-01",
+    snapshot_hash: "b".repeat(64),
+    applied_at: null,
+    can_apply: true,
+    rows: [
+      { unit_number: "01", component: "hoa_fee", owner: "Eigentümer 01", contract_number: "E-1", current: "250.00", new: "300.00", action: "create" },
+      { unit_number: "02", component: "reserve", owner: null, contract_number: null, current: null, new: "40.00", action: "no_contract" },
+    ],
+    counts: { create: 1, unchanged: 0, zero: 0, no_contract: 1 },
+    posted_months: 2,
+  };
+
+  it("loads the preview and applies with confirmation and the snapshot hash", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse(preview))
+      .mockResolvedValueOnce(jsonResponse({ payments_created: 1, applied_at: "2026-09-29T10:00:00Z" }));
+    renderIntl(<HoaSteps target="plan" id={PLAN} status="resolved" legalEntityId={LE} snapshotHash={"b".repeat(64)} />);
+    await userEvent.click(screen.getByTestId("plan-apply-load"));
+    expect(await screen.findByTestId("plan-apply-row-01-hoa_fee")).toHaveTextContent("300,00 EUR");
+    expect(screen.getByTestId("plan-apply-row-01-hoa_fee")).toHaveTextContent("anlegen");
+    expect(screen.getByTestId("plan-apply-row-02-reserve")).toHaveTextContent("kein Eigentumsverhältnis");
+    expect(screen.getByText("1 anlegen, 0 unverändert, 1 ohne Eigentumsverhältnis")).toBeInTheDocument();
+    expect(screen.getByText(/Bereits gebuchte Monate ab Wirksamkeitsbeginn: 2/)).toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("plan-apply-confirm"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
+    expect(String(fetchMock.mock.calls[1]?.[0])).toBe(`/api/bff/hoa/plans/${PLAN}/apply`);
+    expect(JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string)).toEqual({ confirm: true, snapshot_hash: "b".repeat(64) });
+    expect(await screen.findByText("Übernommen: 1 Sollbeträge angelegt.")).toBeInTheDocument();
+  });
+
+  it("shows the four eyes refusal of the API", async () => {
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+    vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(jsonResponse(preview))
+      .mockResolvedValueOnce(jsonResponse({ title: "Freigabe durch eine zweite Person erforderlich", status: 403, detail: "Die Übernahme muss eine andere Person als der Ersteller bestätigen." }, 403));
+    renderIntl(<PlanApplyPreview id={PLAN} snapshotHash={null} />);
+    await userEvent.click(screen.getByTestId("plan-apply-load"));
+    await userEvent.click(await screen.findByTestId("plan-apply-confirm"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("andere Person");
   });
 });
 

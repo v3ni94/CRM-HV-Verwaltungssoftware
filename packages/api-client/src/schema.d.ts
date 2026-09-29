@@ -8195,10 +8195,30 @@ export interface paths {
         put?: never;
         /**
          * Beschlossene Vorschüsse als Vertragszahlungen übernehmen
-         * @description Only after the resolution; creates monthly payments per ownership contract from valid_from
-         *     (W02: the draft changes nothing; no double charge of months already posted).
+         * @description Only after the resolution, only with the confirmed preview (``confirm`` and the
+         *     current ``snapshot_hash``) and only by a second person (not the plan's creator). Creates
+         *     the standing monthly amounts per ownership contract from ``valid_from`` (rule W02: the
+         *     draft changes nothing; months already posted are never charged again). Idempotent: an
+         *     applied plan returns unchanged, rows already standing are skipped.
          */
         post: operations["apply_plan_api_v1_hoa_plans__plan_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/plans/{plan_id}/apply/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Vorschau der Übernahme in die Zahlungspläne (W02) */
+        get: operations["plan_apply_preview_api_v1_hoa_plans__plan_id__apply_preview_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11424,6 +11444,31 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/letting/rent-increases/{case_id}/letter/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Mieterhöhungsschreiben auf dem Briefbogen ablegen (PDF, Versandnachweis, Ticket)
+         * @description The letter of ``GET .../letter`` on the tenant letterhead, filed as a generated
+         *     document of the case, contract, unit, property and tenant, with an optional ticket link
+         *     and a dispatch record (channel, date, user, reference). The platform sends nothing: the
+         *     process step ``send`` (status ``sent``) stays behind G3, a mail draft leaves only through
+         *     the mail approval, and the portal channel is refused while G3 is closed. Until the legal
+         *     review is documented the PDF carries the draft marking.
+         */
+        post: operations["rent_increase_letter_pdf_api_v1_letting_rent_increases__case_id__letter_pdf_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/letting/rent-law/cap-areas": {
         parameters: {
             query?: never;
@@ -13440,6 +13485,30 @@ export interface paths {
         put?: never;
         /** Nachforderungsschreiben als Entwurf erzeugen */
         post: operations["draft_nachforderungsschreiben_api_v1_objektakte_properties__property_id__completeness_nachforderungsschreiben_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/objektakte/properties/{property_id}/completeness/nachforderungsschreiben/pdf": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Nachforderungsschreiben auf dem Briefbogen ablegen (PDF, Versandnachweis, Ticket)
+         * @description Letter on the tenant letterhead (``mhvp.documents.letters``) with the missing
+         *     document classes, filed as a generated document of the property, the recipient and the
+         *     optional ticket; with a dispatch record (channel, date, user, reference). Nothing is sent
+         *     by the platform: a mail draft leaves only through the mail approval, a posting is
+         *     recorded as done outside. Needs ``objektakte:read`` as well (the check itself).
+         */
+        post: operations["nachforderungsschreiben_pdf_api_v1_objektakte_properties__property_id__completeness_nachforderungsschreiben_pdf_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16420,6 +16489,62 @@ export interface paths {
         put?: never;
         /** Aushang anlegen */
         post: operations["create_notice_api_v1_properties__property_id__notices_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/objektakte-export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Exporte der Objektakte (Abgabe) */
+        get: operations["list_exports_api_v1_properties__property_id__objektakte_export_get"];
+        put?: never;
+        /**
+         * Objektakte für den Nachfolger exportieren (Hintergrundjob, ZIP als Dokument)
+         * @description Needs a recorded termination (Verwaltung beenden) or the status ``terminated``, the
+         *     confirmation and the acknowledged personal data note. One export at a time per property.
+         */
+        post: operations["start_export_api_v1_properties__property_id__objektakte_export_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/objektakte-export/{export_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Stand eines Objektakte-Exports */
+        get: operations["get_export_api_v1_properties__property_id__objektakte_export__export_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/objektakte-export/{export_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** ZIP des Objektakte-Exports herunterladen (Ereignis je Abruf) */
+        get: operations["download_export_api_v1_properties__property_id__objektakte_export__export_id__download_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -25616,6 +25741,20 @@ export interface components {
             document_id: string;
         };
         /**
+         * DispatchRecordIn
+         * @description Dispatch record given with the letter: channel, date and tracking reference.
+         */
+        DispatchRecordIn: {
+            /** Channel */
+            channel: string;
+            /** Evidence Kind */
+            evidence_kind?: string | null;
+            /** Evidence Ref */
+            evidence_ref?: string | null;
+            /** Sent On */
+            sent_on?: string | null;
+        };
+        /**
          * DisruptionIn
          * @description Documented technical disruption of a hybrid or virtual meeting (D53).
          */
@@ -31299,6 +31438,22 @@ export interface components {
          * @enum {string}
          */
         MirrorStatus: "pending" | "submitted" | "done" | "failed";
+        /**
+         * NachforderungPdfIn
+         * @description Recipient (the previous manager or whoever holds the documents) and the record.
+         */
+        NachforderungPdfIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            dispatch?: components["schemas"]["DispatchRecordIn"] | null;
+            /** Letter Date */
+            letter_date?: string | null;
+            /** Ticket Id */
+            ticket_id?: string | null;
+        };
         /** NoteIn */
         NoteIn: {
             /** Body */
@@ -31517,6 +31672,21 @@ export interface components {
             valid_from?: string | null;
             /** Valid To */
             valid_to?: string | null;
+        };
+        /** ObjektakteExportIn */
+        ObjektakteExportIn: {
+            /**
+             * Confirm
+             * @default false
+             */
+            confirm: boolean;
+            /** Note */
+            note?: string | null;
+            /**
+             * Personal Data Acknowledged
+             * @default false
+             */
+            personal_data_acknowledged: boolean;
         };
         /** OccupancyRow */
         OccupancyRow: {
@@ -32411,6 +32581,19 @@ export interface components {
             note?: string | null;
             /** Number */
             number: string;
+        };
+        /**
+         * PlanApplyIn
+         * @description Confirmation of the preview: ``snapshot_hash`` must be the plan's current hash.
+         */
+        PlanApplyIn: {
+            /**
+             * Confirm
+             * @default false
+             */
+            confirm: boolean;
+            /** Snapshot Hash */
+            snapshot_hash?: string | null;
         };
         /** PlanIn */
         PlanIn: {
@@ -34590,6 +34773,20 @@ export interface components {
             source_note?: string | null;
             /** Target Rent */
             target_rent: number | string;
+        };
+        /**
+         * RentIncreaseLetterPdfIn
+         * @description Letter on the letterhead; the recipient is the primary contact of the tenant party
+         *     unless ``contact_id`` names another member of it.
+         */
+        RentIncreaseLetterPdfIn: {
+            /** Contact Id */
+            contact_id?: string | null;
+            dispatch?: components["schemas"]["DispatchRecordIn"] | null;
+            /** Letter Date */
+            letter_date?: string | null;
+            /** Ticket Id */
+            ticket_id?: string | null;
         };
         /** RentInvoiceIn */
         RentInvoiceIn: {
@@ -56371,6 +56568,43 @@ export interface operations {
             };
             cookie?: never;
         };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["PlanApplyIn"] | null;
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    plan_apply_preview_api_v1_hoa_plans__plan_id__apply_preview_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                plan_id: string;
+            };
+            cookie?: never;
+        };
         requestBody?: never;
         responses: {
             /** @description Successful Response */
@@ -63122,6 +63356,43 @@ export interface operations {
             };
         };
     };
+    rent_increase_letter_pdf_api_v1_letting_rent_increases__case_id__letter_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                case_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RentIncreaseLetterPdfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_areas_api_v1_letting_rent_law_cap_areas_get: {
         parameters: {
             query?: {
@@ -67415,6 +67686,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    nachforderungsschreiben_pdf_api_v1_objektakte_properties__property_id__completeness_nachforderungsschreiben_pdf_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NachforderungPdfIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -73703,6 +74011,142 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_exports_api_v1_properties__property_id__objektakte_export_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_export_api_v1_properties__property_id__objektakte_export_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ObjektakteExportIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_export_api_v1_properties__property_id__objektakte_export__export_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    download_export_api_v1_properties__property_id__objektakte_export__export_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                export_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
                 };
             };
             /** @description Validation Error */

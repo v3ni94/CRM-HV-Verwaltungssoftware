@@ -503,6 +503,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/audit-engagements/${ID}/board-access/${ID}/revoke$`) },
   { method: "POST", pattern: new RegExp(`^hoa/audit-engagements/${ID}/notes/${ID}/answer$`) },
   { method: "POST", pattern: new RegExp(`^hoa/plans/${ID}/(items|calculate|transition|apply)$`) },
+  // Wirtschaftsplan in die Zahlungspläne (W02): Vorschau vor der Bestätigung durch die zweite Person.
+  { method: "GET", pattern: new RegExp(`^hoa/plans/${ID}/apply/preview$`) },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(costs|calculate|transition|post|new-version)$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
   // Protokollentwurf der Versammlung als PDF (A62); Download über /api/handover-files.
@@ -527,6 +529,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Letting (M26): rent increase process (sending needs G3, checked by the API), prospects.
   { method: "POST", pattern: /^letting\/(rent-increases|prospects)$/ },
   { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/actions$`) },
+  // Mieterhöhungsschreiben auf dem Briefbogen mit Versandnachweis; der Versand bleibt hinter G3.
+  { method: "POST", pattern: new RegExp(`^letting/rent-increases/${ID}/letter/pdf$`) },
   { method: "PATCH", pattern: new RegExp(`^letting/prospects/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^letting/prospects/${ID}$`) },
   // Makler (M28-01): listings for rent and sale. No FLOWFACT connection.
@@ -695,6 +699,17 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
     method: "POST",
     pattern: new RegExp(`^objektakte/properties/${ID}/completeness/nachforderungsschreiben$`),
   },
+  // Nachforderungsschreiben auf dem Briefbogen mit Versandnachweis (M12 Lücken, 29.09.2026).
+  {
+    method: "POST",
+    pattern: new RegExp(`^objektakte/properties/${ID}/completeness/nachforderungsschreiben/pdf$`),
+  },
+  // Objektakte-Export für den Nachfolger: starten, Stand, Liste, Download (Ereignis je Abruf).
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/objektakte-export$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/objektakte-export$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/objektakte-export/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/objektakte-export/${ID}/download$`) },
+
   // Objektakte-Übernahme, Stufe 4/5 (Synchronisationsstand, Löschmarkierungen, KI-Kosten).
   { method: "GET", pattern: /^objektakte\/sync$/ },
   { method: "PUT", pattern: /^objektakte\/sync$/ },

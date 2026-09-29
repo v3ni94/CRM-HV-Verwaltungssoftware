@@ -121,7 +121,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [A06](A06-owner-statement.md) | Eigentümerabrechnung Miete/SEV | 7.6 | implemented, not accepted (M17 task A25, `mhvp.billing.owner_statement`, `test_m17_owner_statement.py`; PDF behind G3) |
 | A07 | Bedienung | 7.6 | specified, not implemented |
 | W01 | Eigene Gemeinschaft | 7.8 | implemented (M24), ledger check |
-| W02 | Wirtschaftsplan | 7.8 | implemented (M24), behind G4 |
+| [W02](W02-wirtschaftsplan.md) | Wirtschaftsplan | 7.8 | implemented (M24; takeover into the payment plans with preview and second person 29.09.2026, `mhvp.hoa.routers.apply_plan`); statements behind G4, receivable posting behind G1 |
 | [W03](W03-cost-allocation.md) | Kostenverteilung | 7.8 | implemented, not accepted (M24, `mhvp.hoa.calc.unit_weights`; D18 partial scope check in `mhvp.hoa.package`) |
 | [W04](W04-cash-flow-reconciliation.md) | Jahresabrechnung als nachvollziehbare Überleitung | 7.8 | implemented, not accepted (A60: Gesamtgeldfluss and bridge in `mhvp.hoa.calc.cash_flow_reconciliation`, unexplained difference blocks the package; migration year open) |
 | W05 | Abrechnungsspitze und Rückstände | 7.8 | implemented (M24), [W05](W05-hoa-result.md) |

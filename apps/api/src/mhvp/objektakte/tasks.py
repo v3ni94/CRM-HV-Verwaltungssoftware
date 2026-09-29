@@ -242,3 +242,39 @@ def import_previews_tenant(
             resume_id=uuid.UUID(resume_id) if resume_id else None,
         )
     )
+
+
+# Objektakte export for the successor manager (M12 gaps, 29.09.2026) -----------------------
+
+
+async def export_property_once(
+    settings: Settings, tenant_id: uuid.UUID, export_id: uuid.UUID
+) -> dict[str, str]:
+    """Build one export (``mhvp.objektakte.export.run_export``) in the tenant's transaction;
+    the row records ``done`` with the document or ``failed`` with the error."""
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.objektakte.export import run_export
+    from mhvp.objektakte.models import ObjektakteExport
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            export = await session.get(ObjektakteExport, export_id, with_for_update=True)
+            if export is None:
+                return {"status": "missing"}
+            if export.status.value != "queued":
+                return {"status": export.status.value}
+            await run_export(session, BlobStore(settings), export)
+            return {"status": export.status.value}
+    finally:
+        await engine.dispose()
+
+
+@shared_task(name="mhvp.objektakte.export_property")
+def export_property(tenant_id: str, export_id: str) -> dict[str, str]:
+    return asyncio.run(
+        export_property_once(get_settings(), uuid.UUID(tenant_id), uuid.UUID(export_id))
+    )

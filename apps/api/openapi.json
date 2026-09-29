@@ -17872,6 +17872,58 @@
         "title": "DispatchIn",
         "type": "object"
       },
+      "DispatchRecordIn": {
+        "additionalProperties": false,
+        "description": "Dispatch record given with the letter: channel, date and tracking reference.",
+        "properties": {
+          "channel": {
+            "pattern": "^(post|email|portal)$",
+            "title": "Channel",
+            "type": "string"
+          },
+          "evidence_kind": {
+            "anyOf": [
+              {
+                "pattern": "^(registered_mail|courier|hand_delivery|email_log|portal_read|other)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Kind"
+          },
+          "evidence_ref": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Ref"
+          },
+          "sent_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent On"
+          }
+        },
+        "required": [
+          "channel"
+        ],
+        "title": "DispatchRecordIn",
+        "type": "object"
+      },
       "DisruptionIn": {
         "additionalProperties": false,
         "description": "Documented technical disruption of a hybrid or virtual meeting (D53).",
@@ -35703,6 +35755,56 @@
         "title": "MirrorStatus",
         "type": "string"
       },
+      "NachforderungPdfIn": {
+        "additionalProperties": false,
+        "description": "Recipient (the previous manager or whoever holds the documents) and the record.",
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "dispatch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DispatchRecordIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "letter_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Date"
+          },
+          "ticket_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Id"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "title": "NachforderungPdfIn",
+        "type": "object"
+      },
       "NoteIn": {
         "additionalProperties": false,
         "properties": {
@@ -36342,6 +36444,35 @@
           "source"
         ],
         "title": "ObjectRelationOut",
+        "type": "object"
+      },
+      "ObjektakteExportIn": {
+        "additionalProperties": false,
+        "properties": {
+          "confirm": {
+            "default": false,
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "personal_data_acknowledged": {
+            "default": false,
+            "title": "Personal Data Acknowledged",
+            "type": "boolean"
+          }
+        },
+        "title": "ObjektakteExportIn",
         "type": "object"
       },
       "OccupancyRow": {
@@ -38725,6 +38856,31 @@
           "is_primary"
         ],
         "title": "PhoneOut",
+        "type": "object"
+      },
+      "PlanApplyIn": {
+        "additionalProperties": false,
+        "description": "Confirmation of the preview: ``snapshot_hash`` must be the plan's current hash.",
+        "properties": {
+          "confirm": {
+            "default": false,
+            "title": "Confirm",
+            "type": "boolean"
+          },
+          "snapshot_hash": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snapshot Hash"
+          }
+        },
+        "title": "PlanApplyIn",
         "type": "object"
       },
       "PlanIn": {
@@ -45726,6 +45882,60 @@
           "effective_date"
         ],
         "title": "RentIncreaseIn",
+        "type": "object"
+      },
+      "RentIncreaseLetterPdfIn": {
+        "additionalProperties": false,
+        "description": "Letter on the letterhead; the recipient is the primary contact of the tenant party\nunless ``contact_id`` names another member of it.",
+        "properties": {
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "dispatch": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/DispatchRecordIn"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "letter_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Letter Date"
+          },
+          "ticket_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ticket Id"
+          }
+        },
+        "title": "RentIncreaseLetterPdfIn",
         "type": "object"
       },
       "RentInvoiceIn": {
@@ -85823,7 +86033,7 @@
     },
     "/api/v1/hoa/plans/{plan_id}/apply": {
       "post": {
-        "description": "Only after the resolution; creates monthly payments per ownership contract from valid_from\n(W02: the draft changes nothing; no double charge of months already posted).",
+        "description": "Only after the resolution, only with the confirmed preview (``confirm`` and the\ncurrent ``snapshot_hash``) and only by a second person (not the plan's creator). Creates\nthe standing monthly amounts per ownership contract from ``valid_from`` (rule W02: the\ndraft changes nothing; months already posted are never charged again). Idempotent: an\napplied plan returns unchanged, rows already standing are skipped.",
         "operationId": "apply_plan_api_v1_hoa_plans__plan_id__apply_post",
         "parameters": [
           {
@@ -85837,6 +86047,23 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PlanApplyIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "content": {
@@ -85862,6 +86089,51 @@
           }
         },
         "summary": "Beschlossene Vorschüsse als Vertragszahlungen übernehmen",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/plans/{plan_id}/apply/preview": {
+      "get": {
+        "operationId": "plan_apply_preview_api_v1_hoa_plans__plan_id__apply_preview_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "plan_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Plan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Plan Apply Preview Api V1 Hoa Plans  Plan Id  Apply Preview Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschau der Übernahme in die Zahlungspläne (W02)",
         "tags": [
           "WEG"
         ]
@@ -95642,6 +95914,62 @@
         ]
       }
     },
+    "/api/v1/letting/rent-increases/{case_id}/letter/pdf": {
+      "post": {
+        "description": "The letter of ``GET .../letter`` on the tenant letterhead, filed as a generated\ndocument of the case, contract, unit, property and tenant, with an optional ticket link\nand a dispatch record (channel, date, user, reference). The platform sends nothing: the\nprocess step ``send`` (status ``sent``) stays behind G3, a mail draft leaves only through\nthe mail approval, and the portal channel is refused while G3 is closed. Until the legal\nreview is documented the PDF carries the draft marking.",
+        "operationId": "rent_increase_letter_pdf_api_v1_letting_rent_increases__case_id__letter_pdf_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "case_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Case Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RentIncreaseLetterPdfIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Rent Increase Letter Pdf Api V1 Letting Rent Increases  Case Id  Letter Pdf Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mieterhöhungsschreiben auf dem Briefbogen ablegen (PDF, Versandnachweis, Ticket)",
+        "tags": [
+          "letting"
+        ]
+      }
+    },
     "/api/v1/letting/rent-law/cap-areas": {
       "get": {
         "operationId": "list_areas_api_v1_letting_rent_law_cap_areas_get",
@@ -102427,6 +102755,62 @@
           }
         },
         "summary": "Nachforderungsschreiben als Entwurf erzeugen",
+        "tags": [
+          "objektakte-completeness"
+        ]
+      }
+    },
+    "/api/v1/objektakte/properties/{property_id}/completeness/nachforderungsschreiben/pdf": {
+      "post": {
+        "description": "Letter on the tenant letterhead (``mhvp.documents.letters``) with the missing\ndocument classes, filed as a generated document of the property, the recipient and the\noptional ticket; with a dispatch record (channel, date, user, reference). Nothing is sent\nby the platform: a mail draft leaves only through the mail approval, a posting is\nrecorded as done outside. Needs ``objektakte:read`` as well (the check itself).",
+        "operationId": "nachforderungsschreiben_pdf_api_v1_objektakte_properties__property_id__completeness_nachforderungsschreiben_pdf_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NachforderungPdfIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Nachforderungsschreiben Pdf Api V1 Objektakte Properties  Property Id  Completeness Nachforderungsschreiben Pdf Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nachforderungsschreiben auf dem Briefbogen ablegen (PDF, Versandnachweis, Ticket)",
         "tags": [
           "objektakte-completeness"
         ]
@@ -111834,6 +112218,209 @@
           }
         },
         "summary": "Aushang anlegen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/objektakte-export": {
+      "get": {
+        "operationId": "list_exports_api_v1_properties__property_id__objektakte_export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Exports Api V1 Properties  Property Id  Objektakte Export Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Exporte der Objektakte (Abgabe)",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "description": "Needs a recorded termination (Verwaltung beenden) or the status ``terminated``, the\nconfirmation and the acknowledged personal data note. One export at a time per property.",
+        "operationId": "start_export_api_v1_properties__property_id__objektakte_export_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ObjektakteExportIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Export Api V1 Properties  Property Id  Objektakte Export Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objektakte für den Nachfolger exportieren (Hintergrundjob, ZIP als Dokument)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/objektakte-export/{export_id}": {
+      "get": {
+        "operationId": "get_export_api_v1_properties__property_id__objektakte_export__export_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Export Api V1 Properties  Property Id  Objektakte Export  Export Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stand eines Objektakte-Exports",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/objektakte-export/{export_id}/download": {
+      "get": {
+        "operationId": "download_export_api_v1_properties__property_id__objektakte_export__export_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "export_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Export Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "ZIP des Objektakte-Exports herunterladen (Ereignis je Abruf)",
         "tags": [
           "Objekte"
         ]

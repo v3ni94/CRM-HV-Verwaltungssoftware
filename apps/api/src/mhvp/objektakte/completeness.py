@@ -12,13 +12,15 @@ later, explicitly decided rule, not assumed here.
 
 from __future__ import annotations
 
+import html
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.documents import letters
 from mhvp.documents.models import Document, DocumentCategory, DocumentLink
 from mhvp.objektakte.models import ObjektakteRequiredDocument
 from mhvp.properties.models import Property
@@ -120,3 +122,36 @@ def nachforderungsschreiben_text(
         "Mit freundlichen Grüßen",
     ]
     return "\n".join(lines)
+
+
+def nachforderungsschreiben_letter(
+    property_row: Property,
+    missing: list[MissingClass],
+    *,
+    recipient_lines: list[str],
+    greeting: str,
+    letter_date: date,
+    company_name: str,
+) -> letters.Letter:
+    """The same letter on the tenant letterhead (``mhvp.documents.letters``, DIN 5008): the
+    missing classes as a list, escaped by the renderer. Subject, body and closing only; the
+    letterhead itself comes from the tenant settings and is never invented here."""
+    body = "\n\n".join(
+        [
+            html.escape(greeting),
+            html.escape(
+                f"für die Objektakte {property_row.number} ({property_row.name}) fehlen uns "
+                "derzeit noch folgende Unterlagen:"
+            ),
+            "<br/>".join(html.escape(f"{i}. {m.name}") for i, m in enumerate(missing, 1)),
+            html.escape("Wir bitten Sie, uns die genannten Unterlagen zeitnah zukommen zu lassen."),
+        ]
+    )
+    return letters.Letter(
+        recipient_lines=recipient_lines,
+        subject=html.escape(f"Fehlende Unterlagen zur Objektakte {property_row.number}"),
+        body=body,
+        letter_date=letter_date,
+        info=[("Objekt", f"{property_row.number} {property_row.name}")],
+        signatory=[s for s in (company_name,) if s],
+    )
