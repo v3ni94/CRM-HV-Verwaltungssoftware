@@ -5,6 +5,21 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.46.0 (29.09.2026) G1 Öffnungspaket, Automatik und Belegkette, Datenübernahme, Offline Erfassung, Schreiben und Objektakte
+
+- Buchhaltung, G1 Öffnung: Neue Seite Einstellungen, Buchhaltung, G1 Öffnung mit Checkliste zur Öffnung der Freigabestufe G1 (Kontenrahmen, abgenommene Anhang D Fälle, manuelle Prüfpunkte, Automatikstufen, Freigabestand), Ergebnis je Prüfpunkt mit Datum und Name, Antrag auf G1 über den bestehenden Vier Augen Pfad; die Seite öffnet die Stufe nie selbst (Migration 0242, Tabelle g1_acceptance). Betreiberunterlagen: Kontenrahmen Prüfung nach Anhang A.1 mit offenen Fragen, Abnahmeprotokoll Anhang D mit Rechenweg und Prüfort je Fall, Verfahrensdokumentation Kapitel 7 Automatik der Buchhaltung.
+- Buchhaltung, Automatik: Automatikbuchungen ohne abgeschlossene Nachkontrolle werden aus Mahnlauf, Tilgungsvorschlag und Lastschriftlauf ausgenommen (Regel M12-05, Fehlercode MHVP-BANK-0026); Rücklastschriften zu automatisch gebuchten Zahlungen erzeugen ein Nachkontrolle Item der Art Rückläufer und zählen einen Widerspruch an der Bankregel; Fälligkeiten berücksichtigen bundesweite und nordrhein westfälische Feiertage (Migration 0243).
+- Buchhaltung, Belegkette B05: Klärungsstatus je unbelegter Bankbewegung mit verantwortlicher Aufgabe, Liste Buchungen ohne Beleg auf der Bankseite, Meldung offener Klärungen bei der Festschreibung, Tabelle belegkette im Prüfexport; die Automatik liest die Entscheidung (Endpunkte GET und POST /banking/clarifications).
+- Lernspeicher: Ein nächtlicher Lauf anonymisiert Entscheidungen und Regelvorschläge nach 24 Monaten statt sie zu löschen, das Entscheidungsergebnis bleibt als Prüfspur (Bestätigung des Betreibers unter M12-09).
+- Datenübernahme: Migrationsjournal je Objekt mit Stand, Eröffnungssalden mit Freigabe durch eine zweite Person, Abgleich gegen Immoware24 mit Abweichungsbericht und Umschaltung des führenden Systems je Buchungskreis (Regel M8-05, Migration 0244, Seite Importe, Migration).
+- Übergabeprotokoll, Offline Erfassung: Am Handy oder Tablet speichert der Editor Änderungen und Fotos ohne Verbindung verschlüsselt auf dem Gerät und überträgt sie in Erfassungsreihenfolge, mit Konfliktfrage bei zwischenzeitlicher Änderung; Mandantenschalter unter Einstellungen (Standard aus), Gerätezeitstempel und Schlüssel je Gerät (Regel M30-10, ADR 0016 angenommen, Migration 0245).
+- Schreiben: Nachforderungsschreiben und Mieterhöhungsschreiben auf dem hinterlegten Briefbogen als PDF mit Ablage als Dokument und Versandnachweis (Weg, Datum, Benutzer, Sendungsnummer); Portalzustellung erst mit Freigabestufe G3.
+- WEG, Wirtschaftsplan: Übernahme des beschlossenen Wirtschaftsplans in die Zahlungspläne mit Vorschau, Bestätigung und zweiter Person (Regel W02).
+- Objektakte: Export der Objektakte für den nachfolgenden Verwalter als ZIP im Hintergrund (Dokumente je Kategorie, Stammdatenblätter, offene Posten, Übergaben) mit Datenschutzhinweis und Abrufprotokoll (Migration 0246).
+- Tests auf Handy und Tablet: Playwright Projekte für Handy, Tablet und Tablet Querformat mit Touch Emulation in CRM und Portal, Prüfungen auf Überlauf, 44 Pixel Ziele, einzeilige Kopfzeile und 16 Pixel Eingabefelder; Übergabepfad und Datenseiten gegen die API; Quelltestwächter gegen nackte Tabellen und feste Breiten; Geräte Checkliste für iPad, iPhone und Android; CI prüft zusätzlich das Projekt Handy.
+- Portal: Eingabefelder mit 16 Pixel Schrift am Handy und 44 Pixel Höhe auf Touch Geräten.
+- Tickets: Abschnitt Lexware Office in der Abschnittsnavigation; Dateien und Seiten der Anwendung öffnen im selben Tab (PDF, DMS Vorschau, Importbericht, Mietrechnung, Objektakte, Kontakt, Offener Posten, Vertrag), externe Links weiter im neuen Tab.
+
 ## 1.45.2 (29.09.2026) Korrektur Playbooks, Nutzungszähler und Freigabe
 
 - Playbooks, Zähler: Das Einfügen einer Playbook Antwort im Ticket zählt jetzt als Nutzung (neuer Endpunkt POST /mail/playbooks/{id}/use); zuvor stieg der Zähler nur beim Antwortentwurf aus der Mail, in der Wissensdatenbank und im Ticket stand daher überall 0x verwendet.

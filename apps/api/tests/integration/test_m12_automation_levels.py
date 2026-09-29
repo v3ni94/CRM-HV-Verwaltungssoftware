@@ -740,6 +740,7 @@ def test_exclusion_returns_clarification_and_retention(
     from decimal import Decimal
 
     from sqlalchemy import delete as sa_delete
+    from sqlalchemy import update as sa_update
     from sqlalchemy.exc import DBAPIError
 
     from mhvp.accounting import direct_debit, dunning, settlement
@@ -1060,7 +1061,7 @@ def test_exclusion_returns_clarification_and_retention(
         nested = await session.begin_nested()
         try:
             await session.execute(
-                PostingDecision.__table__.update()
+                sa_update(PostingDecision)
                 .where(PostingDecision.id == row.id)
                 .values(reason="geändert")
             )

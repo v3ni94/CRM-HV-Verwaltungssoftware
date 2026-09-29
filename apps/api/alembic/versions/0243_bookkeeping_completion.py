@@ -15,7 +15,7 @@
 Idempotent: every step checks the catalogue first, so a partial run can be repeated.
 
 Revision ID: 0243
-Revises: 0241
+Revises: 0242
 Create Date: 2026-09-29
 """
 
@@ -30,7 +30,7 @@ from sqlalchemy.dialects import postgresql
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
 revision: str = "0243"
-down_revision: str | None = "0241"
+down_revision: str | None = "0242"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
