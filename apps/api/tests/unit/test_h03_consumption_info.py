@@ -4,6 +4,7 @@ operator markers, averages and the beat entry."""
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
+from typing import Any
 
 from mhvp.billing import consumption_info as ci
 from mhvp.billing.models import ConsumptionInfo
@@ -84,7 +85,7 @@ def test_tenant_view_strips_operator_content() -> None:
 
 def test_average_ignores_missing_and_mixed_measures() -> None:
     a, b, c = uuid.uuid4(), uuid.uuid4(), uuid.uuid4()
-    values = {
+    values: dict[uuid.UUID, dict[str, Any]] = {
         a: {"heating": {"value": "100", "unit_of_measure": "kWh"}},
         b: {"heating": {"value": "50", "unit_of_measure": "kWh"}},
         c: {"heating": {"value": None, "unit_of_measure": "kWh"}},
@@ -96,8 +97,10 @@ def test_average_ignores_missing_and_mixed_measures() -> None:
     }
     assert ci._average({}, "heating") is None
     values[b]["heating"]["unit_of_measure"] = "MWh"
-    assert ci._average(values, "heating")["unit_of_measure"] is None
-    assert Decimal(ci._average(values, "heating")["value"]) == Decimal("75.00")
+    mixed = ci._average(values, "heating")
+    assert mixed is not None
+    assert mixed["unit_of_measure"] is None
+    assert Decimal(mixed["value"]) == Decimal("75.00")
 
 
 def test_beat_entry(settings: Settings) -> None:
