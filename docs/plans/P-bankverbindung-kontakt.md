@@ -17,7 +17,7 @@ geschlossen; Einzug und Überweisung bleiben hinter G2.
 
 ## Umsetzung
 
-- Migration `0225_contact_bank_account_changes.py` (down_revision 0222):
+- Migration `0225_contact_bank_account_changes.py` (down_revision 0224, umgekettet bei der Integration 29.09.2026):
   `contact_bank_account.replaces_account_id` und Tabelle `contact_bank_account_change`
   (RLS über `tenant_rls_statements`, Status im vorhandenen Enum
   `bank_account_approval_status`, je Konto höchstens eine offene Änderung).

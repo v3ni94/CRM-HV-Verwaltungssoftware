@@ -79,7 +79,7 @@ measured (rule 0.1.8).
 - Every human decision in the bank reconciliation becomes recorded evidence with the shown
   alternatives, so precision per case kind and the streaks for rule proposals (S5) can be
   computed from data instead of guessed.
-- Migration 0232 (down_revision 0223, to be rechained by the integrator): columns
+- Migration 0232 (down_revision 0231, rechained at integration on 29.09.2026): columns
   `journal_entry.reversal_reason_code`, `tenant_settings.learning_bookkeeper_enabled`, index
   `ix_journal_entry_bank_transaction`, tables `posting_decision` (RLS, guard trigger) and
   `banking_event_watermark` (RLS).

@@ -6,7 +6,7 @@ The new table is a tenant table with RLS via mhvp.core.db.rls.tenant_rls_stateme
 (ADR 0002). ``status`` reuses the existing enum ``bank_account_approval_status``.
 
 Revision ID: 0225
-Revises: 0222
+Revises: 0224
 Create Date: 2026-09-28
 """
 
@@ -21,7 +21,7 @@ from sqlalchemy.dialects import postgresql
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
 revision: str = "0225"
-down_revision: str | None = "0222"
+down_revision: str | None = "0224"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

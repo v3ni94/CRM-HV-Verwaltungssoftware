@@ -16,7 +16,7 @@ Sperre.
 - API (`mhvp.properties`): bestehende Endpunkte `POST /properties/{id}/buildings`,
   `POST /properties/{id}/units`, `POST /properties/{id}/allocation-keys`,
   `POST /units/{id}/allocation-values` unverändert genutzt. Neu: `AllocationKey.expected_total`
-  (Migration `0227_allocation_key_expected_total.py`, down_revision 0222),
+  (Migration `0227_allocation_key_expected_total.py`, down_revision 0225, umgekettet bei der Integration 29.09.2026),
   `PATCH /properties/{id}/allocation-keys/{kid}`, `GET /properties/{id}/allocation-summary?as_of=`.
   Keine neuen Fehlercodes (Validierung, Konflikt und Nicht gefunden aus `mhvp.core.problems`).
 - CRM (`apps/web-crm/src/components/properties`): `BuildingsCreate.tsx`, `UnitsCreate.tsx`,

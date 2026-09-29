@@ -6,7 +6,7 @@ Idempotent: every table, column and index is guarded by inspector checks. All ne
 tenant tables with RLS via mhvp.core.db.rls.tenant_rls_statements() (ADR 0002).
 
 Revision ID: 0233
-Revises: 0223
+Revises: 0232
 Create Date: 2026-09-29
 """
 
@@ -21,7 +21,7 @@ from sqlalchemy.dialects import postgresql
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
 revision: str = "0233"
-down_revision: str | None = "0223"
+down_revision: str | None = "0232"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

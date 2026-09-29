@@ -25,7 +25,7 @@ Mieterhöhung Zeilen 2 und 3 (nur der Fristtypteil; Briefbogen-PDF bleibt offen)
   `mhvp/workspace/deadline_routers.py`, `mhvp/workspace/jobs.py` (Typ, Leser, Benachrichtigung),
   `mhvp/workspace/links.py`, `mhvp/letting/routers.py` (Aktion `receipt`),
   `mhvp/core/problems.py` (`MHVP-WS-0001` bis `0003`), `mhvp/main.py`, Migration
-  `0230_deadline_types.py` (down_revision 0223, Integrator kettet um).
+  `0230_deadline_types.py` (down_revision 0227, umgekettet bei der Integration 29.09.2026).
 - CRM: `components/workspace/DeadlineCreatePanel.tsx`, `DeadlineEntriesPanel.tsx`,
   `components/settings/DeadlineTypesAdmin.tsx`, `components/properties/ManagerChangeChecklist.tsx`,
   `components/contracts/NoticePeriodHint.tsx`, `components/letting/RentIncreaseReceipt.tsx`,

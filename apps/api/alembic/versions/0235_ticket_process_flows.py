@@ -6,7 +6,7 @@
 of both tables stays as it is. At most one template per tenant and process code.
 
 Revision ID: 0235
-Revises: 0223
+Revises: 0233
 Create Date: 2026-09-29
 """
 
@@ -19,7 +19,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0235"
-down_revision: str | None = "0223"
+down_revision: str | None = "0233"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

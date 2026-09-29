@@ -16,7 +16,7 @@
   creditor's history and the reviewer's decision per line at confirmation (JSONB, nullable).
 
 Revision ID: 0232
-Revises: 0223
+Revises: 0231
 Create Date: 2026-09-28
 """
 
@@ -31,7 +31,7 @@ from sqlalchemy.dialects import postgresql
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
 revision: str = "0232"
-down_revision: str | None = "0223"
+down_revision: str | None = "0231"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

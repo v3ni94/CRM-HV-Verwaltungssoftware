@@ -173,9 +173,17 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
         Index("ix_message_tenant_from_address_norm", "tenant_id", "from_address_norm"),
         # Gmail back channel (rule M20-08, migration 0224): copy lookup per mailbox and Gmail
         # id, settle deadlines and mails reopened from Gmail. The partial unique index
-        # ``uq_message_mailbox_gmail_id`` is created by the migration only without
-        # duplicate rows (see docs/integrations/gmail.md) and is not declared here.
+        # ``uq_message_mailbox_gmail_id`` is created by the migration only when no duplicate
+        # rows exist (see docs/integrations/gmail.md); it is declared here so that the schema
+        # check (tests/integration/test_migrations.py) matches a clean database.
         Index("ix_message_mailbox_gmail_id", "tenant_id", "mailbox_id", "gmail_message_id"),
+        Index(
+            "uq_message_mailbox_gmail_id",
+            "mailbox_id",
+            "gmail_message_id",
+            unique=True,
+            postgresql_where=text("gmail_message_id IS NOT NULL AND direction = 'in'"),
+        ),
         Index(
             "ix_message_gmail_settle",
             "tenant_id",

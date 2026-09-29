@@ -8,7 +8,7 @@ seeded lazily per tenant by ``mhvp.workspace.deadlines.ensure_system_types`` wit
 duration; no duration and no legal deadline is written by this migration.
 
 Revision ID: 0230
-Revises: 0223
+Revises: 0227
 Create Date: 2026-09-28
 """
 
@@ -23,7 +23,7 @@ from sqlalchemy.dialects import postgresql
 from mhvp.core.db.rls import drop_tenant_rls_statements, tenant_rls_statements
 
 revision: str = "0230"
-down_revision: str | None = "0223"
+down_revision: str | None = "0227"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

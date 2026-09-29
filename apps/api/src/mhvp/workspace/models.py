@@ -267,7 +267,9 @@ class DeadlineEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     trigger_on: Mapped[date] = mapped_column(Date, nullable=False)
     due_on: Mapped[date] = mapped_column(Date, nullable=False)
     # True when ``due_on`` was computed from the type's duration, False when entered.
-    due_computed: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    due_computed: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     responsible_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
     )
@@ -282,7 +284,9 @@ class DeadlineEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     ticket_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     note: Mapped[str | None] = mapped_column(Text)
     # open | done
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="open", server_default="open"
+    )
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     done_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
@@ -311,7 +315,9 @@ class PropertyChecklist(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     kind: Mapped[str] = mapped_column(String(32), nullable=False)
     # open | done
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="open", server_default="open"
+    )
     items: Mapped[list[Any]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )

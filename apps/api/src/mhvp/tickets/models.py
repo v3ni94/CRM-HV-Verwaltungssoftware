@@ -92,7 +92,17 @@ class Team(IdMixin, TimestampMixin, TenantMixin, Base):
 
 class TicketTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "ticket_template"
-    __table_args__ = (UniqueConstraint("tenant_id", "category"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "category"),
+        # One template per process code and tenant (rule M19-11, migration 0235).
+        Index(
+            "uq_ticket_template_process_code",
+            "tenant_id",
+            "process_code",
+            unique=True,
+            postgresql_where=text("process_code IS NOT NULL"),
+        ),
+    )
 
     category: Mapped[str] = mapped_column(String(100), nullable=False)
     title: Mapped[str] = mapped_column(String(300), nullable=False)

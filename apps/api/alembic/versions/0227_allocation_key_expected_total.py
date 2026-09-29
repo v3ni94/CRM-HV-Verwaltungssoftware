@@ -7,7 +7,7 @@ date with it and shows a warning only; nothing is blocked or derived (docs/OPEN_
 C1-01). No legal value is assumed, the column stays empty until the operator enters one.
 
 Revision ID: 0227
-Revises: 0222
+Revises: 0225
 Create Date: 2026-09-28
 """
 
@@ -19,7 +19,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0227"
-down_revision: str | None = "0222"
+down_revision: str | None = "0225"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

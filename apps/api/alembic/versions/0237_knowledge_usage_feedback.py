@@ -9,7 +9,7 @@
 Counters only; the release workflow (M34-01) and posted records are untouched.
 
 Revision ID: 0237
-Revises: 0223
+Revises: 0235
 Create Date: 2026-09-29
 """
 
@@ -21,7 +21,7 @@ import sqlalchemy as sa
 from alembic import op
 
 revision: str = "0237"
-down_revision: str | None = "0223"
+down_revision: str | None = "0235"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

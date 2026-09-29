@@ -336,7 +336,9 @@ class LexofficeInvoiceDraft(IdMixin, TimestampMixin, TenantMixin, Base):
     )
 
     config_id: Mapped[uuid.UUID] = _fk("lexoffice_tenant_config.id", ondelete="CASCADE")
-    legal_entity_id: Mapped[uuid.UUID | None] = _fk("legal_entity.id", nullable=True)
+    legal_entity_id: Mapped[uuid.UUID | None] = _fk(
+        "legal_entity.id", nullable=True, ondelete="RESTRICT"
+    )
     contact_id: Mapped[uuid.UUID | None] = _fk("contact.id", nullable=True, ondelete="SET NULL")
     invoice_kind: Mapped[str | None] = mapped_column(String(32))
     payload: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
@@ -413,7 +415,9 @@ class LexofficeRecurringPrep(IdMixin, TimestampMixin, TenantMixin, Base):
     prepared: Mapped[dict[str, Any]] = _jsonb("{}")
     checklist: Mapped[list[dict[str, Any]]] = _jsonb("[]")
     # open, done, dismissed
-    status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="open", server_default="open"
+    )
     lexoffice_template_id: Mapped[str | None] = mapped_column(String(64))
     done_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
