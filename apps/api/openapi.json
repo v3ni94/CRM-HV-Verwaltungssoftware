@@ -5469,6 +5469,11 @@
             "default": false,
             "title": "Enabled",
             "type": "boolean"
+          },
+          "settings": {
+            "additionalProperties": true,
+            "title": "Settings",
+            "type": "object"
           }
         },
         "title": "BrokerConfigIn",
@@ -91328,7 +91333,7 @@
     },
     "/api/v1/letting/listings/{listing_id}/broker/{provider}/sync": {
       "post": {
-        "description": "Explicit, operator-triggered handover only (rule 0.1.6, never automatic). Fails with\n`BROKER_NOT_CONFIGURED` while the feature flag is off, and with\n`BROKER_DOCUMENTATION_REQUIRED` for every provider today (see\n`mhvp.letting.broker_provider` module docstring: no verified endpoint contract yet).",
+        "description": "Explicit, operator-triggered handover only (rule 0.1.6, never automatic). Fails with\n`BROKER_NOT_CONFIGURED` while the feature flag is off, `BROKER_DOCUMENTATION_REQUIRED` for\na provider/operation with no verified endpoint contract, `BROKER_AMBIGUOUS_MATCH` when the\nprovider's search-before-create finds more than one match, and `BROKER_UPSTREAM_ERROR` for\nany other rejection by the provider (see `mhvp.letting.broker_provider` module docstring:\nflowfact `create_or_update_listing` is implemented, other operations and providers are\nnot).",
         "operationId": "sync_listing_to_broker_api_v1_letting_listings__listing_id__broker__provider__sync_post",
         "parameters": [
           {

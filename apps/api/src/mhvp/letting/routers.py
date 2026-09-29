@@ -28,7 +28,9 @@ from mhvp.documents.models import Document, DocumentLink
 from mhvp.letting import flow_import as flow
 from mhvp.letting import openimmo, openimmo_import, openimmo_schema
 from mhvp.letting.broker_provider import (
+    BrokerAmbiguousMatchError,
     BrokerListingPayload,
+    BrokerUpstreamError,
     DocumentationRequiredError,
     get_provider,
 )
@@ -146,6 +148,9 @@ class BrokerConfigIn(LettingBaseIn):
     api_secret: str | None = Field(default=None, max_length=500)
     base_url: str | None = Field(default=None, max_length=300)
     enabled: bool = False
+    # Provider specific configuration with no shared column (M28-02): flowfact expects
+    # schema_rental/schema_sale, the FLOWFACT schema name per listing kind.
+    settings: dict[str, Any] = Field(default_factory=dict)
 
 
 def _case_out(c: RentIncreaseCase) -> dict[str, Any]:
@@ -2067,6 +2072,7 @@ def _broker_config_out(config: BrokerTenantConfig | None, provider: str) -> dict
             "last_tested_at": None,
             "last_test_ok": None,
             "last_test_message": None,
+            "settings": {},
         }
     return {
         "provider": config.provider,
@@ -2076,6 +2082,7 @@ def _broker_config_out(config: BrokerTenantConfig | None, provider: str) -> dict
         "last_tested_at": config.last_tested_at,
         "last_test_ok": config.last_test_ok,
         "last_test_message": config.last_test_message,
+        "settings": config.settings,
     }
 
 
@@ -2108,6 +2115,8 @@ async def put_broker_config(
             config.api_secret = body.api_secret
         if body.base_url is not None:
             config.base_url = body.base_url
+        if body.settings:
+            config.settings = {**config.settings, **body.settings}
         config.enabled = body.enabled
         if config.enabled and not config.api_key:
             raise ProblemError(
@@ -2129,9 +2138,13 @@ async def sync_listing_to_broker(
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     """Explicit, operator-triggered handover only (rule 0.1.6, never automatic). Fails with
-    `BROKER_NOT_CONFIGURED` while the feature flag is off, and with
-    `BROKER_DOCUMENTATION_REQUIRED` for every provider today (see
-    `mhvp.letting.broker_provider` module docstring: no verified endpoint contract yet)."""
+    `BROKER_NOT_CONFIGURED` while the feature flag is off, `BROKER_DOCUMENTATION_REQUIRED` for
+    a provider/operation with no verified endpoint contract, `BROKER_AMBIGUOUS_MATCH` when the
+    provider's search-before-create finds more than one match, and `BROKER_UPSTREAM_ERROR` for
+    any other rejection by the provider (see `mhvp.letting.broker_provider` module docstring:
+    flowfact `create_or_update_listing` is implemented, other operations and providers are
+    not)."""
+    from mhvp.properties.models import Property
 
     async with tenant_tx(request, principal) as session:
         listing = await session.get(Listing, listing_id)
@@ -2140,7 +2153,8 @@ async def sync_listing_to_broker(
         config = await _broker_config(session, principal.tenant_id, provider)
         if config is None or not config.enabled or not config.api_key:
             raise ProblemError(ErrorCodes.BROKER_NOT_CONFIGURED)
-        client = get_provider(provider)
+        prop = await session.get(Property, listing.property_id)
+        client = get_provider(provider, api_key=config.api_key, settings=config.settings)
         payload = BrokerListingPayload(
             external_ref=str(listing.external_ref or listing.id),
             title=listing.title,
@@ -2152,11 +2166,20 @@ async def sync_listing_to_broker(
             ),
             rooms=str(listing.rooms) if listing.rooms is not None else None,
             status=listing.status,
+            street=prop.street if prop else None,
+            house_number=prop.house_number if prop else None,
+            postal_code=prop.postal_code if prop else None,
+            city=prop.city if prop else None,
+            country=prop.country if prop else "DE",
         )
         try:
             result = client.create_or_update_listing(payload)
         except DocumentationRequiredError as exc:
             raise ProblemError(ErrorCodes.BROKER_DOCUMENTATION_REQUIRED, detail=str(exc)) from exc
+        except BrokerAmbiguousMatchError as exc:
+            raise ProblemError(ErrorCodes.BROKER_AMBIGUOUS_MATCH, detail=str(exc)) from exc
+        except BrokerUpstreamError as exc:
+            raise ProblemError(ErrorCodes.BROKER_UPSTREAM_ERROR, detail=str(exc)) from exc
         listing.publication_ref = result.provider_entity_id
         listing.publication_status = result.status
         listing.published_at = datetime.now(UTC)

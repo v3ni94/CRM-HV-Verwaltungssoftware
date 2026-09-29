@@ -241,6 +241,12 @@ class BrokerTenantConfig(IdMixin, TimestampMixin, TenantMixin, Base):
     last_tested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_test_ok: Mapped[bool | None] = mapped_column(sa.Boolean)
     last_test_message: Mapped[str | None] = mapped_column(Text)
+    # Provider specific configuration with no shared column (M28-02): for flowfact,
+    # schema_rental/schema_sale, the FLOWFACT schema name per listing kind. Never guessed,
+    # set by the operator after loading the account's schemas.
+    settings: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
 
 
 class ProspectViewing(IdMixin, TimestampMixin, TenantMixin, Base):

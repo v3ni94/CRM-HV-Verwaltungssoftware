@@ -1847,8 +1847,8 @@ def test_prospect_viewings_rejection_templates_and_self_disclosure(
 def test_broker_provider_feature_flag_and_documentation_required(
     clients: tuple[TestClient, TestClient], world: World
 ) -> None:
-    """M28-01 stage 3: no provider has a verified endpoint contract yet, so every sync fails
-    with BROKER_DOCUMENTATION_REQUIRED once the feature flag is on."""
+    """M28-01 stage 3 / M28-02: with the flag on but no FLOWFACT schema in `settings`, the
+    sync fails with BROKER_DOCUMENTATION_REQUIRED (the schema is never guessed)."""
 
     client, _ = clients
     h = bearer(login(client, world, "m26admin"))
@@ -1866,6 +1866,7 @@ def test_broker_provider_feature_flag_and_documentation_required(
         "last_tested_at": None,
         "last_test_ok": None,
         "last_test_message": None,
+        "settings": {},
     }
 
     assert (
@@ -1894,6 +1895,55 @@ def test_broker_provider_feature_flag_and_documentation_required(
     _ok(client.put(f"{L}/broker/flowfact/config", json={"enabled": False}, headers=h))
     not_configured = client.post(f"{L}/listings/{listing['id']}/broker/flowfact/sync", headers=h)
     assert not_configured.status_code == 502
+
+
+def test_broker_flowfact_sync_creates_entity(
+    clients: tuple[TestClient, TestClient], world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """M28-02: FLOWFACT handover against a mocked FLOWFACT (httpx.MockTransport)."""
+    import httpx
+
+    from mhvp.letting import broker_provider
+
+    client, _ = clients
+    h = bearer(login(client, world, "m26admin"))
+    _, unit = _prospect_unit(client, h, "772")
+    listing = _ok(
+        client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
+    )
+    cfg = _ok(
+        client.put(
+            f"{L}/broker/flowfact/config",
+            json={
+                "api_key": "ff-key",
+                "enabled": True,
+                "settings": {"schema_rental": "wohnung_miete"},
+            },
+            headers=h,
+        )
+    )
+    assert cfg["settings"] == {"schema_rental": "wohnung_miete"}
+    assert "ff-key" not in str(cfg)
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        if request.url.path == "/admin-token-service/public/adminUser/authenticate":
+            return httpx.Response(200, text="a.eyJleHAiOjk5OTk5OTk5OTl9.c")
+        if request.url.path == "/search-service/schemas/wohnung_miete":
+            return httpx.Response(200, json={"entries": [], "totalCount": 0})
+        if request.url.path == "/entity-service/schemas/wohnung_miete":
+            return httpx.Response(201, json={"id": "ent-1"})
+        raise AssertionError(str(request.url))
+
+    original = broker_provider.FlowfactBrokerProvider.__init__
+
+    def patched(self: Any, **kwargs: Any) -> None:
+        kwargs["http"] = httpx.Client(transport=httpx.MockTransport(handler))
+        original(self, **kwargs)
+
+    monkeypatch.setattr(broker_provider.FlowfactBrokerProvider, "__init__", patched)
+    result = _ok(client.post(f"{L}/listings/{listing['id']}/broker/flowfact/sync", headers=h))
+    assert result["provider_entity_id"] == "ent-1"
+    assert result["status"] == "synced"
 
 
 def test_openimmo_import_preview_apply_duplicate_and_images(
