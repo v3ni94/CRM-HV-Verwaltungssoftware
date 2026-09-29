@@ -2886,6 +2886,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Nachkontrolle, Mahnlauf und Rückläufer",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Solange eine Automatikbuchung nicht nachkontrolliert ist, lässt die Plattform den betroffenen Schuldner in Ruhe: der Mahnlauf schließt das Konto mit dem Grund „Automatikbuchung ohne abgeschlossene Nachkontrolle“ aus, der Tilgungsvorschlag antwortet mit einem Hinweis, der Lastschr",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Buchungen ohne Beleg",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Bankseite zeigt die Liste „Buchungen ohne Beleg“: Bankbewegungen, die der Automatiklauf mangels Beleg nicht gebucht hat. Jede Zeile trägt einen Klärungsstatus (Offen, In Klärung, Kein Beleg erforderlich, Erledigt) und eine Aufgabe „Beleg fehlt“. Entscheiden: Kein Beleg erford",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Buchung korrigieren",
   "source": "Handbuch: Banking",
   "href": "/bank",
