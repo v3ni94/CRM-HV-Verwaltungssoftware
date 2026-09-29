@@ -233,7 +233,7 @@ class MeterTransferIn(_In):
     confirm: bool = False
 
 
-class ChangeIn(_In):
+class ProtocolChangeIn(_In):
     """ "Änderung nach Unterschrift" (M30-09): the reason is mandatory."""
 
     reason: str = Field(min_length=3, max_length=2000)
@@ -851,7 +851,7 @@ async def hints(
 )
 async def change_after_signature(
     protocol_id: uuid.UUID,
-    body: ChangeIn,
+    body: ProtocolChangeIn,
     request: Request,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:

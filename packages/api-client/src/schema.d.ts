@@ -3022,8 +3022,48 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Automatik über aktive Regeln (nur bei Freischaltung je Mandant) */
+        /**
+         * Automatik über aktive Regeln (nur bei Freischaltung je Mandant)
+         * @description Manual start of the runner (``mhvp.banking.runner``): tenant switch, class level L2 or
+         *     L3, active rule, deterministic verifier with fingerprint, G1 open or non leading ledger
+         *     (operator decision M12-07), case limits, review item per posting. Chronological order:
+         *     a later payment of the same contract must not see the earlier month still open.
+         */
         post: operations["run_auto_post_api_v1_banking_auto_post_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/auto-posting/reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Nachkontrolle automatischer Buchungen */
+        get: operations["list_reviews_api_v1_banking_auto_posting_reviews_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/auto-posting/reviews/{item_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Nachkontrolle abschließen (accounting:review) */
+        post: operations["decide_review_api_v1_banking_auto_posting_reviews__item_id__post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -3040,6 +3080,117 @@ export interface paths {
         get?: never;
         /** Automatik je Mandant ein- oder ausschalten (Standard aus) */
         put: operations["set_automation_api_v1_banking_automation_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/automation/level-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stufenanhebung beantragen */
+        post: operations["create_level_request_api_v1_banking_automation_level_requests_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/automation/level-requests/{request_id}/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stufenanhebung freigeben (andere Person) */
+        post: operations["approve_level_request_api_v1_banking_automation_level_requests__request_id__approve_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/automation/level-requests/{request_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Stufenanhebung ablehnen */
+        post: operations["reject_level_request_api_v1_banking_automation_level_requests__request_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/automation/levels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Automatikstufen je Fallklasse mit Anträgen */
+        get: operations["get_levels_api_v1_banking_automation_levels_get"];
+        /** Stufe absenken (sofort, eine Person) */
+        put: operations["lower_level_api_v1_banking_automation_levels_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/automation/metrics": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Kennzahlen je Fallklasse und Rechtsträger
+         * @description precision_manual, n_decided, n_auto, error_rate_auto and coverage per class and legal
+         *     entity from ``posting_decision`` (A45 style: operational figures, no proof of safety).
+         */
+        get: operations["automation_metrics_api_v1_banking_automation_metrics_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/automation/outgoing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Ausgangsautomatik je Mandant (Standard aus)
+         * @description ``tenant_settings.auto_posting_outgoing_enabled`` (L2b, OPEN_QUESTIONS M12-05):
+         *     accounting:approve plus tenant_settings:update, reason and event.
+         */
+        put: operations["set_outgoing_api_v1_banking_automation_outgoing_put"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3786,6 +3937,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/rule-proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gelernte Regelvorschläge */
+        get: operations["list_rule_proposals_api_v1_banking_rule_proposals_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/rule-proposals/{proposal_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Regelvorschlag annehmen (verengen erlaubt)
+         * @description Creates the BankRule in state proposed; the accepting person is its creator and may
+         *     therefore not approve it (existing four eyes path).
+         */
+        post: operations["accept_rule_proposal_api_v1_banking_rule_proposals__proposal_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/rule-proposals/{proposal_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Regelvorschlag ablehnen (Grund) */
+        post: operations["reject_rule_proposal_api_v1_banking_rule_proposals__proposal_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/rules": {
         parameters: {
             query?: never;
@@ -3923,6 +4129,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/transactions/{tx_id}/accept": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ein-Klick-Übernahme (Stufe L1)
+         * @description Books exactly the deterministically verified proposal of the pending round as a manual
+         *     posting of the person (created_by set). Needs level L1 for the case class of the
+         *     transaction (409 ``MHVP-BANK-0023``); history and AI proposals are never accepted here.
+         */
+        post: operations["accept_proposal_api_v1_banking_transactions__tx_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/transactions/{tx_id}/ai-posting": {
         parameters: {
             query?: never;
@@ -3983,6 +4211,28 @@ export interface paths {
         get: operations["tx_candidates_api_v1_banking_transactions__tx_id__candidates_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{tx_id}/correct": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Korrigieren: Storno mit Grundcode und Neubuchung (B03)
+         * @description The posted entry is never edited: the posting in force is reversed with reason code
+         *     and free text and the transaction is posted again in the same transaction, as a manual
+         *     posting of the person with a fresh decision round (ADR 0014, rule M12-04 no. 5).
+         */
+        post: operations["correct_transaction_api_v1_banking_transactions__tx_id__correct_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -19262,6 +19512,18 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AcceptIn
+         * @description One click acceptance (L1): the pending round and the verified proposal in it.
+         */
+        AcceptIn: {
+            /** Chosen */
+            chosen?: number | null;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Text */
+            text?: string | null;
+        };
         /** AccountAssignmentOut */
         AccountAssignmentOut: {
             /** Is Default */
@@ -20600,6 +20862,31 @@ export interface components {
              */
             submission_channel: string;
         };
+        /**
+         * BankCorrectionIn
+         * @description Korrigieren (B03): reversal with reason code and free text plus one new posting.
+         */
+        BankCorrectionIn: {
+            /** Chosen */
+            chosen?: number | null;
+            /** Counter Account Id */
+            counter_account_id?: string | null;
+            /**
+             * Discount
+             * @default 0.00
+             */
+            discount: number | string;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            /** Reason */
+            reason: string;
+            /** @default wrong_assignment */
+            reason_code: components["schemas"]["ReversalReason"];
+            /** Settlements */
+            settlements?: components["schemas"]["SettleIn"][];
+            /** Text */
+            text?: string | null;
+        };
         /** BankStatusIn */
         BankStatusIn: {
             /** Bank Transaction Id */
@@ -21848,6 +22135,17 @@ export interface components {
             share_percent: string;
             /** Year */
             year: number;
+        };
+        /** ChangeIn */
+        ChangeIn: {
+            /** Field */
+            field: string;
+            /** Label */
+            label?: ("work" | "mobile" | "private" | "fax" | "other") | null;
+            /** New */
+            new?: string | null;
+            /** Old */
+            old?: string | null;
         };
         /** ChartTemplateOut */
         ChartTemplateOut: {
@@ -23386,7 +23684,7 @@ export interface components {
         /** CorrectIn */
         CorrectIn: {
             /** Changes */
-            changes: components["schemas"]["mhvp__tickets__proposals__ChangeIn"][];
+            changes: components["schemas"]["ChangeIn"][];
             /** Contact Id */
             contact_id?: string | null;
         };
@@ -27636,6 +27934,29 @@ export interface components {
             /** Letter Date */
             letter_date?: string | null;
         };
+        /** LevelDecisionIn */
+        LevelDecisionIn: {
+            /** Comment */
+            comment?: string | null;
+        };
+        /** LevelLowerIn */
+        LevelLowerIn: {
+            /** Case Kind */
+            case_kind: string;
+            /** Level */
+            level: string;
+            /** Reason */
+            reason: string;
+        };
+        /** LevelRequestIn */
+        LevelRequestIn: {
+            /** Case Kind */
+            case_kind: string;
+            /** Level To */
+            level_to: string;
+            /** Reason */
+            reason: string;
+        };
         /** LevyAmendIn */
         LevyAmendIn: {
             /**
@@ -30743,6 +31064,13 @@ export interface components {
             scheduled_at?: string | null;
             status: components["schemas"]["OrderStatus"];
         };
+        /** OutgoingSwitchIn */
+        OutgoingSwitchIn: {
+            /** Enabled */
+            enabled: boolean;
+            /** Reason */
+            reason: string;
+        };
         /** OverviewOut */
         OverviewOut: {
             /** Tenants */
@@ -31771,6 +32099,8 @@ export interface components {
             }[];
             /** Reason */
             reason: string | null;
+            /** Review Due On */
+            review_due_on?: string | null;
             /** Round */
             round: number;
             /** Rule Version */
@@ -31779,6 +32109,8 @@ export interface components {
             status: string;
             /** Supersedes Id */
             supersedes_id: string | null;
+            /** Verifier Fingerprint */
+            verifier_fingerprint?: string | null;
         };
         /** PostingEnabledIn */
         PostingEnabledIn: {
@@ -32656,6 +32988,14 @@ export interface components {
             scheduled_at?: string | null;
             /** Status */
             status?: string | null;
+        };
+        /**
+         * ProtocolChangeIn
+         * @description "Änderung nach Unterschrift" (M30-09): the reason is mandatory.
+         */
+        ProtocolChangeIn: {
+            /** Reason */
+            reason: string;
         };
         /** ProtocolCreateIn */
         ProtocolCreateIn: {
@@ -33949,6 +34289,13 @@ export interface components {
             /** Event Id */
             event_id?: string | null;
         };
+        /** ReviewDecisionIn */
+        ReviewDecisionIn: {
+            /** Note */
+            note?: string | null;
+            /** Outcome */
+            outcome: string;
+        };
         /**
          * ReviewStatus
          * @enum {string}
@@ -34077,6 +34424,11 @@ export interface components {
             approval_state: string;
             /** Approved By */
             approved_by: string | null;
+            /**
+             * Contradiction Count
+             * @default 0
+             */
+            contradiction_count: number;
             /** Created By */
             created_by: string | null;
             /** Hit Count */
@@ -34088,6 +34440,8 @@ export interface components {
             id: string;
             /** Learned From Ai */
             learned_from_ai: boolean;
+            /** Learned From Proposal Id */
+            learned_from_proposal_id?: string | null;
             /** Learned From Transaction Id */
             learned_from_transaction_id: string | null;
             /**
@@ -34105,6 +34459,8 @@ export interface components {
             name: string;
             /** Priority */
             priority: number;
+            /** Superseded By Id */
+            superseded_by_id?: string | null;
             /** Test Evidence Document Id */
             test_evidence_document_id: string | null;
         };
@@ -34125,6 +34481,17 @@ export interface components {
             target_category_id?: string | null;
             /** Target Document Type */
             target_document_type?: string | null;
+        };
+        /** RuleProposalAcceptIn */
+        RuleProposalAcceptIn: {
+            /** Amount Max */
+            amount_max?: number | string | null;
+            /** Amount Min */
+            amount_min?: number | string | null;
+            /** Name */
+            name?: string | null;
+            /** Purpose Tokens */
+            purpose_tokens?: string[] | null;
         };
         /** RuleProposalEvidence */
         RuleProposalEvidence: {
@@ -35521,6 +35888,25 @@ export interface components {
             ai_learning_examples_retention_months: number;
             /** Auto Posting Enabled */
             auto_posting_enabled: boolean;
+            /**
+             * Auto Posting Outgoing Enabled
+             * @default false
+             */
+            auto_posting_outgoing_enabled: boolean;
+            /**
+             * Bank Rule Proposal Threshold
+             * @default 5
+             */
+            bank_rule_proposal_threshold: number;
+            /**
+             * Bank Rule Recurring Threshold
+             * @default 3
+             */
+            bank_rule_recurring_threshold: number;
+            /** Bookkeeping Automation */
+            bookkeeping_automation?: {
+                [key: string]: string;
+            };
             branding: components["schemas"]["Branding"];
             company: components["schemas"]["CompanyData"];
             /**
@@ -35637,6 +36023,10 @@ export interface components {
             ai_learning_examples_enabled?: boolean | null;
             /** Ai Learning Examples Retention Months */
             ai_learning_examples_retention_months?: number | null;
+            /** Bank Rule Proposal Threshold */
+            bank_rule_proposal_threshold?: number | null;
+            /** Bank Rule Recurring Threshold */
+            bank_rule_recurring_threshold?: number | null;
             branding?: components["schemas"]["Branding"] | null;
             company?: components["schemas"]["CompanyData"] | null;
             /** Consumption Info Enabled */
@@ -37218,14 +37608,6 @@ export interface components {
             /** Name */
             name: string;
         };
-        /**
-         * ChangeIn
-         * @description "Änderung nach Unterschrift" (M30-09): the reason is mandatory.
-         */
-        mhvp__handover__routers__ChangeIn: {
-            /** Reason */
-            reason: string;
-        };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
             /**
@@ -37411,17 +37793,6 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to?: string | null;
-        };
-        /** ChangeIn */
-        mhvp__tickets__proposals__ChangeIn: {
-            /** Field */
-            field: string;
-            /** Label */
-            label?: ("work" | "mobile" | "private" | "fax" | "other") | null;
-            /** New */
-            new?: string | null;
-            /** Old */
-            old?: string | null;
         };
     };
     responses: never;
@@ -43817,6 +44188,65 @@ export interface operations {
             };
         };
     };
+    list_reviews_api_v1_banking_auto_posting_reviews_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    decide_review_api_v1_banking_auto_posting_reviews__item_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     set_automation_api_v1_banking_automation_put: {
         parameters: {
             query?: never;
@@ -43827,6 +44257,241 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AutomationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: boolean;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_level_request_api_v1_banking_automation_level_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevelRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_level_request_api_v1_banking_automation_level_requests__request_id__approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevelDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_level_request_api_v1_banking_automation_level_requests__request_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevelDecisionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_levels_api_v1_banking_automation_levels_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    lower_level_api_v1_banking_automation_levels_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LevelLowerIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: string;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    automation_metrics_api_v1_banking_automation_metrics_get: {
+        parameters: {
+            query?: {
+                from?: string | null;
+                to?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    set_outgoing_api_v1_banking_automation_outgoing_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OutgoingSwitchIn"];
             };
         };
         responses: {
@@ -45313,6 +45978,111 @@ export interface operations {
             };
         };
     };
+    list_rule_proposals_api_v1_banking_rule_proposals_get: {
+        parameters: {
+            query?: {
+                status?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    accept_rule_proposal_api_v1_banking_rule_proposals__proposal_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RuleProposalAcceptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RuleOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_rule_proposal_api_v1_banking_rule_proposals__proposal_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proposal_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReopenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_rules_api_v1_banking_rules_get: {
         parameters: {
             query?: never;
@@ -45596,6 +46366,43 @@ export interface operations {
             };
         };
     };
+    accept_proposal_api_v1_banking_transactions__tx_id__accept_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AcceptIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get: {
         parameters: {
             query?: never;
@@ -45712,6 +46519,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    correct_transaction_api_v1_banking_transactions__tx_id__correct_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankCorrectionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -50949,7 +51793,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__handover__routers__ChangeIn"];
+                "application/json": components["schemas"]["ProtocolChangeIn"];
             };
         };
         responses: {

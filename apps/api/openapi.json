@@ -1,6 +1,51 @@
 {
   "components": {
     "schemas": {
+      "AcceptIn": {
+        "additionalProperties": false,
+        "description": "One click acceptance (L1): the pending round and the verified proposal in it.",
+        "properties": {
+          "chosen": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "title": "AcceptIn",
+        "type": "object"
+      },
       "AccountAssignmentOut": {
         "properties": {
           "is_default": {
@@ -4004,6 +4049,98 @@
           }
         },
         "title": "BankConfigIn",
+        "type": "object"
+      },
+      "BankCorrectionIn": {
+        "additionalProperties": false,
+        "description": "Korrigieren (B03): reversal with reason code and free text plus one new posting.",
+        "properties": {
+          "chosen": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Chosen"
+          },
+          "counter_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counter Account Id"
+          },
+          "discount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.00",
+            "title": "Discount"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          },
+          "reason_code": {
+            "$ref": "#/components/schemas/ReversalReason",
+            "default": "wrong_assignment"
+          },
+          "settlements": {
+            "items": {
+              "$ref": "#/components/schemas/SettleIn"
+            },
+            "maxItems": 100,
+            "title": "Settlements",
+            "type": "array"
+          },
+          "text": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "BankCorrectionIn",
         "type": "object"
       },
       "BankStatusIn": {
@@ -8201,6 +8338,63 @@
           "notice"
         ],
         "title": "CertificateOut",
+        "type": "object"
+      },
+      "ChangeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "maxLength": 64,
+            "title": "Field",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "enum": [
+                  "work",
+                  "mobile",
+                  "private",
+                  "fax",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "new": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New"
+          },
+          "old": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "title": "ChangeIn",
         "type": "object"
       },
       "ChartTemplateOut": {
@@ -13125,7 +13319,7 @@
         "properties": {
           "changes": {
             "items": {
-              "$ref": "#/components/schemas/mhvp__tickets__proposals__ChangeIn"
+              "$ref": "#/components/schemas/ChangeIn"
             },
             "maxItems": 20,
             "title": "Changes",
@@ -26254,6 +26448,83 @@
         "title": "LettersIn",
         "type": "object"
       },
+      "LevelDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "title": "LevelDecisionIn",
+        "type": "object"
+      },
+      "LevelLowerIn": {
+        "additionalProperties": false,
+        "properties": {
+          "case_kind": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Case Kind",
+            "type": "string"
+          },
+          "level": {
+            "pattern": "^L[0-2]$",
+            "title": "Level",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_kind",
+          "level",
+          "reason"
+        ],
+        "title": "LevelLowerIn",
+        "type": "object"
+      },
+      "LevelRequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "case_kind": {
+            "maxLength": 24,
+            "minLength": 1,
+            "title": "Case Kind",
+            "type": "string"
+          },
+          "level_to": {
+            "pattern": "^L[1-3]$",
+            "title": "Level To",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "case_kind",
+          "level_to",
+          "reason"
+        ],
+        "title": "LevelRequestIn",
+        "type": "object"
+      },
       "LevyAmendIn": {
         "additionalProperties": false,
         "properties": {
@@ -35988,6 +36259,27 @@
         "title": "OrderStep",
         "type": "object"
       },
+      "OutgoingSwitchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "reason"
+        ],
+        "title": "OutgoingSwitchIn",
+        "type": "object"
+      },
       "OverviewOut": {
         "properties": {
           "tenants": {
@@ -38727,6 +39019,18 @@
             ],
             "title": "Reason"
           },
+          "review_due_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Review Due On"
+          },
           "round": {
             "title": "Round",
             "type": "integer"
@@ -38750,6 +39054,17 @@
               }
             ],
             "title": "Supersedes Id"
+          },
+          "verifier_fingerprint": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verifier Fingerprint"
           }
         },
         "required": [
@@ -41812,6 +42127,23 @@
           }
         },
         "title": "ProspectViewingPatch",
+        "type": "object"
+      },
+      "ProtocolChangeIn": {
+        "additionalProperties": false,
+        "description": "\"Änderung nach Unterschrift\" (M30-09): the reason is mandatory.",
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ProtocolChangeIn",
         "type": "object"
       },
       "ProtocolCreateIn": {
@@ -45619,6 +45951,33 @@
         "title": "RevertGmailDecisionIn",
         "type": "object"
       },
+      "ReviewDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "outcome": {
+            "pattern": "^(ok|corrected|cancelled)$",
+            "title": "Outcome",
+            "type": "string"
+          }
+        },
+        "required": [
+          "outcome"
+        ],
+        "title": "ReviewDecisionIn",
+        "type": "object"
+      },
       "ReviewStatus": {
         "enum": [
           "open",
@@ -46031,6 +46390,11 @@
             ],
             "title": "Approved By"
           },
+          "contradiction_count": {
+            "default": 0,
+            "title": "Contradiction Count",
+            "type": "integer"
+          },
           "created_by": {
             "anyOf": [
               {
@@ -46055,6 +46419,18 @@
           "learned_from_ai": {
             "title": "Learned From Ai",
             "type": "boolean"
+          },
+          "learned_from_proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Learned From Proposal Id"
           },
           "learned_from_transaction_id": {
             "anyOf": [
@@ -46097,6 +46473,18 @@
           "priority": {
             "title": "Priority",
             "type": "integer"
+          },
+          "superseded_by_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Superseded By Id"
           },
           "test_evidence_document_id": {
             "anyOf": [
@@ -46224,6 +46612,72 @@
           }
         },
         "title": "RulePatch",
+        "type": "object"
+      },
+      "RuleProposalAcceptIn": {
+        "additionalProperties": false,
+        "properties": {
+          "amount_max": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Max"
+          },
+          "amount_min": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Amount Min"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "purpose_tokens": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 10,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose Tokens"
+          }
+        },
+        "title": "RuleProposalAcceptIn",
         "type": "object"
       },
       "RuleProposalEvidence": {
@@ -50376,6 +50830,28 @@
             "title": "Auto Posting Enabled",
             "type": "boolean"
           },
+          "auto_posting_outgoing_enabled": {
+            "default": false,
+            "title": "Auto Posting Outgoing Enabled",
+            "type": "boolean"
+          },
+          "bank_rule_proposal_threshold": {
+            "default": 5,
+            "title": "Bank Rule Proposal Threshold",
+            "type": "integer"
+          },
+          "bank_rule_recurring_threshold": {
+            "default": 3,
+            "title": "Bank Rule Recurring Threshold",
+            "type": "integer"
+          },
+          "bookkeeping_automation": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Bookkeeping Automation",
+            "type": "object"
+          },
           "branding": {
             "$ref": "#/components/schemas/Branding"
           },
@@ -50567,6 +51043,32 @@
               }
             ],
             "title": "Ai Learning Examples Retention Months"
+          },
+          "bank_rule_proposal_threshold": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 2.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Rule Proposal Threshold"
+          },
+          "bank_rule_recurring_threshold": {
+            "anyOf": [
+              {
+                "maximum": 50.0,
+                "minimum": 2.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Rule Recurring Threshold"
           },
           "branding": {
             "anyOf": [
@@ -56083,23 +56585,6 @@
         "title": "TenantOut",
         "type": "object"
       },
-      "mhvp__handover__routers__ChangeIn": {
-        "additionalProperties": false,
-        "description": "\"Änderung nach Unterschrift\" (M30-09): the reason is mandatory.",
-        "properties": {
-          "reason": {
-            "maxLength": 2000,
-            "minLength": 3,
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "reason"
-        ],
-        "title": "ChangeIn",
-        "type": "object"
-      },
       "mhvp__platform__schemas__TenantOut": {
         "properties": {
           "id": {
@@ -56618,63 +57103,6 @@
           "id"
         ],
         "title": "ProviderOut",
-        "type": "object"
-      },
-      "mhvp__tickets__proposals__ChangeIn": {
-        "additionalProperties": false,
-        "properties": {
-          "field": {
-            "maxLength": 64,
-            "title": "Field",
-            "type": "string"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "enum": [
-                  "work",
-                  "mobile",
-                  "private",
-                  "fax",
-                  "other"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          },
-          "new": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "New"
-          },
-          "old": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Old"
-          }
-        },
-        "required": [
-          "field"
-        ],
-        "title": "ChangeIn",
         "type": "object"
       }
     }
@@ -66282,6 +66710,7 @@
     },
     "/api/v1/banking/auto-post": {
       "post": {
+        "description": "Manual start of the runner (``mhvp.banking.runner``): tenant switch, class level L2 or\nL3, active rule, deterministic verifier with fingerprint, G1 open or non leading ledger\n(operator decision M12-07), case limits, review item per posting. Chronological order:\na later payment of the same contract must not see the earlier month still open.",
         "operationId": "run_auto_post_api_v1_banking_auto_post_post",
         "responses": {
           "200": {
@@ -66298,6 +66727,87 @@
           }
         },
         "summary": "Automatik über aktive Regeln (nur bei Freischaltung je Mandant)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/auto-posting/reviews": {
+      "get": {
+        "operationId": "list_reviews_api_v1_banking_auto_posting_reviews_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Reviews Api V1 Banking Auto Posting Reviews Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Nachkontrolle automatischer Buchungen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/auto-posting/reviews/{item_id}": {
+      "post": {
+        "operationId": "decide_review_api_v1_banking_auto_posting_reviews__item_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviewDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Decide Review Api V1 Banking Auto Posting Reviews  Item Id  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nachkontrolle abschließen (accounting:review)",
         "tags": [
           "Bank"
         ]
@@ -66343,6 +66853,341 @@
           }
         },
         "summary": "Automatik je Mandant ein- oder ausschalten (Standard aus)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/automation/level-requests": {
+      "post": {
+        "operationId": "create_level_request_api_v1_banking_automation_level_requests_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LevelRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Level Request Api V1 Banking Automation Level Requests Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stufenanhebung beantragen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/automation/level-requests/{request_id}/approve": {
+      "post": {
+        "operationId": "approve_level_request_api_v1_banking_automation_level_requests__request_id__approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LevelDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Level Request Api V1 Banking Automation Level Requests  Request Id  Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stufenanhebung freigeben (andere Person)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/automation/level-requests/{request_id}/reject": {
+      "post": {
+        "operationId": "reject_level_request_api_v1_banking_automation_level_requests__request_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LevelDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reject Level Request Api V1 Banking Automation Level Requests  Request Id  Reject Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stufenanhebung ablehnen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/automation/levels": {
+      "get": {
+        "operationId": "get_levels_api_v1_banking_automation_levels_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Levels Api V1 Banking Automation Levels Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Automatikstufen je Fallklasse mit Anträgen",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "put": {
+        "operationId": "lower_level_api_v1_banking_automation_levels_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LevelLowerIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Lower Level Api V1 Banking Automation Levels Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Stufe absenken (sofort, eine Person)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/automation/metrics": {
+      "get": {
+        "description": "precision_manual, n_decided, n_auto, error_rate_auto and coverage per class and legal\nentity from ``posting_decision`` (A45 style: operational figures, no proof of safety).",
+        "operationId": "automation_metrics_api_v1_banking_automation_metrics_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "To"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Automation Metrics Api V1 Banking Automation Metrics Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kennzahlen je Fallklasse und Rechtsträger",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/automation/outgoing": {
+      "put": {
+        "description": "``tenant_settings.auto_posting_outgoing_enabled`` (L2b, OPEN_QUESTIONS M12-05):\naccounting:approve plus tenant_settings:update, reason and event.",
+        "operationId": "set_outgoing_api_v1_banking_automation_outgoing_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OutgoingSwitchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Set Outgoing Api V1 Banking Automation Outgoing Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ausgangsautomatik je Mandant (Standard aus)",
         "tags": [
           "Bank"
         ]
@@ -68388,6 +69233,169 @@
         ]
       }
     },
+    "/api/v1/banking/rule-proposals": {
+      "get": {
+        "operationId": "list_rule_proposals_api_v1_banking_rule_proposals_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Rule Proposals Api V1 Banking Rule Proposals Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gelernte Regelvorschläge",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/rule-proposals/{proposal_id}/accept": {
+      "post": {
+        "description": "Creates the BankRule in state proposed; the accepting person is its creator and may\ntherefore not approve it (existing four eyes path).",
+        "operationId": "accept_rule_proposal_api_v1_banking_rule_proposals__proposal_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RuleProposalAcceptIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RuleOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regelvorschlag annehmen (verengen erlaubt)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/rule-proposals/{proposal_id}/reject": {
+      "post": {
+        "operationId": "reject_rule_proposal_api_v1_banking_rule_proposals__proposal_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReopenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reject Rule Proposal Api V1 Banking Rule Proposals  Proposal Id  Reject Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regelvorschlag ablehnen (Grund)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
     "/api/v1/banking/rules": {
       "get": {
         "operationId": "list_rules_api_v1_banking_rules_get",
@@ -68863,6 +69871,62 @@
         ]
       }
     },
+    "/api/v1/banking/transactions/{tx_id}/accept": {
+      "post": {
+        "description": "Books exactly the deterministically verified proposal of the pending round as a manual\nposting of the person (created_by set). Needs level L1 for the case class of the\ntransaction (409 ``MHVP-BANK-0023``); history and AI proposals are never accepted here.",
+        "operationId": "accept_proposal_api_v1_banking_transactions__tx_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Accept Proposal Api V1 Banking Transactions  Tx Id  Accept Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ein-Klick-Übernahme (Stufe L1)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
     "/api/v1/banking/transactions/{tx_id}/ai-posting": {
       "get": {
         "operationId": "get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get",
@@ -69048,6 +70112,62 @@
           }
         },
         "summary": "Zuordnungsvorschläge mit Begründung",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/correct": {
+      "post": {
+        "description": "The posted entry is never edited: the posting in force is reversed with reason code\nand free text and the transaction is posted again in the same transaction, as a manual\nposting of the person with a fresh decision round (ADR 0014, rule M12-04 no. 5).",
+        "operationId": "correct_transaction_api_v1_banking_transactions__tx_id__correct_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankCorrectionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Correct Transaction Api V1 Banking Transactions  Tx Id  Correct Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Korrigieren: Storno mit Grundcode und Neubuchung (B03)",
         "tags": [
           "Bank"
         ]
@@ -77605,7 +78725,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__handover__routers__ChangeIn"
+                "$ref": "#/components/schemas/ProtocolChangeIn"
               }
             }
           },

@@ -77,11 +77,11 @@ async def _world(settings: Settings) -> World:
         b, _ = await services.provision_tenant(factory, slug=f"lx-b-{RUN}", name=f"LX B {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, role, tenant in [
-            ("lxadmin", "tenant_admin", a),
-            ("lxadmin2", "tenant_admin", a),
-            ("lxsupport", "support", a),
-            ("lxcare", "caretaker", a),
-            ("lxadminb", "tenant_admin", b),
+            ("lxoadmin", "tenant_admin", a),
+            ("lxoadmin2", "tenant_admin", a),
+            ("lxosupport", "support", a),
+            ("lxocare", "caretaker", a),
+            ("lxoadminb", "tenant_admin", b),
         ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
@@ -185,7 +185,7 @@ def _ok(response: Any, status: int = 200) -> Any:
     return response.json()
 
 
-def _admin(client: TestClient, world: World, name: str = "lxadmin") -> dict[str, str]:
+def _admin(client: TestClient, world: World, name: str = "lxoadmin") -> dict[str, str]:
     return bearer(login(client, world, name))
 
 
@@ -364,7 +364,7 @@ def test_config_lifecycle_avv_test_key_rotation_and_permissions(
     assert created["api_key_set"]
     assert created["api_key_last4"] == fake.api_key[-4:]
     assert fake.api_key not in json.dumps(created)
-    assert created["avv_confirmed_by"] == str(world.users["lxadmin"])
+    assert created["avv_confirmed_by"] == str(world.users["lxoadmin"])
     assert created["message"] == "Verbindungstest erforderlich"
     # Duplicate legal entity: 409.
     dup = client.post(
@@ -428,7 +428,7 @@ def test_config_lifecycle_avv_test_key_rotation_and_permissions(
     assert mismatch.status_code == 409
     assert mismatch.json()["code"] == "MHVP-LEXO-0013"
     # Permissions: support reads, cannot write or test; caretaker cannot read.
-    support = _admin(client, world, "lxsupport")
+    support = _admin(client, world, "lxosupport")
     assert _ok(client.get(f"{L}/configs", headers=support))
     assert (
         client.put(
@@ -438,9 +438,9 @@ def test_config_lifecycle_avv_test_key_rotation_and_permissions(
     )
     assert client.post(f"{L}/configs/{created['id']}/test", headers=support).status_code == 403
     assert client.get(f"{L}/outbox", headers=support).status_code == 403
-    assert client.get(f"{L}/configs", headers=_admin(client, world, "lxcare")).status_code == 403
+    assert client.get(f"{L}/configs", headers=_admin(client, world, "lxocare")).status_code == 403
     # Tenant separation.
-    hb = _admin(client, world, "lxadminb")
+    hb = _admin(client, world, "lxoadminb")
     assert _ok(client.get(f"{L}/configs", headers=hb)) == []
     assert client.get(f"{L}/configs/{created['id']}", headers=hb).status_code == 404
     assert _ok(client.get(f"{L}/outbox", headers=hb))["total"] == 0
@@ -488,7 +488,7 @@ def test_invoice_kind_mapping(client: TestClient, world: World, fake: FakeLexoff
         client.put(
             f"{L}/invoice-kinds",
             json=[{"kind": "broker", "legal_entity_id": None}],
-            headers=_admin(client, world, "lxsupport"),
+            headers=_admin(client, world, "lxosupport"),
         ).status_code
         == 403
     )
@@ -557,7 +557,7 @@ def test_match_decide_push_conflicts_and_retries(
     assert counts == {**counts, "proposed": 1, "ambiguous": 1, "remote_only": 2, "refreshed": 0}
     assert (
         client.post(
-            f"{L}/configs/{cid}/contacts/match", json={}, headers=_admin(client, world, "lxcare")
+            f"{L}/configs/{cid}/contacts/match", json={}, headers=_admin(client, world, "lxocare")
         ).status_code
         == 403
     )
@@ -872,7 +872,7 @@ def test_invoice_copy_verification_fetch_and_recipient_lock(
         client.post(
             f"{L}/tickets/{ticket['id']}/invoice-copies",
             json={"invoice_number": "RE-1019"},
-            headers=_admin(client, world, "lxsupport"),
+            headers=_admin(client, world, "lxosupport"),
         ).status_code
         == 403
     )
@@ -913,7 +913,7 @@ def test_invoice_copy_verification_fetch_and_recipient_lock(
     )
     assert (
         client.post(
-            f"{L}/invoice-copies/{req['id']}/accept", headers=_admin(client, world, "lxcare")
+            f"{L}/invoice-copies/{req['id']}/accept", headers=_admin(client, world, "lxocare")
         ).status_code
         == 403
     )
@@ -1013,7 +1013,7 @@ def test_invoice_copy_verification_fetch_and_recipient_lock(
     # Tenant B cannot see the request.
     assert (
         client.get(
-            f"{L}/tickets/{ticket['id']}/invoice-copies", headers=_admin(client, world, "lxadminb")
+            f"{L}/tickets/{ticket['id']}/invoice-copies", headers=_admin(client, world, "lxoadminb")
         ).status_code
         == 404
     )
@@ -1128,7 +1128,7 @@ def test_invoice_drafts_by_kind_and_recurring_prep(
     assert off.json()["code"] == "MHVP-LEXO-0016"
     assert (
         client.post(
-            f"{L}/invoice-drafts", json=body, headers=_admin(client, world, "lxsupport")
+            f"{L}/invoice-drafts", json=body, headers=_admin(client, world, "lxosupport")
         ).status_code
         == 403
     )
@@ -1192,7 +1192,7 @@ def test_invoice_drafts_by_kind_and_recurring_prep(
     assert done["status"] == "done"
     assert done["deeplink"].endswith("/permalink/recurring-templates/view/rt-1")
     assert (
-        client.get(f"{L}/recurring-preps", headers=_admin(client, world, "lxadminb")).json() == []
+        client.get(f"{L}/recurring-preps", headers=_admin(client, world, "lxoadminb")).json() == []
     )
     for cfg in (broker_cfg, manager_cfg):
         _ok(client.put(f"{L}/configs/{cfg['id']}", json={"enabled": False}, headers=h))
