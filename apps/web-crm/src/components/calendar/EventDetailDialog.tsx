@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import type { Attendee } from "@/components/calendar/CreateEventDialog";
+import { Sheet } from "@/components/ui/Sheet";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -44,9 +45,27 @@ export function EventDetailDialog({ item, onClose, onSent }: { item: CalendarEve
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4" role="dialog" aria-modal="true" aria-label={t("eventDetails")}>
-      <div className={`${ui.card} flex w-full max-w-md flex-col gap-3`}>
-        <h2 className="text-sm font-semibold">{item.title}</h2>
+    <Sheet
+      open
+      onClose={onClose}
+      title={t("eventDetails")}
+      size="md"
+      testId="event-detail-sheet"
+      footer={
+        <div className={ui.formActions}>
+          <button type="button" className={`${ui.button} ${ui.actionFull}`} onClick={onClose}>
+            {t("close")}
+          </button>
+          {canInvite && !confirming ? (
+            <button type="button" className={`${ui.primary} ${ui.actionFull}`} onClick={() => setConfirming(true)}>
+              {t("sendInvite")}
+            </button>
+          ) : null}
+        </div>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <h3 className="text-sm font-semibold break-words [overflow-wrap:anywhere]">{item.title}</h3>
         <p className="text-sm text-muted">{formatDate(item.date)}</p>
 
         {item.is_stale ? (
@@ -90,18 +109,7 @@ export function EventDetailDialog({ item, onClose, onSent }: { item: CalendarEve
             </div>
           </div>
         ) : null}
-
-        <div className={ui.formActions}>
-          <button type="button" className={`${ui.button} ${ui.actionFull}`} onClick={onClose}>
-            {t("close")}
-          </button>
-          {canInvite && !confirming ? (
-            <button type="button" className={`${ui.primary} ${ui.actionFull}`} onClick={() => setConfirming(true)}>
-              {t("sendInvite")}
-            </button>
-          ) : null}
-        </div>
       </div>
-    </div>
+    </Sheet>
   );
 }

@@ -1,8 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useId, useRef, useState } from "react";
 
+import { Sheet } from "@/components/ui/Sheet";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -63,6 +64,8 @@ export function CreateEventDialog({
   const t = useTranslations("Workspace");
   const tc = useTranslations("Calendar");
   const [title, setTitle] = useState(prefill?.title ?? "");
+  const formId = useId();
+  const titleRef = useRef<HTMLInputElement>(null);
   const [reminders, setReminders] = useState<string[]>([]);
   const [frequency, setFrequency] = useState<"" | Recurrence["frequency"]>("");
   const [interval, setInterval] = useState(1);
@@ -121,12 +124,30 @@ export function CreateEventDialog({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-scrim p-4" role="dialog" aria-modal="true" aria-label={t("addEntry")}>
-      <form onSubmit={submit} className={`${ui.card} flex w-full max-w-md flex-col gap-3`}>
-        <h2 className="text-sm font-semibold">{t("addEntry")}</h2>
+    // Bottom sheet on phones and tablets, centred card from md (M31); the submit button sits in
+    // the sticky footer above the keyboard and targets the form by id.
+    <Sheet
+      open
+      onClose={onClose}
+      title={t("addEntry")}
+      size="md"
+      initialFocusRef={titleRef}
+      testId="create-event-sheet"
+      footer={
+        <div className={ui.formActions}>
+          <button type="button" className={`${ui.button} ${ui.actionFull}`} onClick={onClose}>
+            {t("cancel")}
+          </button>
+          <button type="submit" form={formId} className={`${ui.primary} ${ui.actionFull}`} disabled={busy}>
+            {t("addEntry")}
+          </button>
+        </div>
+      }
+    >
+      <form id={formId} onSubmit={submit} className="flex flex-col gap-3">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("entryTitle")}</span>
-          <input required value={title} onChange={(e) => setTitle(e.target.value)} className={ui.input} />
+          <input ref={titleRef} required value={title} onChange={(e) => setTitle(e.target.value)} className={ui.input} />
         </label>
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("entryDate")}</span>
@@ -257,15 +278,7 @@ export function CreateEventDialog({
             {error}
           </p>
         ) : null}
-        <div className={ui.formActions}>
-          <button type="button" className={`${ui.button} ${ui.actionFull}`} onClick={onClose}>
-            {t("cancel")}
-          </button>
-          <button type="submit" className={`${ui.primary} ${ui.actionFull}`} disabled={busy}>
-            {t("addEntry")}
-          </button>
-        </div>
       </form>
-    </div>
+    </Sheet>
   );
 }

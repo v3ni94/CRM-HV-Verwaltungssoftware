@@ -10,6 +10,8 @@ import type { Attendee, CreateEventInput } from "@/components/calendar/CreateEve
 import { CreateEventDialog } from "@/components/calendar/CreateEventDialog";
 import { EventDetailDialog } from "@/components/calendar/EventDetailDialog";
 import { weekRange, WeekView } from "@/components/calendar/WeekView";
+import { ChevronIcon } from "@/components/shell/icons";
+import { Sheet } from "@/components/ui/Sheet";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import type { Problem } from "@/lib/problem";
@@ -98,6 +100,11 @@ export function CalendarView({
   const [refreshing, setRefreshing] = useState(false);
   const [detailItem, setDetailItem] = useState<CalendarItem | null>(null);
   const [focused, setFocused] = useState<string | null>(focusId);
+  /** Phone only: the row whose secondary actions are open in the "Mehr" sheet (M31). */
+  const [moreItem, setMoreItem] = useState<CalendarItem | null>(null);
+  /** Set by the "Heute" button: after the next load the first entry of today scrolls under the header. */
+  const [jumpToToday, setJumpToToday] = useState(false);
+  const today = iso(new Date());
 
   const monthPart = monthRange(year, month);
   const weekPart = weekRange(anchor);
@@ -125,6 +132,25 @@ export function CalendarView({
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (!jumpToToday) return;
+    setJumpToToday(false);
+    try {
+      document.querySelector('[aria-current="date"]')?.scrollIntoView({ block: "start" });
+    } catch {
+      // scrollIntoView is missing in some test environments; the month already changed.
+    }
+  }, [jumpToToday, items]);
+
+  /** Jumps to the current month (or the current week) and scrolls to today's first entry. */
+  function goToday() {
+    const now = new Date();
+    setYear(now.getFullYear());
+    setMonth(now.getMonth());
+    setAnchor(now);
+    setJumpToToday(true);
+  }
 
   function shift(delta: number) {
     if (view === "month") {
@@ -202,40 +228,49 @@ export function CalendarView({
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <button type="button" className={ui.button} onClick={() => shift(-1)}>
-          {view === "month" ? t("prevMonth") : t("prevWeek")}
-        </button>
-        <h2 className="min-w-40 text-center font-medium" aria-live="polite">
-          {label}
-        </h2>
-        <button type="button" className={ui.button} onClick={() => shift(1)}>
-          {view === "month" ? t("nextMonth") : t("nextWeek")}
-        </button>
-        <div className="ml-2 flex items-center gap-1" role="group" aria-label={t("viewMode")}>
-          <button
-            type="button"
-            className={view === "month" ? ui.primary : ui.button}
-            aria-pressed={view === "month"}
-            onClick={() => setView("month")}
-          >
-            {t("monthView")}
+      {/* Toolbar in two rows below sm (M31): arrows, label and "Heute" first, the view switch
+       *  and the actions second. */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center" data-testid="calendar-toolbar">
+        <div className="flex items-center gap-1">
+          <button type="button" className={ui.iconButton} aria-label={view === "month" ? t("prevMonth") : t("prevWeek")} onClick={() => shift(-1)}>
+            <ChevronIcon className="h-5 w-5 rotate-90" />
           </button>
-          <button
-            type="button"
-            className={view === "week" ? ui.primary : ui.button}
-            aria-pressed={view === "week"}
-            onClick={() => setView("week")}
-          >
-            {t("weekView")}
+          <h2 className="min-w-0 flex-1 truncate text-center font-medium sm:min-w-40" aria-live="polite" data-testid="calendar-label">
+            {label}
+          </h2>
+          <button type="button" className={ui.iconButton} aria-label={view === "month" ? t("nextMonth") : t("nextWeek")} onClick={() => shift(1)}>
+            <ChevronIcon className="h-5 w-5 -rotate-90" />
+          </button>
+          <button type="button" className={ui.button} onClick={goToday} data-testid="calendar-today">
+            {tc("today")}
           </button>
         </div>
-        <button type="button" className={ui.button} disabled={refreshing} onClick={() => void refresh()}>
-          {t("refresh")}
-        </button>
-        <button type="button" className={`${ui.primary} ml-auto`} onClick={() => setDialogOpen(true)}>
-          {t("addEntry")}
-        </button>
+        <div className="flex flex-wrap items-center gap-2 sm:ml-2 sm:flex-1">
+          <div className="flex w-full items-center gap-1 sm:w-auto" role="group" aria-label={t("viewMode")}>
+            <button
+              type="button"
+              className={view === "month" ? ui.segmentActive : ui.segment}
+              aria-pressed={view === "month"}
+              onClick={() => setView("month")}
+            >
+              {t("monthView")}
+            </button>
+            <button
+              type="button"
+              className={view === "week" ? ui.segmentActive : ui.segment}
+              aria-pressed={view === "week"}
+              onClick={() => setView("week")}
+            >
+              {t("weekView")}
+            </button>
+          </div>
+          <button type="button" className={ui.button} disabled={refreshing} onClick={() => void refresh()}>
+            {t("refresh")}
+          </button>
+          <button type="button" className={`${ui.primary} ml-auto`} onClick={() => setDialogOpen(true)}>
+            {t("addEntry")}
+          </button>
+        </div>
       </div>
 
       <CalendarLegend visible={visible} available={available} onToggle={(s) => setVisible((prev) => ({ ...prev, [s]: !prev[s] }))} />
@@ -288,48 +323,65 @@ export function CalendarView({
           {filtered.map((item) => (
             <li
               key={`${item.kind}-${item.entity_id ?? item.google_event_id}-${item.date}`}
-              className="flex items-center gap-3 px-3 py-2 text-sm"
+              className={`flex flex-col gap-1 px-3 py-2 text-sm sm:flex-row sm:items-center sm:gap-3 ${
+                item.date === today ? "scroll-mt-[var(--mhvp-header-h)] bg-surface-2" : ""
+              }`}
+              aria-current={item.date === today ? "date" : undefined}
+              data-testid="calendar-row"
             >
-              <span
-                className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${
-                  item.source === "internal" ? "bg-muted" : item.source === "default" ? "bg-fg" : "bg-gold"
-                }`}
-                aria-hidden="true"
-              />
-              <span className="w-24 tabular-nums">{formatDate(item.date)}</span>
-              <span className="w-28 text-xs text-muted">
-                {item.calendar_label ?? (tc.has(`kind.${item.kind}`) ? tc(`kind.${item.kind}`) : item.kind)}
+              <span className="flex items-center gap-2 sm:contents">
+                <span
+                  className={`inline-block h-2.5 w-2.5 shrink-0 rounded-full ${
+                    item.source === "internal" ? "bg-muted" : item.source === "default" ? "bg-fg" : "bg-gold"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span className="shrink-0 tabular-nums">{formatDate(item.date)}</span>
+                <span className="min-w-0 truncate text-xs text-muted sm:max-w-40">
+                  {item.calendar_label ?? (tc.has(`kind.${item.kind}`) ? tc(`kind.${item.kind}`) : item.kind)}
+                </span>
               </span>
-              <span className="flex-1">
+              <span className="min-w-0 flex-1 break-words [overflow-wrap:anywhere]" data-testid="calendar-title">
                 {item.title}
                 {item.is_stale ? <span className={`${ui.badgeWarning} ml-2`}>{t("staleBadge")}</span> : null}
                 {item.recurrence ? (
-                  <span className="ml-2 text-xs text-muted" data-testid="calendar-recurring" title={tc("recurrence.hint")}>
+                  <span className="ml-2 text-xs text-muted" data-testid="calendar-recurring">
                     {tc("recurring")}
                     {tc.has(`recurrence.${item.recurrence.frequency}`) ? ` (${tc(`recurrence.${item.recurrence.frequency}`)})` : ""}
                   </span>
                 ) : null}
                 {item.reminders && item.reminders.length > 0 ? (
-                  <span className="ml-2 text-xs text-muted" title={tc("generatedHint")}>
+                  <span className="ml-2 text-xs text-muted">
                     {tc("reminders")}: {item.reminders.map((r) => (tc.has(`reminder.${r}`) ? tc(`reminder.${r}`) : r)).join(", ")}
                   </span>
                 ) : null}
               </span>
-              {item.href ? (
-                <Link href={item.href} className={ui.buttonSm} data-testid="calendar-source-link">
-                  {tc("openSource")}
-                </Link>
-              ) : null}
-              {item.google_event_id ? (
-                <button type="button" className={ui.buttonSm} onClick={() => setDetailItem(item)}>
-                  {t("details")}
-                </button>
-              ) : null}
-              {item.editable && (item.entity_id || item.google_event_id) ? (
-                <button type="button" className={ui.button} onClick={() => void remove(item)}>
-                  {t("delete")}
-                </button>
-              ) : null}
+              <span className="flex flex-wrap gap-2">
+                {item.href && item.kind === "handover" ? (
+                  <Link href={item.href} className={ui.primary} data-testid="calendar-source-link">
+                    {tc("openProtocol")}
+                  </Link>
+                ) : item.href ? (
+                  <Link href={item.href} className={ui.buttonSm} data-testid="calendar-source-link">
+                    {tc("openSource")}
+                  </Link>
+                ) : null}
+                {item.google_event_id ? (
+                  <button type="button" className={ui.buttonSm} onClick={() => setDetailItem(item)}>
+                    {t("details")}
+                  </button>
+                ) : null}
+                {item.editable && (item.entity_id || item.google_event_id) ? (
+                  <>
+                    <button type="button" className={`${ui.button} hidden sm:inline-flex`} onClick={() => void remove(item)}>
+                      {t("delete")}
+                    </button>
+                    <button type="button" className={`${ui.buttonSm} sm:hidden`} onClick={() => setMoreItem(item)} data-testid="calendar-more">
+                      {tc("more")}
+                    </button>
+                  </>
+                ) : null}
+              </span>
             </li>
           ))}
         </ul>
@@ -344,6 +396,25 @@ export function CalendarView({
           onClose={() => setDialogOpen(false)}
         />
       ) : null}
+
+      <Sheet open={moreItem !== null} onClose={() => setMoreItem(null)} title={moreItem?.title ?? ""} size="sm" testId="calendar-more-sheet">
+        {moreItem ? (
+          <div className="flex flex-col gap-2">
+            <p className="text-sm text-muted">{formatDate(moreItem.date)}</p>
+            <button
+              type="button"
+              className={`${ui.danger} ${ui.actionFull}`}
+              onClick={() => {
+                const item = moreItem;
+                setMoreItem(null);
+                void remove(item);
+              }}
+            >
+              {t("delete")}
+            </button>
+          </div>
+        ) : null}
+      </Sheet>
 
       {detailItem ? (
         <EventDetailDialog

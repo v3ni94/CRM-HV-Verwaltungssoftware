@@ -9558,6 +9558,9 @@
       "3m": "3 Monate vorher",
       "6m": "6 Monate vorher"
     },
+    "today": "Heute",
+    "openProtocol": "Protokoll öffnen",
+    "more": "Mehr",
     "remindersField": "Erinnerungen",
     "recurring": "Wiederkehrend",
     "recurrence": {
