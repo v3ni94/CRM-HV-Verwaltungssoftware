@@ -212,8 +212,8 @@ class StateFake:
             page_no = int(params.get("pageToken", "0"))
             if acc.fail_history_page is not None and page_no + 1 == acc.fail_history_page:
                 return httpx.Response(500, json={"error": "backend"})
-            page = entries[page_no * size : (page_no + 1) * size]
-            body = {"history": page, "historyId": str(self.history_id)}
+            hist_page = entries[page_no * size : (page_no + 1) * size]
+            body = {"history": hist_page, "historyId": str(self.history_id)}
             if (page_no + 1) * size < len(entries):
                 body["nextPageToken"] = str(page_no + 1)
             return httpx.Response(200, json=body)

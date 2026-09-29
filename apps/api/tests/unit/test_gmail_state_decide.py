@@ -4,6 +4,7 @@ and the aggregated sync state."""
 
 import uuid
 from dataclasses import replace
+from typing import Any
 
 import pytest
 
@@ -57,7 +58,7 @@ def copy(
 
 def decide(
     copies: list[CopyView], changed: CopyView, new_state: str, by: str = "user", **kw: object
-):
+) -> Any:
     options = {"mode": "done", "done_on_trash": True, "reopen_on_unarchive": True} | kw
     return decide_group(copies, changed, new_state, by, **options)  # type: ignore[arg-type]
 
@@ -80,7 +81,9 @@ def test_authoritative_prefers_collective_copies_and_never_echoes() -> None:
 
 
 def test_fold_collapses_undo_snooze_and_trash_in_two_entries() -> None:
-    e = lambda hid, kind, **kw: HistoryEvent(hid, "m", kind, **kw)  # noqa: E731
+    def e(hid: int, kind: str, **kw: Any) -> HistoryEvent:
+        return HistoryEvent(hid, "m", kind, **kw)
+
     folded = fold("inbox", [e(1, "inbox_removed"), e(2, "inbox_added")], frozenset())
     assert (folded.state, folded.coalesced) == ("inbox", 2)
     folded = fold("inbox", [e(1, "inbox_removed"), e(2, "trash_added")], frozenset())

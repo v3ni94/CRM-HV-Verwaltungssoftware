@@ -186,7 +186,7 @@ def test_feedback_on_entry_run_and_playbook(
         )
         session.add(run)
         await session.flush()
-        return cast(uuid.UUID, run.id)
+        return run.id
 
     run_id = _in_tenant(database, redis_url, world.tenant_a, _make_run)
     out = _ok(

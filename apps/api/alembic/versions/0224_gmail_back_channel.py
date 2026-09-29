@@ -49,9 +49,7 @@ MESSAGE_COLUMNS: tuple[sa.Column, ...] = (
 )
 
 MAILBOX_COLUMNS: tuple[sa.Column, ...] = (
-    sa.Column(
-        "sync_back_enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")
-    ),
+    sa.Column("sync_back_enabled", sa.Boolean(), nullable=False, server_default=sa.text("true")),
     sa.Column("gmail_history_expired_at", sa.DateTime(timezone=True), nullable=True),
     sa.Column("gmail_state_reconciled_at", sa.DateTime(timezone=True), nullable=True),
     sa.Column(
@@ -85,9 +83,7 @@ SETTINGS_COLUMNS: tuple[sa.Column, ...] = (
     sa.Column(
         "gmail_done_closes_ticket", sa.Boolean(), nullable=False, server_default=sa.text("false")
     ),
-    sa.Column(
-        "gmail_done_on_trash", sa.Boolean(), nullable=False, server_default=sa.text("true")
-    ),
+    sa.Column("gmail_done_on_trash", sa.Boolean(), nullable=False, server_default=sa.text("true")),
     sa.Column(
         "gmail_reopen_on_unarchive", sa.Boolean(), nullable=False, server_default=sa.text("true")
     ),
