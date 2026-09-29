@@ -23,6 +23,7 @@ from mhvp.core.config import Settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.documents.blobs import BlobStore
+from mhvp.tickets.flows import PROCESS_CATALOGUE
 
 MAX_EXCERPT = 4000
 MIN_PLAYBOOK_SCORE = 0.3
@@ -64,6 +65,7 @@ def fallback_suggestion(
 ) -> dict[str, Any]:
     """Deterministic suggestion from ``mhvp.communication.mail`` (keywords only), used where
     the model answers null or the run fails."""
+    process = mail.process_category(subject, body)
     return {
         "category": mail.category(subject, body, categories),
         "urgency": "high" if mail.urgency(subject, body) == "urgent" else "normal",
@@ -71,6 +73,9 @@ def fallback_suggestion(
         "property_number": mail.property_number(subject, body),
         "contact_name": None,
         "reply_draft": None,
+        "process_code": process["process_code"],
+        "process_confidence": process["confidence"],
+        "process_reason": process["reason"],
     }
 
 
@@ -83,7 +88,7 @@ def merge_suggestion(output: dict[str, Any], fallback: dict[str, Any]) -> dict[s
     classification field falls back; ``contact_name`` and ``reply_draft`` stay as answered
     (null stays null, nothing is invented). Pure, so the offline evaluation (9.1,
     ``mhvp.ai.evaluate``) scores exactly this step."""
-    return {
+    merged = {
         "category": output.get("category") or fallback["category"],
         "urgency": output.get("urgency") or fallback["urgency"],
         "summary": output.get("summary") or fallback["summary"],
@@ -91,6 +96,23 @@ def merge_suggestion(output: dict[str, Any], fallback: dict[str, Any]) -> dict[s
         "contact_name": output.get("contact_name"),
         "reply_draft": output.get("reply_draft"),
     }
+    # Vorgangsart (Regel M19-11): nur ein Code des festen Katalogs zählt; ein unbekannter oder
+    # fehlender Code fällt auf die Schlüsselworterkennung zurück, samt Grund und Konfidenz.
+    from mhvp.tickets.flows import PROCESS_CODES
+
+    code = output.get("process_code")
+    if code in PROCESS_CODES:
+        confidence = output.get("process_confidence")
+        merged["process_code"] = code
+        merged["process_confidence"] = (
+            float(confidence) if isinstance(confidence, int | float) else None
+        )
+        merged["process_reason"] = output.get("process_reason") or "KI-Vorschlag"
+    else:
+        merged["process_code"] = fallback.get("process_code")
+        merged["process_confidence"] = fallback.get("process_confidence")
+        merged["process_reason"] = fallback.get("process_reason")
+    return merged
 
 
 def playbook_fields(output: dict[str, Any], ticket_title: str) -> dict[str, Any]:
@@ -277,6 +299,9 @@ async def suggest_for_message(
         f"Absender: {message.from_address or ''}\n"
         f"Text (Auszug):\n{mask_ibans(body_excerpt)}\n\n"
         f"Bekannte Ticketkategorien: {', '.join(categories) or '-'}\n"
+        "Vorgangsarten (process_code): "
+        + ", ".join(f"{p['code']} ({p['label']})" for p in PROCESS_CATALOGUE)
+        + "\n"
         "Bekannte Playbooks (Titel, Schlagwörter): "
         + ("; ".join(f"{p.title} ({', '.join(p.keywords)})" for p in playbooks) or "-")
         + "\nObjektnummern stehen meist als dreistellige Zahl nach 'Objekt' oder 'Objekt Nr.'."

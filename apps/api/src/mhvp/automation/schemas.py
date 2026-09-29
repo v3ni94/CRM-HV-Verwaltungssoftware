@@ -103,6 +103,14 @@ class SetTicketFieldAction(_In):
             return self
         if self.field == "category" and not isinstance(self.value, str | dict):
             raise ValueError("Kategorie muss Text sein.")
+        if self.field == "process_code":
+            from mhvp.tickets.flows import PROCESS_CODES
+
+            if not (
+                (isinstance(self.value, str) and self.value in PROCESS_CODES)
+                or (isinstance(self.value, dict) and set(self.value) == {"$field"})
+            ):
+                raise ValueError("Vorgangsart muss ein Code des Prozesskatalogs sein.")
         if self.field == "topic" and not (
             (isinstance(self.value, str) and re.fullmatch(r"[a-z0-9_]{1,32}", self.value))
             or (isinstance(self.value, dict) and set(self.value) == {"$field"})

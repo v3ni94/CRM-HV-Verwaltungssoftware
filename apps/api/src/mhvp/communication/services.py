@@ -190,6 +190,8 @@ async def ingest_parsed(
                 "method": "rules",
                 "urgency": mail.urgency(parsed["subject"], parsed["body"]),
                 "category": mail.category(parsed["subject"], parsed["body"], categories),
+                # Vorgangsart des Prozesskatalogs (Regel M19-11), nur Schlüsselwörter.
+                "process": mail.process_category(parsed["subject"], parsed["body"]),
                 "property_number": number,
                 "contact_matched": contact_id is not None,
                 "attachments_total": len(parsed["attachments"]),

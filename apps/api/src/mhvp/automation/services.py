@@ -622,6 +622,12 @@ async def _set_ticket_field(
         new_value = None if value in (None, "") else str(value)[:32]
         if new_value is not None and not await _known_topic(session, tenant_id, new_value):
             raise ActionError(f"Unbekanntes Thema: {new_value}")
+    elif action.field == "process_code":
+        from mhvp.tickets.flows import PROCESS_CODES
+
+        new_value = None if value in (None, "") else str(value)[:32]
+        if new_value is not None and new_value not in PROCESS_CODES:
+            raise ActionError(f"Unbekannte Vorgangsart: {new_value}")
     elif action.field in ("team_id", "assignee_user_id"):
         new_value = _uuid_or_none(value, action.field)
         if action.field == "team_id":
@@ -652,6 +658,18 @@ async def _set_ticket_field(
     old_value = normalise(getattr(ticket, action.field))
     if old_value == normalise(new_value):
         return preview | {"ok": True, "detail": "Wert bereits gesetzt."}
+    if action.field == "process_code":
+        # Regel M19-11: die Regel wendet den Flow der Mandantenvorlage an (Kategorie,
+        # Checkliste einmalig, Rolle, Fristvorschläge); ohne Vorlage passiert nichts.
+        from mhvp.tickets import flows
+
+        if new_value is None:
+            return preview | {"ok": True, "detail": "Vorgangsart wird per Regel nicht entfernt."}
+        tpl = await flows.template_for_process(session, tenant_id, str(new_value))
+        if tpl is None:
+            raise ActionError(f"Keine aktive Vorlage für die Vorgangsart {new_value}.")
+        await flows.apply_flow(session, ticket, tpl, actor_user_id=None, source="rule")
+        ticket.updated_by = None
     if await is_learned_rule(session, rule.id):
         kept = await learned_field_kept(session, tenant_id, ticket, action.field)
         if kept is not None:

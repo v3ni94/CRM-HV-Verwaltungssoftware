@@ -18,7 +18,7 @@ from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.numbering import next_number
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.tickets import reply_templates, tnr
+from mhvp.tickets import flows, reply_templates, tnr
 from mhvp.tickets.competences import is_known_code
 from mhvp.tickets.merge import assert_mergeable, assignees_to_carry, origin_data
 from mhvp.tickets.models import (
@@ -148,6 +148,18 @@ class TicketTemplateIn(_In):
     default_assignee_user_id: uuid.UUID | None = None
     sla_hours: int | None = Field(default=None, ge=1, le=8760)
     active: bool = True
+    # Prozessflow (Regel M19-11): Vorgangsart, zuständige Rolle, Verknüpfungen, Fristtypen
+    # (Codes der Fristenliste, ohne Dauer) und Unterlagen.
+    process_code: str | None = Field(default=None, max_length=32)
+    responsible_role: str | None = Field(default=None, max_length=63)
+    required_links: list[str] = Field(default_factory=list, max_length=4)
+    deadline_type_codes: list[str] = Field(default_factory=list, max_length=20)
+    document_kinds: list[str] = Field(default_factory=list, max_length=30)
+
+    @model_validator(mode="after")
+    def _flow_check(self) -> "TicketTemplateIn":
+        _validate_flow_fields(self)
+        return self
 
 
 class TicketTemplatePatch(_In):
@@ -161,6 +173,44 @@ class TicketTemplatePatch(_In):
     default_assignee_user_id: uuid.UUID | None = None
     sla_hours: int | None = Field(default=None, ge=1, le=8760)
     active: bool | None = None
+    process_code: str | None = Field(default=None, max_length=32)
+    responsible_role: str | None = Field(default=None, max_length=63)
+    required_links: list[str] | None = Field(default=None, max_length=4)
+    deadline_type_codes: list[str] | None = Field(default=None, max_length=20)
+    document_kinds: list[str] | None = Field(default=None, max_length=30)
+
+    @model_validator(mode="after")
+    def _flow_check(self) -> "TicketTemplatePatch":
+        _validate_flow_fields(self)
+        return self
+
+
+def _validate_flow_fields(model: Any) -> None:
+    """Flow fields of a template (Regel M19-11): process code from the catalogue, role from
+    the system roles, links from ``LINK_KINDS``, deadline types from the deadline list (a
+    code only, never a duration), document kinds as short German labels."""
+    from mhvp.core.auth.permissions import SYSTEM_ROLES
+    from mhvp.workspace.jobs import DEADLINE_KINDS
+
+    code = getattr(model, "process_code", None)
+    if code is not None and code not in flows.PROCESS_CODES:
+        raise ValueError(f"Unbekannte Vorgangsart: {code}")
+    role = getattr(model, "responsible_role", None)
+    if role is not None and role not in {r.code for r in SYSTEM_ROLES}:
+        raise ValueError(f"Unbekannte Rolle: {role}")
+    links = getattr(model, "required_links", None)
+    if links is not None:
+        unknown = [k for k in links if k not in flows.LINK_KINDS]
+        if unknown or len(set(links)) != len(links):
+            raise ValueError("Verknüpfungen: nur contact, unit, property, contract, je einmal.")
+    deadlines = getattr(model, "deadline_type_codes", None)
+    if deadlines is not None:
+        unknown = [k for k in deadlines if k not in DEADLINE_KINDS]
+        if unknown or len(set(deadlines)) != len(deadlines):
+            raise ValueError(f"Unbekannter Fristtyp: {', '.join(unknown) or 'doppelt'}")
+    kinds = getattr(model, "document_kinds", None)
+    if kinds is not None and any(not k.strip() or len(k) > 120 for k in kinds):
+        raise ValueError("Unterlagen: Bezeichnung fehlt oder ist länger als 120 Zeichen.")
 
 
 class TicketIn(_In):
@@ -297,11 +347,14 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "resolution_note",
             "resolved_by",
             "created_at",
+            "process_code",
+            "flow",
         )
     } | {
+        "process_label": flows.PROCESS_LABELS.get(str(t.process_code or "")),
         "sla_breached": bool(
             t.sla_due_at and not t.resolved_at and datetime.now(UTC) > t.sla_due_at
-        )
+        ),
     }
 
 
@@ -414,8 +467,13 @@ def _template_out(tpl: TicketTemplate) -> dict[str, Any]:
             "default_assignee_user_id",
             "sla_hours",
             "active",
+            "process_code",
+            "responsible_role",
+            "required_links",
+            "deadline_type_codes",
+            "document_kinds",
         )
-    }
+    } | {"process_label": flows.PROCESS_LABELS.get(str(tpl.process_code or ""))}
 
 
 def _validate_extra_field_value(field: dict[str, Any], value: Any) -> Any:
@@ -444,6 +502,102 @@ async def create_template(
         session.add(tpl)
         await session.flush()
         return {"id": tpl.id, "category": tpl.category}
+
+
+async def _assert_process_code_free(
+    session: AsyncSession, tenant_id: uuid.UUID, code: str | None, exclude_id: uuid.UUID | None
+) -> None:
+    if code is None:
+        return
+    query = select(TicketTemplate.id).where(
+        TicketTemplate.tenant_id == tenant_id, TicketTemplate.process_code == code
+    )
+    if exclude_id is not None:
+        query = query.where(TicketTemplate.id != exclude_id)
+    if await session.scalar(query) is not None:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail=f"Für die Vorgangsart {code} gibt es bereits eine Vorlage.",
+        )
+
+
+# Prozesskatalog (Regel M19-11) --------------------------------------------------------------
+
+
+class ApplyProcessIn(_In):
+    process_code: str = Field(min_length=2, max_length=32)
+
+
+@router.get("/tickets/process-catalogue", summary="Prozesskatalog der Vorgangsarten")
+async def get_process_catalogue(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Die zwölf Vorgangsarten mit Bezeichnung und Standardflow sowie je Vorgangsart die
+    Vorlage des Mandanten, sofern eingespielt (``template_id``)."""
+    from mhvp.workspace.jobs import DEADLINE_KINDS
+
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.execute(
+                select(TicketTemplate.process_code, TicketTemplate.id, TicketTemplate.active).where(
+                    TicketTemplate.process_code.is_not(None)
+                )
+            )
+        ).all()
+    by_code = {str(code): (tid, active) for code, tid, active in rows}
+    return {
+        "processes": [
+            {
+                "code": p["code"],
+                "label": p["label"],
+                **flows.template_values(p),
+                "template_id": by_code.get(p["code"], (None, None))[0],
+                "template_active": by_code.get(p["code"], (None, None))[1],
+            }
+            for p in flows.PROCESS_CATALOGUE
+        ],
+        "link_kinds": list(flows.LINK_KINDS),
+        "deadline_kinds": list(DEADLINE_KINDS),
+    }
+
+
+@router.post("/tickets/process-catalogue/seed", summary="Prozesskatalog als Vorlagen einspielen")
+async def seed_process_catalogue(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Idempotent je Mandant: bestehende Vorlagen mit Vorgangsart bleiben unverändert."""
+    _require_template_manage(principal)
+    async with tenant_tx(request, principal) as session:
+        return await flows.seed_process_templates(session, principal.tenant_id)
+
+
+@router.post("/tickets/{ticket_id}/apply-process", summary="Prozessflow auf Ticket anwenden")
+async def apply_process_to_ticket(
+    ticket_id: uuid.UUID,
+    body: ApplyProcessIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Setzt Kategorie und Vorgangsart, ergänzt die Checkliste der Vorlage einmalig, hält
+    zuständige Rolle, Verknüpfungsstatus, Fristvorschläge (nur Vorschlag) und Unterlagenliste
+    im Feld ``flow`` fest. Idempotent; Status und Geld bleiben unberührt."""
+    if body.process_code not in flows.PROCESS_CODES:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Unbekannte Vorgangsart.")
+    async with tenant_tx(request, principal) as session:
+        ticket = await session.get(Ticket, ticket_id, with_for_update=True)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        _assert_not_merged(ticket)
+        tpl = await flows.template_for_process(session, principal.tenant_id, body.process_code)
+        if tpl is None:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND,
+                detail="Für die Vorgangsart ist keine aktive Vorlage eingespielt.",
+            )
+        applied = await flows.apply_flow(
+            session, ticket, tpl, actor_user_id=principal.user_id, source="manual"
+        )
+        return _ticket_out(ticket) | {"applied": applied}
 
 
 @router.get("/tickets/resolution-kinds", summary="Erledigungsarten des Mandanten")
@@ -477,6 +631,7 @@ async def create_template_v2(
     _require_template_manage(principal)
     async with tenant_tx(request, principal) as session:
         await _assert_known_topic(session, principal.tenant_id, body.topic)
+        await _assert_process_code_free(session, principal.tenant_id, body.process_code, None)
         tpl = TicketTemplate(
             tenant_id=principal.tenant_id,
             **body.model_dump(exclude={"checklist", "extra_fields"}),
@@ -513,6 +668,10 @@ async def patch_template(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if "topic" in body.model_fields_set:
             await _assert_known_topic(session, principal.tenant_id, body.topic)
+        if "process_code" in body.model_fields_set:
+            await _assert_process_code_free(
+                session, principal.tenant_id, body.process_code, template_id
+            )
         data = body.model_dump(exclude_unset=True)
         if "checklist" in data and data["checklist"] is not None:
             tpl.checklist = [c.model_dump() for c in body.checklist]  # type: ignore[union-attr]
@@ -1721,6 +1880,9 @@ async def list_tickets(
     ),
     team_id: uuid.UUID | None = None,
     category: str | None = Query(default=None, max_length=100),
+    process_code: str | None = Query(
+        default=None, max_length=32, description="Vorgangsart des Prozesskatalogs (M19-11)"
+    ),
     priority: Priority | None = None,
     created_from: datetime | None = Query(default=None, description="Erstellt ab (inklusive)"),
     created_to: datetime | None = Query(default=None, description="Erstellt bis (inklusive)"),
@@ -1938,6 +2100,8 @@ async def list_tickets(
             query = query.where(Ticket.team_id == team_id)
         if category:
             query = query.where(Ticket.category == category)
+        if process_code:
+            query = query.where(Ticket.process_code == process_code)
         if priority:
             query = query.where(Ticket.priority == priority)
         if created_from:

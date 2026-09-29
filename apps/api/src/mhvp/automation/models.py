@@ -56,6 +56,8 @@ SETTABLE_TICKET_FIELDS: tuple[str, ...] = (
     "category",
     "assignee_user_id",
     "topic",
+    # Prozessflow (Regel M19-11): setzt die Vorgangsart und wendet den Flow der Vorlage an.
+    "process_code",
 )
 # Run results: a run is only written for rules whose conditions matched.
 RUN_STATUS_EXECUTED = "executed"

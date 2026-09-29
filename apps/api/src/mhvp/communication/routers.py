@@ -1444,6 +1444,75 @@ async def to_ticket(
         return {"ticket_id": ticket.id, "number": ticket.number, "priority": ticket.priority.value}
 
 
+class ApplyProcessIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    # Ohne Angabe gilt der Vorschlag (KI-Vorschlag, sonst Schlüsselworterkennung).
+    process_code: str | None = Field(default=None, max_length=32)
+
+
+@router.post(
+    "/messages/{message_id}/apply-process",
+    status_code=200,
+    summary="Vorgangsart übernehmen und Prozessflow auf das Ticket anwenden",
+)
+async def apply_process(
+    message_id: uuid.UUID,
+    body: ApplyProcessIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """Regel M19-11: übernimmt die vorgeschlagene (oder gewählte) Vorgangsart, legt bei Bedarf
+    das Ticket aus der Mail an (``create_ticket``, mit Kontakt und Objekt aus der Zuordnung) und
+    wendet den Flow der Vorlage an (Kategorie, Checkliste einmalig, zuständige Rolle,
+    Fristvorschläge, Unterlagen). Idempotent; nichts wird abgeschlossen oder gebucht."""
+    from mhvp.communication.services import create_ticket
+    from mhvp.tickets import flows
+
+    if not principal.has("tickets:update"):
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing tickets:update.")
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id, principal)
+        code = body.process_code or (row.suggestion or {}).get("process_code")
+        if not code:
+            code = ((row.classification or {}).get("process") or {}).get("process_code")
+        if code not in flows.PROCESS_CODES:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Keine Vorgangsart vorgeschlagen oder gewählt."
+            )
+        tpl = await flows.template_for_process(session, principal.tenant_id, str(code))
+        if tpl is None:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND,
+                detail="Für die Vorgangsart ist keine aktive Vorlage eingespielt.",
+            )
+        if row.ticket_id is None and not principal.has("tickets:create"):
+            raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Missing tickets:create.")
+        ticket = await create_ticket(session, row, principal.user_id)
+        if ticket is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if ticket.merged_into_ticket_id is not None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Ticket ist zusammengeführt; kein Flow anwendbar."
+            )
+        # Verknüpfungen aus der Mailzuordnung nur in Lücken übernehmen.
+        if ticket.contact_id is None and row.contact_id is not None:
+            ticket.contact_id = row.contact_id
+        if ticket.property_id is None and row.property_id is not None:
+            ticket.property_id = row.property_id
+        applied = await flows.apply_flow(
+            session, ticket, tpl, actor_user_id=principal.user_id, source="mail"
+        )
+        return {
+            "ticket_id": ticket.id,
+            "number": ticket.number,
+            "process_code": ticket.process_code,
+            "process_label": flows.PROCESS_LABELS.get(str(ticket.process_code)),
+            "applied": applied,
+            "flow": ticket.flow,
+        }
+
+
 INVOICE_INTAKE = require_permission("accounting:create")
 
 

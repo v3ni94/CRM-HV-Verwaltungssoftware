@@ -116,6 +116,21 @@ class TicketTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
     )
+    # Prozessflow (Regel M19-11, Migration 0235): Code aus ``mhvp.tickets.flows.PROCESS_CODES``
+    # (je Mandant höchstens eine Vorlage je Code), zuständige Rolle (Rollencode), erforderliche
+    # Verknüpfungen (contact, unit, property, contract), verknüpfte Fristtypen (Codes der
+    # Fristenliste, nie eine Dauer) und zu sammelnde Unterlagen (deutsche Bezeichnungen).
+    process_code: Mapped[str | None] = mapped_column(String(32))
+    responsible_role: Mapped[str | None] = mapped_column(String(63))
+    required_links: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    deadline_type_codes: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    document_kinds: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -128,6 +143,7 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
         # Listing by status (M4): ordered by number, and the assignee filter.
         Index("ix_ticket_status_number", "tenant_id", "status", "number"),
         Index("ix_ticket_assignee", "tenant_id", "assignee_user_id"),
+        Index("ix_ticket_process_code", "tenant_id", "process_code"),
         Index(
             "uq_ticket_follow_up_of",
             "tenant_id",
@@ -191,6 +207,14 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     resolution_kind: Mapped[str | None] = mapped_column(String(32))
     resolution_note: Mapped[str | None] = mapped_column(Text)
     resolved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # Prozessflow (Regel M19-11, Migration 0235): Vorgangsart aus dem Katalog und der beim
+    # Anwenden erzeugte Flow (``mhvp.tickets.flows.build_flow``: zuständige Rolle,
+    # Verknüpfungsstatus, Fristvorschläge, Unterlagenliste). Fristen werden hier nur
+    # vorgeschlagen, nie angelegt.
+    process_code: Mapped[str | None] = mapped_column(String(32))
+    flow: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
 
 
 class TicketAssignee(IdMixin, TenantMixin, Base):

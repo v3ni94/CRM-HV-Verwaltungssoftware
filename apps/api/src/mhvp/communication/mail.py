@@ -229,6 +229,225 @@ def appointments(body: str | None, today: date) -> list[dict[str, Any]]:
     return out[:5]
 
 
+# Prozesskatalog (Regel M19-11): deterministische Schlüsselwörter je Vorgangsart. Reihenfolge
+# ist die Prüfreihenfolge bei Gleichstand (spezifischere Vorgänge zuerst). Ein Treffer im
+# Betreff zählt doppelt. Die Codes sind ``mhvp.tickets.flows.PROCESS_CODES``.
+PROCESS_KEYWORDS: tuple[tuple[str, tuple[str, ...]], ...] = (
+    (
+        "gericht",
+        (
+            "amtsgericht",
+            "landgericht",
+            "klage",
+            "mahnbescheid",
+            "aktenzeichen",
+            "versäumnisurteil",
+            "gerichtsvollzieher",
+            "einstweilige verfügung",
+            "az.:",
+        ),
+    ),
+    (
+        "versicherungsschaden",
+        (
+            "versicherungsschaden",
+            "schadenmeldung",
+            "schadensmeldung",
+            "schadennummer",
+            "schadensnummer",
+            "versicherung",
+            "leitungswasser",
+            "sturmschaden",
+            "elementarschaden",
+            "gebäudeversicherung",
+        ),
+    ),
+    (
+        "objektabgabe",
+        (
+            "verwaltung beenden",
+            "verwaltervertrag gekündigt",
+            "kündigung der verwaltung",
+            "kündigung des verwaltervertrags",
+            "abgabe des objekts",
+            "nachfolgeverwaltung",
+            "neue verwaltung übernimmt",
+            "verwalterwechsel zum",
+        ),
+    ),
+    (
+        "objektuebernahme",
+        (
+            "verwalterwechsel",
+            "übernahme der verwaltung",
+            "neues objekt",
+            "vorverwaltung",
+            "verwaltungsbeginn",
+            "bestellung zum verwalter",
+            "verwaltervertrag",
+            "objektübernahme",
+            "unterlagen der vorverwaltung",
+        ),
+    ),
+    (
+        "mieterhoehung",
+        (
+            "mieterhöhung",
+            "mieterhoehung",
+            "mietanpassung",
+            "mietspiegel",
+            "vergleichsmiete",
+            "kappungsgrenze",
+            "zustimmung zur erhöhung",
+            "staffelmiete",
+            "indexmiete",
+        ),
+    ),
+    (
+        "kaution",
+        (
+            "kaution",
+            "mietsicherheit",
+            "kautionsabrechnung",
+            "kautionsrückzahlung",
+            "kautionskonto",
+            "bürgschaft",
+        ),
+    ),
+    (
+        "uebergabe",
+        (
+            "übergabe",
+            "uebergabe",
+            "übergabeprotokoll",
+            "wohnungsübergabe",
+            "schlüsselübergabe",
+            "abnahme der wohnung",
+            "rückgabe der wohnung",
+            "zählerstände",
+        ),
+    ),
+    (
+        "kuendigung",
+        (
+            "kündigung",
+            "kuendigung",
+            "kündige",
+            "kuendige",
+            "mietverhältnis beenden",
+            "aufhebungsvertrag",
+            "auszug zum",
+            "kündigungsfrist",
+            "kündigen",
+        ),
+    ),
+    (
+        "vermietung",
+        (
+            "vermietung",
+            "neuvermietung",
+            "mietinteressent",
+            "wohnungsbesichtigung",
+            "besichtigungstermin",
+            "selbstauskunft",
+            "mietangebot",
+            "wohnung frei",
+            "bewerbung um die wohnung",
+            "mietvertrag anlegen",
+            "neuer mieter",
+        ),
+    ),
+    (
+        "beschwerde",
+        (
+            "beschwerde",
+            "beschweren",
+            "lärmbelästigung",
+            "ruhestörung",
+            "hausordnung",
+            "nachbar",
+            "belästigung",
+            "verstoß gegen",
+            "unzumutbar",
+        ),
+    ),
+    (
+        "reparaturanfrage",
+        (
+            "reparatur",
+            "defekt",
+            "kaputt",
+            "tropft",
+            "funktioniert nicht",
+            "heizung",
+            "handwerker",
+            "mangel",
+            "mängel",
+            "wasserschaden",
+            "rohrbruch",
+            "aufzug",
+            "schimmel",
+            "undicht",
+            "instandsetzung",
+        ),
+    ),
+    (
+        "buchhaltung",
+        (
+            "buchhaltung",
+            "kontoauszug",
+            "abrechnung",
+            "nebenkosten",
+            "betriebskosten",
+            "hausgeld",
+            "mahnung",
+            "überweisung",
+            "zahlung",
+            "rechnung",
+            "saldo",
+            "lastschrift",
+            "wirtschaftsplan",
+            "guthaben",
+            "nachzahlung",
+        ),
+    ),
+)
+PROCESS_MIN_SCORE = 1
+PROCESS_STRONG_SCORE = 3
+
+
+def process_category(subject: str | None, body: str | None) -> dict[str, Any]:
+    """Vorschlag der Vorgangsart aus dem Prozesskatalog (Regel M19-11), rein deterministisch:
+    ``{"process_code", "confidence", "reason"}``. Treffer im Betreff zählen doppelt; die
+    Vorgangsart mit der höchsten Summe gewinnt, bei Gleichstand die zuerst gelistete.
+    ``confidence`` ist 0,5 bei einem Treffer, 0,75 bei zwei, 0,9 ab drei; ohne Treffer
+    ``process_code`` null. Der Grund nennt die gefundenen Wörter (nie den Mailtext)."""
+    subject_text = (subject or "").lower()
+    body_text = (body or "").lower()
+    best_code: str | None = None
+    best_score = 0
+    best_hits: list[str] = []
+    for code, words in PROCESS_KEYWORDS:
+        score = 0
+        hits: list[str] = []
+        for word in words:
+            in_subject = word in subject_text
+            in_body = word in body_text
+            if in_subject or in_body:
+                hits.append(word)
+                score += (2 if in_subject else 0) + (1 if in_body else 0)
+        if score > best_score:
+            best_code, best_score, best_hits = code, score, hits
+    if best_code is None or best_score < PROCESS_MIN_SCORE:
+        return {"process_code": None, "confidence": 0.0, "reason": "kein Schlüsselwort erkannt"}
+    confidence = 0.9 if best_score >= PROCESS_STRONG_SCORE else (0.75 if best_score == 2 else 0.5)
+    return {
+        "process_code": best_code,
+        "confidence": confidence,
+        "reason": "Schlüsselwörter: " + ", ".join(best_hits[:5]),
+    }
+
+
 def category(subject: str | None, body: str | None, categories: list[str]) -> str | None:
     text = f"{subject or ''} {body or ''}".lower()
     hits = [c for c in categories if c.lower() in text]

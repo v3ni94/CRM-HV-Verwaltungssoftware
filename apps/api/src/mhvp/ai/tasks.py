@@ -235,6 +235,22 @@ class SummaryResult(_Out):
     open_points: list[str]
 
 
+ProcessCode = Literal[
+    "kuendigung",
+    "vermietung",
+    "versicherungsschaden",
+    "reparaturanfrage",
+    "beschwerde",
+    "buchhaltung",
+    "uebergabe",
+    "mieterhoehung",
+    "gericht",
+    "objektuebernahme",
+    "objektabgabe",
+    "kaution",
+]
+
+
 class MailSuggestion(_Out):
     """Vorschlag je eingehender Mail (M20 Übernahme aus dem Immoware Hub); nur Vorschlag,
     nichts wird automatisch geschrieben oder versendet."""
@@ -245,6 +261,16 @@ class MailSuggestion(_Out):
     property_number: str | None = Field(description="dreistellige Objektnummer, falls erkennbar")
     contact_name: str | None = Field(description="Name des Absenders, falls aus dem Text erkennbar")
     reply_draft: str | None = Field(description="kurzer, sachlicher Antwortentwurf auf Deutsch")
+    # Vorgangsart aus dem festen Prozesskatalog (Regel M19-11, additiv seit Prompt v2).
+    process_code: ProcessCode | None = Field(
+        default=None, description="Vorgangsart aus dem Prozesskatalog, sonst null"
+    )
+    process_confidence: float | None = Field(
+        default=None, ge=0, le=1, description="Sicherheit der Vorgangsart, 0 bis 1"
+    )
+    process_reason: str | None = Field(
+        default=None, max_length=300, description="ein kurzer Grund auf Deutsch, sonst null"
+    )
 
 
 class PlaybookDraft(_Out):

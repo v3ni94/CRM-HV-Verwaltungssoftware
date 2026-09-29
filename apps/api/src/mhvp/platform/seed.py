@@ -35,6 +35,15 @@ async def run() -> int:
     try:
         tenants = await seed_tenants(factory)
         log.info("tenants_seeded", tenants=sorted(tenants))
+        # Prozesskatalog der Vorgangsarten als Ticketvorlagen je Mandant (Regel M19-11),
+        # idempotent; vom Mandanten bearbeitete Vorlagen bleiben unverändert.
+        from mhvp.core.db.tenancy import tenant_transaction
+        from mhvp.tickets.flows import seed_process_templates
+
+        for slug, tenant_id in tenants.items():
+            async with tenant_transaction(factory, tenant_id) as session:
+                counts = await seed_process_templates(session, tenant_id)
+            log.info("process_catalogue_seeded", tenant=slug, **counts)
         email = os.environ.get("MHVP_SEED_ADMIN_EMAIL")
         password = os.environ.get("MHVP_SEED_ADMIN_PASSWORD")
         if email and password:
