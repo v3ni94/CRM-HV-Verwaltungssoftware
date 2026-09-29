@@ -151,6 +151,8 @@
     "ticketAnalytics": "Auswertung Tickets"
   },
   "Contacts": {
+    "call": "Anrufen",
+    "mail": "E-Mail",
     "masterData": {
       "title": "Stammdaten",
       "description": "Felder werden einzeln gespeichert. Adressen, Telefonnummern, E-Mail-Adressen und Bankverbindungen werden über Bearbeiten gepflegt.",

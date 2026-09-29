@@ -151,6 +151,8 @@
     "ticketAnalytics": "Ticket analytics"
   },
   "Contacts": {
+    "call": "Call",
+    "mail": "E-mail",
     "masterData": {
       "title": "Master data",
       "description": "Fields are saved one by one. Addresses, phone numbers, e-mail addresses and bank accounts are maintained via Edit.",

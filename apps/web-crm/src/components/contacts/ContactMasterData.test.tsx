@@ -70,3 +70,23 @@ describe("ContactMasterData", () => {
     expect(screen.getByRole("button", { name: "Neu laden" })).toBeInTheDocument();
   });
 });
+
+describe("ContactQuickActions (M31)", () => {
+  it("renders 44 px call and mail actions only for existing values", async () => {
+    const { ContactQuickActions } = await import("./ContactQuickActions");
+    const { unmount } = renderIntl(<ContactQuickActions phone="+49 2103 123 456" email="max@example.com" />);
+    const call = screen.getByRole("link", { name: "Anrufen" });
+    expect(call).toHaveAttribute("href", "tel:+492103123456");
+    expect(call.className).toContain("min-h-11");
+    const mail = screen.getByRole("link", { name: "E-Mail" });
+    expect(mail).toHaveAttribute("href", "mailto:max@example.com");
+    expect(mail.className).toContain("min-h-11");
+    unmount();
+    renderIntl(<ContactQuickActions phone={null} email="max@example.com" />);
+    expect(screen.queryByRole("link", { name: "Anrufen" })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "E-Mail" })).toBeInTheDocument();
+    unmount();
+    const { container } = renderIntl(<ContactQuickActions phone={null} email={null} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+});

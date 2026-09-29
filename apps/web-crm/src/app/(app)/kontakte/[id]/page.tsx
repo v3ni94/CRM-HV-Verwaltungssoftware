@@ -8,6 +8,7 @@ import { BankAccountsSection } from "@/components/contacts/BankAccountsSection";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { ContactMasterData } from "@/components/contacts/ContactMasterData";
+import { ContactQuickActions } from "@/components/contacts/ContactQuickActions";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
 import { PortalAccessSection } from "@/components/contacts/PortalAccessSection";
 import { PortalProposalsPanel } from "@/components/contacts/PortalProposalsPanel";
@@ -203,7 +204,11 @@ export default async function ContactDetailPage({
             <LexofficeContactBadge contactId={contact.id} />
           </p>
         </div>
-        <div className="ml-auto">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto">
+          <ContactQuickActions
+            phone={(contact.phones.find((p) => p.is_primary) ?? contact.phones[0])?.number}
+            email={(contact.emails.find((e) => e.is_primary) ?? contact.emails[0])?.email}
+          />
           <ContactActions
             id={contact.id}
             name={contact.display_name}
@@ -214,16 +219,15 @@ export default async function ContactDetailPage({
 
       <EntityLinksBar links={entityLinks} />
 
-      <nav
-        aria-label={t("tabs.master")}
-        className="flex gap-1 border-b border-border text-sm"
-      >
+      {/* One swipeable row on phones, wrapping from sm (M31, ui.tabBar); the server page renders
+       *  only class names, no client hooks. */}
+      <nav aria-label={t("tabs.master")} className={`${ui.tabBar} border-b border-border pb-1`} data-testid="contact-tabs">
         {TABS.map((key) => (
           <Link
             key={key}
             href={`/kontakte/${contact.id}?tab=${key}`}
             aria-current={key === tab ? "page" : undefined}
-            className={`-mb-px border-b-2 px-3 py-1.5 ${key === tab ? "border-accent font-medium" : "border-transparent text-muted hover:text-fg"}`}
+            className={key === tab ? ui.tabActive : ui.tab}
           >
             {t(`tabs.${TAB_KEY[key]}`)}
           </Link>
@@ -308,7 +312,7 @@ export default async function ContactDetailPage({
               <ul className="text-sm">
                 {contact.phones.map((p) => (
                   <li key={p.id}>
-                    <a href={`tel:${p.number}`} className="hover:underline">
+                    <a href={`tel:${p.number.replace(/\s+/g, "")}`} className="inline-flex min-h-11 items-center hover:underline">
                       {p.number}
                     </a>{" "}
                     <span className="text-xs text-muted">
@@ -330,7 +334,7 @@ export default async function ContactDetailPage({
               <ul className="text-sm">
                 {contact.emails.map((e) => (
                   <li key={e.id}>
-                    <a href={`mailto:${e.email}`} className="hover:underline">
+                    <a href={`mailto:${e.email}`} className="inline-flex min-h-11 items-center break-all hover:underline">
                       {e.email}
                     </a>{" "}
                     <span className="text-xs text-muted">
