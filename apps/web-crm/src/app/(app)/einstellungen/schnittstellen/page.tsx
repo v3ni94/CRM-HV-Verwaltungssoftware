@@ -14,12 +14,14 @@ export default async function InterfacesPage() {
   const ts = await getTranslations("Settings");
   const tw = await getTranslations("Webhooks");
   const tsd = await getTranslations("Schadenstool");
+  const tlx = await getTranslations("Lexoffice");
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   const cards = [
     { href: "/einstellungen/schnittstellen/messdienstleister", title: t("card.title"), description: t("card.description"), show: can("metering_data:read") },
     { href: "/einstellungen/schnittstellen/schadenbearbeiter", title: tsd("card.title"), description: tsd("card.description"), show: can("tenant_settings:read") },
+    { href: "/einstellungen/schnittstellen/lexware-office", title: tlx("card.title"), description: tlx("card.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/webhooks", title: tw("card.title"), description: tw("card.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/immoware", title: ts("immoware.title"), description: ts("immoware.description"), show: can("immoware:read") },
   ].filter((c) => c.show);

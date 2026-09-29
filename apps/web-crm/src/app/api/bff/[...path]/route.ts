@@ -732,6 +732,23 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^integrations/schadenstool/takeover/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^integrations/schadenstool/tickets/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^integrations/schadenstool/tickets/${ID}/(handover|comments|attachments)$`) },
+  // Lexware Office (INT-LEXO-01): configs per legal entity (key write only), invoice kind
+  // mapping, queue, contact links, invoice drafts, recurring preparations, invoice copies.
+  { method: "GET", pattern: /^integrations\/lexoffice\/(config|configs|runs|outbox|legal-entities|invoice-kinds|invoice-drafts|recurring-preps)$/ },
+  { method: "PUT", pattern: /^integrations\/lexoffice\/(config|invoice-kinds)$/ },
+  { method: "POST", pattern: /^integrations\/lexoffice\/(test|configs|invoice-drafts|invoice-drafts\/preview)$/ },
+  { method: "GET", pattern: new RegExp(`^integrations/lexoffice/configs/${ID}$`) },
+  { method: "PUT", pattern: new RegExp(`^integrations/lexoffice/configs/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^integrations/lexoffice/configs/${ID}/(test|contacts/match|contacts/links/push-batch)$`) },
+  { method: "GET", pattern: new RegExp(`^integrations/lexoffice/configs/${ID}/(runs|contacts/links|contacts/search)$`) },
+  { method: "POST", pattern: new RegExp(`^integrations/lexoffice/configs/${ID}/contacts/links/${ID}/(decide|retry|push|resolve-conflict)$`) },
+  { method: "POST", pattern: new RegExp(`^integrations/lexoffice/outbox/${ID}/retry$`) },
+  { method: "GET", pattern: new RegExp(`^integrations/lexoffice/contacts/${ID}/lexoffice$`) },
+  { method: "GET", pattern: new RegExp(`^integrations/lexoffice/invoice-drafts/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^integrations/lexoffice/recurring-preps/${ID}/(done|dismiss)$`) },
+  { method: "GET", pattern: new RegExp(`^integrations/lexoffice/tickets/${ID}/invoice-copies$`) },
+  { method: "POST", pattern: new RegExp(`^integrations/lexoffice/tickets/${ID}/invoice-copies$`) },
+  { method: "POST", pattern: new RegExp(`^integrations/lexoffice/invoice-copies/${ID}/(correct|accept|reject|link-recipient)$`) },
   // Telefonie (13.5, A70): settings (secret write only), call list, callback proposal.
   { method: "GET", pattern: /^communication\/telephony\/settings$/ },
   { method: "PUT", pattern: /^communication\/telephony\/settings$/ },
