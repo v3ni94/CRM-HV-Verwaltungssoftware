@@ -1,6 +1,6 @@
 # ADR 0014: Learning bookkeeper (staged automation, decision log, learned rules)
 
-- Status: Proposed (steps S0 and S1 implemented; operator decisions M12-05 to M12-08 open)
+- Status: Proposed (steps S0 to S7 implemented; addendum S4 to S6 of 29.09.2026 below; operator decisions M12-05 and M12-08 open, M12-06 and M12-07 decided with conditions)
 - Date: 2026-09-28
 
 ## Context
@@ -98,6 +98,59 @@ measured (rule 0.1.8).
 - Retention of `posting_decision` (proposal 24 months, daily job after the pattern
   `ai_examples_retention`, evidence of active rules kept) is part of M12-06 and implemented
   with S5.
+
+## Addendum 29.09.2026: levels, learned rules, verifiers and runner (S4 to S6)
+
+Decisions:
+
+1. Case classes and levels (rule M12-05): every transaction is routed by `levels.classify`
+   to `debtor_full`, `debtor_collective` (cap L1), `creditor_invoice` (cap L2),
+   `recurring_expense` (cap L2), `transfer_pair` or `excluded` (always L0). Levels live per
+   tenant and class in `tenant_settings.bookkeeping_automation`; raising a level is a
+   persistent request (`bookkeeping_level_request`, eligibility report as evidence) released
+   by another person, never a platform admin; lowering is immediate and also automatic
+   (nightly `levels_refresh`, only down). Thresholds are product protection (A-084), never
+   lowered per tenant.
+2. L1 one click (`POST /transactions/{id}/accept`) books exactly the deterministically
+   verified proposal as a manual posting of the person; history and AI proposals never
+   qualify. Bulk confirmation keeps its preview and pre-selects verified proposals only.
+3. Learned rules (rule M12-06): `learning.observe` runs in a savepoint after every decision
+   of a person and after every reversal, reuses the pure streak functions of
+   `mhvp.automation.learning`, and writes `bank_rule_proposal` at the tenant threshold (5,
+   recurring pattern 3, A-085); contradictions withdraw, acceptance creates a `BankRule`
+   `proposed` (narrowing only), activation supersedes older learned rules of the key. The
+   automation rule engine (M9-02) is not extended.
+4. Runner (rule M12-05): `matching.auto_post` delegates to `runner.auto_post_transaction`;
+   `runner.run_for_tenant` runs after every import and sync (in `compute_proposals_once`)
+   and on `POST /banking/auto-post`, with an advisory lock per tenant, level L2 or L3, an
+   active rule, the deterministic verifier of the class (fingerprint stored on the
+   `auto_posted` decision), case limits (A-086) and the check G1 open or ledger not leading.
+   The operator decision M12-07 of 28.09.2026 allows comparison postings by the automation
+   before G1 in the non leading ledger; the leading ledger stays closed until G1.
+5. Review and correction: every L2 posting gets an `auto_posting_review` item due the next
+   working day (L3: deterministic sample only), overdue items block the class, closing
+   needs `accounting:review`. "Editable afterwards" is exactly B03:
+   `POST /transactions/{id}/correct` reverses with reason code and posts again in one
+   transaction; the consumer turns the reversal into a counter example and lowers the rule
+   on `automation_error`.
+6. `recurring_expense` (L2b) additionally needs `auto_posting_outgoing_enabled` and the
+   evidence chain (linked posted invoice or the rule flag `no_receipt_required` set by a
+   person); an unsupported bank movement gets `bank_transaction.clarification_needed`
+   instead of a posting (B05). The productive use stays behind the operator decision M12-05.
+
+Consequences:
+
+- Migration 0241 (down_revision 0237): tables `bookkeeping_level_request`,
+  `bank_rule_proposal`, `auto_posting_review` (RLS), columns on `tenant_settings`,
+  `bank_rule` and `posting_decision`. Permission `accounting:review`. Error codes
+  `MHVP-BANK-0022` to `0025`. Audit export tables `entscheidungen`, `nachkontrolle`,
+  `automatikstufen`, `regelvorschlaege`, `bankregeln`.
+- The existing tests of `POST /banking/auto-post` set level L2 and the learning switch
+  explicitly (`test_m12_matching.py`); without them the runner posts nothing.
+- Open: exclusion of not yet reviewed automatic postings from dunning, allocation proposal
+  and direct debit runs; return items as review items; retention job (guard trigger forbids
+  deletes); weekly digest and B09 coupling of L3 (M12-08). Listed in the rule files and
+  `docs/OPEN_QUESTIONS.md` M12-09.
 
 ## Alternatives considered
 

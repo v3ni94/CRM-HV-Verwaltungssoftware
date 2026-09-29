@@ -1,6 +1,6 @@
 # Annahmen
 
-Stand: 29.09.2026 (A-080 ergänzt; zuvor 28.09.2026 mit A-074 bis A-079; zuvor 26.09.2026 mit A-048, A-049 und A-052). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
+Stand: 29.09.2026 (A-084 bis A-088 ergänzt; zuvor A-080 ergänzt; zuvor 28.09.2026 mit A-074 bis A-079; zuvor 26.09.2026 mit A-048, A-049 und A-052). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
 
 Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Keine dieser Annahmen berührt Geld, Forderungsbestand, Datenschutz, gesetzliche Fristen oder Beweiserhalt. Solche Punkte wären nach Regel 3 offene Fragen und stehen in `docs/OPEN_QUESTIONS.md`. Jede Annahme wird spätestens beim genannten Meilenstein überprüft und bei Bestätigung oder Widerlegung hier fortgeschrieben.
 
@@ -975,3 +975,46 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Überprüfung spätestens bei Meilenstein | Abnahme M31 durch den Betreiber auf Android Chrome und iPad Safari; Entscheidung M30-07 (Offline Erfassung) und M31 Entscheidung 6 (Thumbnail Caching) |
 | Datum | 29.09.2026 |
 
+## A-085
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Eignungsschwellen der Automatikstufen (Regel M12-05, `mhvp.banking.levels.ELIGIBILITY`): L1 ab 20 Entscheidungen von Personen in 90 Tagen und Präzision der gezeigten Vorschläge von mindestens 0,95; L2 zusätzlich 30 Tage auf L1, 50 Entscheidungen und 0,98; L3 zusätzlich 60 Tage auf L2, 100 Automatikbuchungen und Fehlerquote höchstens 0,005. Automatische Herabstufung bei Fehlerquote über 0,02 (L3 0,01) in 30 Tagen oder drei Korrekturen einer L1-Klasse. Anhebung nur eine Stufe je Antrag. |
+| Begründung | Fahrplan Abschnitt 3.3 und 3.4 nennt die Werte als Produktschutz-Standards ohne empirische Basis; der Master-Prompt verlangt Nachkontrolle und Grenzen, keine Zahlen. |
+| Kennzeichnung | unkritisch für Geld: die Stufen buchen nur unter aktiver Regel mit Verifier; je Mandant nur nach oben veränderbar; nie als Rechtsanforderung dargestellt |
+| Betroffene Bereiche | Automatikstufen, Kennzahlen je Klasse, Nachtjob `levels_refresh` |
+| Überprüfung spätestens bei Meilenstein | Neubewertung mit dem anonymisierten HVM-Testbestand (M12-02) vor dem G1-Antrag |
+| Datum | 29.09.2026 |
+
+## A-086
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Regelvorschläge aus Wiederholung (Regel M12-06): Schwelle `bank_rule_proposal_threshold` Standard 5 gleiche Entscheidungen, für wiederkehrende Muster (gleiche Gegenpartei, in jedem Fall identischer Betrag) `bank_rule_recurring_threshold` Standard 3; beide je Mandant zwischen 2 und 50 einstellbar. Massenbestätigungen zählen 0,5. Zwecktoken: Buchstabenfolgen ab vier Zeichen, die in jedem Nachweisfall vorkommen, ohne Namens- und Stoppwörter (Zahlung, Überweisung, Rechnung, Lastschrift, SEPA, Mandat, Betrag, Dank), höchstens fünf. Muster mit mehreren Konten werden nicht gelernt. |
+| Begründung | Der Betreiber nennt 90 Prozent monatlich oder jährlich wiederkehrende Buchungen; drei identische Fälle (ein Quartal) sind für eine Regel im Zustand vorgeschlagen ausreichend, weil Freigabe, Aktivierung mit Betragsgrenze und Testnachweis unverändert folgen. Fahrplan 3.3 nennt 5 als Standard. |
+| Kennzeichnung | unkritisch: ein Vorschlag bucht und aktiviert nichts; Betreiber kann die Schwellen anheben |
+| Betroffene Bereiche | `mhvp.banking.learning`, Seite Bankregeln |
+| Überprüfung spätestens bei Meilenstein | nach den ersten 90 Tagen mit Entscheidungsprotokoll der HVM |
+| Datum | 29.09.2026 |
+
+## A-087
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Fallgrenzen des Runners (Regel M12-05, `mhvp.banking.runner`): 50 Automatikbuchungen je Regel und Tag, 200 je Lauf, 500 je Mandant und Tag; Stichprobe L3 10 Prozent nach Hash der Umsatz-ID mit 7 Tagen Frist. Erreichen einer Grenze stoppt den Lauf mit Ereignis, der Rest bleibt offen. |
+| Begründung | 7.4 Nr. 4 verlangt Betrags- und Fallgrenzen ohne Zahlen; die Werte liegen deutlich über dem Tagesvolumen eines Objekts und unter dem, was eine Fehlregel an einem Tag anrichten dürfte. |
+| Kennzeichnung | unkritisch, Konstanten; Änderung ohne Migration |
+| Betroffene Bereiche | Runner, Sync-Zähler |
+| Überprüfung spätestens bei Meilenstein | vor dem G1-Antrag mit dem Volumen der HVM |
+| Datum | 29.09.2026 |
+
+## A-088
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Fälligkeit der Nachkontrolle: nächster Werktag Montag bis Freitag ohne Feiertagskalender (`mhvp.banking.review.next_working_day`). |
+| Begründung | Der Master-Prompt verlangt eine Tagesprüfung; ein Feiertagskalender je Bundesland existiert in der Plattform noch nicht. |
+| Kennzeichnung | unkritisch: eine an einem Feiertag fällige Nachkontrolle sperrt die Klasse einen Tag früher, nie später |
+| Betroffene Bereiche | Nachkontrolle, Runner-Sperre |
+| Überprüfung spätestens bei Meilenstein | mit dem Feiertagskalender der Fristenverwaltung |
+| Datum | 29.09.2026 |

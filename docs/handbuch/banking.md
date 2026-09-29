@@ -114,6 +114,54 @@ zählen nicht mit, weder in der Anzahl noch in der Summe oder den Summen je Rech
 werden nicht gesendet. Erst die Bestätigung bucht, je Umsatz ganz oder gar nicht; das Ergebnis
 nennt gebuchte und nicht gebuchte Umsätze mit Grund. Jede Buchung ist eine manuelle Buchung der angemeldeten Person.
 
+## Automatik in Stufen
+
+Einstellungen, Buchhaltung, Automatikstufen zeigt je Fallklasse die Stufe, den Deckel und
+die Kennzahlen der letzten 90 Tage (Entscheidungen, Präzision der gezeigten Vorschläge,
+Automatikbuchungen, Fehlerquote, Abdeckung). Fallklassen: Zahlungseingang mit Vollausgleich,
+Sammelzahlung (höchstens L1), Rechnungszahlung mit verknüpfter Rechnung (höchstens L2),
+wiederkehrender Aufwand gegen Sachkonto (höchstens L2, nur mit Ausgangsautomatik und Beleg),
+Umbuchung zwischen eigenen Konten, Ausgeschlossen (Rückläufer, Kaution, Teil- und
+Überzahlung, unklar; immer L0).
+
+Stufen: L0 nur Vorschlag (Standard). L1 zeigt im Buchungsdialog Übernehmen für den
+deterministisch geprüften Vorschlag und wählt ihn in der Massenbestätigung vor; jede Buchung
+bleibt eine manuelle Buchung der angemeldeten Person, Verlauf und KI werden nie übernommen.
+L2 bucht nach jedem Import und Abruf automatisch, wenn eine aktive Regel trifft und die Prüfung
+der Klasse besteht (Betrag, ältester offener Posten des Schuldners, Konto ohne Steuerkennzeichen,
+Periode offen); jede Automatikbuchung erscheint unter Bank, Nachkontrolle mit Fälligkeit am
+nächsten Werktag. L3 ersetzt die Tagesprüfung durch eine Stichprobe (nur Vollausgleich und
+Umbuchung, nicht vor der Freigabestufe G1 und der Betreiberentscheidung M12-08).
+
+Anhebung: Stufe beantragen mit Grund; die Plattform prüft die Eignung (zum Beispiel L1 ab 20
+Entscheidungen mit Präzision 95 Prozent) und lehnt sonst mit Hinweis ab. Eine andere Person gibt
+den Antrag frei; wer beantragt hat, kann nicht freigeben. Absenken geht sofort. Überfällige
+Nachkontrollen sperren die Klasse, eine hohe Fehlerquote senkt sie nachts automatisch. Der
+Automatikschalter des Mandanten, das Entscheidungsprotokoll und der Schalter der
+Ausgangsautomatik sind Voraussetzung; vor G1 bucht die Automatik nur im nicht führenden
+Buchungskreis (Vergleichsbuchung, Betreiberentscheidung vom 28.09.2026).
+
+## Buchung korrigieren
+
+Eine gebuchte Buchung wird nie geändert. Korrigieren (Bank, Nachkontrolle, oder über die
+Schnittstelle für jeden gebuchten Umsatz) storniert die gültige Buchung mit Grundcode
+(Automatikfehler, falsche Zuordnung, falscher Betrag, falsches Datum, doppelt, sonstiges) und
+Begründung und bucht den Umsatz im selben Schritt neu gegen das gewählte Gegenkonto. Für
+einen Postenausgleich nach dem Storno den Buchungsdialog nutzen. Das Entscheidungsprotokoll
+speichert die stornierte Buchung als Gegenbeispiel; bei Grundcode Automatikfehler wird die
+Regel von aktiv auf freigegeben zurückgestuft, beim zweiten Fall abgeschaltet. In Ordnung
+bestätigt die Automatikbuchung (Recht Nachkontrolle).
+
+## Gelernte Regelvorschläge
+
+Unter Bank, Bankregeln erscheinen Vorschläge, sobald dieselbe Gegenpartei im selben
+Rechtsträger mehrfach gleich gebucht wurde (Standard fünf gleiche Entscheidungen, bei
+gleichem Betrag drei; Einstellungen des Mandanten). Ein Widerspruch (anderes Konto, Ablehnung,
+Storno) zieht den Vorschlag zurück. Annehmen legt die Regel im Zustand vorgeschlagen an; die
+Betragsobergrenze darf dabei gesenkt, nie erhöht werden. Freigabe durch eine andere Person und
+Aktivierung mit Betragsgrenze und Testnachweis bleiben Pflicht; die Aktivierung ersetzt ältere
+gelernte Regeln derselben Gegenpartei. Ein Vorschlag bucht nichts.
+
 ## Regel lernen
 
 Bei einem gebuchten Eingang legt Regel lernen einen Regelvorschlag aus IBAN-Fingerabdruck und

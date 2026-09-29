@@ -1423,6 +1423,27 @@
  },
  {
   "kind": "page",
+  "title": "Automatikstufen",
+  "source": "Einstellungen",
+  "href": "/einstellungen/buchhaltung/automatik",
+  "keywords": [
+   "automatik",
+   "automatikstufe",
+   "stufe",
+   "l1",
+   "l2",
+   "ein-klick",
+   "nachkontrolle",
+   "regelautomatik",
+   "bankabgleich"
+  ],
+  "permission": [
+   "accounting:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Kontenrahmen",
   "source": "Einstellungen",
   "href": "/einstellungen/buchhaltung/kontenrahmen",
@@ -2851,6 +2872,36 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Neue Umsätze der Seite auswählen oder einzelne Kästchen markieren, dann Massenbestätigung. Der Dialog lädt die Vorschläge der gewählten Umsätze und bereitet nur deterministisch geprüfte Fälle vor (eindeutiger Vollausgleich oder Treffer einer freigegebenen Regel); alle anderen ers",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Automatik in Stufen",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Einstellungen, Buchhaltung, Automatikstufen zeigt je Fallklasse die Stufe, den Deckel und die Kennzahlen der letzten 90 Tage (Entscheidungen, Präzision der gezeigten Vorschläge, Automatikbuchungen, Fehlerquote, Abdeckung). Fallklassen: Zahlungseingang mit Vollausgleich, Sammelzah",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Buchung korrigieren",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Eine gebuchte Buchung wird nie geändert. Korrigieren (Bank, Nachkontrolle, oder über die Schnittstelle für jeden gebuchten Umsatz) storniert die gültige Buchung mit Grundcode (Automatikfehler, falsche Zuordnung, falscher Betrag, falsches Datum, doppelt, sonstiges) und Begründung ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Gelernte Regelvorschläge",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Bank, Bankregeln erscheinen Vorschläge, sobald dieselbe Gegenpartei im selben Rechtsträger mehrfach gleich gebucht wurde (Standard fünf gleiche Entscheidungen, bei gleichem Betrag drei; Einstellungen des Mandanten). Ein Widerspruch (anderes Konto, Ablehnung, Storno) zieht d",
   "file": "docs/handbuch/banking.md"
  },
  {
