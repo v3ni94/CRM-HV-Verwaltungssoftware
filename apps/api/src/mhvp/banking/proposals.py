@@ -19,6 +19,7 @@ partial unique index ``uq_posting_decision_pending`` makes a second pending row 
 
 from __future__ import annotations
 
+import logging
 import uuid
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -38,6 +39,21 @@ from mhvp.banking.models import (
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 LEVEL_L0 = "L0"
+log = logging.getLogger(__name__)
+
+
+async def observe_learning(session: AsyncSession, tx: BankTransaction) -> None:
+    """Rule learning after a decision of a person (plan M12 S5) inside a savepoint: a failure
+    here never breaks the booking or the rejection."""
+    from mhvp.banking import learning
+
+    nested = await session.begin_nested()
+    try:
+        await learning.observe(session, tx)
+        await nested.commit()
+    except Exception:
+        await nested.rollback()
+        log.exception("bank rule learning failed", extra={"tx": str(tx.id)})
 
 
 async def learning_enabled(session: AsyncSession) -> bool:
@@ -281,11 +297,19 @@ async def _open_round(
     if current is not None:
         return current
     collected, proposals = await snapshot(session, tx)
+    # Inserted as pending and closed by the caller in a second statement: the DB guard
+    # allows exactly the transition pending to closed and refuses an update of a row that
+    # was inserted closed (S6 correction path, 29.09.2026).
     row = _new_row(
-        tx, collected, proposals, round_no=await _next_round(session, tx.id), status=status
+        tx,
+        collected,
+        proposals,
+        round_no=await _next_round(session, tx.id),
+        status=PostingDecisionStatus.PENDING.value,
     )
     session.add(row)
     await session.flush()
+    del status
     return row
 
 
@@ -319,7 +343,7 @@ async def record_booking(
     index = _chosen(row, chosen)
     reference = row.proposals[index] if index is not None else None
     changes = decisions.diff(reference, final)
-    return _close(
+    _close(
         row,
         status=decisions.outcome(changes),
         user_id=user_id,
@@ -329,6 +353,9 @@ async def record_booking(
         journal_entry_id=journal_entry_id,
         bulk=bulk,
     )
+    await session.flush()
+    await observe_learning(session, tx)
+    return row
 
 
 async def record_rejection(
@@ -358,6 +385,7 @@ async def record_rejection(
     )
     await session.flush()
     await ensure_pending(session, tx)
+    await observe_learning(session, tx)
     return row
 
 
@@ -481,4 +509,6 @@ def decision_out(row: PostingDecision) -> dict[str, Any]:
         "supersedes_id": row.supersedes_id,
         "decided_by": row.decided_by,
         "decided_at": row.decided_at,
+        "verifier_fingerprint": row.verifier_fingerprint,
+        "review_due_on": row.review_due_on,
     }

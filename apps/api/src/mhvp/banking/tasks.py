@@ -881,7 +881,7 @@ async def compute_proposals_once(
     the file and CSV endpoints queue it as an after-commit hook, the finAPI and FinTS tasks
     call it once their own import transaction committed. A tenant without
     ``learning_bookkeeper_enabled`` gets no rows."""
-    from mhvp.banking import proposals
+    from mhvp.banking import proposals, runner
 
     _ensure_crypto(settings)
     engine = create_async_engine(
@@ -890,9 +890,67 @@ async def compute_proposals_once(
     factory = create_session_factory(engine)
     try:
         async with tenant_transaction(factory, tenant_id) as session:
-            return await proposals.compute_for_run(session, run_id)
+            counts = await proposals.compute_for_run(session, run_id)
+        # Runner of levels L2 and L3 (S6) after the snapshots, in its own transaction: the
+        # advisory lock serialises parallel imports, G1 is asked from the job resolver, a
+        # non leading ledger is allowed by the operator decision M12-07.
+        try:
+            async with tenant_transaction(factory, tenant_id) as session:
+                result = await runner.run_for_tenant(
+                    session, tenant_id, gate_open=await _g1_open(tenant_id), run_id=run_id
+                )
+            if result.get("enabled"):
+                counts["auto_posted"] = int(result.get("posted", 0))
+        except Exception:
+            log.exception("auto post runner failed", extra={"tenant_id": str(tenant_id)})
+        return counts
     finally:
         await engine.dispose()
+
+
+async def _g1_open(tenant_id: uuid.UUID) -> bool:
+    from mhvp.core.release_gates import ReleaseGate, job_release_gate_resolver
+
+    try:
+        return await job_release_gate_resolver.is_open(tenant_id, ReleaseGate.G1)
+    except Exception:
+        return False
+
+
+async def levels_refresh_once(settings: Settings, *, today: date | None = None) -> dict[str, Any]:
+    """Nightly downgrade job of the automation levels (``levels.refresh_downgrades``)."""
+    from mhvp.banking import levels
+
+    _ensure_crypto(settings)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    totals: dict[str, Any] = {"tenants": 0, "lowered": {}}
+    try:
+        factory = create_session_factory(engine)
+        async with platform_transaction(factory) as session:
+            tenant_ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in tenant_ids:
+            totals["tenants"] += 1
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    lowered = await levels.refresh_downgrades(
+                        session, tenant_id, today=today or local_today()
+                    )
+                if lowered:
+                    totals["lowered"][str(tenant_id)] = lowered
+            except Exception:
+                log.warning("levels refresh failed", extra={"tenant_id": str(tenant_id)})
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.banking.levels_refresh")
+def levels_refresh() -> dict[str, Any]:
+    return asyncio.run(levels_refresh_once(get_settings()))
 
 
 @shared_task(name="mhvp.banking.compute_proposals")

@@ -177,6 +177,16 @@ def rule_matches(match: dict[str, Any], tx: dict[str, Any]) -> bool:
                 return False
         except re.error:
             return False
+    # Learned rules (plan M12 S5): creditor id of a direct debit (stable across an IBAN change
+    # of the creditor) and purpose keywords as an all-of condition next to the counterparty
+    # key and the amount band (plan 3.6: keywords alone never trigger).
+    if match.get("creditor_id") and match["creditor_id"] != tx.get("creditor_id"):
+        return False
+    keywords = match.get("purpose_keywords") or []
+    if keywords:
+        purpose = (tx.get("purpose") or "").lower()
+        if any(not _word_in(str(k).lower(), purpose) for k in keywords):
+            return False
     if match.get("amount_min") is not None and amount < _dec(match["amount_min"]):
         return False
     return not (match.get("amount_max") is not None and amount > _dec(match["amount_max"]))

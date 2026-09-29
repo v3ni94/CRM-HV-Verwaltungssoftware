@@ -9,7 +9,6 @@ full (partial, collective and overpayments stay manual, 7.4.4).
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -30,7 +29,7 @@ from mhvp.accounting.models import (
     OpenItemKind,
 )
 from mhvp.banking import allocation, posting_proposal
-from mhvp.banking.models import BankRule, BankTransaction, RuleState, TransactionStatus
+from mhvp.banking.models import BankRule, BankTransaction, TransactionStatus
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 SCORES = {"mandate": 40, "end_to_end": 40, "contract_number": 30, "iban": 15, "amount": 15}
@@ -181,6 +180,7 @@ def rule_matches(rule: BankRule, tx: BankTransaction) -> bool:
             "purpose": tx.purpose,
             "counterpart_name": tx.counterpart_name,
             "counterpart_iban_fingerprint": tx.counterpart_iban_fingerprint,
+            "creditor_id": tx.creditor_id,
         },
     )
 
@@ -479,44 +479,20 @@ async def book_payment(
 
 
 async def auto_post(
-    session: AsyncSession, tx: BankTransaction, enabled: bool
+    session: AsyncSession, tx: BankTransaction, enabled: bool, *, ctx: Any = None
 ) -> JournalEntry | None:
-    """Automatic posting only by an active rule within its limit (6.9.4); otherwise None."""
-    if (
-        not enabled
-        or tx.status is not TransactionStatus.NEW
-        or tx.transfer_pair_id
-        or tx.amount <= 0
-    ):
+    """Automatic posting only by an active rule within its limit (6.9.4) and, since step S6,
+    only through the runner of ``mhvp.banking.runner``: class level L2 or L3, deterministic
+    verifier with fingerprint, G1 open or non leading ledger, case limits and review item.
+    ``ctx`` is the run context (``runner.context_for_tenant``); without one the runner
+    builds it for the tenant of the transaction with G1 treated as closed."""
+    from mhvp.banking import runner
+
+    if not enabled or tx.status is not TransactionStatus.NEW:
         return None
-    rules = (
-        await session.scalars(
-            select(BankRule)
-            .where(
-                BankRule.approval_state == RuleState.ACTIVE,
-                BankRule.legal_entity_id == tx.legal_entity_id,
-            )
-            .order_by(BankRule.priority, BankRule.created_at)
-        )
-    ).all()
-    rule = next((r for r in rules if rule_matches(r, tx)), None)
-    if rule is None or (rule.max_amount is not None and tx.amount > rule.max_amount):
-        return None
-    best = unambiguous(await candidates(session, tx), tx.amount)
-    if best is None or (
-        rule.action.get("account_id") and str(best.account_id) != rule.action["account_id"]
-    ):
-        return None
-    entry = await book_payment(
-        session,
-        tx,
-        settlements=[(best.open_item_id, best.remaining)],
-        counter_account_id=None,
-        user_id=None,
-        source=EntrySource.BANK_IMPORT,
-    )
-    tx.matched_rule_id = rule.id
-    rule.hit_count += 1
-    rule.last_hit_at = datetime.now(UTC)
-    await session.flush()
-    return entry
+    if ctx is None:
+        ctx = await runner.context_for_tenant(session, tx.tenant_id, gate_open=False)
+        if ctx is None:
+            return None
+    _key, entry = await runner.auto_post_transaction(session, tx, ctx)
+    return entry if isinstance(entry, JournalEntry) else None

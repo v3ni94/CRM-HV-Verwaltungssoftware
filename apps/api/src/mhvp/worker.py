@@ -259,6 +259,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.banking.process_events",
                 "schedule": 60.0,
             },
+            # Automatikstufen (ADR 0014 Nachtrag S6, Regel M12-05): Nachtjob nur mit
+            # Herabstufung aus den Kennzahlen der letzten 30 Tage; nie eine Anhebung.
+            "banking-levels-refresh": {
+                "task": "mhvp.banking.levels_refresh",
+                "schedule": crontab(hour=4, minute=10),
+            },
             "sla-check-clocks": {
                 "task": "mhvp.sla.check_clocks",
                 "schedule": 300.0,

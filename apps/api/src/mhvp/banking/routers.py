@@ -2,7 +2,7 @@
 no payment is initiated here (G2)."""
 
 import uuid
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
 from typing import Annotated, Any
 
@@ -11,19 +11,25 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
-from mhvp.accounting.models import EntrySource, LedgerAccount
-from mhvp.banking import account_selection, decisions, matching, payments, proposals
+from mhvp.accounting.models import EntrySource, LedgerAccount, ReversalReason
+from mhvp.banking import account_selection, decisions, matching, payments, proposals, verifiers
 from mhvp.banking import event_types as ev
 from mhvp.banking import finapi as finapi_client
+from mhvp.banking import learning as learning_svc
+from mhvp.banking import levels as levels_svc
 from mhvp.banking import matching_metrics as matching_metrics_svc
+from mhvp.banking import review as review_svc
+from mhvp.banking import runner as runner_svc
 from mhvp.banking import services as svc
 from mhvp.banking.connectors import FileConnector
 from mhvp.banking.models import (
     AccountPurpose,
     BankConnection,
     BankRule,
+    BankRuleProposal,
     BankSyncRun,
     BankTransaction,
+    BookkeepingLevelRequest,
     ConnectionStatus,
     Connector,
     FinApiAccountLink,
@@ -37,6 +43,7 @@ from mhvp.banking.models import (
     RuleState,
     TransactionStatus,
 )
+from mhvp.core.auth.permissions import ACCOUNTING_REVIEW
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_legal_entity_allowed
 from mhvp.core.db.tenancy import after_commit
@@ -54,6 +61,7 @@ READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 UPDATE = require_permission("accounting:update")
 APPROVE = require_permission("accounting:approve")
+REVIEW = require_permission(ACCOUNTING_REVIEW)
 
 
 class _In(BaseModel):
@@ -172,6 +180,9 @@ class PostingDecisionOut(BaseModel):
     supersedes_id: uuid.UUID | None
     decided_by: uuid.UUID | None
     decided_at: datetime | None
+    # Runner (S6): only on auto_posted rows.
+    verifier_fingerprint: str | None = None
+    review_due_on: date | None = None
 
 
 def _conn_out(row: BankConnection) -> ConnectionOut:
@@ -438,6 +449,9 @@ class RuleOut(BaseModel):
     max_amount: Decimal | None
     test_evidence_document_id: uuid.UUID | None
     created_by: uuid.UUID | None
+    learned_from_proposal_id: uuid.UUID | None = None
+    contradiction_count: int = 0
+    superseded_by_id: uuid.UUID | None = None
 
 
 async def _tx(session: Any, tx_id: uuid.UUID) -> BankTransaction:
@@ -1040,6 +1054,8 @@ async def activate_rule(
             body.max_amount,
             body.test_evidence_document_id,
         )
+        # Learned rule (S5): older learned rules of the same key are superseded (event).
+        superseded = await learning_svc.supersede(session, rule, user_id=principal.user_id)
         await _rule_event(
             session,
             principal,
@@ -1048,6 +1064,7 @@ async def activate_rule(
             {
                 "max_amount": str(body.max_amount),
                 "test_evidence_document_id": str(body.test_evidence_document_id),
+                "superseded": [str(r.id) for r in superseded],
             },
         )
         await session.flush()
@@ -1114,32 +1131,23 @@ async def learn(
 async def run_auto_post(
     request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
-    from mhvp.platform.models import TenantSettings
+    """Manual start of the runner (``mhvp.banking.runner``): tenant switch, class level L2 or
+    L3, active rule, deterministic verifier with fingerprint, G1 open or non leading ledger
+    (operator decision M12-07), case limits, review item per posting. Chronological order:
+    a later payment of the same contract must not see the earlier month still open."""
+    from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGate
 
+    resolver = getattr(request.app.state, "release_gate_resolver", ClosedReleaseGateResolver())
+    gate_open = await resolver.is_open(principal.tenant_id, ReleaseGate.G1)
     async with tenant_tx(request, principal) as session:
-        settings = await session.scalar(select(TenantSettings))
-        enabled = bool(settings and settings.auto_posting_enabled)
-        if not enabled:
-            return {"enabled": False, "posted": 0}
-        posted = 0
-        # Chronological order: a later payment of the same contract must not see the earlier
-        # month still open, otherwise both open items match and the later one stays manual.
-        new = (
-            await session.scalars(
-                select(BankTransaction)
-                .where(BankTransaction.status == TransactionStatus.NEW)
-                .order_by(BankTransaction.booking_date, BankTransaction.created_at)
-            )
-        ).all()
-        for row in new:
-            nested = await session.begin_nested()
-            try:
-                if await matching.auto_post(session, row, enabled):
-                    posted += 1
-                await nested.commit()
-            except ProblemError:
-                await nested.rollback()
-        return {"enabled": True, "posted": posted, "checked": len(new)}
+        result = await runner_svc.run_for_tenant(
+            session, principal.tenant_id, gate_open=gate_open, today=local_today()
+        )
+        return {
+            "enabled": result["enabled"],
+            "posted": result["posted"],
+            **{k: v for k, v in result.items() if k not in ("enabled", "posted")},
+        }
 
 
 @router.get("/matching/metrics", summary="Abdeckung und Fehlerquote der Automatik getrennt")
@@ -1274,6 +1282,452 @@ async def set_learning(
         )
         await session.flush()
         return {"enabled": body.enabled}
+
+
+# Automation levels, L1 acceptance, learned rules, review queue, correction (S4 to S6) --------
+
+
+class LevelRequestIn(_In):
+    case_kind: str = Field(min_length=1, max_length=24)
+    level_to: str = Field(pattern="^L[1-3]$")
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class LevelDecisionIn(_In):
+    comment: str | None = Field(default=None, max_length=2000)
+
+
+class LevelLowerIn(_In):
+    case_kind: str = Field(min_length=1, max_length=24)
+    level: str = Field(pattern="^L[0-2]$")
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class OutgoingSwitchIn(_In):
+    enabled: bool
+    reason: str = Field(min_length=3, max_length=2000)
+
+
+class AcceptIn(_In):
+    """One click acceptance (L1): the pending round and the verified proposal in it."""
+
+    proposal_id: uuid.UUID | None = None
+    chosen: int | None = Field(default=None, ge=0, le=100)
+    text: str | None = Field(default=None, max_length=500)
+
+
+class RuleProposalAcceptIn(_In):
+    name: str | None = Field(default=None, max_length=200)
+    amount_min: Decimal | None = Field(default=None, ge=0)
+    amount_max: Decimal | None = Field(default=None, ge=0)
+    purpose_tokens: list[str] | None = Field(default=None, max_length=10)
+
+
+class ReviewDecisionIn(_In):
+    outcome: str = Field(pattern="^(ok|corrected|cancelled)$")
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class BankCorrectionIn(BookIn):
+    """Korrigieren (B03): reversal with reason code and free text plus one new posting."""
+
+    reason: str = Field(min_length=3, max_length=2000)
+    reason_code: ReversalReason = ReversalReason.WRONG_ASSIGNMENT
+
+
+def _actor(principal: TenantPrincipal) -> levels_svc.LevelActor:
+    return levels_svc.LevelActor(
+        principal.user_id, principal.tenant_id, is_platform_admin=principal.is_platform_admin
+    )
+
+
+@router.get("/automation/levels", summary="Automatikstufen je Fallklasse mit Anträgen")
+async def get_levels(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        settings = await session.scalar(select(TenantSettings))
+        current = await levels_svc.current_levels(session)
+        requests = list(
+            await session.scalars(
+                select(BookkeepingLevelRequest)
+                .order_by(BookkeepingLevelRequest.created_at.desc())
+                .limit(100)
+            )
+        )
+        return {
+            "levels": current,
+            "caps": levels_svc.CLASS_CAPS,
+            "labels": levels_svc.CLASS_LABELS,
+            "auto_posting_enabled": bool(settings and settings.auto_posting_enabled),
+            "auto_posting_outgoing_enabled": bool(
+                settings and settings.auto_posting_outgoing_enabled
+            ),
+            "learning_enabled": bool(settings and settings.learning_bookkeeper_enabled),
+            "blocked": await levels_svc.overdue_reviews(session, today=local_today()),
+            "thresholds": {
+                k: {kk: str(vv) for kk, vv in v.items()} for k, v in levels_svc.ELIGIBILITY.items()
+            },
+            "requests": [levels_svc.request_out(r) for r in requests],
+            "note": (
+                "Stufen sind Produktschutz: L1 Ein-Klick, L2 Regelautomatik mit Tagesprüfung, "
+                "L3 mit Stichprobe. Keine Stufe öffnet ein Gate; der Runner prüft G1 oder "
+                "nicht führenden Buchungskreis selbst."
+            ),
+        }
+
+
+@router.get("/automation/metrics", summary="Kennzahlen je Fallklasse und Rechtsträger")
+async def automation_metrics(
+    request: Request,
+    period_from: Annotated[date | None, Query(alias="from")] = None,
+    period_to: Annotated[date | None, Query(alias="to")] = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """precision_manual, n_decided, n_auto, error_rate_auto and coverage per class and legal
+    entity from ``posting_decision`` (A45 style: operational figures, no proof of safety)."""
+    today = local_today()
+    window_to = period_to or today
+    window_from = period_from or (window_to - timedelta(days=90))
+    if window_from > window_to:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Der Zeitraum ist ungültig (von > bis).")
+    async with tenant_tx(request, principal) as session:
+        rows = await levels_svc.class_metrics(
+            session, window_from=window_from, window_to=window_to, tenant_id=principal.tenant_id
+        )
+        allowed = [
+            r
+            for r in rows
+            if r.legal_entity_id is None or _entity_allowed(principal, r.legal_entity_id)
+        ]
+        return {
+            "window_from": window_from,
+            "window_to": window_to,
+            "levels": await levels_svc.current_levels(session),
+            "classes": [r.as_dict() for r in allowed],
+            "note": (
+                "Betriebskennzahlen aus dem Entscheidungsprotokoll; eine hohe Präzision ist "
+                "kein Nachweis und keine Freigabe der Automatik (7.4)."
+            ),
+        }
+
+
+def _entity_allowed(principal: TenantPrincipal, legal_entity_id: uuid.UUID) -> bool:
+    try:
+        ensure_legal_entity_allowed(principal, legal_entity_id)
+    except ProblemError:
+        return False
+    return True
+
+
+@router.post("/automation/level-requests", status_code=201, summary="Stufenanhebung beantragen")
+async def create_level_request(
+    body: LevelRequestIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await levels_svc.request_level(
+            session,
+            _actor(principal),
+            case_kind=body.case_kind,
+            level_to=body.level_to,
+            reason=body.reason,
+            today=local_today(),
+        )
+        return levels_svc.request_out(row)
+
+
+@router.post(
+    "/automation/level-requests/{request_id}/approve",
+    summary="Stufenanhebung freigeben (andere Person)",
+)
+async def approve_level_request(
+    request_id: uuid.UUID,
+    body: LevelDecisionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await levels_svc.decide_level(
+            session, _actor(principal), request_id=request_id, approve=True, comment=body.comment
+        )
+        return levels_svc.request_out(row)
+
+
+@router.post("/automation/level-requests/{request_id}/reject", summary="Stufenanhebung ablehnen")
+async def reject_level_request(
+    request_id: uuid.UUID,
+    body: LevelDecisionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await levels_svc.decide_level(
+            session, _actor(principal), request_id=request_id, approve=False, comment=body.comment
+        )
+        return levels_svc.request_out(row)
+
+
+@router.put("/automation/levels", summary="Stufe absenken (sofort, eine Person)")
+async def lower_level(
+    body: LevelLowerIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, str]:
+    async with tenant_tx(request, principal) as session:
+        await levels_svc.lower_level(
+            session,
+            _actor(principal),
+            case_kind=body.case_kind,
+            level=body.level,
+            reason=body.reason,
+        )
+        return await levels_svc.current_levels(session)
+
+
+@router.put("/automation/outgoing", summary="Ausgangsautomatik je Mandant (Standard aus)")
+async def set_outgoing(
+    body: OutgoingSwitchIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, bool]:
+    """``tenant_settings.auto_posting_outgoing_enabled`` (L2b, OPEN_QUESTIONS M12-05):
+    accounting:approve plus tenant_settings:update, reason and event."""
+    from mhvp.platform.models import TenantSettings
+
+    if not principal.has("tenant_settings:update"):
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, developer_message="Missing tenant_settings:update."
+        )
+    async with tenant_tx(request, principal) as session:
+        settings = await session.scalar(select(TenantSettings).with_for_update())
+        if settings is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before = settings.auto_posting_outgoing_enabled
+        settings.auto_posting_outgoing_enabled = body.enabled
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type=ev.TENANT_AUTO_POSTING_OUTGOING_CHANGED,
+            entity_type="tenant_settings",
+            entity_id=settings.id,
+            actor_user_id=principal.user_id,
+            payload={"enabled": body.enabled, "reason": body.reason},
+            changes={"auto_posting_outgoing_enabled": {"old": before, "new": body.enabled}},
+        )
+        await session.flush()
+        return {"enabled": body.enabled}
+
+
+@router.post(
+    "/transactions/{tx_id}/accept", status_code=201, summary="Ein-Klick-Übernahme (Stufe L1)"
+)
+async def accept_proposal(
+    tx_id: uuid.UUID, body: AcceptIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """Books exactly the deterministically verified proposal of the pending round as a manual
+    posting of the person (created_by set). Needs level L1 for the case class of the
+    transaction (409 ``MHVP-BANK-0023``); history and AI proposals are never accepted here."""
+    async with tenant_tx(request, principal) as session:
+        row = await matching.lock_for_booking(session, tx_id)
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        if row.status is not TransactionStatus.NEW:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Der Umsatz ist nicht offen.")
+        collected, snapshot = await proposals.snapshot(session, row)
+        case_kind = levels_svc.classify(collected.tx, snapshot)
+        level = (await levels_svc.current_levels(session))[case_kind]
+        if levels_svc.level_index(level) < levels_svc.level_index(levels_svc.L1):
+            raise ProblemError(
+                ErrorCodes.BANK_LEVEL_TOO_LOW,
+                detail=f"Klasse {case_kind} steht auf {level}; Ein-Klick braucht L1.",
+            )
+        pending = await proposals.pending_for(session, row.id)
+        shown = pending.proposals if pending is not None else snapshot
+        if body.proposal_id is not None and (pending is None or pending.id != body.proposal_id):
+            raise ProblemError(ErrorCodes.BANK_DECISION_STALE)
+        verified = verifiers.l1_verified(case_kind, shown, row.amount)
+        if verified is None:
+            raise ProblemError(
+                ErrorCodes.BANK_LEVEL_TOO_LOW, detail="Kein deterministisch geprüfter Vorschlag."
+            )
+        if body.chosen is not None and shown[body.chosen] is not verified:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Der gewählte Vorschlag ist nicht der geprüfte."
+            )
+        chosen = shown.index(verified)
+        counter_id = None
+        if not verified.get("splits") and verified.get("account_number"):
+            ledger, _bank = await matching.ledger_for(session, row)
+            counter = await session.scalar(
+                select(LedgerAccount).where(
+                    LedgerAccount.ledger_id == ledger.id,
+                    LedgerAccount.number == str(verified["account_number"]),
+                )
+            )
+            counter_id = counter.id if counter is not None else None
+        book_in = BookIn(
+            settlements=[
+                SettleIn(open_item_id=uuid.UUID(s["open_item_id"]), amount=Decimal(s["amount"]))
+                for s in verified.get("splits") or []
+            ],
+            counter_account_id=counter_id,
+            text=body.text,
+            proposal_id=pending.id if pending is not None else None,
+            chosen=chosen,
+        )
+        entry = await _book(session, principal, row, book_in)
+        return {
+            "journal_entry_id": entry.id,
+            "number": f"{entry.fiscal_year}-{entry.number}",
+            "case_kind": case_kind,
+            "level": level,
+            "chosen": chosen,
+        }
+
+
+@router.post(
+    "/transactions/{tx_id}/correct",
+    status_code=201,
+    summary="Korrigieren: Storno mit Grundcode und Neubuchung (B03)",
+)
+async def correct_transaction(
+    tx_id: uuid.UUID,
+    body: BankCorrectionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """The posted entry is never edited: the posting in force is reversed with reason code
+    and free text and the transaction is posted again in the same transaction, as a manual
+    posting of the person with a fresh decision round (ADR 0014, rule M12-04 no. 5)."""
+    async with tenant_tx(request, principal) as session:
+        row = await _tx(session, tx_id)
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        reversal, entry = await review_svc.correct(
+            session,
+            tx_id=tx_id,
+            body=review_svc.CorrectionIn(
+                reason=body.reason,
+                reason_code=body.reason_code,
+                settlements=[(s.open_item_id, s.amount) for s in body.settlements],
+                counter_account_id=body.counter_account_id,
+                text=body.text,
+                discount=body.discount,
+            ),
+            user_id=principal.user_id,
+            tenant_id=principal.tenant_id,
+            today=local_today(),
+        )
+        return {
+            "reversal_id": reversal.id,
+            "reversal_number": f"{reversal.fiscal_year}-{reversal.number}",
+            "journal_entry_id": entry.id,
+            "number": f"{entry.fiscal_year}-{entry.number}",
+        }
+
+
+@router.get("/rule-proposals", summary="Gelernte Regelvorschläge")
+async def list_rule_proposals(
+    request: Request,
+    status: str | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        query = select(BankRuleProposal).order_by(BankRuleProposal.created_at.desc()).limit(200)
+        if status:
+            query = query.where(BankRuleProposal.status == status)
+        rows = [
+            r for r in await session.scalars(query) if _entity_allowed(principal, r.legal_entity_id)
+        ]
+        return [learning_svc.proposal_out(r) for r in rows]
+
+
+@router.post(
+    "/rule-proposals/{proposal_id}/accept",
+    status_code=201,
+    summary="Regelvorschlag annehmen (verengen erlaubt)",
+)
+async def accept_rule_proposal(
+    proposal_id: uuid.UUID,
+    body: RuleProposalAcceptIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> RuleOut:
+    """Creates the BankRule in state proposed; the accepting person is its creator and may
+    therefore not approve it (existing four eyes path)."""
+    if principal.user_id is None:
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, detail="Annahme nur durch eine angemeldete Person."
+        )
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(BankRuleProposal, proposal_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        rule = await learning_svc.accept(
+            session,
+            proposal_id=proposal_id,
+            user_id=principal.user_id,
+            tenant_id=principal.tenant_id,
+            name=body.name,
+            amount_min=body.amount_min,
+            amount_max=body.amount_max,
+            tokens=body.purpose_tokens,
+        )
+        return RuleOut.model_validate(rule)
+
+
+@router.post("/rule-proposals/{proposal_id}/reject", summary="Regelvorschlag ablehnen (Grund)")
+async def reject_rule_proposal(
+    proposal_id: uuid.UUID,
+    body: ReopenIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    if principal.user_id is None:
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN, detail="Ablehnung nur durch eine angemeldete Person."
+        )
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(BankRuleProposal, proposal_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        row = await learning_svc.reject(
+            session,
+            proposal_id=proposal_id,
+            user_id=principal.user_id,
+            tenant_id=principal.tenant_id,
+            reason=body.reason,
+        )
+        return learning_svc.proposal_out(row)
+
+
+@router.get("/auto-posting/reviews", summary="Nachkontrolle automatischer Buchungen")
+async def list_reviews(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        items = await review_svc.open_items(session, today=local_today())
+        return [i for i in items if _entity_allowed(principal, i["legal_entity_id"])]
+
+
+@router.post(
+    "/auto-posting/reviews/{item_id}", summary="Nachkontrolle abschließen (accounting:review)"
+)
+async def decide_review(
+    item_id: uuid.UUID,
+    body: ReviewDecisionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(REVIEW),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await review_svc.decide(
+            session,
+            item_id=item_id,
+            outcome=body.outcome,
+            note=body.note,
+            user_id=principal.user_id,
+            tenant_id=principal.tenant_id,
+        )
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        return await review_svc.item_out(session, row, today=local_today())
 
 
 # Payment runs (M15, 7.5, 6.9.9); export requires G2 ------------------------------------

@@ -36,8 +36,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting.models import EntryStatus, JournalEntry
 from mhvp.banking import event_types as ev
-from mhvp.banking import proposals
-from mhvp.banking.models import BankingEventWatermark, BankTransaction, TransactionStatus
+from mhvp.banking import learning, proposals, review
+from mhvp.banking.models import (
+    AutoPostingReview,
+    BankingEventWatermark,
+    BankTransaction,
+    PostingDecisionStatus,
+    ReviewStatus,
+    TransactionStatus,
+)
 from mhvp.core.events import DomainEvent, emit
 
 log = logging.getLogger(__name__)
@@ -136,6 +143,38 @@ async def _on_entry_reversed(
         actor_user_id=event.actor_user_id,
         occurred_at=event.occurred_at,
     )
+    # Automatic posting reversed (S6): open review items are cancelled (a correction through
+    # ``review.correct`` closed them as corrected already), the rule counts a contradiction
+    # and is lowered on reason code automation_error (plan 3.3).
+    automatic = [r for r in rows if r.supersedes_id is not None]
+    if automatic:
+        originals = [await session.get(type(r), r.supersedes_id) for r in automatic]
+        if any(
+            o is not None and o.status == PostingDecisionStatus.AUTO_POSTED.value for o in originals
+        ):
+            await review.close_for_entry(
+                session,
+                entry_id=entry.id,
+                outcome=ReviewStatus.CANCELLED.value,
+                note=f"{reason_code or 'other'}: {payload.get('reason') or ''}"[:2000],
+                user_id=event.actor_user_id,
+            )
+            rule_ids = set(
+                await session.scalars(
+                    select(AutoPostingReview.rule_id).where(
+                        AutoPostingReview.journal_entry_id == entry.id,
+                        AutoPostingReview.rule_id.is_not(None),
+                    )
+                )
+            )
+            for rule_id in rule_ids:
+                await learning.on_automation_error(
+                    session,
+                    rule_id,
+                    tenant_id=tenant_id,
+                    reason_code=reason_code,
+                    user_id=event.actor_user_id,
+                )
     # Every transaction that carried this posting (a transfer pair carries it on both halves)
     # is open again; the entry id stays as history and ``book_payment`` accepts a reversed
     # effective entry (B03 Storno plus Neubuchung).
@@ -149,10 +188,15 @@ async def _on_entry_reversed(
             .with_for_update()
         )
     )
+    if not txs and entry.bank_transaction_id is not None:
+        corrected = await session.get(BankTransaction, entry.bank_transaction_id)
+        if corrected is not None:
+            await proposals.observe_learning(session, corrected)
     for tx in txs:
         tx.status = TransactionStatus.NEW
         await session.flush()
         await proposals.ensure_pending(session, tx)
+        await proposals.observe_learning(session, tx)
         await emit(
             session,
             tenant_id=tenant_id,

@@ -977,6 +977,11 @@ async def collect(
         ],
     )
 
+    # Automation of the bank reconciliation (ADR 0014 addendum S6, rule M12-05): decision
+    # rounds, verifier fingerprints, review items, level changes and learned rule proposals of
+    # the legal entity in the period; nothing here changes a posting.
+    automatik = await _automation_tables(session, ledger, start, end)
+
     generated_at = datetime.now(UTC)
     meta: dict[str, Any] = {
         "format": FORMAT,
@@ -1040,10 +1045,276 @@ async def collect(
             schluessel,
             schluesselwerte,
             belege,
+            *automatik,
         ],
         receipts=receipts,
         receipt_files=receipt_files,
     )
+
+
+async def _automation_tables(
+    session: AsyncSession, ledger: Ledger, start: date, end: date
+) -> list[Table]:
+    """Tables ``entscheidungen`` (posting_decision of the legal entity in the period),
+    ``nachkontrolle`` (auto_posting_review), ``automatikstufen`` (bookkeeping_level_request)
+    and ``regelvorschlaege`` (bank_rule_proposal) plus ``bankregeln`` (bank_rule states)."""
+    from mhvp.banking.models import (
+        AutoPostingReview,
+        BankRule,
+        BankRuleProposal,
+        BookkeepingLevelRequest,
+        PostingDecision,
+    )
+
+    lo = datetime.combine(start, datetime.min.time(), tzinfo=UTC)
+    hi = datetime.combine(end, datetime.max.time(), tzinfo=UTC)
+    decisions = list(
+        await session.scalars(
+            select(PostingDecision)
+            .where(
+                PostingDecision.legal_entity_id == ledger.legal_entity_id,
+                PostingDecision.created_at.between(lo, hi),
+            )
+            .order_by(PostingDecision.created_at, PostingDecision.round)
+        )
+    )
+    entscheidungen = Table(
+        "entscheidungen",
+        [
+            "Entscheidung-ID",
+            "Umsatz-ID",
+            "Runde",
+            "Status",
+            "Massenbestätigung",
+            "Engine-Version",
+            "Regel-Version",
+            "Merkmalshash",
+            "Fallart",
+            "Stufe",
+            "Beste Quelle",
+            "Konfidenz",
+            "Gewählter Vorschlag",
+            "Abweichung",
+            "Grund",
+            "Buchung-ID",
+            "Verifier-Fingerprint",
+            "Nachkontrolle fällig",
+            "Entschieden von",
+            "Entschieden am",
+            "Angelegt am",
+        ],
+        [
+            [
+                d.id,
+                d.bank_transaction_id,
+                d.round,
+                d.status,
+                d.bulk,
+                d.engine_version,
+                d.rule_version,
+                d.features_hash,
+                d.case_kind,
+                d.level,
+                d.best_source,
+                d.best_confidence,
+                d.chosen_index,
+                json.dumps(d.diff or {}, sort_keys=True, ensure_ascii=False),
+                d.reason,
+                d.journal_entry_id,
+                d.verifier_fingerprint,
+                d.review_due_on,
+                d.decided_by,
+                d.decided_at,
+                d.created_at,
+            ]
+            for d in decisions
+        ],
+    )
+    reviews = list(
+        await session.scalars(
+            select(AutoPostingReview)
+            .where(
+                AutoPostingReview.legal_entity_id == ledger.legal_entity_id,
+                AutoPostingReview.created_at.between(lo, hi),
+            )
+            .order_by(AutoPostingReview.created_at)
+        )
+    )
+    nachkontrolle = Table(
+        "nachkontrolle",
+        [
+            "Nachkontrolle-ID",
+            "Entscheidung-ID",
+            "Umsatz-ID",
+            "Buchung-ID",
+            "Regel-ID",
+            "Fallklasse",
+            "Art",
+            "Fällig am",
+            "Status",
+            "Hinweis",
+            "Geprüft von",
+            "Geprüft am",
+        ],
+        [
+            [
+                r.id,
+                r.posting_decision_id,
+                r.bank_transaction_id,
+                r.journal_entry_id,
+                r.rule_id,
+                r.case_kind,
+                r.kind,
+                r.due_on,
+                r.status,
+                r.note,
+                r.reviewed_by,
+                r.reviewed_at,
+            ]
+            for r in reviews
+        ],
+    )
+    requests = list(
+        await session.scalars(
+            select(BookkeepingLevelRequest)
+            .where(BookkeepingLevelRequest.created_at.between(lo, hi))
+            .order_by(BookkeepingLevelRequest.created_at)
+        )
+    )
+    automatikstufen = Table(
+        "automatikstufen",
+        [
+            "Antrag-ID",
+            "Fallklasse",
+            "Von",
+            "Nach",
+            "Grund",
+            "Status",
+            "Beantragt von",
+            "Entschieden von",
+            "Entschieden am",
+            "Kommentar",
+            "Eignungsbericht",
+        ],
+        [
+            [
+                r.id,
+                r.case_kind,
+                r.level_from,
+                r.level_to,
+                r.reason,
+                r.status,
+                r.requested_by,
+                r.decided_by,
+                r.decided_at,
+                r.decision_comment,
+                json.dumps(r.evidence or {}, sort_keys=True, ensure_ascii=False),
+            ]
+            for r in requests
+        ],
+    )
+    proposals = list(
+        await session.scalars(
+            select(BankRuleProposal)
+            .where(
+                BankRuleProposal.legal_entity_id == ledger.legal_entity_id,
+                BankRuleProposal.created_at.between(lo, hi),
+            )
+            .order_by(BankRuleProposal.created_at)
+        )
+    )
+    regelvorschlaege = Table(
+        "regelvorschlaege",
+        [
+            "Vorschlag-ID",
+            "Musterschlüssel",
+            "Status",
+            "Richtung",
+            "Fallklasse",
+            "Konto",
+            "Aktion",
+            "Betrag von",
+            "Betrag bis",
+            "Zwecktoken",
+            "Wiederkehrend",
+            "Schwelle",
+            "Nachweis",
+            "Regel-ID",
+            "Entschieden von",
+            "Entschieden am",
+            "Grund",
+        ],
+        [
+            [
+                r.id,
+                r.pattern_key,
+                r.status,
+                r.direction,
+                r.case_kind,
+                r.account_number,
+                r.action_kind,
+                r.amount_min,
+                r.amount_max,
+                ",".join(r.purpose_tokens or []),
+                r.recurring,
+                r.threshold,
+                r.evidence_count,
+                r.rule_id,
+                r.decided_by,
+                r.decided_at,
+                r.reason,
+            ]
+            for r in proposals
+        ],
+    )
+    rules = list(
+        await session.scalars(
+            select(BankRule)
+            .where(BankRule.legal_entity_id == ledger.legal_entity_id)
+            .order_by(BankRule.created_at)
+        )
+    )
+    bankregeln = Table(
+        "bankregeln",
+        [
+            "Regel-ID",
+            "Name",
+            "Bedingung",
+            "Aktion",
+            "Zustand",
+            "Betragsgrenze",
+            "Testnachweis-Dokument",
+            "Treffer",
+            "Widersprüche",
+            "Gelernt aus Vorschlag",
+            "Ersetzt durch",
+            "Freigegeben von",
+            "Freigegeben am",
+            "Angelegt von",
+            "Angelegt am",
+        ],
+        [
+            [
+                r.id,
+                r.name,
+                json.dumps(r.match or {}, sort_keys=True, ensure_ascii=False),
+                json.dumps(r.action or {}, sort_keys=True, ensure_ascii=False),
+                r.approval_state.value,
+                r.max_amount,
+                r.test_evidence_document_id,
+                r.hit_count,
+                r.contradiction_count,
+                r.learned_from_proposal_id,
+                r.superseded_by_id,
+                r.approved_by,
+                r.approved_at,
+                r.created_by,
+                r.created_at,
+            ]
+            for r in rules
+        ],
+    )
+    return [entscheidungen, nachkontrolle, automatikstufen, regelvorschlaege, bankregeln]
 
 
 def _contact_name(contact: Any) -> str:
