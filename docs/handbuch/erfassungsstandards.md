@@ -92,3 +92,11 @@ jeweiligen Datensatz.
 
 Über die API: `GET /api/v1/data-quality/report` (Bericht) und `POST /api/v1/data-quality/check`
 (Prüfung eines Entwurfs ohne Speichern, nur Hinweise).
+
+## Fotos im Übergabeprotokoll (M31 WP2, 29.09.2026)
+
+Das Foto zu einem Mangel oder Zähler wird direkt beim Anlegen des Eintrags aufgenommen
+(Foto aufnehmen oder Aus Galerie wählen). Standard sind ein Übersichtsfoto je Raum und ein
+Detailfoto je Mangel; das Zählerfoto zeigt Zählernummer und Stand lesbar. Fotos werden
+serverseitig ohne Metadaten gespeichert (keine Ortsangabe, kein Aufnahmezeitpunkt aus der
+Kamera); der Zeitpunkt im Protokoll ist der Upload.

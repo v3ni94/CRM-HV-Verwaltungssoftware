@@ -135,6 +135,71 @@ lassen. Einzelheiten in [Verträge](vertraege.md), Abschnitt Kautionsabrechnung.
 
 Wie Schritt 2 mit einem neuen Protokoll, Beteiligte neuer Mieter und Vermieter.
 
+### Übergabe am Tablet oder Handy
+
+Die Übergabe wird im Browser des Geräts erfasst, ohne eigene App. Anmelden wie am
+Arbeitsplatz; das Menü öffnet sich über das Symbol links oben (Handy und Tablet hochkant)
+oder über die schmale Leiste links (Tablet quer). Dort Makler, Übergabeprotokolle.
+
+1. Liste: am Handy erscheinen die Protokolle als Karten mit Nummer und Fassung, Status,
+   Adresse mit Einheit, Beteiligten und Datum; der Chip Heute zeigt nur die Übergaben des
+   Tages, Diese Woche die laufende Woche. Weitere Filter (Status, Protokollart, Archiv)
+   stehen hinter Filter. Neu legt ein Protokoll mit Einheit aus dem Bestand oder mit
+   manueller Adresse an.
+2. Aufbau des Editors: oben die Schrittleiste zum Wischen mit einem Zähler je Schritt und
+   einem Statuspunkt (grau leer, grün ausgefüllt, gelb mit Hinweis). Unten Zurück und
+   Weiter; Speichern liegt in der unteren Leiste über der Tastatur. Ein Schrittwechsel mit
+   ungespeicherten Eingaben fragt nach: Hier bleiben behält die Eingabe, Verwerfen wechselt.
+3. Objekt und Beteiligte: Telefon, E-Mail und PLZ öffnen die passende Tastatur; Beteiligte
+   lassen sich über die Kontaktsuche übernehmen.
+4. Zähler: Zählerstand mit Dezimaltastatur, Foto direkt beim Anlegen über Foto aufnehmen
+   oder Aus Galerie wählen (auch iPhone Fotos im HEIC Format). Nach dem Speichern zeigt jede
+   Datei ihren Stand: Wartet, Wird hochgeladen, Fertig, Fehlgeschlagen mit Erneut versuchen
+   (nur diese Datei) oder Später (das Formular schließt, das Foto kann später nachgereicht
+   werden).
+5. Räume und Mängel: Mangel mit Raum, Priorität, Status und Foto in einem Schritt anlegen.
+   Fotos erscheinen als Kacheln; Tippen öffnet die Galerie zum Wischen; Entfernen fragt nach
+   und erklärt, wann die Datei endgültig gelöscht wird.
+6. Schlüssel, Gegenstände, Bemerkungen (Intern erscheint nie im PDF), Anhänge.
+7. Unterschriften: Einwilligungstext lesen, dann Unterschrift von Beteiligtem antippen, das
+   Gerät übergeben, Fläche im Vollbild unterschreiben, Rückgängig und Leeren stehen bereit;
+   Weitere Person für Zeugen oder Bevollmächtigte ohne Eintrag. Höchstens eine gültige
+   Unterschrift je Person; löschen nur vor dem Abschluss.
+8. Nach der ersten Unterschrift sind Räume, Mängel, Zähler, Schlüssel, Gegenstände,
+   Bemerkungen, Fotos und die Protokollangaben gesperrt. Muss doch etwas geändert werden:
+   Änderung nach Unterschrift antippen, Änderungsgrund eingeben, bestätigen. Grund,
+   Zeitpunkt und Bearbeiter stehen danach im Protokoll und im PDF; alle bisherigen
+   Unterschriften gelten als vor der Änderung geleistet und müssen erneut eingeholt werden.
+   Beteiligte und interne Angaben bleiben auch mit Unterschrift änderbar.
+9. Prüfung und Abschluss zeigt die Zusammenfassung mit Hinweisen und Sprung zum Schritt;
+   Protokoll verbindlich abschließen fragt nach, bei Hinweisen als Trotz Hinweisen. PDF
+   ansehen öffnet im selben Fenster, Zurück führt zum Protokoll. Zustellung vorbereiten
+   erzeugt nur Entwürfe für die Vier Augen Freigabe im Postausgang.
+
+### Protokoll später einsehen
+
+Abgeschlossene Protokolle öffnen als Leseansicht ohne Eingabefelder: Kopf mit Nummer,
+Fassung, Status, Adresse und Datum; Beteiligte mit Anrufen und E-Mail direkt aus der
+Ansicht; Zählerstände; Räume mit ihren Mängeln und Fotos, Mängel ohne Raum in einem eigenen
+Block; Schlüssel, Gegenstände, Bemerkungen (Intern gekennzeichnet); Anhänge; der Verlauf
+Änderungen nach Unterschrift, falls vorhanden; Unterschriften mit Zeitpunkt, ungültige mit
+Kennzeichnung; PDF ansehen. Änderungen sind nur als neue Fassung mit Änderungsgrund
+möglich. Weder das Öffnen der Ansicht noch ein Lesestatus sind ein Zustellnachweis; die
+Zustellung läuft über den Postausgang.
+
+### Hinweise für den Betrieb vor Ort
+
+- Eingaben werden nur beim Speichern übertragen. Ohne Empfang erscheint der Hinweis Keine
+  Verbindung; die Eingaben bleiben auf der Seite bis zum erneuten Speichern (Erneut
+  senden). Die Seite nicht neu laden. Eine Offline Erfassung ist noch nicht freigegeben
+  (M30-07, ADR 0016).
+- Fotos werden vor dem Senden auf dem Gerät verkleinert; Metadaten wie der Aufnahmeort
+  werden auf dem Server entfernt.
+- Entfernen eines Fotos löst nur die Verknüpfung dieser Fassung; ist das Foto in keiner
+  anderen Fassung verknüpft, wird die Datei endgültig gelöscht.
+- Das Gerät beim Unterschreiben nicht unbeaufsichtigt lassen und nach der Unterschrift
+  zurücknehmen.
+
 ## Zu verknüpfende Datensätze
 
 | Datensatz | Was |

@@ -247,3 +247,43 @@ Zusammenfassung aus den Nachträgen dieses Plans, dem `CHANGELOG.md` (1.19.0 bis
 - M30-04 Fotos: Bildpipeline gilt zentral für `POST /documents` (alle Module); keine
   nachträgliche Bereinigung von Altbildern; keine Ortsermittlung per Browser.
 - M30-05 zweiter Faktor: erledigt durch M2-01 (zweiter Faktor freiwillig, auch im Portal).
+
+## Stufe 5: Bedienung am Tablet und Handy (M31 WP2, 29.09.2026)
+
+Ziel und Abnahme: `docs/plans/M31-handy-tablet.md` Abschnitt WP2. Betreiberentscheidungen
+vom 28.09.2026: (1) die gewünschte vollständige Offline Erfassung ist nicht Teil dieser
+Stufe, sie bleibt online mit dem Hinweis Keine Verbindung und Erneut senden; der geforderte
+Offline Modus ist als ADR 0016 (Proposed) mit den offenen Datenschutzpunkten beschrieben und
+wird als eigenes Paket gebaut; (2) nach der ersten Unterschrift ist der Inhalt gesperrt,
+Änderungen nur über Änderung nach Unterschrift mit Pflichtgrund, Zeitpunkt und Bearbeiter im
+Verlauf, alle Unterschriften müssen wiederholt werden (Regel M30-09, Migration 0239).
+
+Dateien (Server): `models.py` (STEPS um `defects`, `HandoverChange`,
+`HandoverSignature.invalidated_at`, `invalidated_change_id`), `services.py` (Hinweiscodes
+`completion_hint_codes`, Inhaltssperre `content_locked`, `require_content_unlocked`,
+`record_change`, `changes_of`, `thumbnail_url` in `documents_of`), `routers.py`
+(`hint_codes`, `content_locked`, `changes` im Vollausgabeformat, `POST .../changes`,
+`GET .../documents/{doc}/thumbnail`, Listenfilter `handover_date`, `handover_from`,
+`handover_to`, Sperrprüfung je Abschnitt), `portal.py` (Thumbnail mit Grant, Portalpfad in
+`thumbnail_url`), `pdf.py` (Abschnitt Änderungen nach Unterschrift, Kennzeichnung ungültiger
+Unterschriften), `images.py` (`thumbnail`), `documents/text.py` (`image/heif`),
+`alembic/versions/0239_handover_change_after_signature.py`.
+
+Dateien (CRM): `HandoverEditor.tsx` (Schrittleiste mit Zählern und Statuspunkten aus
+`hint_codes`, Fußzeile Zurück und Weiter, Rückfrage bei ungespeicherten Eingaben,
+ConfirmSheet statt window.confirm, Erneut senden, Offline Hinweis, Capture first mit Status
+je Datei, Änderung nach Unterschrift), `HandoverSummary.tsx` (Leseansicht),
+`HandoverList.tsx` (ResponsiveList, Filter Aufklapper, Chips Heute und Diese Woche),
+`PhotoPicker.tsx`, `PhotoStrip.tsx`, `PhotoGallery.tsx`, `SignaturePad.tsx` (Hülle über
+`packages/ui/src/signature-canvas.ts`), `SignatureSheet.tsx`, `steps.ts`,
+`useDirtyGuard.ts`, `types.ts` (`INPUT_HINTS`), `lib/image-downscale.ts`, Seiten unter
+`makler/uebergabe`, Proxy `api/handover-files` (Thumbnail Muster), BFF (`changes`).
+
+Tests: `tests/integration/test_m30_handover.py::test_wp2_steps_hint_codes_thumbnail_and_date_filter`
+und `::test_change_after_signature_locks_content_and_records_history`,
+`tests/unit/test_m30_handover_images.py` (HEIF, Thumbnail), vitest je Komponente,
+`packages/ui/src/signature-canvas.test.ts`.
+
+Nicht gebaut (Betreiberfragen, Plan M31): Offline Erfassung (ADR 0016), Autosave je Feld,
+Browser Cache für Vorschaubilder, Zugriffsprotokollierung für Vorschaubilder, eingeschränkter
+Signiermodus, Idempotenz wiederholter Uploads, Sitzungsdauer.

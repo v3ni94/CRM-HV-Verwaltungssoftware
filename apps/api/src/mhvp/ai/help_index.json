@@ -3675,6 +3675,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Fotos im Übergabeprotokoll (M31 WP2, 29.09.2026)",
+  "source": "Handbuch: Erfassungsstandards",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Foto zu einem Mangel oder Zähler wird direkt beim Anlegen des Eintrags aufgenommen (Foto aufnehmen oder Aus Galerie wählen). Standard sind ein Übersichtsfoto je Raum und ein Detailfoto je Mangel; das Zählerfoto zeigt Zählernummer und Stand lesbar. Fotos werden serverseitig oh",
+  "file": "docs/handbuch/erfassungsstandards.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Voraussetzungen",
   "source": "Handbuch: Abgleichbericht im Parallelbetrieb (Immoware24 gegen Plattform)",
   "href": null,
