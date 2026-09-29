@@ -16132,6 +16132,72 @@
         "title": "Decision",
         "type": "string"
       },
+      "DecisionIn": {
+        "properties": {
+          "action": {
+            "enum": [
+              "accept_candidate",
+              "set_manually",
+              "reject",
+              "snooze"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "candidate_index": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Index"
+          },
+          "category_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category Id"
+          },
+          "document_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Type"
+          },
+          "snoozed_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Snoozed Until"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "DecisionIn",
+        "type": "object"
+      },
       "DeductionIn": {
         "additionalProperties": false,
         "properties": {
@@ -35075,6 +35141,196 @@
         "title": "MfaVerifyRequest",
         "type": "object"
       },
+      "MigrationDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          }
+        },
+        "title": "MigrationDecisionIn",
+        "type": "object"
+      },
+      "MigrationReportListOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "compared": {
+            "title": "Compared",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "deviations": {
+            "title": "Deviations",
+            "type": "integer"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "total_difference": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Difference",
+            "type": "string"
+          },
+          "zero_difference": {
+            "title": "Zero Difference",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "created_at",
+          "created_by",
+          "as_of",
+          "zero_difference",
+          "compared",
+          "deviations",
+          "total_difference",
+          "document_id"
+        ],
+        "title": "MigrationReportListOut",
+        "type": "object"
+      },
+      "MigrationReportOut": {
+        "properties": {
+          "as_of": {
+            "format": "date",
+            "title": "As Of",
+            "type": "string"
+          },
+          "compared": {
+            "title": "Compared",
+            "type": "integer"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "deviations": {
+            "title": "Deviations",
+            "type": "integer"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReconciliationLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "summary": {
+            "additionalProperties": true,
+            "title": "Summary",
+            "type": "object"
+          },
+          "total_difference": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Total Difference",
+            "type": "string"
+          },
+          "zero_difference": {
+            "title": "Zero Difference",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "created_at",
+          "created_by",
+          "as_of",
+          "zero_difference",
+          "compared",
+          "deviations",
+          "total_difference",
+          "document_id",
+          "summary",
+          "lines"
+        ],
+        "title": "MigrationReportOut",
+        "type": "object"
+      },
       "MirrorDeletionAction": {
         "enum": [
           "delete",
@@ -45856,6 +46112,111 @@
         "title": "ReportLineOut",
         "type": "object"
       },
+      "ReportListOut": {
+        "properties": {
+          "as_of": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "As Of"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "totals": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Totals",
+            "type": "object"
+          },
+          "trigger": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trigger"
+          }
+        },
+        "required": [
+          "id",
+          "created_at",
+          "as_of",
+          "trigger",
+          "totals",
+          "sources"
+        ],
+        "title": "ReportListOut",
+        "type": "object"
+      },
+      "ReportOut": {
+        "properties": {
+          "accounts": {
+            "items": {
+              "$ref": "#/components/schemas/ReportLineOut"
+            },
+            "title": "Accounts",
+            "type": "array"
+          },
+          "ledger_id": {
+            "format": "uuid",
+            "title": "Ledger Id",
+            "type": "string"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "unmapped_count": {
+            "title": "Unmapped Count",
+            "type": "integer"
+          },
+          "used_unmapped_count": {
+            "title": "Used Unmapped Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "ledger_id",
+          "period_from",
+          "period_to",
+          "unmapped_count",
+          "used_unmapped_count",
+          "accounts"
+        ],
+        "title": "ReportOut",
+        "type": "object"
+      },
       "ReportType": {
         "enum": [
           "properties",
@@ -56564,50 +56925,6 @@
         "title": "WorkspaceBulkIn",
         "type": "object"
       },
-      "mhvp__accounting__datev_mapping_routers__ReportOut": {
-        "properties": {
-          "accounts": {
-            "items": {
-              "$ref": "#/components/schemas/ReportLineOut"
-            },
-            "title": "Accounts",
-            "type": "array"
-          },
-          "ledger_id": {
-            "format": "uuid",
-            "title": "Ledger Id",
-            "type": "string"
-          },
-          "period_from": {
-            "format": "date",
-            "title": "Period From",
-            "type": "string"
-          },
-          "period_to": {
-            "format": "date",
-            "title": "Period To",
-            "type": "string"
-          },
-          "unmapped_count": {
-            "title": "Unmapped Count",
-            "type": "integer"
-          },
-          "used_unmapped_count": {
-            "title": "Used Unmapped Count",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "ledger_id",
-          "period_from",
-          "period_to",
-          "unmapped_count",
-          "used_unmapped_count",
-          "accounts"
-        ],
-        "title": "ReportOut",
-        "type": "object"
-      },
       "mhvp__ai__schemas__ProviderIn": {
         "additionalProperties": false,
         "properties": {
@@ -57328,323 +57645,6 @@
           "name"
         ],
         "title": "TenantOut",
-        "type": "object"
-      },
-      "mhvp__imports__migration_routers__DecisionIn": {
-        "additionalProperties": false,
-        "properties": {
-          "comment": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Comment"
-          }
-        },
-        "title": "DecisionIn",
-        "type": "object"
-      },
-      "mhvp__imports__migration_routers__ReportListOut": {
-        "properties": {
-          "as_of": {
-            "format": "date",
-            "title": "As Of",
-            "type": "string"
-          },
-          "compared": {
-            "title": "Compared",
-            "type": "integer"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "created_by": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created By"
-          },
-          "deviations": {
-            "title": "Deviations",
-            "type": "integer"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "property_id": {
-            "format": "uuid",
-            "title": "Property Id",
-            "type": "string"
-          },
-          "total_difference": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Total Difference",
-            "type": "string"
-          },
-          "zero_difference": {
-            "title": "Zero Difference",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "property_id",
-          "created_at",
-          "created_by",
-          "as_of",
-          "zero_difference",
-          "compared",
-          "deviations",
-          "total_difference",
-          "document_id"
-        ],
-        "title": "ReportListOut",
-        "type": "object"
-      },
-      "mhvp__imports__migration_routers__ReportOut": {
-        "properties": {
-          "as_of": {
-            "format": "date",
-            "title": "As Of",
-            "type": "string"
-          },
-          "compared": {
-            "title": "Compared",
-            "type": "integer"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "created_by": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Created By"
-          },
-          "deviations": {
-            "title": "Deviations",
-            "type": "integer"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "lines": {
-            "items": {
-              "$ref": "#/components/schemas/ReconciliationLineOut"
-            },
-            "title": "Lines",
-            "type": "array"
-          },
-          "property_id": {
-            "format": "uuid",
-            "title": "Property Id",
-            "type": "string"
-          },
-          "summary": {
-            "additionalProperties": true,
-            "title": "Summary",
-            "type": "object"
-          },
-          "total_difference": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Total Difference",
-            "type": "string"
-          },
-          "zero_difference": {
-            "title": "Zero Difference",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "property_id",
-          "created_at",
-          "created_by",
-          "as_of",
-          "zero_difference",
-          "compared",
-          "deviations",
-          "total_difference",
-          "document_id",
-          "summary",
-          "lines"
-        ],
-        "title": "ReportOut",
-        "type": "object"
-      },
-      "mhvp__imports__reconciliation_routers__ReportListOut": {
-        "properties": {
-          "as_of": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "As Of"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "sources": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Sources",
-            "type": "array"
-          },
-          "totals": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Totals",
-            "type": "object"
-          },
-          "trigger": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Trigger"
-          }
-        },
-        "required": [
-          "id",
-          "created_at",
-          "as_of",
-          "trigger",
-          "totals",
-          "sources"
-        ],
-        "title": "ReportListOut",
-        "type": "object"
-      },
-      "mhvp__objektakte__review_routers__DecisionIn": {
-        "properties": {
-          "action": {
-            "enum": [
-              "accept_candidate",
-              "set_manually",
-              "reject",
-              "snooze"
-            ],
-            "title": "Action",
-            "type": "string"
-          },
-          "candidate_index": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Candidate Index"
-          },
-          "category_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Category Id"
-          },
-          "document_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Type"
-          },
-          "snoozed_until": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Snoozed Until"
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "title": "DecisionIn",
         "type": "object"
       },
       "mhvp__platform__schemas__TenantOut": {
@@ -58718,7 +58718,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__accounting__datev_mapping_routers__ReportOut"
+                  "$ref": "#/components/schemas/ReportOut"
                 }
               }
             },
@@ -88825,7 +88825,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__imports__migration_routers__DecisionIn"
+                "$ref": "#/components/schemas/MigrationDecisionIn"
               }
             }
           },
@@ -88880,7 +88880,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__imports__migration_routers__ReportListOut"
+                    "$ref": "#/components/schemas/MigrationReportListOut"
                   },
                   "title": "Response List Reports Api V1 Imports Migration Properties  Property Id  Reconciliation Get",
                   "type": "array"
@@ -88934,7 +88934,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__imports__migration_routers__ReportOut"
+                  "$ref": "#/components/schemas/MigrationReportOut"
                 }
               }
             },
@@ -88977,7 +88977,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__imports__migration_routers__ReportOut"
+                  "$ref": "#/components/schemas/MigrationReportOut"
                 }
               }
             },
@@ -89135,7 +89135,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__imports__migration_routers__DecisionIn"
+                "$ref": "#/components/schemas/MigrationDecisionIn"
               }
             }
           },
@@ -89188,7 +89188,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__imports__migration_routers__DecisionIn"
+                "$ref": "#/components/schemas/MigrationDecisionIn"
               }
             }
           },
@@ -89245,7 +89245,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__imports__reconciliation_routers__ReportListOut"
+                    "$ref": "#/components/schemas/ReportListOut"
                   },
                   "title": "Response List Reports Api V1 Imports Reconciliation Reports Get",
                   "type": "array"
@@ -102225,7 +102225,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__objektakte__review_routers__DecisionIn"
+                "$ref": "#/components/schemas/DecisionIn"
               }
             }
           },

@@ -157,7 +157,7 @@ class BalanceImportOut(BaseModel):
     errors: list[str]
 
 
-class DecisionIn(_In):
+class MigrationDecisionIn(_In):
     comment: str | None = None
 
 
@@ -173,7 +173,7 @@ class ReconciliationLineOut(BaseModel):
     hint: str | None
 
 
-class ReportListOut(BaseModel):
+class MigrationReportListOut(BaseModel):
     id: uuid.UUID
     property_id: uuid.UUID
     created_at: datetime
@@ -186,7 +186,7 @@ class ReportListOut(BaseModel):
     document_id: uuid.UUID | None
 
 
-class ReportOut(ReportListOut):
+class MigrationReportOut(MigrationReportListOut):
     summary: dict[str, Any]
     lines: list[ReconciliationLineOut]
 
@@ -282,8 +282,8 @@ async def _balances_out(
     )
 
 
-def _report_list_out(report: MigrationReconciliationReport) -> ReportListOut:
-    return ReportListOut(
+def _report_list_out(report: MigrationReconciliationReport) -> MigrationReportListOut:
+    return MigrationReportListOut(
         id=report.id,
         property_id=report.property_id,
         created_at=report.created_at,
@@ -297,8 +297,8 @@ def _report_list_out(report: MigrationReconciliationReport) -> ReportListOut:
     )
 
 
-def _report_out(report: MigrationReconciliationReport) -> ReportOut:
-    return ReportOut(
+def _report_out(report: MigrationReconciliationReport) -> MigrationReportOut:
+    return MigrationReportOut(
         **_report_list_out(report).model_dump(),
         summary=report.summary,
         lines=[ReconciliationLineOut(**line) for line in report.lines],
@@ -638,7 +638,7 @@ async def get_opening_balances(
 )
 async def release_opening_balances(
     balance_id: uuid.UUID,
-    body: DecisionIn,
+    body: MigrationDecisionIn,
     request: Request,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> OpeningBalancesOut:
@@ -673,7 +673,7 @@ async def post_opening_balances(
 @router.get("/properties/{property_id}/reconciliation", summary="Abgleichberichte des Objekts")
 async def list_reports(
     property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
-) -> list[ReportListOut]:
+) -> list[MigrationReportListOut]:
     async with tenant_tx(request, principal) as session:
         prop = await _property(session, property_id)
         rows = (
@@ -696,7 +696,7 @@ async def run_reconciliation(
     body: ReconciliationRunIn,
     request: Request,
     principal: TenantPrincipal = Depends(CREATE),
-) -> ReportOut:
+) -> MigrationReportOut:
     async with tenant_tx(request, principal) as session:
         prop = await _property(session, property_id)
         as_of = body.as_of
@@ -759,7 +759,7 @@ async def run_reconciliation(
 @router.get("/reconciliation/{report_id}", summary="Abgleichbericht")
 async def get_report(
     report_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
-) -> ReportOut:
+) -> MigrationReportOut:
     async with tenant_tx(request, principal) as session:
         row = await session.get(MigrationReconciliationReport, report_id)
         if row is None:
@@ -871,7 +871,7 @@ async def _decide(
 @router.post("/switch-requests/{request_id}/approve", summary="Wechsel freigeben (zweite Person)")
 async def approve_switch(
     request_id: uuid.UUID,
-    body: DecisionIn,
+    body: MigrationDecisionIn,
     request: Request,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> SwitchRequestOut:
@@ -881,7 +881,7 @@ async def approve_switch(
 @router.post("/switch-requests/{request_id}/reject", summary="Wechsel ablehnen")
 async def reject_switch(
     request_id: uuid.UUID,
-    body: DecisionIn,
+    body: MigrationDecisionIn,
     request: Request,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> SwitchRequestOut:

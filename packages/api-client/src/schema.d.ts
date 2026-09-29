@@ -24869,6 +24869,22 @@ export interface components {
          * @enum {string}
          */
         Decision: "pending" | "accepted" | "modified" | "rejected";
+        /** DecisionIn */
+        DecisionIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "accept_candidate" | "set_manually" | "reject" | "snooze";
+            /** Candidate Index */
+            candidate_index?: number | null;
+            /** Category Id */
+            category_id?: string | null;
+            /** Document Type */
+            document_type?: string | null;
+            /** Snoozed Until */
+            snoozed_until?: string | null;
+        };
         /** DeductionIn */
         DeductionIn: {
             /** Amount */
@@ -30979,6 +30995,87 @@ export interface components {
             /** Tenant Id */
             tenant_id?: string | null;
         };
+        /** MigrationDecisionIn */
+        MigrationDecisionIn: {
+            /** Comment */
+            comment?: string | null;
+        };
+        /** MigrationReportListOut */
+        MigrationReportListOut: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Compared */
+            compared: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /** Deviations */
+            deviations: number;
+            /** Document Id */
+            document_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Total Difference */
+            total_difference: string;
+            /** Zero Difference */
+            zero_difference: boolean;
+        };
+        /** MigrationReportOut */
+        MigrationReportOut: {
+            /**
+             * As Of
+             * Format: date
+             */
+            as_of: string;
+            /** Compared */
+            compared: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Created By */
+            created_by: string | null;
+            /** Deviations */
+            deviations: number;
+            /** Document Id */
+            document_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lines */
+            lines: components["schemas"]["ReconciliationLineOut"][];
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Summary */
+            summary: {
+                [key: string]: unknown;
+            };
+            /** Total Difference */
+            total_difference: string;
+            /** Zero Difference */
+            zero_difference: boolean;
+        };
         /**
          * MirrorDeletionAction
          * @enum {string}
@@ -34525,6 +34622,55 @@ export interface components {
             /** Unmapped Lines */
             unmapped_lines: number;
         };
+        /** ReportListOut */
+        ReportListOut: {
+            /** As Of */
+            as_of: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Sources */
+            sources: {
+                [key: string]: unknown;
+            }[];
+            /** Totals */
+            totals: {
+                [key: string]: number;
+            };
+            /** Trigger */
+            trigger: string | null;
+        };
+        /** ReportOut */
+        ReportOut: {
+            /** Accounts */
+            accounts: components["schemas"]["ReportLineOut"][];
+            /**
+             * Ledger Id
+             * Format: uuid
+             */
+            ledger_id: string;
+            /**
+             * Period From
+             * Format: date
+             */
+            period_from: string;
+            /**
+             * Period To
+             * Format: date
+             */
+            period_to: string;
+            /** Unmapped Count */
+            unmapped_count: number;
+            /** Used Unmapped Count */
+            used_unmapped_count: number;
+        };
         /**
          * ReportType
          * @enum {string}
@@ -37929,30 +38075,6 @@ export interface components {
             /** Tag */
             tag?: string | null;
         };
-        /** ReportOut */
-        mhvp__accounting__datev_mapping_routers__ReportOut: {
-            /** Accounts */
-            accounts: components["schemas"]["ReportLineOut"][];
-            /**
-             * Ledger Id
-             * Format: uuid
-             */
-            ledger_id: string;
-            /**
-             * Period From
-             * Format: date
-             */
-            period_from: string;
-            /**
-             * Period To
-             * Format: date
-             */
-            period_to: string;
-            /** Unmapped Count */
-            unmapped_count: number;
-            /** Used Unmapped Count */
-            used_unmapped_count: number;
-        };
         /** ProviderIn */
         mhvp__ai__schemas__ProviderIn: {
             /**
@@ -38160,128 +38282,6 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-        };
-        /** DecisionIn */
-        mhvp__imports__migration_routers__DecisionIn: {
-            /** Comment */
-            comment?: string | null;
-        };
-        /** ReportListOut */
-        mhvp__imports__migration_routers__ReportListOut: {
-            /**
-             * As Of
-             * Format: date
-             */
-            as_of: string;
-            /** Compared */
-            compared: number;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Created By */
-            created_by: string | null;
-            /** Deviations */
-            deviations: number;
-            /** Document Id */
-            document_id: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /**
-             * Property Id
-             * Format: uuid
-             */
-            property_id: string;
-            /** Total Difference */
-            total_difference: string;
-            /** Zero Difference */
-            zero_difference: boolean;
-        };
-        /** ReportOut */
-        mhvp__imports__migration_routers__ReportOut: {
-            /**
-             * As Of
-             * Format: date
-             */
-            as_of: string;
-            /** Compared */
-            compared: number;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Created By */
-            created_by: string | null;
-            /** Deviations */
-            deviations: number;
-            /** Document Id */
-            document_id: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Lines */
-            lines: components["schemas"]["ReconciliationLineOut"][];
-            /**
-             * Property Id
-             * Format: uuid
-             */
-            property_id: string;
-            /** Summary */
-            summary: {
-                [key: string]: unknown;
-            };
-            /** Total Difference */
-            total_difference: string;
-            /** Zero Difference */
-            zero_difference: boolean;
-        };
-        /** ReportListOut */
-        mhvp__imports__reconciliation_routers__ReportListOut: {
-            /** As Of */
-            as_of: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Sources */
-            sources: {
-                [key: string]: unknown;
-            }[];
-            /** Totals */
-            totals: {
-                [key: string]: number;
-            };
-            /** Trigger */
-            trigger: string | null;
-        };
-        /** DecisionIn */
-        mhvp__objektakte__review_routers__DecisionIn: {
-            /**
-             * Action
-             * @enum {string}
-             */
-            action: "accept_candidate" | "set_manually" | "reject" | "snooze";
-            /** Candidate Index */
-            candidate_index?: number | null;
-            /** Category Id */
-            category_id?: string | null;
-            /** Document Type */
-            document_type?: string | null;
-            /** Snoozed Until */
-            snoozed_until?: string | null;
         };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
@@ -38852,7 +38852,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__accounting__datev_mapping_routers__ReportOut"];
+                    "application/json": components["schemas"]["ReportOut"];
                 };
             };
             /** @description Validation Error */
@@ -58670,7 +58670,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__imports__migration_routers__DecisionIn"];
+                "application/json": components["schemas"]["MigrationDecisionIn"];
             };
         };
         responses: {
@@ -58711,7 +58711,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__imports__migration_routers__ReportListOut"][];
+                    "application/json": components["schemas"]["MigrationReportListOut"][];
                 };
             };
             /** @description Validation Error */
@@ -58746,7 +58746,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__imports__migration_routers__ReportOut"];
+                    "application/json": components["schemas"]["MigrationReportOut"];
                 };
             };
             /** @description Validation Error */
@@ -58777,7 +58777,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__imports__migration_routers__ReportOut"];
+                    "application/json": components["schemas"]["MigrationReportOut"];
                 };
             };
             /** @description Validation Error */
@@ -58884,7 +58884,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__imports__migration_routers__DecisionIn"];
+                "application/json": components["schemas"]["MigrationDecisionIn"];
             };
         };
         responses: {
@@ -58919,7 +58919,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__imports__migration_routers__DecisionIn"];
+                "application/json": components["schemas"]["MigrationDecisionIn"];
             };
         };
         responses: {
@@ -58960,7 +58960,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__imports__reconciliation_routers__ReportListOut"][];
+                    "application/json": components["schemas"]["ReportListOut"][];
                 };
             };
             /** @description Validation Error */
@@ -67475,7 +67475,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__objektakte__review_routers__DecisionIn"];
+                "application/json": components["schemas"]["DecisionIn"];
             };
         };
         responses: {
