@@ -16,7 +16,7 @@ class _In(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
-class ConfigIn(_In):
+class LexofficeOrganisationIn(_In):
     legal_entity_id: uuid.UUID | None = None
     label: str | None = Field(default=None, max_length=120)
     api_key: str | None = Field(default=None, min_length=1, max_length=500)
@@ -33,7 +33,7 @@ class ConfigIn(_In):
     invoice_drafts: bool = False
 
 
-class ConfigOut(BaseModel):
+class LexofficeOrganisationOut(BaseModel):
     id: uuid.UUID
     legal_entity_id: uuid.UUID | None
     legal_entity_name: str | None
@@ -64,18 +64,18 @@ class ConfigOut(BaseModel):
     message: str | None = None
 
 
-class LegalEntityOut(BaseModel):
+class LexofficeLegalEntityOut(BaseModel):
     id: uuid.UUID
     kind: str
     name: str
 
 
-class InvoiceKindMappingIn(_In):
+class LexofficeInvoiceKindMappingIn(_In):
     kind: Literal["broker", "consulting", "management"]
     legal_entity_id: uuid.UUID | None
 
 
-class InvoiceKindMappingOut(BaseModel):
+class LexofficeInvoiceKindMappingOut(BaseModel):
     kind: str
     label: str
     legal_entity_id: uuid.UUID | None
@@ -83,7 +83,7 @@ class InvoiceKindMappingOut(BaseModel):
     config_id: uuid.UUID | None
 
 
-class RunOut(BaseModel):
+class LexofficeRunOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     kind: str
@@ -94,7 +94,7 @@ class RunOut(BaseModel):
     finished_at: datetime | None
 
 
-class OutboxOut(BaseModel):
+class LexofficeOutboxOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     config_id: uuid.UUID
@@ -111,18 +111,18 @@ class OutboxOut(BaseModel):
     created_at: datetime
 
 
-class Page(BaseModel):
+class LexofficePage(BaseModel):
     items: list[Any]
     total: int
     page: int
     size: int
 
 
-class MatchIn(_In):
+class LexofficeMatchIn(_In):
     scope: Literal["customers_and_vendors", "all"] = "customers_and_vendors"
 
 
-class LinkOut(BaseModel):
+class LexofficeLinkOut(BaseModel):
     id: uuid.UUID
     config_id: uuid.UUID
     contact_id: uuid.UUID | None
@@ -145,22 +145,22 @@ class LinkOut(BaseModel):
     deeplink: str | None
 
 
-class DecideIn(_In):
+class LexofficeDecideIn(_In):
     action: Literal["link", "create_remote", "create_local", "dismiss"]
     lexoffice_contact_id: str | None = Field(default=None, max_length=64)
     contact_id: uuid.UUID | None = None
     roles: list[Literal["customer", "vendor"]] = Field(default_factory=list)
 
 
-class ResolveIn(_In):
+class LexofficeResolveIn(_In):
     resolution: Literal["keep_crm", "keep_lexoffice"]
 
 
-class PushBatchIn(_In):
+class LexofficePushBatchIn(_In):
     contact_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
 
 
-class RemoteSearchOut(BaseModel):
+class LexofficeRemoteSearchOut(BaseModel):
     id: str
     display_name: str
     customer_number: int | None
@@ -170,7 +170,7 @@ class RemoteSearchOut(BaseModel):
     email: str | None
 
 
-class ContactStatusOut(BaseModel):
+class LexofficeContactStatusOut(BaseModel):
     config_id: uuid.UUID
     label: str | None
     legal_entity_id: uuid.UUID | None
@@ -185,7 +185,7 @@ class ContactStatusOut(BaseModel):
 # Invoice drafts -------------------------------------------------------------------------------
 
 
-class LineItemIn(_In):
+class LexofficeLineItemIn(_In):
     name: str = Field(min_length=1, max_length=255)
     description: str | None = Field(default=None, max_length=2000)
     quantity: Decimal = Field(gt=0)
@@ -194,13 +194,13 @@ class LineItemIn(_In):
     tax_rate_percent: Literal[0, 7, 19]
 
 
-class ShippingIn(_In):
+class LexofficeShippingIn(_In):
     type: Literal["none", "service", "serviceperiod"]
     date: dt_date | None = None
     end_date: dt_date | None = None
 
     @model_validator(mode="after")
-    def _dates(self) -> ShippingIn:
+    def _dates(self) -> LexofficeShippingIn:
         if self.type in ("service", "serviceperiod") and self.date is None:
             raise ValueError("Leistungsdatum fehlt")
         if self.type == "serviceperiod" and self.end_date is None:
@@ -208,26 +208,26 @@ class ShippingIn(_In):
         return self
 
 
-class InvoiceDraftIn(_In):
+class LexofficeInvoiceDraftIn(_In):
     config_id: uuid.UUID | None = None
     invoice_kind: Literal["broker", "consulting", "management"] | None = None
     contact_id: uuid.UUID | None = None
     voucher_date: date
     tax_type: Literal["net", "gross", "vatfree"]
-    line_items: list[LineItemIn] = Field(min_length=1, max_length=300)
-    shipping: ShippingIn
+    line_items: list[LexofficeLineItemIn] = Field(min_length=1, max_length=300)
+    shipping: LexofficeShippingIn
     title: str | None = Field(default=None, max_length=25)
     introduction: str | None = Field(default=None, max_length=2000)
     remark: str | None = Field(default=None, max_length=2000)
 
     @model_validator(mode="after")
-    def _vatfree(self) -> InvoiceDraftIn:
+    def _vatfree(self) -> LexofficeInvoiceDraftIn:
         if self.tax_type == "vatfree" and any(i.tax_rate_percent != 0 for i in self.line_items):
             raise ValueError("Steuerfreie Rechnungen erlauben nur 0 Prozent")
         return self
 
 
-class InvoiceDraftPreviewOut(BaseModel):
+class LexofficeInvoiceDraftPreviewOut(BaseModel):
     config_id: uuid.UUID
     legal_entity_id: uuid.UUID | None
     legal_entity_name: str | None
@@ -239,7 +239,7 @@ class InvoiceDraftPreviewOut(BaseModel):
     note: str
 
 
-class InvoiceDraftOut(BaseModel):
+class LexofficeInvoiceDraftOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     config_id: uuid.UUID
@@ -257,26 +257,26 @@ class InvoiceDraftOut(BaseModel):
 # Invoice copies ------------------------------------------------------------------------------
 
 
-class InvoiceCopyIn(_In):
+class LexofficeInvoiceCopyIn(_In):
     invoice_number: str = Field(min_length=1, max_length=64)
     message_id: uuid.UUID | None = None
 
 
-class InvoiceCopyCorrectIn(_In):
+class LexofficeInvoiceCopyCorrectIn(_In):
     invoice_number: str | None = Field(default=None, min_length=1, max_length=64)
     requester_contact_id: uuid.UUID | None = None
     selected_invoice_id: str | None = Field(default=None, max_length=64)
 
 
-class InvoiceCopyRejectIn(_In):
+class LexofficeInvoiceCopyRejectIn(_In):
     reason: str = Field(min_length=1, max_length=500)
 
 
-class LinkRecipientIn(_In):
+class LexofficeLinkRecipientIn(_In):
     contact_id: uuid.UUID
 
 
-class InvoiceCopyOut(BaseModel):
+class LexofficeInvoiceCopyOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     ticket_id: uuid.UUID
@@ -298,11 +298,11 @@ class InvoiceCopyOut(BaseModel):
 # Recurring preparation ------------------------------------------------------------------------
 
 
-class RecurringDoneIn(_In):
+class LexofficeRecurringDoneIn(_In):
     lexoffice_template_id: str = Field(min_length=1, max_length=64)
 
 
-class RecurringPrepOut(BaseModel):
+class LexofficeRecurringPrepOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
     admin_fee_setting_id: uuid.UUID

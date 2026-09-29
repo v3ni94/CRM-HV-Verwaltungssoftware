@@ -73,8 +73,8 @@ async def _entity_name(session: AsyncSession, entity_id: uuid.UUID | None) -> st
 
 async def _config_out(
     session: AsyncSession, config: LexofficeTenantConfig, message: str | None = None
-) -> s.ConfigOut:
-    return s.ConfigOut(
+) -> s.LexofficeOrganisationOut:
+    return s.LexofficeOrganisationOut(
         id=config.id,
         legal_entity_id=config.legal_entity_id,
         legal_entity_name=await _entity_name(session, config.legal_entity_id),
@@ -118,7 +118,7 @@ async def _tenant_config(
 async def apply_config(
     session: AsyncSession,
     config: LexofficeTenantConfig,
-    body: s.ConfigIn,
+    body: s.LexofficeOrganisationIn,
     principal: TenantPrincipal,
     settings: Any,
 ) -> str | None:
@@ -220,7 +220,7 @@ async def apply_config(
 @router.get("/configs", summary="Lexware Office Organisationen je Gesellschaft")
 async def list_configs(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
-) -> list[s.ConfigOut]:
+) -> list[s.LexofficeOrganisationOut]:
     async with tenant_tx(request, principal) as session:
         return [
             await _config_out(session, c)
@@ -230,8 +230,10 @@ async def list_configs(
 
 @router.post("/configs", status_code=201, summary="Lexware Office Organisation anlegen")
 async def create_config(
-    body: s.ConfigIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS_WRITE)
-) -> s.ConfigOut:
+    body: s.LexofficeOrganisationIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS_WRITE),
+) -> s.LexofficeOrganisationOut:
     async with tenant_tx(request, principal) as session:
         existing = await session.scalar(
             select(LexofficeTenantConfig).where(
@@ -267,7 +269,7 @@ async def create_config(
 @router.get("/configs/{config_id}", summary="Lexware Office Organisation lesen")
 async def get_config(
     config_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
-) -> s.ConfigOut:
+) -> s.LexofficeOrganisationOut:
     async with tenant_tx(request, principal) as session:
         return await _config_out(session, await _tenant_config(session, principal, config_id))
 
@@ -275,10 +277,10 @@ async def get_config(
 @router.put("/configs/{config_id}", summary="Lexware Office Organisation ändern")
 async def put_config(
     config_id: uuid.UUID,
-    body: s.ConfigIn,
+    body: s.LexofficeOrganisationIn,
     request: Request,
     principal: TenantPrincipal = Depends(SETTINGS_WRITE),
-) -> s.ConfigOut:
+) -> s.LexofficeOrganisationOut:
     async with tenant_tx(request, principal) as session:
         config = await _tenant_config(session, principal, config_id)
         message = await apply_config(session, config, body, principal, request.app.state.settings)
@@ -288,7 +290,7 @@ async def put_config(
 @router.post("/configs/{config_id}/test", summary="Verbindung testen (Organisation prüfen)")
 async def check_config_connection(
     config_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(SETTINGS_WRITE)
-) -> s.ConfigOut:
+) -> s.LexofficeOrganisationOut:
     async with tenant_tx(request, principal) as session:
         config = await _tenant_config(session, principal, config_id)
         await svc.check_connection(
@@ -304,7 +306,7 @@ async def check_config_connection(
 @router.get("/configs/{config_id}/runs", summary="Letzte Läufe")
 async def config_runs(
     config_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ACCOUNTING_READ)
-) -> list[s.RunOut]:
+) -> list[s.LexofficeRunOut]:
     async with tenant_tx(request, principal) as session:
         await _tenant_config(session, principal, config_id)
         rows = await session.scalars(
@@ -313,26 +315,30 @@ async def config_runs(
             .order_by(LexofficeSyncRun.created_at.desc())
             .limit(50)
         )
-        return [s.RunOut.model_validate(r) for r in rows]
+        return [s.LexofficeRunOut.model_validate(r) for r in rows]
 
 
 @router.get("/legal-entities", summary="Gesellschaften des Mandanten (für die Zuordnung)")
 async def legal_entities(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
-) -> list[s.LegalEntityOut]:
+) -> list[s.LexofficeLegalEntityOut]:
     async with tenant_tx(request, principal) as session:
         rows = await session.scalars(
             select(LegalEntity)
             .where(LegalEntity.tenant_id == principal.tenant_id, LegalEntity.property_id.is_(None))
             .order_by(LegalEntity.name)
         )
-        return [s.LegalEntityOut(id=r.id, kind=str(r.kind.value), name=r.name) for r in rows]
+        return [
+            s.LexofficeLegalEntityOut(id=r.id, kind=str(r.kind.value), name=r.name) for r in rows
+        ]
 
 
 # Invoice kind mapping ------------------------------------------------------------------------
 
 
-async def _mappings(session: AsyncSession, tenant_id: uuid.UUID) -> list[s.InvoiceKindMappingOut]:
+async def _mappings(
+    session: AsyncSession, tenant_id: uuid.UUID
+) -> list[s.LexofficeInvoiceKindMappingOut]:
     await svc.ensure_default_mappings(session, tenant_id)
     rows = {
         m.kind: m
@@ -342,7 +348,7 @@ async def _mappings(session: AsyncSession, tenant_id: uuid.UUID) -> list[s.Invoi
             )
         )
     }
-    out: list[s.InvoiceKindMappingOut] = []
+    out: list[s.LexofficeInvoiceKindMappingOut] = []
     for kind in LexofficeInvoiceKind:
         mapping = rows.get(kind.value)
         config_id = None
@@ -354,7 +360,7 @@ async def _mappings(session: AsyncSession, tenant_id: uuid.UUID) -> list[s.Invoi
                 )
             )
         out.append(
-            s.InvoiceKindMappingOut(
+            s.LexofficeInvoiceKindMappingOut(
                 kind=kind.value,
                 label=KIND_LABELS[kind.value],
                 legal_entity_id=mapping.legal_entity_id if mapping else None,
@@ -370,17 +376,17 @@ async def _mappings(session: AsyncSession, tenant_id: uuid.UUID) -> list[s.Invoi
 @router.get("/invoice-kinds", summary="Zuordnung Rechnungsart zu Gesellschaft")
 async def list_invoice_kinds(
     request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
-) -> list[s.InvoiceKindMappingOut]:
+) -> list[s.LexofficeInvoiceKindMappingOut]:
     async with tenant_tx(request, principal) as session:
         return await _mappings(session, principal.tenant_id)
 
 
 @router.put("/invoice-kinds", summary="Zuordnung Rechnungsart zu Gesellschaft setzen")
 async def put_invoice_kinds(
-    body: list[s.InvoiceKindMappingIn],
+    body: list[s.LexofficeInvoiceKindMappingIn],
     request: Request,
     principal: TenantPrincipal = Depends(SETTINGS_WRITE),
-) -> list[s.InvoiceKindMappingOut]:
+) -> list[s.LexofficeInvoiceKindMappingOut]:
     async with tenant_tx(request, principal) as session:
         for item in body:
             mapping = await session.scalar(
@@ -429,7 +435,7 @@ async def list_outbox(
     status: str | None = None,
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=200),
-) -> s.Page:
+) -> s.LexofficePage:
     async with tenant_tx(request, principal) as session:
         query = select(LexofficeOutbox).where(LexofficeOutbox.tenant_id == principal.tenant_id)
         if config_id is not None:
@@ -440,15 +446,18 @@ async def list_outbox(
         rows = await session.scalars(
             query.order_by(LexofficeOutbox.created_at.desc()).offset((page - 1) * size).limit(size)
         )
-        return s.Page(
-            items=[s.OutboxOut.model_validate(r) for r in rows], total=total, page=page, size=size
+        return s.LexofficePage(
+            items=[s.LexofficeOutboxOut.model_validate(r) for r in rows],
+            total=total,
+            page=page,
+            size=size,
         )
 
 
 @router.post("/outbox/{row_id}/retry", summary="Eintrag erneut versuchen")
 async def retry_outbox(
     row_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(SETTINGS_WRITE)
-) -> s.OutboxOut:
+) -> s.LexofficeOutboxOut:
     async with tenant_tx(request, principal) as session:
         row = await session.get(LexofficeOutbox, row_id)
         if row is None or row.tenant_id != principal.tenant_id:
@@ -456,7 +465,7 @@ async def retry_outbox(
         await svc.retry_row(session, row)
         await session.flush()
         tasks.enqueue_process(principal.tenant_id, row.config_id)
-        return s.OutboxOut.model_validate(row)
+        return s.LexofficeOutboxOut.model_validate(row)
 
 
 # Contact links -------------------------------------------------------------------------------
@@ -467,7 +476,7 @@ async def start_match(
     config_id: uuid.UUID,
     request: Request,
     principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
-    body: s.MatchIn | None = None,
+    body: s.LexofficeMatchIn | None = None,
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         config = await _tenant_config(session, principal, config_id)
@@ -481,10 +490,10 @@ async def start_match(
 
 async def _link_out(
     session: AsyncSession, link: LexofficeContactLink, config: LexofficeTenantConfig
-) -> s.LinkOut:
+) -> s.LexofficeLinkOut:
     contact = await session.get(Contact, link.contact_id) if link.contact_id else None
     version = contact.version if contact is not None else None
-    return s.LinkOut(
+    return s.LexofficeLinkOut(
         id=link.id,
         config_id=link.config_id,
         contact_id=link.contact_id,
@@ -525,7 +534,7 @@ async def list_links(
     q: str | None = None,
     page: int = Query(default=1, ge=1),
     size: int = Query(default=50, ge=1, le=200),
-) -> s.Page:
+) -> s.LexofficePage:
     async with tenant_tx(request, principal) as session:
         config = await _tenant_config(session, principal, config_id)
         query = select(LexofficeContactLink).where(LexofficeContactLink.config_id == config.id)
@@ -551,7 +560,7 @@ async def list_links(
             .limit(size)
         )
         items = [await _link_out(session, r, config) for r in rows]
-        return s.Page(items=items, total=total, page=page, size=size)
+        return s.LexofficePage(items=items, total=total, page=page, size=size)
 
 
 async def _link(
@@ -570,10 +579,10 @@ async def _link(
 async def decide_link(
     config_id: uuid.UUID,
     link_id: uuid.UUID,
-    body: s.DecideIn,
+    body: s.LexofficeDecideIn,
     request: Request,
     principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
-) -> s.LinkOut:
+) -> s.LexofficeLinkOut:
     async with tenant_tx(request, principal) as session:
         config, link = await _link(session, principal, config_id, link_id)
         if body.action == "link":
@@ -689,7 +698,7 @@ async def retry_link(
     link_id: uuid.UUID,
     request: Request,
     principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
-) -> s.LinkOut:
+) -> s.LexofficeLinkOut:
     async with tenant_tx(request, principal) as session:
         config, link = await _link(session, principal, config_id, link_id)
         if link.sync_status not in ("error", "manual_required", "remote_missing", "conflict"):
@@ -708,7 +717,7 @@ async def push_link(
     link_id: uuid.UUID,
     request: Request,
     principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
-) -> s.LinkOut:
+) -> s.LexofficeLinkOut:
     async with tenant_tx(request, principal) as session:
         config, link = await _link(session, principal, config_id, link_id)
         if link.sync_status not in ("linked", "synced", "error"):
@@ -730,10 +739,10 @@ async def push_link(
 async def resolve_conflict(
     config_id: uuid.UUID,
     link_id: uuid.UUID,
-    body: s.ResolveIn,
+    body: s.LexofficeResolveIn,
     request: Request,
     principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
-) -> s.LinkOut:
+) -> s.LexofficeLinkOut:
     async with tenant_tx(request, principal) as session:
         config, link = await _link(session, principal, config_id, link_id)
         if link.sync_status != LexofficeLinkStatus.CONFLICT.value or not link.conflict:
@@ -780,7 +789,7 @@ async def resolve_conflict(
 @router.post("/configs/{config_id}/contacts/links/push-batch", summary="Abweichende abgleichen")
 async def push_batch(
     config_id: uuid.UUID,
-    body: s.PushBatchIn,
+    body: s.LexofficePushBatchIn,
     request: Request,
     principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
 ) -> dict[str, int]:
@@ -813,7 +822,7 @@ async def search_remote(
     request: Request,
     principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
     q: str = Query(min_length=3, max_length=120),
-) -> list[s.RemoteSearchOut]:
+) -> list[s.LexofficeRemoteSearchOut]:
     async with tenant_tx(request, principal) as session:
         config = await _tenant_config(session, principal, config_id)
         if not svc.feature_on(config, "sync_contacts"):
@@ -829,13 +838,13 @@ async def search_remote(
             raise ProblemError(ErrorCodes.VALIDATION, detail=exc.message) from exc
         except LexofficeError as exc:
             raise ProblemError(ErrorCodes.LEXOFFICE_UNAVAILABLE, detail=exc.redacted()) from exc
-        out: list[s.RemoteSearchOut] = []
+        out: list[s.LexofficeRemoteSearchOut] = []
         for item in page.get("content") or []:
             if not isinstance(item, dict):
                 continue
             remote = matching.remote_from_json(item)
             out.append(
-                s.RemoteSearchOut(
+                s.LexofficeRemoteSearchOut(
                     id=remote.id,
                     display_name=str(remote.display.get("name") or ""),
                     customer_number=remote.customer_number,
@@ -851,12 +860,12 @@ async def search_remote(
 @router.get("/contacts/{contact_id}/lexoffice", summary="Lexware Office Status eines Kontakts")
 async def contact_status(
     contact_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CONTACTS_READ)
-) -> list[s.ContactStatusOut]:
+) -> list[s.LexofficeContactStatusOut]:
     async with tenant_tx(request, principal) as session:
         contact = await session.get(Contact, contact_id)
         if contact is None or contact.tenant_id != principal.tenant_id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        out: list[s.ContactStatusOut] = []
+        out: list[s.LexofficeContactStatusOut] = []
         for config in await svc.list_configs(session, principal.tenant_id):
             link = await session.scalar(
                 select(LexofficeContactLink).where(
@@ -865,7 +874,7 @@ async def contact_status(
                 )
             )
             out.append(
-                s.ContactStatusOut(
+                s.LexofficeContactStatusOut(
                     config_id=config.id,
                     label=config.label or config.organization_name,
                     legal_entity_id=config.legal_entity_id,
@@ -897,8 +906,8 @@ def _fmt(value: Any) -> str:
 
 
 async def _preview(
-    session: AsyncSession, principal: TenantPrincipal, body: s.InvoiceDraftIn
-) -> tuple[LexofficeTenantConfig, s.InvoiceDraftPreviewOut]:
+    session: AsyncSession, principal: TenantPrincipal, body: s.LexofficeInvoiceDraftIn
+) -> tuple[LexofficeTenantConfig, s.LexofficeInvoiceDraftPreviewOut]:
     config = await invoice_drafts.resolve_config(
         session, principal.tenant_id, config_id=body.config_id, invoice_kind=body.invoice_kind
     )
@@ -914,7 +923,7 @@ async def _preview(
         introduction=body.introduction,
         remark=body.remark,
     )
-    return config, s.InvoiceDraftPreviewOut(
+    return config, s.LexofficeInvoiceDraftPreviewOut(
         config_id=config.id,
         legal_entity_id=config.legal_entity_id,
         legal_entity_name=await _entity_name(session, config.legal_entity_id),
@@ -929,10 +938,10 @@ async def _preview(
 
 @router.post("/invoice-drafts/preview", summary="Rechnungsentwurf vorschauen")
 async def preview_draft(
-    body: s.InvoiceDraftIn,
+    body: s.LexofficeInvoiceDraftIn,
     request: Request,
     principal: TenantPrincipal = Depends(ACCOUNTING_CREATE),
-) -> s.InvoiceDraftPreviewOut:
+) -> s.LexofficeInvoiceDraftPreviewOut:
     async with tenant_tx(request, principal) as session:
         _, preview = await _preview(session, principal, body)
         return preview
@@ -942,10 +951,10 @@ async def preview_draft(
     "/invoice-drafts", status_code=202, summary="Rechnungsentwurf in Lexware Office anlegen"
 )
 async def create_draft(
-    body: s.InvoiceDraftIn,
+    body: s.LexofficeInvoiceDraftIn,
     request: Request,
     principal: TenantPrincipal = Depends(ACCOUNTING_CREATE),
-) -> s.InvoiceDraftOut:
+) -> s.LexofficeInvoiceDraftOut:
     async with tenant_tx(request, principal) as session:
         config, preview = await _preview(session, principal, body)
         draft = await invoice_drafts.create_draft(
@@ -958,7 +967,7 @@ async def create_draft(
         )
         await session.flush()
         tasks.enqueue_process(principal.tenant_id, config.id)
-        return s.InvoiceDraftOut.model_validate(draft)
+        return s.LexofficeInvoiceDraftOut.model_validate(draft)
 
 
 @router.get("/invoice-drafts", summary="Rechnungsentwürfe")
@@ -967,7 +976,7 @@ async def list_drafts(
     principal: TenantPrincipal = Depends(ACCOUNTING_READ),
     config_id: uuid.UUID | None = None,
     status: str | None = None,
-) -> list[s.InvoiceDraftOut]:
+) -> list[s.LexofficeInvoiceDraftOut]:
     async with tenant_tx(request, principal) as session:
         query = select(LexofficeInvoiceDraft).where(
             LexofficeInvoiceDraft.tenant_id == principal.tenant_id
@@ -979,18 +988,18 @@ async def list_drafts(
         rows = await session.scalars(
             query.order_by(LexofficeInvoiceDraft.created_at.desc()).limit(200)
         )
-        return [s.InvoiceDraftOut.model_validate(r) for r in rows]
+        return [s.LexofficeInvoiceDraftOut.model_validate(r) for r in rows]
 
 
 @router.get("/invoice-drafts/{draft_id}", summary="Rechnungsentwurf lesen")
 async def get_draft(
     draft_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ACCOUNTING_READ)
-) -> s.InvoiceDraftOut:
+) -> s.LexofficeInvoiceDraftOut:
     async with tenant_tx(request, principal) as session:
         draft = await session.get(LexofficeInvoiceDraft, draft_id)
         if draft is None or draft.tenant_id != principal.tenant_id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        return s.InvoiceDraftOut.model_validate(draft)
+        return s.LexofficeInvoiceDraftOut.model_validate(draft)
 
 
 # Recurring preparations -----------------------------------------------------------------------
@@ -998,8 +1007,8 @@ async def get_draft(
 
 def _prep_out(
     row: LexofficeRecurringPrep, config: LexofficeTenantConfig | None
-) -> s.RecurringPrepOut:
-    out = s.RecurringPrepOut.model_validate(row)
+) -> s.LexofficeRecurringPrepOut:
+    out = s.LexofficeRecurringPrepOut.model_validate(row)
     if row.lexoffice_template_id and config is not None:
         out.deeplink = svc.deeplink(config, "recurring", row.lexoffice_template_id)
     return out
@@ -1010,7 +1019,7 @@ async def list_recurring(
     request: Request,
     principal: TenantPrincipal = Depends(ACCOUNTING_READ),
     status: str | None = None,
-) -> list[s.RecurringPrepOut]:
+) -> list[s.LexofficeRecurringPrepOut]:
     async with tenant_tx(request, principal) as session:
         query = select(LexofficeRecurringPrep).where(
             LexofficeRecurringPrep.tenant_id == principal.tenant_id
@@ -1022,7 +1031,7 @@ async def list_recurring(
                 query.order_by(LexofficeRecurringPrep.created_at.desc()).limit(200)
             )
         ).all()
-        out: list[s.RecurringPrepOut] = []
+        out: list[s.LexofficeRecurringPrepOut] = []
         for row in rows:
             config = (
                 await session.get(LexofficeTenantConfig, row.config_id) if row.config_id else None
@@ -1034,10 +1043,10 @@ async def list_recurring(
 @router.post("/recurring-preps/{prep_id}/done", summary="Dauerrechnung in Lexware Office angelegt")
 async def recurring_done(
     prep_id: uuid.UUID,
-    body: s.RecurringDoneIn,
+    body: s.LexofficeRecurringDoneIn,
     request: Request,
     principal: TenantPrincipal = Depends(ACCOUNTING_CREATE),
-) -> s.RecurringPrepOut:
+) -> s.LexofficeRecurringPrepOut:
     async with tenant_tx(request, principal) as session:
         row = await session.get(LexofficeRecurringPrep, prep_id)
         if row is None or row.tenant_id != principal.tenant_id:
@@ -1055,7 +1064,7 @@ async def recurring_done(
 @router.post("/recurring-preps/{prep_id}/dismiss", summary="Vorbereitung verwerfen")
 async def recurring_dismiss(
     prep_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ACCOUNTING_CREATE)
-) -> s.RecurringPrepOut:
+) -> s.LexofficeRecurringPrepOut:
     async with tenant_tx(request, principal) as session:
         row = await session.get(LexofficeRecurringPrep, prep_id)
         if row is None or row.tenant_id != principal.tenant_id:
@@ -1091,7 +1100,7 @@ async def _request(
 @router.get("/tickets/{ticket_id}/invoice-copies", summary="Rechnungskopie Anfragen eines Tickets")
 async def list_invoice_copies(
     ticket_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(TICKETS_UPDATE)
-) -> list[s.InvoiceCopyOut]:
+) -> list[s.LexofficeInvoiceCopyOut]:
     async with tenant_tx(request, principal) as session:
         await _ticket(session, principal, ticket_id)
         rows = await session.scalars(
@@ -1099,7 +1108,7 @@ async def list_invoice_copies(
             .where(LexofficeInvoiceCopyRequest.ticket_id == ticket_id)
             .order_by(LexofficeInvoiceCopyRequest.created_at.desc())
         )
-        return [s.InvoiceCopyOut.model_validate(r) for r in rows]
+        return [s.LexofficeInvoiceCopyOut.model_validate(r) for r in rows]
 
 
 @router.post(
@@ -1107,10 +1116,10 @@ async def list_invoice_copies(
 )
 async def create_invoice_copy(
     ticket_id: uuid.UUID,
-    body: s.InvoiceCopyIn,
+    body: s.LexofficeInvoiceCopyIn,
     request: Request,
     principal: TenantPrincipal = Depends(TICKETS_UPDATE),
-) -> s.InvoiceCopyOut:
+) -> s.LexofficeInvoiceCopyOut:
     async with tenant_tx(request, principal) as session:
         ticket = await _ticket(session, principal, ticket_id)
         message = None
@@ -1134,7 +1143,7 @@ async def create_invoice_copy(
         )
         for config_id in {uuid.UUID(c) for c in row.lookup.get("pending_configs") or []}:
             tasks.enqueue_process(principal.tenant_id, config_id)
-        return s.InvoiceCopyOut.model_validate(row)
+        return s.LexofficeInvoiceCopyOut.model_validate(row)
 
 
 @router.post(
@@ -1142,10 +1151,10 @@ async def create_invoice_copy(
 )
 async def correct_invoice_copy(
     request_id: uuid.UUID,
-    body: s.InvoiceCopyCorrectIn,
+    body: s.LexofficeInvoiceCopyCorrectIn,
     request: Request,
     principal: TenantPrincipal = Depends(TICKETS_UPDATE),
-) -> s.InvoiceCopyOut:
+) -> s.LexofficeInvoiceCopyOut:
     async with tenant_tx(request, principal) as session:
         row = await _request(session, principal, request_id)
         await invoice_copy.correct(
@@ -1159,16 +1168,16 @@ async def correct_invoice_copy(
         await session.flush()
         for config_id in {uuid.UUID(c) for c in row.lookup.get("pending_configs") or []}:
             tasks.enqueue_process(principal.tenant_id, config_id)
-        return s.InvoiceCopyOut.model_validate(row)
+        return s.LexofficeInvoiceCopyOut.model_validate(row)
 
 
 @router.post("/invoice-copies/{request_id}/link-recipient", summary="Rechnungsempfänger zuordnen")
 async def link_recipient(
     request_id: uuid.UUID,
-    body: s.LinkRecipientIn,
+    body: s.LexofficeLinkRecipientIn,
     request: Request,
     principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
-) -> s.InvoiceCopyOut:
+) -> s.LexofficeInvoiceCopyOut:
     async with tenant_tx(request, principal) as session:
         row = await _request(session, principal, request_id)
         hit = invoice_copy.selected_hit(row)
@@ -1212,7 +1221,7 @@ async def link_recipient(
         await invoice_copy.verify(session, row)
         await session.flush()
         tasks.enqueue_process(principal.tenant_id, config.id)
-        return s.InvoiceCopyOut.model_validate(row)
+        return s.LexofficeInvoiceCopyOut.model_validate(row)
 
 
 @router.post(
@@ -1225,25 +1234,25 @@ async def accept_invoice_copy(
     request: Request,
     principal: TenantPrincipal = Depends(TICKETS_UPDATE),
     _communication: TenantPrincipal = Depends(COMMUNICATION_UPDATE),
-) -> s.InvoiceCopyOut:
+) -> s.LexofficeInvoiceCopyOut:
     async with tenant_tx(request, principal) as session:
         row = await _request(session, principal, request_id)
         await invoice_copy.accept(session, row, principal.user_id)
         await session.flush()
         if row.sender_config_id is not None:
             tasks.enqueue_process(principal.tenant_id, row.sender_config_id)
-        return s.InvoiceCopyOut.model_validate(row)
+        return s.LexofficeInvoiceCopyOut.model_validate(row)
 
 
 @router.post("/invoice-copies/{request_id}/reject", summary="Anfrage ablehnen")
 async def reject_invoice_copy(
     request_id: uuid.UUID,
-    body: s.InvoiceCopyRejectIn,
+    body: s.LexofficeInvoiceCopyRejectIn,
     request: Request,
     principal: TenantPrincipal = Depends(TICKETS_UPDATE),
-) -> s.InvoiceCopyOut:
+) -> s.LexofficeInvoiceCopyOut:
     async with tenant_tx(request, principal) as session:
         row = await _request(session, principal, request_id)
         await invoice_copy.reject(session, row, body.reason, principal.user_id)
         await session.flush()
-        return s.InvoiceCopyOut.model_validate(row)
+        return s.LexofficeInvoiceCopyOut.model_validate(row)

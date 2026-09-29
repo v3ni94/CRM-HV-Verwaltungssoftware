@@ -9220,6 +9220,260 @@
         "title": "Completeness",
         "type": "string"
       },
+      "ConfigIn": {
+        "additionalProperties": false,
+        "properties": {
+          "avv_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed On"
+          },
+          "avv_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Note"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "clear_hmac_secret": {
+            "default": false,
+            "title": "Clear Hmac Secret",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hmac_secret": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Hmac Secret"
+          },
+          "token": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 8,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token"
+          },
+          "webhook_secret": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 16,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Webhook Secret"
+          }
+        },
+        "title": "ConfigIn",
+        "type": "object"
+      },
+      "ConfigOut": {
+        "properties": {
+          "avv_confirmed_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed By"
+          },
+          "avv_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed On"
+          },
+          "avv_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Note"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "hmac_secret_set": {
+            "title": "Hmac Secret Set",
+            "type": "boolean"
+          },
+          "last_pull_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Pull At"
+          },
+          "last_pull_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Pull Message"
+          },
+          "last_test_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Message"
+          },
+          "last_test_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Ok"
+          },
+          "last_tested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Tested At"
+          },
+          "token_invalid": {
+            "title": "Token Invalid",
+            "type": "boolean"
+          },
+          "token_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Token Last4"
+          },
+          "token_set": {
+            "title": "Token Set",
+            "type": "boolean"
+          },
+          "webhook_path": {
+            "title": "Webhook Path",
+            "type": "string"
+          },
+          "webhook_secret_set": {
+            "title": "Webhook Secret Set",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "base_url",
+          "enabled",
+          "token_set",
+          "token_last4",
+          "token_invalid",
+          "hmac_secret_set",
+          "webhook_secret_set",
+          "webhook_path",
+          "avv_confirmed_on",
+          "avv_confirmed_by",
+          "avv_note",
+          "last_tested_at",
+          "last_test_ok",
+          "last_test_message",
+          "last_pull_at",
+          "last_pull_message"
+        ],
+        "title": "ConfigOut",
+        "type": "object"
+      },
       "ConnectionIn": {
         "additionalProperties": false,
         "properties": {
@@ -11079,112 +11333,6 @@
         ],
         "title": "ContactRoleCode",
         "type": "string"
-      },
-      "ContactStatusOut": {
-        "properties": {
-          "config_id": {
-            "format": "uuid",
-            "title": "Config Id",
-            "type": "string"
-          },
-          "deeplink": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deeplink"
-          },
-          "diverged": {
-            "title": "Diverged",
-            "type": "boolean"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          },
-          "last_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Error"
-          },
-          "last_synced_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Synced At"
-          },
-          "legal_entity_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Id"
-          },
-          "link_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Link Id"
-          },
-          "sync_status": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sync Status"
-          }
-        },
-        "required": [
-          "config_id",
-          "label",
-          "legal_entity_id",
-          "sync_status",
-          "last_synced_at",
-          "diverged",
-          "deeplink",
-          "last_error",
-          "link_id"
-        ],
-        "title": "ContactStatusOut",
-        "type": "object"
       },
       "ContactSummary": {
         "properties": {
@@ -14134,6 +14282,32 @@
         "title": "DebtorAccountOut",
         "type": "object"
       },
+      "DecideIn": {
+        "additionalProperties": false,
+        "properties": {
+          "accept": {
+            "title": "Accept",
+            "type": "boolean"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "required": [
+          "accept"
+        ],
+        "title": "DecideIn",
+        "type": "object"
+      },
       "Decision": {
         "enum": [
           "pending",
@@ -16277,7 +16451,7 @@
           },
           "links": {
             "items": {
-              "$ref": "#/components/schemas/mhvp__documents__schemas__LinkOut"
+              "$ref": "#/components/schemas/LinkOut"
             },
             "title": "Links",
             "type": "array"
@@ -22614,541 +22788,6 @@
         "title": "InvoiceApplyLineIn",
         "type": "object"
       },
-      "InvoiceCopyCorrectIn": {
-        "additionalProperties": false,
-        "properties": {
-          "invoice_number": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Invoice Number"
-          },
-          "requester_contact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Requester Contact Id"
-          },
-          "selected_invoice_id": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Selected Invoice Id"
-          }
-        },
-        "title": "InvoiceCopyCorrectIn",
-        "type": "object"
-      },
-      "InvoiceCopyIn": {
-        "additionalProperties": false,
-        "properties": {
-          "invoice_number": {
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Invoice Number",
-            "type": "string"
-          },
-          "message_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message Id"
-          }
-        },
-        "required": [
-          "invoice_number"
-        ],
-        "title": "InvoiceCopyIn",
-        "type": "object"
-      },
-      "InvoiceCopyOut": {
-        "properties": {
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "document_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Document Id"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "invoice_number": {
-            "title": "Invoice Number",
-            "type": "string"
-          },
-          "last_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Error"
-          },
-          "lookup": {
-            "additionalProperties": true,
-            "title": "Lookup",
-            "type": "object"
-          },
-          "message_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message Id"
-          },
-          "recipient_contact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Recipient Contact Id"
-          },
-          "reply_message_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reply Message Id"
-          },
-          "requester_contact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Requester Contact Id"
-          },
-          "sender_config_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sender Config Id"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "ticket_id": {
-            "format": "uuid",
-            "title": "Ticket Id",
-            "type": "string"
-          },
-          "verification": {
-            "additionalProperties": true,
-            "title": "Verification",
-            "type": "object"
-          },
-          "xml_document_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Xml Document Id"
-          }
-        },
-        "required": [
-          "id",
-          "ticket_id",
-          "message_id",
-          "invoice_number",
-          "requester_contact_id",
-          "recipient_contact_id",
-          "sender_config_id",
-          "status",
-          "lookup",
-          "verification",
-          "document_id",
-          "xml_document_id",
-          "reply_message_id",
-          "last_error",
-          "created_at"
-        ],
-        "title": "InvoiceCopyOut",
-        "type": "object"
-      },
-      "InvoiceCopyRejectIn": {
-        "additionalProperties": false,
-        "properties": {
-          "reason": {
-            "maxLength": 500,
-            "minLength": 1,
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "reason"
-        ],
-        "title": "InvoiceCopyRejectIn",
-        "type": "object"
-      },
-      "InvoiceDraftIn": {
-        "additionalProperties": false,
-        "properties": {
-          "config_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config Id"
-          },
-          "contact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contact Id"
-          },
-          "introduction": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Introduction"
-          },
-          "invoice_kind": {
-            "anyOf": [
-              {
-                "enum": [
-                  "broker",
-                  "consulting",
-                  "management"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Invoice Kind"
-          },
-          "line_items": {
-            "items": {
-              "$ref": "#/components/schemas/LineItemIn"
-            },
-            "maxItems": 300,
-            "minItems": 1,
-            "title": "Line Items",
-            "type": "array"
-          },
-          "remark": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Remark"
-          },
-          "shipping": {
-            "$ref": "#/components/schemas/ShippingIn"
-          },
-          "tax_type": {
-            "enum": [
-              "net",
-              "gross",
-              "vatfree"
-            ],
-            "title": "Tax Type",
-            "type": "string"
-          },
-          "title": {
-            "anyOf": [
-              {
-                "maxLength": 25,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Title"
-          },
-          "voucher_date": {
-            "format": "date",
-            "title": "Voucher Date",
-            "type": "string"
-          }
-        },
-        "required": [
-          "voucher_date",
-          "tax_type",
-          "line_items",
-          "shipping"
-        ],
-        "title": "InvoiceDraftIn",
-        "type": "object"
-      },
-      "InvoiceDraftOut": {
-        "properties": {
-          "config_id": {
-            "format": "uuid",
-            "title": "Config Id",
-            "type": "string"
-          },
-          "contact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contact Id"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "deeplink": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deeplink"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "invoice_kind": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Invoice Kind"
-          },
-          "last_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Error"
-          },
-          "legal_entity_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Id"
-          },
-          "lexoffice_invoice_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lexoffice Invoice Id"
-          },
-          "payload": {
-            "additionalProperties": true,
-            "title": "Payload",
-            "type": "object"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "config_id",
-          "legal_entity_id",
-          "contact_id",
-          "invoice_kind",
-          "status",
-          "lexoffice_invoice_id",
-          "deeplink",
-          "last_error",
-          "created_at",
-          "payload"
-        ],
-        "title": "InvoiceDraftOut",
-        "type": "object"
-      },
-      "InvoiceDraftPreviewOut": {
-        "properties": {
-          "address_from_link": {
-            "title": "Address From Link",
-            "type": "boolean"
-          },
-          "config_id": {
-            "format": "uuid",
-            "title": "Config Id",
-            "type": "string"
-          },
-          "gross": {
-            "title": "Gross",
-            "type": "string"
-          },
-          "legal_entity_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Id"
-          },
-          "legal_entity_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Name"
-          },
-          "net": {
-            "title": "Net",
-            "type": "string"
-          },
-          "note": {
-            "title": "Note",
-            "type": "string"
-          },
-          "payload": {
-            "additionalProperties": true,
-            "title": "Payload",
-            "type": "object"
-          },
-          "tax": {
-            "title": "Tax",
-            "type": "string"
-          }
-        },
-        "required": [
-          "config_id",
-          "legal_entity_id",
-          "legal_entity_name",
-          "payload",
-          "address_from_link",
-          "net",
-          "tax",
-          "gross",
-          "note"
-        ],
-        "title": "InvoiceDraftPreviewOut",
-        "type": "object"
-      },
       "InvoiceForwardSettingsIn": {
         "additionalProperties": false,
         "properties": {
@@ -23445,94 +23084,6 @@
         ],
         "title": "InvoiceKind",
         "type": "string"
-      },
-      "InvoiceKindMappingIn": {
-        "additionalProperties": false,
-        "properties": {
-          "kind": {
-            "enum": [
-              "broker",
-              "consulting",
-              "management"
-            ],
-            "title": "Kind",
-            "type": "string"
-          },
-          "legal_entity_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Id"
-          }
-        },
-        "required": [
-          "kind",
-          "legal_entity_id"
-        ],
-        "title": "InvoiceKindMappingIn",
-        "type": "object"
-      },
-      "InvoiceKindMappingOut": {
-        "properties": {
-          "config_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config Id"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "label": {
-            "title": "Label",
-            "type": "string"
-          },
-          "legal_entity_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Id"
-          },
-          "legal_entity_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Name"
-          }
-        },
-        "required": [
-          "kind",
-          "label",
-          "legal_entity_id",
-          "legal_entity_name",
-          "config_id"
-        ],
-        "title": "InvoiceKindMappingOut",
-        "type": "object"
       },
       "InvoiceLineIn": {
         "additionalProperties": false,
@@ -24925,6 +24476,42 @@
         "title": "LegalEntityOption",
         "type": "object"
       },
+      "LegalEntityOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/LegalEntityKind"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "party_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Party Id"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "party_id"
+        ],
+        "title": "LegalEntityOut",
+        "type": "object"
+      },
       "LetterIn": {
         "additionalProperties": false,
         "properties": {
@@ -25069,7 +24656,7 @@
           },
           "links": {
             "items": {
-              "$ref": "#/components/schemas/mhvp__documents__schemas__LinkOut"
+              "$ref": "#/components/schemas/LinkOut"
             },
             "title": "Links",
             "type": "array"
@@ -25454,6 +25041,167 @@
         "title": "LexofficeConfigOut",
         "type": "object"
       },
+      "LexofficeContactStatusOut": {
+        "properties": {
+          "config_id": {
+            "format": "uuid",
+            "title": "Config Id",
+            "type": "string"
+          },
+          "deeplink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deeplink"
+          },
+          "diverged": {
+            "title": "Diverged",
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "link_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Id"
+          },
+          "sync_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sync Status"
+          }
+        },
+        "required": [
+          "config_id",
+          "label",
+          "legal_entity_id",
+          "sync_status",
+          "last_synced_at",
+          "diverged",
+          "deeplink",
+          "last_error",
+          "link_id"
+        ],
+        "title": "LexofficeContactStatusOut",
+        "type": "object"
+      },
+      "LexofficeDecideIn": {
+        "additionalProperties": false,
+        "properties": {
+          "action": {
+            "enum": [
+              "link",
+              "create_remote",
+              "create_local",
+              "dismiss"
+            ],
+            "title": "Action",
+            "type": "string"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "lexoffice_contact_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexoffice Contact Id"
+          },
+          "roles": {
+            "items": {
+              "enum": [
+                "customer",
+                "vendor"
+              ],
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          }
+        },
+        "required": [
+          "action"
+        ],
+        "title": "LexofficeDecideIn",
+        "type": "object"
+      },
       "LexofficeExportContactItem": {
         "additionalProperties": false,
         "properties": {
@@ -25712,6 +25460,1731 @@
         "title": "LexofficeImportedItem",
         "type": "object"
       },
+      "LexofficeInvoiceCopyCorrectIn": {
+        "additionalProperties": false,
+        "properties": {
+          "invoice_number": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Number"
+          },
+          "requester_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requester Contact Id"
+          },
+          "selected_invoice_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Invoice Id"
+          }
+        },
+        "title": "LexofficeInvoiceCopyCorrectIn",
+        "type": "object"
+      },
+      "LexofficeInvoiceCopyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "invoice_number": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Invoice Number",
+            "type": "string"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          }
+        },
+        "required": [
+          "invoice_number"
+        ],
+        "title": "LexofficeInvoiceCopyIn",
+        "type": "object"
+      },
+      "LexofficeInvoiceCopyOut": {
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invoice_number": {
+            "title": "Invoice Number",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "lookup": {
+            "additionalProperties": true,
+            "title": "Lookup",
+            "type": "object"
+          },
+          "message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message Id"
+          },
+          "recipient_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Contact Id"
+          },
+          "reply_message_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reply Message Id"
+          },
+          "requester_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Requester Contact Id"
+          },
+          "sender_config_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sender Config Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "ticket_id": {
+            "format": "uuid",
+            "title": "Ticket Id",
+            "type": "string"
+          },
+          "verification": {
+            "additionalProperties": true,
+            "title": "Verification",
+            "type": "object"
+          },
+          "xml_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Xml Document Id"
+          }
+        },
+        "required": [
+          "id",
+          "ticket_id",
+          "message_id",
+          "invoice_number",
+          "requester_contact_id",
+          "recipient_contact_id",
+          "sender_config_id",
+          "status",
+          "lookup",
+          "verification",
+          "document_id",
+          "xml_document_id",
+          "reply_message_id",
+          "last_error",
+          "created_at"
+        ],
+        "title": "LexofficeInvoiceCopyOut",
+        "type": "object"
+      },
+      "LexofficeInvoiceCopyRejectIn": {
+        "additionalProperties": false,
+        "properties": {
+          "reason": {
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "LexofficeInvoiceCopyRejectIn",
+        "type": "object"
+      },
+      "LexofficeInvoiceDraftIn": {
+        "additionalProperties": false,
+        "properties": {
+          "config_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Id"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "introduction": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Introduction"
+          },
+          "invoice_kind": {
+            "anyOf": [
+              {
+                "enum": [
+                  "broker",
+                  "consulting",
+                  "management"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Kind"
+          },
+          "line_items": {
+            "items": {
+              "$ref": "#/components/schemas/LexofficeLineItemIn"
+            },
+            "maxItems": 300,
+            "minItems": 1,
+            "title": "Line Items",
+            "type": "array"
+          },
+          "remark": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remark"
+          },
+          "shipping": {
+            "$ref": "#/components/schemas/LexofficeShippingIn"
+          },
+          "tax_type": {
+            "enum": [
+              "net",
+              "gross",
+              "vatfree"
+            ],
+            "title": "Tax Type",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 25,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "voucher_date": {
+            "format": "date",
+            "title": "Voucher Date",
+            "type": "string"
+          }
+        },
+        "required": [
+          "voucher_date",
+          "tax_type",
+          "line_items",
+          "shipping"
+        ],
+        "title": "LexofficeInvoiceDraftIn",
+        "type": "object"
+      },
+      "LexofficeInvoiceDraftOut": {
+        "properties": {
+          "config_id": {
+            "format": "uuid",
+            "title": "Config Id",
+            "type": "string"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deeplink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deeplink"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invoice_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invoice Kind"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "lexoffice_invoice_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexoffice Invoice Id"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "config_id",
+          "legal_entity_id",
+          "contact_id",
+          "invoice_kind",
+          "status",
+          "lexoffice_invoice_id",
+          "deeplink",
+          "last_error",
+          "created_at",
+          "payload"
+        ],
+        "title": "LexofficeInvoiceDraftOut",
+        "type": "object"
+      },
+      "LexofficeInvoiceDraftPreviewOut": {
+        "properties": {
+          "address_from_link": {
+            "title": "Address From Link",
+            "type": "boolean"
+          },
+          "config_id": {
+            "format": "uuid",
+            "title": "Config Id",
+            "type": "string"
+          },
+          "gross": {
+            "title": "Gross",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "legal_entity_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Name"
+          },
+          "net": {
+            "title": "Net",
+            "type": "string"
+          },
+          "note": {
+            "title": "Note",
+            "type": "string"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "tax": {
+            "title": "Tax",
+            "type": "string"
+          }
+        },
+        "required": [
+          "config_id",
+          "legal_entity_id",
+          "legal_entity_name",
+          "payload",
+          "address_from_link",
+          "net",
+          "tax",
+          "gross",
+          "note"
+        ],
+        "title": "LexofficeInvoiceDraftPreviewOut",
+        "type": "object"
+      },
+      "LexofficeInvoiceKindMappingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "kind": {
+            "enum": [
+              "broker",
+              "consulting",
+              "management"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          }
+        },
+        "required": [
+          "kind",
+          "legal_entity_id"
+        ],
+        "title": "LexofficeInvoiceKindMappingIn",
+        "type": "object"
+      },
+      "LexofficeInvoiceKindMappingOut": {
+        "properties": {
+          "config_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Id"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "legal_entity_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Name"
+          }
+        },
+        "required": [
+          "kind",
+          "label",
+          "legal_entity_id",
+          "legal_entity_name",
+          "config_id"
+        ],
+        "title": "LexofficeInvoiceKindMappingOut",
+        "type": "object"
+      },
+      "LexofficeLegalEntityOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "name"
+        ],
+        "title": "LexofficeLegalEntityOut",
+        "type": "object"
+      },
+      "LexofficeLineItemIn": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity"
+          },
+          "tax_rate_percent": {
+            "enum": [
+              0,
+              7,
+              19
+            ],
+            "title": "Tax Rate Percent",
+            "type": "integer"
+          },
+          "unit_name": {
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Unit Name",
+            "type": "string"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              }
+            ],
+            "title": "Unit Price"
+          }
+        },
+        "required": [
+          "name",
+          "quantity",
+          "unit_name",
+          "unit_price",
+          "tax_rate_percent"
+        ],
+        "title": "LexofficeLineItemIn",
+        "type": "object"
+      },
+      "LexofficeLinkOut": {
+        "properties": {
+          "candidates": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "config_id": {
+            "format": "uuid",
+            "title": "Config Id",
+            "type": "string"
+          },
+          "conflict": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Conflict"
+          },
+          "contact_display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Display Name"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "contact_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Version"
+          },
+          "customer_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Number"
+          },
+          "deeplink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deeplink"
+          },
+          "diverged": {
+            "title": "Diverged",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_synced_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Synced At"
+          },
+          "lexoffice_contact_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexoffice Contact Id"
+          },
+          "lexoffice_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexoffice Version"
+          },
+          "match_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Reason"
+          },
+          "match_score": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Match Score"
+          },
+          "remote_display": {
+            "additionalProperties": true,
+            "title": "Remote Display",
+            "type": "object"
+          },
+          "sync_status": {
+            "title": "Sync Status",
+            "type": "string"
+          },
+          "synced_contact_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Synced Contact Version"
+          },
+          "vendor_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Number"
+          }
+        },
+        "required": [
+          "id",
+          "config_id",
+          "contact_id",
+          "contact_display_name",
+          "lexoffice_contact_id",
+          "lexoffice_version",
+          "customer_number",
+          "vendor_number",
+          "sync_status",
+          "synced_contact_version",
+          "contact_version",
+          "diverged",
+          "remote_display",
+          "match_reason",
+          "match_score",
+          "candidates",
+          "conflict",
+          "last_synced_at",
+          "last_error",
+          "deeplink"
+        ],
+        "title": "LexofficeLinkOut",
+        "type": "object"
+      },
+      "LexofficeLinkRecipientIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "title": "LexofficeLinkRecipientIn",
+        "type": "object"
+      },
+      "LexofficeMatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "scope": {
+            "default": "customers_and_vendors",
+            "enum": [
+              "customers_and_vendors",
+              "all"
+            ],
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "title": "LexofficeMatchIn",
+        "type": "object"
+      },
+      "LexofficeOrganisationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "avv_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed On"
+          },
+          "avv_note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Note"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "clear_api_key": {
+            "default": false,
+            "title": "Clear Api Key",
+            "type": "boolean"
+          },
+          "clear_mailbox": {
+            "default": false,
+            "title": "Clear Mailbox",
+            "type": "boolean"
+          },
+          "enabled": {
+            "default": false,
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "invoice_copies": {
+            "default": false,
+            "title": "Invoice Copies",
+            "type": "boolean"
+          },
+          "invoice_drafts": {
+            "default": false,
+            "title": "Invoice Drafts",
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "maxLength": 120,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "mailbox_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mailbox Id"
+          },
+          "sync_contacts": {
+            "default": false,
+            "title": "Sync Contacts",
+            "type": "boolean"
+          },
+          "sync_names": {
+            "default": false,
+            "title": "Sync Names",
+            "type": "boolean"
+          }
+        },
+        "title": "LexofficeOrganisationIn",
+        "type": "object"
+      },
+      "LexofficeOrganisationOut": {
+        "properties": {
+          "api_key_last4": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key Last4"
+          },
+          "api_key_set": {
+            "title": "Api Key Set",
+            "type": "boolean"
+          },
+          "app_base_url": {
+            "title": "App Base Url",
+            "type": "string"
+          },
+          "avv_confirmed_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed By"
+          },
+          "avv_confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Confirmed On"
+          },
+          "avv_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Avv Note"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "has_invoicing": {
+            "title": "Has Invoicing",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "invoice_copies": {
+            "title": "Invoice Copies",
+            "type": "boolean"
+          },
+          "invoice_drafts": {
+            "title": "Invoice Drafts",
+            "type": "boolean"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "last_test_message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Message"
+          },
+          "last_test_ok": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Test Ok"
+          },
+          "last_tested_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Tested At"
+          },
+          "legal_entity_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Id"
+          },
+          "legal_entity_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Legal Entity Name"
+          },
+          "mailbox_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Mailbox Id"
+          },
+          "message": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Message"
+          },
+          "organization_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Id"
+          },
+          "organization_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Organization Name"
+          },
+          "profile_business_features": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Profile Business Features",
+            "type": "array"
+          },
+          "profile_small_business": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Small Business"
+          },
+          "profile_tax_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Tax Type"
+          },
+          "sync_contacts": {
+            "title": "Sync Contacts",
+            "type": "boolean"
+          },
+          "sync_names": {
+            "title": "Sync Names",
+            "type": "boolean"
+          },
+          "token_invalid": {
+            "title": "Token Invalid",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "id",
+          "legal_entity_id",
+          "legal_entity_name",
+          "label",
+          "base_url",
+          "app_base_url",
+          "enabled",
+          "api_key_set",
+          "api_key_last4",
+          "token_invalid",
+          "organization_id",
+          "organization_name",
+          "profile_tax_type",
+          "profile_small_business",
+          "profile_business_features",
+          "has_invoicing",
+          "avv_confirmed_on",
+          "avv_confirmed_by",
+          "avv_note",
+          "mailbox_id",
+          "sync_contacts",
+          "sync_names",
+          "invoice_copies",
+          "invoice_drafts",
+          "last_tested_at",
+          "last_test_ok",
+          "last_test_message"
+        ],
+        "title": "LexofficeOrganisationOut",
+        "type": "object"
+      },
+      "LexofficeOutboxOut": {
+        "properties": {
+          "attempts": {
+            "title": "Attempts",
+            "type": "integer"
+          },
+          "config_id": {
+            "format": "uuid",
+            "title": "Config Id",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "detail": {
+            "additionalProperties": true,
+            "title": "Detail",
+            "type": "object"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "last_status_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Status Code"
+          },
+          "next_attempt_at": {
+            "format": "date-time",
+            "title": "Next Attempt At",
+            "type": "string"
+          },
+          "sent_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sent At"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "target_id": {
+            "format": "uuid",
+            "title": "Target Id",
+            "type": "string"
+          },
+          "target_kind": {
+            "title": "Target Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "config_id",
+          "kind",
+          "target_kind",
+          "target_id",
+          "status",
+          "attempts",
+          "next_attempt_at",
+          "last_status_code",
+          "last_error",
+          "detail",
+          "sent_at",
+          "created_at"
+        ],
+        "title": "LexofficeOutboxOut",
+        "type": "object"
+      },
+      "LexofficePage": {
+        "properties": {
+          "items": {
+            "items": {},
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "size"
+        ],
+        "title": "LexofficePage",
+        "type": "object"
+      },
+      "LexofficePushBatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 500,
+            "minItems": 1,
+            "title": "Contact Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "contact_ids"
+        ],
+        "title": "LexofficePushBatchIn",
+        "type": "object"
+      },
+      "LexofficeRecurringDoneIn": {
+        "additionalProperties": false,
+        "properties": {
+          "lexoffice_template_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Lexoffice Template Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "lexoffice_template_id"
+        ],
+        "title": "LexofficeRecurringDoneIn",
+        "type": "object"
+      },
+      "LexofficeRecurringPrepOut": {
+        "properties": {
+          "admin_fee_setting_id": {
+            "format": "uuid",
+            "title": "Admin Fee Setting Id",
+            "type": "string"
+          },
+          "checklist": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Checklist",
+            "type": "array"
+          },
+          "config_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Config Id"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "deeplink": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deeplink"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "lexoffice_template_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lexoffice Template Id"
+          },
+          "prepared": {
+            "additionalProperties": true,
+            "title": "Prepared",
+            "type": "object"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "admin_fee_setting_id",
+          "property_id",
+          "config_id",
+          "contact_id",
+          "prepared",
+          "checklist",
+          "status",
+          "lexoffice_template_id",
+          "created_at"
+        ],
+        "title": "LexofficeRecurringPrepOut",
+        "type": "object"
+      },
+      "LexofficeRemoteSearchOut": {
+        "properties": {
+          "city": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "City"
+          },
+          "customer_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Customer Number"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "title": "Id",
+            "type": "string"
+          },
+          "vendor_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vendor Number"
+          },
+          "zip": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Zip"
+          }
+        },
+        "required": [
+          "id",
+          "display_name",
+          "customer_number",
+          "vendor_number",
+          "city",
+          "zip",
+          "email"
+        ],
+        "title": "LexofficeRemoteSearchOut",
+        "type": "object"
+      },
+      "LexofficeResolveIn": {
+        "additionalProperties": false,
+        "properties": {
+          "resolution": {
+            "enum": [
+              "keep_crm",
+              "keep_lexoffice"
+            ],
+            "title": "Resolution",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resolution"
+        ],
+        "title": "LexofficeResolveIn",
+        "type": "object"
+      },
       "LexofficeRunOut": {
         "properties": {
           "counts": {
@@ -25769,6 +27242,49 @@
           "finished_at"
         ],
         "title": "LexofficeRunOut",
+        "type": "object"
+      },
+      "LexofficeShippingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date"
+          },
+          "end_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "End Date"
+          },
+          "type": {
+            "enum": [
+              "none",
+              "service",
+              "serviceperiod"
+            ],
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type"
+        ],
+        "title": "LexofficeShippingIn",
         "type": "object"
       },
       "LicenseIn": {
@@ -25846,78 +27362,6 @@
           "valid_from"
         ],
         "title": "LicenseIn",
-        "type": "object"
-      },
-      "LineItemIn": {
-        "additionalProperties": false,
-        "properties": {
-          "description": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Description"
-          },
-          "name": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "quantity": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "title": "Quantity"
-          },
-          "tax_rate_percent": {
-            "enum": [
-              0,
-              7,
-              19
-            ],
-            "title": "Tax Rate Percent",
-            "type": "integer"
-          },
-          "unit_name": {
-            "maxLength": 50,
-            "minLength": 1,
-            "title": "Unit Name",
-            "type": "string"
-          },
-          "unit_price": {
-            "anyOf": [
-              {
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              }
-            ],
-            "title": "Unit Price"
-          }
-        },
-        "required": [
-          "name",
-          "quantity",
-          "unit_name",
-          "unit_price",
-          "tax_rate_percent"
-        ],
-        "title": "LineItemIn",
         "type": "object"
       },
       "LineOut": {
@@ -26162,19 +27606,33 @@
         "title": "LinkIn",
         "type": "object"
       },
-      "LinkRecipientIn": {
-        "additionalProperties": false,
+      "LinkOut": {
         "properties": {
-          "contact_id": {
+          "entity_id": {
             "format": "uuid",
-            "title": "Contact Id",
+            "title": "Entity Id",
             "type": "string"
+          },
+          "entity_type": {
+            "title": "Entity Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role": {
+            "$ref": "#/components/schemas/LinkRole"
           }
         },
         "required": [
-          "contact_id"
+          "id",
+          "entity_type",
+          "entity_id",
+          "role"
         ],
-        "title": "LinkRecipientIn",
+        "title": "LinkOut",
         "type": "object"
       },
       "LinkRole": {
@@ -29072,6 +30530,21 @@
           }
         },
         "title": "MappingPatch",
+        "type": "object"
+      },
+      "MatchIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "title": "MatchIn",
         "type": "object"
       },
       "MeOut": {
@@ -32622,107 +34095,6 @@
         "title": "OrderStep",
         "type": "object"
       },
-      "OutboxOut": {
-        "properties": {
-          "attempts": {
-            "title": "Attempts",
-            "type": "integer"
-          },
-          "config_id": {
-            "format": "uuid",
-            "title": "Config Id",
-            "type": "string"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "detail": {
-            "additionalProperties": true,
-            "title": "Detail",
-            "type": "object"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "last_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Error"
-          },
-          "last_status_code": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Status Code"
-          },
-          "next_attempt_at": {
-            "format": "date-time",
-            "title": "Next Attempt At",
-            "type": "string"
-          },
-          "sent_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Sent At"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "target_id": {
-            "format": "uuid",
-            "title": "Target Id",
-            "type": "string"
-          },
-          "target_kind": {
-            "title": "Target Kind",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "config_id",
-          "kind",
-          "target_kind",
-          "target_id",
-          "status",
-          "attempts",
-          "next_attempt_at",
-          "last_status_code",
-          "last_error",
-          "detail",
-          "sent_at",
-          "created_at"
-        ],
-        "title": "OutboxOut",
-        "type": "object"
-      },
       "OverviewOut": {
         "properties": {
           "tenants": {
@@ -33232,35 +34604,6 @@
           "entries"
         ],
         "title": "PackageOut",
-        "type": "object"
-      },
-      "Page": {
-        "properties": {
-          "items": {
-            "items": {},
-            "title": "Items",
-            "type": "array"
-          },
-          "page": {
-            "title": "Page",
-            "type": "integer"
-          },
-          "size": {
-            "title": "Size",
-            "type": "integer"
-          },
-          "total": {
-            "title": "Total",
-            "type": "integer"
-          }
-        },
-        "required": [
-          "items",
-          "total",
-          "page",
-          "size"
-        ],
-        "title": "Page",
         "type": "object"
       },
       "PaperlessIntakeIn": {
@@ -36436,7 +37779,7 @@
           },
           "legal_entities": {
             "items": {
-              "$ref": "#/components/schemas/mhvp__properties__schemas__LegalEntityOut"
+              "$ref": "#/components/schemas/LegalEntityOut"
             },
             "title": "Legal Entities",
             "type": "array"
@@ -38609,26 +39952,6 @@
         "title": "ProviderTestOut",
         "type": "object"
       },
-      "PushBatchIn": {
-        "additionalProperties": false,
-        "properties": {
-          "contact_ids": {
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "maxItems": 500,
-            "minItems": 1,
-            "title": "Contact Ids",
-            "type": "array"
-          }
-        },
-        "required": [
-          "contact_ids"
-        ],
-        "title": "PushBatchIn",
-        "type": "object"
-      },
       "QueuedOut": {
         "properties": {
           "link_id": {
@@ -39724,123 +41047,6 @@
         "title": "RecurrenceIn",
         "type": "object"
       },
-      "RecurringDoneIn": {
-        "additionalProperties": false,
-        "properties": {
-          "lexoffice_template_id": {
-            "maxLength": 64,
-            "minLength": 1,
-            "title": "Lexoffice Template Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "lexoffice_template_id"
-        ],
-        "title": "RecurringDoneIn",
-        "type": "object"
-      },
-      "RecurringPrepOut": {
-        "properties": {
-          "admin_fee_setting_id": {
-            "format": "uuid",
-            "title": "Admin Fee Setting Id",
-            "type": "string"
-          },
-          "checklist": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Checklist",
-            "type": "array"
-          },
-          "config_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Config Id"
-          },
-          "contact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contact Id"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "deeplink": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deeplink"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "lexoffice_template_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lexoffice Template Id"
-          },
-          "prepared": {
-            "additionalProperties": true,
-            "title": "Prepared",
-            "type": "object"
-          },
-          "property_id": {
-            "format": "uuid",
-            "title": "Property Id",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "admin_fee_setting_id",
-          "property_id",
-          "config_id",
-          "contact_id",
-          "prepared",
-          "checklist",
-          "status",
-          "lexoffice_template_id",
-          "created_at"
-        ],
-        "title": "RecurringPrepOut",
-        "type": "object"
-      },
       "ReferenceRateIn": {
         "additionalProperties": false,
         "properties": {
@@ -40280,84 +41486,6 @@
           "verification_basis"
         ],
         "title": "RemoteConfirmIn",
-        "type": "object"
-      },
-      "RemoteSearchOut": {
-        "properties": {
-          "city": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "City"
-          },
-          "customer_number": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Customer Number"
-          },
-          "display_name": {
-            "title": "Display Name",
-            "type": "string"
-          },
-          "email": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Email"
-          },
-          "id": {
-            "title": "Id",
-            "type": "string"
-          },
-          "vendor_number": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Vendor Number"
-          },
-          "zip": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Zip"
-          }
-        },
-        "required": [
-          "id",
-          "display_name",
-          "customer_number",
-          "vendor_number",
-          "city",
-          "zip",
-          "email"
-        ],
-        "title": "RemoteSearchOut",
         "type": "object"
       },
       "RentIncreaseAction": {
@@ -41584,24 +42712,6 @@
           }
         },
         "title": "ResolutionKindsConfig",
-        "type": "object"
-      },
-      "ResolveIn": {
-        "additionalProperties": false,
-        "properties": {
-          "resolution": {
-            "enum": [
-              "keep_crm",
-              "keep_lexoffice"
-            ],
-            "title": "Resolution",
-            "type": "string"
-          }
-        },
-        "required": [
-          "resolution"
-        ],
-        "title": "ResolveIn",
         "type": "object"
       },
       "RestartIn": {
@@ -42890,6 +44000,200 @@
         "title": "RunIn",
         "type": "object"
       },
+      "RunOut": {
+        "properties": {
+          "confidence": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "cost_eur": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Cost Eur",
+            "type": "string"
+          },
+          "duration_ms": {
+            "title": "Duration Ms",
+            "type": "integer"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "fallback": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Fallback",
+            "type": "array"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "input_stats": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Input Stats",
+            "type": "object"
+          },
+          "links": {
+            "items": {
+              "$ref": "#/components/schemas/ChatLink"
+            },
+            "title": "Links",
+            "type": "array"
+          },
+          "lookup_answer": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lookup Answer"
+          },
+          "model": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model"
+          },
+          "model_tier_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Tier Reason"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "progress": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Progress"
+          },
+          "prompt_version": {
+            "title": "Prompt Version",
+            "type": "string"
+          },
+          "proposal_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proposal Id"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/AiProvider"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provider_used": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Used"
+          },
+          "status": {
+            "$ref": "#/components/schemas/RunStatus"
+          },
+          "task": {
+            "$ref": "#/components/schemas/AiTask"
+          },
+          "tokens_in": {
+            "title": "Tokens In",
+            "type": "integer"
+          },
+          "tokens_out": {
+            "title": "Tokens Out",
+            "type": "integer"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Warnings",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "task",
+          "status",
+          "provider",
+          "model",
+          "prompt_version",
+          "output",
+          "confidence",
+          "tokens_in",
+          "tokens_out",
+          "cost_eur",
+          "duration_ms",
+          "error"
+        ],
+        "title": "RunOut",
+        "type": "object"
+      },
       "RunReverseIn": {
         "additionalProperties": false,
         "properties": {
@@ -44071,49 +45375,6 @@
           "as_of"
         ],
         "title": "SettlementProposalIn",
-        "type": "object"
-      },
-      "ShippingIn": {
-        "additionalProperties": false,
-        "properties": {
-          "date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Date"
-          },
-          "end_date": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "End Date"
-          },
-          "type": {
-            "enum": [
-              "none",
-              "service",
-              "serviceperiod"
-            ],
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type"
-        ],
-        "title": "ShippingIn",
         "type": "object"
       },
       "SignatureIn": {
@@ -51400,200 +52661,6 @@
         "title": "ProviderOut",
         "type": "object"
       },
-      "mhvp__ai__schemas__RunOut": {
-        "properties": {
-          "confidence": {
-            "anyOf": [
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confidence"
-          },
-          "cost_eur": {
-            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-            "title": "Cost Eur",
-            "type": "string"
-          },
-          "duration_ms": {
-            "title": "Duration Ms",
-            "type": "integer"
-          },
-          "error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Error"
-          },
-          "fallback": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Fallback",
-            "type": "array"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "input_stats": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Input Stats",
-            "type": "object"
-          },
-          "links": {
-            "items": {
-              "$ref": "#/components/schemas/ChatLink"
-            },
-            "title": "Links",
-            "type": "array"
-          },
-          "lookup_answer": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lookup Answer"
-          },
-          "model": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model"
-          },
-          "model_tier_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Model Tier Reason"
-          },
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output"
-          },
-          "progress": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Progress"
-          },
-          "prompt_version": {
-            "title": "Prompt Version",
-            "type": "string"
-          },
-          "proposal_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Proposal Id"
-          },
-          "provider": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/AiProvider"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "provider_used": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Provider Used"
-          },
-          "status": {
-            "$ref": "#/components/schemas/RunStatus"
-          },
-          "task": {
-            "$ref": "#/components/schemas/AiTask"
-          },
-          "tokens_in": {
-            "title": "Tokens In",
-            "type": "integer"
-          },
-          "tokens_out": {
-            "title": "Tokens Out",
-            "type": "integer"
-          },
-          "warnings": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Warnings",
-            "type": "array"
-          }
-        },
-        "required": [
-          "id",
-          "task",
-          "status",
-          "provider",
-          "model",
-          "prompt_version",
-          "output",
-          "confidence",
-          "tokens_in",
-          "tokens_out",
-          "cost_eur",
-          "duration_ms",
-          "error"
-        ],
-        "title": "RunOut",
-        "type": "object"
-      },
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -52086,1070 +53153,6 @@
         "title": "TenantOut",
         "type": "object"
       },
-      "mhvp__documents__schemas__LinkOut": {
-        "properties": {
-          "entity_id": {
-            "format": "uuid",
-            "title": "Entity Id",
-            "type": "string"
-          },
-          "entity_type": {
-            "title": "Entity Type",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "role": {
-            "$ref": "#/components/schemas/LinkRole"
-          }
-        },
-        "required": [
-          "id",
-          "entity_type",
-          "entity_id",
-          "role"
-        ],
-        "title": "LinkOut",
-        "type": "object"
-      },
-      "mhvp__immoware__schemas__MatchIn": {
-        "additionalProperties": false,
-        "properties": {
-          "contact_id": {
-            "format": "uuid",
-            "title": "Contact Id",
-            "type": "string"
-          }
-        },
-        "required": [
-          "contact_id"
-        ],
-        "title": "MatchIn",
-        "type": "object"
-      },
-      "mhvp__integrations__lexoffice_ext__schemas__ConfigIn": {
-        "additionalProperties": false,
-        "properties": {
-          "api_key": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "minLength": 1,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Api Key"
-          },
-          "avv_confirmed_on": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Confirmed On"
-          },
-          "avv_note": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Note"
-          },
-          "base_url": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Base Url"
-          },
-          "clear_api_key": {
-            "default": false,
-            "title": "Clear Api Key",
-            "type": "boolean"
-          },
-          "clear_mailbox": {
-            "default": false,
-            "title": "Clear Mailbox",
-            "type": "boolean"
-          },
-          "enabled": {
-            "default": false,
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "invoice_copies": {
-            "default": false,
-            "title": "Invoice Copies",
-            "type": "boolean"
-          },
-          "invoice_drafts": {
-            "default": false,
-            "title": "Invoice Drafts",
-            "type": "boolean"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "maxLength": 120,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          },
-          "legal_entity_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Id"
-          },
-          "mailbox_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mailbox Id"
-          },
-          "sync_contacts": {
-            "default": false,
-            "title": "Sync Contacts",
-            "type": "boolean"
-          },
-          "sync_names": {
-            "default": false,
-            "title": "Sync Names",
-            "type": "boolean"
-          }
-        },
-        "title": "ConfigIn",
-        "type": "object"
-      },
-      "mhvp__integrations__lexoffice_ext__schemas__ConfigOut": {
-        "properties": {
-          "api_key_last4": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Api Key Last4"
-          },
-          "api_key_set": {
-            "title": "Api Key Set",
-            "type": "boolean"
-          },
-          "app_base_url": {
-            "title": "App Base Url",
-            "type": "string"
-          },
-          "avv_confirmed_by": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Confirmed By"
-          },
-          "avv_confirmed_on": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Confirmed On"
-          },
-          "avv_note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Note"
-          },
-          "base_url": {
-            "title": "Base Url",
-            "type": "string"
-          },
-          "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "has_invoicing": {
-            "title": "Has Invoicing",
-            "type": "boolean"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "invoice_copies": {
-            "title": "Invoice Copies",
-            "type": "boolean"
-          },
-          "invoice_drafts": {
-            "title": "Invoice Drafts",
-            "type": "boolean"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          },
-          "last_test_message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Test Message"
-          },
-          "last_test_ok": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Test Ok"
-          },
-          "last_tested_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Tested At"
-          },
-          "legal_entity_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Id"
-          },
-          "legal_entity_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Legal Entity Name"
-          },
-          "mailbox_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Mailbox Id"
-          },
-          "message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Message"
-          },
-          "organization_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organization Id"
-          },
-          "organization_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Organization Name"
-          },
-          "profile_business_features": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Profile Business Features",
-            "type": "array"
-          },
-          "profile_small_business": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Profile Small Business"
-          },
-          "profile_tax_type": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Profile Tax Type"
-          },
-          "sync_contacts": {
-            "title": "Sync Contacts",
-            "type": "boolean"
-          },
-          "sync_names": {
-            "title": "Sync Names",
-            "type": "boolean"
-          },
-          "token_invalid": {
-            "title": "Token Invalid",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "id",
-          "legal_entity_id",
-          "legal_entity_name",
-          "label",
-          "base_url",
-          "app_base_url",
-          "enabled",
-          "api_key_set",
-          "api_key_last4",
-          "token_invalid",
-          "organization_id",
-          "organization_name",
-          "profile_tax_type",
-          "profile_small_business",
-          "profile_business_features",
-          "has_invoicing",
-          "avv_confirmed_on",
-          "avv_confirmed_by",
-          "avv_note",
-          "mailbox_id",
-          "sync_contacts",
-          "sync_names",
-          "invoice_copies",
-          "invoice_drafts",
-          "last_tested_at",
-          "last_test_ok",
-          "last_test_message"
-        ],
-        "title": "ConfigOut",
-        "type": "object"
-      },
-      "mhvp__integrations__lexoffice_ext__schemas__DecideIn": {
-        "additionalProperties": false,
-        "properties": {
-          "action": {
-            "enum": [
-              "link",
-              "create_remote",
-              "create_local",
-              "dismiss"
-            ],
-            "title": "Action",
-            "type": "string"
-          },
-          "contact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contact Id"
-          },
-          "lexoffice_contact_id": {
-            "anyOf": [
-              {
-                "maxLength": 64,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lexoffice Contact Id"
-          },
-          "roles": {
-            "items": {
-              "enum": [
-                "customer",
-                "vendor"
-              ],
-              "type": "string"
-            },
-            "title": "Roles",
-            "type": "array"
-          }
-        },
-        "required": [
-          "action"
-        ],
-        "title": "DecideIn",
-        "type": "object"
-      },
-      "mhvp__integrations__lexoffice_ext__schemas__LegalEntityOut": {
-        "properties": {
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "name"
-        ],
-        "title": "LegalEntityOut",
-        "type": "object"
-      },
-      "mhvp__integrations__lexoffice_ext__schemas__LinkOut": {
-        "properties": {
-          "candidates": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Candidates",
-            "type": "array"
-          },
-          "config_id": {
-            "format": "uuid",
-            "title": "Config Id",
-            "type": "string"
-          },
-          "conflict": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Conflict"
-          },
-          "contact_display_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contact Display Name"
-          },
-          "contact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contact Id"
-          },
-          "contact_version": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Contact Version"
-          },
-          "customer_number": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Customer Number"
-          },
-          "deeplink": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Deeplink"
-          },
-          "diverged": {
-            "title": "Diverged",
-            "type": "boolean"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "last_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Error"
-          },
-          "last_synced_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Synced At"
-          },
-          "lexoffice_contact_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lexoffice Contact Id"
-          },
-          "lexoffice_version": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Lexoffice Version"
-          },
-          "match_reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Match Reason"
-          },
-          "match_score": {
-            "anyOf": [
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Match Score"
-          },
-          "remote_display": {
-            "additionalProperties": true,
-            "title": "Remote Display",
-            "type": "object"
-          },
-          "sync_status": {
-            "title": "Sync Status",
-            "type": "string"
-          },
-          "synced_contact_version": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Synced Contact Version"
-          },
-          "vendor_number": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Vendor Number"
-          }
-        },
-        "required": [
-          "id",
-          "config_id",
-          "contact_id",
-          "contact_display_name",
-          "lexoffice_contact_id",
-          "lexoffice_version",
-          "customer_number",
-          "vendor_number",
-          "sync_status",
-          "synced_contact_version",
-          "contact_version",
-          "diverged",
-          "remote_display",
-          "match_reason",
-          "match_score",
-          "candidates",
-          "conflict",
-          "last_synced_at",
-          "last_error",
-          "deeplink"
-        ],
-        "title": "LinkOut",
-        "type": "object"
-      },
-      "mhvp__integrations__lexoffice_ext__schemas__MatchIn": {
-        "additionalProperties": false,
-        "properties": {
-          "scope": {
-            "default": "customers_and_vendors",
-            "enum": [
-              "customers_and_vendors",
-              "all"
-            ],
-            "title": "Scope",
-            "type": "string"
-          }
-        },
-        "title": "MatchIn",
-        "type": "object"
-      },
-      "mhvp__integrations__lexoffice_ext__schemas__RunOut": {
-        "properties": {
-          "counts": {
-            "additionalProperties": {
-              "type": "integer"
-            },
-            "title": "Counts",
-            "type": "object"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "errors": {
-            "items": {
-              "type": "string"
-            },
-            "title": "Errors",
-            "type": "array"
-          },
-          "finished_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Finished At"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "status",
-          "counts",
-          "errors",
-          "created_at",
-          "finished_at"
-        ],
-        "title": "RunOut",
-        "type": "object"
-      },
-      "mhvp__integrations__schadenstool__schemas__ConfigIn": {
-        "additionalProperties": false,
-        "properties": {
-          "avv_confirmed_on": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Confirmed On"
-          },
-          "avv_note": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Note"
-          },
-          "base_url": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Base Url"
-          },
-          "clear_hmac_secret": {
-            "default": false,
-            "title": "Clear Hmac Secret",
-            "type": "boolean"
-          },
-          "enabled": {
-            "default": false,
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "hmac_secret": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "minLength": 16,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Hmac Secret"
-          },
-          "token": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "minLength": 8,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Token"
-          },
-          "webhook_secret": {
-            "anyOf": [
-              {
-                "maxLength": 500,
-                "minLength": 16,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Webhook Secret"
-          }
-        },
-        "title": "ConfigIn",
-        "type": "object"
-      },
-      "mhvp__integrations__schadenstool__schemas__ConfigOut": {
-        "properties": {
-          "avv_confirmed_by": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Confirmed By"
-          },
-          "avv_confirmed_on": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Confirmed On"
-          },
-          "avv_note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Avv Note"
-          },
-          "base_url": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Base Url"
-          },
-          "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "hmac_secret_set": {
-            "title": "Hmac Secret Set",
-            "type": "boolean"
-          },
-          "last_pull_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Pull At"
-          },
-          "last_pull_message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Pull Message"
-          },
-          "last_test_message": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Test Message"
-          },
-          "last_test_ok": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Test Ok"
-          },
-          "last_tested_at": {
-            "anyOf": [
-              {
-                "format": "date-time",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Tested At"
-          },
-          "token_invalid": {
-            "title": "Token Invalid",
-            "type": "boolean"
-          },
-          "token_last4": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Token Last4"
-          },
-          "token_set": {
-            "title": "Token Set",
-            "type": "boolean"
-          },
-          "webhook_path": {
-            "title": "Webhook Path",
-            "type": "string"
-          },
-          "webhook_secret_set": {
-            "title": "Webhook Secret Set",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "base_url",
-          "enabled",
-          "token_set",
-          "token_last4",
-          "token_invalid",
-          "hmac_secret_set",
-          "webhook_secret_set",
-          "webhook_path",
-          "avv_confirmed_on",
-          "avv_confirmed_by",
-          "avv_note",
-          "last_tested_at",
-          "last_test_ok",
-          "last_test_message",
-          "last_pull_at",
-          "last_pull_message"
-        ],
-        "title": "ConfigOut",
-        "type": "object"
-      },
       "mhvp__platform__schemas__TenantOut": {
         "properties": {
           "id": {
@@ -53177,32 +53180,6 @@
           "status"
         ],
         "title": "TenantOut",
-        "type": "object"
-      },
-      "mhvp__portal__mandates__DecideIn": {
-        "additionalProperties": false,
-        "properties": {
-          "accept": {
-            "title": "Accept",
-            "type": "boolean"
-          },
-          "note": {
-            "anyOf": [
-              {
-                "maxLength": 2000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
-          }
-        },
-        "required": [
-          "accept"
-        ],
-        "title": "DecideIn",
         "type": "object"
       },
       "mhvp__properties__schemas__BankAccountIn": {
@@ -53415,42 +53392,6 @@
           "valid_to"
         ],
         "title": "BankAccountOut",
-        "type": "object"
-      },
-      "mhvp__properties__schemas__LegalEntityOut": {
-        "properties": {
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "kind": {
-            "$ref": "#/components/schemas/LegalEntityKind"
-          },
-          "name": {
-            "title": "Name",
-            "type": "string"
-          },
-          "party_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Party Id"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "name",
-          "party_id"
-        ],
-        "title": "LegalEntityOut",
         "type": "object"
       },
       "mhvp__properties__schemas__ProviderIn": {
@@ -60482,7 +60423,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__ai__schemas__RunOut"
+                  "$ref": "#/components/schemas/RunOut"
                 }
               }
             },
@@ -61720,7 +61661,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__ai__schemas__RunOut"
+                  "$ref": "#/components/schemas/RunOut"
                 }
               }
             },
@@ -80676,7 +80617,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__immoware__schemas__MatchIn"
+                "$ref": "#/components/schemas/MatchIn"
               }
             }
           },
@@ -82718,7 +82659,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__ConfigOut"
+                    "$ref": "#/components/schemas/LexofficeOrganisationOut"
                   },
                   "title": "Response List Configs Api V1 Integrations Lexoffice Configs Get",
                   "type": "array"
@@ -82739,7 +82680,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__ConfigIn"
+                "$ref": "#/components/schemas/LexofficeOrganisationIn"
               }
             }
           },
@@ -82750,7 +82691,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__ConfigOut"
+                  "$ref": "#/components/schemas/LexofficeOrganisationOut"
                 }
               }
             },
@@ -82793,7 +82734,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__ConfigOut"
+                  "$ref": "#/components/schemas/LexofficeOrganisationOut"
                 }
               }
             },
@@ -82833,7 +82774,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__ConfigIn"
+                "$ref": "#/components/schemas/LexofficeOrganisationIn"
               }
             }
           },
@@ -82844,7 +82785,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__ConfigOut"
+                  "$ref": "#/components/schemas/LexofficeOrganisationOut"
                 }
               }
             },
@@ -82942,7 +82883,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page"
+                  "$ref": "#/components/schemas/LexofficePage"
                 }
               }
             },
@@ -82984,7 +82925,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/PushBatchIn"
+                "$ref": "#/components/schemas/LexofficePushBatchIn"
               }
             }
           },
@@ -83051,7 +82992,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__DecideIn"
+                "$ref": "#/components/schemas/LexofficeDecideIn"
               }
             }
           },
@@ -83062,7 +83003,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__LinkOut"
+                  "$ref": "#/components/schemas/LexofficeLinkOut"
                 }
               }
             },
@@ -83115,7 +83056,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__LinkOut"
+                  "$ref": "#/components/schemas/LexofficeLinkOut"
                 }
               }
             },
@@ -83167,7 +83108,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ResolveIn"
+                "$ref": "#/components/schemas/LexofficeResolveIn"
               }
             }
           },
@@ -83178,7 +83119,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__LinkOut"
+                  "$ref": "#/components/schemas/LexofficeLinkOut"
                 }
               }
             },
@@ -83231,7 +83172,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__LinkOut"
+                  "$ref": "#/components/schemas/LexofficeLinkOut"
                 }
               }
             },
@@ -83275,7 +83216,7 @@
               "schema": {
                 "anyOf": [
                   {
-                    "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__MatchIn"
+                    "$ref": "#/components/schemas/LexofficeMatchIn"
                   },
                   {
                     "type": "null"
@@ -83348,7 +83289,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RemoteSearchOut"
+                    "$ref": "#/components/schemas/LexofficeRemoteSearchOut"
                   },
                   "title": "Response Search Remote Api V1 Integrations Lexoffice Configs  Config Id  Contacts Search Get",
                   "type": "array"
@@ -83395,7 +83336,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__RunOut"
+                    "$ref": "#/components/schemas/LexofficeRunOut"
                   },
                   "title": "Response Config Runs Api V1 Integrations Lexoffice Configs  Config Id  Runs Get",
                   "type": "array"
@@ -83441,7 +83382,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__ConfigOut"
+                  "$ref": "#/components/schemas/LexofficeOrganisationOut"
                 }
               }
             },
@@ -83485,7 +83426,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/ContactStatusOut"
+                    "$ref": "#/components/schemas/LexofficeContactStatusOut"
                   },
                   "title": "Response Contact Status Api V1 Integrations Lexoffice Contacts  Contact Id  Lexoffice Get",
                   "type": "array"
@@ -83654,7 +83595,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceCopyOut"
+                  "$ref": "#/components/schemas/LexofficeInvoiceCopyOut"
                 }
               }
             },
@@ -83696,7 +83637,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InvoiceCopyCorrectIn"
+                "$ref": "#/components/schemas/LexofficeInvoiceCopyCorrectIn"
               }
             }
           },
@@ -83707,7 +83648,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceCopyOut"
+                  "$ref": "#/components/schemas/LexofficeInvoiceCopyOut"
                 }
               }
             },
@@ -83749,7 +83690,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/LinkRecipientIn"
+                "$ref": "#/components/schemas/LexofficeLinkRecipientIn"
               }
             }
           },
@@ -83760,7 +83701,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceCopyOut"
+                  "$ref": "#/components/schemas/LexofficeInvoiceCopyOut"
                 }
               }
             },
@@ -83802,7 +83743,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InvoiceCopyRejectIn"
+                "$ref": "#/components/schemas/LexofficeInvoiceCopyRejectIn"
               }
             }
           },
@@ -83813,7 +83754,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceCopyOut"
+                  "$ref": "#/components/schemas/LexofficeInvoiceCopyOut"
                 }
               }
             },
@@ -83880,7 +83821,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/InvoiceDraftOut"
+                    "$ref": "#/components/schemas/LexofficeInvoiceDraftOut"
                   },
                   "title": "Response List Drafts Api V1 Integrations Lexoffice Invoice Drafts Get",
                   "type": "array"
@@ -83911,7 +83852,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InvoiceDraftIn"
+                "$ref": "#/components/schemas/LexofficeInvoiceDraftIn"
               }
             }
           },
@@ -83922,7 +83863,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceDraftOut"
+                  "$ref": "#/components/schemas/LexofficeInvoiceDraftOut"
                 }
               }
             },
@@ -83952,7 +83893,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InvoiceDraftIn"
+                "$ref": "#/components/schemas/LexofficeInvoiceDraftIn"
               }
             }
           },
@@ -83963,7 +83904,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceDraftPreviewOut"
+                  "$ref": "#/components/schemas/LexofficeInvoiceDraftPreviewOut"
                 }
               }
             },
@@ -84006,7 +83947,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceDraftOut"
+                  "$ref": "#/components/schemas/LexofficeInvoiceDraftOut"
                 }
               }
             },
@@ -84038,7 +83979,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/InvoiceKindMappingOut"
+                    "$ref": "#/components/schemas/LexofficeInvoiceKindMappingOut"
                   },
                   "title": "Response List Invoice Kinds Api V1 Integrations Lexoffice Invoice Kinds Get",
                   "type": "array"
@@ -84060,7 +84001,7 @@
             "application/json": {
               "schema": {
                 "items": {
-                  "$ref": "#/components/schemas/InvoiceKindMappingIn"
+                  "$ref": "#/components/schemas/LexofficeInvoiceKindMappingIn"
                 },
                 "title": "Body",
                 "type": "array"
@@ -84075,7 +84016,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/InvoiceKindMappingOut"
+                    "$ref": "#/components/schemas/LexofficeInvoiceKindMappingOut"
                   },
                   "title": "Response Put Invoice Kinds Api V1 Integrations Lexoffice Invoice Kinds Put",
                   "type": "array"
@@ -84110,7 +84051,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__integrations__lexoffice_ext__schemas__LegalEntityOut"
+                    "$ref": "#/components/schemas/LexofficeLegalEntityOut"
                   },
                   "title": "Response Legal Entities Api V1 Integrations Lexoffice Legal Entities Get",
                   "type": "array"
@@ -84192,7 +84133,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/Page"
+                  "$ref": "#/components/schemas/LexofficePage"
                 }
               }
             },
@@ -84235,7 +84176,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/OutboxOut"
+                  "$ref": "#/components/schemas/LexofficeOutboxOut"
                 }
               }
             },
@@ -84285,7 +84226,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/RecurringPrepOut"
+                    "$ref": "#/components/schemas/LexofficeRecurringPrepOut"
                   },
                   "title": "Response List Recurring Api V1 Integrations Lexoffice Recurring Preps Get",
                   "type": "array"
@@ -84331,7 +84272,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RecurringPrepOut"
+                  "$ref": "#/components/schemas/LexofficeRecurringPrepOut"
                 }
               }
             },
@@ -84373,7 +84314,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RecurringDoneIn"
+                "$ref": "#/components/schemas/LexofficeRecurringDoneIn"
               }
             }
           },
@@ -84384,7 +84325,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/RecurringPrepOut"
+                  "$ref": "#/components/schemas/LexofficeRecurringPrepOut"
                 }
               }
             },
@@ -84474,7 +84415,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/InvoiceCopyOut"
+                    "$ref": "#/components/schemas/LexofficeInvoiceCopyOut"
                   },
                   "title": "Response List Invoice Copies Api V1 Integrations Lexoffice Tickets  Ticket Id  Invoice Copies Get",
                   "type": "array"
@@ -84517,7 +84458,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/InvoiceCopyIn"
+                "$ref": "#/components/schemas/LexofficeInvoiceCopyIn"
               }
             }
           },
@@ -84528,7 +84469,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/InvoiceCopyOut"
+                  "$ref": "#/components/schemas/LexofficeInvoiceCopyOut"
                 }
               }
             },
@@ -85290,7 +85231,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__schadenstool__schemas__ConfigOut"
+                  "$ref": "#/components/schemas/ConfigOut"
                 }
               }
             },
@@ -85308,7 +85249,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__integrations__schadenstool__schemas__ConfigIn"
+                "$ref": "#/components/schemas/ConfigIn"
               }
             }
           },
@@ -85319,7 +85260,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__schadenstool__schemas__ConfigOut"
+                  "$ref": "#/components/schemas/ConfigOut"
                 }
               }
             },
@@ -85350,7 +85291,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__integrations__schadenstool__schemas__ConfigOut"
+                  "$ref": "#/components/schemas/ConfigOut"
                 }
               }
             },
@@ -97812,7 +97753,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__portal__mandates__DecideIn"
+                "$ref": "#/components/schemas/DecideIn"
               }
             }
           },
@@ -102360,7 +102301,7 @@
               "application/json": {
                 "schema": {
                   "items": {
-                    "$ref": "#/components/schemas/mhvp__properties__schemas__LegalEntityOut"
+                    "$ref": "#/components/schemas/LegalEntityOut"
                   },
                   "title": "Response List Entities Api V1 Properties  Property Id  Legal Entities Get",
                   "type": "array"

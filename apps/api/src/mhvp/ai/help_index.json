@@ -3489,6 +3489,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Lexware Office",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Organisationen je Gesellschaft mit API Schlüssel, AVV, Postfach und Schaltern, Zuordnung der Rechnungsarten, Kontaktabgleich, Warteschlange und vorbereitete Dauerrechnungen unter Schnittstellen, Lexware Office; siehe Lexware Office.",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Grundsatz: Hinweis statt Sperre",
   "source": "Handbuch: Erfassungsstandards",
   "href": null,
@@ -4046,6 +4056,96 @@
   "permission": null,
   "excerpt": "- IBAN oder BIC ungültig: Formatprüfung schlägt fehl; Eingabe ohne Leerzeichen und mit korrektem Länderpräfix wiederholen. - SEPA-Freigabe lässt sich nicht speichern: Datum der Erteilung, Erteilungsart oder Mandatsnachweis (Bitte das Mandat als PDF hinterlegen oder einen Vermerk ",
   "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Einrichtung",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "1. Reiter Organisationen: je Gesellschaft eine Organisation anlegen (Hausverwaltung Müller GmbH, Müller Holding AG, Einzelunternehmen Timo Müller) oder die Standardorganisation ohne Gesellschaft. Bezeichnung, API Schlüssel (wird nach dem Speichern nur noch als \"endet auf\" angezei",
+  "file": "docs/handbuch/lexware-office.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kontakte zuordnen",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Reiter Kontakte zuordnen: \"Abgleich starten\" liest die Kunden und Lieferanten (oder alle Kontakte) aus Lexware Office und schlägt Zuordnungen vor. Gründe: Kundennummer, E-Mail identisch, Name und PLZ, nur Name. Jede Zeile wird von einer Person entschieden: - Verknüpfen: der CRM K",
+  "file": "docs/handbuch/lexware-office.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Adressänderung",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Nach einer im CRM angewandten Änderung (Bearbeiten des Kontakts, angenommener Vorschlag aus einer E-Mail) wird die Adresse, die primäre E-Mail und das primäre Telefon an jede verknüpfte Organisation übertragen. Am Ticket erscheint \"Lexware Office: übertragen am TT.MM.JJJJ\" oder \"",
+  "file": "docs/handbuch/lexware-office.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rechnungskopie",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bittet ein Kontakt per E-Mail um eine bereits gestellte Rechnung (\"Rechnung RE-1019 nochmals zusenden\"), entsteht am Ticket eine Anfrage mit der wörtlich erkannten Rechnungsnummer. Manuell: POST /integrations/lexoffice/tickets/{ticket}/invoice-copies mit der Nummer (Telefon, Scha",
+  "file": "docs/handbuch/lexware-office.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rechnungsentwurf",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "POST /integrations/lexoffice/invoice-drafts/preview und .../invoice-drafts mit Rechnungsart (oder Organisation), Kontakt, Belegdatum, Steuerart, Positionen, Leistungszeitraum und Texten. Die Gesellschaft ergibt sich aus der Rechnungsart. Der Entwurf wird in Lexware Office angeleg",
+  "file": "docs/handbuch/lexware-office.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Dauerrechnungen",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Laufende Verwaltervergütungen bleiben Dauerrechnungen in Lexware Office. Die API stellt Dauerrechnungen nur lesend bereit. Wird ein Verwalterhonorar am Objekt erfasst, erscheint im Reiter Dauerrechnungen eine Vorbereitung mit Debitor, Beträgen, Intervall, Beginn und Text sowie ei",
+  "file": "docs/handbuch/lexware-office.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Warteschlange",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Jede Übertragung ist ein Eintrag mit Versuchen nach Plan (1 min, 5 min, 30 min, 2 h, 6 h, 24 h). Fehlgeschlagene Einträge können erneut eingeplant werden. Wird der Schlüssel abgelehnt, hält die Organisation an, bis ein neuer Schlüssel hinterlegt und getestet ist. Fehlertexte enth",
+  "file": "docs/handbuch/lexware-office.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Was nie übertragen wird",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "IBAN, BIC, Mandate, Steuernummern, Umsatzsteuer-IDs, Notizen, interne Beschreibungen, Rollen und Nummern aus dem CRM, Dokumente außer der angeforderten Rechnungsdatei (die in die Plattform kommt, nicht hinaus).",
+  "file": "docs/handbuch/lexware-office.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rechte je Rolle",
+  "source": "Handbuch: Lexware Office",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Aufgabe Recht --- --- Organisationen lesen tenantsettings:read Organisationen, Rechnungsarten, Warteschlange tenantsettings:update Kontakte zuordnen, Konflikte, Suche contacts:update Status am Kontakt contacts:read Läufe accounting:read Rechnungsentwürfe, Dauerrechnungen accounti",
+  "file": "docs/handbuch/lexware-office.md"
  },
  {
   "kind": "handbook",
@@ -4905,6 +5005,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Zusammenführen schlägt fehl, Zielticket nicht gefunden: Suche nach Nummer oder Titel liefert kein Ergebnis (Kein passendes Ticket gefunden); Schreibweise prüfen, ein bereits zusammengeführtes Ticket kann nicht erneut Ziel sein. - Sammelstatus bricht mit Fehlgeschlagen ab: einze",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rechnungskopie aus Lexware Office",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Bittet ein Kontakt um eine bereits gestellte Rechnung, entsteht am Ticket eine Anfrage mit der erkannten Rechnungsnummer; nach Prüfung des Empfängers wird die Rechnungsdatei abgerufen und ein Antwortentwurf an die bekannte Adresse erstellt (zweite Freigabe). Details in Lexware Of",
   "file": "docs/handbuch/tickets.md"
  },
  {

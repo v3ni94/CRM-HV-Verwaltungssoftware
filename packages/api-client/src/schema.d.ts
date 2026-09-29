@@ -21172,6 +21172,66 @@ export interface components {
          * @enum {string}
          */
         Completeness: "complete" | "incomplete";
+        /** ConfigIn */
+        ConfigIn: {
+            /** Avv Confirmed On */
+            avv_confirmed_on?: string | null;
+            /** Avv Note */
+            avv_note?: string | null;
+            /** Base Url */
+            base_url?: string | null;
+            /**
+             * Clear Hmac Secret
+             * @default false
+             */
+            clear_hmac_secret: boolean;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /** Hmac Secret */
+            hmac_secret?: string | null;
+            /** Token */
+            token?: string | null;
+            /** Webhook Secret */
+            webhook_secret?: string | null;
+        };
+        /** ConfigOut */
+        ConfigOut: {
+            /** Avv Confirmed By */
+            avv_confirmed_by: string | null;
+            /** Avv Confirmed On */
+            avv_confirmed_on: string | null;
+            /** Avv Note */
+            avv_note: string | null;
+            /** Base Url */
+            base_url: string | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Hmac Secret Set */
+            hmac_secret_set: boolean;
+            /** Last Pull At */
+            last_pull_at: string | null;
+            /** Last Pull Message */
+            last_pull_message: string | null;
+            /** Last Test Message */
+            last_test_message: string | null;
+            /** Last Test Ok */
+            last_test_ok: boolean | null;
+            /** Last Tested At */
+            last_tested_at: string | null;
+            /** Token Invalid */
+            token_invalid: boolean;
+            /** Token Last4 */
+            token_last4: string | null;
+            /** Token Set */
+            token_set: boolean;
+            /** Webhook Path */
+            webhook_path: string;
+            /** Webhook Secret Set */
+            webhook_secret_set: boolean;
+        };
         /** ConnectionIn */
         ConnectionIn: {
             /** Bank Name */
@@ -21740,30 +21800,6 @@ export interface components {
          * @enum {string}
          */
         ContactRoleCode: "eigentuemer" | "mieter" | "verwalter" | "dienstleister" | "bank" | "sonstiges";
-        /** ContactStatusOut */
-        ContactStatusOut: {
-            /**
-             * Config Id
-             * Format: uuid
-             */
-            config_id: string;
-            /** Deeplink */
-            deeplink: string | null;
-            /** Diverged */
-            diverged: boolean;
-            /** Label */
-            label: string | null;
-            /** Last Error */
-            last_error: string | null;
-            /** Last Synced At */
-            last_synced_at: string | null;
-            /** Legal Entity Id */
-            legal_entity_id: string | null;
-            /** Link Id */
-            link_id: string | null;
-            /** Sync Status */
-            sync_status: string | null;
-        };
         /** ContactSummary */
         ContactSummary: {
             /** Blocked */
@@ -22703,6 +22739,13 @@ export interface components {
             /** Number */
             number: string;
         };
+        /** DecideIn */
+        DecideIn: {
+            /** Accept */
+            accept: boolean;
+            /** Note */
+            note?: string | null;
+        };
         /**
          * Decision
          * @enum {string}
@@ -23527,7 +23570,7 @@ export interface components {
              */
             id: string;
             /** Links */
-            links?: components["schemas"]["mhvp__documents__schemas__LinkOut"][];
+            links?: components["schemas"]["LinkOut"][];
             /** Mime Type */
             mime_type: string;
             /** Mirrors */
@@ -25498,163 +25541,6 @@ export interface components {
              */
             vat_percent: number | string;
         };
-        /** InvoiceCopyCorrectIn */
-        InvoiceCopyCorrectIn: {
-            /** Invoice Number */
-            invoice_number?: string | null;
-            /** Requester Contact Id */
-            requester_contact_id?: string | null;
-            /** Selected Invoice Id */
-            selected_invoice_id?: string | null;
-        };
-        /** InvoiceCopyIn */
-        InvoiceCopyIn: {
-            /** Invoice Number */
-            invoice_number: string;
-            /** Message Id */
-            message_id?: string | null;
-        };
-        /** InvoiceCopyOut */
-        InvoiceCopyOut: {
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Document Id */
-            document_id: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Invoice Number */
-            invoice_number: string;
-            /** Last Error */
-            last_error: string | null;
-            /** Lookup */
-            lookup: {
-                [key: string]: unknown;
-            };
-            /** Message Id */
-            message_id: string | null;
-            /** Recipient Contact Id */
-            recipient_contact_id: string | null;
-            /** Reply Message Id */
-            reply_message_id: string | null;
-            /** Requester Contact Id */
-            requester_contact_id: string | null;
-            /** Sender Config Id */
-            sender_config_id: string | null;
-            /** Status */
-            status: string;
-            /**
-             * Ticket Id
-             * Format: uuid
-             */
-            ticket_id: string;
-            /** Verification */
-            verification: {
-                [key: string]: unknown;
-            };
-            /** Xml Document Id */
-            xml_document_id: string | null;
-        };
-        /** InvoiceCopyRejectIn */
-        InvoiceCopyRejectIn: {
-            /** Reason */
-            reason: string;
-        };
-        /** InvoiceDraftIn */
-        InvoiceDraftIn: {
-            /** Config Id */
-            config_id?: string | null;
-            /** Contact Id */
-            contact_id?: string | null;
-            /** Introduction */
-            introduction?: string | null;
-            /** Invoice Kind */
-            invoice_kind?: ("broker" | "consulting" | "management") | null;
-            /** Line Items */
-            line_items: components["schemas"]["LineItemIn"][];
-            /** Remark */
-            remark?: string | null;
-            shipping: components["schemas"]["ShippingIn"];
-            /**
-             * Tax Type
-             * @enum {string}
-             */
-            tax_type: "net" | "gross" | "vatfree";
-            /** Title */
-            title?: string | null;
-            /**
-             * Voucher Date
-             * Format: date
-             */
-            voucher_date: string;
-        };
-        /** InvoiceDraftOut */
-        InvoiceDraftOut: {
-            /**
-             * Config Id
-             * Format: uuid
-             */
-            config_id: string;
-            /** Contact Id */
-            contact_id: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Deeplink */
-            deeplink: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Invoice Kind */
-            invoice_kind: string | null;
-            /** Last Error */
-            last_error: string | null;
-            /** Legal Entity Id */
-            legal_entity_id: string | null;
-            /** Lexoffice Invoice Id */
-            lexoffice_invoice_id: string | null;
-            /** Payload */
-            payload: {
-                [key: string]: unknown;
-            };
-            /** Status */
-            status: string;
-        };
-        /** InvoiceDraftPreviewOut */
-        InvoiceDraftPreviewOut: {
-            /** Address From Link */
-            address_from_link: boolean;
-            /**
-             * Config Id
-             * Format: uuid
-             */
-            config_id: string;
-            /** Gross */
-            gross: string;
-            /** Legal Entity Id */
-            legal_entity_id: string | null;
-            /** Legal Entity Name */
-            legal_entity_name: string | null;
-            /** Net */
-            net: string;
-            /** Note */
-            note: string;
-            /** Payload */
-            payload: {
-                [key: string]: unknown;
-            };
-            /** Tax */
-            tax: string;
-        };
         /** InvoiceForwardSettingsIn */
         InvoiceForwardSettingsIn: {
             /**
@@ -25741,29 +25627,6 @@ export interface components {
          * @enum {string}
          */
         InvoiceKind: "invoice" | "partial" | "final" | "credit_note" | "recurring";
-        /** InvoiceKindMappingIn */
-        InvoiceKindMappingIn: {
-            /**
-             * Kind
-             * @enum {string}
-             */
-            kind: "broker" | "consulting" | "management";
-            /** Legal Entity Id */
-            legal_entity_id: string | null;
-        };
-        /** InvoiceKindMappingOut */
-        InvoiceKindMappingOut: {
-            /** Config Id */
-            config_id: string | null;
-            /** Kind */
-            kind: string;
-            /** Label */
-            label: string;
-            /** Legal Entity Id */
-            legal_entity_id: string | null;
-            /** Legal Entity Name */
-            legal_entity_name: string | null;
-        };
         /** InvoiceLineIn */
         InvoiceLineIn: {
             /**
@@ -26174,6 +26037,19 @@ export interface components {
             /** Property Id */
             property_id?: string | null;
         };
+        /** LegalEntityOut */
+        LegalEntityOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            kind: components["schemas"]["LegalEntityKind"];
+            /** Name */
+            name: string;
+            /** Party Id */
+            party_id: string | null;
+        };
         /** LetterIn */
         LetterIn: {
             /**
@@ -26234,7 +26110,7 @@ export interface components {
              */
             id: string;
             /** Links */
-            links?: components["schemas"]["mhvp__documents__schemas__LinkOut"][];
+            links?: components["schemas"]["LinkOut"][];
             /** Mime Type */
             mime_type: string;
             /** Mirrors */
@@ -26351,6 +26227,44 @@ export interface components {
              */
             tenant_id: string;
         };
+        /** LexofficeContactStatusOut */
+        LexofficeContactStatusOut: {
+            /**
+             * Config Id
+             * Format: uuid
+             */
+            config_id: string;
+            /** Deeplink */
+            deeplink: string | null;
+            /** Diverged */
+            diverged: boolean;
+            /** Label */
+            label: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Synced At */
+            last_synced_at: string | null;
+            /** Legal Entity Id */
+            legal_entity_id: string | null;
+            /** Link Id */
+            link_id: string | null;
+            /** Sync Status */
+            sync_status: string | null;
+        };
+        /** LexofficeDecideIn */
+        LexofficeDecideIn: {
+            /**
+             * Action
+             * @enum {string}
+             */
+            action: "link" | "create_remote" | "create_local" | "dismiss";
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Lexoffice Contact Id */
+            lexoffice_contact_id?: string | null;
+            /** Roles */
+            roles?: ("customer" | "vendor")[];
+        };
         /** LexofficeExportContactItem */
         LexofficeExportContactItem: {
             /**
@@ -26465,6 +26379,535 @@ export interface components {
             /** Receipt Draft Id */
             receipt_draft_id?: string | null;
         };
+        /** LexofficeInvoiceCopyCorrectIn */
+        LexofficeInvoiceCopyCorrectIn: {
+            /** Invoice Number */
+            invoice_number?: string | null;
+            /** Requester Contact Id */
+            requester_contact_id?: string | null;
+            /** Selected Invoice Id */
+            selected_invoice_id?: string | null;
+        };
+        /** LexofficeInvoiceCopyIn */
+        LexofficeInvoiceCopyIn: {
+            /** Invoice Number */
+            invoice_number: string;
+            /** Message Id */
+            message_id?: string | null;
+        };
+        /** LexofficeInvoiceCopyOut */
+        LexofficeInvoiceCopyOut: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Document Id */
+            document_id: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invoice Number */
+            invoice_number: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Lookup */
+            lookup: {
+                [key: string]: unknown;
+            };
+            /** Message Id */
+            message_id: string | null;
+            /** Recipient Contact Id */
+            recipient_contact_id: string | null;
+            /** Reply Message Id */
+            reply_message_id: string | null;
+            /** Requester Contact Id */
+            requester_contact_id: string | null;
+            /** Sender Config Id */
+            sender_config_id: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /** Verification */
+            verification: {
+                [key: string]: unknown;
+            };
+            /** Xml Document Id */
+            xml_document_id: string | null;
+        };
+        /** LexofficeInvoiceCopyRejectIn */
+        LexofficeInvoiceCopyRejectIn: {
+            /** Reason */
+            reason: string;
+        };
+        /** LexofficeInvoiceDraftIn */
+        LexofficeInvoiceDraftIn: {
+            /** Config Id */
+            config_id?: string | null;
+            /** Contact Id */
+            contact_id?: string | null;
+            /** Introduction */
+            introduction?: string | null;
+            /** Invoice Kind */
+            invoice_kind?: ("broker" | "consulting" | "management") | null;
+            /** Line Items */
+            line_items: components["schemas"]["LexofficeLineItemIn"][];
+            /** Remark */
+            remark?: string | null;
+            shipping: components["schemas"]["LexofficeShippingIn"];
+            /**
+             * Tax Type
+             * @enum {string}
+             */
+            tax_type: "net" | "gross" | "vatfree";
+            /** Title */
+            title?: string | null;
+            /**
+             * Voucher Date
+             * Format: date
+             */
+            voucher_date: string;
+        };
+        /** LexofficeInvoiceDraftOut */
+        LexofficeInvoiceDraftOut: {
+            /**
+             * Config Id
+             * Format: uuid
+             */
+            config_id: string;
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deeplink */
+            deeplink: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invoice Kind */
+            invoice_kind: string | null;
+            /** Last Error */
+            last_error: string | null;
+            /** Legal Entity Id */
+            legal_entity_id: string | null;
+            /** Lexoffice Invoice Id */
+            lexoffice_invoice_id: string | null;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Status */
+            status: string;
+        };
+        /** LexofficeInvoiceDraftPreviewOut */
+        LexofficeInvoiceDraftPreviewOut: {
+            /** Address From Link */
+            address_from_link: boolean;
+            /**
+             * Config Id
+             * Format: uuid
+             */
+            config_id: string;
+            /** Gross */
+            gross: string;
+            /** Legal Entity Id */
+            legal_entity_id: string | null;
+            /** Legal Entity Name */
+            legal_entity_name: string | null;
+            /** Net */
+            net: string;
+            /** Note */
+            note: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /** Tax */
+            tax: string;
+        };
+        /** LexofficeInvoiceKindMappingIn */
+        LexofficeInvoiceKindMappingIn: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "broker" | "consulting" | "management";
+            /** Legal Entity Id */
+            legal_entity_id: string | null;
+        };
+        /** LexofficeInvoiceKindMappingOut */
+        LexofficeInvoiceKindMappingOut: {
+            /** Config Id */
+            config_id: string | null;
+            /** Kind */
+            kind: string;
+            /** Label */
+            label: string;
+            /** Legal Entity Id */
+            legal_entity_id: string | null;
+            /** Legal Entity Name */
+            legal_entity_name: string | null;
+        };
+        /** LexofficeLegalEntityOut */
+        LexofficeLegalEntityOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+        };
+        /** LexofficeLineItemIn */
+        LexofficeLineItemIn: {
+            /** Description */
+            description?: string | null;
+            /** Name */
+            name: string;
+            /** Quantity */
+            quantity: number | string;
+            /**
+             * Tax Rate Percent
+             * @enum {integer}
+             */
+            tax_rate_percent: 0 | 7 | 19;
+            /** Unit Name */
+            unit_name: string;
+            /** Unit Price */
+            unit_price: number | string;
+        };
+        /** LexofficeLinkOut */
+        LexofficeLinkOut: {
+            /** Candidates */
+            candidates: {
+                [key: string]: unknown;
+            }[];
+            /**
+             * Config Id
+             * Format: uuid
+             */
+            config_id: string;
+            /** Conflict */
+            conflict: {
+                [key: string]: unknown;
+            } | null;
+            /** Contact Display Name */
+            contact_display_name: string | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /** Contact Version */
+            contact_version: number | null;
+            /** Customer Number */
+            customer_number: number | null;
+            /** Deeplink */
+            deeplink: string | null;
+            /** Diverged */
+            diverged: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Synced At */
+            last_synced_at: string | null;
+            /** Lexoffice Contact Id */
+            lexoffice_contact_id: string | null;
+            /** Lexoffice Version */
+            lexoffice_version: number | null;
+            /** Match Reason */
+            match_reason: string | null;
+            /** Match Score */
+            match_score: string | null;
+            /** Remote Display */
+            remote_display: {
+                [key: string]: unknown;
+            };
+            /** Sync Status */
+            sync_status: string;
+            /** Synced Contact Version */
+            synced_contact_version: number | null;
+            /** Vendor Number */
+            vendor_number: number | null;
+        };
+        /** LexofficeLinkRecipientIn */
+        LexofficeLinkRecipientIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+        };
+        /** LexofficeMatchIn */
+        LexofficeMatchIn: {
+            /**
+             * Scope
+             * @default customers_and_vendors
+             * @enum {string}
+             */
+            scope: "customers_and_vendors" | "all";
+        };
+        /** LexofficeOrganisationIn */
+        LexofficeOrganisationIn: {
+            /** Api Key */
+            api_key?: string | null;
+            /** Avv Confirmed On */
+            avv_confirmed_on?: string | null;
+            /** Avv Note */
+            avv_note?: string | null;
+            /** Base Url */
+            base_url?: string | null;
+            /**
+             * Clear Api Key
+             * @default false
+             */
+            clear_api_key: boolean;
+            /**
+             * Clear Mailbox
+             * @default false
+             */
+            clear_mailbox: boolean;
+            /**
+             * Enabled
+             * @default false
+             */
+            enabled: boolean;
+            /**
+             * Invoice Copies
+             * @default false
+             */
+            invoice_copies: boolean;
+            /**
+             * Invoice Drafts
+             * @default false
+             */
+            invoice_drafts: boolean;
+            /** Label */
+            label?: string | null;
+            /** Legal Entity Id */
+            legal_entity_id?: string | null;
+            /** Mailbox Id */
+            mailbox_id?: string | null;
+            /**
+             * Sync Contacts
+             * @default false
+             */
+            sync_contacts: boolean;
+            /**
+             * Sync Names
+             * @default false
+             */
+            sync_names: boolean;
+        };
+        /** LexofficeOrganisationOut */
+        LexofficeOrganisationOut: {
+            /** Api Key Last4 */
+            api_key_last4: string | null;
+            /** Api Key Set */
+            api_key_set: boolean;
+            /** App Base Url */
+            app_base_url: string;
+            /** Avv Confirmed By */
+            avv_confirmed_by: string | null;
+            /** Avv Confirmed On */
+            avv_confirmed_on: string | null;
+            /** Avv Note */
+            avv_note: string | null;
+            /** Base Url */
+            base_url: string;
+            /** Enabled */
+            enabled: boolean;
+            /** Has Invoicing */
+            has_invoicing: boolean;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Invoice Copies */
+            invoice_copies: boolean;
+            /** Invoice Drafts */
+            invoice_drafts: boolean;
+            /** Label */
+            label: string | null;
+            /** Last Test Message */
+            last_test_message: string | null;
+            /** Last Test Ok */
+            last_test_ok: boolean | null;
+            /** Last Tested At */
+            last_tested_at: string | null;
+            /** Legal Entity Id */
+            legal_entity_id: string | null;
+            /** Legal Entity Name */
+            legal_entity_name: string | null;
+            /** Mailbox Id */
+            mailbox_id: string | null;
+            /** Message */
+            message?: string | null;
+            /** Organization Id */
+            organization_id: string | null;
+            /** Organization Name */
+            organization_name: string | null;
+            /** Profile Business Features */
+            profile_business_features: string[];
+            /** Profile Small Business */
+            profile_small_business: boolean | null;
+            /** Profile Tax Type */
+            profile_tax_type: string | null;
+            /** Sync Contacts */
+            sync_contacts: boolean;
+            /** Sync Names */
+            sync_names: boolean;
+            /** Token Invalid */
+            token_invalid: boolean;
+        };
+        /** LexofficeOutboxOut */
+        LexofficeOutboxOut: {
+            /** Attempts */
+            attempts: number;
+            /**
+             * Config Id
+             * Format: uuid
+             */
+            config_id: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Detail */
+            detail: {
+                [key: string]: unknown;
+            };
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Last Error */
+            last_error: string | null;
+            /** Last Status Code */
+            last_status_code: number | null;
+            /**
+             * Next Attempt At
+             * Format: date-time
+             */
+            next_attempt_at: string;
+            /** Sent At */
+            sent_at: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Target Id
+             * Format: uuid
+             */
+            target_id: string;
+            /** Target Kind */
+            target_kind: string;
+        };
+        /** LexofficePage */
+        LexofficePage: {
+            /** Items */
+            items: unknown[];
+            /** Page */
+            page: number;
+            /** Size */
+            size: number;
+            /** Total */
+            total: number;
+        };
+        /** LexofficePushBatchIn */
+        LexofficePushBatchIn: {
+            /** Contact Ids */
+            contact_ids: string[];
+        };
+        /** LexofficeRecurringDoneIn */
+        LexofficeRecurringDoneIn: {
+            /** Lexoffice Template Id */
+            lexoffice_template_id: string;
+        };
+        /** LexofficeRecurringPrepOut */
+        LexofficeRecurringPrepOut: {
+            /**
+             * Admin Fee Setting Id
+             * Format: uuid
+             */
+            admin_fee_setting_id: string;
+            /** Checklist */
+            checklist: {
+                [key: string]: unknown;
+            }[];
+            /** Config Id */
+            config_id: string | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Deeplink */
+            deeplink?: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Lexoffice Template Id */
+            lexoffice_template_id: string | null;
+            /** Prepared */
+            prepared: {
+                [key: string]: unknown;
+            };
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Status */
+            status: string;
+        };
+        /** LexofficeRemoteSearchOut */
+        LexofficeRemoteSearchOut: {
+            /** City */
+            city: string | null;
+            /** Customer Number */
+            customer_number: number | null;
+            /** Display Name */
+            display_name: string;
+            /** Email */
+            email: string | null;
+            /** Id */
+            id: string;
+            /** Vendor Number */
+            vendor_number: number | null;
+            /** Zip */
+            zip: string | null;
+        };
+        /** LexofficeResolveIn */
+        LexofficeResolveIn: {
+            /**
+             * Resolution
+             * @enum {string}
+             */
+            resolution: "keep_crm" | "keep_lexoffice";
+        };
         /** LexofficeRunOut */
         LexofficeRunOut: {
             /** Counts */
@@ -26490,6 +26933,18 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** LexofficeShippingIn */
+        LexofficeShippingIn: {
+            /** Date */
+            date?: string | null;
+            /** End Date */
+            end_date?: string | null;
+            /**
+             * Type
+             * @enum {string}
+             */
+            type: "none" | "service" | "serviceperiod";
+        };
         /** LicenseIn */
         LicenseIn: {
             /** Min Monthly Amount */
@@ -26512,24 +26967,6 @@ export interface components {
             valid_from: string;
             /** Valid Until */
             valid_until?: string | null;
-        };
-        /** LineItemIn */
-        LineItemIn: {
-            /** Description */
-            description?: string | null;
-            /** Name */
-            name: string;
-            /** Quantity */
-            quantity: number | string;
-            /**
-             * Tax Rate Percent
-             * @enum {integer}
-             */
-            tax_rate_percent: 0 | 7 | 19;
-            /** Unit Name */
-            unit_name: string;
-            /** Unit Price */
-            unit_price: number | string;
         };
         /** LineOut */
         LineOut: {
@@ -26597,13 +27034,21 @@ export interface components {
             /** @default attachment */
             role: components["schemas"]["LinkRole"];
         };
-        /** LinkRecipientIn */
-        LinkRecipientIn: {
+        /** LinkOut */
+        LinkOut: {
             /**
-             * Contact Id
+             * Entity Id
              * Format: uuid
              */
-            contact_id: string;
+            entity_id: string;
+            /** Entity Type */
+            entity_type: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            role: components["schemas"]["LinkRole"];
         };
         /**
          * LinkRole
@@ -27488,6 +27933,14 @@ export interface components {
             label?: string | null;
             /** Valid From */
             valid_from?: string | null;
+        };
+        /** MatchIn */
+        MatchIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
         };
         /** MeOut */
         MeOut: {
@@ -28680,52 +29133,6 @@ export interface components {
             scheduled_at?: string | null;
             status: components["schemas"]["OrderStatus"];
         };
-        /** OutboxOut */
-        OutboxOut: {
-            /** Attempts */
-            attempts: number;
-            /**
-             * Config Id
-             * Format: uuid
-             */
-            config_id: string;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Detail */
-            detail: {
-                [key: string]: unknown;
-            };
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Kind */
-            kind: string;
-            /** Last Error */
-            last_error: string | null;
-            /** Last Status Code */
-            last_status_code: number | null;
-            /**
-             * Next Attempt At
-             * Format: date-time
-             */
-            next_attempt_at: string;
-            /** Sent At */
-            sent_at: string | null;
-            /** Status */
-            status: string;
-            /**
-             * Target Id
-             * Format: uuid
-             */
-            target_id: string;
-            /** Target Kind */
-            target_kind: string;
-        };
         /** OverviewOut */
         OverviewOut: {
             /** Tenants */
@@ -28927,17 +29334,6 @@ export interface components {
             request_id: string;
             /** Sha256 */
             sha256: string;
-        };
-        /** Page */
-        Page: {
-            /** Items */
-            items: unknown[];
-            /** Page */
-            page: number;
-            /** Size */
-            size: number;
-            /** Total */
-            total: number;
         };
         /** PaperlessIntakeIn */
         PaperlessIntakeIn: {
@@ -29995,7 +30391,7 @@ export interface components {
             /** Latitude */
             latitude?: string | null;
             /** Legal Entities */
-            legal_entities?: components["schemas"]["mhvp__properties__schemas__LegalEntityOut"][];
+            legal_entities?: components["schemas"]["LegalEntityOut"][];
             /** Longitude */
             longitude?: string | null;
             /** Managed From */
@@ -30569,11 +30965,6 @@ export interface components {
             /** Tiers */
             tiers: components["schemas"]["TierTestOut"][];
         };
-        /** PushBatchIn */
-        PushBatchIn: {
-            /** Contact Ids */
-            contact_ids: string[];
-        };
         /** QueuedOut */
         QueuedOut: {
             /**
@@ -31028,52 +31419,6 @@ export interface components {
              */
             until: string;
         };
-        /** RecurringDoneIn */
-        RecurringDoneIn: {
-            /** Lexoffice Template Id */
-            lexoffice_template_id: string;
-        };
-        /** RecurringPrepOut */
-        RecurringPrepOut: {
-            /**
-             * Admin Fee Setting Id
-             * Format: uuid
-             */
-            admin_fee_setting_id: string;
-            /** Checklist */
-            checklist: {
-                [key: string]: unknown;
-            }[];
-            /** Config Id */
-            config_id: string | null;
-            /** Contact Id */
-            contact_id: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Deeplink */
-            deeplink?: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Lexoffice Template Id */
-            lexoffice_template_id: string | null;
-            /** Prepared */
-            prepared: {
-                [key: string]: unknown;
-            };
-            /**
-             * Property Id
-             * Format: uuid
-             */
-            property_id: string;
-            /** Status */
-            status: string;
-        };
         /** ReferenceRateIn */
         ReferenceRateIn: {
             /** Note */
@@ -31214,23 +31559,6 @@ export interface components {
             verification_basis: string;
             /** Version */
             version: number;
-        };
-        /** RemoteSearchOut */
-        RemoteSearchOut: {
-            /** City */
-            city: string | null;
-            /** Customer Number */
-            customer_number: number | null;
-            /** Display Name */
-            display_name: string;
-            /** Email */
-            email: string | null;
-            /** Id */
-            id: string;
-            /** Vendor Number */
-            vendor_number: number | null;
-            /** Zip */
-            zip: string | null;
         };
         /** RentIncreaseAction */
         RentIncreaseAction: {
@@ -31651,14 +31979,6 @@ export interface components {
             /** Disabled */
             disabled?: string[];
         };
-        /** ResolveIn */
-        ResolveIn: {
-            /**
-             * Resolution
-             * @enum {string}
-             */
-            resolution: "keep_crm" | "keep_lexoffice";
-        };
         /**
          * RestartIn
          * @description New connect session for an existing connection: after a rejected PIN (fresh PIN
@@ -32069,6 +32389,59 @@ export interface components {
             /** Scope Id */
             scope_id?: string | null;
         };
+        /** RunOut */
+        RunOut: {
+            /** Confidence */
+            confidence: string | null;
+            /** Cost Eur */
+            cost_eur: string;
+            /** Duration Ms */
+            duration_ms: number;
+            /** Error */
+            error: string | null;
+            /** Fallback */
+            fallback?: string[];
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Input Stats */
+            input_stats?: {
+                [key: string]: number;
+            };
+            /** Links */
+            links?: components["schemas"]["ChatLink"][];
+            /** Lookup Answer */
+            lookup_answer?: string | null;
+            /** Model */
+            model: string | null;
+            /** Model Tier Reason */
+            model_tier_reason?: string | null;
+            /** Output */
+            output: {
+                [key: string]: unknown;
+            } | null;
+            /** Progress */
+            progress?: {
+                [key: string]: unknown;
+            } | null;
+            /** Prompt Version */
+            prompt_version: string;
+            /** Proposal Id */
+            proposal_id?: string | null;
+            provider: components["schemas"]["AiProvider"] | null;
+            /** Provider Used */
+            provider_used?: string | null;
+            status: components["schemas"]["RunStatus"];
+            task: components["schemas"]["AiTask"];
+            /** Tokens In */
+            tokens_in: number;
+            /** Tokens Out */
+            tokens_out: number;
+            /** Warnings */
+            warnings?: string[];
+        };
         /** RunReverseIn */
         RunReverseIn: {
             /** Booking Date */
@@ -32471,18 +32844,6 @@ export interface components {
             determination?: components["schemas"]["DeterminationIn"][];
             /** Purpose */
             purpose?: string | null;
-        };
-        /** ShippingIn */
-        ShippingIn: {
-            /** Date */
-            date?: string | null;
-            /** End Date */
-            end_date?: string | null;
-            /**
-             * Type
-             * @enum {string}
-             */
-            type: "none" | "service" | "serviceperiod";
         };
         /** SignatureIn */
         SignatureIn: {
@@ -34759,59 +35120,6 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
-        /** RunOut */
-        mhvp__ai__schemas__RunOut: {
-            /** Confidence */
-            confidence: string | null;
-            /** Cost Eur */
-            cost_eur: string;
-            /** Duration Ms */
-            duration_ms: number;
-            /** Error */
-            error: string | null;
-            /** Fallback */
-            fallback?: string[];
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Input Stats */
-            input_stats?: {
-                [key: string]: number;
-            };
-            /** Links */
-            links?: components["schemas"]["ChatLink"][];
-            /** Lookup Answer */
-            lookup_answer?: string | null;
-            /** Model */
-            model: string | null;
-            /** Model Tier Reason */
-            model_tier_reason?: string | null;
-            /** Output */
-            output: {
-                [key: string]: unknown;
-            } | null;
-            /** Progress */
-            progress?: {
-                [key: string]: unknown;
-            } | null;
-            /** Prompt Version */
-            prompt_version: string;
-            /** Proposal Id */
-            proposal_id?: string | null;
-            provider: components["schemas"]["AiProvider"] | null;
-            /** Provider Used */
-            provider_used?: string | null;
-            status: components["schemas"]["RunStatus"];
-            task: components["schemas"]["AiTask"];
-            /** Tokens In */
-            tokens_in: number;
-            /** Tokens Out */
-            tokens_out: number;
-            /** Warnings */
-            warnings?: string[];
-        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /**
@@ -34946,319 +35254,6 @@ export interface components {
             /** Name */
             name: string;
         };
-        /** LinkOut */
-        mhvp__documents__schemas__LinkOut: {
-            /**
-             * Entity Id
-             * Format: uuid
-             */
-            entity_id: string;
-            /** Entity Type */
-            entity_type: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            role: components["schemas"]["LinkRole"];
-        };
-        /** MatchIn */
-        mhvp__immoware__schemas__MatchIn: {
-            /**
-             * Contact Id
-             * Format: uuid
-             */
-            contact_id: string;
-        };
-        /** ConfigIn */
-        mhvp__integrations__lexoffice_ext__schemas__ConfigIn: {
-            /** Api Key */
-            api_key?: string | null;
-            /** Avv Confirmed On */
-            avv_confirmed_on?: string | null;
-            /** Avv Note */
-            avv_note?: string | null;
-            /** Base Url */
-            base_url?: string | null;
-            /**
-             * Clear Api Key
-             * @default false
-             */
-            clear_api_key: boolean;
-            /**
-             * Clear Mailbox
-             * @default false
-             */
-            clear_mailbox: boolean;
-            /**
-             * Enabled
-             * @default false
-             */
-            enabled: boolean;
-            /**
-             * Invoice Copies
-             * @default false
-             */
-            invoice_copies: boolean;
-            /**
-             * Invoice Drafts
-             * @default false
-             */
-            invoice_drafts: boolean;
-            /** Label */
-            label?: string | null;
-            /** Legal Entity Id */
-            legal_entity_id?: string | null;
-            /** Mailbox Id */
-            mailbox_id?: string | null;
-            /**
-             * Sync Contacts
-             * @default false
-             */
-            sync_contacts: boolean;
-            /**
-             * Sync Names
-             * @default false
-             */
-            sync_names: boolean;
-        };
-        /** ConfigOut */
-        mhvp__integrations__lexoffice_ext__schemas__ConfigOut: {
-            /** Api Key Last4 */
-            api_key_last4: string | null;
-            /** Api Key Set */
-            api_key_set: boolean;
-            /** App Base Url */
-            app_base_url: string;
-            /** Avv Confirmed By */
-            avv_confirmed_by: string | null;
-            /** Avv Confirmed On */
-            avv_confirmed_on: string | null;
-            /** Avv Note */
-            avv_note: string | null;
-            /** Base Url */
-            base_url: string;
-            /** Enabled */
-            enabled: boolean;
-            /** Has Invoicing */
-            has_invoicing: boolean;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Invoice Copies */
-            invoice_copies: boolean;
-            /** Invoice Drafts */
-            invoice_drafts: boolean;
-            /** Label */
-            label: string | null;
-            /** Last Test Message */
-            last_test_message: string | null;
-            /** Last Test Ok */
-            last_test_ok: boolean | null;
-            /** Last Tested At */
-            last_tested_at: string | null;
-            /** Legal Entity Id */
-            legal_entity_id: string | null;
-            /** Legal Entity Name */
-            legal_entity_name: string | null;
-            /** Mailbox Id */
-            mailbox_id: string | null;
-            /** Message */
-            message?: string | null;
-            /** Organization Id */
-            organization_id: string | null;
-            /** Organization Name */
-            organization_name: string | null;
-            /** Profile Business Features */
-            profile_business_features: string[];
-            /** Profile Small Business */
-            profile_small_business: boolean | null;
-            /** Profile Tax Type */
-            profile_tax_type: string | null;
-            /** Sync Contacts */
-            sync_contacts: boolean;
-            /** Sync Names */
-            sync_names: boolean;
-            /** Token Invalid */
-            token_invalid: boolean;
-        };
-        /** DecideIn */
-        mhvp__integrations__lexoffice_ext__schemas__DecideIn: {
-            /**
-             * Action
-             * @enum {string}
-             */
-            action: "link" | "create_remote" | "create_local" | "dismiss";
-            /** Contact Id */
-            contact_id?: string | null;
-            /** Lexoffice Contact Id */
-            lexoffice_contact_id?: string | null;
-            /** Roles */
-            roles?: ("customer" | "vendor")[];
-        };
-        /** LegalEntityOut */
-        mhvp__integrations__lexoffice_ext__schemas__LegalEntityOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Kind */
-            kind: string;
-            /** Name */
-            name: string;
-        };
-        /** LinkOut */
-        mhvp__integrations__lexoffice_ext__schemas__LinkOut: {
-            /** Candidates */
-            candidates: {
-                [key: string]: unknown;
-            }[];
-            /**
-             * Config Id
-             * Format: uuid
-             */
-            config_id: string;
-            /** Conflict */
-            conflict: {
-                [key: string]: unknown;
-            } | null;
-            /** Contact Display Name */
-            contact_display_name: string | null;
-            /** Contact Id */
-            contact_id: string | null;
-            /** Contact Version */
-            contact_version: number | null;
-            /** Customer Number */
-            customer_number: number | null;
-            /** Deeplink */
-            deeplink: string | null;
-            /** Diverged */
-            diverged: boolean;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Last Error */
-            last_error: string | null;
-            /** Last Synced At */
-            last_synced_at: string | null;
-            /** Lexoffice Contact Id */
-            lexoffice_contact_id: string | null;
-            /** Lexoffice Version */
-            lexoffice_version: number | null;
-            /** Match Reason */
-            match_reason: string | null;
-            /** Match Score */
-            match_score: string | null;
-            /** Remote Display */
-            remote_display: {
-                [key: string]: unknown;
-            };
-            /** Sync Status */
-            sync_status: string;
-            /** Synced Contact Version */
-            synced_contact_version: number | null;
-            /** Vendor Number */
-            vendor_number: number | null;
-        };
-        /** MatchIn */
-        mhvp__integrations__lexoffice_ext__schemas__MatchIn: {
-            /**
-             * Scope
-             * @default customers_and_vendors
-             * @enum {string}
-             */
-            scope: "customers_and_vendors" | "all";
-        };
-        /** RunOut */
-        mhvp__integrations__lexoffice_ext__schemas__RunOut: {
-            /** Counts */
-            counts: {
-                [key: string]: number;
-            };
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Errors */
-            errors: string[];
-            /** Finished At */
-            finished_at: string | null;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Kind */
-            kind: string;
-            /** Status */
-            status: string;
-        };
-        /** ConfigIn */
-        mhvp__integrations__schadenstool__schemas__ConfigIn: {
-            /** Avv Confirmed On */
-            avv_confirmed_on?: string | null;
-            /** Avv Note */
-            avv_note?: string | null;
-            /** Base Url */
-            base_url?: string | null;
-            /**
-             * Clear Hmac Secret
-             * @default false
-             */
-            clear_hmac_secret: boolean;
-            /**
-             * Enabled
-             * @default false
-             */
-            enabled: boolean;
-            /** Hmac Secret */
-            hmac_secret?: string | null;
-            /** Token */
-            token?: string | null;
-            /** Webhook Secret */
-            webhook_secret?: string | null;
-        };
-        /** ConfigOut */
-        mhvp__integrations__schadenstool__schemas__ConfigOut: {
-            /** Avv Confirmed By */
-            avv_confirmed_by: string | null;
-            /** Avv Confirmed On */
-            avv_confirmed_on: string | null;
-            /** Avv Note */
-            avv_note: string | null;
-            /** Base Url */
-            base_url: string | null;
-            /** Enabled */
-            enabled: boolean;
-            /** Hmac Secret Set */
-            hmac_secret_set: boolean;
-            /** Last Pull At */
-            last_pull_at: string | null;
-            /** Last Pull Message */
-            last_pull_message: string | null;
-            /** Last Test Message */
-            last_test_message: string | null;
-            /** Last Test Ok */
-            last_test_ok: boolean | null;
-            /** Last Tested At */
-            last_tested_at: string | null;
-            /** Token Invalid */
-            token_invalid: boolean;
-            /** Token Last4 */
-            token_last4: string | null;
-            /** Token Set */
-            token_set: boolean;
-            /** Webhook Path */
-            webhook_path: string;
-            /** Webhook Secret Set */
-            webhook_secret_set: boolean;
-        };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
             /**
@@ -35272,13 +35267,6 @@ export interface components {
             slug: string;
             /** Status */
             status: string;
-        };
-        /** DecideIn */
-        mhvp__portal__mandates__DecideIn: {
-            /** Accept */
-            accept: boolean;
-            /** Note */
-            note?: string | null;
         };
         /** BankAccountIn */
         mhvp__properties__schemas__BankAccountIn: {
@@ -35356,19 +35344,6 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to: string | null;
-        };
-        /** LegalEntityOut */
-        mhvp__properties__schemas__LegalEntityOut: {
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            kind: components["schemas"]["LegalEntityKind"];
-            /** Name */
-            name: string;
-            /** Party Id */
-            party_id: string | null;
         };
         /** ProviderIn */
         mhvp__properties__schemas__ProviderIn: {
@@ -39829,7 +39804,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__ai__schemas__RunOut"];
+                    "application/json": components["schemas"]["RunOut"];
                 };
             };
             /** @description Validation Error */
@@ -40702,7 +40677,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__ai__schemas__RunOut"];
+                    "application/json": components["schemas"]["RunOut"];
                 };
             };
             /** @description Validation Error */
@@ -53243,7 +53218,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__immoware__schemas__MatchIn"];
+                "application/json": components["schemas"]["MatchIn"];
             };
         };
         responses: {
@@ -54667,7 +54642,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__ConfigOut"][];
+                    "application/json": components["schemas"]["LexofficeOrganisationOut"][];
                 };
             };
         };
@@ -54681,7 +54656,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__ConfigIn"];
+                "application/json": components["schemas"]["LexofficeOrganisationIn"];
             };
         };
         responses: {
@@ -54691,7 +54666,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__ConfigOut"];
+                    "application/json": components["schemas"]["LexofficeOrganisationOut"];
                 };
             };
             /** @description Validation Error */
@@ -54722,7 +54697,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__ConfigOut"];
+                    "application/json": components["schemas"]["LexofficeOrganisationOut"];
                 };
             };
             /** @description Validation Error */
@@ -54747,7 +54722,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__ConfigIn"];
+                "application/json": components["schemas"]["LexofficeOrganisationIn"];
             };
         };
         responses: {
@@ -54757,7 +54732,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__ConfigOut"];
+                    "application/json": components["schemas"]["LexofficeOrganisationOut"];
                 };
             };
             /** @description Validation Error */
@@ -54793,7 +54768,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Page"];
+                    "application/json": components["schemas"]["LexofficePage"];
                 };
             };
             /** @description Validation Error */
@@ -54818,7 +54793,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["PushBatchIn"];
+                "application/json": components["schemas"]["LexofficePushBatchIn"];
             };
         };
         responses: {
@@ -54856,7 +54831,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__DecideIn"];
+                "application/json": components["schemas"]["LexofficeDecideIn"];
             };
         };
         responses: {
@@ -54866,7 +54841,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__LinkOut"];
+                    "application/json": components["schemas"]["LexofficeLinkOut"];
                 };
             };
             /** @description Validation Error */
@@ -54898,7 +54873,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__LinkOut"];
+                    "application/json": components["schemas"]["LexofficeLinkOut"];
                 };
             };
             /** @description Validation Error */
@@ -54924,7 +54899,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ResolveIn"];
+                "application/json": components["schemas"]["LexofficeResolveIn"];
             };
         };
         responses: {
@@ -54934,7 +54909,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__LinkOut"];
+                    "application/json": components["schemas"]["LexofficeLinkOut"];
                 };
             };
             /** @description Validation Error */
@@ -54966,7 +54941,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__LinkOut"];
+                    "application/json": components["schemas"]["LexofficeLinkOut"];
                 };
             };
             /** @description Validation Error */
@@ -54991,7 +54966,7 @@ export interface operations {
         };
         requestBody?: {
             content: {
-                "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__MatchIn"] | null;
+                "application/json": components["schemas"]["LexofficeMatchIn"] | null;
             };
         };
         responses: {
@@ -55036,7 +55011,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RemoteSearchOut"][];
+                    "application/json": components["schemas"]["LexofficeRemoteSearchOut"][];
                 };
             };
             /** @description Validation Error */
@@ -55067,7 +55042,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__RunOut"][];
+                    "application/json": components["schemas"]["LexofficeRunOut"][];
                 };
             };
             /** @description Validation Error */
@@ -55098,7 +55073,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__ConfigOut"];
+                    "application/json": components["schemas"]["LexofficeOrganisationOut"];
                 };
             };
             /** @description Validation Error */
@@ -55129,7 +55104,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["ContactStatusOut"][];
+                    "application/json": components["schemas"]["LexofficeContactStatusOut"][];
                 };
             };
             /** @description Validation Error */
@@ -55259,7 +55234,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceCopyOut"];
+                    "application/json": components["schemas"]["LexofficeInvoiceCopyOut"];
                 };
             };
             /** @description Validation Error */
@@ -55284,7 +55259,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InvoiceCopyCorrectIn"];
+                "application/json": components["schemas"]["LexofficeInvoiceCopyCorrectIn"];
             };
         };
         responses: {
@@ -55294,7 +55269,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceCopyOut"];
+                    "application/json": components["schemas"]["LexofficeInvoiceCopyOut"];
                 };
             };
             /** @description Validation Error */
@@ -55319,7 +55294,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["LinkRecipientIn"];
+                "application/json": components["schemas"]["LexofficeLinkRecipientIn"];
             };
         };
         responses: {
@@ -55329,7 +55304,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceCopyOut"];
+                    "application/json": components["schemas"]["LexofficeInvoiceCopyOut"];
                 };
             };
             /** @description Validation Error */
@@ -55354,7 +55329,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InvoiceCopyRejectIn"];
+                "application/json": components["schemas"]["LexofficeInvoiceCopyRejectIn"];
             };
         };
         responses: {
@@ -55364,7 +55339,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceCopyOut"];
+                    "application/json": components["schemas"]["LexofficeInvoiceCopyOut"];
                 };
             };
             /** @description Validation Error */
@@ -55396,7 +55371,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceDraftOut"][];
+                    "application/json": components["schemas"]["LexofficeInvoiceDraftOut"][];
                 };
             };
             /** @description Validation Error */
@@ -55419,7 +55394,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InvoiceDraftIn"];
+                "application/json": components["schemas"]["LexofficeInvoiceDraftIn"];
             };
         };
         responses: {
@@ -55429,7 +55404,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceDraftOut"];
+                    "application/json": components["schemas"]["LexofficeInvoiceDraftOut"];
                 };
             };
             /** @description Validation Error */
@@ -55452,7 +55427,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InvoiceDraftIn"];
+                "application/json": components["schemas"]["LexofficeInvoiceDraftIn"];
             };
         };
         responses: {
@@ -55462,7 +55437,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceDraftPreviewOut"];
+                    "application/json": components["schemas"]["LexofficeInvoiceDraftPreviewOut"];
                 };
             };
             /** @description Validation Error */
@@ -55493,7 +55468,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceDraftOut"];
+                    "application/json": components["schemas"]["LexofficeInvoiceDraftOut"];
                 };
             };
             /** @description Validation Error */
@@ -55522,7 +55497,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceKindMappingOut"][];
+                    "application/json": components["schemas"]["LexofficeInvoiceKindMappingOut"][];
                 };
             };
         };
@@ -55536,7 +55511,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InvoiceKindMappingIn"][];
+                "application/json": components["schemas"]["LexofficeInvoiceKindMappingIn"][];
             };
         };
         responses: {
@@ -55546,7 +55521,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceKindMappingOut"][];
+                    "application/json": components["schemas"]["LexofficeInvoiceKindMappingOut"][];
                 };
             };
             /** @description Validation Error */
@@ -55575,7 +55550,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__lexoffice_ext__schemas__LegalEntityOut"][];
+                    "application/json": components["schemas"]["LexofficeLegalEntityOut"][];
                 };
             };
         };
@@ -55600,7 +55575,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Page"];
+                    "application/json": components["schemas"]["LexofficePage"];
                 };
             };
             /** @description Validation Error */
@@ -55631,7 +55606,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["OutboxOut"];
+                    "application/json": components["schemas"]["LexofficeOutboxOut"];
                 };
             };
             /** @description Validation Error */
@@ -55662,7 +55637,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecurringPrepOut"][];
+                    "application/json": components["schemas"]["LexofficeRecurringPrepOut"][];
                 };
             };
             /** @description Validation Error */
@@ -55693,7 +55668,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecurringPrepOut"];
+                    "application/json": components["schemas"]["LexofficeRecurringPrepOut"];
                 };
             };
             /** @description Validation Error */
@@ -55718,7 +55693,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["RecurringDoneIn"];
+                "application/json": components["schemas"]["LexofficeRecurringDoneIn"];
             };
         };
         responses: {
@@ -55728,7 +55703,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["RecurringPrepOut"];
+                    "application/json": components["schemas"]["LexofficeRecurringPrepOut"];
                 };
             };
             /** @description Validation Error */
@@ -55799,7 +55774,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceCopyOut"][];
+                    "application/json": components["schemas"]["LexofficeInvoiceCopyOut"][];
                 };
             };
             /** @description Validation Error */
@@ -55824,7 +55799,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["InvoiceCopyIn"];
+                "application/json": components["schemas"]["LexofficeInvoiceCopyIn"];
             };
         };
         responses: {
@@ -55834,7 +55809,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["InvoiceCopyOut"];
+                    "application/json": components["schemas"]["LexofficeInvoiceCopyOut"];
                 };
             };
             /** @description Validation Error */
@@ -56343,7 +56318,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__schadenstool__schemas__ConfigOut"];
+                    "application/json": components["schemas"]["ConfigOut"];
                 };
             };
         };
@@ -56357,7 +56332,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__integrations__schadenstool__schemas__ConfigIn"];
+                "application/json": components["schemas"]["ConfigIn"];
             };
         };
         responses: {
@@ -56367,7 +56342,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__schadenstool__schemas__ConfigOut"];
+                    "application/json": components["schemas"]["ConfigOut"];
                 };
             };
             /** @description Validation Error */
@@ -56396,7 +56371,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__integrations__schadenstool__schemas__ConfigOut"];
+                    "application/json": components["schemas"]["ConfigOut"];
                 };
             };
         };
@@ -64607,7 +64582,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__portal__mandates__DecideIn"];
+                "application/json": components["schemas"]["DecideIn"];
             };
         };
         responses: {
@@ -67630,7 +67605,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__properties__schemas__LegalEntityOut"][];
+                    "application/json": components["schemas"]["LegalEntityOut"][];
                 };
             };
             /** @description Validation Error */
