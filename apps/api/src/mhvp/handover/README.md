@@ -80,3 +80,29 @@ Schließt die Lücken der Anleitung Mieterwechsel (`docs/handbuch/anleitung-miet
   `invalidated_change_id`) und gibt den Inhalt frei; das PDF druckt den Verlauf. Migration
   0239.
 - `image/heif` ist wie `image/heic` zulässig und wird als JPEG abgelegt.
+
+## Offline Erfassung (Regel M30-10, ADR 0016, 29.09.2026)
+
+Betreiberentscheidung 28.09.2026 zu M30-07: vollständig offline hinter dem Mandantenschalter
+`tenant_settings.handover_offline_enabled` (Standard aus, Migration 0245). Die Schreibpfade
+PATCH Protokoll, POST, PATCH und DELETE Teildatensatz, POST Dokument und POST Unterschrift
+nehmen drei optionale Header an:
+
+- `X-Handover-Client-Key` (8 bis 64 Zeichen): dauerhafte Dublettenprüfung über die Tabelle
+  `handover_client_write` (RLS, eindeutig je Mandant und Schlüssel). Nur angenommene
+  Schreibvorgänge werden mit ihrer Antwort gespeichert; ein zweiter Aufruf mit demselben
+  Schlüssel liefert die gespeicherte Antwort. Bewusst nicht `Idempotency-Key`, weil die
+  allgemeine Middleware 24 Stunden auch Abweisungen zurückspielt.
+- `X-Captured-At` (ISO 8601 mit Zeitzone): Gerätezeit der Erfassung, gespeichert als
+  `captured_at` am Teildatensatz beziehungsweise `signed_at_device` an der Unterschrift
+  (vom Gerät gemeldet, nie Beweis; `created_at` und `signed_at` bleiben Serverzeit). Ohne
+  den Schalter antwortet der Server 403 `MHVP-HDOV-0003`.
+- `X-Base-Updated-At`: Stand der Serverkopie, auf der eine Änderung beruht; ist die Zeile
+  jünger, antwortet der Server 409 `MHVP-HDOV-0004` mit dem Serverstand in der Erweiterung
+  `server`, damit die Oberfläche beide Stände zeigt und fragt.
+
+Die Sperren M30-01 und M30-09 gelten unverändert (409 mit dem jeweiligen Hinweis). Die
+Ereignisse `handover.*` tragen `captured_at` und `idempotency_key` zusätzlich. Das PDF druckt
+bei Unterschriften die Gerätezeit mit dem Hinweis vom Gerät gemeldet. Client:
+`apps/web-crm/src/components/handover/offline/` (verschlüsselte Warteschlange, Abgleich,
+Konfliktfrage, Abgleichsprotokoll). Test: `tests/integration/test_m30_handover_offline.py`.

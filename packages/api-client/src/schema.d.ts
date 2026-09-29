@@ -35971,6 +35971,11 @@ export interface components {
             /** Gmail Spike Protocol Ref */
             gmail_spike_protocol_ref?: string | null;
             /**
+             * Handover Offline Enabled
+             * @default false
+             */
+            handover_offline_enabled: boolean;
+            /**
              * Learning Bookkeeper Enabled
              * @default false
              */
@@ -36053,6 +36058,8 @@ export interface components {
             gmail_restore_inbox_on_reopen?: boolean | null;
             /** Gmail Settle Seconds */
             gmail_settle_seconds?: number | null;
+            /** Handover Offline Enabled */
+            handover_offline_enabled?: boolean | null;
             /** Mail Approval Mode */
             mail_approval_mode?: string | null;
             /** Metering Module Enabled */
@@ -51748,7 +51755,14 @@ export interface operations {
     patch_protocol_api_v1_handover_protocols__protocol_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not. */
+                "X-Handover-Client-Key"?: string | null;
+                /** @description Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled. */
+                "X-Captured-At"?: string | null;
+                /** @description updated_at of the server copy the queued change was based on; an older value than the current row answers 409 MHVP-HDOV-0004 with the server state. */
+                "X-Base-Updated-At"?: string | null;
+            };
             path: {
                 protocol_id: string;
             };
@@ -51896,7 +51910,12 @@ export interface operations {
     upload_document_api_v1_handover_protocols__protocol_id__documents_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not. */
+                "X-Handover-Client-Key"?: string | null;
+                /** @description Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled. */
+                "X-Captured-At"?: string | null;
+            };
             path: {
                 protocol_id: string;
             };
@@ -52366,7 +52385,12 @@ export interface operations {
     add_signature_api_v1_handover_protocols__protocol_id__signatures_post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not. */
+                "X-Handover-Client-Key"?: string | null;
+                /** @description Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled. */
+                "X-Captured-At"?: string | null;
+            };
             path: {
                 protocol_id: string;
             };
@@ -52507,7 +52531,12 @@ export interface operations {
     create_item_api_v1_handover_protocols__protocol_id___section__post: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not. */
+                "X-Handover-Client-Key"?: string | null;
+                /** @description Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled. */
+                "X-Captured-At"?: string | null;
+            };
             path: {
                 protocol_id: string;
                 section: string;
@@ -52579,7 +52608,12 @@ export interface operations {
     delete_item_api_v1_handover_protocols__protocol_id___section___item_id__delete: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not. */
+                "X-Handover-Client-Key"?: string | null;
+                /** @description Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled. */
+                "X-Captured-At"?: string | null;
+            };
             path: {
                 protocol_id: string;
                 section: string;
@@ -52610,7 +52644,14 @@ export interface operations {
     patch_item_api_v1_handover_protocols__protocol_id___section___item_id__patch: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /** @description Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not. */
+                "X-Handover-Client-Key"?: string | null;
+                /** @description Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled. */
+                "X-Captured-At"?: string | null;
+                /** @description updated_at of the server copy the queued change was based on; an older value than the current row answers 409 MHVP-HDOV-0004 with the server state. */
+                "X-Base-Updated-At"?: string | null;
+            };
             path: {
                 protocol_id: string;
                 section: string;

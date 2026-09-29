@@ -50943,6 +50943,11 @@
             ],
             "title": "Gmail Spike Protocol Ref"
           },
+          "handover_offline_enabled": {
+            "default": false,
+            "title": "Handover Offline Enabled",
+            "type": "boolean"
+          },
           "learning_bookkeeper_enabled": {
             "default": false,
             "title": "Learning Bookkeeper Enabled",
@@ -51230,6 +51235,17 @@
               }
             ],
             "title": "Gmail Settle Seconds"
+          },
+          "handover_offline_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Handover Offline Enabled"
           },
           "mail_approval_mode": {
             "anyOf": [
@@ -78663,6 +78679,65 @@
               "title": "Protocol Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+            "in": "header",
+            "name": "X-Handover-Client-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 8,
+                  "pattern": "^[A-Za-z0-9._:-]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+              "title": "X-Handover-Client-Key"
+            }
+          },
+          {
+            "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+            "in": "header",
+            "name": "X-Captured-At",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+              "title": "X-Captured-At"
+            }
+          },
+          {
+            "description": "updated_at of the server copy the queued change was based on; an older value than the current row answers 409 MHVP-HDOV-0004 with the server state.",
+            "in": "header",
+            "name": "X-Base-Updated-At",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "updated_at of the server copy the queued change was based on; an older value than the current row answers 409 MHVP-HDOV-0004 with the server state.",
+              "title": "X-Base-Updated-At"
+            }
           }
         ],
         "requestBody": {
@@ -78884,6 +78959,46 @@
               "format": "uuid",
               "title": "Protocol Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+            "in": "header",
+            "name": "X-Handover-Client-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 8,
+                  "pattern": "^[A-Za-z0-9._:-]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+              "title": "X-Handover-Client-Key"
+            }
+          },
+          {
+            "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+            "in": "header",
+            "name": "X-Captured-At",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+              "title": "X-Captured-At"
             }
           }
         ],
@@ -79604,6 +79719,46 @@
               "title": "Protocol Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+            "in": "header",
+            "name": "X-Handover-Client-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 8,
+                  "pattern": "^[A-Za-z0-9._:-]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+              "title": "X-Handover-Client-Key"
+            }
+          },
+          {
+            "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+            "in": "header",
+            "name": "X-Captured-At",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+              "title": "X-Captured-At"
+            }
           }
         ],
         "requestBody": {
@@ -79824,6 +79979,46 @@
               "title": "Section",
               "type": "string"
             }
+          },
+          {
+            "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+            "in": "header",
+            "name": "X-Handover-Client-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 8,
+                  "pattern": "^[A-Za-z0-9._:-]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+              "title": "X-Handover-Client-Key"
+            }
+          },
+          {
+            "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+            "in": "header",
+            "name": "X-Captured-At",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+              "title": "X-Captured-At"
+            }
           }
         ],
         "responses": {
@@ -79952,6 +80147,46 @@
               "title": "Item Id",
               "type": "string"
             }
+          },
+          {
+            "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+            "in": "header",
+            "name": "X-Handover-Client-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 8,
+                  "pattern": "^[A-Za-z0-9._:-]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+              "title": "X-Handover-Client-Key"
+            }
+          },
+          {
+            "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+            "in": "header",
+            "name": "X-Captured-At",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+              "title": "X-Captured-At"
+            }
           }
         ],
         "responses": {
@@ -80004,6 +80239,65 @@
               "format": "uuid",
               "title": "Item Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+            "in": "header",
+            "name": "X-Handover-Client-Key",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 64,
+                  "minLength": 8,
+                  "pattern": "^[A-Za-z0-9._:-]+$",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Key of a queued offline write (rule M30-10); a replay with the same key returns the stored answer instead of writing twice. Only accepted answers are stored, a refusal (403, 409, 422) is not.",
+              "title": "X-Handover-Client-Key"
+            }
+          },
+          {
+            "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+            "in": "header",
+            "name": "X-Captured-At",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Device time of capture (ISO 8601 with offset) of a queued offline item. Stored as a value reported by the device, never as proof; needs tenant_settings.handover_offline_enabled.",
+              "title": "X-Captured-At"
+            }
+          },
+          {
+            "description": "updated_at of the server copy the queued change was based on; an older value than the current row answers 409 MHVP-HDOV-0004 with the server state.",
+            "in": "header",
+            "name": "X-Base-Updated-At",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 40,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "updated_at of the server copy the queued change was based on; an older value than the current row answers 409 MHVP-HDOV-0004 with the server state.",
+              "title": "X-Base-Updated-At"
             }
           }
         ],
