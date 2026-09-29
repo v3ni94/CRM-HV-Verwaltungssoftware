@@ -5383,12 +5383,22 @@
  },
  {
   "kind": "handbook",
-  "title": "7. Grenzen dieses Entwurfs",
+  "title": "7. Automatik der Buchhaltung (Regeln M12-04, M12-05, M12-06)",
   "source": "Handbuch: Verfahrensdokumentation (Entwurf für den Steuerberater)",
   "href": null,
   "keywords": [],
   "permission": null,
-  "excerpt": "Dieses Dokument beschreibt den technischen und organisatorischen Stand des Repositorys am 27.09.2026. Es ist keine abschließende Verfahrensdokumentation im Sinne der GoBD und keine Ersatzprüfung durch einen Steuerberater oder Wirtschaftsprüfer (Master-Prompt Abschnitt 0.2). Vor p",
+  "excerpt": "Stand 29.09.2026, aus dem Code abgeleitet (apps/api/src/mhvp/banking/: proposals.py, features.py, postingproposal.py, levels.py, verifiers.py, runner.py, review.py, learning.py; Regeln in docs/rules/M12-04-lernender-buchhalter.md, M12-05-automatikstufen-runner.md, M12-06-gelernte",
+  "file": "docs/handbuch/verfahrensdokumentation.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "8. Grenzen dieses Entwurfs",
+  "source": "Handbuch: Verfahrensdokumentation (Entwurf für den Steuerberater)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Dieses Dokument beschreibt den technischen und organisatorischen Stand des Repositorys am 27.09.2026 (Kapitel 7: 29.09.2026). Es ist keine abschließende Verfahrensdokumentation im Sinne der GoBD und keine Ersatzprüfung durch einen Steuerberater oder Wirtschaftsprüfer (Master-Prom",
   "file": "docs/handbuch/verfahrensdokumentation.md"
  },
  {
