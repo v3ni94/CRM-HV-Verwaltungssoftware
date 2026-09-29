@@ -141,7 +141,9 @@ async def after_apply(
     tenant_settings: Any,
 ) -> None:
     """Ticket consequences of the groups completed in one run, once per ticket (a thread
-    archived at once yields one status event, never n minus 1 refusals)."""
+    archived at once yields one status event, never n minus 1 refusals). Every ticket runs
+    in its own savepoint: a failing ticket check is logged and leaves the mail done, it never
+    rolls back the sync run (the cursor would replay the same events for ever)."""
     seen: set[uuid.UUID] = set()
     for applied in completed:
         ticket_id = applied.ticket_id
@@ -149,19 +151,26 @@ async def after_apply(
         if ticket_id is None or ticket_id in seen or trigger is None:
             continue
         seen.add(ticket_id)
-        if applied.gmail_action == "deleted":
-            await note_deleted(session, ticket_id, trigger, mailbox.address)
-            continue
-        await try_auto_close_ticket(
-            session,
-            settings,
-            ticket_id,
-            trigger=trigger,
-            mailbox_address=mailbox.address,
-            gmail_action=applied.gmail_action or "archived",
-            history_id=applied.history_id,
-            tenant_settings=tenant_settings,
-        )
+        try:
+            async with session.begin_nested():
+                if applied.gmail_action == "deleted":
+                    await note_deleted(session, ticket_id, trigger, mailbox.address)
+                    continue
+                await try_auto_close_ticket(
+                    session,
+                    settings,
+                    ticket_id,
+                    trigger=trigger,
+                    mailbox_address=mailbox.address,
+                    gmail_action=applied.gmail_action or "archived",
+                    history_id=applied.history_id,
+                    tenant_settings=tenant_settings,
+                )
+        except Exception:
+            log.exception(
+                "gmail auto close check failed",
+                extra={"ticket_id": str(ticket_id), "message_id": str(trigger.id)},
+            )
 
 
 async def note_deleted(
@@ -281,16 +290,7 @@ async def try_auto_close_ticket(
         return refuse("open_assignment_review")
     if await _open_invoice(session, ticket.id):
         return refuse("open_invoice")
-    keep_open = await session.scalar(
-        select(func.count())
-        .select_from(Message)
-        .where(
-            Message.ticket_id == ticket.id,
-            Message.direction == "in",
-            Message.gmail_keep_open_label.is_not(None),
-        )
-    )
-    if keep_open:
+    if await _keep_open_on_authoritative_copy(session, ticket.id):
         return refuse("keep_open_label")
     config = await load_resolution_kinds_config(session, tenant_id)
     if AUTO_CLOSE_KIND not in active_kind_codes(config):
@@ -373,14 +373,34 @@ async def _skipped_today(session: AsyncSession, ticket_id: uuid.UUID, reason: st
     return found is not None
 
 
+async def _keep_open_on_authoritative_copy(session: AsyncSession, ticket_id: uuid.UUID) -> bool:
+    """Section 6.1, point 11: a work label blocks the close only on an authoritative copy of
+    a mail of the ticket (a label in a personal mailbox beside the collective one does not)."""
+    labelled = (
+        await session.scalars(
+            select(Message).where(
+                Message.ticket_id == ticket_id,
+                Message.direction == "in",
+                Message.gmail_keep_open_label.is_not(None),
+            )
+        )
+    ).all()
+    for row in labelled:
+        members = await duplicates.group_members(session, row) or [row]
+        views = await gmail_state.copy_views(session, members)
+        if row.id in {v.message_id for v in gmail_state.authoritative(views)}:
+            return True
+    return False
+
+
 async def _open_proposals(session: AsyncSession, ticket_id: uuid.UUID) -> bool:
+    """Open AI proposals bound to the ticket (``context_id``: contact change and call
+    assistant proposals of ``mhvp.tickets``)."""
     from mhvp.ai.models import AiProposal, Decision
 
     found = await session.scalar(
         select(AiProposal.id).where(
-            AiProposal.entity_type == "ticket",
-            AiProposal.context_id == ticket_id,
-            AiProposal.decision == Decision.PENDING,
+            AiProposal.context_id == ticket_id, AiProposal.decision == Decision.PENDING
         )
     )
     return found is not None
@@ -499,7 +519,9 @@ async def reopen_group(
         member.archive_history_id = None
         member.archive_error = None
         member.gmail_expected_state = None
-        member.gmail_reopened_at = now if source == "gmail" else None
+        # Reopened from Gmail (E10) or by "Automatik zurücknehmen" (P05): the mail stays in
+        # the default list even when its ticket stays closed.
+        member.gmail_reopened_at = now if source in ("gmail", "revert") else None
         member.gmail_settle_until = None
         if (
             restore

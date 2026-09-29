@@ -10,6 +10,7 @@ import pytest
 from mhvp.communication.gmail import HistoryEvent
 from mhvp.communication.gmail_state import (
     CopyView,
+    attribution,
     authoritative,
     classify,
     classify_by,
@@ -34,6 +35,7 @@ def copy(
     status: str = "assigned",
     done_source: str | None = None,
     archive_status: str | None = None,
+    active: bool = True,
 ) -> CopyView:
     return CopyView(
         message_id=uuid.uuid4(),
@@ -49,6 +51,7 @@ def copy(
         status=status,
         done_source=done_source,
         archive_status=archive_status,
+        mailbox_active=active,
     )
 
 
@@ -70,6 +73,10 @@ def test_authoritative_prefers_collective_copies_and_never_echoes() -> None:
     echo = copy(INFO, collective=True, echo=True)
     assert authoritative([echo, timo]) == [timo]
     assert authoritative([copy(None), copy(TIMO, gmail=False)]) == []
+    # A copy of a deleted or disabled mailbox never decides and never blocks (E05).
+    gone = copy(INFO, collective=True, active=False)
+    assert authoritative([gone, timo]) == [timo]
+    assert authoritative([copy(KOLLEGE, active=False), timo]) == [timo]
 
 
 def test_fold_collapses_undo_snooze_and_trash_in_two_entries() -> None:
@@ -96,6 +103,20 @@ def test_fold_collapses_undo_snooze_and_trash_in_two_entries() -> None:
         ).keep_open_label
         is None
     )
+    # Removal of the work label clears it (empty string: the caller drops the stored label).
+    removed = fold(
+        "archived", [e(5, "label_removed_other", added_labels=("Warten",))], frozenset({"warten"})
+    )
+    assert (removed.state, removed.keep_open_label, removed.coalesced) == ("archived", "", 0)
+    both = fold(
+        "inbox",
+        [
+            e(1, "label_added_other", added_labels=("Warten",)),
+            e(2, "label_removed_other", added_labels=("Warten",)),
+        ],
+        frozenset({"warten"}),
+    )
+    assert both.keep_open_label == ""
 
 
 def test_classify_by_recognises_own_actions() -> None:
@@ -105,6 +126,14 @@ def test_classify_by_recognises_own_actions() -> None:
     assert classify_by(copy(INFO, expected="archived"), "trashed", 99) == "user"
     assert classify_by(copy(INFO, expected="inbox", state="archived"), "inbox", 99) == "platform"
     assert classify_by(copy(INFO), "archived", 99) == "user"
+    # Fallback attribution: only the expected state explains the observed state.
+    assert attribution(copy(INFO, archive_history_id=50), "archived", 50) == ("platform", False)
+    assert attribution(copy(INFO, archive_history_id=50, expected="archived"), "archived", 51) == (
+        "platform",
+        True,
+    )
+    assert attribution(copy(INFO, expected="archived"), "archived", 99) == ("platform", True)
+    assert attribution(copy(INFO), "archived", 99) == ("user", False)
     folded, by = classify(
         copy(INFO, expected="archived"),
         [HistoryEvent(7, "m", "inbox_removed")],

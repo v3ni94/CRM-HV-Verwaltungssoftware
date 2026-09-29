@@ -31,7 +31,7 @@ from sqlalchemy import or_, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import duplicates
-from mhvp.communication.gmail import GmailClient, HistoryEvent, state_from_labels
+from mhvp.communication.gmail import OTHER_LABEL_KINDS, GmailClient, HistoryEvent, state_from_labels
 from mhvp.communication.models import Mailbox, Message
 from mhvp.core.config import Settings
 from mhvp.core.events import emit
@@ -80,6 +80,9 @@ class CopyView:
     archive_status: str | None = None
     settle_until: datetime | None = None
     mailbox_address: str | None = None
+    # False for a copy in a soft deleted or disabled mailbox: it receives no label events any
+    # more and must neither decide nor block a decision.
+    mailbox_active: bool = True
 
 
 @dataclass(frozen=True)
@@ -100,8 +103,13 @@ class Folded:
 
 def authoritative(copies: Sequence[CopyView]) -> list[CopyView]:
     """Copies that decide for the group: copies in collective mailboxes; without one, every
-    copy bound to a mailbox. Echo copies and copies without Gmail id never decide."""
-    eligible = [c for c in copies if c.has_gmail_id and c.mailbox_id is not None and not c.is_echo]
+    copy bound to a live, enabled mailbox. Echo copies, copies without Gmail id and copies of
+    deleted or disabled mailboxes never decide."""
+    eligible = [
+        c
+        for c in copies
+        if c.has_gmail_id and c.mailbox_id is not None and not c.is_echo and c.mailbox_active
+    ]
     collective = [c for c in eligible if c.is_collective]
     return collective or eligible
 
@@ -109,15 +117,17 @@ def authoritative(copies: Sequence[CopyView]) -> list[CopyView]:
 def fold(state: str, events: Sequence[HistoryEvent], keep_open_labels: frozenset[str]) -> Folded:
     """End state of one copy after ``events`` (already in history order, E19): undo, snooze
     and a trash in two entries collapse into the last state; intermediate states count in
-    ``coalesced``. A work label from ``keep_open_labels`` is remembered (E13)."""
+    ``coalesced``. A work label from ``keep_open_labels`` (label names, case insensitive) is
+    remembered (E13); its removal clears it (``keep_open_label = ""``, the caller drops the
+    stored label)."""
     label: str | None = None
     changes = 0
     for event in events:
         kind = event.kind
-        if kind == "label_added_other":
+        if kind in OTHER_LABEL_KINDS:
             for raw in event.added_labels:
                 if raw.lower() in keep_open_labels:
-                    label = raw
+                    label = raw if kind == "label_added_other" else ""
             continue
         if kind == "added":
             new = state_from_labels(event.label_ids) if event.label_ids else STATE_INBOX
@@ -143,15 +153,22 @@ def fold(state: str, events: Sequence[HistoryEvent], keep_open_labels: frozenset
     return Folded(state, label, changes)
 
 
-def classify_by(copy: CopyView, new_state: str, history_id: int) -> str:
-    """``platform`` when the event is the echo of an own action: its history id is not newer
-    than the id of the own modify call, or the observed state is the state the platform
-    requested (``gmail_expected_state``); otherwise ``user``."""
+def attribution(copy: CopyView, new_state: str, history_id: int) -> tuple[str, bool]:
+    """``(by, fallback)``: ``platform`` when the event is the echo of an own action, that is
+    its history id is not newer than the id of the own modify call, or, as the fallback
+    criterion, the observed state is the state the platform requested
+    (``gmail_expected_state``); otherwise ``user``. ``fallback`` is True when only the
+    expected state carried the attribution (counter ``fallback_attributions``, section 13
+    of the rule: the spike checks how the modify history id relates to the history entry)."""
     if copy.archive_history_id is not None and history_id <= copy.archive_history_id:
-        return "platform"
+        return "platform", False
     if copy.expected_state is not None and new_state == copy.expected_state:
-        return "platform"
-    return "user"
+        return "platform", True
+    return "user", False
+
+
+def classify_by(copy: CopyView, new_state: str, history_id: int) -> str:
+    return attribution(copy, new_state, history_id)[0]
 
 
 def classify(
@@ -266,22 +283,32 @@ async def locked_members(session: AsyncSession, row: Message) -> list[Message]:
 
 async def mailbox_info(
     session: AsyncSession, members: Sequence[Message]
-) -> dict[uuid.UUID, tuple[bool, str]]:
+) -> dict[uuid.UUID, tuple[bool, str, bool]]:
+    """``(is_collective, address, enabled)`` per live mailbox of ``members``; soft deleted
+    mailboxes are left out."""
     ids = {m.mailbox_id for m in members if m.mailbox_id is not None}
     if not ids:
         return {}
     rows = await session.execute(
-        select(Mailbox.id, Mailbox.is_collective, Mailbox.address).where(Mailbox.id.in_(ids))
+        select(Mailbox.id, Mailbox.is_collective, Mailbox.address, Mailbox.enabled).where(
+            Mailbox.id.in_(ids), Mailbox.deleted_at.is_(None)
+        )
     )
-    return {mid: (bool(collective), str(address)) for mid, collective, address in rows}
+    return {
+        mid: (bool(collective), str(address), bool(enabled))
+        for mid, collective, address, enabled in rows
+    }
 
 
-def view_of(row: Message, boxes: dict[uuid.UUID, tuple[bool, str]]) -> CopyView:
+def view_of(row: Message, boxes: dict[uuid.UUID, tuple[bool, str, bool]]) -> CopyView:
+    """View of one copy; a copy whose mailbox is soft deleted (missing in ``boxes``) or
+    disabled is inactive (never authoritative)."""
     box = boxes.get(row.mailbox_id) if row.mailbox_id is not None else None
     return CopyView(
         message_id=row.id,
         mailbox_id=row.mailbox_id,
         is_collective=bool(box[0]) if box else False,
+        mailbox_active=bool(box[2]) if box else False,
         is_echo=bool((row.classification or {}).get("own_sent_echo")),
         has_gmail_id=bool(row.gmail_message_id),
         state=row.gmail_state or STATE_INBOX,
@@ -422,7 +449,7 @@ async def apply_events(
     for event in events:
         if event.kind == "added":
             continue
-        if event.kind == "label_added_other" and not keep_open:
+        if event.kind in OTHER_LABEL_KINDS and not keep_open:
             continue
         grouped.setdefault(event.message_id, []).append(event)
     completed: list[Applied] = []
@@ -446,6 +473,7 @@ async def apply_events(
                     source=source,
                     skipped_mailbox=skipped_mailbox,
                     hooks=hooks,
+                    counts=counts,
                 )
         except Exception:
             log.exception(
@@ -487,6 +515,7 @@ async def _apply_one(
     source: str,
     skipped_mailbox: bool,
     hooks: list[Hook],
+    counts: dict[str, Any],
 ) -> Applied:
     await lock_group(session, row)
     members = await locked_members(session, row)
@@ -512,16 +541,25 @@ async def _apply_one(
     views = [view_of(m, boxes) for m in members]
     changed = next(v for v in views if v.message_id == row.id)
     previous = changed.state
-    folded, by = classify(changed, events, keep_open_labels=keep_open)
+    folded = fold(changed.state, events, keep_open)
+    by, fallback = attribution(changed, folded.state, history_id)
     if source == "reconcile" and by != "platform":
         by = "reconcile"
-    keep_label = (
-        None if folded.state == STATE_INBOX else (folded.keep_open_label or changed.keep_open_label)
-    )
+    if fallback:
+        _bump(counts, "fallback_attributions")
+    # Work label (E13): a label added in this run is stored, its removal ("") drops the
+    # stored one, a copy back in the inbox carries none.
+    if folded.state == STATE_INBOX:
+        keep_label = None
+    elif folded.keep_open_label is None:
+        keep_label = changed.keep_open_label
+    else:
+        keep_label = folded.keep_open_label or None
+    label_changed = keep_label != changed.keep_open_label
     changed = replace(changed, keep_open_label=keep_label)
     if skipped_mailbox:
         decision = Decision("skipped_mailbox", folded.state, by, None)
-    elif folded.state == previous and folded.keep_open_label is None:
+    elif folded.state == previous and not label_changed:
         decision = Decision("ignored_own" if by == "platform" else "noted", folded.state, by, None)
     else:
         decision = decide_group(
@@ -647,7 +685,11 @@ def sync_state(views: Sequence[CopyView], mode: str) -> str:
     (done and out of the inbox, or open and in the inbox), otherwise ``abweichend``."""
     if mode == MODE_OFF:
         return SYNC_OFF
-    copies = [v for v in views if v.has_gmail_id and v.mailbox_id is not None and not v.is_echo]
+    copies = [
+        v
+        for v in views
+        if v.has_gmail_id and v.mailbox_id is not None and not v.is_echo and v.mailbox_active
+    ]
     if not copies:
         return SYNC_UNKNOWN
     if any(
