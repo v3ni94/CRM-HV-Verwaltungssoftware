@@ -5024,7 +5024,9 @@
       "onboarding": "Onboarding",
       "priceList": "Preisliste",
       "overview": "Übersicht",
-      "conversation": "Gespräch"
+      "conversation": "Gespräch",
+      "reconciliation": "Bankabstimmung",
+      "rules": "Bankregeln"
     }
   },
   "Settings": {

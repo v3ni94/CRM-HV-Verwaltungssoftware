@@ -863,7 +863,7 @@ async def run_feedback(
     run_id: uuid.UUID,
     body: s.FeedbackIn,
     request: Request,
-    principal: TenantPrincipal = Depends(READ),
+    principal: TenantPrincipal = Depends(CREATE),
 ) -> s.RunOut:
     """Feedback "hilfreich / nicht hilfreich" on a chat answer (audit 29.09.2026): stored on
     the run and propagated to the knowledge entries that fed it (``input_ref["knowledge_ids"]``).

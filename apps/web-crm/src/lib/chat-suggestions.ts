@@ -129,6 +129,9 @@ export const ROUTES: Rule[] = [
   { path: "/dienstleistervertraege", area: "serviceContracts" },
   { path: "/bank/zahlungen", area: "bank", subArea: "payments" },
   { path: "/bank/lastschriften", area: "bank", subArea: "directDebits" },
+  // Bank screens BK-2 (rule UI-BANK-01): reconciliation and bank rules.
+  { path: "/bank/abstimmung", area: "bank", subArea: "reconciliation" },
+  { path: "/bank/regeln", area: "bank", subArea: "rules" },
   { path: "/bank", area: "bank" },
   { path: "/rechnungen/belegeingang", area: "invoices", subArea: "intake" },
   { path: "/rechnungen/{id}", area: "invoices", subArea: "detail", entityType: "invoice" },
@@ -309,6 +312,8 @@ export const SUGGESTIONS: Record<string, string[]> = {
   bank: ["bankUnmatched", "bankDebtor", "bankOpenItems"],
   "bank/payments": ["bankPaymentsOpen", "bankUnmatched"],
   "bank/directDebits": ["bankDirectDebitsNext", "bankOpenItems"],
+  "bank/reconciliation": ["bankUnmatched", "bankOpenItems"],
+  "bank/rules": ["bankUnmatched", "bankDebtor"],
   invoices: ["invoicesOpen", "invoicesFind", "invoicesIntake"],
   "invoices/intake": ["invoicesIntake", "invoicesOpen"],
   accounting: ["accountingOpenItems", "accountingJournal", "accountingExplain"],

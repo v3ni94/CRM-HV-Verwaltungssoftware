@@ -33,6 +33,8 @@ __all__ = ["fake"]  # fixture re-used from test_m7_ai
 SURNAME = f"Kowalski{RUN}"
 HOUSE = f"Lindenhof{RUN}"
 HEATING = f"Heizung{RUN}"
+# Digits only: a hex RUN such as "ab12cd34" after a space reads as an IBAN to the bank guard.
+TICKET_NO = str(int(RUN, 16))
 
 
 async def _world(settings: Any) -> World:
@@ -708,7 +710,7 @@ def test_ticket_create_proposal_needs_confirmation(
             {
                 "kind": "ticket_create",
                 "refs": [records["contact"], str(uuid.uuid4())],  # unknown id is ignored
-                "title": f"Rückruf {RUN}",
+                "title": f"Rückruf {TICKET_NO}",
                 "description": "Bitte zurückrufen.",
             },
         )
@@ -717,7 +719,9 @@ def test_ticket_create_proposal_needs_confirmation(
     proposal_id = answer["proposal_id"]
     proposal = _ok(client.get(f"/api/v1/ai/proposals/{proposal_id}", headers=admin), 200)
     assert proposal["proposed"]["contact_id"] == records["contact"]
-    listed = _ok(client.get("/api/v1/tickets", params={"q": f"Rückruf {RUN}"}, headers=admin), 200)
+    listed = _ok(
+        client.get("/api/v1/tickets", params={"q": f"Rückruf {TICKET_NO}"}, headers=admin), 200
+    )
     assert listed == []  # nothing before the confirmation
     applied = _ok(
         client.post(
@@ -726,7 +730,7 @@ def test_ticket_create_proposal_needs_confirmation(
     )
     ticket_id = applied["summary"]["ticket_id"]
     ticket = _ok(client.get(f"/api/v1/tickets/{ticket_id}", headers=admin), 200)
-    assert ticket["title"] == f"Rückruf {RUN}"
+    assert ticket["title"] == f"Rückruf {TICKET_NO}"
     assert ticket["contact_id"] == records["contact"]
 
 

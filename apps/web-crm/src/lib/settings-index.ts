@@ -368,6 +368,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: null,
   },
   {
+    id: "lexware-office",
+    title: "Lexware Office",
+    breadcrumb: [ROOT, "Schnittstellen", "Lexware Office"],
+    href: "/einstellungen/schnittstellen/lexware-office",
+    keywords: ["lexware", "lexoffice", "rechnung", "rechnungskopie", "rechnungsentwurf", "kontaktabgleich", "avv"],
+    permission: ["tenant_settings:read"],
+  },
+  {
     id: "schadenbearbeiter",
     title: "Schadenbearbeiter",
     breadcrumb: [ROOT, "Schnittstellen", "Schadenbearbeiter"],
