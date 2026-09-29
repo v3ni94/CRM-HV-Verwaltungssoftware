@@ -862,9 +862,13 @@ async def reject_proposals(
 async def list_decisions(
     tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[PostingDecisionOut]:
+    """Gated like the writes: with ``learning_bookkeeper_enabled`` off the answer is empty,
+    existing rows stay stored (retention concept M12-06) and reappear when switched on."""
     async with tenant_tx(request, principal) as session:
         row = await _tx(session, tx_id)
         ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        if not await proposals.learning_enabled(session):
+            return []
         return [
             PostingDecisionOut(**proposals.decision_out(r))
             for r in await proposals.rounds_of(session, tx_id)

@@ -179,8 +179,9 @@ booking, ignoring and rejecting behave as before. Nothing here posts automatical
   through `mhvp.ai.examples.record_rejection`), `record_ignore` (`POST .../ignore`) and
   `record_reversal` (counter example rows). `POST .../reopen` makes an ignored transaction
   open again with a reason. A stale `proposal_id` is refused with 409 `MHVP-BANK-0021`.
-  `GET /transactions/{id}/decisions` lists the rounds; `GET .../posting-proposals` names the
-  pending round under `learning`. Tax advisor scope (M18-05) applies to the new endpoints.
+  `GET /transactions/{id}/decisions` lists the rounds (empty while the switch is off: the
+  read is gated like the writes, stored rows stay and reappear when switched on);
+  `GET .../posting-proposals` names the pending round under `learning`. Tax advisor scope (M18-05) applies to the new endpoints.
 * `events_consumer.py`: watermark job (`banking_event_watermark`, beat task
   `mhvp.banking.process_events`, pattern `automation.services.process_tenant`) for
   `journal_entry.reversed` (counter example row, transaction back to `new`, fresh snapshot,

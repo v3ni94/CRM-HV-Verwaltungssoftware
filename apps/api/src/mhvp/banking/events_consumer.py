@@ -178,14 +178,16 @@ async def _on_transaction_reviewed(session: AsyncSession, event: DomainEvent) ->
         return
     payload: dict[str, Any] = event.payload or {}
     if payload.get("decision") == "ignore":
+        reason = str(payload.get("reason") or "").strip()
+        if not reason:
+            # The review endpoint always carries a reason; an event without one (another
+            # emitter) is skipped: the log never invents a reason, the round stays pending.
+            log.warning("bank_transaction.reviewed without reason skipped", extra={"tx": tx.id})
+            return
         pending = await proposals.pending_for(session, tx.id)
         if pending is not None and tx.status is TransactionStatus.IGNORED:
             await proposals.record_ignore(
-                session,
-                tx,
-                user_id=event.actor_user_id,
-                reason=str(payload.get("reason") or "Doppelumsatz"),
-                proposal_id=pending.id,
+                session, tx, user_id=event.actor_user_id, reason=reason, proposal_id=pending.id
             )
         return
     if payload.get("decision") == "keep":

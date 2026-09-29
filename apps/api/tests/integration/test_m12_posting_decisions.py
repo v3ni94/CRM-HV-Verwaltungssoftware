@@ -490,6 +490,12 @@ def test_decision_log_behind_switch_and_full_cycle(
     rows = _decisions(client, h, t3)
     assert rows[-1]["status"] == "ignored"
     assert rows[-1]["reason"] == "Fehlbuchung der Bank"
+    # The read is gated like the writes: with the switch off the log is not visible, the
+    # rows stay stored and reappear when switched on.
+    _ok(client.put(f"{B}/learning", json={"enabled": False, "reason": "Lesesperre"}, headers=h))
+    assert _decisions(client, h, t3) == []
+    _ok(client.put(f"{B}/learning", json={"enabled": True, "reason": "wieder an"}, headers=h))
+    assert len(_decisions(client, h, t3)) == len(rows)
     assert (
         client.post(f"{B}/transactions/{t3}/reopen", json={"reason": "x"}, headers=h).status_code
         == 422
@@ -696,13 +702,18 @@ def test_decision_log_behind_switch_and_full_cycle(
     assert bulk["results"][0]["ok"] is True
     assert _decisions(client, h, t5)[-1]["bulk"] is True
 
-    # Switching off stops writing; existing rows stay.
+    # Switching off stops writing and gates the read; existing rows stay stored and are
+    # visible again once switched on.
     _ok(client.put(f"{B}/learning", json={"enabled": False, "reason": "Test Ende"}, headers=h))
     fifth = _import(
         client, h, "L-4", BANK, [_ntry("T7", "10.00", "CRDT", "2026-01-09", STRANGER, "Rest")]
     )
     assert _decisions(client, h, fifth["txs"]["T7"]["id"]) == []
+    assert _decisions(client, h, t1) == []
+    _ok(client.put(f"{B}/learning", json={"enabled": True, "reason": "Nachweis"}, headers=h))
     assert len(_decisions(client, h, t1)) >= 4
+    assert _decisions(client, h, fifth["txs"]["T7"]["id"]) == []
+    _ok(client.put(f"{B}/learning", json={"enabled": False, "reason": "Test Ende"}, headers=h))
 
 
 def _assert_guard(
