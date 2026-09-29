@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useId, useRef, type RefObject } from "react";
 import { createPortal } from "react-dom";
 
@@ -53,7 +53,12 @@ export function Sheet({ open, onClose, title, size = "md", footer, initialFocusR
   const openerRef = useRef<HTMLElement | null>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
+  // Route key including the query: a query only navigation (`/objekte` to `/objekte?art=sev`)
+  // changes the page content as well. `useSearchParams` needs a Suspense boundary only on
+  // statically prerendered routes; the signed in (app) routes are dynamic.
   const pathname = usePathname();
+  const search = useSearchParams()?.toString() ?? "";
+  const route = search ? `${pathname}?${search}` : (pathname ?? "");
   const pathAtOpen = useRef<string | null>(null);
 
   // Focus: remember the opener, move focus into the panel, restore on close.
@@ -101,11 +106,11 @@ export function Sheet({ open, onClose, title, size = "md", footer, initialFocusR
       return;
     }
     if (pathAtOpen.current === null) {
-      pathAtOpen.current = pathname;
+      pathAtOpen.current = route;
       return;
     }
-    if (pathname !== pathAtOpen.current) onCloseRef.current();
-  }, [open, pathname]);
+    if (route !== pathAtOpen.current) onCloseRef.current();
+  }, [open, route]);
 
   function trapTab(e: React.KeyboardEvent) {
     if (e.key !== "Tab" || !panelRef.current) return;

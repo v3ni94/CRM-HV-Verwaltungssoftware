@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -148,6 +148,7 @@ export function NavDrawer({ open, onClose, groups, initialExpandedGroups, tenant
                         key={item.href}
                         href={item.href}
                         aria-current={active(item.href) ? "page" : undefined}
+                        onClick={() => onCloseRef.current()}
                         className={`flex min-h-11 items-center gap-2.5 rounded-md px-3 py-2 text-sm transition duration-150 ${
                           active(item.href) ? "bg-rail-active font-semibold text-rail-active-fg" : "text-rail-fg hover:bg-rail-hover hover:text-fg"
                         }`}
@@ -168,7 +169,8 @@ export function NavDrawer({ open, onClose, groups, initialExpandedGroups, tenant
 
 /** Hamburger in the top bar (below `lg`) that opens the `NavDrawer`. The drawer also opens on
  *  the window event `OPEN_NAV_EVENT`, sent by the icon rail between `lg` and `xl`, so the
- *  drawer itself has no breakpoint class. Closes on route change. */
+ *  drawer itself has no breakpoint class. Closes on any route change including a query only
+ *  one (`/objekte` to `/objekte?art=rental` are two drawer entries) and on every link tap. */
 export function MobileNav({
   groups,
   label,
@@ -192,10 +194,11 @@ export function MobileNav({
 }) {
   const [open, setOpen] = useState(false);
   const pathname = usePathname();
+  const search = useSearchParams()?.toString() ?? "";
 
   useEffect(() => {
     setOpen(false);
-  }, [pathname]);
+  }, [pathname, search]);
 
   useEffect(() => {
     function onOpen() {

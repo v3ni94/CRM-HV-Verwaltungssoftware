@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 
 import { ChevronIcon, MenuIcon, navIcon } from "./icons";
 
@@ -87,59 +87,95 @@ export function useActiveHref() {
   return { active, hasActive };
 }
 
+type GroupState = Record<string, boolean>;
+
+function fromList(list: string[]): GroupState {
+  return Object.fromEntries(list.map((l) => [l, true]));
+}
+
+/** One module level store for the group expand state, read by the rail and the drawer through
+ *  `useSyncExternalStore`. Both are mounted at the same time (the rail is only hidden by CSS
+ *  below `lg`, the drawer keeps its hook while closed), so two `useState` copies diverged and
+ *  overwrote each other's `PATCH nav_expanded_groups` with a stale list (review after M31
+ *  WP1). One state, one debounce timer, one PATCH. The store empties itself when the last
+ *  subscriber unmounts (next layout mount or test starts fresh from the server value). */
+const navGroupStore: {
+  state: GroupState | null;
+  server: GroupState | null;
+  listeners: Set<() => void>;
+  timer: ReturnType<typeof setTimeout> | null;
+} = { state: null, server: null, listeners: new Set(), timer: null };
+
+function subscribeNavGroups(listener: () => void) {
+  navGroupStore.listeners.add(listener);
+  return () => {
+    navGroupStore.listeners.delete(listener);
+    if (navGroupStore.listeners.size === 0) {
+      navGroupStore.state = null;
+      navGroupStore.server = null;
+    }
+  };
+}
+
+function setNavGroups(next: GroupState) {
+  navGroupStore.state = next;
+  navGroupStore.listeners.forEach((listener) => listener());
+}
+
+function persistNavGroups(next: GroupState) {
+  const groupLabels = Object.entries(next)
+    .filter(([, on]) => on)
+    .map(([l]) => l);
+  writeJSON(STORAGE_KEY, groupLabels);
+  if (navGroupStore.timer) clearTimeout(navGroupStore.timer);
+  navGroupStore.timer = setTimeout(() => {
+    navGroupStore.timer = null;
+    fetch(PREFERENCES_ENDPOINT, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({ nav_expanded_groups: groupLabels }),
+    }).catch(() => {
+      // offline or session expired: localStorage above still keeps this browser consistent
+    });
+  }, SAVE_DEBOUNCE_MS);
+}
+
 /** Group expand state, server side per user (operator 27.09.2026: all groups start collapsed,
  *  an opened group stays open until closed again, on every device) and mirrored into
  *  localStorage only to avoid a flash while the save round trip is in flight. Shared by the
- *  rail and the drawer so both send the same `PATCH nav_expanded_groups`. */
+ *  rail and the drawer through one store, so a group opened in the drawer is open in the rail
+ *  and both send the same `PATCH nav_expanded_groups`. `initialExpandedGroups` is the server
+ *  value of the first mount; undefined (not logged in yet) falls back to localStorage, then
+ *  all closed. */
 export function useNavGroups(initialExpandedGroups: string[] | undefined) {
-  const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
-    const initial = initialExpandedGroups !== undefined ? asGroupList(initialExpandedGroups) : readGroupList(STORAGE_KEY);
-    return Object.fromEntries(initial.map((l) => [l, true]));
-  });
-  const saveTimer = useState<{ current: ReturnType<typeof setTimeout> | null }>(() => ({
-    current: null,
-  }))[0];
-  useEffect(() => {
-    if (initialExpandedGroups === undefined) {
-      setExpanded(Object.fromEntries(readGroupList(STORAGE_KEY).map((l) => [l, true])));
-    }
-    // Only on mount: initialExpandedGroups is the server value for this render and must not be
-    // re-applied after the user has toggled a group.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function persist(next: Record<string, boolean>) {
-    const groupLabels = Object.entries(next)
-      .filter(([, on]) => on)
-      .map(([l]) => l);
-    writeJSON(STORAGE_KEY, groupLabels);
-    if (saveTimer.current) clearTimeout(saveTimer.current);
-    saveTimer.current = setTimeout(() => {
-      fetch(PREFERENCES_ENDPOINT, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ nav_expanded_groups: groupLabels }),
-      }).catch(() => {
-        // offline or session expired: localStorage above still keeps this browser consistent
-      });
-    }, SAVE_DEBOUNCE_MS);
-  }
+  const expanded = useSyncExternalStore(
+    subscribeNavGroups,
+    () => {
+      if (navGroupStore.state === null) {
+        navGroupStore.state = fromList(initialExpandedGroups !== undefined ? asGroupList(initialExpandedGroups) : readGroupList(STORAGE_KEY));
+      }
+      return navGroupStore.state;
+    },
+    () => {
+      // Server render and hydration: never read localStorage here, the client snapshot above
+      // takes over right after hydration without a markup mismatch.
+      if (navGroupStore.server === null) navGroupStore.server = fromList(initialExpandedGroups !== undefined ? asGroupList(initialExpandedGroups) : []);
+      return navGroupStore.server;
+    },
+  );
 
   function toggleGroup(groupLabel: string) {
-    setExpanded((prev) => {
-      const next = { ...prev, [groupLabel]: !prev[groupLabel] };
-      persist(next);
-      return next;
-    });
+    const prev = navGroupStore.state ?? expanded;
+    const next = { ...prev, [groupLabel]: !prev[groupLabel] };
+    persistNavGroups(next);
+    setNavGroups(next);
   }
 
   function collapseAll() {
-    setExpanded(() => {
-      const next: Record<string, boolean> = {};
-      persist(next);
-      return next;
-    });
+    const next: GroupState = {};
+    persistNavGroups(next);
+    setNavGroups(next);
   }
 
   return { expanded, toggleGroup, collapseAll };

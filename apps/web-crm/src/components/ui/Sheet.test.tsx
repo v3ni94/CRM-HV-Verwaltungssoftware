@@ -7,7 +7,8 @@ import { IntlTestProvider, renderIntl } from "@/test/intl";
 import { Sheet, type SheetSize } from "./Sheet";
 
 let pathname = "/objekte";
-vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+let search = "";
+vi.mock("next/navigation", () => ({ usePathname: () => pathname, useSearchParams: () => new URLSearchParams(search) }));
 
 function Host({ size = "md", withFooter = false, autoFocusField = false }: { size?: SheetSize; withFooter?: boolean; autoFocusField?: boolean }) {
   const [open, setOpen] = useState(false);
@@ -39,6 +40,7 @@ function Host({ size = "md", withFooter = false, autoFocusField = false }: { siz
 describe("Sheet", () => {
   beforeEach(() => {
     pathname = "/objekte";
+    search = "";
   });
 
   it("portals into body with dialog semantics, locks scroll and releases it on close", async () => {
@@ -109,6 +111,19 @@ describe("Sheet", () => {
     await userEvent.click(screen.getByRole("button", { name: "Öffnen" }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     pathname = "/kontakte";
+    rerender(
+      <IntlTestProvider>
+        <Host />
+      </IntlTestProvider>,
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("closes when only the query changes while open (review WP1)", async () => {
+    const { rerender } = renderIntl(<Host />);
+    await userEvent.click(screen.getByRole("button", { name: "Öffnen" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    search = "art=rental";
     rerender(
       <IntlTestProvider>
         <Host />

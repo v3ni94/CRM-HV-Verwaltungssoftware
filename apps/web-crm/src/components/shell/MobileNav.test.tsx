@@ -1,14 +1,15 @@
-import { screen, within } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { renderIntl } from "@/test/intl";
+import { IntlTestProvider, renderIntl } from "@/test/intl";
 
 import { MobileNav } from "./MobileNav";
-import { openNavDrawer } from "./SideNav";
+import { openNavDrawer, SideNav } from "./SideNav";
 
 let search = "";
+let pathname = "/objekte";
 vi.mock("next/navigation", () => ({
-  usePathname: () => "/objekte",
+  usePathname: () => pathname,
   useSearchParams: () => new URLSearchParams(search),
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
@@ -38,6 +39,7 @@ function renderNav(extra: Partial<React.ComponentProps<typeof MobileNav>> = {}) 
 describe("MobileNav", () => {
   beforeEach(() => {
     search = "";
+    pathname = "/objekte";
     window.localStorage.clear();
     vi.restoreAllMocks();
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true }));
@@ -134,5 +136,70 @@ describe("MobileNav", () => {
     renderNav({ tenants: [tenants[0]!], currentTenant: "t1" });
     await userEvent.click(screen.getByRole("button", { name: "Navigation öffnen" }));
     expect(screen.queryByTestId("drawer-tenant")).not.toBeInTheDocument();
+  });
+
+  it("closes on a query only navigation between its own entries (review WP1)", async () => {
+    // a fresh element per render: the same element reference would let React skip the update
+    const ui = () => <MobileNav groups={groups} label="Hauptnavigation" openLabel="Navigation öffnen" closeLabel="Schließen" productName="MHVP" area="HVM" />;
+    const { rerender } = render(ui(), { wrapper: IntlTestProvider });
+    await userEvent.click(screen.getByRole("button", { name: "Navigation öffnen" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    // the router applied the new query, the path is unchanged
+    search = "art=rental";
+    rerender(ui());
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("closes on the tap of a drawer link before the router answers", async () => {
+    renderNav({ initialExpandedGroups: ["Verwaltung"] });
+    await userEvent.click(screen.getByRole("button", { name: "Navigation öffnen" }));
+    const link = screen.getByRole("link", { name: "Mietverwaltung" });
+    await userEvent.click(link);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(document.body.style.overflow).toBe("");
+  });
+
+  it("shares one group state and one PATCH with the rail (review WP1)", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const railGroups = [...groups, { label: "System", items: [{ href: "/einstellungen", label: "Einstellungen" }] }];
+    render(
+      <>
+        <SideNav
+          groups={railGroups}
+          label="Rail"
+          logoSrc="/logo.png"
+          productName="MHVP"
+          area="HVM"
+          collapseLabel="Einklappen"
+          expandLabel="Ausklappen"
+          openNavLabel="Navigation öffnen (Rail)"
+          initialExpandedGroups={["Übersicht"]}
+        />
+        <MobileNav groups={railGroups} label="Drawer" openLabel="Navigation öffnen" closeLabel="Schließen" productName="MHVP" area="HVM" initialExpandedGroups={["Übersicht"]} />
+      </>,
+      { wrapper: IntlTestProvider },
+    );
+    const rail = screen.getByRole("navigation", { name: "Rail" });
+    expect(within(rail).getByRole("button", { name: "Übersicht" })).toHaveAttribute("aria-expanded", "true");
+    // open the drawer from the icon rail and expand a group there
+    await userEvent.click(screen.getByTestId("rail-open-nav"), { advanceTimers: vi.advanceTimersByTime });
+    const drawer = screen.getByRole("dialog", { name: "Drawer" });
+    await userEvent.click(within(drawer).getByRole("button", { name: "System" }), { advanceTimers: vi.advanceTimersByTime });
+    expect(within(drawer).getByRole("link", { name: "Einstellungen" })).toBeInTheDocument();
+    // the rail shows the same state at once
+    expect(within(rail).getByRole("button", { name: "System" })).toHaveAttribute("aria-expanded", "true");
+    expect(within(rail).getByRole("link", { name: "Einstellungen" })).toBeInTheDocument();
+    await userEvent.keyboard("{Escape}");
+    // toggling in the rail keeps what the drawer opened
+    await userEvent.click(within(rail).getByRole("button", { name: "Übersicht" }), { advanceTimers: vi.advanceTimersByTime });
+    vi.advanceTimersByTime(600);
+    const calls = (window.fetch as ReturnType<typeof vi.fn>).mock.calls;
+    expect(calls).toHaveLength(1);
+    const body = JSON.parse(calls[0]?.[1]?.body as string);
+    expect(body.nav_expanded_groups).toEqual(["System"]);
+    await userEvent.click(screen.getByRole("button", { name: "Navigation öffnen" }), { advanceTimers: vi.advanceTimersByTime });
+    expect(within(screen.getByRole("dialog", { name: "Drawer" })).getByRole("button", { name: "Übersicht" })).toHaveAttribute("aria-expanded", "false");
+    vi.useRealTimers();
   });
 });

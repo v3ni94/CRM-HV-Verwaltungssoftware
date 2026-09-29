@@ -47,8 +47,12 @@ looks the same as before.
    key (the only stored shell flag; the old boolean is parsed tolerantly) and are announced
    as `data-rail` on `html` so the fixed `BottomBar` can follow the rail edge in CSS. The
    drawer serves phones and tablets and the icon rail (window event `mhvp:open-nav`), shares
-   the server side group state (`useNavGroups`, `PATCH nav_expanded_groups`) and the query
-   aware active check (`useActiveHref`) with the rail.
+   the server side group state (`useNavGroups` over one module level store read with
+   `useSyncExternalStore`, one debounce timer, one `PATCH nav_expanded_groups`; rail and
+   drawer are mounted at the same time, so two state copies overwrote each other) and the
+   query aware active check (`useActiveHref`) with the rail. The drawer closes on every link
+   tap and on any route change including a query only one (`/objekte?art=rental`), as does
+   `Sheet`.
 4. Nothing is cut off silently. `main` uses `overflow-x-clip`; every data table is rendered
    through `ResponsiveList`, `ui.tableScroll` or `ui.tableCard` (WP3 sweeps the existing
    tables, WP4 adds a source scan and element wise overflow checks in Playwright).
