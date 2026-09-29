@@ -112,7 +112,7 @@ describe("HandoverQueue", () => {
     await queue.enqueue("other-protocol", { kind: "create_item", section: "keys", tempId: "tmp-2", body: {} });
     const again = await queue.enqueue(PID, { kind: "patch_protocol", body: { city: "Berlin" }, baseUpdatedAt: null }, first.id);
     expect(again.id).toBe(first.id);
-    expect((again.op as { body: { city: string } }).body.city).toBe("Bernau");
+    expect((again.op as unknown as { body: { city: string } }).body.city).toBe("Bernau");
     const items = await queue.list(PID);
     expect(items.map((x) => x.id)).toEqual([first.id, second.id]);
     expect(items[0]!.seq).toBeLessThan(items[1]!.seq);
