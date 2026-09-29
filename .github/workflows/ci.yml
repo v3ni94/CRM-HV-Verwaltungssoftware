@@ -184,6 +184,8 @@ jobs:
       - run: pnpm build
       - name: Install Playwright Chromium
         run: pnpm --filter @mhvp/web-crm exec playwright install --with-deps chromium
+      # All Playwright projects: chromium (desktop smoke) plus phone, tablet and tablet-landscape
+      # for the specs tagged @mobile (M31 WP4, shell.mobile.spec.ts of both apps).
       - run: pnpm e2e
       - name: Upload Playwright report
         if: failure()
@@ -253,6 +255,11 @@ jobs:
       - name: Install Playwright Chromium
         run: pnpm --filter @mhvp/web-crm exec playwright install --with-deps chromium
       - name: E2E against the API
+        # Desktop project for every @backend spec plus the phone project (390x844, coarse
+        # pointer) for the @backend @mobile specs (M31 WP4). Tablet viewports run locally with
+        # MHVP_E2E_PW_ARGS="--project tablet" (docs/acceptance/M31-geraetepruefung.md).
+        env:
+          MHVP_E2E_PW_ARGS: "--project chromium --project phone"
         run: bash scripts/e2e-backend.sh
       - name: Upload Playwright report
         if: failure()
