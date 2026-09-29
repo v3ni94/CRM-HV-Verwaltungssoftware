@@ -1271,6 +1271,24 @@
  },
  {
   "kind": "page",
+  "title": "Regelvorschläge",
+  "source": "Einstellungen",
+  "href": "/einstellungen/regelvorschlaege",
+  "keywords": [
+   "regelvorschlag",
+   "vorschlag",
+   "gelernte regel",
+   "automatisierung",
+   "ki regel",
+   "freigabe regel"
+  ],
+  "permission": [
+   "tenant_settings:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Antwortvorlagen",
   "source": "Einstellungen",
   "href": "/einstellungen/antwortvorlagen",
@@ -2419,12 +2437,22 @@
  },
  {
   "kind": "handbook",
-  "title": "Vorschläge je Seite",
+  "title": "Der Chat kennt die geöffnete Seite",
   "source": "Handbuch: KI-Assistent im Chat",
   "href": "/assistent",
   "keywords": [],
   "permission": null,
-  "excerpt": "Beim Öffnen zeigt der Chat Vorschläge passend zur Seite und zum geöffneten Datensatz, zum Beispiel auf einem Kontakt \"Was ist offen bei diesem Kontakt?\" oder auf einem Ticket \"Antwortentwurf erstellen\". Ein Klick stellt die Frage. Der Assistent bezieht sich dann auf den geöffnete",
+  "excerpt": "Der Assistent weiß, in welchem Menüpunkt, auf welcher Unterseite und in welchem Datensatz Sie sich befinden. Das gilt für jede Seite des CRM, auch für Unterebenen wie die Versammlung einer WEG, den Postausgang, eine Mieterhöhung oder eine einzelne Einstellungsseite. Die Kopfzeile",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Termine, Fristen, Dokumente, WEG, Bank",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf diesen Seiten fragt die Plattform ihre eigenen Daten ab, ohne dass Sie einen Suchbegriff nennen müssen. Zeitangaben wie \"heute\", \"morgen\", \"diese Woche\", \"nächste Woche\", \"in 7 Tagen\" oder \"12.10.2026 bis 14.10.2026\" versteht die Plattform selbst. Beispiele: - Termine: eigene",
   "file": "docs/handbuch/assistent-chat.md"
  },
  {
@@ -2464,7 +2492,7 @@
   "href": "/assistent",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Für WEG-Seiten, Übergabeprotokolle und das Postfach gibt es Vorschläge, aber noch keine eigene Datenabfrage zu Beschlüssen, Versammlungen, Rücklagen, Mängeln, Zählerständen oder Unterschriften; der Assistent kennt dort nur Seite und Datensatz. - Die Plattform wählt die Suchbere",
+  "excerpt": "- Für Übergabeprotokolle (Mängel, Zählerstände, Unterschriften), Rechnungen, Abrechnungen und Mahnläufe gibt es Vorschläge, aber noch keine eigene Datenabfrage; der Assistent kennt dort nur Seite und Datensatz. - Eine Zuständigkeit je Frist ist nicht hinterlegt; \"Fristen nach Zus",
   "file": "docs/handbuch/assistent-chat.md"
  },
  {

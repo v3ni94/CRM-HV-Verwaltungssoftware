@@ -304,6 +304,21 @@ Aufgaben, erste Schritte je Modul, `ui_preferences`) existiert nicht — `Onboar
 - `answer_question` started outside the chat (`create_extraction_run`: automation `ai_task`,
   intake) keeps prompt v1 (`NON_CHAT_PROMPT`) and never produces a chat action (`jobs.py`
   builds one only when `input_ref["lookup"]` exists).
+- Area tools (`lookup_tools.py`, 29.09.2026): the chat bubble sends `area` / `sub_area` of the
+  open menu item (`chat-suggestions.ts` route table, `useChatContext` override); `AREA_MAP`
+  adds the tools of that area, which run without a search term (calendar, deadlines,
+  documents, resolutions, meetings, reserve, rent increases, work orders, bank transactions,
+  open items). `lookup.parse` turns time words into `Query.range` and filter words into
+  `Query.flags`; tools may add facts (`Query.facts`). Each tool follows the permission and the
+  legal entity scope of its endpoint; the reserve is reported only inside the scope. Prompt
+  `answer_question/v3` names the area and the two new proposal kinds `calendar_create` and
+  `deadline_create` (internal `CalendarEntry` of the confirmer, never an invitation).
+- Input budget (`fit_answer_input`, 29.09.2026): the data block of a chat call is fitted into
+  the tier's `context_tokens` (default 150000 tokens, chars / 3.5, reserve 0.85): retrieved
+  documents first, then excerpts, then lookup hits beyond 10 per tool, then history beyond 6
+  turns; never the question. A provider 400 naming the token limit is retried once with the
+  budget halved (`_call_within_budget`); a second refusal fails the run with
+  `CONTEXT_WINDOW_NOTICE` and the job answers with the hit list. Sizes go to `input_stats`.
 - `jobs.py` appends the platform hit list to the answer, stores the links on the message
   (`ai_message.links`, migration 0223) and, without a released provider or budget, answers with
   the hit list only. `RunOut.links` and `RunOut.lookup_answer` carry the same.
