@@ -16,6 +16,7 @@ describe("StartTiles", () => {
     expect(screen.getByText("Schäden und Anliegen melden")).toBeInTheDocument();
     expect(screen.getByText("Kontoauszug ansehen")).toBeInTheDocument();
     expect(screen.getByText("Zählerstand melden")).toBeInTheDocument();
+    expect(screen.getByText("Verbrauchsinformation ansehen")).toBeInTheDocument();
     expect(screen.getByText("Stammdaten ändern lassen")).toBeInTheDocument();
     expect(screen.queryByText("Ihre Aufträge der Hausverwaltung.")).not.toBeInTheDocument();
   });

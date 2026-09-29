@@ -8,6 +8,7 @@ import { BillingSettingsForm, type BillingSettings } from "@/components/settings
 import { ManagerEntitySetup, type ManagerEntityStatus } from "@/components/settings/ManagerEntitySetup";
 import { AiLearningExamples } from "@/components/settings/AiLearningExamples";
 import { ResolutionKindsSettings } from "@/components/settings/ResolutionKindsSettings";
+import { ConsumptionInfoSwitch, type ConsumptionInfoSettings } from "@/components/settings/ConsumptionInfoSwitch";
 import { MeteringModuleSwitch } from "@/components/settings/MeteringModuleSwitch";
 import { GMAIL_DONE_SYNC_DEFAULTS, GmailDoneSync, type GmailDoneSyncSettings } from "@/components/settings/GmailDoneSync";
 import { TicketReopenWindow } from "@/components/settings/TicketReopenWindow";
@@ -55,6 +56,15 @@ export default async function CompanySettingsPage() {
         canUpdate={can("tenant_settings:update")}
       />
       <MeteringModuleSwitch initial={settings.data.metering_module_enabled ?? false} canUpdate={can("tenant_settings:update")} />
+      <ConsumptionInfoSwitch
+        initial={{
+          consumption_info_enabled: false,
+          consumption_info_notifications_enabled: false,
+          consumption_info_template_verified: false,
+          ...(settings.data as Partial<ConsumptionInfoSettings>),
+        }}
+        canUpdate={can("tenant_settings:update")}
+      />
       <AiLearningExamples
         initial={settings.data.ai_learning_examples_enabled ?? false}
         initialRetentionMonths={settings.data.ai_learning_examples_retention_months ?? 24}

@@ -42,6 +42,7 @@ export default async function PortalLayout({ children }: { children: React.React
         { href: "/formulare", label: t("nav.forms") },
         { href: "/konto", label: t("nav.account") },
         { href: "/zaehlerstand", label: t("nav.meter") },
+        { href: "/verbrauch", label: t("nav.consumption") },
         { href: "/daten", label: t("nav.data") },
         { href: "/lastschrift", label: t("nav.mandate") },
         // M31 WP5: Übergabeprotokoll for helpers, participants, tenants and owners with a grant

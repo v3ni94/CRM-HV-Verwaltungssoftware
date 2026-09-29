@@ -367,6 +367,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PUT", pattern: new RegExp(`^banking/accounts/${ID}/assignments$`) },
   { method: "DELETE", pattern: new RegExp(`^banking/accounts/${ID}/assignments/${ID}$`) },
   { method: "PUT", pattern: new RegExp(`^banking/accounts/${ID}/legal-entity-default$`) },
+  // Verbrauchsinformation je Objekt (Regel H03): Monate, Objektschalter, manueller Lauf.
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/consumption-info$`) },
+  { method: "PUT", pattern: new RegExp(`^properties/${ID}/consumption-info/settings$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/consumption-info/run$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/bank-account-options$`) },
   // Bankkonten des Rechtsträgers (M16-13): Standardkonto anzeigen und setzen (Restpunkt 27.09.2026).
   { method: "GET", pattern: new RegExp(`^properties/${ID}/bank-accounts$`) },

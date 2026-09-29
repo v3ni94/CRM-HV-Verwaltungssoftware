@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { PropertyBankAccounts } from "@/components/banking/PropertyBankAccounts";
+import { ConsumptionInfoPanel } from "@/components/billing/ConsumptionInfoPanel";
 import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
@@ -288,6 +289,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       <PortalDocumentsPanel rows={portalDocuments} />
       <PropertyNotices propertyId={propertyId} />
       <PropertyMeteringTab property={{ id: data.id, number: data.number, name: data.name, street: data.street, house_number: data.house_number, postal_code: data.postal_code, city: data.city }} permissions={me.data?.permissions ?? []} />
+      <ConsumptionInfoPanel propertyId={propertyId} permissions={me.data?.permissions ?? []} />
       <CompletenessPanel propertyId={propertyId} />
       <ManagerChangeChecklist propertyId={propertyId} canEdit={canEdit} />
       {me.data?.permissions.includes("tickets:read") ? (

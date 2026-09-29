@@ -9859,6 +9859,52 @@
     "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern.",
     "link": "Zu den Verbindungen"
   },
+  "ConsumptionInfo": {
+    "title": "Verbrauchsinformation (§ 6a HeizkostenV)",
+    "description": "Monatliche Verbrauchsinformation je Einheit aus den Periodenverbräuchen des Messdienstes (Regel H03). Der Monatsjob läuft am ersten Werktag für den Vormonat; je Einheit und Monat wird genau ein Datensatz mit Werten, Datengrundlage, fehlenden Angaben und PDF abgelegt. Ein erneuter Lauf überschreibt nichts.",
+    "status": {
+      "on": "aktiv",
+      "off": "aus"
+    },
+    "tenantOff": "Der Mandantenschalter ist aus (Einstellungen, Mandant). Ohne ihn läuft weder der Monatsjob noch der manuelle Lauf.",
+    "notVerified": "Die Vorlage ist noch nicht als verifiziert markiert. Mieter sehen im Portal noch nichts.",
+    "propertySwitch": "Verbrauchsinformation für dieses Objekt erzeugen",
+    "month": "Monat",
+    "run": "Monat jetzt erzeugen",
+    "runResult": "Monat {month}: {created} erzeugt, {skipped} übersprungen, {incomplete} unvollständig.",
+    "months": "Erzeugte Monate",
+    "empty": "Noch keine Verbrauchsinformation erzeugt.",
+    "rows": "{count, plural, one {# Datensatz je Einheit und Monat} other {# Datensätze je Einheit und Monat}}",
+    "columns": {
+      "month": "Monat",
+      "units": "Einheiten",
+      "incomplete": "ohne Verbrauch",
+      "notStored": "ohne PDF",
+      "unit": "Einheit",
+      "heating": "Heizung",
+      "hotWater": "Warmwasser",
+      "missing": "Fehlende Angaben",
+      "created": "Erzeugt"
+    },
+    "toVerifyTitle": "Vom Betreiber zu verifizieren",
+    "toVerifyHint": "Inhalte des § 6a Abs. 3 HeizkostenV, die die Spezifikation nicht festlegt. Sie werden nicht erfunden und Mietern nicht angezeigt; Entscheidung siehe OPEN_QUESTIONS H03."
+  },
+  "ConsumptionInfoSwitch": {
+    "title": "Verbrauchsinformation (Regel H03)",
+    "status": {
+      "on": "an",
+      "off": "aus"
+    },
+    "description": "Schaltet den Monatsjob der Verbrauchsinformation für diesen Mandanten frei (Standard aus). Zusätzlich braucht jedes Objekt seinen eigenen Schalter auf der Objektseite.",
+    "risk": "Mieter sehen die Informationen im Portal erst, wenn die Vorlage als verifiziert markiert ist. Die Benachrichtigung ist ein eigener Schalter (Standard aus). Jede Änderung wird protokolliert.",
+    "labels": {
+      "job": "Monatsjob für diesen Mandanten aktivieren",
+      "notifications": "Mieter im Portal über neue Monate benachrichtigen",
+      "verified": "Vorlage geprüft und für Mieter freigegeben (Betreiber)"
+    },
+    "saved": "Gespeichert.",
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
+  },
   "CircularLowerMajoritySwitch": {
     "title": "Umlaufbeschluss mit einfacher Mehrheit",
     "status": {

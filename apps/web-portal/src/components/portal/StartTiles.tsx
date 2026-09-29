@@ -25,6 +25,8 @@ export function StartTiles({ me, newNotices = 0 }: { me: Me; newNotices?: number
         { href: "/formulare", label: t("start.forms") },
         { href: "/konto", label: t("start.account") },
         { href: "/zaehlerstand", label: t("start.meter") },
+        // Regel H03: Verbrauchsinformation (die API sperrt bis zur Freigabe durch die Verwaltung).
+        { href: "/verbrauch", label: t("start.consumption") },
         { href: "/daten", label: t("start.data") },
         ...(showsHandover(me) ? [{ href: "/uebergabe", label: t("start.handover") }] : []),
         // A51: owner tiles (read only), owners only.

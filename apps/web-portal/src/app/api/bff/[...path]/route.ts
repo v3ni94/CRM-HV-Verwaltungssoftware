@@ -40,6 +40,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/resolutions$/ },
   { method: "GET", pattern: /^portal\/property-contacts$/ },
   { method: "GET", pattern: /^portal\/hoa-account$/ },
+  // Regel H03: monatliche Verbrauchsinformation der eigenen Einheit (lesend).
+  { method: "GET", pattern: /^portal\/consumption-info$/ },
+  { method: "GET", pattern: new RegExp(`^portal/consumption-info/${ID}$`) },
   // Schwarzes Brett (M21-01, A54): current notices of the own properties.
   { method: "GET", pattern: /^portal\/notices$/ },
   { method: "GET", pattern: /^portal\/work-orders$/ },

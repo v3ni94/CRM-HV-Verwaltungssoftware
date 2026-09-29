@@ -158,6 +158,34 @@ export type HoaAccountContract = {
   note: string | null;
 };
 
+/** Regel H03: monatliche Verbrauchsinformation der eigenen Einheit (nur Werte, keine
+ *  Betreibervermerke). */
+export type ConsumptionComponent = {
+  value: string;
+  unit_of_measure: string | null;
+  kind?: string;
+  source?: string;
+  units?: number;
+};
+
+export type ConsumptionInfoRow = {
+  id: string;
+  unit_id: string;
+  month: string;
+  values: {
+    month: string;
+    period_from: string;
+    period_to: string;
+    heating: ConsumptionComponent | null;
+    hot_water: ConsumptionComponent | null;
+    previous_month: { heating?: ConsumptionComponent | null; hot_water?: ConsumptionComponent | null } | null;
+    previous_year_month: { heating?: ConsumptionComponent | null; hot_water?: ConsumptionComponent | null } | null;
+    property_average: { heating?: ConsumptionComponent | null; hot_water?: ConsumptionComponent | null } | null;
+  };
+  estimated: string[];
+  created_at: string;
+};
+
 export type HoaAccount = {
   contracts: HoaAccountContract[];
   note: string;

@@ -69,6 +69,7 @@
       "meetings": "Meetings",
       "contacts": "Contacts",
       "hoaAccount": "HOA fee account",
+      "consumption": "Consumption",
       "notices": "Notices",
       "forms": "Forms",
       "open": "Open menu",
@@ -98,6 +99,7 @@
       "resolutions": "View resolutions of the community",
       "contacts": "Contact persons of the property",
       "hoaAccount": "View HOA fee account",
+      "consumption": "View consumption information",
       "notices": "Read notices",
       "newNotices": "{count, plural, one {One new notice} other {# new notices}} on the notice board.",
       "forms": "Fill in forms of the management"
@@ -162,6 +164,24 @@
     "dueDate": "Due on",
     "amount": "Amount",
     "remaining": "Open"
+  },
+  "ConsumptionInfo": {
+    "title": "Consumption information",
+    "locked": "Consumption information is not yet enabled for your access.",
+    "note": "Monthly consumption information of your unit based on the values transmitted by the metering service. No statement, no legal effect; the heating cost statement remains decisive.",
+    "empty": "No consumption information available yet.",
+    "monthTitle": "Consumption information {month}",
+    "tableCaption": "Consumption per month",
+    "component": "Consumption",
+    "month": "Month",
+    "previousMonth": "Previous month",
+    "previousYear": "Same month last year",
+    "average": "Average in the property",
+    "heating": "Heating",
+    "hotWater": "Hot water",
+    "estimated": "estimated",
+    "none": "not available",
+    "estimatedHint": "Estimated values are marked; missing values are never replaced by zero."
   },
   "Meter": {
     "title": "Report meter reading",

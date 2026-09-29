@@ -69,6 +69,7 @@
       "meetings": "Versammlungen",
       "contacts": "Ansprechpartner",
       "hoaAccount": "Hausgeldkonto",
+      "consumption": "Verbrauch",
       "notices": "Aushänge",
       "forms": "Formulare",
       "open": "Menü öffnen",
@@ -98,6 +99,7 @@
       "resolutions": "Beschlüsse der Gemeinschaft einsehen",
       "contacts": "Ansprechpartner des Objekts",
       "hoaAccount": "Hausgeldkonto ansehen",
+      "consumption": "Verbrauchsinformation ansehen",
       "notices": "Aushänge lesen",
       "newNotices": "{count, plural, one {Ein neuer Aushang} other {# neue Aushänge}} am Schwarzen Brett.",
       "forms": "Formulare der Verwaltung ausfüllen"
@@ -162,6 +164,24 @@
     "dueDate": "Fällig am",
     "amount": "Betrag",
     "remaining": "Offen"
+  },
+  "ConsumptionInfo": {
+    "title": "Verbrauchsinformation",
+    "locked": "Die Verbrauchsinformation ist für Ihren Zugang noch nicht freigeschaltet.",
+    "note": "Monatliche Verbrauchsinformation Ihrer Einheit auf Grundlage der vom Messdienst übermittelten Werte. Keine Abrechnung, keine Rechtsfolge; maßgeblich bleibt die Heizkostenabrechnung.",
+    "empty": "Noch keine Verbrauchsinformation vorhanden.",
+    "monthTitle": "Verbrauchsinformation {month}",
+    "tableCaption": "Verbrauch je Monat",
+    "component": "Verbrauch",
+    "month": "Monat",
+    "previousMonth": "Vormonat",
+    "previousYear": "Vorjahresmonat",
+    "average": "Durchschnitt im Objekt",
+    "heating": "Heizung",
+    "hotWater": "Warmwasser",
+    "estimated": "geschätzt",
+    "none": "keine Angabe",
+    "estimatedHint": "Geschätzte Werte sind gekennzeichnet; fehlende Werte werden nicht durch Null ersetzt."
   },
   "Meter": {
     "title": "Zählerstand melden",

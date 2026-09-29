@@ -9859,6 +9859,52 @@
     "readOnly": "The change requires the permission tenant settings update.",
     "link": "Go to connections"
   },
+  "ConsumptionInfo": {
+    "title": "Consumption information (§ 6a HeizkostenV)",
+    "description": "Monthly consumption information per unit from the period consumptions of the metering service (rule H03). The monthly job runs on the first working day for the previous month; exactly one record per unit and month is stored with values, data basis, missing data and PDF. A rerun overwrites nothing.",
+    "status": {
+      "on": "active",
+      "off": "off"
+    },
+    "tenantOff": "The tenant switch is off (settings, tenant). Without it neither the monthly job nor the manual run works.",
+    "notVerified": "The template is not yet marked as verified. Tenants see nothing in the portal yet.",
+    "propertySwitch": "Generate consumption information for this property",
+    "month": "Month",
+    "run": "Generate month now",
+    "runResult": "Month {month}: {created} created, {skipped} skipped, {incomplete} incomplete.",
+    "months": "Generated months",
+    "empty": "No consumption information generated yet.",
+    "rows": "{count, plural, one {# record per unit and month} other {# records per unit and month}}",
+    "columns": {
+      "month": "Month",
+      "units": "Units",
+      "incomplete": "without consumption",
+      "notStored": "without PDF",
+      "unit": "Unit",
+      "heating": "Heating",
+      "hotWater": "Hot water",
+      "missing": "Missing data",
+      "created": "Created"
+    },
+    "toVerifyTitle": "To be verified by the operator",
+    "toVerifyHint": "Elements of § 6a para. 3 HeizkostenV the specification does not define. They are not invented and not shown to tenants; decision see OPEN_QUESTIONS H03."
+  },
+  "ConsumptionInfoSwitch": {
+    "title": "Consumption information (rule H03)",
+    "status": {
+      "on": "on",
+      "off": "off"
+    },
+    "description": "Enables the monthly consumption information job for this tenant (default off). Every property additionally needs its own switch on the property page.",
+    "risk": "Tenants see the information in the portal only once the template is marked as verified. The notification is a separate switch (default off). Every change is logged.",
+    "labels": {
+      "job": "Enable the monthly job for this tenant",
+      "notifications": "Notify tenants in the portal about new months",
+      "verified": "Template verified and released for tenants (operator)"
+    },
+    "saved": "Saved.",
+    "readOnly": "The change requires the permission tenant settings update."
+  },
   "CircularLowerMajoritySwitch": {
     "title": "Circular resolution with simple majority",
     "status": {
