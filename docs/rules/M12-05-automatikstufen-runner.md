@@ -14,7 +14,7 @@
 
 | Klasse | Bedeutung | Deckel | L1 vorausgewählt | Verifier L2 |
 | --- | --- | --- | --- | --- |
-| `debtor_full` | Eingang gleicht genau einen offenen Posten voll aus (Stufe 1 `full`, eindeutig) | L3 | ja | aktive Regel, Betrag gleich Rest, ältester offener Posten des Schuldners (Chronologie), kein Kautionsposten, Konto ohne Sperrkriterium |
+| `debtor_full` | Eingang gleicht genau einen offenen Posten voll aus (Stufe 1 `full`, eindeutig) | L3 | ja | aktive Regel, Vertragsnummer oder Mandatsreferenz im Nachweis (IBAN, Betrag und Periodenhinweis allein bleiben manuell, 7.4 Nr. 2), Betrag gleich Rest, ältester offener Posten des Schuldners (Chronologie), kein Kautionsposten, Konto ohne Sperrkriterium |
 | `debtor_collective` | Eingang gleicht genau eine Kombination offener Posten aus | L1 | ja | nie automatisch |
 | `creditor_invoice` | Ausgang zu einer verknüpften gebuchten Rechnung | L2 | ja | aktive Regel, Rechnungsbetrag gleich Zahlbetrag, Empfänger-IBAN wie Rechnung, Kontierung aus der Rechnung, Konten ohne Sperrkriterium |
 | `recurring_expense` | Ausgang gegen Sachkonto nach Regel der Art `posting` | L2 | nur bei Regeltreffer mit Posten | zusätzlich `auto_posting_outgoing_enabled`, Historie gleich Regelkonto, Betrag in beobachteter Spanne, keine abweichende offene Verbindlichkeit, Belegkette (verknüpfter Beleg oder Kennzeichen `no_receipt_required` einer Person), sonst Klärungsstatus `bank_transaction.clarification_needed` statt Buchung |

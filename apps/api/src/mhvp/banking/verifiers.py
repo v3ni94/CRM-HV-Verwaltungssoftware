@@ -30,6 +30,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -42,6 +43,7 @@ VERIFIER_VERSION = "2026.09.29-1"
 # Counter accounts the runner never books against (category), independent of the rule.
 FORBIDDEN_CATEGORIES = frozenset({"bank", "system"})
 DEPOSIT_KEYWORDS = ("kaution", "deposit")
+STRONG_REASONS = re.compile(r"Vertragsnummer|Mandatsreferenz")
 
 
 @dataclass
@@ -240,6 +242,10 @@ def verify_debtor_full(
         return _refuse(kind, reasons, str(ctx.rule.get("id")))
     if item.get("is_deposit"):
         reasons.append("Kautionsposten sind ausgeschlossen")
+    # 7.4 no. 2: IBAN, amount and a period hint identify neither contract nor debtor for an
+    # automatic posting; the runner needs the contract number or the mandate reference.
+    if not any(STRONG_REASONS.search(str(r)) for r in match.get("reasoning") or []):
+        reasons.append("Ohne Vertragsnummer oder Mandatsreferenz bleibt der Eingang manuell")
     action_account = (ctx.rule.get("action") or {}).get("account_number")
     if action_account and action_account != item.get("account_number"):
         reasons.append("Regelkonto weicht vom Schuldnerkonto des Postens ab")

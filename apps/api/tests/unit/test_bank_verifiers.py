@@ -67,13 +67,16 @@ def _tx(amount: str, purpose: str = "Hausgeld März", **kw: Any) -> dict[str, An
     }
 
 
-def _full(item: str, amount: str) -> dict[str, Any]:
+def _full(item: str, amount: str, reasons: list[str] | None = None) -> dict[str, Any]:
     return {
         "source": pp.SOURCE_MATCH,
         "kind": pp.KIND_FULL,
         "unambiguous": True,
         "splits": [{"open_item_id": item, "amount": amount}],
         "confidence": 0.85,
+        "reasoning": reasons
+        if reasons is not None
+        else ["Vertragsnummer im Verwendungszweck", "Betrag entspricht dem offenen Betrag"],
     }
 
 
@@ -195,6 +198,23 @@ def test_debtor_full_no_confidence_without_unambiguous_match_and_return_excluded
         ctx=_ctx(),
     )
     assert "Rückläufer sind ausgeschlossen" in out.reasons
+
+
+def test_iban_amount_and_period_hint_alone_stay_manual() -> None:
+    weak_reasons = [
+        "IBAN des Zahlers beim Vertragspartner hinterlegt",
+        "Betrag entspricht dem offenen Betrag",
+    ]
+    out = v.verify(
+        "debtor_full",
+        _tx("250.00"),
+        [_full("oi-1", "250.00", weak_reasons)],
+        open_items=[_item(1, "250.00", "2026-03-01")],
+        payables=[],
+        ctx=_ctx(),
+    )
+    assert out.ok is False
+    assert "Ohne Vertragsnummer oder Mandatsreferenz bleibt der Eingang manuell" in out.reasons
 
 
 def test_period_lock_is_skipped_not_refused() -> None:
