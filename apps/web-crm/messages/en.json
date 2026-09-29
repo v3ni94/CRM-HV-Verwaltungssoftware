@@ -5287,6 +5287,10 @@
       "title": "Accounting, chart of accounts",
       "description": "Chart of accounts per tenant with release by operator and tax advisor, version history and export as CSV or PDF."
     },
+    "g1Opening": {
+      "title": "Accounting, G1 opening",
+      "description": "Checklist before productive bookkeeping with system state, acceptance results and the request for release gate G1."
+    },
     "taxes": {
       "title": "Accounting, taxes",
       "description": "Input tax, construction withholding tax, section 35a and approval limits per role as drafts, switches per tenant."
@@ -10707,6 +10711,93 @@
     "colReleased": "Release",
     "colBy": "Released by",
     "colComment": "Comment"
+  },
+  "G1Opening": {
+    "title": "G1 opening",
+    "description": "Checklist before productive bookkeeping (release gate G1). The state comes from the system, the operator records the results. The request goes through the existing release flow with a second person; this page never opens the gate itself.",
+    "intro": "Order of the opening list M12-09: release the chart of accounts with the tax advisor, accept the annex D cases by the expert person, check the VAT treatment, then file the G1 request. A second person decides under Platform.",
+    "loadError": "The checklist could not be loaded.",
+    "savedMessage": "Result recorded.",
+    "requestedMessage": "G1 request filed. A second person decides under Platform, release gates.",
+    "record": "Record result",
+    "columns": {
+      "key": "Id",
+      "title": "Item",
+      "status": "Result",
+      "date": "Date",
+      "name": "Name"
+    },
+    "itemStatus": {
+      "open": "open",
+      "passed": "passed",
+      "failed": "failed"
+    },
+    "requestStatus": {
+      "requested": "requested",
+      "approved": "approved",
+      "rejected": "rejected",
+      "revoked": "revoked"
+    },
+    "chart": {
+      "released": "Chart of accounts {code} version {version} released on {date}",
+      "notReleased": "Chart of accounts not released (status {status})",
+      "missing": "No chart of accounts yet",
+      "status": {
+        "draft": "draft",
+        "in_review": "in review",
+        "released": "released"
+      }
+    },
+    "status": {
+      "title": "State from the system",
+      "chart": "Chart of accounts (V8)",
+      "cases": "Annex D cases accepted",
+      "manual": "Manual items",
+      "levels": "Automation levels per case class",
+      "learningOn": "Learning bookkeeper on",
+      "learningOff": "Learning bookkeeper off",
+      "gate": "Release gate G1",
+      "gateOpen": "open",
+      "gateRequested": "requested, decision pending",
+      "gateClosed": "closed",
+      "countOf": "{passed} of {total}"
+    },
+    "documents": {
+      "title": "Documents",
+      "help": "The documents live in the repository and are named as evidence in the request.",
+      "kontenrahmen-pruefung": "Chart of accounts review",
+      "abnahme-anhang-d": "Acceptance protocol annex D",
+      "verfahrensdokumentation": "Procedure documentation",
+      "d-cases": "Acceptance cases D01 to D58"
+    },
+    "cases": {
+      "title": "Annex D cases with release gate G1",
+      "help": "Result of the acceptance per case per docs/acceptance/abnahme-anhang-d.md. A test in the code is no acceptance; the result of the expert person is recorded."
+    },
+    "manual": {
+      "title": "Manual items",
+      "help": "Items of the opening list the system cannot derive itself."
+    },
+    "form": {
+      "title": "Result for {key}",
+      "status": "Result",
+      "date": "Date",
+      "name": "Name of the confirming person",
+      "note": "Note",
+      "save": "Save",
+      "cancel": "Cancel"
+    },
+    "request": {
+      "title": "Request release gate G1",
+      "help": "The request is filed as a regular gate request (four eyes). The evidence line is composed from the state of this page. Without a released chart of accounts the approval is refused.",
+      "pending": "Open request: {scope}",
+      "scope": "Released scope and property group",
+      "comment": "Comment",
+      "submit": "File G1 request",
+      "alreadyOpen": "Release gate G1 is open for this tenant.",
+      "blocked": "A request is already open.",
+      "noRight": "The request needs the right to request release gates."
+    }
   },
   "FullImport": {
     "title": "Immoware24 full import with cut-off date",

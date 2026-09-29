@@ -277,6 +277,24 @@ mit erneuter Freigabe. Der Versionsverlauf zeigt alle Versionen. CSV und PDF exp
 Kontenrahmen für die Steuerberatung. Die Freigabestufe G1 wird nur mit einem freigegebenen
 Kontenrahmen genehmigt.
 
+## Buchhaltung, G1 Öffnung
+
+Unter Buchhaltung, G1 Öffnung steht die Checkliste vor der produktiven Buchführung
+(Freigabestufe G1, Öffnungsliste M12-09). Der Stand kommt aus dem System: freigegebener
+Kontenrahmen (V8), Zahl der abgenommenen Anhang-D-Fälle, manuelle Prüfpunkte, Automatikstufen
+je Fallklasse, Schalter des lernenden Buchhalters und der Stand der Freigabestufe G1 mit
+ihren Anträgen. Die Unterlagen `docs/acceptance/kontenrahmen-pruefung.md`,
+`docs/acceptance/abnahme-anhang-d.md` und `docs/handbuch/verfahrensdokumentation.md` sind
+verlinkt. Je Prüfpunkt (Fall D04 bis D58 mit Stufe G1, Querschnittsfälle D50, D51, D57 und
+die manuellen Punkte fachkundige Person, Umsatzsteuerprüfung, Belegkette B05, Mahn- und
+Lastschriftausschluss, Löschlauf) trägt eine Person mit dem Recht Buchhaltung freigeben das
+Ergebnis bestanden, nicht bestanden oder offen mit Datum und Name ein; ein Test im Code ist
+keine Abnahme. Der Antrag auf G1 wird mit dem Recht Freigabestufen beantragen als regulärer
+Freigabeantrag gestellt; die Nachweiszeile entsteht aus dem Stand der Seite. Die Entscheidung
+trifft eine zweite Person unter Plattform, Freigabestufen (Vier-Augen-Prinzip); ohne
+freigegebenen Kontenrahmen wird die Genehmigung mit `MHVP-GATE-0004` abgelehnt. Die Seite
+öffnet die Stufe nie selbst.
+
 Unter Buchhaltung, DATEV steht zusätzlich die formale Prüfung des Buchungsstapels
 (Prüfbericht je Export, Testdatei für den Importtest, Prüfung beliebiger Dateien); siehe
 [DATEV-Importtest](datev-importtest.md).

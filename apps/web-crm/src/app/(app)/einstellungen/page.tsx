@@ -83,6 +83,12 @@ export default async function SettingsPage() {
       show: can("accounting:read"),
     },
     {
+      href: "/einstellungen/buchhaltung/g1-oeffnung",
+      title: t("g1Opening.title"),
+      description: t("g1Opening.description"),
+      show: can("accounting:read"),
+    },
+    {
       href: "/einstellungen/buchhaltung/steuern",
       title: t("taxes.title"),
       description: t("taxes.description"),

@@ -1460,6 +1460,23 @@
  },
  {
   "kind": "page",
+  "title": "Buchhaltung, G1 Öffnung",
+  "source": "Einstellungen",
+  "href": "/einstellungen/buchhaltung/g1-oeffnung",
+  "keywords": [
+   "g1",
+   "freigabestufe",
+   "produktive buchführung",
+   "abnahme anhang d",
+   "checkliste öffnung"
+  ],
+  "permission": [
+   "accounting:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Buchhaltung, Steuern",
   "source": "Einstellungen",
   "href": "/einstellungen/buchhaltung/steuern",
@@ -3682,6 +3699,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Buchhaltung, Kontenrahmen wird der Kontenrahmen des Mandanten freigegeben (V8). Jede Version hat den Status Entwurf, zur Prüfung oder freigegeben. Zur Prüfung geben und neue Version anlegen erfordern das Recht Buchhaltung ändern, die Freigabe das Recht Buchhaltung freigeben",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Buchhaltung, G1 Öffnung",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Buchhaltung, G1 Öffnung steht die Checkliste vor der produktiven Buchführung (Freigabestufe G1, Öffnungsliste M12-09). Der Stand kommt aus dem System: freigegebener Kontenrahmen (V8), Zahl der abgenommenen Anhang-D-Fälle, manuelle Prüfpunkte, Automatikstufen je Fallklasse, ",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
