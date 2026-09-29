@@ -10,6 +10,8 @@ import { ui } from "@/lib/ui";
 const KINDS = ["filing_rule", "workflow", "correction", "fact"] as const;
 type Kind = (typeof KINDS)[number];
 const STATUSES = ["draft", "in_review", "approved", "withdrawn"] as const;
+/** Mirrors `mhvp.ai.knowledge.STALE_AFTER_DAYS` (display only; the API computes `stale`). */
+const STALE_AFTER_DAYS = 180;
 
 type PropertyOption = { id: string; number: string; name: string };
 
@@ -255,6 +257,18 @@ export function KnowledgeSettings({
               </span>
             </div>
             <p className="mt-1 whitespace-pre-wrap text-sm text-muted">{entry.content}</p>
+            <p className="mt-1 text-xs text-muted" data-testid="knowledge-usage">
+              {t("knowledge.usage", { count: entry.usage_count ?? 0 })} ·{" "}
+              {t("knowledge.helpfulness", { helpful: entry.helpful_count ?? 0, unhelpful: entry.unhelpful_count ?? 0 })}
+              {entry.stale ? (
+                <>
+                  {" · "}
+                  <span className={ui.badge} title={t("knowledge.staleHint", { days: STALE_AFTER_DAYS })}>
+                    {t("knowledge.stale")}
+                  </span>
+                </>
+              ) : null}
+            </p>
             {entry.status === "draft" && entry.rejection_reason ? (
               <p className="mt-1 text-xs text-danger-fg">
                 {t("knowledge.rejectedHint", { reason: entry.rejection_reason })}

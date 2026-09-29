@@ -18,6 +18,8 @@ export type PlaybookRow = {
   status: string;
   usage_count: number;
   last_used_at?: string | null;
+  helpful_count?: number;
+  unhelpful_count?: number;
 };
 
 export type ExampleRow = {
@@ -126,6 +128,7 @@ export function KnowledgeBase({
                   <th>{t("playbooks.steps")}</th>
                   <th>{t("playbooks.usage")}</th>
                   <th>{t("playbooks.lastUsed")}</th>
+                  <th>{t("playbooks.helpfulness")}</th>
                   <th>{t("playbooks.status")}</th>
                   {canManage ? <th>{t("playbooks.actions")}</th> : null}
                 </tr>
@@ -144,6 +147,7 @@ export function KnowledgeBase({
                     </td>
                     <td>{p.usage_count}</td>
                     <td>{p.last_used_at ? formatDateTime(p.last_used_at) : t("playbooks.never")}</td>
+                    <td>{t("playbooks.helpfulnessValue", { helpful: p.helpful_count ?? 0, unhelpful: p.unhelpful_count ?? 0 })}</td>
                     <td>
                       <StatusPill variant={p.status === "active" ? "success" : "neutral"} label={t(`playbooks.statuses.${p.status}`)} />
                     </td>

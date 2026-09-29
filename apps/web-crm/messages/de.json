@@ -755,7 +755,13 @@
       "contact": "Kontakt"
     },
     "backToOverview": "Zurück zur Übersicht",
-    "transcript": "Protokoll"
+    "transcript": "Protokoll",
+    "feedback": {
+      "helpful": "Hilfreich",
+      "unhelpful": "Nicht hilfreich",
+      "saved": "Danke, Rückmeldung gespeichert.",
+      "hint": "Rückmeldung zur Antwort (zählt auf die verwendeten Wissenseinträge)"
+    }
   },
   "Imports": {
     "title": "Importe",
@@ -946,7 +952,11 @@
         "in_review": "In Prüfung",
         "approved": "Freigegeben",
         "withdrawn": "Zurückgezogen"
-      }
+      },
+      "usage": "{count}x verwendet",
+      "helpfulness": "{helpful} hilfreich, {unhelpful} nicht hilfreich",
+      "stale": "Lange nicht geprüft",
+      "staleHint": "Freigegeben und seit mehr als {days} Tagen nicht geändert. Bitte prüfen, ob der Eintrag noch stimmt. Ein Hinweis ohne weitere Folgen."
     },
     "embeddings": {
       "title": "Einbettungen (Ähnlichkeitssuche)",
@@ -3893,7 +3903,10 @@
       },
       "process": "Vorgangsart",
       "applyProcess": "Vorgangsart übernehmen",
-      "processApplied": "Flow auf Ticket {number} angewendet."
+      "processApplied": "Flow auf Ticket {number} angewendet.",
+      "playbookHelpful": "Playbook passt",
+      "playbookUnhelpful": "Playbook passt nicht",
+      "feedbackSaved": "Rückmeldung gespeichert."
     },
     "preparation": {
       "title": "Vorbereitung",
@@ -8426,7 +8439,9 @@
         "draft": "Entwurf",
         "active": "aktiv",
         "archived": "deaktiviert"
-      }
+      },
+      "helpfulness": "Rückmeldung",
+      "helpfulnessValue": "{helpful} passt, {unhelpful} passt nicht"
     },
     "examples": {
       "empty": "Keine Lernbeispiele.",

@@ -18203,6 +18203,21 @@
         "title": "FeeIn",
         "type": "object"
       },
+      "FeedbackIn": {
+        "additionalProperties": false,
+        "description": "POST /ai/runs/{id}/feedback, /ai/knowledge/{id}/feedback, /mail/playbooks/{id}/feedback.",
+        "properties": {
+          "helpful": {
+            "title": "Helpful",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "helpful"
+        ],
+        "title": "FeedbackIn",
+        "type": "object"
+      },
       "FetchRangeIn": {
         "additionalProperties": false,
         "description": "Optional date range for a manual fetch (Stage 2). The provider is never asked to\nfilter by date (docs/integrations/finapi.md, \"zu prüfen\"); the range only bounds what is\nkept from the rows finAPI actually returned -- nothing is synthesized for a gap the\nprovider does not cover.",
@@ -23875,6 +23890,11 @@
             "title": "Group Id",
             "type": "string"
           },
+          "helpful_count": {
+            "default": 0,
+            "title": "Helpful Count",
+            "type": "integer"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -23882,6 +23902,18 @@
           },
           "kind": {
             "$ref": "#/components/schemas/AiKnowledgeKind"
+          },
+          "last_used_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used At"
           },
           "property_id": {
             "anyOf": [
@@ -23945,6 +23977,11 @@
             ],
             "title": "Source Document Id"
           },
+          "stale": {
+            "default": false,
+            "title": "Stale",
+            "type": "boolean"
+          },
           "status": {
             "$ref": "#/components/schemas/AiKnowledgeStatus"
           },
@@ -23988,10 +24025,20 @@
             "title": "Title",
             "type": "string"
           },
+          "unhelpful_count": {
+            "default": 0,
+            "title": "Unhelpful Count",
+            "type": "integer"
+          },
           "updated_at": {
             "format": "date-time",
             "title": "Updated At",
             "type": "string"
+          },
+          "usage_count": {
+            "default": 0,
+            "title": "Usage Count",
+            "type": "integer"
           },
           "valid_from": {
             "anyOf": [
@@ -44060,6 +44107,17 @@
             "title": "Fallback",
             "type": "array"
           },
+          "feedback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Feedback"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
@@ -44071,6 +44129,14 @@
             },
             "title": "Input Stats",
             "type": "object"
+          },
+          "knowledge_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Knowledge Ids",
+            "type": "array"
           },
           "links": {
             "items": {
@@ -61167,6 +61233,60 @@
         ]
       }
     },
+    "/api/v1/ai/knowledge/{entry_id}/feedback": {
+      "post": {
+        "description": "Feedback \"hilfreich / nicht hilfreich\" on one entry (audit 29.09.2026). Counters only:\nno state change, no automatic withdrawal; the release workflow stays with the reviewers.",
+        "operationId": "knowledge_feedback_api_v1_ai_knowledge__entry_id__feedback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KnowledgeEntryOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wissenseintrag bewerten",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
     "/api/v1/ai/knowledge/{entry_id}/reject": {
       "post": {
         "operationId": "reject_knowledge_api_v1_ai_knowledge__entry_id__reject_post",
@@ -61831,6 +61951,60 @@
           }
         },
         "summary": "KI-Lauf lesen",
+        "tags": [
+          "KI-Assistent"
+        ]
+      }
+    },
+    "/api/v1/ai/runs/{run_id}/feedback": {
+      "post": {
+        "description": "Feedback \"hilfreich / nicht hilfreich\" on a chat answer (audit 29.09.2026): stored on\nthe run and propagated to the knowledge entries that fed it (``input_ref[\"knowledge_ids\"]``).\nA second vote replaces the first one (the counters move accordingly). Feedback never\nchanges an entry's status.",
+        "operationId": "run_feedback_api_v1_ai_runs__run_id__feedback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Antwort bewerten",
         "tags": [
           "KI-Assistent"
         ]
@@ -90913,6 +91087,62 @@
           }
         },
         "summary": "Playbook ändern oder freigeben",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/playbooks/{playbook_id}/feedback": {
+      "post": {
+        "description": "Feedback \"hilfreich / nicht hilfreich\" on a suggested playbook (audit 29.09.2026). Counters\nonly, shown in the knowledge base; no automatic activation or archiving.",
+        "operationId": "playbook_feedback_api_v1_mail_playbooks__playbook_id__feedback_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "playbook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Playbook Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FeedbackIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Playbook Feedback Api V1 Mail Playbooks  Playbook Id  Feedback Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Playbook-Vorschlag bewerten",
         "tags": [
           "Postfach"
         ]

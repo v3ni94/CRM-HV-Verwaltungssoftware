@@ -38,6 +38,11 @@ export type KnowledgeEntry = S["KnowledgeEntryOut"] & {
   rejected_by?: string | null;
   rejected_at?: string | null;
   rejection_reason?: string | null;
+  usage_count?: number;
+  last_used_at?: string | null;
+  helpful_count?: number;
+  unhelpful_count?: number;
+  stale?: boolean;
 };
 export type KnowledgeEntryIn = S["KnowledgeEntryIn"] & {
   valid_from?: string | null;

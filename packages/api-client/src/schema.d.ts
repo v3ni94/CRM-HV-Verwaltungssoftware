@@ -2135,6 +2135,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/knowledge/{entry_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Wissenseintrag bewerten
+         * @description Feedback "hilfreich / nicht hilfreich" on one entry (audit 29.09.2026). Counters only:
+         *     no state change, no automatic withdrawal; the release workflow stays with the reviewers.
+         */
+        post: operations["knowledge_feedback_api_v1_ai_knowledge__entry_id__feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/knowledge/{entry_id}/reject": {
         parameters: {
             query?: never;
@@ -2392,6 +2413,29 @@ export interface paths {
         get: operations["get_run_api_v1_ai_runs__run_id__get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/ai/runs/{run_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Antwort bewerten
+         * @description Feedback "hilfreich / nicht hilfreich" on a chat answer (audit 29.09.2026): stored on
+         *     the run and propagated to the knowledge entries that fed it (``input_ref["knowledge_ids"]``).
+         *     A second vote replaces the first one (the counters move accordingly). Feedback never
+         *     changes an entry's status.
+         */
+        post: operations["run_feedback_api_v1_ai_runs__run_id__feedback_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -11445,6 +11489,27 @@ export interface paths {
         head?: never;
         /** Playbook ändern oder freigeben */
         patch: operations["patch_playbook_api_v1_mail_playbooks__playbook_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/mail/playbooks/{playbook_id}/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Playbook-Vorschlag bewerten
+         * @description Feedback "hilfreich / nicht hilfreich" on a suggested playbook (audit 29.09.2026). Counters
+         *     only, shown in the knowledge base; no automatic activation or archiving.
+         */
+        post: operations["playbook_feedback_api_v1_mail_playbooks__playbook_id__feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/mail/signature/preview": {
@@ -24204,6 +24269,14 @@ export interface components {
             vat_percent: number | string;
         };
         /**
+         * FeedbackIn
+         * @description POST /ai/runs/{id}/feedback, /ai/knowledge/{id}/feedback, /mail/playbooks/{id}/feedback.
+         */
+        FeedbackIn: {
+            /** Helpful */
+            helpful: boolean;
+        };
+        /**
          * FetchRangeIn
          * @description Optional date range for a manual fetch (Stage 2). The provider is never asked to
          *     filter by date (docs/integrations/finapi.md, "zu prüfen"); the range only bounds what is
@@ -25944,11 +26017,18 @@ export interface components {
              */
             group_id: string;
             /**
+             * Helpful Count
+             * @default 0
+             */
+            helpful_count: number;
+            /**
              * Id
              * Format: uuid
              */
             id: string;
             kind: components["schemas"]["AiKnowledgeKind"];
+            /** Last Used At */
+            last_used_at?: string | null;
             /** Property Id */
             property_id: string | null;
             /** Rejected At */
@@ -25960,6 +26040,11 @@ export interface components {
             source: components["schemas"]["AiKnowledgeSource"];
             /** Source Document Id */
             source_document_id: string | null;
+            /**
+             * Stale
+             * @default false
+             */
+            stale: boolean;
             status: components["schemas"]["AiKnowledgeStatus"];
             /** Submitted At */
             submitted_at: string | null;
@@ -25970,10 +26055,20 @@ export interface components {
             /** Title */
             title: string;
             /**
+             * Unhelpful Count
+             * @default 0
+             */
+            unhelpful_count: number;
+            /**
              * Updated At
              * Format: date-time
              */
             updated_at: string;
+            /**
+             * Usage Count
+             * @default 0
+             */
+            usage_count: number;
             /** Valid From */
             valid_from: string | null;
             /** Valid Until */
@@ -32492,6 +32587,8 @@ export interface components {
             error: string | null;
             /** Fallback */
             fallback?: string[];
+            /** Feedback */
+            feedback?: string | null;
             /**
              * Id
              * Format: uuid
@@ -32501,6 +32598,8 @@ export interface components {
             input_stats?: {
                 [key: string]: number;
             };
+            /** Knowledge Ids */
+            knowledge_ids?: string[];
             /** Links */
             links?: components["schemas"]["ChatLink"][];
             /** Lookup Answer */
@@ -40324,6 +40423,41 @@ export interface operations {
             };
         };
     };
+    knowledge_feedback_api_v1_ai_knowledge__entry_id__feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entry_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeEntryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     reject_knowledge_api_v1_ai_knowledge__entry_id__reject_post: {
         parameters: {
             query?: never;
@@ -40786,6 +40920,41 @@ export interface operations {
             cookie?: never;
         };
         requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    run_feedback_api_v1_ai_runs__run_id__feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackIn"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -60153,6 +60322,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["PlaybookPatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    playbook_feedback_api_v1_mail_playbooks__playbook_id__feedback_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackIn"];
             };
         };
         responses: {

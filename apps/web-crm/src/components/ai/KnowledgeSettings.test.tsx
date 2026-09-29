@@ -43,4 +43,23 @@ describe("KnowledgeSettings", () => {
 
     expect(screen.getByText("Neu")).toBeInTheDocument();
   });
+
+  it("shows usage, helpfulness and the stale hint of an approved entry (audit 29.09.2026)", () => {
+    const stale = {
+      ...entry,
+      id: "01920000-0000-7000-8000-0000000000k3",
+      title: "Alte Regel",
+      status: "approved",
+      usage_count: 7,
+      helpful_count: 3,
+      unhelpful_count: 1,
+      stale: true,
+    } as unknown as KnowledgeEntry;
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse([entry, stale])));
+    renderIntl(<KnowledgeSettings initial={[entry, stale]} properties={[]} />);
+    const usages = screen.getAllByTestId("knowledge-usage");
+    expect(usages[0]).toHaveTextContent("0x verwendet · 0 hilfreich, 0 nicht hilfreich");
+    expect(usages[1]).toHaveTextContent("7x verwendet · 3 hilfreich, 1 nicht hilfreich");
+    expect(screen.getAllByText("Lange nicht geprüft")).toHaveLength(1);
+  });
 });

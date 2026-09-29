@@ -22,6 +22,22 @@ export function SuggestionCard({
   const t = useTranslations("Mail.suggestion");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [playbookFeedback, setPlaybookFeedback] = useState<boolean | null>(null);
+
+  /** "Passt / passt nicht" on the suggested playbook (audit 29.09.2026): counters on the
+   * playbook, shown in the knowledge base; nothing is activated or archived by it. */
+  const ratePlaybook = async (helpful: boolean) => {
+    if (!message.suggestion.playbook_id) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff<unknown>(`/api/bff/mail/playbooks/${message.suggestion.playbook_id}/feedback`, {
+      method: "POST",
+      body: JSON.stringify({ helpful }),
+    });
+    setBusy(false);
+    if (res.ok) setPlaybookFeedback(helpful);
+    else setError(res.message);
+  };
 
   const recompute = async () => {
     setBusy(true);
@@ -164,6 +180,29 @@ export function SuggestionCard({
               </button>
             ) : null}
           </div>
+          {message.suggestion.playbook_id ? (
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <button
+                type="button"
+                className={ui.buttonSm}
+                aria-pressed={playbookFeedback === true}
+                disabled={busy}
+                onClick={() => void ratePlaybook(true)}
+              >
+                {t("playbookHelpful")}
+              </button>
+              <button
+                type="button"
+                className={ui.buttonSm}
+                aria-pressed={playbookFeedback === false}
+                disabled={busy}
+                onClick={() => void ratePlaybook(false)}
+              >
+                {t("playbookUnhelpful")}
+              </button>
+              {playbookFeedback !== null ? <span className="text-muted">{t("feedbackSaved")}</span> : null}
+            </div>
+          ) : null}
         </div>
       ) : null}
     </section>

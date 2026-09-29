@@ -809,6 +809,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^ai\/embeddings\/status$/ },
   { method: "POST", pattern: /^ai\/embeddings\/reindex$/ },
   { method: "POST", pattern: new RegExp(`^ai/knowledge/${ID}/reject$`) },
+  // Rückmeldung "hilfreich / nicht hilfreich" (Audit 29.09.2026): Zähler je Antwort, Wissenseintrag und Playbook.
+  { method: "POST", pattern: new RegExp(`^ai/runs/${ID}/feedback$`) },
+  { method: "POST", pattern: new RegExp(`^ai/knowledge/${ID}/feedback$`) },
+  { method: "POST", pattern: new RegExp(`^mail/playbooks/${ID}/feedback$`) },
   { method: "GET", pattern: new RegExp(`^banking/transactions/${ID}/posting-proposals$`) },
   { method: "POST", pattern: new RegExp(`^contacts/${ID}/relations$`) },
   { method: "PATCH", pattern: new RegExp(`^contacts/${ID}/contact-relations/${ID}$`) },

@@ -755,7 +755,13 @@
       "contact": "Contact"
     },
     "backToOverview": "Back to overview",
-    "transcript": "Transcript"
+    "transcript": "Transcript",
+    "feedback": {
+      "helpful": "Helpful",
+      "unhelpful": "Not helpful",
+      "saved": "Thanks, feedback saved.",
+      "hint": "Feedback on the answer (counted on the knowledge entries used)"
+    }
   },
   "Imports": {
     "title": "Imports",
@@ -946,7 +952,11 @@
         "in_review": "In review",
         "approved": "Approved",
         "withdrawn": "Withdrawn"
-      }
+      },
+      "usage": "used {count} times",
+      "helpfulness": "{helpful} helpful, {unhelpful} not helpful",
+      "stale": "Not reviewed for a long time",
+      "staleHint": "Approved and unchanged for more than {days} days. Please check whether the entry is still correct. A hint without further consequences."
     },
     "embeddings": {
       "title": "Embeddings (similarity search)",
@@ -3893,7 +3903,10 @@
       },
       "process": "Process type",
       "applyProcess": "Adopt process type",
-      "processApplied": "Flow applied to ticket {number}."
+      "processApplied": "Flow applied to ticket {number}.",
+      "playbookHelpful": "Playbook fits",
+      "playbookUnhelpful": "Playbook does not fit",
+      "feedbackSaved": "Feedback saved."
     },
     "preparation": {
       "title": "Preparation",
@@ -8426,7 +8439,9 @@
         "draft": "Draft",
         "active": "active",
         "archived": "deactivated"
-      }
+      },
+      "helpfulness": "Feedback",
+      "helpfulnessValue": "{helpful} fit, {unhelpful} did not fit"
     },
     "examples": {
       "empty": "No learning examples.",

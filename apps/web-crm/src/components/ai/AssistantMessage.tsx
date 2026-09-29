@@ -21,7 +21,25 @@ export function AssistantMessage({ message }: { message: Message }) {
   const [run, setRun] = useState<Run | null>(null);
   const [proposal, setProposal] = useState<Proposal | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [feedback, setFeedback] = useState<string | null>(null);
+  const [feedbackBusy, setFeedbackBusy] = useState(false);
   const isAssistant = message.role === "assistant";
+
+  /** "Hilfreich / nicht hilfreich" on the answer (audit 29.09.2026): stored on the run and
+   * counted on the knowledge entries the answer used. Never changes an entry's status. */
+  const sendFeedback = async (helpful: boolean) => {
+    if (!message.task_run_id) return;
+    setFeedbackBusy(true);
+    const res = await bff<Run>(`/api/bff/ai/runs/${message.task_run_id}/feedback`, {
+      method: "POST",
+      body: JSON.stringify({ helpful }),
+    });
+    setFeedbackBusy(false);
+    if (res.ok) {
+      setRun(res.data);
+      setFeedback(helpful ? "helpful" : "unhelpful");
+    } else setError(res.message);
+  };
 
   useEffect(() => {
     if (!isAssistant) return;
@@ -29,7 +47,10 @@ export function AssistantMessage({ message }: { message: Message }) {
     void (async () => {
       if (message.task_run_id) {
         const res = await bff<Run>(`/api/bff/ai/runs/${message.task_run_id}`);
-        if (!cancelled && res.ok) setRun(res.data);
+        if (!cancelled && res.ok) {
+          setRun(res.data);
+          setFeedback(res.data.feedback ?? null);
+        }
       }
       if (message.proposal_id) {
         const res = await bff<Proposal>(`/api/bff/ai/proposals/${message.proposal_id}`);
@@ -62,6 +83,29 @@ export function AssistantMessage({ message }: { message: Message }) {
       <p className="whitespace-pre-wrap">{message.content}</p>
       <ChatLinks links={message.links} />
       <p className="text-xs text-muted">{formatDateTime(message.created_at)}</p>
+      {run && run.status === "succeeded" && message.task_run_id ? (
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("feedback.hint")}>
+          <button
+            type="button"
+            className={ui.buttonSm}
+            aria-pressed={feedback === "helpful"}
+            disabled={feedbackBusy}
+            onClick={() => void sendFeedback(true)}
+          >
+            {t("feedback.helpful")}
+          </button>
+          <button
+            type="button"
+            className={ui.buttonSm}
+            aria-pressed={feedback === "unhelpful"}
+            disabled={feedbackBusy}
+            onClick={() => void sendFeedback(false)}
+          >
+            {t("feedback.unhelpful")}
+          </button>
+          {feedback ? <span className="text-xs text-muted">{t("feedback.saved")}</span> : null}
+        </div>
+      ) : null}
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}
