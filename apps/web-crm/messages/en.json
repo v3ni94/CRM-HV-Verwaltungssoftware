@@ -3162,7 +3162,16 @@
       "invalidAddress": "Invalid e-mail address: {address}",
       "approvalHint": "With the approval permission the reply is sent immediately and logged. With the flag approval required (trainee, new employee) or while the tenant brake is on, it goes to the approvers as a draft and is sent only after their approval.",
       "reset": "Discard",
-      "sentDirect": "Reply sent directly (approved by yourself, logged)."
+      "sentDirect": "Reply sent directly (approved by yourself, logged).",
+      "playbooks": "Matching playbooks",
+      "playbooksHint": "Learned procedures for the ticket's category or process. Insert copies the reply text into the draft, nothing is sent.",
+      "playbooksEmpty": "No matching playbooks.",
+      "playbooksClientFilter": "Filtered in the browser by category and process; playbooks carry no property reference.",
+      "insertPlaybook": "Insert",
+      "playbookUsage": "{count, plural, =1 {1 use} other {# uses}}",
+      "playbookFits": "fits",
+      "playbookFitsNot": "does not fit",
+      "playbookFeedbackSaved": "Feedback saved."
     },
     "openTicket": "Ticket öffnen",
     "messages": "Nachrichten",

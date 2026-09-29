@@ -3162,7 +3162,16 @@
       "invalidAddress": "Ungültige E-Mail-Adresse: {address}",
       "approvalHint": "Mit Freigaberecht wird die Antwort sofort versendet und protokolliert. Mit Kennzeichen Freigabepflicht (Azubi, neuer Mitarbeiter) oder bei aktiver Notbremse des Mandanten geht sie als Vorlage an die Freigabeberechtigten und wird erst nach deren Freigabe versendet.",
       "reset": "Verwerfen",
-      "sentDirect": "Antwort direkt versendet (Freigabe durch Sie selbst, protokolliert)."
+      "sentDirect": "Antwort direkt versendet (Freigabe durch Sie selbst, protokolliert).",
+      "playbooks": "Passende Playbooks",
+      "playbooksHint": "Gelernte Abläufe zu Kategorie oder Vorgangsart des Tickets. Einfügen übernimmt den Antworttext in den Entwurf, nichts wird gesendet.",
+      "playbooksEmpty": "Keine passenden Playbooks.",
+      "playbooksClientFilter": "Gefiltert im Browser nach Kategorie und Vorgangsart; ein Objektbezug ist bei Playbooks nicht hinterlegt.",
+      "insertPlaybook": "Einfügen",
+      "playbookUsage": "{count, plural, =1 {1 Nutzung} other {# Nutzungen}}",
+      "playbookFits": "passt",
+      "playbookFitsNot": "passt nicht",
+      "playbookFeedbackSaved": "Rückmeldung gespeichert."
     },
     "openTicket": "Ticket öffnen",
     "messages": "Nachrichten",

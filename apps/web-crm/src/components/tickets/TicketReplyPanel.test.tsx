@@ -134,3 +134,66 @@ describe("TicketReplyPanel", () => {
     expect(screen.queryByRole("button", { name: "Antwort senden" })).not.toBeInTheDocument();
   });
 });
+
+describe("TicketReplyPanel playbooks", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  const playbooks = [
+    { id: "pb-1", title: "Wasserschaden melden", category: "schaden", keywords: ["wasser"], summary: "", reply_template: "Vielen Dank für die Schadenmeldung.", status: "active", usage_count: 3 },
+    { id: "pb-2", title: "Kündigung bestätigen", category: "vertrag", keywords: [], summary: "", reply_template: "Wir bestätigen den Eingang.", status: "active", usage_count: 1 },
+    { id: "pb-3", title: "Ohne Text", category: "schaden", keywords: [], summary: "", reply_template: null, status: "active", usage_count: 0 },
+  ];
+
+  function mockWithPlaybooks() {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, init });
+      if (url.includes("/reply-templates?active=true")) return jsonResponse(templates);
+      if (url.includes("/reply-context")) return jsonResponse(context);
+      if (url.includes("/mail/playbooks?status=active")) return jsonResponse(playbooks);
+      if (url.includes("/mail/playbooks/pb-1/feedback")) return jsonResponse({ ...playbooks[0], helpful_count: 1 });
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    return calls;
+  }
+
+  it("filters playbooks client side by category, inserts the reply text and records feedback", async () => {
+    const calls = mockWithPlaybooks();
+    const user = userEvent.setup();
+    renderIntl(<TicketReplyPanel ticketId={TICKET} canSend category="schaden" processCode={null} propertyId="p1" />);
+    await waitFor(() => expect(screen.getByTestId("ticket-reply-playbooks")).toBeInTheDocument());
+    const rows = screen.getAllByTestId("ticket-reply-playbook");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toHaveTextContent("Wasserschaden melden");
+    expect(rows[0]).toHaveTextContent("3 Nutzungen");
+    expect(screen.getByText(/Gefiltert im Browser/)).toBeInTheDocument();
+
+    await user.click(within(rows[0]!).getByRole("button", { name: "Einfügen" }));
+    expect(screen.getByLabelText("Text")).toHaveValue("Vielen Dank für die Schadenmeldung.");
+    await user.click(within(rows[0]!).getByRole("button", { name: "Einfügen" }));
+    expect(screen.getByLabelText("Text")).toHaveValue("Vielen Dank für die Schadenmeldung.\n\nVielen Dank für die Schadenmeldung.");
+    expect(calls.filter((c) => c.init?.method === "POST")).toHaveLength(0);
+
+    await user.click(within(rows[0]!).getByRole("button", { name: "passt" }));
+    await waitFor(() => expect(screen.getByText("Rückmeldung gespeichert.")).toBeInTheDocument());
+    const feedback = calls.find((c) => c.url.includes("/mail/playbooks/pb-1/feedback"))!;
+    expect(feedback.init?.method).toBe("POST");
+    expect(JSON.parse(String(feedback.init?.body))).toEqual({ helpful: true });
+    expect(within(rows[0]!).getByRole("button", { name: "passt" })).toHaveAttribute("aria-pressed", "true");
+  });
+
+  it("matches the process code against category and keywords and stays away without both", async () => {
+    mockWithPlaybooks();
+    const { unmount } = renderIntl(<TicketReplyPanel ticketId={TICKET} canSend processCode="wasser" />);
+    await waitFor(() => expect(screen.getByTestId("ticket-reply-playbooks")).toBeInTheDocument());
+    expect(screen.getAllByTestId("ticket-reply-playbook")).toHaveLength(1);
+    unmount();
+    const fetchSpy = globalThis.fetch as unknown as ReturnType<typeof vi.fn>;
+    fetchSpy.mockClear();
+    renderIntl(<TicketReplyPanel ticketId={TICKET} canSend />);
+    await waitFor(() => expect(screen.getByTestId("ticket-reply-form")).toBeInTheDocument());
+    expect(screen.queryByTestId("ticket-reply-playbooks")).not.toBeInTheDocument();
+    expect(fetchSpy.mock.calls.some((c) => String(c[0]).includes("/mail/playbooks"))).toBe(false);
+  });
+});

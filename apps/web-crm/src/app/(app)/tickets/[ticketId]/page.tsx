@@ -182,7 +182,13 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
       ) : null}
       {mergedInto ? null : (
         <>
-          <TicketMailSection ticketId={ticketId} canReply={canReply} />
+          <TicketMailSection
+            ticketId={ticketId}
+            canReply={canReply}
+            category={data.category ? String(data.category) : null}
+            processCode={processCode}
+            propertyId={data.property_id ? String(data.property_id) : null}
+          />
           <LexofficeInvoiceCopyCard
             ticketId={ticketId}
             canUpdate={me.data?.permissions.includes("tickets:update") ?? false}

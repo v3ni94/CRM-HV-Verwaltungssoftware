@@ -11,7 +11,19 @@ import { ui } from "@/lib/ui";
 /** Mailverlauf und Antwortformular des Tickets (operator 26.09.2026): der Verlauf wird über
  *  `GET /tickets/{id}/messages` geladen, "Auf diese Mail antworten" belegt das Formular mit
  *  dieser Mail vor, nach dem Einreichen wird der Verlauf neu geladen. */
-export function TicketMailSection({ ticketId, canReply }: { ticketId: string; canReply: boolean }) {
+export function TicketMailSection({
+  ticketId,
+  canReply,
+  category,
+  processCode,
+  propertyId,
+}: {
+  ticketId: string;
+  canReply: boolean;
+  category?: string | null;
+  processCode?: string | null;
+  propertyId?: string | null;
+}) {
   const t = useTranslations("Tickets.mailThread");
   const [messages, setMessages] = useState<ThreadMessage[] | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -54,7 +66,7 @@ export function TicketMailSection({ ticketId, canReply }: { ticketId: string; ca
         )}
       </section>
       <div id="ticket-reply">
-        <TicketReplyPanel ticketId={ticketId} canSend={canReply} target={target} onSent={() => void load()} />
+        <TicketReplyPanel ticketId={ticketId} canSend={canReply} target={target} onSent={() => void load()} category={category} processCode={processCode} propertyId={propertyId} />
       </div>
     </div>
   );

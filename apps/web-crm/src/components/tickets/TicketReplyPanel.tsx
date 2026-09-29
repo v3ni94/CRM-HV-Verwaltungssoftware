@@ -11,6 +11,19 @@ import { formatBytes, isValidAddress, parseAddressList } from "@/lib/mailText";
 import { ui } from "@/lib/ui";
 
 type ReplyTemplate = { id: string; name: string; topic: string | null };
+/** Gelerntes Playbook (M20, Audit 29.09.2026) mit Antworttext und Zählern. */
+export type ReplyPlaybook = {
+  id: string;
+  title: string;
+  category: string | null;
+  keywords: string[];
+  summary: string;
+  reply_template: string | null;
+  status: string;
+  usage_count: number;
+  helpful_count?: number;
+  unhelpful_count?: number;
+};
 export type ReplyAttachment = { document_id: string; title: string | null; filename: string | null; missing: boolean; size?: number | null };
 type ReplyContext = {
   reply_to_message_id: string | null;
@@ -37,6 +50,19 @@ export type ReplyTarget = { messageId: string; at: string | null };
 
 const PLACEHOLDER_RE = /\{[a-zA-Z_]+\}/;
 
+/** Client side match (the playbook list endpoint filters by status and title only): the
+ *  playbook category equals the ticket category or process code, or a keyword names one of
+ *  them. Playbooks carry no property reference, so the property cannot narrow the list. */
+export function matchingPlaybooks(playbooks: ReplyPlaybook[], category: string | null | undefined, processCode: string | null | undefined): ReplyPlaybook[] {
+  const wanted = [category, processCode].filter((x): x is string => Boolean(x)).map((x) => x.trim().toLowerCase());
+  if (wanted.length === 0) return [];
+  return playbooks.filter((p) => {
+    if (p.status !== "active" || !p.reply_template) return false;
+    const own = [p.category ?? "", ...p.keywords].map((x) => x.trim().toLowerCase());
+    return own.some((x) => x && wanted.includes(x));
+  });
+}
+
 /** Antwortformular im Ticket (operator 26.09.2026): An und Kopie aus der Ursprungsmail
  *  vorbelegt (nur beteiligte Absender), Betreff mit Kennung TNR#<nummer>, Text frei oder aus
  *  einer Antwortvorlage, eigene Anhänge aus Dokumenten oder Upload. Die Antwort geht als
@@ -49,14 +75,22 @@ export function TicketReplyPanel({
   canSend,
   target,
   onSent,
+  category,
+  processCode,
+  propertyId,
 }: {
   ticketId: string;
   canSend: boolean;
   target?: ReplyTarget | null;
   onSent?: (message: SentMessage) => void;
+  category?: string | null;
+  processCode?: string | null;
+  propertyId?: string | null;
 }) {
   const t = useTranslations("Tickets.reply");
   const [templates, setTemplates] = useState<ReplyTemplate[] | null>(null);
+  const [playbooks, setPlaybooks] = useState<ReplyPlaybook[]>([]);
+  const [playbookFeedback, setPlaybookFeedback] = useState<Record<string, boolean>>({});
   const [templateId, setTemplateId] = useState("");
   const [context, setContext] = useState<ReplyContext | null>(null);
   const [preview, setPreview] = useState<Preview | null>(null);
@@ -82,6 +116,18 @@ export function TicketReplyPanel({
       cancelled = true;
     };
   }, []);
+
+  // Playbooks (Audit 29.09.2026): einmal laden, im Browser nach Kategorie und Vorgangsart filtern.
+  useEffect(() => {
+    if (!category && !processCode) return;
+    let cancelled = false;
+    void bff<ReplyPlaybook[]>("/api/bff/mail/playbooks?status=active").then((res) => {
+      if (!cancelled) setPlaybooks(res.ok ? res.data : []);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [category, processCode]);
 
   // Vorbelegung (An, Kopie, Betreff, Postfach) je Antwortziel; ohne Ziel die letzte Eingangsmail.
   useEffect(() => {
@@ -132,6 +178,23 @@ export function TicketReplyPanel({
       const known = new Set(prev.map((a) => a.document_id));
       return [...prev, ...res.data.attachments.filter((a) => !a.missing && !known.has(a.document_id))];
     });
+  }
+
+  const matched = matchingPlaybooks(playbooks, category, processCode);
+
+  function insertPlaybook(p: ReplyPlaybook) {
+    const text = p.reply_template ?? "";
+    setBody((prev) => (prev.trim() ? `${prev.trimEnd()}\n\n${text}` : text));
+    setSent(null);
+  }
+
+  async function ratePlaybook(p: ReplyPlaybook, helpful: boolean) {
+    setError(null);
+    const res = await bff<ReplyPlaybook>(`/api/bff/mail/playbooks/${p.id}/feedback`, { method: "POST", body: JSON.stringify({ helpful }) });
+    if (res.ok) {
+      setPlaybookFeedback((prev) => ({ ...prev, [p.id]: helpful }));
+      setPlaybooks((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...res.data } : x)));
+    } else setError(res.message);
   }
 
   async function searchDocuments() {
@@ -243,6 +306,32 @@ export function TicketReplyPanel({
           </select>
         </label>
       )}
+      {matched.length > 0 ? (
+        <div className="flex flex-col gap-1" data-testid="ticket-reply-playbooks">
+          <span className={ui.label}>{t("playbooks")}</span>
+          <p className="text-xs text-muted">{t("playbooksHint")}</p>
+          <ul className="flex flex-col gap-1">
+            {matched.map((p) => (
+              <li key={p.id} className="flex flex-wrap items-center gap-2 text-sm" data-testid="ticket-reply-playbook">
+                <SafeLine className="font-medium">{p.title}</SafeLine>
+                {p.category ? <span className={ui.badge}>{p.category}</span> : null}
+                <span className="text-xs text-muted">{t("playbookUsage", { count: p.usage_count })}</span>
+                <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => insertPlaybook(p)}>
+                  {t("insertPlaybook")}
+                </button>
+                <button type="button" className={ui.buttonSm} aria-pressed={playbookFeedback[p.id] === true} onClick={() => void ratePlaybook(p, true)}>
+                  {t("playbookFits")}
+                </button>
+                <button type="button" className={ui.buttonSm} aria-pressed={playbookFeedback[p.id] === false} onClick={() => void ratePlaybook(p, false)}>
+                  {t("playbookFitsNot")}
+                </button>
+                {p.id in playbookFeedback ? <span className="text-xs text-muted">{t("playbookFeedbackSaved")}</span> : null}
+              </li>
+            ))}
+          </ul>
+          {propertyId ? <p className={ui.help}>{t("playbooksClientFilter")}</p> : null}
+        </div>
+      ) : null}
       {preview ? (
         <p className="text-xs text-muted" data-testid="ticket-reply-preview">
           {t("preview")}
