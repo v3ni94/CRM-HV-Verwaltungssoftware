@@ -226,6 +226,12 @@ async def items_for(
         raise ProblemError(
             ErrorCodes.VALIDATION, detail="Der Ausgleich nach Reihenfolge gilt für Debitoren."
         )
+    if account_id in await acc.unreviewed_auto_accounts(session, ledger):
+        # Rule M12-05: the settlement proposal never builds on an unreviewed automatic
+        # posting of the same debtor; the person closes the review first.
+        raise ProblemError(
+            ErrorCodes.BANK_AUTO_REVIEW_PENDING, detail=acc.UNREVIEWED_AUTO_REASON + "."
+        )
     rows = [
         r
         for r in await acc.open_items(session, ledger, as_of, account_id)

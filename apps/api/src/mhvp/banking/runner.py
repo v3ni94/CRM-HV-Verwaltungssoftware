@@ -19,8 +19,10 @@ Preconditions, all checked here and never replaced by confidence (0.1.6, 7.4 no.
 Every automatic posting: ``book_payment`` (created_by None, source bank import), decision
 ``auto_posted`` with fingerprint and review due date, review item (daily at L2, sampled at
 L3 for debtor_full and transfer_pair), event ``bank_transaction.auto_posted``, counters in
-the sync run. A missing evidence chain (B05) of a recurring expense yields a clarification
-event instead of a posting. Nothing here opens a gate or pays.
+the sync run, ``journal_entry.auto_review_pending`` until the review item is closed (dunning,
+settlement proposal and direct debit runs skip the affected debtor accounts). A missing
+evidence chain (B05) of a recurring expense yields a clarification row with responsible
+ticket instead of a posting. Nothing here opens a gate or pays.
 """
 
 from __future__ import annotations
@@ -39,6 +41,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting.models import EntrySource, LeadingSystem, Ledger, LedgerAccount
 from mhvp.banking import (
+    clarifications,
     decisions,
     levels,
     matching,
@@ -272,6 +275,11 @@ async def auto_post_transaction(
     if verification.skipped:
         return "auto_period_locked", None
     if verification.clarification:
+        # B05: clarification status with responsible ticket instead of a posting; the row is
+        # created once, the event is emitted once per run of the transaction.
+        row, created = await clarifications.ensure_open(
+            session, tx, tenant_id=ctx.tenant_id, reasons=verification.reasons, rule_id=rule_row.id
+        )
         await emit(
             session,
             tenant_id=ctx.tenant_id,
@@ -283,6 +291,9 @@ async def auto_post_transaction(
                 "case_kind": case_kind,
                 "rule_id": str(rule_row.id),
                 "reasons": verification.reasons,
+                "clarification_id": str(row.id),
+                "clarification_status": row.status,
+                "clarification_created": created,
             },
         )
         return "auto_clarification", None
@@ -340,6 +351,9 @@ async def auto_post_transaction(
         due=due,
     )
     if due is not None:
+        # Exclusion from dunning, settlement proposal and direct debit until reviewed
+        # (rule M12-05); the guard trigger of posted entries ignores this flag.
+        entry.auto_review_pending = True
         session.add(
             AutoPostingReview(
                 tenant_id=tx.tenant_id,

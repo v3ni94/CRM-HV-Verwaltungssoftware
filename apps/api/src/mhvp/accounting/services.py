@@ -570,6 +570,29 @@ async def reverse(
     return reversal
 
 
+async def unreviewed_auto_accounts(session: AsyncSession, ledger: Ledger) -> set[uuid.UUID]:
+    """Accounts touched by automatic postings of the bank runner whose review is still open
+    (``journal_entry.auto_review_pending``, rule M12-05). Dunning, settlement proposal and
+    direct debit runs leave these debtor accounts alone: an unreviewed automatic settlement
+    is no basis for a reminder, an allocation or a collection."""
+    rows = await session.scalars(
+        select(JournalLine.account_id)
+        .join(JournalEntry, JournalEntry.id == JournalLine.journal_entry_id)
+        .where(
+            JournalEntry.ledger_id == ledger.id,
+            JournalEntry.status == EntryStatus.POSTED,
+            JournalEntry.auto_review_pending.is_(True),
+        )
+        .distinct()
+    )
+    return set(rows.all())
+
+
+UNREVIEWED_AUTO_REASON = (
+    "Automatikbuchung ohne abgeschlossene Nachkontrolle: zurückgestellt bis zur Nachkontrolle"
+)
+
+
 async def lock_period(session: AsyncSession, ledger: Ledger, until: date) -> int:
     """Festschreibung only moves forward; returns the number of drafts left in the period."""
     if ledger.locked_until is not None and until < ledger.locked_until:

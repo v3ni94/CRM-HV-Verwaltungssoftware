@@ -383,6 +383,7 @@ async def preview(
         for i in items:
             if i["due_date"] and i["due_date"] < run_date:
                 by_account.setdefault(i["account_id"], []).append(i)
+        unreviewed = await acc.unreviewed_auto_accounts(session, ledger)
         for account_id, overdue in sorted(by_account.items(), key=lambda kv: str(kv[0])):
             account = await session.get(LedgerAccount, account_id)
             contract_id = next((i["contract_id"] for i in overdue if i["contract_id"]), None)
@@ -406,6 +407,11 @@ async def preview(
                     )
                 elif days < int(config["min_days_overdue"]):
                     reason = f"Noch nicht {config['min_days_overdue']} Tage überfällig"
+            if reason is None and account_id in unreviewed:
+                # Rule M12-05: an automatic posting without completed review is no basis
+                # for a reminder; the case is excluded, never silently postponed.
+                reason = acc.UNREVIEWED_AUTO_REASON
+                counts["auto_review_pending"] = counts.get("auto_review_pending", 0) + 1
             if reason is None and ledger.leading_system is not LeadingSystem.MHVP:
                 reason = "Buchungskreis nicht führend: gemahnt wird im führenden System (6.9.10)"
             fee_amount = Decimal("0.00")
