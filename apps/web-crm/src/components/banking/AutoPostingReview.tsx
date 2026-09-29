@@ -33,6 +33,7 @@ export type ReviewItem = {
   final: { settlements?: { open_item_id: string; amount: string }[]; counter_account_number?: string | null } | null;
   verifier_fingerprint: string | null;
   reversed: boolean;
+  return_transaction_id: string | null;
 };
 
 const REASON_CODES = ["automation_error", "wrong_assignment", "wrong_amount", "wrong_date", "duplicate", "other"] as const;
@@ -130,6 +131,7 @@ export function AutoPostingReview({ canReview, canBook }: AutoPostingReviewProps
                 {item.purpose} · {t("entry", { number: item.journal_number ?? "" })}
                 {item.final?.counter_account_number ? ` · ${t("counter", { number: item.final.counter_account_number })}` : ""}
               </p>
+              {item.kind === "return" ? <p className={ui.help}>{t("returnHint")}</p> : null}
               <div className={ui.formActions}>
                 {canReview ? (
                   <button type="button" className={ui.primary} disabled={busy === item.id || item.reversed} onClick={() => ok(item)}>

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { BankAccountOverview } from "@/components/banking/BankAccountOverview";
+import { BankClarifications } from "@/components/banking/BankClarifications";
 import { BankSetupWizard } from "@/components/banking/BankSetupWizard";
 import { FinApiConnections } from "@/components/banking/FinApiConnections";
 import { FinTsConnections } from "@/components/banking/FinTsConnections";
@@ -53,6 +54,7 @@ export default async function BankPage() {
       <FinApiConnections />
       <StatementImport />
       <MatchingMetricsCard />
+      <BankClarifications canUpdate={permissions.includes("accounting:update")} />
       <TransactionList canBook={permissions.includes("accounting:create")} canUpdate={permissions.includes("accounting:update")} />
     </div>
   );
