@@ -83,7 +83,7 @@ dessen Abschluss archiviert.
 
 ## Erledigt aus Gmail
 
-Seit 1.43.0 liest die Plattform, was im Gmail Postfach mit einer Mail geschieht: archiviert,
+Seit 1.44.0 liest die Plattform, was im Gmail Postfach mit einer Mail geschieht: archiviert,
 in den Papierkorb verschoben, als Spam eingestuft, endgültig gelöscht oder wieder in den
 Posteingang gelegt. Je Postfachkopie steht das in der Maildetailansicht (wer, wann, welches
 Postfach), die Mailübersicht zeigt den Abgleichstand (synchron, abweichend, ausstehend, in

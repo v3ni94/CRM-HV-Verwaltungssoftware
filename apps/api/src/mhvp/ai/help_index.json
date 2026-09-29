@@ -908,6 +908,25 @@
  },
  {
   "kind": "page",
+  "title": "Lexware Office",
+  "source": "Einstellungen",
+  "href": "/einstellungen/schnittstellen/lexware-office",
+  "keywords": [
+   "lexware",
+   "lexoffice",
+   "rechnung",
+   "rechnungskopie",
+   "rechnungsentwurf",
+   "kontaktabgleich",
+   "avv"
+  ],
+  "permission": [
+   "tenant_settings:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Schadenbearbeiter",
   "source": "Einstellungen",
   "href": "/einstellungen/schnittstellen/schadenbearbeiter",
@@ -4321,7 +4340,7 @@
   "href": "/mail",
   "keywords": [],
   "permission": null,
-  "excerpt": "Seit 1.43.0 liest die Plattform, was im Gmail Postfach mit einer Mail geschieht: archiviert, in den Papierkorb verschoben, als Spam eingestuft, endgültig gelöscht oder wieder in den Posteingang gelegt. Je Postfachkopie steht das in der Maildetailansicht (wer, wann, welches Postfa",
+  "excerpt": "Seit 1.44.0 liest die Plattform, was im Gmail Postfach mit einer Mail geschieht: archiviert, in den Papierkorb verschoben, als Spam eingestuft, endgültig gelöscht oder wieder in den Posteingang gelegt. Je Postfachkopie steht das in der Maildetailansicht (wer, wann, welches Postfa",
   "file": "docs/handbuch/mail.md"
  },
  {
