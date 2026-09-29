@@ -12,6 +12,7 @@ import json
 import re
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal
@@ -46,6 +47,14 @@ CHUNK_ROWS = 80  # rows per chunk for extract_contacts/extract_property (fits 16
 DEFAULT_MAX_OUTPUT_TOKENS = 16000
 RETRIEVE_LIMIT = 6  # normal retrieval; reduced (below) when the input would be too large
 REDUCED_RETRIEVE_LIMIT = 3
+# Hard input budget of a chat call (answer_question): the tier's ``context_tokens`` when the
+# operator entered it, else this conservative default; chars / 3.5 estimate. The reserve
+# keeps room for the system prompt, the context line, examples and the estimate's error.
+DEFAULT_INPUT_BUDGET_TOKENS = 150_000
+BUDGET_RESERVE = Decimal("0.85")
+MIN_EXCERPT_CHARS = 2_000  # a retrieved document is never cut below this
+HISTORY_KEEP = 6  # turns kept when the history has to give way
+LOOKUP_LINKS_PER_TOOL = 10
 FEW_SHOT = 8
 WARN_SHARE = Decimal("0.8")
 # Rate limits and overloads: wait and retry the same provider before falling back (seconds).
@@ -212,14 +221,10 @@ def _table_body(document: Document, blobs: BlobStore) -> str:
     return csv_text(blobs.get(document.storage_ref))
 
 
-async def document_text(
-    session: AsyncSession,
-    blobs: BlobStore,
-    document_id: uuid.UUID,
-    *,
-    max_chars: int = MAX_DOCUMENT_CHARS,
-) -> tuple[str, int]:
-    """Returns the wrapped text and the raw character count before any cut (for input_stats)."""
+async def document_body(
+    session: AsyncSession, blobs: BlobStore, document_id: uuid.UUID
+) -> tuple[Document, str]:
+    """The document and its raw text (table text or OCR text)."""
     document = await _document_body(session, blobs, document_id)
     if document.mime_type in TABLE_MIME_TYPES:
         body = _table_body(document, blobs)
@@ -229,10 +234,26 @@ async def document_text(
         raise GatewayBlockedError(
             f"Für {document.filename} liegt noch kein Text vor (Texterkennung ausstehend)."
         )
-    raw_chars = len(body)
-    if raw_chars > max_chars:
+    return document, body
+
+
+def wrap_document(name: str, document_id: uuid.UUID | str, body: str, max_chars: int) -> str:
+    """The ``<datei>`` block of one document, cut visibly at ``max_chars``."""
+    if len(body) > max_chars:
         body = body[:max_chars] + "\n[gekürzt: Datei länger als das Limit für eine Datei]"
-    return f'<datei name="{document.filename}" id="{document.id}">\n{body}\n</datei>', raw_chars
+    return f'<datei name="{name}" id="{document_id}">\n{body}\n</datei>'
+
+
+async def document_text(
+    session: AsyncSession,
+    blobs: BlobStore,
+    document_id: uuid.UUID,
+    *,
+    max_chars: int = MAX_DOCUMENT_CHARS,
+) -> tuple[str, int]:
+    """Returns the wrapped text and the raw character count before any cut (for input_stats)."""
+    document, body = await document_body(session, blobs, document_id)
+    return wrap_document(document.filename, document.id, body, max_chars), len(body)
 
 
 async def document_chunks(
@@ -336,10 +357,24 @@ HISTORY_CHARS = 1500  # per message
 async def conversation_history(session: AsyncSession, run: AiTaskRun) -> str:
     """Earlier messages of the run's conversation (oldest first, without the current question),
     so remarks and follow up questions keep their context."""
+    return history_text(await conversation_history_lines(session, run))
+
+
+def history_text(lines: list[str], keep: int | None = None) -> str:
+    """The history block; ``keep`` limits it to the last messages (input budget)."""
+    if not lines:
+        return ""
+    if keep is not None and len(lines) > keep:
+        lines = lines[-keep:]
+    return "\n".join(["Bisheriger Gesprächsverlauf (älteste zuerst, nur als Kontext):", *lines])
+
+
+async def conversation_history_lines(session: AsyncSession, run: AiTaskRun) -> list[str]:
+    """One line per earlier message of the conversation, oldest first."""
     from mhvp.ai.models import AiMessage
 
     if run.conversation_id is None:
-        return ""
+        return []
     rows = (
         await session.scalars(
             select(AiMessage)
@@ -351,19 +386,132 @@ async def conversation_history(session: AsyncSession, run: AiTaskRun) -> str:
             .limit(HISTORY_MESSAGES)
         )
     ).all()
-    if not rows:
-        return ""
-    lines = ["Bisheriger Gesprächsverlauf (älteste zuerst, nur als Kontext):"]
+    lines = []
     for message in reversed(rows):
         who = "Nutzer" if message.role == "user" else "Assistent"
         # One line per message: a line break inside a message can never start a line that
         # looks like another turn or the instruction (9.1).
         text = lookup.flat(message.content).replace("<", "\u2039").replace(">", "\u203a")
         lines.append(f"{who}: {text[:HISTORY_CHARS]}")
-    return "\n".join(lines)
+    return lines
 
 
-async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -> TaskInput:
+# Input budget of a chat call ----------------------------------------------------------------
+
+
+@dataclass
+class DocPart:
+    name: str
+    document_id: uuid.UUID
+    body: str
+    attached: bool  # attached by the user (kept), else retrieved (dropped first)
+
+
+@dataclass
+class AnswerParts:
+    """Everything that goes into the data block of an ``answer_question`` call, before the
+    budget is applied. The user's question and the page context are not part of it: they are
+    never trimmed."""
+
+    history: list[str]
+    lookup: dict[str, Any] | None
+    documents: list[DocPart]  # attached first, then retrieved in rank order
+    instruction: str | None = None  # first line of the block (non chat callers only)
+    knowledge: str = ""  # approved knowledge entries (M34-01), capped upstream, never trimmed
+
+
+def budget_chars(budget_tokens: int) -> int:
+    return int(Decimal(budget_tokens) * CHARS_PER_TOKEN * BUDGET_RESERVE)
+
+
+def fit_answer_input(
+    parts: AnswerParts, budget_tokens: int
+) -> tuple[str, list[uuid.UUID], dict[str, int]]:
+    """Assembles the data block within the input budget. Trim order until it fits: retrieved
+    documents (least relevant first), then each document to a smaller excerpt, then lookup
+    hits beyond 10 per tool, then history beyond the last ``HISTORY_KEEP`` turns. Returns the
+    text, the document ids kept and the sizes for ``input_stats``."""
+    limit = budget_chars(budget_tokens)
+    retrieved = [d for d in parts.documents if not d.attached]
+    attached = [d for d in parts.documents if d.attached]
+    excerpt = MAX_DOCUMENT_CHARS
+    links_max: int | None = None
+    history_keep: int | None = None
+    tools = max(1, len((parts.lookup or {}).get("tools") or []))
+    all_links = len((parts.lookup or {}).get("links") or [])
+    trimmed = 0
+
+    def assemble() -> str:
+        blocks = [] if parts.instruction is None else [parts.instruction]
+        records = "\n\n".join(
+            p
+            for p in (
+                history_text(parts.history, history_keep),
+                parts.knowledge,
+                lookup.prompt_text(parts.lookup, links_max),
+            )
+            if p
+        )
+        if records:
+            blocks.append(records)
+        blocks += [
+            wrap_document(d.name, d.document_id, d.body, excerpt) for d in [*attached, *retrieved]
+        ]
+        return "\n\n".join(blocks)
+
+    text = assemble()
+    while len(text) > limit:
+        if retrieved:
+            retrieved.pop()
+        elif excerpt > MIN_EXCERPT_CHARS and any(len(d.body) > MIN_EXCERPT_CHARS for d in attached):
+            excerpt = max(MIN_EXCERPT_CHARS, excerpt // 2)
+        elif links_max is None and all_links > LOOKUP_LINKS_PER_TOOL * tools:
+            links_max = LOOKUP_LINKS_PER_TOOL * tools
+        elif history_keep is None and len(parts.history) > HISTORY_KEEP:
+            history_keep = HISTORY_KEEP
+        else:
+            break  # the question and the page context are never trimmed
+        trimmed += 1
+        text = assemble()
+    kept = [*attached, *retrieved]
+    stats = {
+        "budget_tokens": budget_tokens,
+        "budget_chars": limit,
+        "input_chars": len(text),
+        "estimated_tokens": estimate_tokens(len(text)),
+        "documents_attached": len(attached),
+        "documents_retrieved": len(retrieved),
+        "documents_dropped": len(parts.documents) - len(kept),
+        "document_excerpt_chars": excerpt,
+        "history_messages": min(len(parts.history), history_keep or len(parts.history)),
+        "knowledge_chars": len(parts.knowledge),
+        "lookup_links": min(all_links, links_max) if links_max is not None else all_links,
+        "trim_steps": trimmed,
+    }
+    for d in kept:
+        stats[d.name] = len(d.body)
+    return text, [d.document_id for d in kept], stats
+
+
+async def input_budget_tokens(session: AsyncSession, task: AiTask) -> int:
+    """The tier's ``context_tokens`` of the preferred usable provider, else the default."""
+    try:
+        usable, _reasons = await routes(session, task)
+    except GatewayBlockedError:
+        return DEFAULT_INPUT_BUDGET_TOKENS
+    if usable and usable[0].context_tokens:
+        return int(usable[0].context_tokens)
+    return DEFAULT_INPUT_BUDGET_TOKENS
+
+
+async def build_input(
+    session: AsyncSession,
+    blobs: BlobStore,
+    run: AiTaskRun,
+    *,
+    budget_tokens: int | None = None,
+) -> TaskInput:
+    """``budget_tokens`` (chat): hard input budget of the call, see ``fit_answer_input``."""
     ref = run.input_ref
     document_ids = [uuid.UUID(d) for d in ref.get("document_ids", [])]
     question = str(ref.get("instruction", ""))
@@ -420,18 +568,45 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
             found = [d for d in found if d.id in scope]
         document_ids = [*document_ids, *[d.id for d in found if d.id not in document_ids]]
 
-    records = ""
     if run.task is AiTask.ANSWER_QUESTION:
         # Multi turn (rule AI-LOOKUP-01): the stored conversation is the history; platform hits
-        # of this question follow as data. Both are masked with the rest of the input.
-        history = await conversation_history(session, run)
+        # of this question follow as data. Both are masked with the rest of the input. The
+        # whole block is fitted into the input budget (``fit_answer_input``): the question and
+        # the page context are never trimmed.
+        attached_ids = [uuid.UUID(d) for d in ref.get("document_ids", [])]
+        docs: list[DocPart] = []
+        for document_id in document_ids:
+            document, body = await document_body(session, blobs, document_id)
+            if len(body) > HARD_LIMIT_CHARS and document_id in attached_ids:
+                raise GatewayBlockedError(
+                    f"Die Datei {document.filename} ist mit {len(body)} Zeichen zu umfangreich "
+                    f"(höchstens {HARD_LIMIT_CHARS}). Bitte in kleinere Teile aufteilen."
+                )
+            docs.append(DocPart(document.filename, document.id, body, document_id in attached_ids))
         # Approved knowledge entries (M34-01) in front of the documents, so a released rule of
         # the tenant outranks raw document text (audit 29.09.2026, mhvp.ai.knowledge); capped
         # by count and characters, the used ids stay on the run for proof and feedback.
-        knowledge_text = await knowledge_context(session, run, question)
-        records = "\n\n".join(
-            p for p in (history, knowledge_text, lookup.prompt_text(ref.get("lookup"))) if p
+        parts = AnswerParts(
+            history=await conversation_history_lines(session, run),
+            knowledge=await knowledge_context(session, run, question),
+            lookup=ref.get("lookup"),
+            documents=docs,
+            instruction=None if separate else instruction,
         )
+        text, document_ids, input_stats = fit_answer_input(
+            parts, budget_tokens or DEFAULT_INPUT_BUDGET_TOKENS
+        )
+        text = mask_identifiers(text)
+        return TaskInput(
+            text=text,
+            document_ids=document_ids,
+            context=context,
+            input_stats=input_stats,
+            chunks=[],
+            instruction=mask_identifiers(question) if separate else None,
+        )
+
+    records = ""
 
     async def _assemble(ids: list[uuid.UUID], max_chars: int) -> tuple[str, dict[str, int]]:
         parts = [] if separate else [instruction]
@@ -1135,6 +1310,9 @@ class _PlanResult:
     error: str | None
     skips: list[str]
     chosen: Route
+    # The provider refused the input as too large (HTTP 400 naming tokens or the context):
+    # the chat retries once with the budget halved (``_call_within_budget``).
+    token_limit: bool = False
 
 
 def _status_of(exc: providers.ProviderError) -> int | None:
@@ -1142,6 +1320,41 @@ def _status_of(exc: providers.ProviderError) -> int | None:
     cause = exc.__cause__
     status = getattr(cause, "status_code", None)
     return status if isinstance(status, int) else None
+
+
+_TOKEN_LIMIT = re.compile(r"token|context|kontext", re.I)
+CONTEXT_WINDOW_NOTICE = (
+    "Die Eingabe überschreitet das Kontextfenster des KI-Anbieters, auch nach Kürzung der "
+    "Dokumente und des Verlaufs."
+)
+
+
+def is_token_limit_error(exc: providers.ProviderError) -> bool:
+    """A 400 whose message names tokens or the context window ("Input tokens exceed the
+    configured limit ...")."""
+    text = str(exc)
+    status = _status_of(exc)
+    return (status == 400 or "400" in text) and bool(_TOKEN_LIMIT.search(text))
+
+
+async def _call_within_budget(
+    call: Callable[[TaskInput], Awaitable[_PlanResult]],
+    rebuild: Callable[[int], Awaitable[TaskInput]],
+    item: TaskInput,
+    budget_tokens: int,
+) -> tuple[_PlanResult, TaskInput]:
+    """Chat call with the input budget: on a provider 400 naming the token or context limit
+    the input is rebuilt with the budget halved and sent once more; a second refusal ends
+    the run with ``CONTEXT_WINDOW_NOTICE`` (the job then answers with the hit list)."""
+    result = await call(item)
+    if not result.token_limit:
+        return result, item
+    log.warning("ai_input_over_limit_retry", budget_tokens=budget_tokens)
+    item = await rebuild(max(1, budget_tokens // 2))
+    result = await call(item)
+    if result.token_limit:
+        result.error = CONTEXT_WINDOW_NOTICE
+    return result, item
 
 
 async def _call_plan(
@@ -1166,6 +1379,7 @@ async def _call_plan(
     error: str | None = None
     skips: list[str] = []
     chosen = plan[0][0]
+    token_limit = False
     for step in plan:
         chosen, _spent, _budget = step
         provider = chosen.config.provider
@@ -1186,6 +1400,7 @@ async def _call_plan(
                 except providers.ProviderError as exc:
                     error = f"Anbieterfehler: {exc}"
                     provider_failed = True
+                    token_limit = is_token_limit_error(exc)
                     log.warning(
                         "ai_provider_error",
                         tenant_id=str(tenant_id) if tenant_id else None,
@@ -1220,7 +1435,9 @@ async def _call_plan(
         if not provider_failed:
             break
         skips.append(f"{provider.value}: {error}")
-    return _PlanResult(output, tokens_in, tokens_out, error, skips, chosen)
+        if token_limit:
+            break  # the caller retries with a smaller input instead of the next provider
+    return _PlanResult(output, tokens_in, tokens_out, error, skips, chosen, token_limit)
 
 
 async def _update_progress(
@@ -1255,7 +1472,10 @@ async def execute(
                 blocked = await posting_block_reason(session)
                 if blocked is not None:
                     raise GatewayBlockedError(blocked)
-            item = await build_input(session, blobs, run)
+            budget_tokens = (
+                await input_budget_tokens(session, task) if task is AiTask.ANSWER_QUESTION else None
+            )
+            item = await build_input(session, blobs, run, budget_tokens=budget_tokens)
             estimated_chars = (
                 len(item.text) if not item.chunks else max(len(c) for c in item.chunks)
             )
@@ -1433,19 +1653,38 @@ async def execute(
             else:
                 error = warnings[-1] if warnings else "Alle Teile fehlgeschlagen."
         else:
-            messages = _messages(
-                item.text, item.context, shots, item.instruction, masked=task in MASKED_TASKS
-            )
-            result = await _call_plan(
-                plan,
-                keys,
-                prompt.system,
-                messages,
-                schema,
-                task,
-                tenant_id=tenant_id,
-                run_id=run_id,
-            )
+
+            async def _call(current: TaskInput) -> _PlanResult:
+                messages = _messages(
+                    current.text,
+                    current.context,
+                    shots,
+                    current.instruction,
+                    masked=task in MASKED_TASKS,
+                )
+                return await _call_plan(
+                    plan,
+                    keys,
+                    prompt.system,
+                    messages,
+                    schema,
+                    task,
+                    tenant_id=tenant_id,
+                    run_id=run_id,
+                )
+
+            async def _rebuild(smaller: int) -> TaskInput:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    current = await session.get(AiTaskRun, run_id)
+                    assert current is not None  # noqa: S101 - locked above
+                    rebuilt = await build_input(session, blobs, current, budget_tokens=smaller)
+                    current.input_ref = {**current.input_ref, "input_stats": rebuilt.input_stats}
+                    return rebuilt
+
+            if task is AiTask.ANSWER_QUESTION and budget_tokens is not None:
+                result, item = await _call_within_budget(_call, _rebuild, item, budget_tokens)
+            else:
+                result = await _call(item)
             tokens_in, tokens_out = result.tokens_in, result.tokens_out
             output, error, skipped_extra, chosen = (
                 result.output,
