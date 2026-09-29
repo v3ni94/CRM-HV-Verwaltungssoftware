@@ -8689,6 +8689,8 @@ export interface paths {
         /**
          * Import zurücknehmen
          * @description Removes what is not bound by later data; kept items carry the reason (10.1 step 5).
+         *     A confirmed chat action (contact change, note, ticket) registers no items; its run is not
+         *     undoable here, otherwise the log would record a rollback that reverted nothing (0.1.7).
          */
         post: operations["undo_import_api_v1_imports__import_id__undo_post"];
         delete?: never;

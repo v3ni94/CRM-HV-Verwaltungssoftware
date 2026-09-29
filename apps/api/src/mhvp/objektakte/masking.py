@@ -6,7 +6,8 @@ an IBAN or phone number reaching the provider is not).
 
 Masks, in this order so a later pattern cannot re-expose what an earlier one hid:
 1. IBAN (`DE`-style and generic, any case, groups separated by nothing, a space, a dot or a
-   hyphen; rule 0.1.13 cites IBANs by name).
+   hyphen; rule 0.1.13 cites IBANs by name). A token that is itself a hyphen separated
+   segment (UUID groups such as ``9fdd-eb23479b2b9e``) is not an IBAN.
 2. E-Mail addresses.
 3. Phone numbers (international `+` or `00` prefix with any country code, or a national `0`
    prefix; digits, spaces, hyphens, at least 6 digits). Contact phones are stored in E.164
@@ -27,7 +28,7 @@ from __future__ import annotations
 import re
 
 _IBAN = re.compile(
-    r"(?<![A-Za-z0-9])[A-Z]{2}[0-9]{2}(?:[ .\-]?[A-Z0-9]{1,4}){2,7}(?![A-Za-z0-9])", re.IGNORECASE
+    r"(?<![A-Za-z0-9-])[A-Z]{2}[0-9]{2}(?:[ .\-]?[A-Z0-9]{1,4}){2,7}(?![A-Za-z0-9-])", re.IGNORECASE
 )
 _EMAIL = re.compile(r"\b[\w.+-]+@[\w-]+\.[A-Za-z]{2,}\b")
 _PHONE = re.compile(r"(?<![\w])(?:\+\d{1,3}|00\d{1,3}|0)[ /()\-]?(?:\d[ /()\-]?){5,13}\d(?![\w])")

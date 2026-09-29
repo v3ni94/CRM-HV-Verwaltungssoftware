@@ -43,3 +43,11 @@ def test_plain_text_without_pii_is_left_readable() -> None:
 def test_contains_iban_detects_unmasked_iban() -> None:
     assert contains_iban("Konto DE02120300000000202051")
     assert not contains_iban("kein Konto hier")
+
+
+def test_uuid_segments_are_not_masked_as_iban() -> None:
+    from mhvp.objektakte.masking import mask_identifiers
+
+    text = '<datei id="01a0eafa-9f4e-7247-9fdd-eb23479b2b9e">Beschluss</datei>'
+    assert mask_identifiers(text) == text
+    assert mask_identifiers("IBAN DE89-3704-0044-0532-0130-00") == "IBAN [IBAN]"
