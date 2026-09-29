@@ -128,6 +128,7 @@ from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.properties.routers import router as properties_router
 from mhvp.properties.routers_catalogs import router as catalogs_router
+from mhvp.properties.routers_creditors import router as properties_creditors_router
 from mhvp.properties.routers_masterdata import router as properties_masterdata_router
 from mhvp.properties.routers_patch import router as properties_patch_router
 from mhvp.properties.routers_termination import router as properties_termination_router
@@ -236,6 +237,7 @@ def create_app(
     app.include_router(properties_patch_router, prefix=API_PREFIX)
     app.include_router(properties_masterdata_router, prefix=API_PREFIX)
     app.include_router(properties_termination_router, prefix=API_PREFIX)
+    app.include_router(properties_creditors_router, prefix=API_PREFIX)
     app.include_router(notice_crm_router, prefix=API_PREFIX)
     app.include_router(notice_portal_router, prefix=API_PREFIX)
     app.include_router(contracts_router, prefix=API_PREFIX)

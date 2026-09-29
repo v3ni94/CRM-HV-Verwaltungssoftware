@@ -769,3 +769,37 @@ class MaintenanceItem(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PropertyCreditorSource(StrEnum):
+    """How a creditor got linked to a property (rule M11-05)."""
+
+    PROPOSAL = "proposal"  # created or confirmed from a posting proposal / bank transaction
+    MANUAL = "manual"  # added on the property tab
+    BACKFILL = "backfill"  # derived from existing creditor postings or invoices
+
+
+class PropertyCreditor(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Creditor (contact with role ``dienstleister``) linked to a property: the list
+    "Dienstleister/Handwerker" of the property page (rule M11-05). Master data only: no
+    money, no bank account. Distinct from ``ServiceProviderRelation`` (a provider contract
+    with term, customer number and creditor account), which stays unchanged."""
+
+    __tablename__ = "property_creditor"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "property_id", "contact_id", name="uq_property_creditor"),
+    )
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
+    contact_id: Mapped[uuid.UUID] = _fk("contact.id", ondelete="CASCADE")
+    # Gewerk, free text (operator entry; no catalogue claimed).
+    trade: Mapped[str | None] = mapped_column(String(100))
+    since: Mapped[date | None] = mapped_column(Date)
+    source: Mapped[PropertyCreditorSource] = mapped_column(
+        _enum(PropertyCreditorSource, "property_creditor_source"),
+        nullable=False,
+        default=PropertyCreditorSource.MANUAL,
+        server_default="manual",
+    )
+    # Bank transaction that led to the link (source proposal); reference only.
+    source_transaction_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
