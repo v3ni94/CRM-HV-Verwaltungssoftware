@@ -376,6 +376,18 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^properties/${ID}/bank-accounts$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/bank-accounts/${ID}/default$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/legal-entities$`) },
+  // Einrichtung in drei Schritten (Bank, Regel M11-08): internes Konto für den Dateiweg anlegen.
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/bank-accounts$`) },
+  // Dienstleister/Handwerker je Objekt (Regel M11-08): Liste, Verknüpfen, Gewerk, Lösen, Nachziehen.
+  { method: "GET", pattern: new RegExp(`^properties/${ID}/creditors$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/creditors$`) },
+  { method: "PATCH", pattern: new RegExp(`^properties/${ID}/creditors/${ID}$`) },
+  { method: "DELETE", pattern: new RegExp(`^properties/${ID}/creditors/${ID}$`) },
+  { method: "POST", pattern: /^properties\/creditors\/backfill$/ },
+  { method: "GET", pattern: new RegExp(`^contacts/${ID}/creditor-properties$`) },
+  // Kreditor anlegen aus dem Buchungsdialog: Gegenpartei prüfen, Kontakt mit Rolle Dienstleister.
+  { method: "GET", pattern: new RegExp(`^banking/transactions/${ID}/counterparty-contact$`) },
+  { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/creditor-contact$`) },
   // Eigentümer festlegen (operator 26.09.2026): Objekteigentümer der Mietverwaltung.
   { method: "GET", pattern: new RegExp(`^properties/${ID}/owners$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/owner$`) },

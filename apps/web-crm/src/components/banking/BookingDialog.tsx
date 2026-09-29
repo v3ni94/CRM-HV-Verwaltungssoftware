@@ -22,6 +22,7 @@ import {
   type Split,
   type Transaction,
 } from "./bankTypes";
+import { CreditorContactButton } from "./CreditorContactButton";
 
 /** HOOK (plan M12 step S1): rejection of a deterministic stage 1 proposal with a mandatory
  *  reason needs the decision log endpoint (`POST /banking/transactions/{id}/reject`), which
@@ -305,6 +306,7 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
               <span className="font-medium tabular-nums">{formatEur(tx.amount)}</span>
               {isTransfer ? <span className={`ml-2 ${ui.badgeInfo}`}>{t("transferBadge")}</span> : null}
             </p>
+            {!isTransfer ? <CreditorContactButton transactionId={tx.id} outgoing={!incoming} /> : null}
           </div>
           <button type="button" className={ui.buttonSm} onClick={onClose}>
             {t("close")}

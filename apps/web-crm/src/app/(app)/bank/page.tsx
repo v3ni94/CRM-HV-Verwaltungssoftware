@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { BankAccountOverview } from "@/components/banking/BankAccountOverview";
+import { BankSetupWizard } from "@/components/banking/BankSetupWizard";
 import { FinApiConnections } from "@/components/banking/FinApiConnections";
 import { FinTsConnections } from "@/components/banking/FinTsConnections";
 import { MatchingMetricsCard } from "@/components/banking/MatchingMetricsCard";
@@ -40,6 +41,7 @@ export default async function BankPage() {
           {t("reconciliationLink")}
         </Link>
       </nav>
+      <BankSetupWizard />
       <BankAccountOverview />
       <FinTsConnections />
       <FinApiConnections />

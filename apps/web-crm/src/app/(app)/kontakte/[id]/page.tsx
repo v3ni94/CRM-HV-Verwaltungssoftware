@@ -9,6 +9,7 @@ import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
 import { ContactMasterData } from "@/components/contacts/ContactMasterData";
 import { ContactQuickActions } from "@/components/contacts/ContactQuickActions";
+import { CreditorPropertiesSection, type CreditorProperty } from "@/components/contacts/CreditorPropertiesSection";
 import { NotesPanel } from "@/components/contacts/NotesPanel";
 import { PortalAccessSection } from "@/components/contacts/PortalAccessSection";
 import { PortalProposalsPanel } from "@/components/contacts/PortalProposalsPanel";
@@ -161,6 +162,12 @@ export default async function ContactDetailPage({
     tab === "beziehungen"
       ? ((await api.GET("/api/v1/contacts/{contact_id}/contact-relations", { params: { path: { contact_id: id } } })).data ?? [])
       : [];
+  // Objekte als Dienstleister (Regel M11-08): nur für Kreditoren (Rolle dienstleister).
+  const creditorRes =
+    tab === "beziehungen" && contact.roles.includes("dienstleister")
+      ? await serverFetch(`/api/v1/contacts/${id}/creditor-properties`)
+      : null;
+  const creditorProperties: CreditorProperty[] = creditorRes?.ok ? ((await creditorRes.json()) as CreditorProperty[]) : [];
   // Dokumente (4.1): documents linked to the contact.
   const documents =
     tab === "dokumente"
@@ -403,6 +410,7 @@ export default async function ContactDetailPage({
       {tab === "beziehungen" ? (
         <>
           <RelationsPanel relations={relations} />
+          {contact.roles.includes("dienstleister") ? <CreditorPropertiesSection rows={creditorProperties} /> : null}
           <RepresentativesPanel
             contactId={contact.id}
             relations={contactRelations}

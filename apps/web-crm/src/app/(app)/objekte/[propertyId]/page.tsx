@@ -17,6 +17,7 @@ import { MaintenancePanel, type MaintenanceRow } from "@/components/properties/M
 import { MetersPanel, type MeterRow } from "@/components/properties/MetersPanel";
 import { OwnersDetails } from "@/components/properties/OwnersDetails";
 import { ManagerChangeChecklist } from "@/components/properties/ManagerChangeChecklist";
+import { PropertyCreditorsPanel } from "@/components/properties/PropertyCreditorsPanel";
 import { PropertyMasterData, type PropertyMaster } from "@/components/properties/PropertyMasterData";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
 import { PropertyTermination, type Termination } from "@/components/properties/PropertyTermination";
@@ -264,6 +265,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       />
 
       <ServiceProvidersPanel rows={providerRows} />
+      <PropertyCreditorsPanel propertyId={propertyId} canEdit={canEdit} />
 
       <PropertyBankAccounts propertyId={propertyId} legalEntities={(data.legal_entities ?? []).map((e) => ({ id: e.id, kind: e.kind, name: e.name }))} />
       <LegalEntityBankAccounts
