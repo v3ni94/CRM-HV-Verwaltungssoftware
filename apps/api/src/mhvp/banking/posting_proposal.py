@@ -6,6 +6,17 @@ file, amount against open items, invoice number and payee IBAN against open paya
 without any AI call and classifies the transaction (full settlement, partial payment,
 collective transfer, return, deposit, supplier invoice, unclear).
 
+Stage 1d (plan M12 S3, ADR 0013) adds the memory of the platform, still deterministic and still
+only a proposal: the source ``history`` repeats what persons booked for the same counterparty
+(IBAN fingerprint or creditor id) in the same legal entity and direction, with the number of
+consistent cases and contradictions (reversals, other accounts); the source ``invoice``
+carries the account assignment of a posted invoice linked to the transaction (creditor account
+and cost accounts per line); an own payment order found by ``end_to_end_id`` strengthens the
+payable match; booking texts of ledger accounts (``LedgerAccount.booking_texts``) and a
+recognised transfer pair (D04) give further hints; periodicity of the history is an
+explanation only, never a trigger; a rule or history bound to a contract that ended before
+the booking date is excluded. History proposals are never ``unambiguous``.
+
 Stage 2 is the AI proposal in ``mhvp.banking.ai_posting``; it only runs with the tenant switch
 ``ai_posting_enabled`` (default off) and a released provider (``gateway.posting_block_reason``).
 
@@ -13,7 +24,10 @@ Both stages produce proposals only. Nothing here posts: a person books via
 ``POST /banking/transactions/{id}/book`` (rule 0.1.6, 7.4 no. 4, B01 to B09). The engine works
 on plain dicts so the independent test set (M12-02, ``tests/ai_eval/posting_stage1``) measures
 its hit rate without a database; ``stage1_for_transaction`` assembles the dicts from the
-database.
+database (``mhvp.banking.features.collect``). The stage 1d inputs travel inside the ``tx``
+dict (``history``, ``linked_invoices``, ``payment_order``, ``transfer_pair``,
+``account_texts``) so the evaluation harness and the feature hash see them as features of the
+transaction; every one of them is optional.
 """
 
 from __future__ import annotations
@@ -22,7 +36,8 @@ import re
 from dataclasses import asdict, dataclass, field
 from datetime import date
 from decimal import Decimal
-from itertools import combinations
+from itertools import combinations, pairwise
+from statistics import median
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -31,12 +46,14 @@ from mhvp.banking import allocation
 
 SOURCE_RULE = "rule"
 SOURCE_MATCH = "match"
+SOURCE_HISTORY = "history"
+SOURCE_INVOICE = "invoice"
 SOURCE_AI = "ai"
 
 # Version of the stage 1 engine (this module). Stored with every decision snapshot
 # (``posting_decision.engine_version``); a change restarts the measurement windows of the
 # automation levels (plan M12 3.1 no. 10). Bump on every change of ``propose``.
-ENGINE_VERSION = "2026.09.28-1"
+ENGINE_VERSION = "2026.09.28-2"
 
 KIND_FULL = "full"
 KIND_PARTIAL = "partial"
@@ -47,6 +64,37 @@ KIND_RETURN = "return"
 KIND_DEPOSIT = "deposit"
 KIND_INVOICE = "invoice"
 KIND_UNCLEAR = "unclear"
+# Stage 1d kinds (plan M12 S3).
+KIND_HISTORY = "history"  # last confirmed account assignment of the same counterparty
+KIND_TRANSFER = "transfer"  # recognised transfer pair between own accounts (D04)
+KIND_ACCOUNT_TEXT = "account_text"  # booking text of one ledger account found in the purpose
+
+# Stage 1d history (ADR 0013, plan 3.1 no. 3 and 3.3, assumption A-074): base confidence,
+# increment per consistent case, cap, minimum evidence, and the factor per contradiction
+# (a reversal or another account for the same counterparty). Product protection standards,
+# not empirical values; the anonymised test set (M12-02) re-evaluates them.
+HISTORY_BASE = Decimal("0.4")
+HISTORY_STEP = Decimal("0.1")
+HISTORY_CAP = Decimal("0.85")
+HISTORY_MIN_CASES = 2
+HISTORY_CONTRADICTION_FACTOR = Decimal("0.5")
+HISTORY_BULK_WEIGHT = Decimal("0.5")  # bulk confirmations count with lower weight (3.3)
+# Periodicity (explanation only): at least this many dated cases, and every interval within
+# ``PERIOD_TOLERANCE_DAYS`` of the median interval; the median is named by its class.
+PERIOD_MIN_CASES = 3
+PERIOD_TOLERANCE_DAYS = 7
+PERIOD_CLASSES = (
+    (25, 35, "monatlich"),
+    (55, 65, "zweimonatlich"),
+    (85, 95, "vierteljährlich"),
+    (175, 190, "halbjährlich"),
+    (355, 375, "jährlich"),
+)
+# Confidence of the invoice source by match basis of the link (``InvoiceMatchBasis``).
+INVOICE_LINK_CONFIDENCE = {"amount_and_number": 0.9, "manual": 0.9, "amount_and_iban": 0.7}
+TRANSFER_CONFIDENCE = 0.9
+ACCOUNT_TEXT_CONFIDENCE = 0.3
+END_TO_END_SCORE = 40  # own payment order found by its end-to-end id (matching.SCORES)
 
 # A contract or invoice number named by the payer outweighs IBAN plus amount (7.4 no. 2: the
 # IBAN alone proves neither contract nor debtor; payments by third parties are supported).
@@ -80,6 +128,11 @@ class Proposal:
     splits: list[dict[str, str]] = field(default_factory=list)
     unambiguous: bool = False
     postable: bool = False
+    # Stage 1d evidence for the CRM (plan S3): history ``{"count", "contradictions",
+    # "entries": [{"journal_entry_id", "label", "booking_date", "amount"}], "accounts",
+    # "last_booking_date", "periodicity"}``; invoice ``{"invoice_id", "number", "lines"}``;
+    # transfer ``{"partner_transaction_id"}``. Plain JSON, no names, no IBAN.
+    evidence: dict[str, Any] | None = None
 
     def as_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -129,12 +182,21 @@ def rule_matches(match: dict[str, Any], tx: dict[str, Any]) -> bool:
     return not (match.get("amount_max") is not None and amount > _dec(match["amount_max"]))
 
 
+def _contract_ended(contract_end: Any, booking_date: Any) -> bool:
+    """A contract that ended before the booking date excludes rules and history bound to it
+    (plan 3.2: Vertragsende als Aussetzungsgrund, W07, D15)."""
+    end, day = _date(contract_end), _date(booking_date)
+    return end is not None and day is not None and end < day
+
+
 def _rule_proposals(tx: dict[str, Any], rules: list[dict[str, Any]]) -> list[Proposal]:
     out: list[Proposal] = []
     amount = abs(_dec(tx["amount"]))
     for rule in sorted(rules, key=lambda r: (int(r.get("priority", 100)), str(r.get("id")))):
         state = rule.get("approval_state")
         if state not in ("approved", "active"):
+            continue
+        if _contract_ended(rule.get("contract_end"), tx.get("booking_date")):
             continue
         if not rule_matches(rule.get("match") or {}, tx):
             continue
@@ -345,6 +407,20 @@ def _is_return(tx: dict[str, Any]) -> bool:
     return code in _RETURN_CODES or bool(_RETURN_PURPOSE.search(tx.get("purpose") or ""))
 
 
+def _own_payment_order(tx: dict[str, Any], inv: dict[str, Any]) -> bool:
+    """The transaction carries the end-to-end id of an own payment order for this payable
+    (plan 3.2: End-to-End-Referenz gegen PaymentOrder.end_to_end_id)."""
+    order = tx.get("payment_order") or {}
+    if not order or not tx.get("end_to_end_id"):
+        return False
+    if order.get("end_to_end_id") != tx.get("end_to_end_id"):
+        return False
+    return bool(
+        (order.get("invoice_id") and order.get("invoice_id") == inv.get("invoice_id"))
+        or (order.get("open_item_id") and str(order.get("open_item_id")) == str(inv.get("id")))
+    )
+
+
 def _payable_proposal(tx: dict[str, Any], payables: list[dict[str, Any]]) -> Proposal:
     amount = abs(_dec(tx["amount"]))
     purpose = " ".join((tx.get("purpose") or "").lower().split())
@@ -356,6 +432,9 @@ def _payable_proposal(tx: dict[str, Any], payables: list[dict[str, Any]]) -> Pro
         if _word_in(inv.get("number"), purpose):
             score += SCORES["contract_number"]
             reasons.append("Rechnungsnummer im Verwendungszweck")
+        if _own_payment_order(tx, inv):
+            score += END_TO_END_SCORE
+            reasons.append("End-to-End-Referenz des eigenen Zahlungsauftrags")
         if payee_fp and inv.get("payee_iban_fingerprint") == payee_fp:
             score += SCORES["iban"]
             reasons.append("IBAN des Empfängers entspricht der Rechnung")
@@ -394,16 +473,286 @@ def _payable_proposal(tx: dict[str, Any], payables: list[dict[str, Any]]) -> Pro
     return Proposal(SOURCE_MATCH, KIND_UNCLEAR, 0.0, ["Keine offene Rechnung passt"])
 
 
+# Stage 1d: transfer pair, linked invoice, history, booking texts -------------------------
+
+
+def _fmt_date(value: Any) -> str:
+    day = _date(value)
+    return day.strftime("%d.%m.%Y") if day is not None else "unbekannt"
+
+
+def _fmt_eur(value: Any) -> str:
+    amount = _dec(value)
+    whole, cents = f"{abs(amount):,.2f}".split(".")
+    sign = "-" if amount < 0 else ""
+    return f"{sign}{whole.replace(',', '.')},{cents} EUR"
+
+
+def _transfer_proposal(tx: dict[str, Any]) -> Proposal | None:
+    """Recognised transfer pair between own accounts of the same legal entity (D04, B08): the
+    booking goes bank against the partner bank account; ``matching.book_payment`` enforces
+    the pair semantics. Not ``unambiguous``: the L1 verification of the class is step S4."""
+    pair = tx.get("transfer_pair") or {}
+    if not pair or not pair.get("partner_account_number"):
+        return None
+    return Proposal(
+        SOURCE_MATCH,
+        KIND_TRANSFER,
+        TRANSFER_CONFIDENCE,
+        [
+            "Umbuchung zwischen eigenen Konten desselben Rechtsträgers erkannt (D04)",
+            "Buchung gegen das Bankkonto der Partnerseite, ohne Postenausgleich",
+        ],
+        account_number=str(pair["partner_account_number"]),
+        evidence={"partner_transaction_id": pair.get("partner_transaction_id")},
+    )
+
+
+def _invoice_proposal(tx: dict[str, Any]) -> Proposal | None:
+    """Account assignment from a posted invoice linked to the transaction
+    (``InvoiceBankTransactionLink``, plan 3.1 no. 3, Entwurf 2 Tier B): the payment settles
+    the creditor's open payable; the cost accounts of the invoice lines are shown as evidence
+    (they were posted with the invoice, the payment does not touch them)."""
+    linked = [inv for inv in tx.get("linked_invoices") or [] if inv.get("posted", True)]
+    if not linked:
+        return None
+    amount = abs(_dec(tx["amount"]))
+    if len(linked) > 1:
+        return Proposal(
+            SOURCE_INVOICE,
+            KIND_UNCLEAR,
+            0.2,
+            [f"{len(linked)} verknüpfte Rechnungen, keine eindeutige Zuordnung"],
+            evidence={"invoice_ids": [str(inv.get("invoice_id")) for inv in linked]},
+        )
+    inv = linked[0]
+    basis = str(inv.get("match_basis") or "manual")
+    confidence = INVOICE_LINK_CONFIDENCE.get(basis, INVOICE_LINK_CONFIDENCE["amount_and_iban"])
+    reasons = [f"Verknüpfte gebuchte Rechnung {inv.get('number') or ''}".rstrip()]
+    reasons.append(
+        {
+            "amount_and_number": "Verknüpfung über Betrag und Rechnungsnummer",
+            "amount_and_iban": "Verknüpfung über Betrag und Empfänger-IBAN, Prüfung nötig",
+        }.get(basis, "Verknüpfung durch eine Person")
+    )
+    splits: list[dict[str, str]] = []
+    remaining = _dec(inv["remaining"]) if inv.get("remaining") is not None else None
+    if inv.get("open_item_id") and remaining is not None and remaining > 0:
+        splits.append(
+            {"open_item_id": str(inv["open_item_id"]), "amount": str(min(remaining, amount))}
+        )
+        if remaining == amount:
+            reasons.append("Betrag entspricht dem offenen Rechnungsbetrag")
+        else:
+            reasons.append("Betrag weicht vom offenen Rechnungsbetrag ab")
+    else:
+        reasons.append("Kein offener Posten zur Rechnung, Prüfung nötig")
+    lines = [
+        {
+            "account_number": ln.get("account_number"),
+            "name": ln.get("name"),
+            "net": str(_dec(ln.get("net") or 0)),
+            "text": ln.get("text"),
+        }
+        for ln in inv.get("lines") or []
+    ]
+    if lines:
+        reasons.append(
+            "Kontierung der Rechnung: "
+            + ", ".join(f"{ln['account_number']} {_fmt_eur(ln['net'])}" for ln in lines)
+        )
+    return Proposal(
+        SOURCE_INVOICE,
+        KIND_INVOICE,
+        confidence,
+        reasons,
+        account_number=inv.get("creditor_account_number"),
+        splits=splits,
+        unambiguous=bool(splits) and remaining == amount and basis != "amount_and_iban",
+        evidence={
+            "invoice_id": str(inv.get("invoice_id")),
+            "number": inv.get("number"),
+            "match_basis": basis,
+            "lines": lines,
+        },
+    )
+
+
+def _periodicity(entries: list[dict[str, Any]]) -> dict[str, Any] | None:
+    """Regularity of the consistent history cases (explanation only, plan 3.2)."""
+    days = sorted(d for d in (_date(e.get("booking_date")) for e in entries) if d is not None)
+    if len(days) < PERIOD_MIN_CASES:
+        return None
+    gaps = [(b - a).days for a, b in pairwise(days)]
+    if not gaps or min(gaps) <= 0:
+        return None
+    mid = int(median(gaps))
+    if any(abs(g - mid) > PERIOD_TOLERANCE_DAYS for g in gaps):
+        return None
+    label = next((name for lo, hi, name in PERIOD_CLASSES if lo <= mid <= hi), None)
+    if label is None:
+        return None
+    amounts = [abs(_dec(e["amount"])) for e in entries if e.get("amount") is not None]
+    return {
+        "interval": label,
+        "median_days": mid,
+        "count": len(days),
+        "first_booking_date": days[0].isoformat(),
+        "last_booking_date": days[-1].isoformat(),
+        "amount_min": str(min(amounts)) if amounts else None,
+        "amount_max": str(max(amounts)) if amounts else None,
+    }
+
+
+def _history_pattern(entry: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(sorted(str(a) for a in entry.get("accounts") or []))
+
+
+def _history_proposal(tx: dict[str, Any], open_items: list[dict[str, Any]]) -> Proposal | None:
+    """Stage 1d memory (ADR 0013, plan 3.3): the account pattern of the last confirmed decision
+    of a person for the same counterparty, legal entity and direction; ``count`` consistent
+    cases (bulk confirmations with lower weight), ``contradictions`` (reversals of the same
+    pattern, other patterns) halve the confidence each; at least two consistent cases; never
+    ``unambiguous``; history bound to a contract that ended before the booking date is
+    excluded. Immoware24 journal, imports and drafts are never in ``tx["history"]``."""
+    entries = [
+        e
+        for e in tx.get("history") or []
+        if e.get("accounts") and not _contract_ended(e.get("contract_end"), tx.get("booking_date"))
+    ]
+    if not entries:
+        return None
+    live = [e for e in entries if not e.get("reversed")]
+    if not live:
+        return None
+    ordered = sorted(
+        live, key=lambda e: (str(e.get("booking_date") or ""), str(e.get("decided_at") or ""))
+    )
+    pattern = _history_pattern(ordered[-1])
+    consistent = [e for e in live if _history_pattern(e) == pattern]
+    if len(consistent) < HISTORY_MIN_CASES:
+        return None
+    other = [e for e in live if _history_pattern(e) != pattern]
+    reversed_same = [e for e in entries if e.get("reversed") and _history_pattern(e) == pattern]
+    contradictions = len(other) + len(reversed_same)
+    weight = sum((HISTORY_BULK_WEIGHT if e.get("bulk") else Decimal("1")) for e in consistent)
+    raw = min(HISTORY_CAP, HISTORY_BASE + HISTORY_STEP * weight)
+    raw *= HISTORY_CONTRADICTION_FACTOR**contradictions
+    confidence = float(raw.quantize(CENT))
+    last = ordered[-1]
+    reasons = [
+        f"Zuletzt {len(consistent)} mal so gebucht, {contradictions} "
+        + ("Widerspruch" if contradictions == 1 else "Widersprüche")
+    ]
+    reasons.append(f"Letzte Buchung am {_fmt_date(last.get('booking_date'))}")
+    if any(e.get("key") == "creditor_id" for e in consistent):
+        reasons.append("Gläubiger-ID stimmt überein")
+    if reversed_same:
+        reasons.append(f"{len(reversed_same)} Buchung(en) dieses Musters wurden storniert")
+    if other:
+        reasons.append(f"{len(other)} Buchung(en) auf andere Konten")
+    if any(e.get("bulk") for e in consistent):
+        reasons.append("Massenbestätigungen zählen mit geringerem Gewicht")
+    accounts = list(pattern)
+    if len(accounts) > 1:
+        reasons.append(f"Aufteilung auf {len(accounts)} Konten: {', '.join(accounts)}")
+    periodicity = _periodicity(consistent)
+    if periodicity is not None:
+        reasons.append(
+            f"Regelmäßig etwa {periodicity['interval']} seit "
+            f"{_fmt_date(periodicity['first_booking_date'])}, Beträge zwischen "
+            f"{_fmt_eur(periodicity['amount_min'])} und {_fmt_eur(periodicity['amount_max'])}"
+        )
+    reasons.append("Vorschlag aus dem Verlauf, kein Nachweis (7.4 Nr. 2)")
+    splits: list[dict[str, str]] = []
+    amount = _dec(tx["amount"])
+    if amount > 0 and len(accounts) == 1:
+        # Incoming: the debtor account of the pattern; exactly one open item on it with the
+        # payment amount becomes the settlement proposal.
+        candidates = [
+            i
+            for i in open_items
+            if i.get("kind") == "receivable"
+            and str(i.get("account_number")) == accounts[0]
+            and _dec(i["remaining"]) == amount
+        ]
+        if len(candidates) == 1:
+            splits = [_split(_Scored(candidates[0], 0, []), amount)]
+            reasons.append("Genau ein offener Posten des Kontos mit diesem Betrag")
+    return Proposal(
+        SOURCE_HISTORY,
+        KIND_HISTORY,
+        confidence,
+        reasons,
+        account_number=accounts[0] if accounts else None,
+        splits=splits,
+        evidence={
+            "count": len(consistent),
+            "contradictions": contradictions,
+            "accounts": accounts,
+            "last_booking_date": str(last.get("booking_date")),
+            "text": last.get("text"),
+            "entries": [
+                {
+                    "journal_entry_id": e.get("journal_entry_id"),
+                    "label": e.get("label"),
+                    "booking_date": str(e.get("booking_date")),
+                    "amount": str(_dec(e.get("amount") or 0)),
+                    "reversed": bool(e.get("reversed")),
+                    "consistent": _history_pattern(e) == pattern,
+                }
+                for e in sorted(entries, key=lambda e: str(e.get("booking_date") or ""))
+            ],
+            "periodicity": periodicity,
+        },
+    )
+
+
+def _account_text_proposal(tx: dict[str, Any]) -> Proposal | None:
+    """Booking texts of ledger accounts (``LedgerAccount.booking_texts``) found in the purpose
+    or counterpart name: a hint only, and only when exactly one account matches."""
+    haystack = " ".join(
+        f"{tx.get('purpose') or ''} {tx.get('counterpart_name') or ''}".lower().split()
+    )
+    if not haystack:
+        return None
+    hits: list[tuple[dict[str, Any], str]] = []
+    for account in tx.get("account_texts") or []:
+        for text in account.get("booking_texts") or []:
+            needle = " ".join(str(text).lower().split())
+            if len(needle) >= 3 and needle in haystack:
+                hits.append((account, str(text)))
+                break
+    if len(hits) != 1:
+        return None
+    account, text = hits[0]
+    return Proposal(
+        SOURCE_MATCH,
+        KIND_ACCOUNT_TEXT,
+        ACCOUNT_TEXT_CONFIDENCE,
+        [
+            f"Buchungstext „{text}“ des Kontos {account.get('account_number')} "
+            f"{account.get('name') or ''} im Verwendungszweck".rstrip(),
+            "Hinweis auf das Sachkonto, kein Nachweis",
+        ],
+        account_number=str(account.get("account_number")),
+    )
+
+
 def propose(
     tx: dict[str, Any],
     rules: list[dict[str, Any]] | None = None,
     open_items: list[dict[str, Any]] | None = None,
     payables: list[dict[str, Any]] | None = None,
 ) -> list[Proposal]:
-    """Stage 1 proposals for one transaction, rules first, then the open item match. Always
-    at least one match proposal (possibly ``unclear``) so the reason is visible."""
+    """Stage 1 proposals for one transaction: rules, then transfer pair and linked invoice
+    (stage 1d), then the open item match, then history and booking text hints. Always at
+    least one match proposal (possibly ``unclear``) so the reason is visible."""
     out = _rule_proposals(tx, rules or [])
     amount = _dec(tx["amount"])
+    transfer = _transfer_proposal(tx)
+    if transfer is not None:
+        out.append(transfer)
     if _is_return(tx):
         out.append(
             Proposal(
@@ -416,7 +765,8 @@ def propose(
                 ],
             )
         )
-    elif amount > 0:
+        return out
+    if amount > 0:
         match = _receivable_proposal(tx, open_items or [])
         for rule in out:
             # A debtor payment rule names the account; the settled open item comes from the
@@ -426,11 +776,24 @@ def propose(
                 rule.reasoning = [*rule.reasoning, *match.reasoning]
         out.append(match)
     else:
+        invoice = _invoice_proposal(tx)
+        if invoice is not None:
+            out.append(invoice)
         out.append(_payable_proposal(tx, payables or []))
+    history = _history_proposal(tx, open_items or [])
+    if history is not None:
+        out.append(history)
+    text_hint = _account_text_proposal(tx)
+    if text_hint is not None:
+        out.append(text_hint)
     return out
 
 
 def best(proposals: list[Proposal]) -> Proposal | None:
+    """Highest confidence, the earlier one on a tie; the same order as
+    ``decisions.reference_index`` (assumption A-075 no. 4). A history proposal with more than
+    two consistent cases can therefore rank above a weak deterministic match; it is still
+    never ``unambiguous`` and never pre-selected (plan 3.4, L1)."""
     return max(proposals, key=lambda p: p.confidence, default=None)
 
 
