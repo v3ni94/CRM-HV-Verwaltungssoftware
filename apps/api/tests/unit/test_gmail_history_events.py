@@ -15,6 +15,7 @@ from mhvp.communication.gmail import (
     GmailError,
     HistoryEvent,
     parse_history,
+    resolve_label_names,
     state_from_labels,
 )
 
@@ -41,7 +42,10 @@ def test_parse_history_kinds_and_dropped_labels() -> None:
             "labelsRemoved": [{"message": {"id": "a"}, "labelIds": ["INBOX", "UNREAD"]}],
             "labelsAdded": [{"message": {"id": "a"}, "labelIds": ["TRASH", "STARRED", "Warten"]}],
         },
-        {"id": "14", "labelsRemoved": [{"message": {"id": "a"}, "labelIds": ["UNREAD"]}]},
+        {
+            "id": "14",
+            "labelsRemoved": [{"message": {"id": "a"}, "labelIds": ["UNREAD", "Label_7"]}],
+        },
         {
             "id": "15",
             "labelsAdded": [
@@ -59,6 +63,7 @@ def test_parse_history_kinds_and_dropped_labels() -> None:
         HistoryEvent(13, "a", "inbox_removed"),
         HistoryEvent(13, "a", "trash_added"),
         HistoryEvent(13, "a", "label_added_other", added_labels=("Warten",)),
+        HistoryEvent(14, "a", "label_removed_other", added_labels=("Label_7",)),
         HistoryEvent(16, "a", "deleted"),
         HistoryEvent(17, "d", "spam_added"),
         HistoryEvent(18, "d", "spam_removed"),
@@ -68,6 +73,33 @@ def test_parse_history_kinds_and_dropped_labels() -> None:
     assert state_from_labels(["TRASH", "INBOX"]) == "trashed"
     assert state_from_labels(["SPAM"]) == "spam"
     assert state_from_labels(["Ablage"]) == "archived"
+    # Work labels arrive as label ids; the names of labels.list replace them (E13).
+    resolved = resolve_label_names(events, {"Label_7": "Warten", "Warten": "Warten"})
+    assert resolved[4] == HistoryEvent(13, "a", "label_added_other", added_labels=("Warten",))
+    assert resolved[5] == HistoryEvent(14, "a", "label_removed_other", added_labels=("Warten",))
+    assert resolved[0] == events[0]
+
+
+async def test_label_names_maps_ids_to_names() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        if (r := _token(request)) is not None:
+            return r
+        assert request.url.path.endswith("/labels")
+        return httpx.Response(
+            200,
+            json={
+                "labels": [
+                    {"id": "INBOX", "name": "INBOX", "type": "system"},
+                    {"id": "Label_7", "name": "Warten", "type": "user"},
+                ]
+            },
+        )
+
+    client = _client(handler)
+    try:
+        assert await client.label_names() == {"INBOX": "INBOX", "Label_7": "Warten"}
+    finally:
+        await client.aclose()
 
 
 async def test_history_since_requests_all_types_dedupes_pages_and_sorts() -> None:

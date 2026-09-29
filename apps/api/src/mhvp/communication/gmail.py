@@ -9,7 +9,7 @@ current inbox and relies on Message-ID deduplication.
 import base64
 import logging
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime, timedelta
 from typing import Any, Literal
 
@@ -33,9 +33,10 @@ class GmailError(RuntimeError):
 
 # History entry kinds of ``GmailClient.history_since`` (rule M20-08). ``added`` is a message
 # added to the inbox (or without label information), the label kinds describe INBOX, TRASH
-# and SPAM changes, ``label_added_other`` carries every other added label (work labels),
-# ``deleted`` a permanent deletion. All other labels (UNREAD, STARRED, IMPORTANT, CATEGORY_*)
-# are dropped while parsing.
+# and SPAM changes, ``label_added_other`` and ``label_removed_other`` carry every other added
+# or removed user label (work labels, as raw label ids until ``resolve_label_names`` maps them
+# to names), ``deleted`` a permanent deletion. All other system labels (UNREAD, STARRED,
+# IMPORTANT, CATEGORY_*) are dropped while parsing.
 HISTORY_TYPES = ("messageAdded", "labelRemoved", "labelAdded", "messageDeleted")
 LABEL_KINDS: dict[str, tuple[str, str]] = {
     "INBOX": ("inbox_removed", "inbox_added"),
@@ -49,9 +50,11 @@ class HistoryEvent:
     history_id: int
     message_id: str
     kind: str  # added | inbox_removed | inbox_added | trash_added | trash_removed |
-    # spam_added | spam_removed | deleted | label_added_other
+    # spam_added | spam_removed | deleted | label_added_other | label_removed_other
     label_ids: tuple[str, ...] = ()  # labelIds of the message when Google includes them
-    added_labels: tuple[str, ...] = ()  # raw labelIds of labelsAdded (work labels)
+    # Other labels of labelsAdded or labelsRemoved (work labels): raw label ids from the
+    # history, label names after ``resolve_label_names``.
+    added_labels: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -94,25 +97,22 @@ def parse_history(history: list[dict[str, Any]], fallback_id: str) -> list[Histo
                         label_ids=tuple(labels) if labels is not None else (),
                     )
                 )
-        for removed in h.get("labelsRemoved", []):
-            mid = str((removed.get("message") or {}).get("id") or "")
-            for label in removed.get("labelIds", []):
-                if mid and label in LABEL_KINDS:
-                    events.append(HistoryEvent(entry_id, mid, LABEL_KINDS[label][0]))
-        for added in h.get("labelsAdded", []):
-            mid = str((added.get("message") or {}).get("id") or "")
-            if not mid:
-                continue
-            other: list[str] = []
-            for label in added.get("labelIds", []):
-                if label in LABEL_KINDS:
-                    events.append(HistoryEvent(entry_id, mid, LABEL_KINDS[label][1]))
-                elif not _is_system_label(label):
-                    other.append(str(label))
-            if other:
-                events.append(
-                    HistoryEvent(entry_id, mid, "label_added_other", added_labels=tuple(other))
-                )
+        for index, part in ((0, "labelsRemoved"), (1, "labelsAdded")):
+            other_kind = "label_removed_other" if index == 0 else "label_added_other"
+            for change in h.get(part, []):
+                mid = str((change.get("message") or {}).get("id") or "")
+                if not mid:
+                    continue
+                other: list[str] = []
+                for label in change.get("labelIds", []):
+                    if label in LABEL_KINDS:
+                        events.append(HistoryEvent(entry_id, mid, LABEL_KINDS[label][index]))
+                    elif not _is_system_label(label):
+                        other.append(str(label))
+                if other:
+                    events.append(
+                        HistoryEvent(entry_id, mid, other_kind, added_labels=tuple(other))
+                    )
         for deleted in h.get("messagesDeleted", []):
             mid = str((deleted.get("message") or {}).get("id") or "")
             if mid:
@@ -127,6 +127,21 @@ SYSTEM_LABELS = frozenset(
 
 def _is_system_label(label: str) -> bool:
     return label in SYSTEM_LABELS or label.startswith("CATEGORY_")
+
+
+OTHER_LABEL_KINDS = frozenset({"label_added_other", "label_removed_other"})
+
+
+def resolve_label_names(events: list[HistoryEvent], names: dict[str, str]) -> list[HistoryEvent]:
+    """Work label events with label names instead of the raw Gmail label ids of the history
+    (``labels.list``, rule M20-08 E13: ``gmail_keep_open_labels`` holds names). An id without
+    a known name keeps the id."""
+    return [
+        replace(e, added_labels=tuple(names.get(label, label) for label in e.added_labels))
+        if e.kind in OTHER_LABEL_KINDS
+        else e
+        for e in events
+    ]
 
 
 class GmailClient:
@@ -232,6 +247,18 @@ class GmailClient:
         ids = [str(m["id"]) for m in data.get("messages", [])]
         next_token = data.get("nextPageToken")
         return ids, (str(next_token) if next_token else None)
+
+    async def label_names(self) -> dict[str, str]:
+        """Label id to label name of the account (``labels.list``), used to map the raw label
+        ids of the history to the configured work labels (rule M20-08, E13)."""
+        r = await self._get("labels")
+        if r.status_code != 200:
+            raise GmailError(f"Labels nicht lesbar (HTTP {r.status_code}).")
+        return {
+            str(label["id"]): str(label.get("name") or label["id"])
+            for label in r.json().get("labels") or []
+            if label.get("id")
+        }
 
     async def profile_history_id(self) -> str:
         r = await self._get("profile")
@@ -779,6 +806,9 @@ async def sync_mailbox(
             entries = await client.history_since(mailbox.gmail_history_id)
             if entries is None:
                 mailbox.gmail_history_expired_at = datetime.now(UTC)
+            elif keep_open and any(e.kind in OTHER_LABEL_KINDS for e in entries):
+                # Work labels are configured by name, the history carries label ids (E13).
+                entries = resolve_label_names(entries, await client.label_names())
         if entries is None:
             # No cursor yet or history expired (404): restart from the inbox listing; the
             # Message-ID deduplication keeps this free of duplicates.
@@ -842,7 +872,7 @@ async def sync_mailbox(
 def _is_relevant(event: HistoryEvent, keep_open: frozenset[str]) -> bool:
     """Events that consume the batch budget (M20-08): inbox additions, INBOX, TRASH and
     SPAM changes, deletions and work labels that are configured."""
-    if event.kind == "label_added_other":
+    if event.kind in OTHER_LABEL_KINDS:
         return any(label.lower() in keep_open for label in event.added_labels)
     return True
 
