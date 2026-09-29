@@ -75,7 +75,11 @@ automatisch geschrieben oder versendet, das Vier-Augen-Prinzip beim Versand blei
   `suggestion.reason`, nie eine Exception. Fehlt ein KI-Feld, greift der bestehende
   Regel-Fallback aus `mail.py` (Kategorie, Dringlichkeit, Objektnummer). Die
   Playbook-Zuordnung läuft zusätzlich lokal über `score_playbook` (Schlagwort-Überlappung,
-  0 bis 1, Vorschlag ab 0,3) und funktioniert auch ohne KI-Anbieter.
+  0 bis 1, Vorschlag ab 0,3) und funktioniert auch ohne KI-Anbieter. Seit 29.09.2026
+  (`rank_playbooks`) erhält ein Playbook mit der deterministischen Mailkategorie
+  (`mail.category`) einen Bonus von 0,2; ohne Schlagworttreffer kein Vorschlag. Rückmeldung
+  "passt / passt nicht" je Playbook über `POST /playbooks/{id}/feedback` (Zähler
+  `helpful_count`, `unhelpful_count`, Ereignis `playbook.feedback`, keine Statusfolge).
   `learn_playbook_from_ticket` erzeugt beim Schließen eines Tickets über den Task
   `draft_reply` einen Playbook-Entwurf (`status="draft"`), sofern noch kein ähnlich
   betiteltes Playbook existiert; ohne Anbieter entsteht kein Entwurf.

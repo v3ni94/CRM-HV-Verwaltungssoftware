@@ -213,7 +213,28 @@ every other call (four eyes release, DPA evidence, opt-out, key), otherwise noth
   ranking (9.1). The knowledge context of the mail preparation
   (`communication.preparation._knowledge_context`) ranks the permission scoped entries by
   similarity to subject and excerpt (`rank_knowledge`), recency order stays the fallback.
-  Playbook matching (`communication.suggest.best_playbook`) is still keyword based.
+  Playbook matching (`communication.suggest.best_playbook`) is keyword based with a bonus for
+  the mail's deterministic category (`rank_playbooks`, 29.09.2026).
+
+## Knowledge base context, usage and feedback (audit 29.09.2026)
+
+`knowledge.py` is the one place that selects knowledge entries for a run, used by the mail
+preparation (`communication.preparation._knowledge_context`) and the assistant chat
+(`gateway.knowledge_context`, part of `build_input` for `answer_question`): approved and
+currently valid entries only (M34-01, release workflow unchanged), one row per `group_id`,
+ranked by similarity when embeddings exist, capped at `MAX_CONTEXT_ENTRIES` (30),
+`MAX_CONTEXT_CHARS` (20.000) and `MAX_ENTRY_CHARS` (2.000, cut visibly). In the chat the block
+stands in front of the documents ("Vorrang vor Dokumenttext"); the property in focus
+(`context.entity_type = property`) adds its entries. Used ids go to
+`input_ref["knowledge_ids"]` and `RunOut.knowledge_ids`; `usage_count` and `last_used_at` are
+bumped per entry (counters keep `updated_at`).
+
+Feedback: `POST /ai/runs/{id}/feedback` (author of the run only; a second vote replaces the
+first and moves the counters of the used entries), `POST /ai/knowledge/{id}/feedback`,
+`POST /mail/playbooks/{id}/feedback`, each `{helpful: bool}`. Counters only
+(`helpful_count`, `unhelpful_count`), shown in the CRM; no status change, no automatic
+withdrawal. `KnowledgeEntryOut.stale` flags an approved entry unchanged for
+`STALE_AFTER_DAYS` (180): a review hint without legal meaning. Migration 0237.
 * No new dependency: `mhvp.ai.vector.Vector` is a small SQLAlchemy `UserDefinedType` for the
   text form `[..]` of pgvector, so the `pgvector` Python package is not needed (ADR 0001
   unchanged).

@@ -952,3 +952,14 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | `mhvp.integrations.lexoffice_ext`, Migration 0233, Einstellungen Schnittstellen Lexware Office |
 | Überprüfung spätestens bei Meilenstein | Freigabe ADR 0013 (docs/OPEN_QUESTIONS.md LEXO-06, LEXO-09, LEXO-12) |
 | Datum | 29.09.2026 |
+
+## A-083
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der Wissenskontext eines KI-Laufs (`mhvp.ai.knowledge`) umfasst höchstens 30 freigegebene Einträge, 20.000 Zeichen insgesamt und 2.000 Zeichen je Eintrag (längere Einträge werden sichtbar gekürzt). Ein freigegebener Eintrag gilt nach 180 Tagen ohne Änderung als "lange nicht geprüft" (`STALE_AFTER_DAYS`); das ist ein Hinweis in der Oberfläche ohne Folge für Status oder Verwendung. Die Playbook-Zuordnung erhält einen Bonus von 0,2 auf den Schlagwortwert, wenn die deterministische Mailkategorie der Playbook-Kategorie entspricht. |
+| Begründung | Der Master-Prompt nennt keine Obergrenzen für den Kontext und keine Prüffrist für Wissenseinträge. Ohne Obergrenze wächst der Prompt mit der Wissensbasis (Produktionsfehler 29.09.2026, Eingabe über 272.000 Token). Die Prüffrist ist Produktschutz, kein Rechtsbezug. |
+| Kennzeichnung | unkritisch, Konstanten in `mhvp.ai.knowledge` und `mhvp.communication.suggest`; Änderung ohne Migration möglich |
+| Betroffene Bereiche | Kontext-Chat (answer_question), Mail-Vorbereitung, KI-Vorschlag je Mail |
+| Überprüfung spätestens bei Meilenstein | nach den ersten Auswertungen der Rückmeldungen (hilfreich / nicht hilfreich) mit echten Daten |
+| Datum | 29.09.2026 |
