@@ -42,6 +42,20 @@ describe("KnowledgeBase", () => {
     expect(await screen.findByText("deaktiviert")).toBeInTheDocument();
   });
 
+  it("activates a learned draft so it takes effect", async () => {
+    const draft = { ...playbook, id: "p2", status: "draft" as const, usage_count: 0 };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ ...draft, status: "active" }));
+    renderIntl(<KnowledgeBase initialPlaybooks={[draft]} initialExamples={examples} canManage={true} />);
+    expect(screen.getByText("Entwurf")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Freigeben"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(url).toBe("/api/bff/mail/playbooks/p2");
+    expect(JSON.parse(String(init.body))).toEqual({ status: "active" });
+    expect(await screen.findByText("aktiv")).toBeInTheDocument();
+    expect(screen.queryByText("Freigeben")).not.toBeInTheDocument();
+  });
+
   it("shows learning examples read only and filters by task", async () => {
     const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({ data: [], meta: { page: 1, per_page: 50, total: 0 } }));
     renderIntl(<KnowledgeBase initialPlaybooks={[]} initialExamples={examples} canManage={false} />);

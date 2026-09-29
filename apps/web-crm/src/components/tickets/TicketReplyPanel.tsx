@@ -189,6 +189,11 @@ export function TicketReplyPanel({
     const text = p.reply_template ?? "";
     setBody((prev) => (prev.trim() ? `${prev.trimEnd()}\n\n${text}` : text));
     setSent(null);
+    // Nutzung zählen (Betreibermeldung 29.09.2026: Zähler blieb im Ticket bei 0); ein Fehler
+    // hindert das Einfügen nicht.
+    void bff<ReplyPlaybook>(`/api/bff/mail/playbooks/${p.id}/use`, { method: "POST" }).then((res) => {
+      if (res.ok) setPlaybooks((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...res.data } : x)));
+    });
   }
 
   async function ratePlaybook(p: ReplyPlaybook, helpful: boolean) {

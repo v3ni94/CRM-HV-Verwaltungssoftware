@@ -91,8 +91,11 @@ automatisch geschrieben oder versendet, das Vier-Augen-Prinzip beim Versand blei
 * Endpunkte (`/mail`): `POST /messages/{id}/suggest` (Vorschlag neu berechnen), `GET/POST
   /playbooks`, `PATCH/DELETE /playbooks/{id}` (`DELETE` erfordert `tenant_settings:update`),
   `POST /messages/{id}/apply-playbook` (Antwortentwurf aus Playbook-Vorlage oder, ohne
-  Vorlage, aus `suggestion.reply_draft`; erhöht `usage_count`). Platzhalter der Antwortvorlage:
-  `{anrede}`, `{ticket}`, `{objekt}`.
+  Vorlage, aus `suggestion.reply_draft`; erhöht `usage_count`), `POST /playbooks/{id}/use`
+  (zählt eine Nutzung außerhalb von apply-playbook, etwa das Einfügen in die Ticketantwort;
+  nur `usage_count` und `last_used_at`). Gelernte Playbooks entstehen als Entwurf und wirken
+  erst nach Freigabe (Status `active`) in Ticketantwort, Mailvorschlag und Telefonassistent.
+  Platzhalter der Antwortvorlage: `{anrede}`, `{ticket}`, `{objekt}`.
 * Tests: `apps/api/tests/integration/test_m20_suggest.py`, Unit-Test für den
   Schlagwort-Score in `apps/api/tests/unit/test_m20_suggest.py`.
 * Frontend: Karte „KI-Vorschlag“ in `MailDetail` (`SuggestionCard.tsx`), Seite

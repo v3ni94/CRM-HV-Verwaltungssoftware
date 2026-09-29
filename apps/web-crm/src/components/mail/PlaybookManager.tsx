@@ -131,6 +131,7 @@ export function PlaybookManager({
   const [editing, setEditing] = useState<string | "new" | null>(null);
   const [form, setForm] = useState<Form>(EMPTY);
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const startNew = () => {
     setEditing("new");
@@ -161,13 +162,19 @@ export function PlaybookManager({
   };
 
   const activate = async (p: Playbook) => {
+    setActionError(null);
+    setBusy(true);
     const res = await bff<Playbook>(`/api/bff/mail/playbooks/${p.id}`, { method: "PATCH", body: JSON.stringify({ status: "active" }) });
+    setBusy(false);
     if (res.ok) setItems(items.map((x) => (x.id === p.id ? res.data : x)));
+    else setActionError(res.message);
   };
 
   const remove = async (p: Playbook) => {
+    setActionError(null);
     const res = await bff<null>(`/api/bff/mail/playbooks/${p.id}`, { method: "DELETE" });
     if (res.ok) setItems(items.filter((x) => x.id !== p.id));
+    else setActionError(res.message);
   };
 
   return (
@@ -191,6 +198,12 @@ export function PlaybookManager({
         </section>
       ) : null}
 
+      {actionError ? (
+        <p role="alert" className={ui.alert}>
+          {actionError}
+        </p>
+      ) : null}
+
       {items.length === 0 ? (
         <p className="text-sm text-muted">{t("empty")}</p>
       ) : (
@@ -211,7 +224,7 @@ export function PlaybookManager({
                     {t("save")}
                   </button>
                   {p.status === "draft" ? (
-                    <button type="button" className={ui.primary} onClick={() => void activate(p)}>
+                    <button type="button" className={ui.primary} disabled={busy} onClick={() => void activate(p)}>
                       {t("activate")}
                     </button>
                   ) : null}

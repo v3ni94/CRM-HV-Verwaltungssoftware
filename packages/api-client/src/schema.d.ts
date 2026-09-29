@@ -12098,6 +12098,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/playbooks/{playbook_id}/use": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Playbook-Nutzung zählen
+         * @description Counts a use of the playbook outside ``apply-playbook`` (reply text inserted in the ticket
+         *     reply, operator report 29.09.2026: the counter stayed at 0 because the ticket path inserted
+         *     the text in the browser only). Counter and ``last_used_at`` only, no content change.
+         */
+        post: operations["playbook_use_api_v1_mail_playbooks__playbook_id__use_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/signature/preview": {
         parameters: {
             query?: never;
@@ -63520,6 +63542,39 @@ export interface operations {
                 "application/json": components["schemas"]["FeedbackIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    playbook_use_api_v1_mail_playbooks__playbook_id__use_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                playbook_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {

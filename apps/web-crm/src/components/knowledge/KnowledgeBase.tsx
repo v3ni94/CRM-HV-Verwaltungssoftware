@@ -80,17 +80,21 @@ export function KnowledgeBase({
     setExamples((prev) => (page > 1 ? { data: [...prev.data, ...res.data.data], meta: res.data.meta } : res.data));
   }
 
-  async function deactivate(id: string) {
+  async function setStatus(id: string, status: "active" | "archived") {
     setBusy(true);
     setError(null);
     const res = await bff<PlaybookRow>(`/api/bff/mail/playbooks/${id}`, {
       method: "PATCH",
-      body: JSON.stringify({ status: "archived" }),
+      body: JSON.stringify({ status }),
     });
     setBusy(false);
     if (!res.ok) return setError(res.message);
-    setPlaybooks((prev) => prev.map((p) => (p.id === id ? { ...p, status: "archived" } : p)));
+    setPlaybooks((prev) => prev.map((p) => (p.id === id ? { ...p, status } : p)));
   }
+  const deactivate = (id: string) => setStatus(id, "archived");
+  /** Gelernte Playbooks entstehen als Entwurf und wirken erst nach der Freigabe (Ticketantwort,
+   *  Mailvorschlag, Telefonassistent); die Freigabe ist hier und unter /mail/playbooks möglich. */
+  const activate = (id: string) => setStatus(id, "active");
 
   const hasMore = examples.data.length < examples.meta.total;
 
@@ -154,6 +158,11 @@ export function KnowledgeBase({
                     {canManage ? (
                       <td>
                         <div className="flex gap-2">
+                          {p.status !== "active" ? (
+                            <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void activate(p.id)}>
+                              {t("playbooks.activate")}
+                            </button>
+                          ) : null}
                           {p.status !== "archived" ? (
                             <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void deactivate(p.id)}>
                               {t("playbooks.deactivate")}

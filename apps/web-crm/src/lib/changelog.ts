@@ -17,6 +17,15 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.45.2",
+    date: "29.09.2026",
+    title: "Korrektur Playbooks, Nutzungszähler und Freigabe",
+    changes: [
+      "Playbooks, Zähler: Das Einfügen einer Playbook Antwort im Ticket zählt jetzt als Nutzung (neuer Endpunkt POST /mail/playbooks/{id}/use); zuvor stieg der Zähler nur beim Antwortentwurf aus der Mail, in der Wissensdatenbank und im Ticket stand daher überall 0x verwendet.",
+      "Playbooks, Freigabe: Gelernte Playbooks entstehen als Entwurf und wirken erst nach der Freigabe. Die Schaltfläche Freigeben steht jetzt auch in der Wissensdatenbank; unter Mail, Playbooks zeigt sie einen Fehler statt stumm zu bleiben, und Löschen meldet Fehler ebenfalls.",
+    ],
+  },
+  {
     version: "1.45.1",
     date: "29.09.2026",
     title: "Korrektur Gmail Abruf, Volltextindex",

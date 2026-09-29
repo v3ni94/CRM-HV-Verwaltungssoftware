@@ -153,6 +153,7 @@ describe("TicketReplyPanel playbooks", () => {
       if (url.includes("/reply-context")) return jsonResponse(context);
       if (url.includes("/mail/playbooks?status=active")) return jsonResponse(playbooks);
       if (url.includes("/mail/playbooks/pb-1/feedback")) return jsonResponse({ ...playbooks[0], helpful_count: 1 });
+      if (url.includes("/mail/playbooks/pb-1/use")) return jsonResponse({ ...playbooks[0], usage_count: 4 });
       return jsonResponse({ title: "unerwartet" }, 500);
     });
     return calls;
@@ -173,7 +174,10 @@ describe("TicketReplyPanel playbooks", () => {
     expect(screen.getByLabelText("Text")).toHaveValue("Vielen Dank für die Schadenmeldung.");
     await user.click(within(rows[0]!).getByRole("button", { name: "Einfügen" }));
     expect(screen.getByLabelText("Text")).toHaveValue("Vielen Dank für die Schadenmeldung.\n\nVielen Dank für die Schadenmeldung.");
-    expect(calls.filter((c) => c.init?.method === "POST")).toHaveLength(0);
+    // Each insert counts as a use on the server (operator 29.09.2026: counter stayed at 0).
+    await waitFor(() => expect(calls.filter((c) => c.url.includes("/mail/playbooks/pb-1/use") && c.init?.method === "POST")).toHaveLength(2));
+    expect(calls.filter((c) => c.init?.method === "POST")).toHaveLength(2);
+    await waitFor(() => expect(rows[0]).toHaveTextContent("4 Nutzungen"));
 
     await user.click(within(rows[0]!).getByRole("button", { name: "passt" }));
     await waitFor(() => expect(screen.getByText("Rückmeldung gespeichert.")).toBeInTheDocument());

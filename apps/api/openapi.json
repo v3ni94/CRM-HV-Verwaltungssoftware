@@ -96003,6 +96003,52 @@
         ]
       }
     },
+    "/api/v1/mail/playbooks/{playbook_id}/use": {
+      "post": {
+        "description": "Counts a use of the playbook outside ``apply-playbook`` (reply text inserted in the ticket\nreply, operator report 29.09.2026: the counter stayed at 0 because the ticket path inserted\nthe text in the browser only). Counter and ``last_used_at`` only, no content change.",
+        "operationId": "playbook_use_api_v1_mail_playbooks__playbook_id__use_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "playbook_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Playbook Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Playbook Use Api V1 Mail Playbooks  Playbook Id  Use Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Playbook-Nutzung zählen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/signature/preview": {
       "get": {
         "operationId": "preview_signature_api_v1_mail_signature_preview_get",

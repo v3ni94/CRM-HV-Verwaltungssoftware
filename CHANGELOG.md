@@ -5,6 +5,11 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.45.2 (29.09.2026) Korrektur Playbooks, Nutzungszähler und Freigabe
+
+- Playbooks, Zähler: Das Einfügen einer Playbook Antwort im Ticket zählt jetzt als Nutzung (neuer Endpunkt POST /mail/playbooks/{id}/use); zuvor stieg der Zähler nur beim Antwortentwurf aus der Mail, in der Wissensdatenbank und im Ticket stand daher überall 0x verwendet.
+- Playbooks, Freigabe: Gelernte Playbooks entstehen als Entwurf und wirken erst nach der Freigabe. Die Schaltfläche Freigeben steht jetzt auch in der Wissensdatenbank; unter Mail, Playbooks zeigt sie einen Fehler statt stumm zu bleiben, und Löschen meldet Fehler ebenfalls.
+
 ## 1.45.1 (29.09.2026) Korrektur Gmail Abruf, Volltextindex
 
 - Dokumente, Volltext: Der extrahierte Text eines Dokuments wird nun auch nach UTF-8 Bytes begrenzt (900.000 Bytes), damit der erzeugte Suchvektor unter der PostgreSQL Grenze von 1.048.575 Bytes bleibt. Zuvor scheiterte der Gmail Abruf an einem großen Anhang mit der Meldung string is too long for tsvector, und die betroffene Mail blieb ohne Ablage.

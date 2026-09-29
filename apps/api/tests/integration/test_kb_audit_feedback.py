@@ -235,6 +235,17 @@ def test_feedback_on_entry_run_and_playbook(
         ).status_code
         == 404
     )
+    # Use outside apply-playbook (ticket reply insert, operator 29.09.2026): counter and
+    # last_used_at only; other tenant: not found.
+    used = _ok(client.post(f"{M}/mail/playbooks/{playbook['id']}/use", headers=author))
+    assert used["usage_count"] == 1
+    assert used["last_used_at"] is not None
+    assert (used["helpful_count"], used["unhelpful_count"]) == (0, 1)
+    assert (
+        _ok(client.post(f"{M}/mail/playbooks/{playbook['id']}/use", headers=author))["usage_count"]
+        == 2
+    )
+    assert client.post(f"{M}/mail/playbooks/{playbook['id']}/use", headers=other).status_code == 404
 
 
 def test_stale_hint_for_old_approved_entries(

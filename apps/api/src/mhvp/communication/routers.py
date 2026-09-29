@@ -2740,6 +2740,24 @@ async def playbook_feedback(
         return out
 
 
+@router.post("/playbooks/{playbook_id}/use", summary="Playbook-Nutzung zählen")
+async def playbook_use(
+    playbook_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Counts a use of the playbook outside ``apply-playbook`` (reply text inserted in the ticket
+    reply, operator report 29.09.2026: the counter stayed at 0 because the ticket path inserted
+    the text in the browser only). Counter and ``last_used_at`` only, no content change."""
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Playbook, playbook_id, with_for_update=True)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.usage_count += 1
+        row.last_used_at = datetime.now(UTC)
+        await session.flush()
+        await session.refresh(row)
+        return _playbook_out(row)
+
+
 @router.delete("/playbooks/{playbook_id}", status_code=204, summary="Playbook löschen")
 async def delete_playbook(
     playbook_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(PLAYBOOK_ADMIN)

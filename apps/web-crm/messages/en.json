@@ -8903,6 +8903,7 @@
       "actions": "Actions",
       "never": "never",
       "deactivate": "Deactivate",
+      "activate": "Activate",
       "edit": "Edit",
       "statuses": {
         "draft": "Draft",
