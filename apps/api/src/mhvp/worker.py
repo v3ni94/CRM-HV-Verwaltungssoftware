@@ -265,6 +265,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.banking.levels_refresh",
                 "schedule": crontab(hour=4, minute=10),
             },
+            # Lernspeicher (Betreiberentscheidung M12-06, 24 Monate): nächtliche
+            # Anonymisierung statt Löschung (Guard-Trigger, B03), OPEN_QUESTIONS M12-09.
+            "banking-learning-retention": {
+                "task": "mhvp.banking.learning_retention",
+                "schedule": crontab(hour=3, minute=50),
+            },
             "sla-check-clocks": {
                 "task": "mhvp.sla.check_clocks",
                 "schedule": 300.0,
