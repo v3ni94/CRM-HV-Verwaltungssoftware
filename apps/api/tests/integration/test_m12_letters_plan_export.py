@@ -276,7 +276,7 @@ def test_nachforderungsschreiben_pdf_with_dispatch_and_ticket(
     assert "Fehlende Unterlagen zur Objektakte 811" in text
     assert "1. Teilungserklärung" in text
     assert "Sehr geehrte Frau" in text
-    assert COMPANY["name"] in text
+    assert str(COMPANY["name"]) in text
     assert "29.09.2026" in text
     document = _ok(client.get(f"/api/v1/documents/{out['document_id']}", headers=h))
     links = {(x["entity_type"], x["entity_id"]) for x in document["links"]}
@@ -420,7 +420,7 @@ def test_rent_increase_letter_pdf_records_dispatch_without_sending(
     assert "660,00 EUR" in text
     assert "Mietspiegel Test 2026" in text
     assert "ENTWURF" in text
-    assert COMPANY["name"] in text
+    assert str(COMPANY["name"]) in text
     # The case did not move: the process step send stays behind G3.
     assert _ok(client.get(f"{LET}/rent-increases/{case['id']}", headers=h))["status"] == "draft"
     document = _ok(client.get(f"/api/v1/documents/{out['document_id']}", headers=h))
@@ -573,7 +573,7 @@ def test_plan_apply_preview_confirmation_second_person_idempotent(
     assert again["payments_created"] == 0
     assert again["already_applied"] is True
     payments = _ok(client.get(f"/api/v1/contracts/{c1['id']}/payments", headers=h))
-    by_type = {}
+    by_type: dict[str, list[dict[str, Any]]] = {}
     for p in payments:
         by_type.setdefault(p["payment_type_code"], []).append(p)
     old, new = sorted(by_type["hoa_fee"], key=lambda p: p["valid_from"])
