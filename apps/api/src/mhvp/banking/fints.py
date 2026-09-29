@@ -198,7 +198,24 @@ def problem_for_exception(exc: BaseException) -> ProblemError:
         if match:
             return problem_for_code(match.group(1), message)
         return ProblemError(ErrorCodes.FINTS_BANK_REJECTED, detail=message)
-    return ProblemError(ErrorCodes.FINTS_BANK_REJECTED, detail=f"{name}: {exc}"[:500])
+    message = str(exc)
+    if "could not fetch BPD" in message:
+        # Dialog initialisation failed before any bank return code: either the FinTS URL of
+        # the institute list is wrong for this BLZ, or the bank's system does not yet know
+        # the product registration (the DK forwards new ids to the banks with a delay of
+        # several working days).
+        return ProblemError(
+            ErrorCodes.FINTS_BANK_REJECTED,
+            detail=(
+                "Die Bank hat den Dialog nicht eröffnet (keine Bankparameter). Mögliche "
+                "Ursachen: FinTS-Adresse passt nicht zur Bankleitzahl, oder die "
+                "FinTS-Produktregistrierung ist bei der Bank noch nicht freigeschaltet "
+                "(die Deutsche Kreditwirtschaft verteilt neue Nummern erst nach mehreren "
+                "Werktagen). Bitte später erneut versuchen und die Adresse mit der Angabe "
+                "der Bank vergleichen."
+            ),
+        )
+    return ProblemError(ErrorCodes.FINTS_BANK_REJECTED, detail=f"{name}: {message}"[:500])
 
 
 def problem_code(error: ErrorCode) -> str:

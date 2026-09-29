@@ -108,7 +108,7 @@ Prüfhinweis, D05, `services.import_finapi_transactions`).
 
 `apps/api/src/mhvp/banking/data/fints_institutes.txt`, je Zeile
 `BLZ=Name|Ort|BIC|Prüfziffer|HBCI-Domain|FinTS-URL|HBCI-Version|FinTS-Version|`. Die Liste
-wird extern gepflegt (Stand der Übernahme: 27.09.2026, 4062 Institute, davon 2721 mit
+wird extern gepflegt (Stand der Übernahme: 29.09.2026, Liste der Deutschen Kreditwirtschaft vom 20.08.2026 (Registrierungsmail vom 28.09.2026), 4062 Institute (davon 3548 aus der Liste 2026 aktualisiert), davon 3537 mit
 FinTS-URL). Die Aktualisierung ist eine Betriebsaufgabe: neue Datei einspielen, Tests
 laufen lassen, ausliefern. Die Bundesbank veröffentlicht die BLZ-Datei quartalsweise; die
 FinTS-URLs stammen aus der Liste der DK bzw. der jeweiligen Bank. Ein Institut ohne
