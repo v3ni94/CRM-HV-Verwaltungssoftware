@@ -112,6 +112,7 @@ const TABLE: { path: string; area: ChatArea; subArea: string | null; entityType:
   { path: "/importe/abgleich", area: "imports", subArea: "reconcile", entityType: null },
   { path: "/importe/immoware24", area: "imports", subArea: "immoware", entityType: null },
   { path: "/importe/immoware24-listen", area: "imports", subArea: "immowareLists", entityType: null },
+  { path: "/importe/migration", area: "imports", subArea: "migration", entityType: null },
   { path: "/importe/vollimport", area: "imports", subArea: "full", entityType: null },
   { path: "/immoware", area: "immoware", subArea: null, entityType: null },
   { path: "/immoware/lernphase", area: "immoware", subArea: "learning", entityType: null },

@@ -87,6 +87,7 @@ from mhvp.hoa.package import router as hoa_package_router
 from mhvp.hoa.routers import router as hoa_router
 from mhvp.immoware.routers import router as immoware_router
 from mhvp.imports.list_import_routers import router as list_imports_router
+from mhvp.imports.migration_routers import router as migration_router
 from mhvp.imports.reconciliation_routers import router as reconciliation_router
 from mhvp.imports.routers import router as imports_router
 from mhvp.imports.vollimport_routers import router as vollimport_router
@@ -256,6 +257,7 @@ def create_app(
     app.include_router(list_imports_router, prefix=API_PREFIX)
     app.include_router(reconciliation_router, prefix=API_PREFIX)
     app.include_router(vollimport_router, prefix=API_PREFIX)
+    app.include_router(migration_router, prefix=API_PREFIX)
     app.include_router(ai_router, prefix=API_PREFIX)
     app.include_router(workspace_router, prefix=API_PREFIX)
     app.include_router(deadline_router, prefix=API_PREFIX)

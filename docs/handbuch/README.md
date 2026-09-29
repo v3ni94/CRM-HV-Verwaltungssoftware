@@ -63,6 +63,7 @@ Datenübernahme und Importe
 - [Kontakte aus den Immoware24-Kontaktlisten](import-kontakte.md)
 - [Eigentümer und Mieter den Einheiten zuordnen (Listenimport, Zuordnung)](import-zuordnung.md)
 - [Abgleichbericht im Parallelbetrieb](import-abgleichbericht.md)
+- [Migration von Immoware24 ohne Parallelbetrieb (Migrationsjournal, Eröffnungssalden, Nulldifferenz, Umstellung)](migration-immoware.md)
 
 System
 

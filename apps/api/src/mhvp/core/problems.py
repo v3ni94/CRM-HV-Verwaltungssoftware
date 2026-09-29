@@ -1111,6 +1111,27 @@ class ErrorCodes:
         "Diese IBAN ist beim Kontakt bereits hinterlegt",
         "An account with the same IBAN fingerprint already exists on this contact.",
     )
+    MIG_CUTOFF_MISSING = ErrorCode(
+        "MHVP-MIG-0001",
+        409,
+        "Migrationsstichtag des Buchungskreises fehlt",
+        "Opening balances are posted only into a ledger whose migration cut off date is set "
+        "and equals the cut off date of the balances (6.9.10, M8-03).",
+    )
+    MIG_STATE = ErrorCode(
+        "MHVP-MIG-0002",
+        409,
+        "Migrationsschritt nicht im passenden Zustand",
+        "The opening balances or the switch request are not in the state the action needs "
+        "(draft, released, posted; requested, approved, rejected).",
+    )
+    MIG_NOT_RECONCILED = ErrorCode(
+        "MHVP-MIG-0003",
+        409,
+        "Abgleich ohne Nulldifferenz",
+        "The leading system switches only after a reconciliation report of the property with "
+        "zero difference that is newer than the posted opening balances (6.9.10).",
+    )
 
 
 def _build_registry() -> dict[str, ErrorCode]:
