@@ -10,6 +10,14 @@ M12 S6, rule M12-05, B03).
 * ``correct`` is the "Korrigieren" of the operator: exactly B03, a reversal with reason code
   and free text plus one new posting in the same transaction, never an edit of the posted
   entry. It works for automatic and manual postings alike.
+* Exclusion (rule M12-05, plan S6): while an item is open the posted entry carries
+  ``journal_entry.auto_review_pending``; dunning, settlement proposal and direct debit runs
+  leave the affected debtor accounts alone. Closing the item (ok, corrected, cancelled)
+  clears the flag.
+* Returns (``register_returns``): a returned payment (Rücklastschrift by transaction code or
+  purpose) of an automatically posted transaction opens an item of kind ``return`` on that
+  posting, flags the entry again and counts a contradiction of the rule (reason code
+  ``bank_return``). The reversal itself stays a decision of a person (B03).
 """
 
 from __future__ import annotations
@@ -31,12 +39,14 @@ from mhvp.accounting.models import (
     LedgerAccount,
     ReversalReason,
 )
-from mhvp.banking import decisions, matching, proposals
+from mhvp.banking import decisions, holidays, learning, matching, proposals
 from mhvp.banking import event_types as ev
+from mhvp.banking import posting_proposal as pp
 from mhvp.banking.models import (
     AutoPostingReview,
     BankTransaction,
     PostingDecision,
+    PostingDecisionStatus,
     ReviewKind,
     ReviewStatus,
     TransactionStatus,
@@ -45,14 +55,14 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 SAMPLE_DUE_DAYS = 7
+# A return is matched to an automatic posting of the last 60 days (product protection).
+RETURN_WINDOW_DAYS = 60
 
 
 def next_working_day(day: date) -> date:
-    """Next Monday to Friday after ``day`` (no holiday calendar, assumption A-088)."""
-    out = day + timedelta(days=1)
-    while out.weekday() >= 5:
-        out += timedelta(days=1)
-    return out
+    """Next Monday to Friday after ``day`` that is no nationwide or NRW holiday
+    (``holidays``, assumption A-088)."""
+    return holidays.next_working_day(day)
 
 
 def due_for(kind: str, today: date) -> date:
@@ -102,6 +112,7 @@ async def item_out(session: AsyncSession, row: AutoPostingReview, *, today: date
         "final": decision.final if decision else None,
         "verifier_fingerprint": decision.verifier_fingerprint if decision else None,
         "reversed": bool(entry and entry.reversed_by_id),
+        "return_transaction_id": row.return_transaction_id,
     }
 
 
@@ -143,6 +154,7 @@ async def decide(
             detail="Korrigiert oder aufgehoben setzt einen Storno voraus (Korrigieren nutzen).",
         )
     _close(row, outcome, note, user_id)
+    await _release_entry(session, row)
     await emit(
         session,
         tenant_id=tenant_id,
@@ -190,8 +202,148 @@ async def close_for_entry(
     )
     for row in rows:
         _close(row, outcome, note, user_id)
+        await _release_entry(session, row)
     await session.flush()
     return rows
+
+
+async def _release_entry(session: AsyncSession, row: AutoPostingReview) -> None:
+    """Clears ``auto_review_pending`` when no open item is left on the entry."""
+    if row.journal_entry_id is None:
+        return
+    still_open = await session.scalar(
+        select(AutoPostingReview.id).where(
+            AutoPostingReview.journal_entry_id == row.journal_entry_id,
+            AutoPostingReview.status == ReviewStatus.OPEN.value,
+            AutoPostingReview.id != row.id,
+        )
+    )
+    if still_open is not None:
+        return
+    entry = await session.get(JournalEntry, row.journal_entry_id)
+    if entry is not None and entry.auto_review_pending:
+        entry.auto_review_pending = False
+        await session.flush()
+
+
+def is_return(tx: BankTransaction) -> bool:
+    return pp._is_return({"transaction_code": tx.transaction_code, "purpose": tx.purpose})
+
+
+async def _auto_decision_for(
+    session: AsyncSession, original: BankTransaction
+) -> PostingDecision | None:
+    if original.journal_entry_id is None:
+        return None
+    row = await session.scalar(
+        select(PostingDecision)
+        .where(
+            PostingDecision.bank_transaction_id == original.id,
+            PostingDecision.status == PostingDecisionStatus.AUTO_POSTED.value,
+            PostingDecision.journal_entry_id == original.journal_entry_id,
+        )
+        .order_by(PostingDecision.round.desc())
+        .limit(1)
+    )
+    return row if isinstance(row, PostingDecision) else None
+
+
+async def register_returns(
+    session: AsyncSession, *, tenant_id: uuid.UUID, today: date
+) -> list[AutoPostingReview]:
+    """Open transactions that are returns of an automatically posted payment (same bank
+    account, opposite amount, same payer fingerprint, within ``RETURN_WINDOW_DAYS``) get a
+    review item of kind ``return`` on the original posting: the entry is flagged for the
+    exclusion from dunning, settlement proposal and direct debit, the rule of the posting
+    counts a contradiction (``bank_return``). Idempotent per return transaction; the runner
+    never posts the return itself (class ``excluded``)."""
+    created: list[AutoPostingReview] = []
+    candidates = list(
+        await session.scalars(
+            select(BankTransaction)
+            .where(BankTransaction.status == TransactionStatus.NEW)
+            .order_by(BankTransaction.booking_date, BankTransaction.created_at)
+        )
+    )
+    for ret in candidates:
+        if not is_return(ret):
+            continue
+        exists = await session.scalar(
+            select(AutoPostingReview.id).where(AutoPostingReview.return_transaction_id == ret.id)
+        )
+        if exists is not None:
+            continue
+        query = (
+            select(BankTransaction)
+            .where(
+                BankTransaction.id != ret.id,
+                BankTransaction.property_bank_account_id == ret.property_bank_account_id,
+                BankTransaction.legal_entity_id == ret.legal_entity_id,
+                BankTransaction.status == TransactionStatus.BOOKED,
+                BankTransaction.amount == -ret.amount,
+                BankTransaction.booking_date <= ret.booking_date,
+                BankTransaction.booking_date
+                >= ret.booking_date - timedelta(days=RETURN_WINDOW_DAYS),
+            )
+            .order_by(BankTransaction.booking_date.desc(), BankTransaction.created_at.desc())
+        )
+        if ret.counterpart_iban_fingerprint:
+            query = query.where(
+                BankTransaction.counterpart_iban_fingerprint == ret.counterpart_iban_fingerprint
+            )
+        original: BankTransaction | None = None
+        decision: PostingDecision | None = None
+        for candidate in await session.scalars(query):
+            decision = await _auto_decision_for(session, candidate)
+            if decision is not None:
+                original = candidate
+                break
+        if original is None or decision is None:
+            continue
+        entry = await session.get(JournalEntry, original.journal_entry_id)
+        if entry is None or entry.reversed_by_id is not None:
+            continue
+        item = AutoPostingReview(
+            tenant_id=tenant_id,
+            posting_decision_id=decision.id,
+            bank_transaction_id=original.id,
+            legal_entity_id=original.legal_entity_id,
+            journal_entry_id=entry.id,
+            rule_id=original.matched_rule_id,
+            case_kind=decision.case_kind,
+            kind=ReviewKind.RETURN.value,
+            due_on=next_working_day(today),
+            return_transaction_id=ret.id,
+        )
+        session.add(item)
+        entry.auto_review_pending = True
+        await session.flush()
+        await learning.on_automation_error(
+            session,
+            original.matched_rule_id,
+            tenant_id=tenant_id,
+            reason_code="bank_return",
+            user_id=None,
+        )
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type=ev.AUTO_POSTING_RETURN,
+            entity_type="auto_posting_review",
+            entity_id=item.id,
+            actor_user_id=None,
+            payload={
+                "bank_transaction_id": str(original.id),
+                "return_transaction_id": str(ret.id),
+                "journal_entry_id": str(entry.id),
+                "decision_id": str(decision.id),
+                "rule_id": str(original.matched_rule_id) if original.matched_rule_id else None,
+                "amount": str(ret.amount),
+                "due_on": item.due_on.isoformat(),
+            },
+        )
+        created.append(item)
+    return created
 
 
 @dataclass
