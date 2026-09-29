@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
 import { STATUSES, PRIORITIES } from "@/components/tickets/TicketForms";
+import { PROCESS_CODES } from "@/components/tickets/TicketProcessBadge";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -28,6 +29,7 @@ const KEYS = [
   "status",
   "priority",
   "category",
+  "process_code",
   "team_id",
   "created_from",
   "created_to",
@@ -367,6 +369,22 @@ export function TicketFilters({ meUserId }: { meUserId: string | null }) {
               onChange={(e) => set("category", e.target.value)}
               data-testid="filter-category"
             />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("filters.process")}</span>
+            <select
+              className={ui.input}
+              value={values.process_code}
+              onChange={(e) => set("process_code", e.target.value)}
+              data-testid="filter-process"
+            >
+              <option value="">{t("filters.processAll")}</option>
+              {PROCESS_CODES.map((code) => (
+                <option key={code} value={code}>
+                  {t(`process.codes.${code}`)}
+                </option>
+              ))}
+            </select>
           </label>
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("filters.createdFrom")}</span>

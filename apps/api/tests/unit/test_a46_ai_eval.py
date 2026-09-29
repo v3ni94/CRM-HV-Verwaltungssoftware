@@ -65,6 +65,10 @@ def test_merge_suggestion_falls_back_only_for_empty_classification_fields() -> N
         "property_number": "104",
         "contact_name": None,
         "reply_draft": None,
+        # Vorgangsart des Prozesskatalogs (Regel M19-11), Schlüsselwort im Betreff und Text.
+        "process_code": "reparaturanfrage",
+        "process_confidence": 0.9,
+        "process_reason": "Schlüsselwörter: heizung",
     }
     merged = merge_suggestion(
         {

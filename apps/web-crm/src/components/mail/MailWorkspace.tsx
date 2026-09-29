@@ -63,6 +63,10 @@ export type Message = {
     playbook_score?: number | null;
     reason?: string;
     preparation?: Preparation;
+    // Vorgangsart des Prozesskatalogs (Regel M19-11) mit Sicherheit und Grund.
+    process_code?: string | null;
+    process_confidence?: number | null;
+    process_reason?: string | null;
   };
   suggestion_status: "none" | "pending" | "ready" | "failed" | "skipped";
   // Gmail archive tracking (operator 27.09.2026): pending, archived, skipped, failed,

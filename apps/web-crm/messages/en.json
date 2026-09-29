@@ -3108,7 +3108,9 @@
       "reset": "Reset",
       "showClosed": "Show completed",
       "sortCreated": "By arrival",
-      "sortHint": "Default: longest without reaction first, completed last"
+      "sortHint": "Default: longest without reaction first, completed last",
+      "process": "Process type",
+      "processAll": "All process types"
     },
     "reply": {
       "title": "Reply",
@@ -3323,7 +3325,57 @@
       "deleted": "mail permanently deleted in Gmail",
       "not_current": "ticket is not the end of its chain"
     },
-    "systemAuthor": "System"
+    "systemAuthor": "System",
+    "process": {
+      "title": "Process flow",
+      "codes": {
+        "kuendigung": "Termination",
+        "vermietung": "Letting",
+        "versicherungsschaden": "Insurance claim",
+        "reparaturanfrage": "Repair request",
+        "beschwerde": "Complaint",
+        "buchhaltung": "Accounting",
+        "uebergabe": "Handover",
+        "mieterhoehung": "Rent increase",
+        "gericht": "Court",
+        "objektuebernahme": "Takeover of new property",
+        "objektabgabe": "Handing over old property",
+        "kaution": "Deposit"
+      },
+      "responsibleRole": "Responsible role",
+      "requiredLinks": "Links",
+      "links": {
+        "contact": "Contact",
+        "unit": "Unit",
+        "property": "Property",
+        "contract": "Contract"
+      },
+      "linkPresent": "present",
+      "linkMissing": "missing",
+      "deadlineProposals": "Deadline proposals",
+      "deadlineHint": "Proposal only: deadline type from the catalogue, date and duration are entered by the member (due date on the ticket or calendar). No deadline is created automatically.",
+      "documents": "Documents to collect",
+      "choose": "Process type",
+      "none": "No process type assigned.",
+      "apply": "Apply flow",
+      "roles": {
+        "tenant_admin": "Tenant administrator",
+        "administrator": "Administrator",
+        "standard": "Standard",
+        "read_only": "Read only",
+        "read_only_master_data": "Read only master data",
+        "clerk_no_delete": "Clerk without delete",
+        "clerk_no_accounting": "Clerk without accounting",
+        "accountant_no_banking": "Accountant without online banking",
+        "accountant_banking": "Accountant with online banking",
+        "caretaker": "Caretaker",
+        "technical_clerk": "Technical clerk",
+        "support": "Support",
+        "insurance_broker": "Insurance broker",
+        "portal_user": "Portal access",
+        "tax_advisor": "Tax advisor"
+      }
+    }
   },
   "Automation": {
     "title": "Automation",
@@ -3660,7 +3712,20 @@
     "activate": "Activate",
     "deactivate": "Deactivate",
     "activeState": "active",
-    "inactiveState": "inactive"
+    "inactiveState": "inactive",
+    "processCode": "Process type (catalogue)",
+    "processNone": "No process type",
+    "responsibleRole": "Responsible role",
+    "roleNone": "No role",
+    "requiredLinks": "Required links",
+    "deadlineTypes": "Linked deadline types",
+    "deadlineTypesHint": "Only the deadline type is proposed; the duration is entered by the member on the ticket.",
+    "documentKinds": "Documents to collect",
+    "newDocumentKind": "New document",
+    "seedCatalogue": "Load process catalogue",
+    "seedResult": "Catalogue loaded: {created} new, {updated} completed, {kept} unchanged.",
+    "seedHint": "Creates a template for each of the twelve process types unless one exists. Existing templates stay unchanged.",
+    "flowSummary": "Process type: {label}"
   },
   "ReplyTemplates": {
     "title": "Reply templates",
@@ -3825,7 +3890,10 @@
         "ready": "Suggestion ready",
         "failed": "Suggestion failed: {reason}",
         "skipped": "No suggestion: {reason}"
-      }
+      },
+      "process": "Process type",
+      "applyProcess": "Adopt process type",
+      "processApplied": "Flow applied to ticket {number}."
     },
     "preparation": {
       "title": "Preparation",
@@ -4820,7 +4888,7 @@
     },
     "ticketTemplates": {
       "title": "Ticket templates",
-      "description": "Checklists and additional fields for recurring processes (e.g. letting, deposit)."
+      "description": "Checklists, additional fields and process flows (process types) for recurring cases, for example termination, letting or deposit."
     },
     "immoware": {
       "title": "Immoware24 connection",

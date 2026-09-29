@@ -49,6 +49,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // KI-Vorschläge und Playbooks (M20 Übernahme aus dem Immoware Hub).
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/suggest$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-playbook$`) },
+  // Prozessflows (Regel M19-11): Vorgangsart aus der Mail übernehmen, Katalog, Flow auf Ticket.
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/apply-process$`) },
+  { method: "GET", pattern: /^tickets\/process-catalogue$/ },
+  { method: "POST", pattern: /^tickets\/process-catalogue\/seed$/ },
+  { method: "POST", pattern: new RegExp(`^tickets/${ID}/apply-process$`) },
   // Postausgang und Postdienst (M23-01): Aufträge, manuelle Erfassung, Statusabruf, Einstellungen.
   { method: "GET", pattern: /^postal\/(jobs|jobs\/summary|settings)$/ },
   { method: "GET", pattern: new RegExp(`^postal/jobs/${ID}$`) },

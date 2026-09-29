@@ -45,6 +45,54 @@ describe("TicketTemplatesAdmin", () => {
     expect(await screen.findByText("Kaution einrichten")).toBeInTheDocument();
   });
 
+  it("sends the process flow fields and loads the catalogue (M19-11)", async () => {
+    const created = {
+      id: "tpl-3",
+      category: "kaution",
+      title: "Kaution",
+      description: null,
+      checklist: [],
+      extra_fields: [],
+      default_priority: "normal",
+      sla_hours: null,
+      active: true,
+      process_code: "kaution",
+      responsible_role: "accountant_no_banking",
+      required_links: ["contract"],
+      deadline_type_codes: ["note_follow_up"],
+      document_kinds: ["Kautionsnachweis"],
+    };
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const url = String(input);
+      if (url.endsWith("/process-catalogue/seed")) return jsonResponse({ created: 12, updated: 0, kept: 0 });
+      if (url.endsWith("/tickets/templates") && !url.includes("tpl-")) return jsonResponse([created]);
+      return jsonResponse(created, 201);
+    });
+    renderIntl(<TicketTemplatesAdmin initialTemplates={[]} canManage={true} />);
+
+    await userEvent.click(screen.getByText("Prozesskatalog einspielen"));
+    expect(await screen.findByText("Katalog eingespielt: 12 neu, 0 ergänzt, 0 unverändert.")).toBeInTheDocument();
+    expect(screen.getByTestId("ticket-process-badge")).toHaveAttribute("data-process", "kaution");
+
+    await userEvent.click(screen.getByText("Bearbeiten"));
+    expect(screen.getByTestId("template-process")).toHaveValue("kaution");
+    expect(screen.getByTestId("template-role")).toHaveValue("accountant_no_banking");
+    expect(screen.getByLabelText("Vertrag")).toBeChecked();
+    expect(screen.getByLabelText("Wiedervorlage")).toBeChecked();
+    await userEvent.click(screen.getByLabelText("Einheit"));
+    await userEvent.type(screen.getByPlaceholderText("Neue Unterlage"), "Kautionsabrechnung");
+    await userEvent.click(screen.getAllByText("Hinzufügen").at(-1)!);
+    await userEvent.click(screen.getByText("Speichern"));
+    await waitFor(() => expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith("/tickets/templates/tpl-3"))).toBe(true));
+    const call = fetchMock.mock.calls.find((c) => String(c[0]).endsWith("/tickets/templates/tpl-3"));
+    const body = JSON.parse(call?.[1]?.body as string);
+    expect(body.process_code).toBe("kaution");
+    expect(body.responsible_role).toBe("accountant_no_banking");
+    expect(body.required_links).toEqual(["contract", "unit"]);
+    expect(body.deadline_type_codes).toEqual(["note_follow_up"]);
+    expect(body.document_kinds).toEqual(["Kautionsnachweis", "Kautionsabrechnung"]);
+  });
+
   it("hides management actions without manage permission", () => {
     renderIntl(
       <TicketTemplatesAdmin

@@ -49088,6 +49088,14 @@
             "title": "Checklist",
             "type": "array"
           },
+          "deadline_type_codes": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Deadline Type Codes",
+            "type": "array"
+          },
           "default_assignee_user_id": {
             "anyOf": [
               {
@@ -49128,6 +49136,14 @@
             ],
             "title": "Description"
           },
+          "document_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Document Kinds",
+            "type": "array"
+          },
           "extra_fields": {
             "items": {
               "$ref": "#/components/schemas/ExtraFieldIn"
@@ -49135,6 +49151,38 @@
             "maxItems": 50,
             "title": "Extra Fields",
             "type": "array"
+          },
+          "process_code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Code"
+          },
+          "required_links": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "title": "Required Links",
+            "type": "array"
+          },
+          "responsible_role": {
+            "anyOf": [
+              {
+                "maxLength": 63,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Role"
           },
           "sla_hours": {
             "anyOf": [
@@ -49204,6 +49252,21 @@
             ],
             "title": "Checklist"
           },
+          "deadline_type_codes": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline Type Codes"
+          },
           "default_assignee_user_id": {
             "anyOf": [
               {
@@ -49250,6 +49313,21 @@
             ],
             "title": "Description"
           },
+          "document_kinds": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 30,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Kinds"
+          },
           "extra_fields": {
             "anyOf": [
               {
@@ -49264,6 +49342,45 @@
               }
             ],
             "title": "Extra Fields"
+          },
+          "process_code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Code"
+          },
+          "required_links": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 4,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Required Links"
+          },
+          "responsible_role": {
+            "anyOf": [
+              {
+                "maxLength": 63,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Responsible Role"
           },
           "sla_hours": {
             "anyOf": [
@@ -52661,6 +52778,25 @@
         "title": "ProviderOut",
         "type": "object"
       },
+      "mhvp__communication__routers__ApplyProcessIn": {
+        "additionalProperties": false,
+        "properties": {
+          "process_code": {
+            "anyOf": [
+              {
+                "maxLength": 32,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Process Code"
+          }
+        },
+        "title": "ApplyProcessIn",
+        "type": "object"
+      },
       "mhvp__contacts__schemas__BankAccountIn": {
         "additionalProperties": false,
         "properties": {
@@ -53671,6 +53807,22 @@
           "id"
         ],
         "title": "ProviderOut",
+        "type": "object"
+      },
+      "mhvp__tickets__routers__ApplyProcessIn": {
+        "additionalProperties": false,
+        "properties": {
+          "process_code": {
+            "maxLength": 32,
+            "minLength": 2,
+            "title": "Process Code",
+            "type": "string"
+          }
+        },
+        "required": [
+          "process_code"
+        ],
+        "title": "ApplyProcessIn",
         "type": "object"
       }
     }
@@ -89258,6 +89410,62 @@
         ]
       }
     },
+    "/api/v1/mail/messages/{message_id}/apply-process": {
+      "post": {
+        "description": "Regel M19-11: übernimmt die vorgeschlagene (oder gewählte) Vorgangsart, legt bei Bedarf\ndas Ticket aus der Mail an (``create_ticket``, mit Kontakt und Objekt aus der Zuordnung) und\nwendet den Flow der Vorlage an (Kategorie, Checkliste einmalig, zuständige Rolle,\nFristvorschläge, Unterlagen). Idempotent; nichts wird abgeschlossen oder gebucht.",
+        "operationId": "apply_process_api_v1_mail_messages__message_id__apply_process_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__communication__routers__ApplyProcessIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Process Api V1 Mail Messages  Message Id  Apply Process Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorgangsart übernehmen und Prozessflow auf das Ticket anwenden",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
     "/api/v1/mail/messages/{message_id}/appointment": {
       "post": {
         "operationId": "take_appointment_api_v1_mail_messages__message_id__appointment_post",
@@ -109277,6 +109485,25 @@
             }
           },
           {
+            "description": "Vorgangsart des Prozesskatalogs (M19-11)",
+            "in": "query",
+            "name": "process_code",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Vorgangsart des Prozesskatalogs (M19-11)",
+              "title": "Process Code"
+            }
+          },
+          {
             "in": "query",
             "name": "priority",
             "required": false,
@@ -109870,6 +110097,54 @@
         ]
       }
     },
+    "/api/v1/tickets/process-catalogue": {
+      "get": {
+        "description": "Die zwölf Vorgangsarten mit Bezeichnung und Standardflow sowie je Vorgangsart die\nVorlage des Mandanten, sofern eingespielt (``template_id``).",
+        "operationId": "get_process_catalogue_api_v1_tickets_process_catalogue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Process Catalogue Api V1 Tickets Process Catalogue Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Prozesskatalog der Vorgangsarten",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/process-catalogue/seed": {
+      "post": {
+        "description": "Idempotent je Mandant: bestehende Vorlagen mit Vorgangsart bleiben unverändert.",
+        "operationId": "seed_process_catalogue_api_v1_tickets_process_catalogue_seed_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Seed Process Catalogue Api V1 Tickets Process Catalogue Seed Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Prozesskatalog als Vorlagen einspielen",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
     "/api/v1/tickets/reply-templates": {
       "get": {
         "operationId": "list_reply_templates_api_v1_tickets_reply_templates_get",
@@ -110449,6 +110724,62 @@
           }
         },
         "summary": "Status, Zuweisung, Checkliste",
+        "tags": [
+          "Tickets und Aufträge"
+        ]
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/apply-process": {
+      "post": {
+        "description": "Setzt Kategorie und Vorgangsart, ergänzt die Checkliste der Vorlage einmalig, hält\nzuständige Rolle, Verknüpfungsstatus, Fristvorschläge (nur Vorschlag) und Unterlagenliste\nim Feld ``flow`` fest. Idempotent; Status und Geld bleiben unberührt.",
+        "operationId": "apply_process_to_ticket_api_v1_tickets__ticket_id__apply_process_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ticket_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ticket Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__tickets__routers__ApplyProcessIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Process To Ticket Api V1 Tickets  Ticket Id  Apply Process Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Prozessflow auf Ticket anwenden",
         "tags": [
           "Tickets und Aufträge"
         ]

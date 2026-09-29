@@ -9,6 +9,7 @@ import { StatusChip } from "@/components/ui/StatusChip";
 import { ResolutionDialog, isClosingStatus, type Resolution } from "@/components/tickets/ResolutionDialog";
 import { ATTENTION_BORDER, type Attention } from "@/components/tickets/attention";
 import { AttentionBadge, AttentionLegend } from "@/components/tickets/TicketAttention";
+import { TicketProcessBadge } from "@/components/tickets/TicketProcessBadge";
 import { STATUSES } from "@/components/tickets/TicketForms";
 import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -24,6 +25,8 @@ type Ticket = {
   sla_breached: boolean;
   /** Working due date (spec 4.9), shown next to the attention badge; separate from the SLA. */
   due_on?: string | null;
+  /** Process category of rule M19-11, shown as a badge under the title. */
+  process_code?: string | null;
   // Traffic light (M19-09), derived on the server; the list only maps it to colours.
   attention: Attention;
   last_activity_at: string | null;
@@ -163,6 +166,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
                   <Link href={`/tickets/${tk.id}`} className="block max-w-full truncate font-medium hover:underline" title={tk.title ?? ""}>
                     {tk.title ?? ""}
                   </Link>
+                  {tk.process_code ? <TicketProcessBadge code={tk.process_code} className="mt-1 inline-block" /> : null}
                 </td>
                 <td>
                   <StatusChip domain="ticketPriority" status={tk.priority} label={t(`priorities.${tk.priority}`)} />

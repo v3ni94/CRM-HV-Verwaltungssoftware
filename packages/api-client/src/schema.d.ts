@@ -10974,6 +10974,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/mail/messages/{message_id}/apply-process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vorgangsart übernehmen und Prozessflow auf das Ticket anwenden
+         * @description Regel M19-11: übernimmt die vorgeschlagene (oder gewählte) Vorgangsart, legt bei Bedarf
+         *     das Ticket aus der Mail an (``create_ticket``, mit Kontakt und Objekt aus der Zuordnung) und
+         *     wendet den Flow der Vorlage an (Kategorie, Checkliste einmalig, zuständige Rolle,
+         *     Fristvorschläge, Unterlagen). Idempotent; nichts wird abgeschlossen oder gebucht.
+         */
+        post: operations["apply_process_api_v1_mail_messages__message_id__apply_process_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/mail/messages/{message_id}/appointment": {
         parameters: {
             query?: never;
@@ -17177,6 +17200,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tickets/process-catalogue": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prozesskatalog der Vorgangsarten
+         * @description Die zwölf Vorgangsarten mit Bezeichnung und Standardflow sowie je Vorgangsart die
+         *     Vorlage des Mandanten, sofern eingespielt (``template_id``).
+         */
+        get: operations["get_process_catalogue_api_v1_tickets_process_catalogue_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/process-catalogue/seed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prozesskatalog als Vorlagen einspielen
+         * @description Idempotent je Mandant: bestehende Vorlagen mit Vorgangsart bleiben unverändert.
+         */
+        post: operations["seed_process_catalogue_api_v1_tickets_process_catalogue_seed_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tickets/reply-templates": {
         parameters: {
             query?: never;
@@ -17304,6 +17368,28 @@ export interface paths {
         head?: never;
         /** Status, Zuweisung, Checkliste */
         patch: operations["patch_ticket_api_v1_tickets__ticket_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/tickets/{ticket_id}/apply-process": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Prozessflow auf Ticket anwenden
+         * @description Setzt Kategorie und Vorgangsart, ergänzt die Checkliste der Vorlage einmalig, hält
+         *     zuständige Rolle, Verknüpfungsstatus, Fristvorschläge (nur Vorschlag) und Unterlagenliste
+         *     im Feld ``flow`` fest. Idempotent; Status und Geld bleiben unberührt.
+         */
+        post: operations["apply_process_to_ticket_api_v1_tickets__ticket_id__apply_process_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/tickets/{ticket_id}/assignees": {
@@ -34068,6 +34154,8 @@ export interface components {
             category: string;
             /** Checklist */
             checklist?: components["schemas"]["ChecklistItemIn"][];
+            /** Deadline Type Codes */
+            deadline_type_codes?: string[];
             /** Default Assignee User Id */
             default_assignee_user_id?: string | null;
             /** @default normal */
@@ -34076,8 +34164,16 @@ export interface components {
             default_team_id?: string | null;
             /** Description */
             description?: string | null;
+            /** Document Kinds */
+            document_kinds?: string[];
             /** Extra Fields */
             extra_fields?: components["schemas"]["ExtraFieldIn"][];
+            /** Process Code */
+            process_code?: string | null;
+            /** Required Links */
+            required_links?: string[];
+            /** Responsible Role */
+            responsible_role?: string | null;
             /** Sla Hours */
             sla_hours?: number | null;
             /** Title */
@@ -34091,6 +34187,8 @@ export interface components {
             active?: boolean | null;
             /** Checklist */
             checklist?: components["schemas"]["ChecklistItemIn"][] | null;
+            /** Deadline Type Codes */
+            deadline_type_codes?: string[] | null;
             /** Default Assignee User Id */
             default_assignee_user_id?: string | null;
             default_priority?: components["schemas"]["Priority"] | null;
@@ -34098,8 +34196,16 @@ export interface components {
             default_team_id?: string | null;
             /** Description */
             description?: string | null;
+            /** Document Kinds */
+            document_kinds?: string[] | null;
             /** Extra Fields */
             extra_fields?: components["schemas"]["ExtraFieldIn"][] | null;
+            /** Process Code */
+            process_code?: string | null;
+            /** Required Links */
+            required_links?: string[] | null;
+            /** Responsible Role */
+            responsible_role?: string | null;
             /** Sla Hours */
             sla_hours?: number | null;
             /** Title */
@@ -35120,6 +35226,11 @@ export interface components {
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
         };
+        /** ApplyProcessIn */
+        mhvp__communication__routers__ApplyProcessIn: {
+            /** Process Code */
+            process_code?: string | null;
+        };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
             /**
@@ -35439,6 +35550,11 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to?: string | null;
+        };
+        /** ApplyProcessIn */
+        mhvp__tickets__routers__ApplyProcessIn: {
+            /** Process Code */
+            process_code: string;
         };
     };
     responses: never;
@@ -59036,6 +59152,43 @@ export interface operations {
             };
         };
     };
+    apply_process_api_v1_mail_messages__message_id__apply_process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__communication__routers__ApplyProcessIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     take_appointment_api_v1_mail_messages__message_id__appointment_post: {
         parameters: {
             query?: never;
@@ -72242,6 +72395,8 @@ export interface operations {
                 assignee_user_id?: string | null;
                 team_id?: string | null;
                 category?: string | null;
+                /** @description Vorgangsart des Prozesskatalogs (M19-11) */
+                process_code?: string | null;
                 priority?: components["schemas"]["Priority"] | null;
                 /** @description Erstellt ab (inklusive) */
                 created_from?: string | null;
@@ -72563,6 +72718,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_process_catalogue_api_v1_tickets_process_catalogue_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    seed_process_catalogue_api_v1_tickets_process_catalogue_seed_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
         };
@@ -72960,6 +73159,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TicketPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_process_to_ticket_api_v1_tickets__ticket_id__apply_process_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                ticket_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__tickets__routers__ApplyProcessIn"];
             };
         };
         responses: {

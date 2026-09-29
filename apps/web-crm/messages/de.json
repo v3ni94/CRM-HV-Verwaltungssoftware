@@ -3108,7 +3108,9 @@
       "reset": "Zurücksetzen",
       "showClosed": "Erledigte anzeigen",
       "sortCreated": "Nach Eingang",
-      "sortHint": "Standard: am längsten ohne Reaktion zuerst, Erledigte zuletzt"
+      "sortHint": "Standard: am längsten ohne Reaktion zuerst, Erledigte zuletzt",
+      "process": "Vorgangsart",
+      "processAll": "Alle Vorgangsarten"
     },
     "reply": {
       "title": "Antworten",
@@ -3323,7 +3325,57 @@
       "deleted": "Mail in Gmail endgültig gelöscht",
       "not_current": "Ticket ist nicht das Ende der Kette"
     },
-    "systemAuthor": "System"
+    "systemAuthor": "System",
+    "process": {
+      "title": "Prozessflow",
+      "codes": {
+        "kuendigung": "Kündigung",
+        "vermietung": "Vermietung",
+        "versicherungsschaden": "Versicherungsschaden",
+        "reparaturanfrage": "Reparaturanfrage",
+        "beschwerde": "Beschwerde",
+        "buchhaltung": "Buchhaltung",
+        "uebergabe": "Übergabe",
+        "mieterhoehung": "Mieterhöhung",
+        "gericht": "Gericht",
+        "objektuebernahme": "Übernahme neues Objekt",
+        "objektabgabe": "Abgabe altes Objekt",
+        "kaution": "Kaution"
+      },
+      "responsibleRole": "Zuständige Rolle",
+      "requiredLinks": "Verknüpfungen",
+      "links": {
+        "contact": "Kontakt",
+        "unit": "Einheit",
+        "property": "Objekt",
+        "contract": "Vertrag"
+      },
+      "linkPresent": "vorhanden",
+      "linkMissing": "fehlt",
+      "deadlineProposals": "Fristvorschläge",
+      "deadlineHint": "Nur Vorschlag: Fristtyp aus dem Katalog, Datum und Dauer trägt der Bearbeiter ein (Fälligkeit am Ticket oder Kalender). Es wird keine Frist automatisch angelegt.",
+      "documents": "Zu sammelnde Unterlagen",
+      "choose": "Vorgangsart",
+      "none": "Keine Vorgangsart zugeordnet.",
+      "apply": "Flow anwenden",
+      "roles": {
+        "tenant_admin": "Mandantenadministrator",
+        "administrator": "Administrator",
+        "standard": "Standard",
+        "read_only": "Nur Lesezugriff",
+        "read_only_master_data": "Nur Lesezugriff Stammdaten",
+        "clerk_no_delete": "Sachbearbeiter ohne Löschen",
+        "clerk_no_accounting": "Sachbearbeiter ohne Buchhaltung",
+        "accountant_no_banking": "Buchhalter ohne Onlinebanking",
+        "accountant_banking": "Buchhalter mit Onlinebanking",
+        "caretaker": "Hausmeister",
+        "technical_clerk": "Technischer Sachbearbeiter",
+        "support": "Support",
+        "insurance_broker": "Versicherungsmakler",
+        "portal_user": "Portalzugang",
+        "tax_advisor": "Steuerberater"
+      }
+    }
   },
   "Automation": {
     "title": "Automatisierung",
@@ -3660,7 +3712,20 @@
     "activate": "Aktivieren",
     "deactivate": "Deaktivieren",
     "activeState": "aktiv",
-    "inactiveState": "inaktiv"
+    "inactiveState": "inaktiv",
+    "processCode": "Vorgangsart (Prozesskatalog)",
+    "processNone": "Keine Vorgangsart",
+    "responsibleRole": "Zuständige Rolle",
+    "roleNone": "Keine Rolle",
+    "requiredLinks": "Erforderliche Verknüpfungen",
+    "deadlineTypes": "Verknüpfte Fristtypen",
+    "deadlineTypesHint": "Nur der Fristtyp wird vorgeschlagen, die Dauer trägt der Bearbeiter am Ticket ein.",
+    "documentKinds": "Zu sammelnde Unterlagen",
+    "newDocumentKind": "Neue Unterlage",
+    "seedCatalogue": "Prozesskatalog einspielen",
+    "seedResult": "Katalog eingespielt: {created} neu, {updated} ergänzt, {kept} unverändert.",
+    "seedHint": "Legt für jede der zwölf Vorgangsarten eine Vorlage an, sofern noch keine besteht. Bestehende Vorlagen bleiben unverändert.",
+    "flowSummary": "Vorgangsart: {label}"
   },
   "ReplyTemplates": {
     "title": "Antwortvorlagen",
@@ -3825,7 +3890,10 @@
         "ready": "Vorschlag bereit",
         "failed": "Vorschlag fehlgeschlagen: {reason}",
         "skipped": "Kein Vorschlag: {reason}"
-      }
+      },
+      "process": "Vorgangsart",
+      "applyProcess": "Vorgangsart übernehmen",
+      "processApplied": "Flow auf Ticket {number} angewendet."
     },
     "preparation": {
       "title": "Vorbereitung",
@@ -4820,7 +4888,7 @@
     },
     "ticketTemplates": {
       "title": "Ticketvorlagen",
-      "description": "Checklisten und Zusatzfelder für wiederkehrende Vorgänge (z. B. Vermietung, Kaution)."
+      "description": "Checklisten, Zusatzfelder und Prozessflows (Vorgangsarten) für wiederkehrende Vorgänge, zum Beispiel Kündigung, Vermietung oder Kaution."
     },
     "immoware": {
       "title": "Immoware24-Anbindung",

@@ -13,6 +13,7 @@ import { TicketAttachInvoiceButton } from "@/components/tickets/TicketAttachInvo
 import { TicketBoardPanel } from "@/components/tickets/TicketBoardPanel";
 import { TicketChecklist } from "@/components/tickets/TicketChecklist";
 import { TicketComments, type TicketCommentRow } from "@/components/tickets/TicketComments";
+import { TicketFlowPanel, type TicketFlow } from "@/components/tickets/TicketFlowPanel";
 import { TicketFollowUpLinks, type TicketRef } from "@/components/tickets/TicketFollowUpLinks";
 import { TicketEdit } from "@/components/tickets/TicketForms";
 import { TicketHistory, type TicketEventRow } from "@/components/tickets/TicketHistory";
@@ -59,6 +60,9 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
     }),
   );
   const checklist = (data.checklist ?? []) as { key: string; label: string; required: boolean; done: boolean }[];
+  // Prozessflow (Regel M19-11): Vorgangsart und Flow kommen mit dem Ticketdetail.
+  const processCode = data.process_code ? String(data.process_code) : null;
+  const flow = (data.flow ?? null) as TicketFlow | null;
   const extraFieldValues = (data.extra_fields ?? {}) as Record<string, unknown>;
   let extraFieldDefs: { key: string; label: string; type: string; required: boolean }[] = [];
   if (data.template_id) {
@@ -140,6 +144,12 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
             dueOn={data.due_on ? String(data.due_on) : null}
             canChangeAnyStatus={canChangeAnyStatus}
             internalDescription={data.internal_description ? String(data.internal_description) : ""}
+          />
+          <TicketFlowPanel
+            ticketId={ticketId}
+            processCode={processCode}
+            flow={flow}
+            canUpdate={me.data?.permissions.includes("tickets:update") ?? false}
           />
           <TicketChecklist
             ticketId={ticketId}

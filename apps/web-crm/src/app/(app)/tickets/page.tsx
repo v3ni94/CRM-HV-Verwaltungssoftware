@@ -29,6 +29,7 @@ const FORWARDED_KEYS = [
   "status",
   "priority",
   "category",
+  "process_code",
   "team_id",
   "created_from",
   "created_to",
@@ -49,6 +50,7 @@ type Ticket = {
   status: string;
   sla_due_at: string | null;
   sla_breached: boolean;
+  process_code?: string | null;
   attention: Attention;
   last_activity_at: string | null;
   last_inbound_at: string | null;

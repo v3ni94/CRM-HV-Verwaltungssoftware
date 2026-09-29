@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useTranslations } from "next-intl";
 
+import { TicketProcessBadge } from "@/components/tickets/TicketProcessBadge";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
@@ -57,6 +58,35 @@ export function SuggestionCard({
     else setError(res.message);
   };
 
+  // Vorgangsart (Regel M19-11): KI-Vorschlag, sonst die Schlüsselworterkennung der
+  // Klassifikation; Übernehmen legt bei Bedarf das Ticket an und wendet den Flow an.
+  const keyword = (message.classification.process ?? null) as
+    | { process_code?: string | null; confidence?: number | null; reason?: string | null }
+    | null;
+  const processCode = message.suggestion.process_code ?? keyword?.process_code ?? null;
+  const processConfidence = message.suggestion.process_code
+    ? (message.suggestion.process_confidence ?? null)
+    : (keyword?.confidence ?? null);
+  const processReason = message.suggestion.process_code
+    ? (message.suggestion.process_reason ?? null)
+    : (keyword?.reason ?? null);
+  const [processDone, setProcessDone] = useState<string | null>(null);
+
+  const applyProcess = async () => {
+    if (!processCode) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ ticket_id: string; number: number; applied: boolean }>(
+      `/api/bff/mail/messages/${message.id}/apply-process`,
+      { method: "POST", body: JSON.stringify({ process_code: processCode }) },
+    );
+    setBusy(false);
+    if (res.ok) {
+      setProcessDone(t("processApplied", { number: res.data.number }));
+      onUpdated({ ...message, ticket_id: res.data.ticket_id });
+    } else setError(res.message);
+  };
+
   const status = message.suggestion_status;
 
   return (
@@ -72,6 +102,17 @@ export function SuggestionCard({
         <p role="alert" className={ui.alert}>
           {error}
         </p>
+      ) : null}
+      {processCode ? (
+        <div className="flex flex-wrap items-center gap-2 text-xs" data-testid="suggestion-process">
+          <span>{t("process")}:</span>
+          <TicketProcessBadge code={processCode} confidence={processConfidence} />
+          {processReason ? <span className="text-muted">{processReason}</span> : null}
+          <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void applyProcess()}>
+            {t("applyProcess")}
+          </button>
+          {processDone ? <span className="text-muted">{processDone}</span> : null}
+        </div>
       ) : null}
       {status === "none" || status === "pending" ? <p className="text-xs text-muted">{t(`status.${status}`)}</p> : null}
       {status === "failed" || status === "skipped" ? (
