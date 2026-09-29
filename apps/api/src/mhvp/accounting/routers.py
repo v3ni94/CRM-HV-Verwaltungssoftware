@@ -299,7 +299,19 @@ async def lock(
             actor_user_id=principal.user_id,
             payload={"locked_until": body.until.isoformat()},
         )
-        return {"locked_until": body.until, "drafts_in_locked_period": drafts}
+        # B05: unposted bank movements with open clarification up to the lock date are
+        # reported with the lock (list "Buchungen ohne Beleg"); the lock itself is not
+        # refused, the count is the visible warning of the audit trail.
+        from mhvp.banking import clarifications
+
+        unclarified = await clarifications.list_rows(
+            session, ledger_id=ledger.id, until=body.until, open_only=True
+        )
+        return {
+            "locked_until": body.until,
+            "drafts_in_locked_period": drafts,
+            "unclarified_bank_movements": len(unclarified),
+        }
 
 
 @router.post("/ledgers/{ledger_id}/leading", summary="Führendes System festlegen (G1)")

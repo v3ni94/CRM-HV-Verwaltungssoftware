@@ -35,9 +35,11 @@ from typing import Any
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.banking import clarifications
+
 # Version of the feature extraction. Bump on every change of ``collect`` or ``summary`` that
 # alters what a proposal is computed from; documented in docs/rules/M12-04.
-RULE_VERSION = "2026.09.28-2"
+RULE_VERSION = "2026.09.29-3"
 
 # End-to-end ids that banks deliver when the originator gave none (ISO 20022).
 _NO_END_TO_END = {"", "NOTPROVIDED", "NOTPROVIDED.", "N/A"}
@@ -103,6 +105,7 @@ class Features:
             ),
             "payment_order_id": (self.tx.get("payment_order") or {}).get("id"),
             "transfer_pair": bool(self.tx.get("transfer_pair")),
+            "clarification_status": (self.tx.get("clarification") or {}).get("status"),
         }
         # JSON scalars only (dates as ISO strings): the summary is stored in JSONB.
         loaded: dict[str, Any] = json.loads(canonical_json(summary))
@@ -356,6 +359,10 @@ async def collect(session: AsyncSession, tx: Any) -> Features:
         "transfer_pair": await _transfer_pair(session, tx, ledger),
         "payment_order": await _payment_order(session, tx, ledger),
         "linked_invoices": await _linked_invoices(session, tx, ledger),
+        # B05 evidence chain: clarification status of the movement (verifier input).
+        "clarification": clarifications.evidence_of(
+            await clarifications.for_transaction(session, tx.id)
+        ),
         "account_texts": await _account_texts(session, ledger),
         "history": await _history(session, tx, bank),
     }

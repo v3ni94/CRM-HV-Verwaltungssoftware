@@ -13,6 +13,7 @@ from sqlalchemy.exc import IntegrityError
 
 from mhvp.accounting.models import EntrySource, LedgerAccount, ReversalReason
 from mhvp.banking import account_selection, decisions, matching, payments, proposals, verifiers
+from mhvp.banking import clarifications as clarification_svc
 from mhvp.banking import event_types as ev
 from mhvp.banking import finapi as finapi_client
 from mhvp.banking import learning as learning_svc
@@ -24,6 +25,7 @@ from mhvp.banking import services as svc
 from mhvp.banking.connectors import FileConnector
 from mhvp.banking.models import (
     AccountPurpose,
+    BankClarification,
     BankConnection,
     BankRule,
     BankRuleProposal,
@@ -1728,6 +1730,68 @@ async def decide_review(
         )
         ensure_legal_entity_allowed(principal, row.legal_entity_id)
         return await review_svc.item_out(session, row, today=local_today())
+
+
+# Evidence chain B05: clarification status of unposted bank movements ---------------------
+
+
+class ClarificationDecisionIn(_In):
+    status: str = Field(pattern="^(open|in_clarification|no_document_required|resolved)$")
+    reason: str | None = Field(default=None, max_length=2000)
+    document_id: uuid.UUID | None = None
+    assignee_user_id: uuid.UUID | None = None
+
+
+@router.get("/clarifications", summary="Buchungen ohne Beleg (Klärungsstatus B05)")
+async def list_clarifications(
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+    legal_entity_id: uuid.UUID | None = None,
+    ledger_id: uuid.UUID | None = None,
+    until: date | None = None,
+    open_only: bool = True,
+) -> list[dict[str, Any]]:
+    """The list before the period lock: every unposted bank movement with clarification
+    status of the legal entity (or ledger) up to ``until``; ``open_only=false`` includes the
+    decided rows (no document required with reason, resolved with document)."""
+    async with tenant_tx(request, principal) as session:
+        rows = await clarification_svc.list_rows(
+            session,
+            legal_entity_id=legal_entity_id,
+            ledger_id=ledger_id,
+            until=until,
+            open_only=open_only,
+        )
+        return [
+            await clarification_svc.row_out(session, r)
+            for r in rows
+            if _entity_allowed(principal, r.legal_entity_id)
+        ]
+
+
+@router.post("/clarifications/{row_id}", summary="Klärungsstatus setzen (accounting:update)")
+async def decide_clarification(
+    row_id: uuid.UUID,
+    body: ClarificationDecisionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        current = await session.get(BankClarification, row_id)
+        if current is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_legal_entity_allowed(principal, current.legal_entity_id)
+        row = await clarification_svc.decide(
+            session,
+            row_id=row_id,
+            status=body.status,
+            reason=body.reason,
+            document_id=body.document_id,
+            assignee_user_id=body.assignee_user_id,
+            user_id=principal.user_id,
+            tenant_id=principal.tenant_id,
+        )
+        return await clarification_svc.row_out(session, row)
 
 
 # Payment runs (M15, 7.5, 6.9.9); export requires G2 ------------------------------------
