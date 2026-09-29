@@ -38152,6 +38152,176 @@
         "title": "ReadingSource",
         "type": "string"
       },
+      "ReceiptAccountProposalLineOut": {
+        "properties": {
+          "index": {
+            "title": "Index",
+            "type": "integer"
+          },
+          "proposals": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptAccountProposalOut"
+            },
+            "title": "Proposals",
+            "type": "array"
+          }
+        },
+        "required": [
+          "index",
+          "proposals"
+        ],
+        "title": "ReceiptAccountProposalLineOut",
+        "type": "object"
+      },
+      "ReceiptAccountProposalOut": {
+        "description": "One cost account from the creditor's history for one invoice line (plan M12 S7,\n``mhvp.banking.history.creditor_account_history``). Only the account identity and the\ncounts: allocation category, operating cost type, § 35a and VAT are never part of it.",
+        "properties": {
+          "account_id": {
+            "format": "uuid",
+            "title": "Account Id",
+            "type": "string"
+          },
+          "account_number": {
+            "title": "Account Number",
+            "type": "string"
+          },
+          "count": {
+            "title": "Count",
+            "type": "integer"
+          },
+          "count_bank": {
+            "title": "Count Bank",
+            "type": "integer"
+          },
+          "count_invoices": {
+            "title": "Count Invoices",
+            "type": "integer"
+          },
+          "count_posted": {
+            "title": "Count Posted",
+            "type": "integer"
+          },
+          "last_used_on": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Used On"
+          },
+          "line_index": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Index"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "reason": {
+            "title": "Reason",
+            "type": "string"
+          },
+          "source": {
+            "const": "history",
+            "title": "Source",
+            "type": "string"
+          }
+        },
+        "required": [
+          "account_id",
+          "account_number",
+          "name",
+          "count",
+          "count_invoices",
+          "count_posted",
+          "count_bank",
+          "last_used_on",
+          "source",
+          "line_index",
+          "reason"
+        ],
+        "title": "ReceiptAccountProposalOut",
+        "type": "object"
+      },
+      "ReceiptAccountProposalsOut": {
+        "description": "Result of ``GET /receipts/drafts/{id}?ledger_id=&provider_contact_id=``: ``enabled``\nis the tenant switch ``learning_bookkeeper_enabled``; with the switch off the lines are\nempty. Source label in the CRM: Verlauf.",
+        "properties": {
+          "creditor_account": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Creditor Account"
+          },
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "ledger_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ledger Id"
+          },
+          "lines": {
+            "items": {
+              "$ref": "#/components/schemas/ReceiptAccountProposalLineOut"
+            },
+            "title": "Lines",
+            "type": "array"
+          },
+          "note": {
+            "default": "Vorschlag aus dem Verlauf des Ausstellers, keine Buchung. Umlagefähigkeit, Kostenart und Umsatzsteuer werden nicht aus dem Vorschlag übernommen.",
+            "title": "Note",
+            "type": "string"
+          },
+          "provider_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Contact Id"
+          },
+          "sources": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "title": "Sources",
+            "type": "object"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "ReceiptAccountProposalsOut",
+        "type": "object"
+      },
       "ReceiptConfirmIn": {
         "additionalProperties": false,
         "description": "Reviewed values. ``invoice`` is what the reviewer confirmed; an IBAN is accepted only\ntogether with ``iban_confirmed=true`` (rule 0.1.6: no IBAN from a proposal without a\nhuman confirmation).",
@@ -38316,6 +38486,28 @@
       },
       "ReceiptDraftOut": {
         "properties": {
+          "account_proposal_decision": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Proposal Decision"
+          },
+          "account_proposals": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReceiptAccountProposalsOut"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "conflicts": {
             "items": {
               "$ref": "#/components/schemas/ReceiptConflictOut"
@@ -63720,6 +63912,7 @@
     },
     "/api/v1/banking/transactions/{tx_id}/decisions": {
       "get": {
+        "description": "Gated like the writes: with ``learning_bookkeeper_enabled`` off the answer is empty,\nexisting rows stay stored (retention concept M12-06) and reappear when switched on.",
         "operationId": "list_decisions_api_v1_banking_transactions__tx_id__decisions_get",
         "parameters": [
           {
@@ -100065,6 +100258,7 @@
     },
     "/api/v1/receipts/drafts/{draft_id}": {
       "get": {
+        "description": "With ``ledger_id`` and ``provider_contact_id`` the answer carries ``account_proposals``\n(plan M12 S7, source Verlauf): the cost accounts persons chose on earlier invoices and\nbank transactions of the same creditor in the same ledger, per line. Only with\n``learning_bookkeeper_enabled``; reading never writes.",
         "operationId": "get_draft_api_v1_receipts_drafts__draft_id__get",
         "parameters": [
           {
@@ -100075,6 +100269,42 @@
               "format": "uuid",
               "title": "Draft Id",
               "type": "string"
+            }
+          },
+          {
+            "description": "Mit provider_contact_id: Kontovorschläge aus dem Verlauf",
+            "in": "query",
+            "name": "ledger_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Mit provider_contact_id: Kontovorschläge aus dem Verlauf",
+              "title": "Ledger Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "provider_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider Contact Id"
             }
           }
         ],

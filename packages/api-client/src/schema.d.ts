@@ -3918,7 +3918,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Vorschlags- und Entscheidungsprotokoll eines Umsatzes (ADR 0013) */
+        /**
+         * Vorschlags- und Entscheidungsprotokoll eines Umsatzes (ADR 0013)
+         * @description Gated like the writes: with ``learning_bookkeeper_enabled`` off the answer is empty,
+         *     existing rows stay stored (retention concept M12-06) and reappear when switched on.
+         */
         get: operations["list_decisions_api_v1_banking_transactions__tx_id__decisions_get"];
         put?: never;
         post?: never;
@@ -14905,7 +14909,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Belegentwurf lesen */
+        /**
+         * Belegentwurf lesen
+         * @description With ``ledger_id`` and ``provider_contact_id`` the answer carries ``account_proposals``
+         *     (plan M12 S7, source Verlauf): the cost accounts persons chose on earlier invoices and
+         *     bank transactions of the same creditor in the same ledger, per line. Only with
+         *     ``learning_bookkeeper_enabled``; reading never writes.
+         */
         get: operations["get_draft_api_v1_receipts_drafts__draft_id__get"];
         put?: never;
         post?: never;
@@ -29956,6 +29966,78 @@ export interface components {
          * @enum {string}
          */
         ReadingSource: "manual" | "portal" | "provider_import" | "ai";
+        /** ReceiptAccountProposalLineOut */
+        ReceiptAccountProposalLineOut: {
+            /** Index */
+            index: number;
+            /** Proposals */
+            proposals: components["schemas"]["ReceiptAccountProposalOut"][];
+        };
+        /**
+         * ReceiptAccountProposalOut
+         * @description One cost account from the creditor's history for one invoice line (plan M12 S7,
+         *     ``mhvp.banking.history.creditor_account_history``). Only the account identity and the
+         *     counts: allocation category, operating cost type, § 35a and VAT are never part of it.
+         */
+        ReceiptAccountProposalOut: {
+            /**
+             * Account Id
+             * Format: uuid
+             */
+            account_id: string;
+            /** Account Number */
+            account_number: string;
+            /** Count */
+            count: number;
+            /** Count Bank */
+            count_bank: number;
+            /** Count Invoices */
+            count_invoices: number;
+            /** Count Posted */
+            count_posted: number;
+            /** Last Used On */
+            last_used_on: string | null;
+            /** Line Index */
+            line_index: number | null;
+            /** Name */
+            name: string;
+            /** Reason */
+            reason: string;
+            /**
+             * Source
+             * @constant
+             */
+            source: "history";
+        };
+        /**
+         * ReceiptAccountProposalsOut
+         * @description Result of ``GET /receipts/drafts/{id}?ledger_id=&provider_contact_id=``: ``enabled``
+         *     is the tenant switch ``learning_bookkeeper_enabled``; with the switch off the lines are
+         *     empty. Source label in the CRM: Verlauf.
+         */
+        ReceiptAccountProposalsOut: {
+            /** Creditor Account */
+            creditor_account?: {
+                [key: string]: unknown;
+            } | null;
+            /** Enabled */
+            enabled: boolean;
+            /** Ledger Id */
+            ledger_id?: string | null;
+            /** Lines */
+            lines?: components["schemas"]["ReceiptAccountProposalLineOut"][];
+            /**
+             * Note
+             * @default Vorschlag aus dem Verlauf des Ausstellers, keine Buchung. Umlagefähigkeit, Kostenart und Umsatzsteuer werden nicht aus dem Vorschlag übernommen.
+             */
+            note: string;
+            /** Provider Contact Id */
+            provider_contact_id?: string | null;
+            /** Sources */
+            sources?: {
+                [key: string]: number;
+            };
+        };
         /**
          * ReceiptConfirmIn
          * @description Reviewed values. ``invoice`` is what the reviewer confirmed; an IBAN is accepted only
@@ -30031,6 +30113,11 @@ export interface components {
         };
         /** ReceiptDraftOut */
         ReceiptDraftOut: {
+            /** Account Proposal Decision */
+            account_proposal_decision?: {
+                [key: string]: unknown;
+            } | null;
+            account_proposals?: components["schemas"]["ReceiptAccountProposalsOut"] | null;
             /** Conflicts */
             conflicts?: components["schemas"]["ReceiptConflictOut"][];
             /**
@@ -66408,7 +66495,11 @@ export interface operations {
     };
     get_draft_api_v1_receipts_drafts__draft_id__get: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Mit provider_contact_id: Kontovorschläge aus dem Verlauf */
+                ledger_id?: string | null;
+                provider_contact_id?: string | null;
+            };
             header?: never;
             path: {
                 draft_id: string;
