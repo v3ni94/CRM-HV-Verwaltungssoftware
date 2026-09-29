@@ -173,7 +173,7 @@ export function CreateEventDialog({
                 ))}
               </div>
             </fieldset>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
               <label className="flex flex-col gap-1">
                 <span className={ui.label}>{tc("recurrence.label")}</span>
                 <select value={frequency} onChange={(e) => setFrequency(e.target.value as "" | Recurrence["frequency"])} className={ui.input}>

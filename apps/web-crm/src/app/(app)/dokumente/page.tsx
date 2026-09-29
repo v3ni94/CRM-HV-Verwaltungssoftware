@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DocumentListFilter, draftFilterOf } from "@/components/documents/DocumentListFilter";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { ResponsiveList } from "@/components/ui/ResponsiveList";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -60,8 +61,26 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
       ) : items.length === 0 ? (
         <EmptyState title={draft === "true" ? t("emptyDrafts") : t("empty")} />
       ) : (
-        <div className={`${ui.card} overflow-x-auto p-0`}>
-          <table className={ui.table} data-testid="documents">
+        <ResponsiveList
+          rows={items}
+          keyOf={(d) => d.id}
+          testId="documents"
+          card={(d) => (
+            <div className="flex flex-col gap-1">
+              <Link href={`/dokumente/${d.id}`} className="font-medium hover:underline [overflow-wrap:anywhere]">
+                {d.title}
+              </Link>
+              <span className="text-sm text-muted [overflow-wrap:anywhere]">{d.filename}</span>
+              <span className="text-sm tabular-nums text-muted">{formatDate(d.created_at)}</span>
+              {d.is_draft ? (
+                <span>
+                  <span className={ui.badgeWarning}>{t("draftBadge")}</span>
+                </span>
+              ) : null}
+            </div>
+          )}
+          table={
+          <table className={ui.table}>
             <thead>
               <tr>
                 <th>{t("colTitle")}</th>
@@ -86,7 +105,8 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
               ))}
             </tbody>
           </table>
-        </div>
+          }
+        />
       )}
       {data && pages > 1 ? (
         <nav className="flex items-center gap-3 text-sm" aria-label={t("pagination")}>

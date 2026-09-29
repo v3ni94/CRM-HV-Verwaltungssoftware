@@ -2,6 +2,7 @@ import type { components } from "@mhvp/api-client";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 
+import { KeyValueList, type KeyValueItem } from "@/components/ui/KeyValueList";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 import { formatQty } from "@/lib/units";
@@ -27,14 +28,9 @@ function show(value: unknown): string {
   return /^\d{4}-\d{2}-\d{2}(T.*)?$/.test(text) ? formatDate(text) : text;
 }
 
-function Field({ label, value }: { label: string; value: string }) {
-  if (!value) return null;
-  return (
-    <div className="contents">
-      <dt className="text-muted">{label}</dt>
-      <dd>{value}</dd>
-    </div>
-  );
+/** Label and value pair for `KeyValueList`; empty values are left out. */
+function field(label: string, value: string): KeyValueItem[] {
+  return value ? [{ label, value }] : [];
 }
 
 function Party({ occupant, withRent }: { occupant: Occupant; withRent?: boolean }) {
@@ -112,25 +108,29 @@ export function UnitDetails({
       {showParameters ? (
       <section className={ui.card} data-testid="unit-parameters">
         <h2 className={ui.h2}>{t("parameters")}</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          <Field label={t("number")} value={unit.number} />
-          <Field label={t("label")} value={unit.label ?? ""} />
-          <Field label={t("internalName")} value={unit.internal_name ?? ""} />
-          <Field label={t("type")} value={tp(`unitTypes.${unit.unit_type}`)} />
-          <Field label={t("location")} value={unit.location ?? ""} />
-          <Field label={t("floor")} value={unit.floor ?? ""} />
-          <Field label={t("livingArea")} value={area(unit.living_area_sqm)} />
-          <Field label={t("totalArea")} value={area(unit.total_area_sqm)} />
-          <Field label={t("mea")} value={mea.map((v) => formatQty(v.value)).join(", ")} />
-          <Field label={t("rooms")} value={formatQty(unit.rooms)} />
-          <Field label={t("bedrooms")} value={show(unit.bedrooms)} />
-          <Field label={t("bathrooms")} value={show(unit.bathrooms)} />
-          <Field label={t("cellar")} value={unit.cellar_number ?? ""} />
-          <Field label={t("modernization")} value={show(unit.last_modernization_year)} />
-          <Field label={t("features")} value={unit.features ?? ""} />
-          <Field label={t("address")} value={address} />
-          <Field label={t("vatOption")} value={unit.vat_option ?? ""} />
-        </dl>
+        <KeyValueList
+          className="mt-2"
+          testId="unit-parameters-list"
+          items={[
+            ...field(t("number"), unit.number),
+            ...field(t("label"), unit.label ?? ""),
+            ...field(t("internalName"), unit.internal_name ?? ""),
+            ...field(t("type"), tp(`unitTypes.${unit.unit_type}`)),
+            ...field(t("location"), unit.location ?? ""),
+            ...field(t("floor"), unit.floor ?? ""),
+            ...field(t("livingArea"), area(unit.living_area_sqm)),
+            ...field(t("totalArea"), area(unit.total_area_sqm)),
+            ...field(t("mea"), mea.map((v) => formatQty(v.value)).join(", ")),
+            ...field(t("rooms"), formatQty(unit.rooms)),
+            ...field(t("bedrooms"), show(unit.bedrooms)),
+            ...field(t("bathrooms"), show(unit.bathrooms)),
+            ...field(t("cellar"), unit.cellar_number ?? ""),
+            ...field(t("modernization"), show(unit.last_modernization_year)),
+            ...field(t("features"), unit.features ?? ""),
+            ...field(t("address"), address),
+            ...field(t("vatOption"), unit.vat_option ?? ""),
+          ]}
+        />
       </section>
       ) : null}
 
@@ -172,21 +172,13 @@ export function UnitDetails({
           {Object.keys(custom).length ? (
             <>
               <h2 className={ui.subtitle}>{t("customFields")}</h2>
-              <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                {Object.entries(custom).map(([k, v]) => (
-                  <Field key={k} label={k} value={show(v)} />
-                ))}
-              </dl>
+              <KeyValueList className="mt-2" testId="unit-custom-list" items={Object.entries(custom).flatMap(([k, v]) => field(k, show(v)))} />
             </>
           ) : null}
           {legacy && typeof legacy === "object" ? (
             <div className="mt-3" data-testid="unit-legacy">
               <h3 className={ui.subtitle}>{t("legacy")}</h3>
-              <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-                {Object.entries(legacy).map(([k, v]) => (
-                  <Field key={k} label={LEGACY_LABELS[k] ?? k} value={show(v)} />
-                ))}
-              </dl>
+              <KeyValueList className="mt-1" testId="unit-legacy-list" items={Object.entries(legacy).flatMap(([k, v]) => field(LEGACY_LABELS[k] ?? k, show(v)))} />
             </div>
           ) : null}
         </section>

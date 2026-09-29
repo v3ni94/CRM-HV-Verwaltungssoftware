@@ -58,4 +58,14 @@ describe("UnitDetails", () => {
     expect(history).toHaveTextContent("Otto Alt");
     expect(history).toHaveTextContent("bis 31.12.2019");
   });
+
+  it("stacks definition lists through KeyValueList without a bare two column grid (M31)", () => {
+    const { container } = renderIntl(<UnitDetails unit={unit as never} occupants={{ owner, tenant: null, history: [] } as never} />);
+    expect(screen.getByTestId("unit-parameters-list")).toHaveTextContent("1. OG");
+    expect(screen.getByTestId("unit-custom-list")).toHaveTextContent("P4");
+    expect(screen.getByTestId("unit-legacy-list")).toHaveTextContent("Alt Mieter");
+    for (const dl of Array.from(container.querySelectorAll("dl"))) {
+      expect(dl.className).not.toMatch(/(^|\s)grid-cols-2(\s|$)/);
+    }
+  });
 });

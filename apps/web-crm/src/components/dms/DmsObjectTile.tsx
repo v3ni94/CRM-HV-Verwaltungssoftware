@@ -22,7 +22,7 @@ export function DmsObjectTile({ object }: { object: DmsObject }) {
         </div>
         <span className={ui.badge}>{object.takeover_status}</span>
       </div>
-      <dl className="grid grid-cols-3 gap-2 text-sm">
+      <dl className="grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
         <div>
           <dt className="text-xs text-muted">{t("tile.openCases")}</dt>
           <dd className="tabular-nums font-medium">{object.open_review_cases}</dd>

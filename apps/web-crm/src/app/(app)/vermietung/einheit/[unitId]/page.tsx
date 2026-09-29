@@ -10,6 +10,7 @@ import { UnitDetails } from "@/components/properties/UnitDetails";
 import { UnitMasterData, type UnitMaster } from "@/components/properties/UnitMasterData";
 import { MeterChangesPanel, VacancyValuesPanel, type MeterChangeRow, type VacancyValueRow } from "@/components/properties/UnitPanels";
 import { TicketsSection, type TicketSummary } from "@/components/tickets/TicketsSection";
+import { KeyValueList } from "@/components/ui/KeyValueList";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { DeadlineCreatePanel } from "@/components/workspace/DeadlineCreatePanel";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -128,25 +129,14 @@ export default async function LettingUnitPage({ params }: { params: Promise<{ un
       {building.data ? <EnergyCertificateForm building={building.data as unknown as EnergyBuilding} canEdit={canEdit} /> : null}
       <section className={ui.card}>
         <h2 className={ui.h2}>{t("expose")}</h2>
-        <dl className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-          {Object.entries(fields).map(([k, v]) => (
-            <div key={k} className="contents">
-              <dt className="text-muted">{t(`fields.${k}`)}</dt>
-              <dd>{show(k, v)}</dd>
-            </div>
-          ))}
-        </dl>
+        <KeyValueList className="mt-2" testId="expose-fields" items={Object.entries(fields).map(([k, v]) => ({ label: t(`fields.${k}`), value: show(k, v) }))} />
         {(Object.keys(blocks) as (keyof typeof blocks)[]).map((block) => (
           <div key={block} className="mt-3" data-testid={`expose-${block}`}>
             <h3 className={ui.subtitle}>{t(`fields.${block}.title`)}</h3>
-            <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
-              {Object.entries(blocks[block]).map(([k, v]) => (
-                <div key={k} className="contents">
-                  <dt className="text-muted">{t(`fields.${block}.${k}`)}</dt>
-                  <dd className={EUR_KEYS.has(k) ? "tabular-nums" : undefined}>{show(k, v)}</dd>
-                </div>
-              ))}
-            </dl>
+            <KeyValueList
+              className="mt-1"
+              items={Object.entries(blocks[block]).map(([k, v]) => ({ label: t(`fields.${block}.${k}`), value: show(k, v), num: EUR_KEYS.has(k) }))}
+            />
             {block === "asking_rent" ? (
               listingId ? (
                 <Link href={`/makler/${listingId}`} className="text-sm hover:underline">

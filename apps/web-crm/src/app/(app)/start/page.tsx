@@ -134,7 +134,7 @@ export default async function StartPage() {
        *  below the KPI strip; the analytics API is admin only since 1.34.1, so the card is
        *  simply left out for everyone else instead of showing a load error. */}
       {canSeeAnalytics ? <TicketAnalytics /> : null}
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 lg:items-start">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 md:items-start xl:grid-cols-3">
         <div className="flex flex-col gap-2">
           {failed ? (
             <p role="alert" className={ui.alert}>

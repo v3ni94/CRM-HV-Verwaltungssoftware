@@ -1,4 +1,4 @@
-import { screen, waitFor } from "@testing-library/react";
+import { screen, within, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
@@ -54,9 +54,17 @@ describe("DmsDocuments", () => {
     expect(table).toHaveTextContent("Teilungserklärung");
     expect(table).toHaveTextContent("24.09.2026");
     expect(table).toHaveTextContent("02_Stammakte / Energie");
-    expect(screen.getByText("In Drive öffnen")).toHaveAttribute("href", "https://drive.google.com/file/d/drive-9001/view");
-    expect(screen.getByText("CRM-Dokument")).toHaveAttribute("href", "/dokumente/0192abcd-0000-7000-8000-000000000001");
-    expect(screen.getByText("Nicht verknüpft")).toBeInTheDocument();
+    expect(within(table).getByText("In Drive öffnen")).toHaveAttribute("href", "https://drive.google.com/file/d/drive-9001/view");
+    expect(within(table).getByText("CRM-Dokument")).toHaveAttribute("href", "/dokumente/0192abcd-0000-7000-8000-000000000001");
+    expect(within(table).getByText("Nicht verknüpft")).toBeInTheDocument();
+    // M31: cards below sm carry title, type and date and the same links; the table hides below sm.
+    const cards = screen.getByTestId("dms-documents-cards");
+    expect(cards.className).toContain("sm:hidden");
+    expect(table.className).toContain("hidden sm:block");
+    const card = within(cards).getAllByTestId("dms-documents-card")[0]!;
+    expect(card).toHaveTextContent("Teilungserklärung");
+    expect(card).toHaveTextContent("24.09.2026");
+    expect(within(card).getByText("In Drive öffnen")).toHaveAttribute("href", "https://drive.google.com/file/d/drive-9001/view");
     expect(fetchMock).toHaveBeenCalledWith(
       "/api/bff/integrations/objektakte/objects/291/documents?page=1&page_size=50",
       expect.anything(),

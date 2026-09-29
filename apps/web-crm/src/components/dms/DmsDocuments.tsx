@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { ResponsiveList } from "@/components/ui/ResponsiveList";
 import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { dmsBase, type DmsDocumentPage, type DmsLinkResult } from "@/lib/objektakte-dms";
@@ -78,8 +79,33 @@ export function DmsDocuments({ number }: { number: string }) {
       {!data ? null : data.results.length === 0 ? (
         <p className="text-sm text-muted">{t("documents.empty")}</p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className={ui.table} data-testid="dms-documents">
+        <ResponsiveList
+          rows={data.results}
+          keyOf={(d) => String(d.id)}
+          testId="dms-documents"
+          card={(d) => (
+            <div className="flex flex-col gap-1">
+              <span className="font-medium [overflow-wrap:anywhere]">{d.title}</span>
+              <span className="text-sm text-muted">{[d.doc_type, [d.category, d.subfolder].filter(Boolean).join(" / ")].filter(Boolean).join(" · ")}</span>
+              <span className="text-sm tabular-nums text-muted">{formatDate(d.filed_at)}</span>
+              <div className="flex flex-wrap gap-3">
+                {d.drive_url ? (
+                  <a href={d.drive_url} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-sm font-medium hover:underline">
+                    {t("documents.openDrive")}
+                  </a>
+                ) : null}
+                {d.crm_document_id ? (
+                  <Link href={`/dokumente/${d.crm_document_id}`} className="inline-flex min-h-11 items-center text-sm font-medium hover:underline">
+                    {t("documents.openCrm")}
+                  </Link>
+                ) : (
+                  <span className={ui.badge}>{t("documents.notLinked")}</span>
+                )}
+              </div>
+            </div>
+          )}
+          table={
+          <table className={ui.table}>
             <thead>
               <tr>
                 <th>{t("documents.colTitle")}</th>
@@ -116,7 +142,8 @@ export function DmsDocuments({ number }: { number: string }) {
               ))}
             </tbody>
           </table>
-        </div>
+          }
+        />
       )}
       {data && pages > 1 ? (
         <div className="flex items-center gap-2 text-sm">

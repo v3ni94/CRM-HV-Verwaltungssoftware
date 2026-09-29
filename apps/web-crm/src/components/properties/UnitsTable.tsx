@@ -2,6 +2,7 @@ import type { components } from "@mhvp/api-client";
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 
+import { ResponsiveList } from "@/components/ui/ResponsiveList";
 import { ui } from "@/lib/ui";
 import { formatQty, sortUnits, unitNumberFormatter } from "@/lib/units";
 
@@ -33,15 +34,43 @@ function OccupantLinks({ occupant }: { occupant: Occupant }) {
   );
 }
 
-/** Unit list of a property: natural order, number and label link to the unit page (26.09.2026). */
+/** Unit list of a property: natural order, number and label link to the unit page (26.09.2026).
+ *  Cards below `sm` (number and label as title, tenant, owner, area, type), table from `sm`
+ *  (M31 WP3). */
 export function UnitsTable({ units }: { units: Unit[] }) {
   const t = useTranslations("Units");
   const tp = useTranslations("Properties");
   const rows = sortUnits(units);
   const display = unitNumberFormatter(rows.map((u) => u.number));
+  const areaOf = (u: Unit) => ((u.living_area_sqm ?? u.total_area_sqm) ? `${formatQty(u.living_area_sqm ?? u.total_area_sqm)} m²` : "");
   return (
-    <div className={`${ui.card} overflow-x-auto p-0`}>
-      <table className={ui.table} data-testid="units">
+    <ResponsiveList
+      rows={rows}
+      keyOf={(u) => u.id}
+      testId="units"
+      card={(u) => {
+        const href = `/vermietung/einheit/${u.id}`;
+        return (
+          <div className="flex flex-col gap-1">
+            <Link href={href} className="font-medium hover:underline" title={u.number}>
+              <span className="tabular-nums">{display(u.number)}</span>
+              {u.label || u.internal_name ? <span> · {u.label || u.internal_name}</span> : null}
+            </Link>
+            <span className="text-sm text-muted">{tp(`unitTypes.${u.unit_type}`)}</span>
+            <span className="text-sm">
+              <span className="text-muted">{t("tenant")}: </span>
+              {u.tenant ? <OccupantLinks occupant={u.tenant} /> : <span className="text-muted">{t("noTenant")}</span>}
+            </span>
+            <span className="text-sm">
+              <span className="text-muted">{t("owner")}: </span>
+              {u.owner ? <OccupantLinks occupant={u.owner} /> : <span className="text-muted">{t("noOwner")}</span>}
+            </span>
+            {areaOf(u) ? <span className={`${ui.num} text-sm`}>{areaOf(u)}</span> : null}
+          </div>
+        );
+      }}
+      table={
+      <table className={ui.table}>
         <thead>
           <tr>
             <th>{t("number")}</th>
@@ -75,9 +104,7 @@ export function UnitsTable({ units }: { units: Unit[] }) {
                 <td>
                   {u.tenant ? <OccupantLinks occupant={u.tenant} /> : <span className="text-muted">{t("noTenant")}</span>}
                 </td>
-                <td className="num">
-                  {u.living_area_sqm ?? u.total_area_sqm ? `${formatQty(u.living_area_sqm ?? u.total_area_sqm)} m²` : ""}
-                </td>
+                <td className="num">{areaOf(u)}</td>
                 <td className="text-xs text-muted">
                   {(u.allocation_values ?? []).map((v) => `${v.key_code ?? ""}: ${formatQty(v.value)}`).join(" · ")}
                 </td>
@@ -86,6 +113,7 @@ export function UnitsTable({ units }: { units: Unit[] }) {
           })}
         </tbody>
       </table>
-    </div>
+      }
+    />
   );
 }

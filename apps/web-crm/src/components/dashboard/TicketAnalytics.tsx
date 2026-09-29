@@ -445,11 +445,11 @@ export function TicketAnalytics() {
             )}
             <p className="mt-2 text-xs text-subtle">{t("compareHint")}</p>
             {compareRows.length === 2 ? (
-              <div className="mt-4 grid grid-cols-2 gap-3">
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 {compareRows.map((a) => (
                   <div key={a.user_id} className={ui.cardLift}>
                     <span className="mhvp-label">{nameOf(a.user_id)}</span>
-                    <dl className="mt-2 grid grid-cols-3 gap-2 text-sm">
+                    <dl className="mt-2 grid grid-cols-1 gap-2 text-sm sm:grid-cols-3">
                       <div>
                         <dt className="text-xs text-subtle">{t("assigneeOpen")}</dt>
                         <dd className="tabular-nums font-semibold">{a.open}</dd>

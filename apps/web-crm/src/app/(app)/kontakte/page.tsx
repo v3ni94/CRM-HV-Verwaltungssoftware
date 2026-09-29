@@ -166,7 +166,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </ul>
           <form id="contacts-bulk" className="hidden flex-col gap-2 sm:flex">
             <BulkTagBar formId="contacts-bulk" />
-            <div className="overflow-x-auto">
+            <div className={ui.tableCard}>
               <table className="mhvp-table">
                 <thead>
                   <tr>

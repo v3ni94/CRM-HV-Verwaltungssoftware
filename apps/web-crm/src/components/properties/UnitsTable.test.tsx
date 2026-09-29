@@ -40,12 +40,28 @@ describe("UnitsTable", () => {
 
   it("links the contract when the occupant has no members", () => {
     renderIntl(<UnitsTable units={[{ ...base, id: "u1", number: "1", owner: { ...occupant("WEG X"), members: [] } }] as never} />);
-    expect(screen.getByRole("link", { name: "WEG X" })).toHaveAttribute("href", "/vertraege/c-WEG X");
+    expect(within(screen.getByTestId("units")).getByRole("link", { name: "WEG X" })).toHaveAttribute("href", "/vertraege/c-WEG X");
   });
 
   it("keeps numbers as stored when they are not all numeric", () => {
     renderIntl(<UnitsTable units={[{ ...base, id: "a", number: "WE10" }, { ...base, id: "b", number: "WE2" }, { ...base, id: "c", number: "1" }] as never} />);
     const rows = within(screen.getByTestId("units")).getAllByRole("row").slice(1);
     expect(rows.map((r) => within(r).getAllByRole("cell")[0]?.textContent)).toEqual(["1", "WE2", "WE10"]);
+  });
+
+  it("renders cards below sm and the table wrapper from sm (M31)", () => {
+    const { container } = renderIntl(
+      <UnitsTable units={[{ ...base, id: "u1", number: "1", label: "EG links", living_area_sqm: "65.50000000", tenant: { ...occupant("Mia Miete"), kind: "tenancy" } }] as never} />,
+    );
+    const cards = screen.getByTestId("units-cards");
+    expect(cards.className).toContain("sm:hidden");
+    expect(screen.getByTestId("units").className).toContain("hidden sm:block");
+    const card = within(cards).getByTestId("units-card");
+    expect(card).toHaveTextContent("001 · EG links");
+    expect(card).toHaveTextContent("Mia Miete");
+    expect(card).toHaveTextContent("kein Eigentümer");
+    expect(card).toHaveTextContent("65,5 m²");
+    expect(within(card).getByRole("link", { name: /001/ })).toHaveAttribute("href", "/vermietung/einheit/u1");
+    expect(container.querySelector("table")?.parentElement?.className).toContain("overflow-x-auto");
   });
 });
