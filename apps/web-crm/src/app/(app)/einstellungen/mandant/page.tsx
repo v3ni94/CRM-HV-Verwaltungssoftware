@@ -9,6 +9,7 @@ import { ManagerEntitySetup, type ManagerEntityStatus } from "@/components/setti
 import { AiLearningExamples } from "@/components/settings/AiLearningExamples";
 import { ResolutionKindsSettings } from "@/components/settings/ResolutionKindsSettings";
 import { ConsumptionInfoSwitch, type ConsumptionInfoSettings } from "@/components/settings/ConsumptionInfoSwitch";
+import { HandoverOfflineSwitch } from "@/components/settings/HandoverOfflineSwitch";
 import { MeteringModuleSwitch } from "@/components/settings/MeteringModuleSwitch";
 import { GMAIL_DONE_SYNC_DEFAULTS, GmailDoneSync, type GmailDoneSyncSettings } from "@/components/settings/GmailDoneSync";
 import { TicketReopenWindow } from "@/components/settings/TicketReopenWindow";
@@ -56,6 +57,7 @@ export default async function CompanySettingsPage() {
         canUpdate={can("tenant_settings:update")}
       />
       <MeteringModuleSwitch initial={settings.data.metering_module_enabled ?? false} canUpdate={can("tenant_settings:update")} />
+      <HandoverOfflineSwitch initial={Boolean((settings.data as { handover_offline_enabled?: boolean }).handover_offline_enabled)} canUpdate={can("tenant_settings:update")} />
       <ConsumptionInfoSwitch
         initial={{
           consumption_info_enabled: false,
