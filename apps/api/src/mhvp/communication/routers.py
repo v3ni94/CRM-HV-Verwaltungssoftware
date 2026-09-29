@@ -329,6 +329,8 @@ def _playbook_out(p: Playbook) -> dict[str, Any]:
             "status",
             "usage_count",
             "last_used_at",
+            "helpful_count",
+            "unhelpful_count",
             "created_by",
             "created_at",
             "updated_at",
@@ -2702,6 +2704,40 @@ async def patch_playbook(
             setattr(row, key, value)
         await session.flush()
         return _playbook_out(row)
+
+
+@router.post("/playbooks/{playbook_id}/feedback", summary="Playbook-Vorschlag bewerten")
+async def playbook_feedback(
+    playbook_id: uuid.UUID,
+    body: ai_s.FeedbackIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Feedback "hilfreich / nicht hilfreich" on a suggested playbook (audit 29.09.2026). Counters
+    only, shown in the knowledge base; no automatic activation or archiving."""
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Playbook, playbook_id, with_for_update=True)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if body.helpful:
+            row.helpful_count += 1
+        else:
+            row.unhelpful_count += 1
+        await session.flush()
+        # ``updated_at`` is server generated (onupdate) and expired by the flush; reload it
+        # explicitly, a lazy load has no greenlet on the async path.
+        await session.refresh(row)
+        out = _playbook_out(row)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="playbook.feedback",
+            entity_type="playbook",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"helpful": body.helpful},
+        )
+        return out
 
 
 @router.delete("/playbooks/{playbook_id}", status_code=204, summary="Playbook löschen")

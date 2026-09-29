@@ -48,15 +48,41 @@ async def _active_playbooks(session: AsyncSession) -> list[Playbook]:
     )
 
 
-async def best_playbook(session: AsyncSession, text: str) -> tuple[Playbook | None, float]:
-    best: Playbook | None = None
-    best_score = 0.0
-    for row in await _active_playbooks(session):
-        current = score_playbook(text, row.keywords)
-        if current > best_score:
-            best, best_score = row, current
-    if best is not None and best_score >= MIN_PLAYBOOK_SCORE:
-        return best, best_score
+CATEGORY_BONUS = 0.2
+
+
+def rank_playbooks(
+    text: str, playbooks: list[Any], category: str | None = None
+) -> list[tuple[float, Any]]:
+    """Pure: playbooks with their score for ``text``, best first. A playbook of the mail's
+    (deterministic) ``category`` gets ``CATEGORY_BONUS`` on top of the keyword score, one of
+    another category none, so among equal keyword hits the category decides (audit
+    29.09.2026). Playbooks without any keyword hit stay out whatever their category."""
+    wanted = (category or "").strip().lower()
+    scored: list[tuple[float, Any]] = []
+    for row in playbooks:
+        score = score_playbook(text, row.keywords)
+        if score <= 0.0:
+            continue
+        own = (row.category or "").strip().lower()
+        if wanted and own == wanted:
+            score = round(min(score + CATEGORY_BONUS, 1.0), 4)
+        scored.append((score, row))
+    scored.sort(key=lambda item: -item[0])
+    return scored
+
+
+async def best_playbook(
+    session: AsyncSession,
+    text: str,
+    *,
+    category: str | None = None,
+    playbooks: list[Playbook] | None = None,
+) -> tuple[Playbook | None, float]:
+    rows = playbooks if playbooks is not None else await _active_playbooks(session)
+    ranked = rank_playbooks(text, rows, category)
+    if ranked and ranked[0][0] >= MIN_PLAYBOOK_SCORE:
+        return ranked[0][1], ranked[0][0]
     return None, 0.0
 
 
@@ -288,7 +314,14 @@ async def suggest_for_message(
     playbooks = await _active_playbooks(session)
     body_excerpt = (message.body or "")[:MAX_EXCERPT]
     match_text = f"{message.subject or ''}\n{body_excerpt}"
-    playbook, playbook_score = await best_playbook(session, match_text)
+    # One load of the playbooks for the prompt and the match; the deterministic category of
+    # the mail (mhvp.communication.mail) steers the match before any model answer exists.
+    playbook, playbook_score = await best_playbook(
+        session,
+        match_text,
+        category=mail.category(message.subject, message.body, categories),
+        playbooks=playbooks,
+    )
     hint = resolution_hint(match_text, await resolution_examples(session))
 
     # An IBAN never reaches the provider (rule 0.1.13); the classification does not need it.
