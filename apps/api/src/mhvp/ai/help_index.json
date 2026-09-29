@@ -4656,6 +4656,86 @@
  },
  {
   "kind": "handbook",
+  "title": "Voraussetzungen",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Objekt, Rechtsträger und Buchungskreis sind angelegt (Buchhaltung, Buchungskreise). Der Buchungskreis kennt sein Objekt über den Rechtsträger. Die Berechtigungen: Buchhaltung lesen für die Seite, Buchhaltung anlegen für Journal, Salden, Buchung, Abgleich und Antrag, Buchhaltung ä",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Schritt 1: Migrationsstichtag",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Bereich Migrationsstichtag das Datum eintragen und speichern. Der Stichtag gilt je Buchungskreis; die Eröffnungssalden und der Abgleich beziehen sich darauf. Nach der Buchung der Eröffnungssalden ist der Stichtag fest.",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Schritt 2: Migrationsjournal",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "1. Den Journal-Export des Übernahmejahres im Importassistenten (Importe, Importassistent) als Reporttyp Journal hochladen. Die Datei bleibt als Rohzeilen gespeichert; ihre Kennung steht in der Dateiansicht. 2. Auf der Migrationsseite die Kennung, das Kalenderjahr und, wenn der Ex",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Schritt 3: Eröffnungssalden",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Salden zum Stichtag stammen aus der Saldenliste von Immoware24 und werden je Buchungskreis erfasst: Formular: Art (Bestandskonto, Debitor, Kreditor, Bankkonto, Rücklage), Konto und Saldo je Zeile. Der Saldo steht wie in der Saldenliste, Soll positiv und Haben negativ: Bank un",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Schritt 4: Abgleich mit Nulldifferenzprüfung",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Abgleich ausführen vergleicht je Objekt die erfassten Salden mit den Werten der Plattform: Kennzahl Immoware24 Plattform --- --- --- Kontosaldo Saldo der Saldenliste Saldo der gebuchten Buchungssätze bis zum Stichtag Offene Posten Debitor und Kreditor Saldo des Personenkontos off",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Schritt 5: Wechsel des führenden Systems",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Wechsel beantragen prüft in dieser Reihenfolge: 1. Die Freigabestufe G1 (Produktive Buchführung) ist für den Mandanten offen. Ist sie geschlossen, lautet die Antwort: Der Wechsel des führenden Systems auf die Plattform erfordert die Freigabestufe G1 (Produktive Buchführung). G1 i",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Statusübersicht",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Tabelle zeigt je Objekt und Buchungskreis den Stichtag, das führende System und die Schritte Journal eingelesen, Salden erfasst, Freigegeben, Gebucht, Abgeglichen (jüngster Bericht zum Stichtag mit Nulldifferenz) und Umgestellt.",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Offene Punkte",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Echte Kopfzeilen des Journal-Exports und der Saldenliste (M8-01), Stichtag je Objekt und Entscheidung Salden je Vertrag oder je Debitorenkonto (V9), belegte Jahresdaten für unterjährige Übernahmen (V19). Die Abrechnungen des Übernahmejahres lesen die Vorperiode aus dem Migrations",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Objekte und Einheiten",
   "href": "/objekte",

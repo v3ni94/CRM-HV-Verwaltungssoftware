@@ -1,6 +1,6 @@
 # Annahmen
 
-Stand: 29.09.2026 (A-084 bis A-088 ergänzt; zuvor A-080 ergänzt; zuvor 28.09.2026 mit A-074 bis A-079; zuvor 26.09.2026 mit A-048, A-049 und A-052). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
+Stand: 29.09.2026 (A-089 ergänzt; A-084 bis A-088 ergänzt; zuvor A-080 ergänzt; zuvor 28.09.2026 mit A-074 bis A-079; zuvor 26.09.2026 mit A-048, A-049 und A-052). Grundlage: `docs/MASTER-PROMPT.md`, Abschnitt 0.1 Regel 3.
 
 Hier stehen nur unkritische Annahmen, die den Entwurfsbetrieb ermöglichen. Keine dieser Annahmen berührt Geld, Forderungsbestand, Datenschutz, gesetzliche Fristen oder Beweiserhalt. Solche Punkte wären nach Regel 3 offene Fragen und stehen in `docs/OPEN_QUESTIONS.md`. Jede Annahme wird spätestens beim genannten Meilenstein überprüft und bei Bestätigung oder Widerlegung hier fortgeschrieben.
 
@@ -1017,4 +1017,15 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Kennzeichnung | unkritisch: eine an einem Feiertag fällige Nachkontrolle sperrt die Klasse einen Tag früher, nie später |
 | Betroffene Bereiche | Nachkontrolle, Runner-Sperre |
 | Überprüfung spätestens bei Meilenstein | mit dem Feiertagskalender der Fristenverwaltung |
+| Datum | 29.09.2026 |
+
+## A-089
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Kopfzeilen des Immoware24-Journal-Exports für das Migrationsjournal (`mhvp.imports.migration.DEFAULT_JOURNAL_COLUMNS`): Buchungsnummer, Objekt, Konto, Datum, Betrag (Soll positiv) oder Soll und Haben, Buchungstext, Referenz, Beleg. Saldenliste für Eröffnungssalden: Spalten Konto und Saldo (Soll positiv), optional Bezeichnung. |
+| Begründung | Die Spaltennamen sind nicht spezifiziert (13.1, M8-01). Die Standardwerte folgen A-047 und sind je Mandant über `PUT /api/v1/imports/migration/journal-columns` ersetzbar; die Saldenliste akzeptiert die Schreibweisen Konto, Kontonummer, Konto-Nr, Sachkonto, Personenkonto und Saldo, Betrag, Saldo EUR. |
+| Kennzeichnung | unkritisch: eine falsche Zuordnung führt zu Warnungen oder abgewiesenen Zeilen, nie zu geratenen Werten; die Nulldifferenzprüfung sperrt die Umstellung |
+| Betroffene Bereiche | Migrationsjournal, Eröffnungssalden aus Saldenliste, Abgleichbericht Migration |
+| Überprüfung spätestens bei Meilenstein | Übernahme des echten HVM-Journals (M8-01) |
 | Datum | 29.09.2026 |

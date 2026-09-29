@@ -85,6 +85,7 @@ HANDBOOK_PAGES: dict[str, str | None] = {
     "import-kontakte.md": "/importe",
     "import-objektdaten.md": "/importe",
     "import-zuordnung.md": "/importe",
+    "migration-immoware.md": "/importe/migration",
     "kalender.md": "/kalender",
     "kontakte.md": "/kontakte",
     "mail.md": "/mail",

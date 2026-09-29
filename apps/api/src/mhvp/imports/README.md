@@ -129,3 +129,19 @@ pre-check, run, list, JSON, PDF draft); stored runs live in `import_full_run` (m
 Handbook: `docs/handbuch/import-abgleichbericht.md`, section Vollimport. Tests:
 `tests/unit/test_vollimport.py`, `tests/integration/test_vollimport.py` (synthetic 67 objects
 and 869 units from `tests/synthetic_immoware.py`).
+
+## Migration without parallel operation (29.09.2026)
+
+`migration_models.py` (migration 0244, RLS) holds the migration journal
+(`migrated_journal_entry`, `migrated_journal_line`: rows of the Immoware24 journal export per
+ledger with the original entry id, year completeness flag and reconciliation marker, never
+posted), the opening balances per ledger and cut off date with their lines, the
+reconciliation report per property and the switch request. `migration.py` imports staged
+journal rows with a per tenant column mapping (`import_mapping` "Migrationsjournal"), saves
+balances from a form or a balance list CSV, releases them by a second person, posts them as
+one `EntrySource.migration` entry only with the ledger cut off date, builds the zero
+difference report (stored as PDF document) and handles the switch of `ledger.leading_system`
+behind G1 with a second person decision. `migration_routers.py` serves
+`/api/v1/imports/migration`. Rule `docs/rules/M8-05-migrationsjournal.md`, handbook
+`docs/handbuch/migration-immoware.md`. Tests: `tests/integration/test_m8_migration.py`.
+
