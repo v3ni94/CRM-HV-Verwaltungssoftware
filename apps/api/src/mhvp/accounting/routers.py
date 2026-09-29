@@ -1043,7 +1043,17 @@ async def create_fee(
         row = AdminFeeSetting(tenant_id=principal.tenant_id, created_by=principal.user_id, **data)
         session.add(row)
         await session.flush()
-        return {"id": row.id}
+        # Lexware Office (INT-LEXO-01): prepare the recurring invoice (API is read only for
+        # recurring templates, so a checklist for the manual creation); never fails the fee.
+        from mhvp.integrations.lexoffice_ext import invoice_drafts as lexoffice_drafts
+
+        try:
+            prep = await lexoffice_drafts.prepare_recurring(
+                session, principal.tenant_id, row, principal.user_id
+            )
+        except Exception:  # pragma: no cover - defensive
+            prep = None
+        return {"id": row.id, "lexoffice_recurring_prep_id": prep.id if prep else None}
 
 
 @router.get("/admin-fees/{fee_id}/invoice-preview", summary="Honorarrechnung als Entwurf berechnen")

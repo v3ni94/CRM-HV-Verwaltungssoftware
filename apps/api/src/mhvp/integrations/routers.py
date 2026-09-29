@@ -13,6 +13,7 @@ from __future__ import annotations
 import uuid
 from datetime import UTC, datetime
 from typing import Any
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import select
@@ -29,8 +30,10 @@ from mhvp.documents.services import store_document
 from mhvp.integrations import schemas as s
 from mhvp.integrations.lexoffice import LexofficeClient, LexofficeCredentials
 from mhvp.integrations.models import (
+    LexofficeContactLink,
     LexofficeExportKind,
     LexofficeExportLink,
+    LexofficeLinkStatus,
     LexofficeRunKind,
     LexofficeRunStatus,
     LexofficeSyncRun,
@@ -41,6 +44,7 @@ from mhvp.receipts.models import ReceiptDraft, ReceiptDraftSource, ReceiptDraftS
 router = APIRouter(prefix="/integrations/lexoffice", tags=["Schnittstellen"])
 
 SETTINGS = require_permission("tenant_settings:update")
+SETTINGS_READ = require_permission("tenant_settings:read")
 EXPORT = require_permission("accounting:create")
 IMPORT = require_permission("accounting:create")
 READ = require_permission("accounting:read")
@@ -52,8 +56,13 @@ def _invalid(detail: str) -> ProblemError:
 
 
 async def _config(session: AsyncSession, tenant_id: uuid.UUID) -> LexofficeTenantConfig | None:
+    """The tenant default config (``legal_entity_id IS NULL``); the legacy endpoints of this
+    module are aliases of it (rule INT-LEXO-01, several organisations per tenant)."""
     result: LexofficeTenantConfig | None = await session.scalar(
-        select(LexofficeTenantConfig).where(LexofficeTenantConfig.tenant_id == tenant_id)
+        select(LexofficeTenantConfig).where(
+            LexofficeTenantConfig.tenant_id == tenant_id,
+            LexofficeTenantConfig.legal_entity_id.is_(None),
+        )
     )
     return result
 
@@ -95,7 +104,7 @@ async def _finish_run(
 
 @router.get("/config", summary="lexoffice-Anbindung lesen")
 async def get_config(
-    request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS_READ)
 ) -> s.LexofficeConfigOut:
     async with tenant_tx(request, principal) as session:
         config = await _config(session, principal.tenant_id)
@@ -132,10 +141,14 @@ async def put_config(
         if body.base_url:
             config.base_url = body.base_url
         if body.api_key is not None:
-            config.api_key = body.api_key
+            config.api_key = body.api_key.strip()
+            config.api_key_last4 = config.api_key[-4:]
+            config.token_invalid = False
         config.enabled = body.enabled
         if config.enabled and not config.api_key:
             raise _invalid("Ohne API-Schlüssel kann die Anbindung nicht aktiviert werden.")
+        if config.enabled and config.avv_confirmed_on is None:
+            raise ProblemError(ErrorCodes.LEXOFFICE_AVV_MISSING)
         await session.flush()
         return s.LexofficeConfigOut(
             tenant_id=config.tenant_id,
@@ -308,7 +321,7 @@ async def export_contacts(
     async with tenant_tx(request, principal) as session:
         config = await _config(session, principal.tenant_id)
         client = _client_for(config) if config else None
-        if client is None:
+        if client is None or config is None:
             raise ProblemError(ErrorCodes.LEXOFFICE_NOT_CONFIGURED)
         run = await _run(session, principal, LexofficeRunKind.EXPORT_CONTACTS)
         results: list[s.LexofficeExportResultItem] = []
@@ -367,6 +380,24 @@ async def export_contacts(
                         run_id=run.id,
                     )
                 )
+            # One truth for contacts going forward (ADR 0013): the contact link table.
+            link = await session.scalar(
+                select(LexofficeContactLink).where(
+                    LexofficeContactLink.config_id == config.id,
+                    LexofficeContactLink.contact_id == item.contact_id,
+                )
+            )
+            if link is None:
+                link = LexofficeContactLink(
+                    tenant_id=principal.tenant_id,
+                    config_id=config.id,
+                    contact_id=item.contact_id,
+                    sync_status=LexofficeLinkStatus.LINKED.value,
+                    match_reason="export_migrated",
+                )
+                session.add(link)
+            link.lexoffice_contact_id = lexoffice_id
+            link.sync_status = LexofficeLinkStatus.LINKED.value
             ok += 1
             results.append(
                 s.LexofficeExportResultItem(
@@ -393,11 +424,20 @@ async def import_receipts(
         results: list[s.LexofficeImportedItem] = []
         ok = failed = duplicates = 0
         errors: list[str] = []
-        updated_at_from = body.updated_at_from.isoformat() if body.updated_at_from else None
+        # Additive per ADR 0009: the datetime is truncated to the documented yyyy-MM-dd date
+        # in Europe/Berlin (docs/integrations/lexoffice.md, voucherlist filters).
+        updated_date_from = (
+            body.updated_at_from.astimezone(ZoneInfo("Europe/Berlin")).date().isoformat()
+            if body.updated_at_from
+            else None
+        )
         for page in range(body.max_pages):
             try:
                 page_result = client.list_voucherlist(
-                    page=page, updated_at_from=updated_at_from, voucher_type="purchaseinvoice"
+                    "purchaseinvoice",
+                    body.voucher_status,
+                    page=page,
+                    updated_date_from=updated_date_from,
                 )
             except ProblemError as exc:
                 failed += 1

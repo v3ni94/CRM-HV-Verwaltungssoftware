@@ -242,3 +242,48 @@ def draft_reply(salutation: str, subject: str | None, ticket_number: int | None)
         "Wir haben Ihr Anliegen erhalten und "
         "melden uns mit dem nächsten Schritt.\n\nMit freundlichen Grüßen\n[Name]\n[Firma]"
     )
+
+
+# Invoice copy request (rule INT-LEXO-01, section 5.1): deterministic, literal number only.
+_INV_KEYWORD = (
+    r"(?:rechnung(?:en)?|rechnungs(?:nummer|nr\.?|-nr\.?)|re[-\s]?nr\.?|rg[-\s]?nr\.?|rg\b"
+    r"|beleg(?:nummer|[-\s]?nr\.?)?)"
+)
+_INV_INTENT = (
+    r"(?:nochmals?|erneut|noch\s+einmal|kopie|duplikat|zweitschrift|zusenden|zuschicken"
+    r"|zukommen\s+lassen|(?:senden|schicken|übersenden)\s+sie\s+(?:mir|uns)|nicht\s+erhalten"
+    r"|nicht\s+angekommen|verloren)"
+)
+_INV_NUMBER = r"(?:nr\.?|nummer|no\.?|#)?\s*:?\s*(?P<num>(?:[A-Z]{1,4}[-/]?)?\d{2,}(?:[-/.]\d+)*)"
+INVOICE_NUMBER_RE = re.compile(_INV_KEYWORD + r"[^\S\r\n]{0,3}" + _INV_NUMBER, re.IGNORECASE)
+INVOICE_INTENT_RE = re.compile(_INV_INTENT, re.IGNORECASE)
+INVOICE_KEYWORD_RE = re.compile(_INV_KEYWORD, re.IGNORECASE)
+INVOICE_NEGATIVE_RE = re.compile(
+    r"(?:anbei|im\s+anhang|beigefügt|überwiesen|bezahlt|zahlung\s+erfolgt|mahnung\s+erhalten)",
+    re.IGNORECASE,
+)
+INVOICE_STATEMENT_RE = re.compile(
+    r"(?:betriebskosten|nebenkosten|hausgeld|heizkosten)abrechnung", re.IGNORECASE
+)
+
+
+def invoice_copy_request(subject: str | None, body: str | None) -> dict[str, Any] | None:
+    """``{"intent": "invoice_copy_requested", "invoice_number": str | None}`` when the sender
+    wants an already issued invoice again; a statement (Abrechnung) is no invoice here and a
+    negative phrase within 60 characters before the keyword ("Rechnung anbei", "bezahlt")
+    cancels the match. The number is taken verbatim from the text, never normalised."""
+    text = (subject or "") + "\n" + (body or "")[:4000]
+    keyword = INVOICE_KEYWORD_RE.search(text)
+    if keyword is None or INVOICE_INTENT_RE.search(text) is None:
+        return None
+    if INVOICE_STATEMENT_RE.search(text) and not INVOICE_NUMBER_RE.search(text):
+        return None
+    for match in INVOICE_KEYWORD_RE.finditer(text):
+        window = text[max(0, match.start() - 60) : match.end() + 60]
+        if INVOICE_NEGATIVE_RE.search(window):
+            return None
+    number = INVOICE_NUMBER_RE.search(text)
+    return {
+        "intent": "invoice_copy_requested",
+        "invoice_number": number.group("num") if number else None,
+    }

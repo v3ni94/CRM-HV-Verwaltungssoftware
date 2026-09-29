@@ -56,6 +56,8 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.config import Settings
 from mhvp.core.events import diff, emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.integrations.lexoffice_ext import invoice_copy as lexoffice_invoice_copy
+from mhvp.integrations.lexoffice_ext import sync as lexoffice_sync
 from mhvp.objektakte.masking import mask_identifiers
 from mhvp.tickets.models import Ticket, TicketEvent
 
@@ -988,6 +990,8 @@ async def queue_for_message(
     (``ai_inline``), otherwise on the ``ai`` queue; a failure never disturbs mail intake."""
     if message.ticket_id is None or message.direction != "in":
         return
+    # Lexware Office (INT-LEXO-01): deterministic invoice copy detection, queue rows only.
+    await lexoffice_invoice_copy.queue_for_message(session, tenant_id, message)
     if settings.ai_inline:
         ticket = await session.get(Ticket, message.ticket_id)
         if ticket is None:
@@ -1130,6 +1134,26 @@ async def apply_changes(
             "proposal_id": str(proposal_id),
         },
         changes=changed,
+    )
+    # Lexware Office (INT-LEXO-01): person applied proposal, queue only, never raises.
+    proposal = await session.get(AiProposal, proposal_id)
+    valid_from_raw = (proposal.proposed.get("address_valid_from") if proposal else None) or None
+    valid_from: date | None = None
+    if isinstance(valid_from_raw, str):
+        try:
+            valid_from = date.fromisoformat(valid_from_raw[:10])
+        except ValueError:
+            valid_from = None
+    await lexoffice_sync.queue_contact_sync(
+        session,
+        principal.tenant_id,
+        contact.id,
+        after.version,
+        set(changed),
+        principal.user_id,
+        "ai_proposal",
+        valid_from=valid_from,
+        ticket_id=proposal.context_id if proposal else None,
     )
     # display_name is derived from the name fields; the caller only asked for the fields it sent.
     return {k: v for k, v in changed.items() if k != "display_name"}

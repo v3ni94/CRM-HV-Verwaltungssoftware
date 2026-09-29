@@ -50,6 +50,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.objektakte.tasks",
             "mhvp.automation.tasks",
             "mhvp.integrations.schadenstool.tasks",
+            "mhvp.integrations.lexoffice_ext.tasks",
             "mhvp.imports.tasks",
             "mhvp.metering.tasks",
         ],
@@ -87,6 +88,18 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "schadenstool-pull": {
                 "task": "mhvp.integrations.schadenstool.pull",
                 "schedule": 900.0,
+                "options": {"queue": "io"},
+            },
+            # Lexware Office extension (INT-LEXO-01): outbound queue every minute for enabled
+            # configs, retention purge of queue rows daily.
+            "lexoffice-process": {
+                "task": "mhvp.integrations.lexoffice.process",
+                "schedule": 60.0,
+                "options": {"queue": "io"},
+            },
+            "lexoffice-purge": {
+                "task": "mhvp.integrations.lexoffice.purge",
+                "schedule": crontab(hour=3, minute=20),
                 "options": {"queue": "io"},
             },
             # Mirror copies to Paperless/Drive; only tenants with an enabled connection (11.1).

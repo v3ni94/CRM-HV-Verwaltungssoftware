@@ -34,6 +34,7 @@ from mhvp.core.db.tenancy import after_commit, platform_transaction, tenant_tran
 from mhvp.core.escaping import LIKE_ESCAPE, escape_like
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.integrations.lexoffice_ext import invoice_copy as lexoffice_invoice_copy
 from mhvp.platform.services import gate_superadmin_bypass_enabled
 from mhvp.tickets import tnr
 
@@ -1855,6 +1856,10 @@ async def patch_draft(
         row = await _message(session, message_id, principal)
         if row.direction != "out" or row.status != "draft":
             raise ProblemError(ErrorCodes.CONFLICT, detail="Nur Entwürfe können bearbeitet werden.")
+        # Lexware Office (INT-LEXO-01): a draft with an invoice file keeps its recipient.
+        await lexoffice_invoice_copy.assert_recipients_locked(
+            session, row, to_addresses=body.to_addresses, cc_addresses=body.cc_addresses
+        )
         for key, value in body.model_dump(exclude_none=True).items():
             setattr(row, key, value)
         # Wer den Text zuletzt geändert hat, zählt im Vier-Augen-Prinzip (M16).
@@ -2075,6 +2080,8 @@ async def submit(
             raise ProblemError(ErrorCodes.VALIDATION, detail="Der Entwurf hat keinen Empfänger.")
         if not (row.body or "").strip():
             raise ProblemError(ErrorCodes.VALIDATION, detail="Der Entwurf hat keinen Text.")
+        # Lexware Office (INT-LEXO-01): recipient lock of invoice copy drafts.
+        await lexoffice_invoice_copy.assert_recipients_locked(session, row)
         # Review 1.36.0: the approver reviews exactly the text that is sent, so a missing
         # signature (drafts from playbooks, proposals, jobs) is inserted into the stored body
         # now; the send path sends the body verbatim. A ``-- `` delimiter line counts as
@@ -2263,6 +2270,8 @@ async def approve_and_send(
 
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id, principal)
+        # Lexware Office (INT-LEXO-01): recipient lock also at approval time.
+        await lexoffice_invoice_copy.assert_recipients_locked(session, row)
         resume = row.status == "sending"
         if row.direction != "out" or row.status not in ("pending", "sending"):
             raise ProblemError(

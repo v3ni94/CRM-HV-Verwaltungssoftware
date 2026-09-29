@@ -30,6 +30,7 @@ from mhvp.contacts.validation import mask_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import diff, emit
 from mhvp.core.problems import ErrorCodes, ProblemError, body_validation_error
+from mhvp.integrations.lexoffice_ext import sync as lexoffice_sync
 
 router = APIRouter(tags=["Kontakte"])
 
@@ -287,6 +288,16 @@ async def replace_contact(
             payload={"fields": sorted(changes)},
             changes=changes,
         )
+        # Lexware Office (INT-LEXO-01): person applied change, queue only, never raises.
+        await lexoffice_sync.queue_contact_sync(
+            session,
+            principal.tenant_id,
+            contact.id,
+            after.version,
+            set(changes),
+            principal.user_id,
+            "api",
+        )
         response.headers["ETag"] = f'"{after.version}"'
         return after
 
@@ -367,6 +378,16 @@ async def patch_contact(
             payload={"fields": sorted(changes)},
             changes=changes,
         )
+        # Lexware Office (INT-LEXO-01): person applied change, queue only, never raises.
+        await lexoffice_sync.queue_contact_sync(
+            session,
+            principal.tenant_id,
+            contact.id,
+            after.version,
+            set(changes),
+            principal.user_id,
+            "api",
+        )
         response.headers["ETag"] = f'"{after.version}"'
         return after
 
@@ -381,6 +402,7 @@ async def delete_contact(
         contact.updated_by = principal.user_id
         # ADR 0010, M7-04: learning examples built from the contact's tickets go with it.
         await delete_examples_for_contact(session, contact.id)
+        await lexoffice_sync.on_contact_removed(session, principal.tenant_id, contact.id)
         await emit(
             session,
             tenant_id=principal.tenant_id,
