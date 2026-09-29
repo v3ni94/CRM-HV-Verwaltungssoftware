@@ -3,6 +3,12 @@
 @import "@mhvp/ui/theme.css";
 @import "@mhvp/ui/base.css";
 
+/* The CRM header is sticky (M31, one row of --mhvp-header-h): elements that stick while the
+ * page scrolls (table heads with mhvp-table--page) sit below it. The portal keeps 0. */
+:root {
+  --mhvp-sticky-top: var(--mhvp-header-h);
+}
+
 /* Indeterminate progress bar of the AI chat widget (queued/running, no percent implied). */
 @keyframes ai-chat-progress {
   0% {

@@ -77,6 +77,11 @@ export const ui = {
   mono: "mhvp-mono",
   subtitle: "mhvp-label",
   table: "mhvp-table",
+  /** Table that scrolls with the page (no scroll wrapper): its head sticks below the app
+   *  header via `--mhvp-sticky-top`. Inside `tableScroll`, `tableCard` or `ResponsiveList`
+   *  use `table`, the wrapper is the scroll container there and any offset would push the head
+   *  over the first rows (M31 review). */
+  tablePage: "mhvp-table mhvp-table--page",
   pageGap: "flex flex-col gap-6",
   sectionGap: "flex flex-col gap-4",
   badge: "inline-flex items-center gap-1.5 rounded-full bg-muted-bg px-2.5 py-0.5 text-xs font-semibold text-muted-fg",

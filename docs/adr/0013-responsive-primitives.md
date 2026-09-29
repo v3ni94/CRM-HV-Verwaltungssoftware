@@ -62,8 +62,11 @@ looks the same as before.
 ## Consequences
 
 - Desktop with a mouse at 1280 px and more is unchanged apart from the header height
-  (64 px instead of the former 63 px wrapped row) and the table head, which now sticks
-  below the header instead of sliding under it.
+  (64 px instead of the former 63 px wrapped row). Table heads keep `top: 0` of their scroll
+  container; only a table with `ui.tablePage` (`mhvp-table--page`, no scroll wrapper) sticks
+  below the header via `--mhvp-sticky-top`, which the CRM sets to `--mhvp-header-h` in its
+  `globals.css` while the portal keeps `0px` (review after WP1: an offset inside an
+  `overflow-x: auto` wrapper shifts the head over the first rows at scroll position 0).
 - Tablets with touch get 44 px controls even above `sm`; phones get 16 px inputs.
 - WP2 and WP3 build only against the interfaces listed in `docs/design/README.md`
   ("Handy und Tablet") and this ADR; new pages never invent their own class chains.
@@ -71,10 +74,9 @@ looks the same as before.
   `MobileNav.test.tsx`, `CommandPalette.test.tsx`, `NotificationBell.test.tsx`,
   `UserMenu.test.tsx`, `StatusChip.test.tsx`, `InlineField.test.tsx`; the portal test suite
   runs after every change to `packages/ui` because both apps import the CSS.
-- Open (operator, no gate affected): whether the sticky table head offset also fits the
-  portal header (the portal imports the same `base.css`; its tables sit in scroll wrappers,
-  so the offset has no visible effect today); whether the portal should adopt the CRM
-  primitives as code instead of string twins.
+- Open (operator, no gate affected): whether the portal should adopt the CRM primitives as
+  code instead of string twins. The sticky offset question is settled: the portal has no
+  sticky header and keeps `--mhvp-sticky-top: 0px`.
 
 ## Alternatives considered
 

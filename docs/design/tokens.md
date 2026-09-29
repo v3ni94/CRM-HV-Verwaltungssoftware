@@ -148,11 +148,16 @@ Bedienelemente: `focus-visible:ring-2 focus-visible:ring-focus`.
 ## Handy und Tablet (M31)
 
 - `--mhvp-header-h`: Höhe der Kopfzeile, 3,5 rem (56 px) unter `sm`, 4 rem (64 px) ab 640 px, in
-  `packages/ui/src/tokens.css` unter `:root`. Klebende Elemente unter der Kopfzeile (Tabellenkopf
-  `.mhvp-table thead th`, Abschnittsleisten `top-[var(--mhvp-header-h)]`, Sprungziele
-  `scroll-mt-[calc(var(--mhvp-header-h)+3rem)]`) rechnen mit diesem Wert, nie mit einer Zahl.
-  Der Tabellenkopf klebt nur, wenn die Tabelle mit der Seite scrollt; in einem Scrollwrapper
-  scrollt er mit.
+  `packages/ui/src/tokens.css` unter `:root`. Klebende Elemente unter der Kopfzeile (Abschnittsleisten
+  `top-[var(--mhvp-header-h)]`, Sprungziele `scroll-mt-[calc(var(--mhvp-header-h)+3rem)]`, Popover
+  der Glocke) rechnen mit diesem Wert, nie mit einer Zahl.
+- `--mhvp-sticky-top`: Versatz klebender Elemente, die mit der Seite scrollen. In `tokens.css`
+  `0px`; das CRM setzt ihn in `apps/web-crm/src/app/globals.css` auf `--mhvp-header-h`, weil nur
+  dort die Kopfzeile klebt. Das Portal bleibt bei 0, bis es eine klebende Kopfzeile hat.
+  Tabellenköpfe (`.mhvp-table thead th`) kleben bei `top: 0` ihres Scrollcontainers; in einem
+  Scrollwrapper (`ui.tableScroll`, `ui.tableCard`, `ResponsiveList`) ist das der Wrapper, und jeder
+  andere Versatz schiebt den Kopf schon bei Scrollposition 0 über die ersten Zeilen. Nur eine
+  Tabelle ohne Wrapper nutzt `ui.tablePage` (`mhvp-table--page`) und klebt unter der Kopfzeile.
 - Hover nur unter `@media (hover: hover)`: Zeilen Hover, Sticky Spalten Hover und `.mhvp-lift`
   in `base.css`. Fokus und aktive Zustände bleiben auf allen Geräten.
 - Zeigervarianten statt Breitenvarianten für Zielgrößen: `pointer-coarse:` und `pointer-fine:`

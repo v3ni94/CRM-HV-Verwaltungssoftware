@@ -101,6 +101,9 @@
    * the media rule below). Sticky elements under the header (table heads, section bars,
    * scroll margins) offset by this variable instead of a hard coded value. */
   --mhvp-header-h: 3.5rem;
+  /* Offset of sticky elements that scroll with the page (mhvp-table--page heads). 0 here: the
+   * portal has no sticky header. The CRM sets it to --mhvp-header-h in its globals.css. */
+  --mhvp-sticky-top: 0px;
 
   /* Focus ring (consistent across inputs, buttons, links, cards) */
   --mhvp-focus-ring-color: var(--mhvp-color-accent-strong);

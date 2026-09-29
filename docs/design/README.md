@@ -85,7 +85,7 @@ einem Service Worker.
 
 | Ebene | z-Index |
 | --- | --- |
-| Tabellenkopf (sticky unter der Kopfzeile) | 1 |
+| Tabellenkopf (sticky am oberen Rand des Scrollcontainers, unter der Kopfzeile nur mit `ui.tablePage`) | 1 |
 | Kopfzeile | `z-30` |
 | `BottomBar` | `z-30` |
 | Popover, Menüs (Glocke, Benutzermenü, Statuschip Erklärung) | `z-40` (Chip `z-20` innerhalb der Seite) |

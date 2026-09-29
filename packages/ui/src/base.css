@@ -103,14 +103,17 @@ body {
   background-size: 14px;
 }
 
-/* Data tables: airy rows, quiet header, no vertical rules. The head is sticky at the header
- * height (--mhvp-header-h) only when the table scrolls with the page itself; inside a
- * horizontal scroll wrapper (ui.tableScroll, ui.tableCard, ResponsiveList) the wrapper is the
- * scroll container, so the head scrolls with it (no sticky effect, no overlap with the app
- * header). z-index 1 keeps it below the app header (z-30), menus and dialogs. On the page
- * ground a table is its own card (surface, line, soft shadow by day); inside a card
- * (mhvp-surface-card, set by ui.card and mhvp-card) it stays flat. Separate borders with zero
- * spacing keep the single bottom rule per row and allow rounded corners. */
+/* Data tables: airy rows, quiet header, no vertical rules, sticky head at top 0 of its scroll
+ * container (unchanged since 1.37). Note: a horizontal scroll wrapper (overflow-x: auto, e.g.
+ * ui.tableScroll, ui.tableCard, ResponsiveList) is itself the scroll container, so any inset
+ * other than 0 shifts the head down over the first rows even at scroll position 0. A table that
+ * scrolls with the page under a sticky app header opts in with mhvp-table--page; the offset
+ * comes from --mhvp-sticky-top (0px in tokens.css, set to --mhvp-header-h by the CRM only,
+ * see apps/web-crm/src/app/globals.css; the portal header is not sticky). z-index 1 keeps the
+ * head below the app header (z-30), menus and dialogs. On the page ground a table is its own
+ * card (surface, line, soft shadow by day); inside a card (mhvp-surface-card, set by ui.card
+ * and mhvp-card) it stays flat. Separate borders with zero spacing keep the single bottom rule
+ * per row and allow rounded corners. */
 .mhvp-table {
   width: 100%;
   border-collapse: separate;
@@ -142,7 +145,7 @@ body {
 }
 .mhvp-table thead th {
   position: sticky;
-  top: var(--mhvp-header-h, 0);
+  top: 0;
   z-index: 1;
   text-align: left;
   font-weight: 500;
@@ -153,6 +156,9 @@ body {
   background: var(--mhvp-color-surface);
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid var(--mhvp-color-border);
+}
+.mhvp-table--page thead th {
+  top: var(--mhvp-sticky-top, 0px);
 }
 .mhvp-table tbody td {
   padding: 0.625rem 0.75rem;

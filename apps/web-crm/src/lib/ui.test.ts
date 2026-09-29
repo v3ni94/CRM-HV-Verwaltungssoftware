@@ -1,3 +1,6 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+
 import { ui } from "./ui";
 
 /** Touch sizes follow the pointer, not the width (M31, plan WP1 step 2): every control keeps
@@ -42,6 +45,15 @@ describe("ui class sets (M31)", () => {
     expect(ui.tableCard).toContain("p-0");
     expect(ui.tableCard).not.toContain("p-4");
     expect(ui.cardsMobile).toContain("sm:hidden");
+  });
+
+  it("keeps table heads at top 0 and offsets only the page table below the header (review WP1)", () => {
+    expect(ui.table).toBe("mhvp-table");
+    expect(ui.tablePage).toBe("mhvp-table mhvp-table--page");
+    expect(ui.tableCard).not.toContain("mhvp-table--page");
+    expect(ui.tableScroll).not.toContain("mhvp-table--page");
+    const globals = readFileSync(join(__dirname, "../app/globals.css"), "utf8");
+    expect(globals).toMatch(/--mhvp-sticky-top:\s*var\(--mhvp-header-h\);/);
   });
 
   it("segments and icon buttons follow the pointer", () => {
