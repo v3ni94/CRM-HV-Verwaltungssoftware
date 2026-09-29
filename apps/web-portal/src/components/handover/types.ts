@@ -96,6 +96,8 @@ export type Doc = {
   section: string | null;
   item_id: string | null;
   created_at: string;
+  /** Portal thumbnail path (320 px, no metadata; M31 WP2) for photos, null for other kinds. */
+  thumbnail_url?: string | null;
 };
 
 export type Signature = {

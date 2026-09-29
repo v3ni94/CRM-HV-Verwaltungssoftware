@@ -46,7 +46,7 @@ export function HandoverReadCard({ p, files }: { p: Full; files: string }) {
               onClick={() => setOpen(gallery.findIndex((g) => g.id === d.id))}
             >
               {/* eslint-disable-next-line @next/next/no-img-element -- protected same-origin blob, no optimizer */}
-              <img src={`${files}/documents/${d.id}/content`} alt={d.title} className="h-20 w-20 rounded-md border border-border object-cover" />
+              <img src={`${files}/documents/${d.id}/${d.thumbnail_url ? "thumbnail" : "content"}`} alt={d.title} className="h-20 w-20 rounded-md border border-border object-cover" />
             </button>
           </li>
         ))}

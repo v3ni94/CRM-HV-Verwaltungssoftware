@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { SignaturePad, drawStrokes, normalise } from "./SignaturePad";
+import { SignaturePad } from "./SignaturePad";
 
 /** jsdom has no canvas: a minimal 2D context records the calls we assert on. */
 function stubCanvas() {
@@ -46,15 +46,16 @@ function draw(canvas: HTMLCanvasElement, from: [number, number], to: [number, nu
 describe("SignaturePad", () => {
   afterEach(() => vi.restoreAllMocks());
 
-  it("keeps strokes normalised and redraws them at a new size (rotation)", () => {
-    expect(normalise({ x: 150, y: 50 }, { width: 300, height: 200 })).toEqual({ x: 0.5, y: 0.25 });
-    expect(normalise({ x: -5, y: 500 }, { width: 300, height: 200 })).toEqual({ x: 0, y: 1 });
+  it("draws through the shared signature core: normalised strokes, redrawn at the canvas size", () => {
     const { ctx } = stubCanvas();
-    const canvas = document.createElement("canvas");
-    drawStrokes(canvas, [[{ x: 0.5, y: 0.25 }, { x: 1, y: 1 }]]);
-    expect(ctx.moveTo).toHaveBeenCalledWith(150, 50);
-    expect(ctx.lineTo).toHaveBeenCalledWith(300, 200);
-    expect(ctx.stroke).toHaveBeenCalledTimes(1);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}, 200));
+    renderIntl(<SignaturePad base="/api/bff/portal/handover/x" kind="rental" participants={[]} signatures={[]} disabled={false} onSaved={vi.fn()} />);
+    const canvas = screen.getByLabelText("Unterschriftsfeld") as HTMLCanvasElement;
+    draw(canvas, [150, 50], [300, 200]);
+    // the core draws in bitmap pixels (CSS box times the device pixel ratio, 1 in jsdom)
+    expect(ctx.moveTo).toHaveBeenLastCalledWith(150, 50);
+    expect(ctx.lineTo).toHaveBeenLastCalledWith(300, 200);
+    expect(ctx.stroke).toHaveBeenCalled();
   });
 
   it("offers Rückgängig for the last stroke and Leeren for all, and refuses to save an empty pad", async () => {

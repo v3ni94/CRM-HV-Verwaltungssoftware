@@ -5,7 +5,7 @@
  * is the static offline page returned. API responses (/api), documents, pages with personal or
  * financial data and every other request are never cached and never read from the cache. The
  * cache name carries the release, so an update drops the previous shell on activation. */
-const CACHE = "mhvp-crm-shell-1.46.0";
+const CACHE = "mhvp-crm-shell-1.45.0";
 const SHELL = ["/offline.html", "/icons/icon-192.png", "/icons/icon-512.png", "/icons/icon-512-maskable.png"];
 const NAVIGATION_TIMEOUT_MS = 8000;
 
