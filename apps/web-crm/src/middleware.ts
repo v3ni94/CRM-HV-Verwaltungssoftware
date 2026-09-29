@@ -15,9 +15,12 @@ import { safeNext, withNext } from "@/lib/next-path";
 // shows the logo before any session exists (operator report 28.09.2026: /logo-mhag.png was
 // redirected to /anmelden). Only one path segment with a static file extension is excluded;
 // the app has no top level dynamic route, so no page or API route can match it.
+// M31 WP5 (operator decision M30-08, 28.09.2026): the installable shell needs sw.js,
+// offline.html, manifest.webmanifest and the PNG icons under icons/ before any session
+// exists; exactly these names are added, nothing else under icons/ and no other extension.
 export const config = {
   matcher: [
-    "/((?!_next/|favicon.ico|api/health|[^/]+\\.(?:png|svg|ico|jpg|jpeg|webp|gif|avif|woff2?|webmanifest)$).*)",
+    "/((?!_next/|favicon.ico|api/health|sw\\.js$|offline\\.html$|manifest\\.webmanifest$|icons/[^/]+\\.png$|[^/]+\\.(?:png|svg|ico|jpg|jpeg|webp|gif|avif|woff2?|webmanifest)$).*)",
   ],
   runtime: "nodejs",
 };
@@ -26,7 +29,10 @@ const PATH_HEADER = "x-mhvp-path";
 /** A file directly under public/, same rule as the matcher exclusion above. Kept here as well
  *  so the decision is testable and holds if the matcher is ever widened again. */
 const STATIC_ASSET = /^\/[A-Za-z0-9_-][A-Za-z0-9._-]*\.(?:png|svg|ico|jpg|jpeg|webp|gif|avif|woff2?|webmanifest)$/;
-const PUBLIC = [/^\/$/, /^\/anmelden(\/|$)/, /^\/api\/session\//, STATIC_ASSET];
+/** Files of the installable shell (M30-08): the worker, the offline page, the manifest and
+ *  the icons folder with PNG files only. */
+const PWA_SHELL = /^\/(?:sw\.js|offline\.html|manifest\.webmanifest|icons\/[A-Za-z0-9_-]+\.png)$/;
+const PUBLIC = [/^\/$/, /^\/anmelden(\/|$)/, /^\/api\/session\//, STATIC_ASSET, PWA_SHELL];
 
 function unauthenticated(request: NextRequest): NextResponse {
   if (request.nextUrl.pathname.startsWith("/api/")) {

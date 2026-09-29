@@ -4,6 +4,7 @@ import {
   DEFAULT_THEME,
   THEME_STORAGE_KEY,
   getThemePreference,
+  installThemeColorMeta,
   isEveningHour,
   parseThemePreference,
   readStoredPreference,
@@ -127,5 +128,35 @@ describe("setThemePreference / getThemePreference", () => {
     unsubscribe();
     setThemePreference("day");
     expect(listener).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("theme-color meta of the installed shell (M31 WP5)", () => {
+  afterEach(() => {
+    document.head.querySelectorAll('meta[name="theme-color"]').forEach((m) => m.remove());
+    document.head.querySelectorAll("style[data-test]").forEach((s) => s.remove());
+  });
+
+  it("writes the token value of the active theme and follows a change of data-theme", async () => {
+    const style = document.createElement("style");
+    style.dataset.test = "1";
+    style.textContent = ':root{--mhvp-color-bg:#f6f5f2}:root[data-theme="evening"]{--mhvp-color-bg:#0f1115}';
+    document.head.appendChild(style);
+    document.documentElement.setAttribute("data-theme", "day");
+    const stop = installThemeColorMeta();
+    const meta = () => document.querySelector('meta[name="theme-color"]')?.getAttribute("content");
+    expect(meta()).toBe("#f6f5f2");
+    document.documentElement.setAttribute("data-theme", "evening");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(meta()).toBe("#0f1115");
+    stop();
+    document.documentElement.setAttribute("data-theme", "day");
+    await new Promise((r) => setTimeout(r, 0));
+    expect(meta()).toBe("#0f1115");
+  });
+
+  it("does nothing without a token value (no stylesheet loaded)", () => {
+    installThemeColorMeta()();
+    expect(document.querySelector('meta[name="theme-color"]')).toBeNull();
   });
 });

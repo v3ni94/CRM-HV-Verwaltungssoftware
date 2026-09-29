@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>MH Verwaltungsplattform</title>
+    <script>
+      /* Same mode as the CRM (src/lib/theme.ts): stored choice day, evening or auto (evening
+       * from 19:00 to 06:59 local time). */
+      try {
+        var p = (localStorage.getItem("mhvp-theme") || "auto").trim().toLowerCase();
+        var h = new Date().getHours();
+        var e = p === "evening" || p === "dark" || (p !== "day" && p !== "light" && (h >= 19 || h < 7));
+        document.documentElement.setAttribute("data-theme", e ? "evening" : "day");
+      } catch (err) {}
+    </script>
+    <style>
+      /* Static copy of the @mhvp/ui tokens (bg, surface, fg, muted, border, accent); the offline
+       * page loads no stylesheet from the app. */
+      :root {
+        color-scheme: light;
+        --bg: #f6f5f2;
+        --surface: #ffffff;
+        --fg: #1a1a1a;
+        --muted: #6b6c6f;
+        --border: #ecebe7;
+        --accent: #e6a83c;
+      }
+      :root[data-theme="evening"] {
+        color-scheme: dark;
+        --bg: #0f1115;
+        --surface: #171a21;
+        --fg: #e8eaf0;
+        --muted: #9aa3b2;
+        --border: #262b35;
+      }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--bg);
+        color: var(--fg);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+        padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+      }
+      main {
+        max-width: 24rem;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-left: 3px solid var(--accent);
+        border-radius: 12px;
+        padding: 24px;
+      }
+      h1 {
+        font-size: 1.25rem;
+        margin: 0 0 8px;
+      }
+      p {
+        margin: 0 0 12px;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+      button {
+        border: 1px solid var(--border);
+        background: var(--surface);
+        color: var(--fg);
+        border-radius: 8px;
+        padding: 10px 14px;
+        font: inherit;
+        min-height: 44px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p style="font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase">MH Verwaltungsplattform</p>
+      <h1>Keine Verbindung</h1>
+      <p>Eingaben werden nicht auf dem Gerät gespeichert. Sobald wieder eine Verbindung besteht, können Sie die Anwendung erneut öffnen; nicht gespeicherte Eingaben müssen neu erfasst werden.</p>
+      <button type="button" onclick="location.reload()">Erneut versuchen</button>
+    </main>
+  </body>
+</html>

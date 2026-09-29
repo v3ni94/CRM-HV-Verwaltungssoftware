@@ -1,4 +1,4 @@
-import { readdirSync } from "node:fs";
+import { readdirSync, statSync } from "node:fs";
 import path from "node:path";
 
 import { NextRequest } from "next/server";
@@ -60,13 +60,19 @@ describe("middleware next handling", () => {
 });
 
 describe("middleware static public files (operator report 28.09.2026)", () => {
-  const publicFiles = readdirSync(path.resolve(import.meta.dirname, "../public"));
+  const publicDir = path.resolve(import.meta.dirname, "../public");
+  const publicFiles = readdirSync(publicDir).filter((name) => statSync(path.join(publicDir, name)).isFile());
   // The matcher string is also a valid JavaScript pattern; anchored it mirrors Next's decision.
   const matcher = new RegExp(`^${config.matcher[0]}$`);
 
   it("serves every file of public/ without a session instead of redirecting to /anmelden", async () => {
     expect(publicFiles).toContain("logo-mhag.png");
-    for (const file of publicFiles) {
+    // M31 WP5 (M30-08): the shell files and the icons folder are public as well.
+    expect(publicFiles).toContain("sw.js");
+    expect(publicFiles).toContain("offline.html");
+    const icons = readdirSync(path.join(publicDir, "icons")).map((name) => `icons/${name}`);
+    expect(icons).toEqual(expect.arrayContaining(["icons/icon-192.png", "icons/icon-512.png", "icons/icon-512-maskable.png"]));
+    for (const file of [...publicFiles, ...icons, "manifest.webmanifest"]) {
       const res = await middleware(request(`/${file}`));
       expect(res.headers.get("location"), file).toBeNull();
       expect(res.status, file).toBe(200);
@@ -85,6 +91,14 @@ describe("middleware static public files (operator report 28.09.2026)", () => {
       "/logo-mhag.png/objekte",
       "/logo-mhag.pngx",
       "/.png",
+      // M30-08: only the named shell files are open, not their neighbours.
+      "/sw.js/x",
+      "/sw.jsx",
+      "/offline.html/x",
+      "/icons/x.svg",
+      "/icons/sub/icon.png",
+      "/icons/",
+      "/api/bff",
     ]) {
       expect(matcher.test(target), target).toBe(true);
       const res = await middleware(request(target));

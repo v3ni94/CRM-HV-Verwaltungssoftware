@@ -5,6 +5,7 @@ import { Suspense } from "react";
 
 import { AiChatWidget } from "@/components/ai/AiChatWidget";
 import { MobileNav } from "@/components/shell/MobileNav";
+import { PwaRegister } from "@/components/shell/PwaRegister";
 import { CommandPalette } from "@/components/shell/CommandPalette";
 import { SideNav, type NavGroup } from "@/components/shell/SideNav";
 import { TenantSwitcher } from "@/components/shell/TenantSwitcher";
@@ -104,6 +105,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         <script dangerouslySetInnerHTML={{ __html: serverThemeScript(themePreference) }} />
       ) : null}
       <ThemeController serverPreference={themePreference} />
+      <PwaRegister />
       <a href="#inhalt" className="sr-only focus:not-sr-only focus:absolute focus:left-2 focus:top-2 focus:z-50">
         {t("skip")}
       </a>

@@ -11366,5 +11366,10 @@
     "confirm": "Confirm",
     "cancel": "Cancel",
     "stepProgress": "Step {n} of {total}"
+  },
+  "Pwa": {
+    "install": "Install as app",
+    "iosHint": "In Safari via Share and Add to Home Screen. The app stores no data on the device.",
+    "dismiss": "Do not show again"
   }
 }

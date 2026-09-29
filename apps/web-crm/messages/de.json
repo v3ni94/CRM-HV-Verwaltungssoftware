@@ -11366,5 +11366,10 @@
     "confirm": "Bestätigen",
     "cancel": "Abbrechen",
     "stepProgress": "Schritt {n} von {total}"
+  },
+  "Pwa": {
+    "install": "Als App installieren",
+    "iosHint": "In Safari über Teilen und Zum Home-Bildschirm hinzufügen. Die App speichert keine Daten auf dem Gerät.",
+    "dismiss": "Nicht mehr anzeigen"
   }
 }

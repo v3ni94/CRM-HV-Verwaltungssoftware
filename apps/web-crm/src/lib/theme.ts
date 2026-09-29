@@ -81,3 +81,31 @@ export const subscribeTheme = crmThemeStore.subscribe;
 export const setThemePreference = crmThemeStore.set;
 /** For tests: forget the cached preference. */
 export const resetThemeStore = crmThemeStore.reset;
+
+const THEME_COLOR_VARIABLE = "--mhvp-color-bg";
+
+/** Writes the current page ground (token --mhvp-color-bg of the active data-theme) into
+ *  <meta name="theme-color">, so the status bar of an installed app follows the day and
+ *  evening theme without a hex value in code (M31 WP5, M30-08). Read from getComputedStyle,
+ *  so tenant branding and future token changes carry over. */
+export function syncThemeColorMeta(doc: Document = document): void {
+  const value = getComputedStyle(doc.documentElement).getPropertyValue(THEME_COLOR_VARIABLE).trim();
+  if (!value) return;
+  let meta = doc.querySelector<HTMLMetaElement>('meta[name="theme-color"]:not([media])');
+  if (!meta) {
+    meta = doc.createElement("meta");
+    meta.setAttribute("name", "theme-color");
+    doc.head.appendChild(meta);
+  }
+  if (meta.getAttribute("content") !== value) meta.setAttribute("content", value);
+}
+
+/** Keeps the meta in step with every change of data-theme (manual switch, automatic evening
+ *  mode, server preference). Returns the stop function. */
+export function installThemeColorMeta(doc: Document = document): () => void {
+  syncThemeColorMeta(doc);
+  if (typeof MutationObserver === "undefined") return () => undefined;
+  const observer = new MutationObserver(() => syncThemeColorMeta(doc));
+  observer.observe(doc.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+  return () => observer.disconnect();
+}

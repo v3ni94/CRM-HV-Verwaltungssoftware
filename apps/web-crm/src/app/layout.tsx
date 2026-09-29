@@ -14,6 +14,10 @@ export async function generateMetadata(): Promise<Metadata> {
   return {
     title: t("title"),
     description: t("description"),
+    // Installable shell (M31 WP5, M30-08): manifest link and home screen title; the icons of
+    // the home screen come from the manifest, the touch icon stays for older Safari versions.
+    manifest: "/manifest.webmanifest",
+    appleWebApp: { capable: true, title: "MHVP", statusBarStyle: "default" },
     icons: {
       icon: [{ url: "/favicon.png", type: "image/png" }],
       apple: [{ url: "/apple-touch-icon.png" }],

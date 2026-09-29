@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 
+import { InstallHint } from "@/components/shell/InstallHint";
 import { ThemeSwitch } from "@/components/workspace/ThemeToggle";
 import { bff } from "@/lib/bff";
 
@@ -89,6 +90,7 @@ export function UserMenu({ name, email }: { name: string; email?: string }) {
           >
             {t("settings")}
           </Link>
+          <InstallHint itemClassName={MENU_ITEM} />
           <button
             type="button"
             role="menuitem"
