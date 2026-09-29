@@ -398,6 +398,7 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         },
         auto_posting_outgoing_enabled=row.auto_posting_outgoing_enabled,
         metering_module_enabled=row.metering_module_enabled,
+        handover_offline_enabled=row.handover_offline_enabled,
         consumption_info_enabled=row.consumption_info_enabled,
         consumption_info_notifications_enabled=row.consumption_info_notifications_enabled,
         consumption_info_template_verified=row.consumption_info_template_verified,
@@ -482,6 +483,7 @@ async def patch_settings(
             "bank_rule_proposal_threshold": row.bank_rule_proposal_threshold,
             "bank_rule_recurring_threshold": row.bank_rule_recurring_threshold,
             "metering_module_enabled": row.metering_module_enabled,
+            "handover_offline_enabled": row.handover_offline_enabled,
             "consumption_info_enabled": row.consumption_info_enabled,
             "consumption_info_notifications_enabled": row.consumption_info_notifications_enabled,
             "consumption_info_template_verified": row.consumption_info_template_verified,
@@ -520,6 +522,9 @@ async def patch_settings(
         if body.metering_module_enabled is not None:
             # Messdienstleister module switch per tenant, change recorded in the event.
             row.metering_module_enabled = body.metering_module_enabled
+        if body.handover_offline_enabled is not None:
+            # Rule M30-10, ADR 0016: offline capture of handover protocols, change recorded.
+            row.handover_offline_enabled = body.handover_offline_enabled
         # Rule H03: Verbrauchsinformation switches per tenant, every change recorded.
         for field in CONSUMPTION_INFO_FIELDS:
             value = getattr(body, field)
@@ -564,6 +569,7 @@ async def patch_settings(
             "bank_rule_proposal_threshold": row.bank_rule_proposal_threshold,
             "bank_rule_recurring_threshold": row.bank_rule_recurring_threshold,
             "metering_module_enabled": row.metering_module_enabled,
+            "handover_offline_enabled": row.handover_offline_enabled,
             "consumption_info_enabled": row.consumption_info_enabled,
             "consumption_info_notifications_enabled": row.consumption_info_notifications_enabled,
             "consumption_info_template_verified": row.consumption_info_template_verified,

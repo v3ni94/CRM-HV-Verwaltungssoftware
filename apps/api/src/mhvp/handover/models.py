@@ -14,7 +14,7 @@ from typing import Any
 import sqlalchemy as sa
 from sqlalchemy import Date, DateTime, ForeignKey, Index, Integer, Numeric, String, Text, Time
 from sqlalchemy import text as sa_text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.core.db.base import Base
@@ -163,6 +163,10 @@ class HandoverParticipant(IdMixin, TimestampMixin, TenantMixin, Base):
     phone: Mapped[str | None] = mapped_column(String(50))
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Device time of capture when the row was recorded offline and replayed later (rule
+    # M30-10, ADR 0016): a value reported by the device, never proof; ``created_at`` is the
+    # replay time on the server.
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
@@ -181,6 +185,10 @@ class HandoverMeter(IdMixin, TimestampMixin, TenantMixin, Base):
     read_at: Mapped[time | None] = mapped_column(Time)
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Device time of capture when the row was recorded offline and replayed later (rule
+    # M30-10, ADR 0016): a value reported by the device, never proof; ``created_at`` is the
+    # replay time on the server.
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
     # Set by "Zählerstände übernehmen" (Package F): the meter_reading created from this row.
     # A row with a reading is never taken over again (idempotent takeover).
@@ -202,6 +210,10 @@ class HandoverRoom(IdMixin, TimestampMixin, TenantMixin, Base):
     condition: Mapped[str | None] = mapped_column(String(20))
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Device time of capture when the row was recorded offline and replayed later (rule
+    # M30-10, ADR 0016): a value reported by the device, never proof; ``created_at`` is the
+    # replay time on the server.
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
@@ -220,6 +232,10 @@ class HandoverDefect(IdMixin, TimestampMixin, TenantMixin, Base):
     defect_status: Mapped[str | None] = mapped_column(String(20))
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Device time of capture when the row was recorded offline and replayed later (rule
+    # M30-10, ADR 0016): a value reported by the device, never proof; ``created_at`` is the
+    # replay time on the server.
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
@@ -236,6 +252,10 @@ class HandoverKey(IdMixin, TimestampMixin, TenantMixin, Base):
     )  # handed_over, not_handed_over, to_follow
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Device time of capture when the row was recorded offline and replayed later (rule
+    # M30-10, ADR 0016): a value reported by the device, never proof; ``created_at`` is the
+    # replay time on the server.
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
@@ -249,6 +269,10 @@ class HandoverItem(IdMixin, TimestampMixin, TenantMixin, Base):
     condition: Mapped[str | None] = mapped_column(String(100))
     comment: Mapped[str | None] = mapped_column(Text)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Device time of capture when the row was recorded offline and replayed later (rule
+    # M30-10, ADR 0016): a value reported by the device, never proof; ``created_at`` is the
+    # replay time on the server.
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
@@ -266,6 +290,10 @@ class HandoverNote(IdMixin, TimestampMixin, TenantMixin, Base):
         sa.Boolean, nullable=False, default=False, server_default=sa_text("false")
     )
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    # Device time of capture when the row was recorded offline and replayed later (rule
+    # M30-10, ADR 0016): a value reported by the device, never proof; ``created_at`` is the
+    # replay time on the server.
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
 
 
@@ -282,6 +310,9 @@ class HandoverSignature(IdMixin, TimestampMixin, TenantMixin, Base):
     sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     signed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     signed_location: Mapped[str | None] = mapped_column(String(200))
+    # Device time of the signature when it was captured offline (rule M30-10, ADR 0016): a
+    # value reported by the device; ``signed_at`` stays the server time of the replay.
+    signed_at_device: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     comment: Mapped[str | None] = mapped_column(String(255))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
     # Set by "Änderung nach Unterschrift" (M30-09, operator decision 28.09.2026): the signature
@@ -312,3 +343,23 @@ class HandoverChange(IdMixin, TimestampMixin, TenantMixin, Base):
     signatures_invalidated: Mapped[int] = mapped_column(
         Integer, nullable=False, default=0, server_default="0"
     )
+
+
+class HandoverClientWrite(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Idempotency ledger of the offline capture (rule M30-10, ADR 0016): one row per accepted
+    write that carried an ``Idempotency-Key``. A replay with the same key returns the stored
+    response instead of writing twice. ``captured_at`` is the device time reported by the
+    client; ``created_at`` is when the server accepted the write."""
+
+    __tablename__ = "handover_client_write"
+    __table_args__ = (
+        sa.UniqueConstraint("tenant_id", "client_key", name="uq_handover_client_write_key"),
+    )
+
+    protocol_id: Mapped[uuid.UUID] = _protocol_fk()
+    client_key: Mapped[str] = mapped_column(String(64), nullable=False)
+    method: Mapped[str] = mapped_column(String(8), nullable=False)
+    path: Mapped[str] = mapped_column(String(300), nullable=False)
+    captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    status_code: Mapped[int] = mapped_column(Integer, nullable=False)
+    response: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
