@@ -863,6 +863,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^mail\/signature\/preview$/ },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/position$`) },
   { method: "GET", pattern: /^banking\/fints\/config$/ },
+  { method: "GET", pattern: /^banking\/clarifications$/ },
+  { method: "POST", pattern: new RegExp(`^banking/clarifications/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/open-items/settlement-proposal(/confirm)?$`) },
   { method: "GET", pattern: /^ai\/embeddings\/status$/ },
   { method: "POST", pattern: /^ai\/embeddings\/reindex$/ },
