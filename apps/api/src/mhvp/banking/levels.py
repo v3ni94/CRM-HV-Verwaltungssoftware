@@ -24,7 +24,7 @@ tenant and class in ``tenant_settings.bookkeeping_automation``; raising a level 
 request by one person and the release by another (``BookkeepingLevelRequest``), lowering is
 immediate and is also done by the platform itself (``downgrade``). Thresholds
 (``ELIGIBILITY``) are product protection standards without empirical basis (assumptions
-A-084, docs/ASSUMPTIONS.md), never a legal requirement, and never lower per tenant. Nothing
+A-085, docs/ASSUMPTIONS.md), never a legal requirement, and never lower per tenant. Nothing
 here posts, and no level opens a gate: the runner checks G1 or a non leading ledger itself.
 """
 
@@ -89,7 +89,7 @@ CLASS_CAPS: dict[str, str] = {
 # Classes whose L3 review is a deterministic sample instead of every posting (plan 3.4).
 SAMPLED_CLASSES: frozenset[str] = frozenset({CLASS_DEBTOR_FULL, CLASS_TRANSFER_PAIR})
 
-# Eligibility thresholds per target level (product protection, assumption A-084): minimum
+# Eligibility thresholds per target level (product protection, assumption A-085): minimum
 # number of decisions of persons in the window, minimum precision of the shown proposals,
 # minimum days at the previous level, and for L3 the automatic figures.
 ELIGIBILITY: dict[str, dict[str, Any]] = {

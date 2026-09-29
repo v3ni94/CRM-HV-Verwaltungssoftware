@@ -67,7 +67,7 @@ from mhvp.workspace.services import local_today
 
 log = logging.getLogger(__name__)
 
-# Case limits (product protection, assumption A-086): per rule and day, per run, per tenant
+# Case limits (product protection, assumption A-087): per rule and day, per run, per tenant
 # and day. Reaching one stops the run with ``bank_auto_post.run_stopped``.
 RULE_DAY_LIMIT = 50
 RUN_LIMIT = 200

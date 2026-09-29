@@ -461,8 +461,8 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
     # Lernende Bankregeln (Regel M12-06, Migration 0241): Schwelle gleicher Entscheidungen bis
-    # zum Regelvorschlag (Standard 5, Annahme A-085) und die niedrigere Schwelle für
-    # wiederkehrende Muster mit gleicher Gegenpartei und gleichem Betrag (Standard 3, A-085).
+    # zum Regelvorschlag (Standard 5, Annahme A-086) und die niedrigere Schwelle für
+    # wiederkehrende Muster mit gleicher Gegenpartei und gleichem Betrag (Standard 3, A-086).
     bank_rule_proposal_threshold: Mapped[int] = mapped_column(
         Integer, nullable=False, default=5, server_default=text("5")
     )

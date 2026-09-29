@@ -109,7 +109,7 @@ Decisions:
    tenant and class in `tenant_settings.bookkeeping_automation`; raising a level is a
    persistent request (`bookkeeping_level_request`, eligibility report as evidence) released
    by another person, never a platform admin; lowering is immediate and also automatic
-   (nightly `levels_refresh`, only down). Thresholds are product protection (A-084), never
+   (nightly `levels_refresh`, only down). Thresholds are product protection (A-085), never
    lowered per tenant.
 2. L1 one click (`POST /transactions/{id}/accept`) books exactly the deterministically
    verified proposal as a manual posting of the person; history and AI proposals never
@@ -117,14 +117,14 @@ Decisions:
 3. Learned rules (rule M12-06): `learning.observe` runs in a savepoint after every decision
    of a person and after every reversal, reuses the pure streak functions of
    `mhvp.automation.learning`, and writes `bank_rule_proposal` at the tenant threshold (5,
-   recurring pattern 3, A-085); contradictions withdraw, acceptance creates a `BankRule`
+   recurring pattern 3, A-086); contradictions withdraw, acceptance creates a `BankRule`
    `proposed` (narrowing only), activation supersedes older learned rules of the key. The
    automation rule engine (M9-02) is not extended.
 4. Runner (rule M12-05): `matching.auto_post` delegates to `runner.auto_post_transaction`;
    `runner.run_for_tenant` runs after every import and sync (in `compute_proposals_once`)
    and on `POST /banking/auto-post`, with an advisory lock per tenant, level L2 or L3, an
    active rule, the deterministic verifier of the class (fingerprint stored on the
-   `auto_posted` decision), case limits (A-086) and the check G1 open or ledger not leading.
+   `auto_posted` decision), case limits (A-087) and the check G1 open or ledger not leading.
    The operator decision M12-07 of 28.09.2026 allows comparison postings by the automation
    before G1 in the non leading ledger; the leading ledger stays closed until G1.
 5. Review and correction: every L2 posting gets an `auto_posting_review` item due the next

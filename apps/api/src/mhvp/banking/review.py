@@ -48,7 +48,7 @@ SAMPLE_DUE_DAYS = 7
 
 
 def next_working_day(day: date) -> date:
-    """Next Monday to Friday after ``day`` (no holiday calendar, assumption A-087)."""
+    """Next Monday to Friday after ``day`` (no holiday calendar, assumption A-088)."""
     out = day + timedelta(days=1)
     while out.weekday() >= 5:
         out += timedelta(days=1)

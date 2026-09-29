@@ -12,7 +12,7 @@ proposed again only at twice the evidence. Bulk confirmations count with half we
 
 Thresholds: ``tenant_settings.bank_rule_proposal_threshold`` (default 5) and, for a recurring
 pattern (same counterparty, identical amount in every case), the lower
-``bank_rule_recurring_threshold`` (default 3); both are assumptions (A-085), never
+``bank_rule_recurring_threshold`` (default 3); both are assumptions (A-086), never
 lower than ``MIN_THRESHOLD``. A proposal books nothing and activates nothing: ``accept``
 creates a ``BankRule`` in state ``proposed`` (narrowing allowed, widening refused) that walks
 the existing four eyes path; ``supersede`` on activation disables older learned rules of the
@@ -54,7 +54,7 @@ BULK_WEIGHT = Decimal("0.5")
 EVIDENCE_LIMIT = 200
 MAX_TOKENS = 5
 _TOKEN = re.compile(r"[a-zäöüß]{4,}")
-# Words that appear in most purposes and carry no pattern (assumption A-085).
+# Words that appear in most purposes and carry no pattern (assumption A-086).
 STOP_TOKENS = frozenset(
     {
         "zahlung",

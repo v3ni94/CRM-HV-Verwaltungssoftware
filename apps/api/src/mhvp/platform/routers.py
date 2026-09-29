@@ -512,10 +512,10 @@ async def patch_settings(
             # Lern-Workflow (rule M9-11): threshold of the rule proposals, change recorded.
             row.rule_proposal_threshold = body.rule_proposal_threshold
         if body.bank_rule_proposal_threshold is not None:
-            # Regel M12-06: Schwelle der gelernten Bankregeln (Annahme A-085), protokolliert.
+            # Regel M12-06: Schwelle der gelernten Bankregeln (Annahme A-086), protokolliert.
             row.bank_rule_proposal_threshold = body.bank_rule_proposal_threshold
         if body.bank_rule_recurring_threshold is not None:
-            # Regel M12-06: niedrigere Schwelle wiederkehrender Muster (Annahme A-085).
+            # Regel M12-06: niedrigere Schwelle wiederkehrender Muster (Annahme A-086).
             row.bank_rule_recurring_threshold = body.bank_rule_recurring_threshold
         if body.metering_module_enabled is not None:
             # Messdienstleister module switch per tenant, change recorded in the event.
