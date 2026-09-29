@@ -29,7 +29,8 @@ type Props = {
  *  verifizieren". Never blocks the termination form. */
 export function NoticePeriodHint({ contractId, terminationDate, endDate }: Props) {
   const t = useTranslations("NoticePeriod");
-  const [months, setMonths] = useState("3");
+  // No default period: the value is entered per contract, never taken from a legal rule.
+  const [months, setMonths] = useState("");
   const [days, setDays] = useState("0");
   const [toMonthEnd, setToMonthEnd] = useState(true);
   const [result, setResult] = useState<NoticePeriod | null>(null);
@@ -39,6 +40,10 @@ export function NoticePeriodHint({ contractId, terminationDate, endDate }: Props
   async function compute() {
     if (!terminationDate) {
       setError(t("missingDate"));
+      return;
+    }
+    if (!(Number(months) || Number(days))) {
+      setError(t("missingPeriod"));
       return;
     }
     setBusy(true);

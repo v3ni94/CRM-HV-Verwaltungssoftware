@@ -10437,7 +10437,8 @@
     "before": "Das eingetragene Vertragsende {date} liegt vor dem rechnerischen Ende. Bitte prüfen, die Erfassung wird nicht blockiert.",
     "legal": "Die Kündigungsfrist ist rechtlich zu prüfen (Rechtsanwalt). Die Berechnung addiert nur die eingetragene Frist.",
     "error": "Die Berechnung konnte nicht abgerufen werden.",
-    "missingDate": "Zugang der Kündigung eintragen."
+    "missingDate": "Zugang der Kündigung eintragen.",
+    "missingPeriod": "Kündigungsfrist aus dem Vertrag eintragen."
   },
   "ManagerChecklist": {
     "title": "Checkliste Verwalterwechsel",

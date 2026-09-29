@@ -22,6 +22,12 @@ describe("NoticePeriodHint", () => {
   it("asks the API with the entered period and shows the end as orientation", async () => {
     renderIntl(<NoticePeriodHint contractId={CONTRACT} terminationDate="2026-09-05" endDate="2026-11-30" />);
     expect(screen.getByTestId("notice-termination")).toHaveValue("2026-09-05");
+    // No default period: without an entered period nothing is computed.
+    expect(screen.getByTestId("notice-months")).toHaveValue(null);
+    await userEvent.click(screen.getByTestId("notice-compute"));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Kündigungsfrist aus dem Vertrag eintragen.");
+    expect(calls).toHaveLength(0);
+    await userEvent.type(screen.getByTestId("notice-months"), "3");
     await userEvent.click(screen.getByTestId("notice-compute"));
     expect(await screen.findByText("Rechnerisches Ende: 31.12.2026")).toBeInTheDocument();
     expect(calls[0]).toContain("/workspace/notice-period?");
@@ -36,6 +42,7 @@ describe("NoticePeriodHint", () => {
 
   it("confirms an end date on or after the computed end and needs a termination date", async () => {
     const { unmount } = renderIntl(<NoticePeriodHint contractId={CONTRACT} terminationDate="2026-09-05" endDate="2026-12-31" />);
+    await userEvent.type(screen.getByTestId("notice-months"), "3");
     await userEvent.click(screen.getByTestId("notice-compute"));
     expect(await screen.findByText("Das eingetragene Vertragsende 31.12.2026 liegt nicht vor dem rechnerischen Ende.")).toBeInTheDocument();
     unmount();

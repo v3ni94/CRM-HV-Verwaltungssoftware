@@ -28,9 +28,10 @@ describe("RentIncreaseReceipt", () => {
     await userEvent.type(screen.getByTestId("receipt-date"), "2026-10-02");
     await userEvent.click(screen.getByRole("button", { name: "Zugangsdatum erfassen" }));
     expect(await screen.findByText("Zugangsdatum gespeichert.")).toBeInTheDocument();
-    expect(calls[0].url).toBe(`/api/bff/letting/rent-increases/${CASE}/actions`);
-    expect(calls[0].method).toBe("POST");
-    expect(calls[0].body).toEqual({ action: "receipt", received_on: "2026-10-02" });
+    const first = calls[0]!;
+    expect(first.url).toBe(`/api/bff/letting/rent-increases/${CASE}/actions`);
+    expect(first.method).toBe("POST");
+    expect(first.body).toEqual({ action: "receipt", received_on: "2026-10-02" });
     await waitFor(() => expect(refresh).toHaveBeenCalled());
   });
 

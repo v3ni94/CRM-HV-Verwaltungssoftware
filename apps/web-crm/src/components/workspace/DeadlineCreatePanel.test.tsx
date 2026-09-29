@@ -63,7 +63,7 @@ describe("DeadlineCreatePanel", () => {
     expect(screen.getAllByText("zu verifizieren").length).toBeGreaterThan(0);
     expect(screen.getByText(/Anna Beispiel/)).toBeInTheDocument();
     expect(screen.queryByTestId("deadline-create-form")).not.toBeInTheDocument();
-    expect(calls[0].url).toContain("source_type=contract&source_id=" + ENTRY.source_id + "&status=open");
+    expect(calls[0]!.url).toContain("source_type=contract&source_id=" + ENTRY.source_id + "&status=open");
   });
 
   it("computes the due date from the type and posts the new deadline", async () => {

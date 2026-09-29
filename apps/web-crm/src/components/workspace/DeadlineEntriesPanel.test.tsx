@@ -46,7 +46,7 @@ describe("DeadlineEntriesPanel", () => {
     expect(screen.getByText("ohne Verantwortlichen (ES-10)")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Zur Quelle" })).toHaveAttribute("href", ENTRY.href);
     expect(screen.getByRole("link", { name: "Fristtypen pflegen" })).toHaveAttribute("href", "/einstellungen/fristtypen");
-    expect(calls[0].url).toContain("status=open");
+    expect(calls[0]!.url).toContain("status=open");
   });
 
   it("finishes an entry and reloads with done entries when requested", async () => {

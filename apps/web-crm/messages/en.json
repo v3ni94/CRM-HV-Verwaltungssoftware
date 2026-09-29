@@ -10437,7 +10437,8 @@
     "before": "The entered contract end {date} lies before the computed end. Please check; the entry is not blocked.",
     "legal": "The notice period must be checked legally (lawyer). The computation only adds the entered period.",
     "error": "The computation could not be fetched.",
-    "missingDate": "Enter the date the termination was received."
+    "missingDate": "Enter the date the termination was received.",
+    "missingPeriod": "Enter the notice period from the contract."
   },
   "ManagerChecklist": {
     "title": "Checklist manager change",
