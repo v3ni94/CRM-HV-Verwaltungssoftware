@@ -64,6 +64,41 @@ describe("handover files", () => {
     expect(serverFetch).toHaveBeenCalledTimes(1);
   });
 
+  it("relays the thumbnail path and keeps no-store on every allowed pattern", async () => {
+    for (const path of [
+      `handover/protocols/${ID}/documents/${ID}/thumbnail`,
+      `handover/protocols/${ID}/pdf`,
+      `documents/${ID}/content`,
+    ]) {
+      serverFetch.mockResolvedValue(
+        new Response("jpg", {
+          status: 200,
+          headers: { "content-type": "image/jpeg", "cache-control": "public, max-age=3600" },
+        }),
+      );
+      const res = await GET(new Request("http://crm.localhost/x"), ctx(path));
+      expect(res.status).toBe(200);
+      expect(res.headers.get("cache-control")).toBe("private, no-store");
+      expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+    }
+    expect(
+      (
+        await GET(
+          new Request("http://crm.localhost/x"),
+          ctx(`handover/protocols/${ID}/documents/${ID}/content`),
+        )
+      ).status,
+    ).toBe(404);
+    expect(
+      (
+        await GET(
+          new Request("http://crm.localhost/x"),
+          ctx(`handover/protocols/${ID}/documents/thumbnail`),
+        )
+      ).status,
+    ).toBe(404);
+  });
+
   it("maps upstream errors to 404 without leaking the body", async () => {
     serverFetch.mockResolvedValue(new Response("secret", { status: 403 }));
     const res = await GET(

@@ -1,20 +1,66 @@
 "use client";
 
+import { attachSignatureCanvas, type SignatureController } from "@mhvp/ui/signature-canvas";
 import { useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-import {
-  ROLES,
-  type Item,
-  type Kind,
-  type Signature,
-  mainRoles,
-} from "./types";
+import { ROLES, type Item, type Kind, type Signature, mainRoles } from "./types";
 
-/** Canvas signature (finger, pen or mouse) stored as PNG with SHA-256 on the server (M30). */
+export type SignatureCanvasHandle = {
+  undo: () => void;
+  clear: () => void;
+  isEmpty: () => boolean;
+  toDataURL: () => string;
+};
+
+/** Canvas bound to the shared signature core (packages/ui): normalised strokes, redraw on
+ *  resize and rotation, undo. `className` sets the height (h-56 by default). */
+export function SignatureCanvas({
+  className = "h-56 sm:h-64",
+  onReady,
+  disabled = false,
+  label,
+}: {
+  className?: string;
+  onReady: (handle: SignatureCanvasHandle | null) => void;
+  disabled?: boolean;
+  label: string;
+}) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const controller = useRef<SignatureController | null>(null);
+  const onReadyRef = useRef(onReady);
+  onReadyRef.current = onReady;
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const c = attachSignatureCanvas(canvas);
+    controller.current = c;
+    onReadyRef.current({ undo: c.undo, clear: c.clear, isEmpty: c.isEmpty, toDataURL: c.toDataURL });
+    return () => {
+      c.destroy();
+      controller.current = null;
+      onReadyRef.current(null);
+    };
+  }, []);
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`w-full touch-none rounded-md border border-border bg-paper ${className} ${disabled ? "pointer-events-none opacity-60" : ""}`.trim()}
+      aria-label={label}
+      data-testid="signature-canvas"
+    />
+  );
+}
+
+export function participantName(p: Item): string {
+  return [p.first_name, p.last_name].filter(Boolean).join(" ") || String(p.company ?? "");
+}
+
+/** Signature form (M30): participant first, then the canvas, then name, role and place. Thin
+ *  shell over the shared core; the consent text stays in the parent. */
 export function SignaturePad({
   protocolId,
   kind,
@@ -31,177 +77,80 @@ export function SignaturePad({
   onSaved: () => void;
 }) {
   const t = useTranslations("Handover");
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const drawing = useRef(false);
-  const dirty = useRef(false);
+  const [handle, setHandle] = useState<SignatureCanvasHandle | null>(null);
   const [participantId, setParticipantId] = useState("");
   const [name, setName] = useState("");
   const [role, setRole] = useState<string>(mainRoles(kind)[1]);
   const [location, setLocation] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
-  const signed = new Set(
-    signatures.map((s) => s.participant_id).filter(Boolean),
-  );
-
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ratio = window.devicePixelRatio || 1;
-    const rect = canvas.getBoundingClientRect();
-    canvas.width = Math.max(1, Math.round(rect.width * ratio));
-    canvas.height = Math.max(1, Math.round(180 * ratio));
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    ctx.scale(ratio, ratio);
-    // The signature is a document image: always ink on white paper in both appearance modes
-    // (same values as the --mhvp-color-paper and --mhvp-color-ink tokens), never themed.
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, rect.width, 180);
-    ctx.lineWidth = 2.2;
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    ctx.strokeStyle = "#1A1A1A";
-  }, []);
-
-  function point(e: React.PointerEvent<HTMLCanvasElement>) {
-    const rect = e.currentTarget.getBoundingClientRect();
-    return { x: e.clientX - rect.left, y: e.clientY - rect.top };
-  }
-
-  function down(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (disabled) return;
-    const ctx = e.currentTarget.getContext("2d");
-    if (!ctx) return;
-    e.currentTarget.setPointerCapture(e.pointerId);
-    drawing.current = true;
-    const p = point(e);
-    ctx.beginPath();
-    ctx.moveTo(p.x, p.y);
-  }
-
-  function move(e: React.PointerEvent<HTMLCanvasElement>) {
-    if (!drawing.current) return;
-    const ctx = e.currentTarget.getContext("2d");
-    if (!ctx) return;
-    const p = point(e);
-    ctx.lineTo(p.x, p.y);
-    ctx.stroke();
-    dirty.current = true;
-  }
-
-  function up() {
-    drawing.current = false;
-  }
-
-  function clear() {
-    const canvas = canvasRef.current;
-    const ctx = canvas?.getContext("2d");
-    if (!canvas || !ctx) return;
-    ctx.save();
-    ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = "#ffffff";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.restore();
-    dirty.current = false;
-    setMessage(null);
-  }
+  const signed = new Set(signatures.filter((s) => !s.invalidated_at).map((s) => s.participant_id).filter(Boolean));
 
   function pickParticipant(id: string) {
     setParticipantId(id);
     const p = participants.find((x) => x.id === id);
     if (p) {
-      setName(
-        [p.first_name, p.last_name].filter(Boolean).join(" ") ||
-          String(p.company ?? ""),
-      );
+      setName(participantName(p));
       setRole(String(p.role ?? "other"));
     }
   }
 
   async function save() {
-    const canvas = canvasRef.current;
-    if (!canvas || !dirty.current) {
+    if (!handle || handle.isEmpty()) {
       setMessage(t("signature.empty"));
       return;
     }
     setBusy(true);
     setMessage(null);
-    const res = await bff<Signature>(
-      `/api/bff/handover/protocols/${protocolId}/signatures`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          image: canvas.toDataURL("image/png"),
-          signer_name: name || null,
-          signer_role: role || null,
-          participant_id: participantId || null,
-          signed_location: location || null,
-        }),
-      },
-    );
+    const res = await bff<Signature>(`/api/bff/handover/protocols/${protocolId}/signatures`, {
+      method: "POST",
+      body: JSON.stringify({
+        image: handle.toDataURL(),
+        signer_name: name || null,
+        signer_role: role || null,
+        participant_id: participantId || null,
+        signed_location: location || null,
+      }),
+    });
     setBusy(false);
     if (res.ok) {
-      clear();
+      handle.clear();
       setParticipantId("");
       setName("");
       setMessage(t("signature.saved"));
       onSaved();
-    } else {
-      setMessage(res.message);
-    }
+    } else setMessage(res.message);
   }
 
   return (
-    <div
-      className={`${ui.card} flex flex-col gap-3`}
-      data-testid="signature-pad"
-    >
-      <div className="grid gap-3 md:grid-cols-4">
-        <div>
-          <label htmlFor="sig-participant" className={ui.label}>
-            {t("signature.participant")}
-          </label>
-          <select
-            id="sig-participant"
-            className={ui.input}
-            value={participantId}
-            onChange={(e) => pickParticipant(e.target.value)}
-            disabled={disabled}
-          >
-            <option value="">{t("signature.free")}</option>
-            {participants.map((p) => (
-              <option key={p.id} value={p.id} disabled={signed.has(p.id)}>
-                {[p.first_name, p.last_name].filter(Boolean).join(" ") ||
-                  String(p.company ?? "")}
-                {signed.has(p.id) ? ` (${t("signature.done")})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
+    <div className={`${ui.card} flex flex-col gap-3`} data-testid="signature-pad">
+      <div>
+        <label htmlFor="sig-participant" className={ui.label}>
+          {t("signature.participant")}
+        </label>
+        <select id="sig-participant" className={ui.input} value={participantId} onChange={(e) => pickParticipant(e.target.value)} disabled={disabled}>
+          <option value="">{t("signature.free")}</option>
+          {participants.map((p) => (
+            <option key={p.id} value={p.id} disabled={signed.has(p.id)}>
+              {participantName(p)}
+              {signed.has(p.id) ? ` (${t("signature.done")})` : ""}
+            </option>
+          ))}
+        </select>
+      </div>
+      <SignatureCanvas onReady={setHandle} disabled={disabled} label={t("signature.canvas")} />
+      <div className="grid gap-3 sm:grid-cols-3">
         <div>
           <label htmlFor="sig-name" className={ui.label}>
             {t("signature.name")}
           </label>
-          <input
-            id="sig-name"
-            className={ui.input}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            disabled={disabled}
-          />
+          <input id="sig-name" className={ui.input} value={name} onChange={(e) => setName(e.target.value)} disabled={disabled} autoComplete="off" enterKeyHint="next" />
         </div>
         <div>
           <label htmlFor="sig-role" className={ui.label}>
             {t("signature.role")}
           </label>
-          <select
-            id="sig-role"
-            className={ui.input}
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            disabled={disabled}
-          >
+          <select id="sig-role" className={ui.input} value={role} onChange={(e) => setRole(e.target.value)} disabled={disabled}>
             {ROLES.map((r) => (
               <option key={r} value={r}>
                 {t(`roles.${r}`)}
@@ -213,46 +162,21 @@ export function SignaturePad({
           <label htmlFor="sig-location" className={ui.label}>
             {t("signature.location")}
           </label>
-          <input
-            id="sig-location"
-            className={ui.input}
-            value={location}
-            onChange={(e) => setLocation(e.target.value)}
-            disabled={disabled}
-          />
+          <input id="sig-location" className={ui.input} value={location} onChange={(e) => setLocation(e.target.value)} disabled={disabled} enterKeyHint="done" />
         </div>
       </div>
-      <canvas
-        ref={canvasRef}
-        className="h-[180px] w-full touch-none rounded-md border border-border bg-paper"
-        aria-label={t("signature.canvas")}
-        onPointerDown={down}
-        onPointerMove={move}
-        onPointerUp={up}
-        onPointerLeave={up}
-        onPointerCancel={up}
-      />
-      <div className="flex flex-wrap gap-2">
-        <button
-          type="button"
-          className={ui.button}
-          onClick={clear}
-          disabled={disabled || busy}
-        >
+      <div className={ui.formActions}>
+        <button type="button" className={`${ui.button} ${ui.actionFull}`} onClick={() => handle?.undo()} disabled={disabled || busy}>
+          {t("signature.undo")}
+        </button>
+        <button type="button" className={`${ui.button} ${ui.actionFull}`} onClick={() => handle?.clear()} disabled={disabled || busy}>
           {t("signature.clear")}
         </button>
-        <button
-          type="button"
-          className={ui.primary}
-          onClick={save}
-          disabled={disabled || busy}
-        >
+        <button type="button" className={`${ui.primary} ${ui.actionFull}`} onClick={save} disabled={disabled || busy}>
           {t("signature.save")}
         </button>
-        {message ? (
-          <span className="self-center text-sm text-muted">{message}</span>
-        ) : null}
       </div>
+      {message ? <p className="text-sm text-muted">{message}</p> : null}
     </div>
   );
 }

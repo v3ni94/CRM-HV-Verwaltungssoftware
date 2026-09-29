@@ -10,6 +10,8 @@ const ID = "[0-9a-fA-F-]{36}";
 const ALLOWED: RegExp[] = [
   new RegExp(`^documents/${ID}/content$`),
   new RegExp(`^handover/protocols/${ID}/pdf$`),
+  // Derived thumbnail (M30-08, M31 WP2): rendered on the fly by the API, no-store like the rest.
+  new RegExp(`^handover/protocols/${ID}/documents/${ID}/thumbnail$`),
 ];
 const MAX_BYTES = 60 * 1024 * 1024;
 

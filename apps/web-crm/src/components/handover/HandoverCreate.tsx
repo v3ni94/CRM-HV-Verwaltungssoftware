@@ -157,7 +157,7 @@ export function HandoverCreate({ properties }: { properties: Option[] }) {
         </label>
       </fieldset>
       {!manual ? (
-        <div className="grid gap-3 md:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-2">
           <div>
             <label htmlFor="property" className={ui.label}>
               {t("property")}
@@ -218,7 +218,7 @@ export function HandoverCreate({ properties }: { properties: Option[] }) {
           </div>
         </div>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2" data-testid="handover-manual-fields">
+        <div className="grid gap-3 sm:grid-cols-2" data-testid="handover-manual-fields">
           <div>
             <label htmlFor="manual-street" className={ui.label}>
               {t("manual.street")}
@@ -315,7 +315,7 @@ export function HandoverCreate({ properties }: { properties: Option[] }) {
           {error}
         </p>
       ) : null}
-      <button type="submit" className={ui.primary} disabled={busy}>
+      <button type="submit" className={`${ui.primary} ${ui.actionFull}`} disabled={busy}>
         {t("submit")}
       </button>
     </form>

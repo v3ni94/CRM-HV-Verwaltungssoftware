@@ -517,6 +517,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Zählerstände übernehmen (Package F): Zählerstände des Protokolls in die Stammdaten der Einheit.
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/meters/transfer$`) },
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures|complete|versions|status|dispatches)$`) },
+  // Änderung nach Unterschrift (M30-09): reopen the content with a mandatory reason.
+  { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/changes$`) },
   { method: "DELETE", pattern: new RegExp(`^handover/protocols/${ID}/(documents|signatures)/${ID}$`) },
   // Portalzugang eines Beteiligten (M30 Stufe 3): einrichten und beenden.
   { method: "POST", pattern: new RegExp(`^handover/protocols/${ID}/participants/${ID}/portal-access$`) },

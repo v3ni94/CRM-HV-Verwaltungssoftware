@@ -278,6 +278,22 @@ describe("BFF proxy", () => {
     expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}?range=week&mailbox_kind=personal`);
   });
 
+  it("forwards the handover change after signature (M30-09) and the date filters of the list", async () => {
+    serverFetch.mockResolvedValue(new Response("{}", { status: 201, headers: { "content-type": "application/json" } }));
+    const path = `handover/protocols/${ID}/changes`;
+    const req = new Request(`http://crm.localhost/api/bff/${path}`, {
+      method: "POST",
+      headers: { host: "crm.localhost", origin: "http://crm.localhost", "content-type": "application/json" },
+      body: JSON.stringify({ reason: "Zählernummer falsch" }),
+    });
+    expect((await POST(req, ctx(path))).status).toBe(201);
+    expect(serverFetch.mock.calls[0]![0]).toBe(`/api/v1/${path}`);
+    serverFetch.mockResolvedValue(new Response("{}", { status: 200, headers: { "content-type": "application/json" } }));
+    const list = await GET(new Request(`http://crm.localhost/api/bff/handover/protocols?handover_date=2026-09-29`), ctx("handover/protocols"));
+    expect(list.status).toBe(200);
+    expect(serverFetch.mock.calls[1]![0]).toBe("/api/v1/handover/protocols?handover_date=2026-09-29");
+  });
+
   it("forwards the status filter of the Immoware24 rows query", async () => {
     serverFetch.mockResolvedValue(new Response("[]", { status: 200, headers: { "content-type": "application/json" } }));
     const path = `imports/immoware24/files/${ID}/rows`;

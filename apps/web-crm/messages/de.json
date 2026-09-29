@@ -6483,7 +6483,11 @@
       "number": "Protokoll",
       "object": "Objekt",
       "participants": "Beteiligte",
-      "date": "Übergabe"
+      "date": "Übergabe",
+      "today": "Heute",
+      "thisWeek": "Diese Woche",
+      "filters": "Filter",
+      "noDate": "Kein Datum"
     },
     "statusLabel": {
       "draft": "Entwurf",
@@ -6573,10 +6577,29 @@
     "photos": {
       "add": "Foto",
       "uploading": "Wird hochgeladen",
-      "remove": "Foto entfernen"
+      "remove": "Foto entfernen",
+      "capture": "Foto aufnehmen",
+      "pick": "Aus Galerie wählen",
+      "pending": "Ausgewählte Fotos",
+      "removeFile": "Datei entfernen",
+      "preview": "Vorschau",
+      "open": "Foto öffnen",
+      "count": "{count} Foto(s)",
+      "status": {
+        "waiting": "Wartet",
+        "uploading": "Wird hochgeladen",
+        "done": "Fertig",
+        "failed": "Fehlgeschlagen"
+      },
+      "retry": "Erneut versuchen",
+      "later": "Später",
+      "failedHint": "Einzelne Fotos wurden nicht übertragen. Erneut versuchen oder später über Foto aufnehmen nachreichen.",
+      "confirmRemove": "Foto aus dieser Fassung entfernen? Ist das Foto in keiner anderen Fassung verknüpft, wird die Datei endgültig gelöscht.",
+      "confirmRemoveTitle": "Foto entfernen"
     },
     "attachments": {
-      "add": "Datei hinzufügen"
+      "add": "Datei hinzufügen",
+      "open": "Öffnen"
     },
     "fields": {
       "address": "Adresse",
@@ -6767,10 +6790,51 @@
       "empty": "Bitte zuerst unterschreiben.",
       "none": "Noch keine Unterschrift erfasst.",
       "noName": "Ohne Namen",
-      "confirmDelete": "Unterschrift wirklich löschen?"
+      "confirmDelete": "Unterschrift wirklich löschen?",
+      "handDevice": "Bitte das Gerät an {name} übergeben.",
+      "undo": "Rückgängig",
+      "of": "Unterschrift von {name}",
+      "additional": "Weitere Person",
+      "sheetTitle": "Unterschrift",
+      "open": "Unterschreiben",
+      "invalidated": "Vor der Änderung vom {date} geleistet, gilt nicht mehr. Erneute Unterschrift erforderlich.",
+      "repeat": "Erneut unterschreiben",
+      "confirmDeleteTitle": "Unterschrift löschen"
     },
     "summary": {
-      "title": "Zusammenfassung"
+      "title": "Zusammenfassung",
+      "head": "Protokoll",
+      "status": "Status",
+      "object": "Objekt",
+      "unit": "Einheit",
+      "floor": "Etage",
+      "date": "Übergabedatum",
+      "time": "Uhrzeit",
+      "location": "Ort der Übergabe",
+      "participants": "Beteiligte",
+      "meters": "Zählerstände",
+      "rooms": "Räume und Mängel",
+      "unassignedDefects": "Mängel ohne Raumzuordnung",
+      "keys": "Schlüssel",
+      "items": "Gegenstände",
+      "notes": "Bemerkungen",
+      "attachments": "Anhänge",
+      "signatures": "Unterschriften",
+      "signedAt": "unterschrieben am",
+      "internal": "Intern",
+      "photos": "{count} Foto(s)",
+      "noPhotos": "Keine Fotos",
+      "edit": "Bearbeiten",
+      "empty": "Keine Angaben",
+      "pdf": "PDF ansehen",
+      "pdfDraft": "PDF-Vorschau ansehen",
+      "readOnlyHint": "Leseansicht des gespeicherten Protokolls. Änderungen sind nur als neue Fassung mit Änderungsgrund möglich.",
+      "readAt": "abgelesen am",
+      "none": "Keine Einträge",
+      "call": "Anrufen",
+      "mail": "E-Mail schreiben",
+      "dueDate": "Frist",
+      "noSignature": "Keine Unterschrift"
     },
     "hints": {
       "title": "Hinweise (kein Abschlusshindernis):"
@@ -6896,6 +6960,47 @@
         "ambiguous_number": "Zählernummer mehrfach in der Einheit, bitte Zähler im Eintrag wählen",
         "no_meter": "kein Zähler mit dieser Nummer in der Einheit"
       }
+    },
+    "stepPrev": "Zurück",
+    "stepNext": "Weiter",
+    "stepProgress": "Schritt {current} von {total}",
+    "stepState": {
+      "attention": "Hinweis",
+      "filled": "Ausgefüllt",
+      "empty": "Leer"
+    },
+    "stepSaveFailed": "Der Schritt konnte nicht gemerkt werden. Die Eingaben sind davon nicht betroffen.",
+    "unsavedConfirm": {
+      "title": "Ungespeicherte Eingaben",
+      "text": "Es gibt ungespeicherte Eingaben in diesem Abschnitt. Ohne Speichern fortfahren?",
+      "stay": "Hier bleiben",
+      "discard": "Verwerfen"
+    },
+    "retrySave": "Erneut senden",
+    "offlineNotice": "Keine Verbindung. Ungespeicherte Eingaben bleiben nur auf dieser Seite. Bitte die Seite nicht neu laden und nach Wiederherstellung der Verbindung erneut speichern.",
+    "more": {
+      "title": "Mehr",
+      "open": "Mehr Aktionen"
+    },
+    "gallery": {
+      "title": "Fotos",
+      "counter": "{index} von {total}",
+      "prev": "Vorheriges Foto",
+      "next": "Nächstes Foto",
+      "close": "Schließen"
+    },
+    "changes": {
+      "title": "Änderungen nach Unterschrift",
+      "lockedNotice": "Es liegt eine Unterschrift vor. Räume, Mängel, Zähler, Schlüssel, Gegenstände, Bemerkungen, Fotos und die Protokollangaben sind gesperrt. Änderungen sind nur über die Aktion Änderung nach Unterschrift mit Änderungsgrund möglich; alle Unterschriften müssen danach erneut geleistet werden.",
+      "action": "Änderung nach Unterschrift",
+      "reason": "Änderungsgrund",
+      "reasonRequired": "Bitte einen Änderungsgrund mit mindestens drei Zeichen angeben.",
+      "help": "Der Grund, der Zeitpunkt und der Bearbeiter werden im Protokollverlauf gespeichert, im Protokoll angezeigt und im PDF gedruckt. Alle vorhandenen Unterschriften werden als vor der Änderung geleistet gekennzeichnet und müssen erneut eingeholt werden.",
+      "confirm": "Inhalt zur Änderung freigeben",
+      "done": "Der Inhalt ist zur Änderung freigegeben. Bitte danach alle Unterschriften erneut einholen.",
+      "entry": "{date}, {user}: {reason}",
+      "invalidated": "{count} Unterschrift(en) gelten nicht mehr",
+      "unknownUser": "Unbekannter Bearbeiter"
     }
   },
   "ImmowareSettings": {

@@ -6482,7 +6482,11 @@
       "number": "Protocol",
       "object": "Property",
       "participants": "Participants",
-      "date": "Handover"
+      "date": "Handover",
+      "today": "Today",
+      "thisWeek": "This week",
+      "filters": "Filters",
+      "noDate": "No date"
     },
     "statusLabel": {
       "draft": "Draft",
@@ -6572,10 +6576,29 @@
     "photos": {
       "add": "Photo",
       "uploading": "Uploading",
-      "remove": "Remove photo"
+      "remove": "Remove photo",
+      "capture": "Take photo",
+      "pick": "Choose from gallery",
+      "pending": "Selected photos",
+      "removeFile": "Remove file",
+      "preview": "Preview",
+      "open": "Open photo",
+      "count": "{count} photo(s)",
+      "status": {
+        "waiting": "Waiting",
+        "uploading": "Uploading",
+        "done": "Done",
+        "failed": "Failed"
+      },
+      "retry": "Try again",
+      "later": "Later",
+      "failedHint": "Some photos were not transferred. Try again or add them later with Take photo.",
+      "confirmRemove": "Remove the photo from this version? If no other version links the photo, the file is deleted permanently.",
+      "confirmRemoveTitle": "Remove photo"
     },
     "attachments": {
-      "add": "Add file"
+      "add": "Add file",
+      "open": "Open"
     },
     "fields": {
       "address": "Address",
@@ -6766,10 +6789,51 @@
       "empty": "Please sign first.",
       "none": "No signature recorded yet.",
       "noName": "Without name",
-      "confirmDelete": "Really delete the signature?"
+      "confirmDelete": "Really delete the signature?",
+      "handDevice": "Please hand the device to {name}.",
+      "undo": "Undo",
+      "of": "Signature of {name}",
+      "additional": "Another person",
+      "sheetTitle": "Signature",
+      "open": "Sign",
+      "invalidated": "Given before the change of {date}, no longer valid. A new signature is required.",
+      "repeat": "Sign again",
+      "confirmDeleteTitle": "Delete signature"
     },
     "summary": {
-      "title": "Summary"
+      "title": "Summary",
+      "head": "Protocol",
+      "status": "Status",
+      "object": "Object",
+      "unit": "Unit",
+      "floor": "Floor",
+      "date": "Handover date",
+      "time": "Time",
+      "location": "Handover location",
+      "participants": "Participants",
+      "meters": "Meter readings",
+      "rooms": "Rooms and defects",
+      "unassignedDefects": "Defects without room",
+      "keys": "Keys",
+      "items": "Items",
+      "notes": "Notes",
+      "attachments": "Attachments",
+      "signatures": "Signatures",
+      "signedAt": "signed on",
+      "internal": "Internal",
+      "photos": "{count} photo(s)",
+      "noPhotos": "No photos",
+      "edit": "Edit",
+      "empty": "No details",
+      "pdf": "View PDF",
+      "pdfDraft": "View PDF preview",
+      "readOnlyHint": "Read view of the stored protocol. Changes are only possible as a new version with a reason.",
+      "readAt": "read on",
+      "none": "No entries",
+      "call": "Call",
+      "mail": "Write e-mail",
+      "dueDate": "Due",
+      "noSignature": "No signature"
     },
     "hints": {
       "title": "Notes (no obstacle to completion):"
@@ -6896,6 +6960,47 @@
         "ambiguous_number": "meter number occurs more than once in the unit, choose the meter in the row",
         "no_meter": "no meter with this number in the unit"
       }
+    },
+    "stepPrev": "Back",
+    "stepNext": "Next",
+    "stepProgress": "Step {current} of {total}",
+    "stepState": {
+      "attention": "Hint",
+      "filled": "Filled",
+      "empty": "Empty"
+    },
+    "stepSaveFailed": "The step could not be remembered. Your input is not affected.",
+    "unsavedConfirm": {
+      "title": "Unsaved input",
+      "text": "This section has unsaved input. Continue without saving?",
+      "stay": "Stay here",
+      "discard": "Discard"
+    },
+    "retrySave": "Send again",
+    "offlineNotice": "No connection. Unsaved input stays on this page only. Please do not reload the page and save again once the connection is back.",
+    "more": {
+      "title": "More",
+      "open": "More actions"
+    },
+    "gallery": {
+      "title": "Photos",
+      "counter": "{index} of {total}",
+      "prev": "Previous photo",
+      "next": "Next photo",
+      "close": "Close"
+    },
+    "changes": {
+      "title": "Changes after signature",
+      "lockedNotice": "A signature exists. Rooms, defects, meters, keys, items, notes, photos and the protocol details are locked. Changes are only possible through the action Change after signature with a reason; every signature has to be given again afterwards.",
+      "action": "Change after signature",
+      "reason": "Reason",
+      "reasonRequired": "Please enter a reason of at least three characters.",
+      "help": "Reason, time and user are stored in the protocol history, shown in the protocol and printed in the PDF. Every existing signature is marked as given before the change and has to be collected again.",
+      "confirm": "Unlock content for the change",
+      "done": "The content is unlocked for the change. Please collect every signature again afterwards.",
+      "entry": "{date}, {user}: {reason}",
+      "invalidated": "{count} signature(s) no longer valid",
+      "unknownUser": "Unknown user"
     }
   },
   "ImmowareSettings": {

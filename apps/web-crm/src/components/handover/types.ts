@@ -83,6 +83,8 @@ export type Doc = {
   section: string | null;
   item_id: string | null;
   created_at: string;
+  /** Derived preview path of the API (M30-08), null for signatures, PDFs and non images. */
+  thumbnail_url?: string | null;
 };
 
 export type Signature = {
@@ -94,6 +96,19 @@ export type Signature = {
   signed_at: string;
   signed_location: string | null;
   document_id: string;
+  /** Set by "Änderung nach Unterschrift" (M30-09): given before the change, has to be repeated. */
+  invalidated_at?: string | null;
+  invalidated_change_id?: string | null;
+};
+
+/** History entry "Änderung nach Unterschrift" (M30-09). */
+export type Change = {
+  id: string;
+  reason: string;
+  changed_at: string;
+  changed_by: string | null;
+  changed_by_name: string | null;
+  signatures_invalidated: number;
 };
 
 export type Version = {
@@ -134,6 +149,11 @@ export type Full = Protocol & {
   signatures: Signature[];
   documents: Doc[];
   hints: string[];
+  /** Stable codes parallel to `hints` (M31 WP2); the step bar marks steps from these. */
+  hint_codes?: string[];
+  /** True while a valid signature exists on an open protocol (M30-09). */
+  content_locked?: boolean;
+  changes?: Change[];
   versions: Version[];
 };
 
@@ -360,3 +380,38 @@ export function itemTitle(
       return (s("text") || "Bemerkung").slice(0, 80);
   }
 }
+
+/** Keyboard and autofill hints per field name (M31 WP2): the right keyboard on phones and
+ *  tablets, no autocorrect on numbers and identifiers. Spread before `type`, so a field type
+ *  from the definition still wins. */
+export type InputHint = {
+  type?: "email" | "tel" | "text";
+  inputMode?: "email" | "tel" | "numeric" | "decimal" | "text";
+  autoComplete?: string;
+  autoCapitalize?: "characters" | "none" | "words";
+  spellCheck?: boolean;
+};
+
+const IDENTIFIER: InputHint = { autoCapitalize: "characters", autoComplete: "off", spellCheck: false };
+
+export const INPUT_HINTS: Record<string, InputHint> = {
+  email: { type: "email", inputMode: "email", autoComplete: "email", autoCapitalize: "none", spellCheck: false },
+  phone: { type: "tel", inputMode: "tel", autoComplete: "tel" },
+  postal_code: { inputMode: "numeric", autoComplete: "postal-code" },
+  street: { autoComplete: "street-address" },
+  house_number: { autoComplete: "off" },
+  city: { autoComplete: "address-level2" },
+  first_name: { autoComplete: "given-name" },
+  last_name: { autoComplete: "family-name" },
+  company: { autoComplete: "organization" },
+  deposit_iban: IDENTIFIER,
+  deposit_bic: IDENTIFIER,
+  meter_number: IDENTIFIER,
+  number: IDENTIFIER,
+  serial: IDENTIFIER,
+  key_number: IDENTIFIER,
+  value: { inputMode: "decimal" },
+  deposit_amount: { inputMode: "decimal" },
+  count: { inputMode: "numeric" },
+  quantity: { inputMode: "numeric" },
+};

@@ -45,7 +45,9 @@ export function HelperAccessSection({
   const [email, setEmail] = useState("");
   const [kind, setKind] = useState<"helper" | "tenant" | "owner">("helper");
   const [registerParticipant, setRegisterParticipant] = useState(false);
-  const [participantRole, setParticipantRole] = useState<"moving_in" | "moving_out">("moving_in");
+  const [participantRole, setParticipantRole] = useState<
+    "moving_in" | "moving_out"
+  >("moving_in");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<Created | null>(null);
@@ -76,7 +78,10 @@ export function HelperAccessSection({
       invitation_as_mail_draft: asMailDraft,
     };
     if (registerParticipant) body.participant_role = participantRole;
-    const res = await bff<Created>(url, { method: "POST", body: JSON.stringify(body) });
+    const res = await bff<Created>(url, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
     setBusy(false);
     if (res.ok) {
       setCreated(res.data);
@@ -102,9 +107,12 @@ export function HelperAccessSection({
     setError(null);
     setCreated(null);
     setDrafted(false);
-    const res = await bff<{ mail_draft_id: string }>(`${url}/${grantId}/invitation-draft`, {
-      method: "POST",
-    });
+    const res = await bff<{ mail_draft_id: string }>(
+      `${url}/${grantId}/invitation-draft`,
+      {
+        method: "POST",
+      },
+    );
     setBusy(false);
     if (res.ok) setDrafted(true);
     else setError(res.message);
@@ -141,54 +149,44 @@ export function HelperAccessSection({
   }
 
   return (
-    <div className={`${ui.card} flex flex-col gap-3`} data-testid="helper-access">
+    <div
+      className={`${ui.card} flex flex-col gap-3`}
+      data-testid="helper-access"
+    >
       <h2 className={ui.h2}>{t("helperAccess.title")}</h2>
       <p className="text-sm text-muted">{t("helperAccess.help")}</p>
       {rows && rows.length ? (
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="text-left text-muted">
-              <th className="pb-1">{t("helperAccess.name")}</th>
-              <th className="pb-1">{t("helperAccess.kind")}</th>
-              <th className="pb-1">{t("helperAccess.status")}</th>
-              <th className="pb-1">{t("helperAccess.validTo")}</th>
-              <th className="pb-1" />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.grant_id} className="border-t border-border-soft">
-                <td className="py-1">{r.name || "–"}</td>
-                <td className="py-1">{t(`helperAccess.kinds.${r.kind}`)}</td>
-                <td className="py-1">
-                  {r.activated ? t("helperAccess.activated") : t("helperAccess.invited")}
-                </td>
-                <td className="py-1">
-                  {r.valid_to ? r.valid_to.split("-").reverse().join(".") : "–"}
-                </td>
-                <td className="py-1 text-right">
-                  {!disabled ? (
-                    <div className="flex justify-end gap-2">
-                      {!r.activated ? (
-                        r.has_email === false ? (
-                          <button
-                            type="button"
-                            className={ui.buttonSm}
-                            disabled={busy}
-                            onClick={() => invitationLetter(r.grant_id)}
-                          >
-                            {t("helperAccess.invitationLetter")}
-                          </button>
-                        ) : (
-                          <>
-                            <button
-                              type="button"
-                              className={ui.buttonSm}
-                              disabled={busy}
-                              onClick={() => invitationDraft(r.grant_id)}
-                            >
-                              {t("helperAccess.invitationDraft")}
-                            </button>
+        <div className={ui.tableScroll}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-muted">
+                <th className="pb-1">{t("helperAccess.name")}</th>
+                <th className="pb-1">{t("helperAccess.kind")}</th>
+                <th className="pb-1">{t("helperAccess.status")}</th>
+                <th className="pb-1">{t("helperAccess.validTo")}</th>
+                <th className="pb-1" />
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.grant_id} className="border-t border-border-soft">
+                  <td className="py-1">{r.name || "–"}</td>
+                  <td className="py-1">{t(`helperAccess.kinds.${r.kind}`)}</td>
+                  <td className="py-1">
+                    {r.activated
+                      ? t("helperAccess.activated")
+                      : t("helperAccess.invited")}
+                  </td>
+                  <td className="py-1 whitespace-nowrap">
+                    {r.valid_to
+                      ? r.valid_to.split("-").reverse().join(".")
+                      : "–"}
+                  </td>
+                  <td className="py-1 text-right whitespace-nowrap">
+                    {!disabled ? (
+                      <div className="flex justify-end gap-2">
+                        {!r.activated ? (
+                          r.has_email === false ? (
                             <button
                               type="button"
                               className={ui.buttonSm}
@@ -197,29 +195,51 @@ export function HelperAccessSection({
                             >
                               {t("helperAccess.invitationLetter")}
                             </button>
-                          </>
-                        )
-                      ) : null}
-                      <button
-                        type="button"
-                        className={ui.buttonSm}
-                        disabled={busy}
-                        onClick={() => revoke(r.grant_id)}
-                      >
-                        {t("helperAccess.revoke")}
-                      </button>
-                    </div>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                          ) : (
+                            <>
+                              <button
+                                type="button"
+                                className={ui.buttonSm}
+                                disabled={busy}
+                                onClick={() => invitationDraft(r.grant_id)}
+                              >
+                                {t("helperAccess.invitationDraft")}
+                              </button>
+                              <button
+                                type="button"
+                                className={ui.buttonSm}
+                                disabled={busy}
+                                onClick={() => invitationLetter(r.grant_id)}
+                              >
+                                {t("helperAccess.invitationLetter")}
+                              </button>
+                            </>
+                          )
+                        ) : null}
+                        <button
+                          type="button"
+                          className={ui.buttonSm}
+                          disabled={busy}
+                          onClick={() => revoke(r.grant_id)}
+                        >
+                          {t("helperAccess.revoke")}
+                        </button>
+                      </div>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <p className="text-sm text-muted">{t("helperAccess.empty")}</p>
       )}
       {!disabled ? (
-        <form onSubmit={create} className="flex flex-col gap-2 border-t border-border-soft pt-3">
+        <form
+          onSubmit={create}
+          className="flex flex-col gap-2 border-t border-border-soft pt-3"
+        >
           <div className="grid gap-2 md:grid-cols-3">
             <div>
               <label htmlFor="helper-name" className={ui.label}>
@@ -316,17 +336,27 @@ export function HelperAccessSection({
         created.invitation_token ? (
           <div className={ui.notice} data-testid="helper-invitation-token">
             <p className="font-medium">{t("helperAccess.tokenTitle")}</p>
-            <p>{asMailDraft ? t("helperAccess.tokenHelp") : t("helperAccess.tokenHelpManual")}</p>
+            <p>
+              {asMailDraft
+                ? t("helperAccess.tokenHelp")
+                : t("helperAccess.tokenHelpManual")}
+            </p>
             <code className="mt-1 block select-all break-all rounded bg-surface px-2 py-1 font-mono text-xs">
               {created.invitation_token}
             </code>
-            <InvitationQr url={created.invitation_url} title={t("helperAccess.linkTitle")} alt={t("helperAccess.qrAlt")} />
+            <InvitationQr
+              url={created.invitation_url}
+              title={t("helperAccess.linkTitle")}
+              alt={t("helperAccess.qrAlt")}
+            />
           </div>
         ) : (
           <p className="text-sm text-muted">{t("helperAccess.mailDrafted")}</p>
         )
       ) : null}
-      {drafted ? <p className="text-sm text-muted">{t("helperAccess.mailDrafted")}</p> : null}
+      {drafted ? (
+        <p className="text-sm text-muted">{t("helperAccess.mailDrafted")}</p>
+      ) : null}
     </div>
   );
 }
