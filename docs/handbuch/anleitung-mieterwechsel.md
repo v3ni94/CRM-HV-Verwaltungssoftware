@@ -191,14 +191,45 @@ Zustellung läuft über den Postausgang.
 
 - Eingaben werden nur beim Speichern übertragen. Ohne Empfang erscheint der Hinweis Keine
   Verbindung; die Eingaben bleiben auf der Seite bis zum erneuten Speichern (Erneut
-  senden). Die Seite nicht neu laden. Eine Offline Erfassung ist noch nicht freigegeben
-  (M30-07, ADR 0016).
+  senden). Die Seite nicht neu laden. Mit dem Schalter Offline Erfassung (Einstellungen,
+  Mandant) gilt stattdessen der Abschnitt Offline Erfassung unten.
 - Fotos werden vor dem Senden auf dem Gerät verkleinert; Metadaten wie der Aufnahmeort
   werden auf dem Server entfernt.
 - Entfernen eines Fotos löst nur die Verknüpfung dieser Fassung; ist das Foto in keiner
   anderen Fassung verknüpft, wird die Datei endgültig gelöscht.
 - Das Gerät beim Unterschreiben nicht unbeaufsichtigt lassen und nach der Unterschrift
   zurücknehmen.
+
+### Offline Erfassung (Schalter je Mandant, Regel M30-10)
+
+Ist in den Einstellungen unter Mandant der Schalter Offline Erfassung Übergabeprotokoll
+aktiv, arbeitet der Editor am Handy oder Tablet auch ohne Empfang weiter:
+
+1. Ohne Verbindung erscheint oben der Hinweis Keine Verbindung. Offline Erfassung aktiv
+   mit der Zahl der wartenden Änderungen. Räume, Mängel, Zähler, Schlüssel, Gegenstände,
+   Bemerkungen, Beteiligte, Fotos, Anhänge, Protokollfelder und Unterschriften lassen sich
+   wie gewohnt speichern; sie werden verschlüsselt auf dem Gerät zwischengespeichert und
+   in der Liste mit Wartet auf Abgleich gekennzeichnet (Fotos ohne Vorschau). Löschen von
+   Fotos und Unterschriften, Abschluss, Storno, neue Fassung und Zustellung brauchen eine
+   Verbindung.
+2. Die Seite nicht neu laden, den Tab nicht schließen und sich nicht abmelden, solange
+   Änderungen warten: der Schlüssel liegt nur im Speicher der Sitzung, danach sind die
+   wartenden Änderungen unlesbar und werden gelöscht (Hinweis lokale Entwürfe waren nicht
+   mehr lesbar). Das ist gewollt, damit auf einem geteilten Gerät nichts Lesbares bleibt.
+3. Sobald die Verbindung zurück ist, überträgt der Editor die Änderungen von selbst in der
+   Reihenfolge der Erfassung (Jetzt abgleichen stößt sie auch von Hand an). Jede Änderung
+   trägt die Gerätezeit der Erfassung; der Server speichert sie als vom Gerät gemeldet
+   neben seiner eigenen Zeit, das PDF druckt bei Unterschriften beide.
+4. Weist der Server eine Änderung ab (Protokoll inzwischen abgeschlossen, Inhalt nach
+   einer Unterschrift gesperrt, Berechtigung fehlt), hält die Übertragung an und zeigt den
+   Grund; die übrigen Änderungen bleiben auf dem Gerät. Ist der Stand auf dem Server jünger
+   als die Kopie, auf der die Änderung beruht, fragt der Editor mit beiden Ständen:
+   Serverstand behalten verwirft die eigene Änderung, Meine Änderung übernehmen sendet sie
+   erneut. Nichts wird von allein entschieden.
+5. Das Abgleichsprotokoll unter dem Hinweis zeigt je Protokoll, was wann übertragen,
+   abgelehnt, verworfen oder erneut eingereiht wurde (nur für diese Sitzung).
+6. Lokale Entwürfe löschen entfernt alle wartenden Änderungen dieses Protokolls vom Gerät.
+   Abmelden löscht die Warteschlange immer.
 
 ## Zu verknüpfende Datensätze
 
