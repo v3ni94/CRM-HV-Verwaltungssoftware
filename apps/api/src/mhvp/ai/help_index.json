@@ -1695,6 +1695,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Verbrauchsinformation (§ 6a HeizkostenV)",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die monatliche Verbrauchsinformation je Einheit wird aus den Monatsverbräuchen des Messdienstes erzeugt (Modul Messdienstleister, Periodenverbräuche Heizung und Warmwasser je Kalendermonat). Sie ist in drei Stufen geschaltet, alle Standard aus: 1. Einstellungen, Mandant, Verbrauc",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Häufige Fehler",
   "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
   "href": "/abrechnung",
@@ -4780,7 +4790,7 @@
   "href": null,
   "keywords": [],
   "permission": null,
-  "excerpt": "Seite Mieter Eigentümer Beirat Dienstleister --- --- --- --- --- Übersicht ja ja ja ja Dokumente ja ja nein nein Meldungen ja ja nein nein Kontoauszug ja ja nein nein Zählerstand ja ja nein nein Datenänderung ja ja nein nein Aushänge ja ja nein nein Formulare je Zielgruppe je Zie",
+  "excerpt": "Seite Mieter Eigentümer Beirat Dienstleister --- --- --- --- --- Übersicht ja ja ja ja Dokumente ja ja nein nein Meldungen ja ja nein nein Kontoauszug ja ja nein nein Zählerstand ja ja nein nein Verbrauch ja, nach Freigabe ja, nach Freigabe nein nein Datenänderung ja ja nein nein",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -4821,6 +4831,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Kontoauszug: offene Posten der eigenen Verträge (Information, keine Abrechnung). - Zählerstand melden: Vorschlag mit Zähler, Stand und Datum; die Verwaltung prüft und übernimmt im CRM. - Datenänderung: Stammdaten oder Bankverbindung ändern lassen; jeder Vorschlag wird im CRM un",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Verbrauchsinformation",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Seite Verbrauch zeigt Mietern die monatliche Verbrauchsinformation der eigenen Einheit (Heizung und Warmwasser mit Vormonat, Vorjahresmonat und Durchschnitt im Objekt). Grundlage sind die vom Messdienst übermittelten Monatsverbräuche; geschätzte Werte sind gekennzeichnet, feh",
   "file": "docs/handbuch/portal.md"
  },
  {

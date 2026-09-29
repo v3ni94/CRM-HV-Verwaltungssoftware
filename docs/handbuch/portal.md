@@ -63,6 +63,7 @@ von der Verwaltung geprüft). Interne Vermerke der Verwaltung sind im Portal nie
 | Meldungen | ja | ja | nein | nein |
 | Kontoauszug | ja | ja | nein | nein |
 | Zählerstand | ja | ja | nein | nein |
+| Verbrauch | ja, nach Freigabe | ja, nach Freigabe | nein | nein |
 | Datenänderung | ja | ja | nein | nein |
 | Aushänge | ja | ja | nein | nein |
 | Formulare | je Zielgruppe | je Zielgruppe | nein | nein |
@@ -114,6 +115,18 @@ gewählt.
 - Datenänderung: Stammdaten oder Bankverbindung ändern lassen; jeder Vorschlag wird im CRM
   unter Vorschläge aus dem Portal angenommen oder abgelehnt. Bankverbindungen unterliegen
   zusätzlich der Vier-Augen-Freigabe (Kapitel Kontakte).
+
+## Verbrauchsinformation
+
+Die Seite Verbrauch zeigt Mietern die monatliche Verbrauchsinformation der eigenen Einheit
+(Heizung und Warmwasser mit Vormonat, Vorjahresmonat und Durchschnitt im Objekt). Grundlage
+sind die vom Messdienst übermittelten Monatsverbräuche; geschätzte Werte sind gekennzeichnet,
+fehlende Werte werden nicht durch Null ersetzt. Die Seite ist erst sichtbar, wenn die
+Verwaltung die Funktion für den Mandanten und das Objekt eingeschaltet und die Vorlage als
+verifiziert markiert hat; vorher erscheint nur der Hinweis, dass die Verbrauchsinformation
+noch nicht freigeschaltet ist. Eine Benachrichtigung über einen neuen Monat kommt nur, wenn
+die Verwaltung den Benachrichtigungsschalter gesetzt hat. Die Anzeige ist keine Abrechnung
+und kein Nachweis der Zustellung (Kapitel Abrechnung Miete, Abschnitt Verbrauchsinformation).
 
 ## Schwarzes Brett (Aushänge)
 

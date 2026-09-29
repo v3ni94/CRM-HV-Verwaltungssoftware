@@ -43,3 +43,18 @@ hot water method (flat percent, measured energy, formula with draft factor), CO2
 share with notice). Missing consumptions stop the calculation; unresolved CO2 facts keep the
 status `pruefen` and block the feed (D27). Rule `docs/rules/M17-02-heizkosten.md`, migration
 0162, tests `tests/unit/test_m17_heating_calc.py` and `tests/integration/test_m17_heating.py`.
+
+## Consumption information (rule H03)
+
+`consumption_info.py` builds the monthly consumption information per unit (§ 6a HeizkostenV,
+D26) from the period consumptions of `mhvp.metering` (kinds `heating` and `hot_water`, calendar
+month): values with origin and estimated marking, previous month, same month of the previous
+year, property average, missing data flags, a frozen HTML snapshot and a PDF stored as a
+generated document (visibility `internal`, retention note in `source_meta`). One row per
+tenant, unit and month (`consumption_info`, migration 0238); a rerun never overwrites.
+`consumption_info_tasks.py` runs the Celery job `mhvp.billing.consumption_info` on the first
+working day for the previous month, per tenant with `consumption_info_enabled`.
+`consumption_info_routers.py` serves the CRM (`/properties/{id}/consumption-info`, switch, manual
+run); the gated portal endpoints live in `mhvp.portal.consumption_info`. Elements of § 6a
+Abs. 3 the spec does not define are listed as `to_verify` for the operator only (never shown to
+tenants, `docs/OPEN_QUESTIONS.md` H03). Rule `docs/rules/H03-verbrauchsinformation.md`.

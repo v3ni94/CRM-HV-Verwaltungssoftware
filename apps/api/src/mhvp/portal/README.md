@@ -78,3 +78,12 @@ Checked against the folder contents on 26.09.2026, the following files were not 
   mandate evidence, never a collecting mandate (M3-02 portal stage, G2). Model
   `SepaMandateProposal` in `models.py`, migration 0174. Address proposals with validity date
   and evidence: `routers.py` (`_address_payload`, `_apply_address`, M21-02).
+
+## Consumption information (rule H03, addendum 29.09.2026)
+
+`consumption_info.py` serves `GET /portal/consumption-info` and `GET /portal/consumption-info/{id}`
+for tenants: the stored months of the own units (grants of scope `unit` with role `tenant`,
+month inside the contract period). Everything answers 403 until the tenant switch
+`consumption_info_enabled` and the operator's `consumption_info_template_verified` are set; the
+operator's verification list, data basis ids and missing flags never reach the portal output
+(only the estimated marking). Portal notifications of kind `consumption_info` link to `/verbrauch`.

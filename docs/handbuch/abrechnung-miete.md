@@ -88,6 +88,33 @@ Auffälligkeiten. Status: Entwurf, berechnet, intern freigegeben. Die
 interne Freigabe erteilt eine zweite Person über die Schnittstelle; Ausgabe als PDF und
 Versand erst mit G3.
 
+## Verbrauchsinformation (§ 6a HeizkostenV)
+
+Die monatliche Verbrauchsinformation je Einheit wird aus den Monatsverbräuchen des
+Messdienstes erzeugt (Modul Messdienstleister, Periodenverbräuche Heizung und Warmwasser je
+Kalendermonat). Sie ist in drei Stufen geschaltet, alle Standard aus:
+
+1. Einstellungen, Mandant, Verbrauchsinformation: Monatsjob aktivieren. Dort stehen auch
+   der Schalter für die Portalbenachrichtigung und die Bestätigung, dass die Vorlage geprüft
+   ist. Ohne diese Bestätigung sehen Mieter im Portal nichts.
+2. Objektseite, Abschnitt Verbrauchsinformation: Schalter je Objekt.
+3. Der Monatsjob läuft am ersten Werktag (Montag bis Freitag, Feiertage werden nicht
+   berücksichtigt) für den Vormonat. Der Knopf Monat jetzt erzeugen erzeugt einen Monat von
+   Hand, zum Beispiel nach einem verspäteten Abruf beim Messdienst.
+
+Je Einheit und Monat entsteht genau ein Datensatz mit Werten (Heizung, Warmwasser, Vormonat,
+Vorjahresmonat, Durchschnitt im Objekt), Datengrundlage, fehlenden Angaben und einem PDF im
+Dokumentenbestand (nur intern sichtbar). Ein erneuter Lauf überschreibt nichts; ein bereits
+gespeicherter Monat wird übersprungen. Fehlende Verbräuche bleiben fehlend und werden im
+Abschnitt als "ohne Verbrauch" gezählt, geschätzte Werte sind gekennzeichnet.
+
+Die Liste "Vom Betreiber zu verifizieren" nennt die Inhalte des § 6a Abs. 3 HeizkostenV, die
+die Spezifikation nicht festlegt (Energiemix, Emissionen, Kostenangaben, Vergleichsgruppe,
+Zustellweg). Sie werden nicht erfunden und Mietern nicht angezeigt; die Entscheidung ist in
+`docs/OPEN_QUESTIONS.md` unter H03 festgehalten. Das Portal ist kein Nachweis der
+Zustellung; der dokumentierte Ersatzprozess mit dem Messdienst bleibt bis zur Freigabe
+bestehen.
+
 ## Häufige Fehler
 
 - Position lässt sich nicht speichern: Grundlage fehlt.

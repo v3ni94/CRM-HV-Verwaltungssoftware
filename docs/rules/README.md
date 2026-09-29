@@ -143,7 +143,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | PÜ13 | Protokoll ohne Rechtsfiktion | 7.9.3 | partly implemented (M21, M23 logs); request log open, M25-04 |
 | H01 | Messdienst oder Eigenberechnung | 7.10 | implemented, not accepted (M17, external heating statement required) |
 | H02 | HeizkostenV | 7.10 | specified, not implemented |
-| H03 | Laufende Pflichten | 7.10 | specified, not implemented |
+| [H03](H03-verbrauchsinformation.md) | Laufende Pflichten (Verbrauchsinformation § 6a) | 7.10 | implemented, not accepted (29.09.2026; Inhalte des § 6a Abs. 3 zu verifizieren, Mieter sehen nichts bis zur Vorlagenbestätigung) |
 | [H04](H04-co2.md) | CO₂-Regeln mit Geltungsstand | 7.10 | implemented, not accepted (M17, CO₂ split) |
 | [M17-02](M17-02-heizkosten.md) | Heizkostenabrechnung als Entwurf (H02, H04, D25 bis D27) | 7.10 | implemented, not accepted (M17-02, 27.09.2026; Werte als Konfiguration zu prüfen, Ausgabe hinter G3) |
 | H05 | Bereits veröffentlichte spätere Regeln | 7.10 | specified, not implemented |
