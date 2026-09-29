@@ -19,6 +19,7 @@ import {
   type Run,
 } from "@/lib/ai";
 import { bff } from "@/lib/bff";
+import { mergeChatContext, readChatContextAttribute, useChatContextOverride } from "@/lib/chat-context";
 import { chatPageContext, suggestionsFor, type ChatArea, type ChatPageContext } from "@/lib/chat-suggestions";
 import { ui } from "@/lib/ui";
 
@@ -58,8 +59,8 @@ export function looksLikeImportIntent(text: string): boolean {
   return IMPORT_INTENT.test(text) && CONTACT_WORDS.test(text);
 }
 
-export function pageContext(pathname: string): PageContext {
-  return chatPageContext(pathname);
+export function pageContext(pathname: string, search?: string): PageContext {
+  return chatPageContext(pathname, search);
 }
 
 type Chip = { id: string; label: string };
@@ -87,7 +88,22 @@ type Flow =
 export function AiChatWidget() {
   const t = useTranslations("AiChat");
   const pathname = usePathname();
-  const ctx = pageContext(pathname);
+  // Query string and the page's own `data-chat-context` are read after navigation (no
+  // useSearchParams: the widget lives in the layout and must not need a Suspense boundary).
+  const [search, setSearch] = useState("");
+  const [attribute, setAttribute] = useState<ReturnType<typeof readChatContextAttribute>>(null);
+  useEffect(() => {
+    setSearch(typeof window === "undefined" ? "" : window.location.search);
+    setAttribute(readChatContextAttribute(typeof document === "undefined" ? null : document));
+  }, [pathname]);
+  const override = useChatContextOverride();
+  const ctx = mergeChatContext(pageContext(pathname, search), override ?? attribute);
+  /** Page name shown to the user and sent as `page`: area, sub page (a record detail page is
+   *  named by the area alone; the record itself goes as context) and settings entry. */
+  const subLabel = ctx.subArea && ctx.subArea !== "detail" && t.has(`subArea.${ctx.subArea}`) ? t(`subArea.${ctx.subArea}`) : null;
+  const pageName = [t(`area.${ctx.area}`), ctx.settingsEntry ? ctx.settingsEntry.title : subLabel]
+    .filter(Boolean)
+    .join(" / ");
   const [open, setOpen] = useState(false);
   const [entries, setEntries] = useState<Entry[]>([]);
   const [flow, setFlow] = useState<Flow>({ step: "idle" });
@@ -107,8 +123,11 @@ export function AiChatWidget() {
 
   const startChips = (area: Area): Chip[] => {
     // Suggestions for the page and the record open on it: buttons that send the question.
-    const chips: Chip[] = suggestionsFor(ctx).map((key) => ({ id: `suggest:${key}`, label: t(`suggestions.${key}`) }));
-    if (area === "contacts" || area === "other") chips.push({ id: "import_contacts", label: t("chips.importContacts") });
+    const chips: Chip[] = suggestionsFor(ctx).map((key) => ({
+      id: `suggest:${key}`,
+      label: t(`suggestions.${key}`, { title: ctx.settingsEntry?.title ?? t(`area.${ctx.area}`) }),
+    }));
+    if (area === "contacts" || area === "start" || area === "other") chips.push({ id: "import_contacts", label: t("chips.importContacts") });
     if (area === "properties" || area === "hoa") chips.push({ id: "import_property", label: t("chips.importProperty") });
     chips.push({ id: "ask", label: t("chips.ask") }, { id: "summarize", label: t("chips.summarize") });
     return chips;
@@ -118,14 +137,14 @@ export function AiChatWidget() {
   // The widget survives client navigations (app layout), so the conversation of the previous
   // page is dropped here: the next question starts a conversation with the current record
   // (context_type, context_id) and never carries the history of another record.
-  const greetKey = `${ctx.area}:${ctx.entityId ?? ""}`;
+  const greetKey = `${ctx.area}:${ctx.subArea ?? ""}:${ctx.entityId ?? ""}`;
   useEffect(() => {
     if (!open || greetedFor.current === greetKey) return;
     greetedFor.current = greetKey;
     setFlow({ step: "idle" });
     setConversation(null);
     conversationRef.current = null;
-    say(t(ctx.entityType ? "greetingRecord" : "greeting", { page: t(`area.${ctx.area}`) }), startChips(ctx.area));
+    say(t(ctx.entityType ? "greetingRecord" : "greeting", { page: pageName }), startChips(ctx.area));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, greetKey]);
 
@@ -138,7 +157,7 @@ export function AiChatWidget() {
     if (conversation && conversation.context_type === ctx.contextType && (conversation.context_id ?? null) === ctx.contextId) return conversation;
     const res = await bff<Conversation>("/api/bff/ai/conversations", {
       method: "POST",
-      body: JSON.stringify({ title: t("conversationTitle", { page: t(`area.${ctx.area}`) }), context_type: ctx.contextType, context_id: ctx.contextId }),
+      body: JSON.stringify({ title: t("conversationTitle", { page: pageName }), context_type: ctx.contextType, context_id: ctx.contextId }),
     });
     if (!res.ok) throw new Error(stepError(t("stepConversation"), res.status, res.message));
     setConversation(res.data);
@@ -185,7 +204,13 @@ export function AiChatWidget() {
         document_ids: documentIds,
         // Page context for questions: the lookup starts from the record open on the page.
         ...(task === "answer_question"
-          ? { page: t(`area.${ctx.area}`), context_entity_type: ctx.entityType, context_entity_id: ctx.entityId }
+          ? {
+              page: pageName,
+              context_entity_type: ctx.entityType,
+              context_entity_id: ctx.entityId,
+              area: ctx.area,
+              sub_area: ctx.subArea,
+            }
           : {}),
       }),
     });
@@ -310,7 +335,7 @@ export function AiChatWidget() {
     push({ kind: "user", text: chip.label });
     switch (chip.id) {
       case "restart":
-        say(t("greeting", { page: t(`area.${ctx.area}`) }), startChips(ctx.area));
+        say(t("greeting", { page: pageName }), startChips(ctx.area));
         setFlow({ step: "idle" });
         return;
       case "ask":
@@ -506,7 +531,7 @@ export function AiChatWidget() {
       if (list.length) setStage("uploading");
       const ids = list.length ? await upload(list) : [];
       say(t("working"));
-      const run = await runTask("answer_question", [t("pageHint", { page: t(`area.${ctx.area}`) }), content].join(" "), ids);
+      const run = await runTask("answer_question", [t("pageHint", { page: pageName }), content].join(" "), ids);
       // Prefer the stored answer: it carries the platform hit list, the links and, without a
       // released provider, the deterministic fallback (rule AI-LOOKUP-01).
       const stored = await answerOf(run);
@@ -555,7 +580,7 @@ export function AiChatWidget() {
           <header className="flex items-center justify-between border-b border-rail-border bg-rail-bg px-4 py-3 text-rail-fg">
             <div>
               <p className="text-sm font-semibold">{t("title")}</p>
-              <p className="mhvp-label text-rail-muted">{t("onPage", { page: t(`area.${ctx.area}`) })}</p>
+              <p className="mhvp-label text-rail-muted">{t("onPage", { page: pageName })}</p>
             </div>
             <div className="flex shrink-0 items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-gold" aria-hidden />

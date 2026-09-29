@@ -37,21 +37,26 @@ describe("pageContext", () => {
   it("derives area and context from the route", () => {
     expect(pageContext("/kontakte")).toEqual({
       area: "contacts",
+      subArea: null,
       contextType: "global",
       contextId: null,
       entityType: null,
       entityId: null,
+      settingsEntry: null,
     });
     expect(
       pageContext("/objekte/01920000-0000-7000-8000-00000000e001"),
     ).toEqual({
       area: "properties",
+      subArea: "detail",
       contextType: "property",
       contextId: "01920000-0000-7000-8000-00000000e001",
       entityType: "property",
       entityId: "01920000-0000-7000-8000-00000000e001",
+      settingsEntry: null,
     });
-    expect(pageContext("/start").area).toBe("other");
+    expect(pageContext("/start").area).toBe("start");
+    expect(pageContext("/version").area).toBe("other");
   });
 });
 

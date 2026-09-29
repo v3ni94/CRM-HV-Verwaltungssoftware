@@ -580,6 +580,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["tenant_settings:read", "tickets:read"],
   },
   {
+    id: "regelvorschlaege",
+    title: "Regelvorschläge",
+    breadcrumb: [ROOT, "Regelvorschläge"],
+    href: "/einstellungen/regelvorschlaege",
+    keywords: ["regelvorschlag", "vorschlag", "gelernte regel", "automatisierung", "ki regel", "freigabe regel"],
+    permission: ["tenant_settings:read"],
+  },
+  {
     id: "antwortvorlagen",
     title: "Antwortvorlagen",
     breadcrumb: [ROOT, "Antwortvorlagen"],

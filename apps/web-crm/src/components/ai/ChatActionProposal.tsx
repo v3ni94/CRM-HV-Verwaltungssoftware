@@ -10,7 +10,7 @@ import { ui } from "@/lib/ui";
 
 type Change = { field: string; old?: string | null; new: string };
 type Proposed = {
-  kind?: "contact_change" | "contact_note" | "ticket_create";
+  kind?: "contact_change" | "contact_note" | "ticket_create" | "calendar_create" | "deadline_create";
   contact_id?: string | null;
   contact_label?: string | null;
   changes?: Change[];
@@ -19,8 +19,20 @@ type Proposed = {
   description?: string | null;
   property_label?: string | null;
   unit_label?: string | null;
+  // calendar_create / deadline_create: entry of the confirmer's own CRM calendar, never an
+  // invitation (rule M23-05).
+  date?: string;
+  time?: string | null;
+  participants?: { contact_id: string; label: string }[];
+  reminders?: string[];
   reason?: string;
 };
+
+function germanDate(iso: string | undefined): string {
+  if (!iso) return "";
+  const [y, m, d] = iso.split("-");
+  return y && m && d ? `${d}.${m}.${y}` : iso;
+}
 
 /** Change asked for in the chat (rule AI-LOOKUP-01): shown as a proposal; written only after
  *  the confirmation through `POST /ai/proposals/{id}/apply`. Bank details never come here. */
@@ -45,8 +57,15 @@ export function ChatActionProposal({ proposal }: { proposal: Proposal }) {
     setState(action === "apply" ? "applied" : "rejected");
   };
 
-  const summary = (result?.summary ?? {}) as { ticket_id?: string; contact_id?: string };
-  const target = summary.ticket_id ? `/tickets/${summary.ticket_id}` : p.contact_id ? `/kontakte/${p.contact_id}` : null;
+  const summary = (result?.summary ?? {}) as { ticket_id?: string; contact_id?: string; calendar_entry_id?: string; date?: string };
+  const target = summary.ticket_id
+    ? `/tickets/${summary.ticket_id}`
+    : summary.calendar_entry_id
+      ? `/kalender?termin=${summary.calendar_entry_id}&datum=${summary.date ?? ""}`
+      : p.contact_id
+        ? `/kontakte/${p.contact_id}`
+        : null;
+  const entry = p.kind === "calendar_create" || p.kind === "deadline_create";
 
   return (
     <div className={`${ui.card} flex flex-col gap-2 text-sm`} data-testid="chat-action-proposal">
@@ -67,6 +86,18 @@ export function ChatActionProposal({ proposal }: { proposal: Proposal }) {
           {p.description ? <p className="whitespace-pre-wrap text-muted">{p.description}</p> : null}
           {p.property_label ? <p>{t("chatAction.property", { name: p.property_label })}</p> : null}
           {p.unit_label ? <p>{t("chatAction.unit", { name: p.unit_label })}</p> : null}
+        </>
+      ) : null}
+      {entry ? (
+        <>
+          <p>{t("chatAction.title", { title: p.title ?? "" })}</p>
+          <p>{t("chatAction.date", { date: germanDate(p.date) })}</p>
+          <p>{p.time ? t("chatAction.time", { time: p.time }) : t("chatAction.allDay")}</p>
+          {p.participants?.length ? <p>{t("chatAction.participants", { names: p.participants.map((x) => x.label).join(", ") })}</p> : null}
+          {p.property_label ? <p>{t("chatAction.property", { name: p.property_label })}</p> : null}
+          {p.reminders?.length ? <p>{t("chatAction.reminders", { codes: p.reminders.join(", ") })}</p> : null}
+          {p.description ? <p className="whitespace-pre-wrap text-muted">{p.description}</p> : null}
+          <p className="text-muted">{t("chatAction.noInvite")}</p>
         </>
       ) : null}
       {state === "pending" ? (

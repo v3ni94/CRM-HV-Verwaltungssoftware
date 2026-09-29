@@ -33,3 +33,42 @@ describe("ChatActionProposal", () => {
     expect(screen.getByRole("button", { name: "Bestätigen und übernehmen" })).toBeInTheDocument();
   });
 });
+
+describe("ChatActionProposal calendar and deadline entries", () => {
+  const entry = {
+    ...proposal,
+    id: "01920000-0000-7000-8000-00000000b003",
+    proposed: {
+      kind: "calendar_create",
+      title: "Übergabe Musterweg 1",
+      date: "2026-10-05",
+      time: "10:00",
+      appointment_kind: "uebergabe",
+      participants: [{ contact_id: "01920000-0000-7000-8000-00000000c0de", label: "Kowalski, Jan" }],
+      property_label: "893 Lindenhof",
+      reminders: [],
+      reason: "Nutzer bittet um den Termin",
+    },
+  } as unknown as Proposal;
+
+  it("shows date, time, participants and that nobody is invited", () => {
+    renderIntl(<ChatActionProposal proposal={entry} />);
+    expect(screen.getByText("Vorschlag: Termin im CRM-Kalender")).toBeInTheDocument();
+    expect(screen.getByText("Titel: Übergabe Musterweg 1")).toBeInTheDocument();
+    expect(screen.getByText("Datum: 05.10.2026")).toBeInTheDocument();
+    expect(screen.getByText("Uhrzeit: 10:00")).toBeInTheDocument();
+    expect(screen.getByText("Beteiligte (werden nicht eingeladen): Kowalski, Jan")).toBeInTheDocument();
+    expect(screen.getByText("Objekt: 893 Lindenhof")).toBeInTheDocument();
+    expect(screen.getByText(/keine Einladungen versendet/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Bestätigen und übernehmen" })).toBeInTheDocument();
+  });
+
+  it("shows a deadline entry as all day with its reminders", () => {
+    const deadline = { ...entry, proposed: { kind: "deadline_create", title: "Frist Widerspruch", date: "2026-11-02", time: null, reminders: ["1d", "7d"] } } as unknown as Proposal;
+    renderIntl(<ChatActionProposal proposal={deadline} />);
+    expect(screen.getByText("Vorschlag: Fristeintrag mit Erinnerung")).toBeInTheDocument();
+    expect(screen.getByText("Datum: 02.11.2026")).toBeInTheDocument();
+    expect(screen.getByText("ganztägig")).toBeInTheDocument();
+    expect(screen.getByText("Erinnerungen: 1d, 7d")).toBeInTheDocument();
+  });
+});
