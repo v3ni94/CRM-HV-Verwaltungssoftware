@@ -34,11 +34,11 @@ async def _world(settings: Any) -> World:
         b, _ = await services.provision_tenant(factory, slug=f"dlt2-{RUN}", name=f"Fristen2 {RUN}")
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         for name, tenant, role in [
-            ("dladmin", a, "tenant_admin"),
-            ("dlclerk", a, "standard"),
-            ("dlreader", a, "read_only"),
-            ("dlcaretaker", a, "caretaker"),
-            ("dlother", b, "tenant_admin"),
+            ("dltadmin", a, "tenant_admin"),
+            ("dltclerk", a, "standard"),
+            ("dltreader", a, "read_only"),
+            ("dltcaretaker", a, "caretaker"),
+            ("dltother", b, "tenant_admin"),
         ]:
             uid = await services.create_user(
                 factory, email=world.email(name), display_name=name, password=PASSWORD
@@ -152,10 +152,10 @@ def _property_with_contract(
 def test_deadline_types_entries_and_job(
     client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
-    admin = bearer(login(client, world, "dladmin"))
-    clerk = bearer(login(client, world, "dlclerk"))
-    reader = bearer(login(client, world, "dlreader"))
-    other = bearer(login(client, world, "dlother"))
+    admin = bearer(login(client, world, "dltadmin"))
+    clerk = bearer(login(client, world, "dltclerk"))
+    reader = bearer(login(client, world, "dltreader"))
+    other = bearer(login(client, world, "dltother"))
 
     # Catalogue: seeded once per tenant, without durations (no default, "zu verifizieren").
     types = _ok(client.get(f"{W}/deadline-types", headers=clerk))
@@ -231,8 +231,8 @@ def test_deadline_types_entries_and_job(
     ids = _property_with_contract(client, admin)
     users = _ok(client.get(f"{W}/assignable-users", headers=clerk))
     names = {u["display_name"]: u["user_id"] for u in users}
-    assert {"dladmin", "dlclerk"} <= set(names)
-    assert "dlother" not in names
+    assert {"dltadmin", "dltclerk"} <= set(names)
+    assert "dltother" not in names
 
     # Entry without a duration and without a due date: MHVP-WS-0001, never a silent default.
     body = {
@@ -265,7 +265,7 @@ def test_deadline_types_entries_and_job(
                 "source_type": "contract",
                 "source_id": ids["contract"],
                 "trigger_on": "2026-09-30",
-                "responsible_user_id": names["dlclerk"],
+                "responsible_user_id": names["dltclerk"],
             },
             headers=clerk,
         ),
@@ -273,7 +273,7 @@ def test_deadline_types_entries_and_job(
     )
     assert computed["due_on"] == "2026-12-29"
     assert computed["due_computed"] is True
-    assert computed["responsible_name"] == "dlclerk"
+    assert computed["responsible_name"] == "dltclerk"
     assert computed["warnings"] == []
     assert computed["href"] == f"/vertraege/{ids['contract']}"
     assert computed["title"].startswith("Kautionsabrechnung Vertrag ")
@@ -306,7 +306,7 @@ def test_deadline_types_entries_and_job(
         client.post(
             f"{W}/deadline-entries",
             json=body
-            | {"due_on": "2026-12-31", "responsible_user_id": str(world.users["dlother"])},
+            | {"due_on": "2026-12-31", "responsible_user_id": str(world.users["dltother"])},
             headers=clerk,
         ).status_code
         == 422
@@ -342,7 +342,7 @@ def test_deadline_types_entries_and_job(
     assert [e["id"] for e in by_ticket] == [entered["id"]]
     done = _ok(client.post(f"{W}/deadline-entries/{entered['id']}/done", headers=clerk))
     assert done["status"] == "done"
-    assert done["done_by"] == str(world.users["dlclerk"])
+    assert done["done_by"] == str(world.users["dltclerk"])
     assert (
         _ok(
             client.get(
@@ -371,7 +371,7 @@ def test_deadline_types_entries_and_job(
                 "source_id": ids["unit"],
                 "trigger_on": TODAY.isoformat(),
                 "due_on": (TODAY + timedelta(days=5)).isoformat(),
-                "responsible_user_id": names["dlclerk"],
+                "responsible_user_id": names["dltclerk"],
                 "title": "Kaution Einheit 01",
             },
             headers=clerk,
@@ -408,9 +408,9 @@ def entry_unit(entry: dict[str, Any]) -> Any:
 
 
 def test_notice_period_orientation(client: TestClient, world: World) -> None:
-    admin = bearer(login(client, world, "dladmin"))
-    reader = bearer(login(client, world, "dlreader"))
-    caretaker = bearer(login(client, world, "dlcaretaker"))
+    admin = bearer(login(client, world, "dltadmin"))
+    reader = bearer(login(client, world, "dltreader"))
+    caretaker = bearer(login(client, world, "dltcaretaker"))
     params: dict[str, Any] = {"termination_on": "2026-09-05", "months": 3, "to_month_end": True}
     out = _ok(client.get(f"{W}/notice-period", params=params, headers=reader))
     assert out["end_on"] == "2026-12-31"
@@ -447,7 +447,7 @@ def test_notice_period_orientation(client: TestClient, world: World) -> None:
     )
     assert compared["contract_end_date"] == "2026-11-30"
     assert compared["contract_end_covers"] is False  # before the orientation, still accepted
-    other = bearer(login(client, world, "dlother"))
+    other = bearer(login(client, world, "dltother"))
     assert (
         client.get(
             f"{W}/notice-period", params=params | {"contract_id": ids["contract"]}, headers=other
@@ -457,9 +457,9 @@ def test_notice_period_orientation(client: TestClient, world: World) -> None:
 
 
 def test_property_checklist(client: TestClient, world: World) -> None:
-    admin = bearer(login(client, world, "dladmin"))
-    caretaker = bearer(login(client, world, "dlcaretaker"))
-    other = bearer(login(client, world, "dlother"))
+    admin = bearer(login(client, world, "dltadmin"))
+    caretaker = bearer(login(client, world, "dltcaretaker"))
+    other = bearer(login(client, world, "dltother"))
     prop = _ok(
         client.post(
             "/api/v1/properties",
@@ -499,8 +499,8 @@ def test_property_checklist(client: TestClient, world: World) -> None:
         )
     )
     first = ticked["items"][0]
-    assert first["done_by"] == str(world.users["dladmin"])
-    assert first["done_by_name"] == "dladmin"
+    assert first["done_by"] == str(world.users["dltadmin"])
+    assert first["done_by_name"] == "dltadmin"
     assert first["done_at"] is not None
     assert ticked["status"] == "open"
     assert (
@@ -540,8 +540,8 @@ def test_property_checklist(client: TestClient, world: World) -> None:
 
 
 def test_rent_increase_receipt_action(client: TestClient, world: World) -> None:
-    admin = bearer(login(client, world, "dladmin"))
-    clerk = bearer(login(client, world, "dlclerk"))
+    admin = bearer(login(client, world, "dltadmin"))
+    clerk = bearer(login(client, world, "dltclerk"))
     ids = _property_with_contract(client, admin, "774")
     case = _ok(
         client.post(
@@ -586,7 +586,7 @@ def test_rent_increase_receipt_action(client: TestClient, world: World) -> None:
                 "source_id": case["id"],
                 "trigger_on": "2026-10-02",
                 "due_on": "2026-12-31",
-                "responsible_user_id": str(world.users["dladmin"]),
+                "responsible_user_id": str(world.users["dltadmin"]),
             },
             headers=admin,
         ),
