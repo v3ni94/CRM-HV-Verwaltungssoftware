@@ -1,6 +1,6 @@
 import type { MetadataRoute } from "next";
 
-// Web app manifest of the CRM (M31 WP5, operator decision M30-08 of 28.09.2026, ADR 0016):
+// Web app manifest of the CRM (M31 WP5, operator decision M30-08 of 28.09.2026, ADR 0017):
 // the CRM is installable as a shell without any data cache. Colours are a hex copy of the day
 // tokens of packages/ui/src/tokens.css because manifest.ts reads no CSS: background_color and
 // theme_color = --mhvp-color-bg #f6f5f2 (the header of the app shell sits on bg). The evening

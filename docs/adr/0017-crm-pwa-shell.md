@@ -1,4 +1,4 @@
-# ADR 0016: CRM as an installable shell without a data cache
+# ADR 0017: CRM as an installable shell without a data cache
 
 - Status: Accepted (operator decision M30-08 of 28.09.2026; product protection, no legal duty)
 - Date: 2026-09-29

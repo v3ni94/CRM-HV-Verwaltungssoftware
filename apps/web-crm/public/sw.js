@@ -1,4 +1,4 @@
-/* Service worker of the CRM shell (M31 WP5, operator decision M30-08, ADR 0016).
+/* Service worker of the CRM shell (M31 WP5, operator decision M30-08, ADR 0017).
  *
  * Caches exactly the static offline page and the app icons, nothing else. Navigations go to the
  * network first; only when the network fails or does not answer within NAVIGATION_TIMEOUT_MS

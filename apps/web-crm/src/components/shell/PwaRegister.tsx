@@ -7,7 +7,7 @@ import { installThemeColorMeta } from "@/lib/theme";
 /** Registers the service worker of the CRM shell (M31 WP5, M30-08) and keeps the browser
  *  chrome colour in step with the day and evening theme. The worker caches only the static
  *  offline page and the icons; no API response, page or document is ever cached (see
- *  public/sw.js and ADR 0016). Registration is skipped where service workers are unavailable. */
+ *  public/sw.js and ADR 0017). Registration is skipped where service workers are unavailable. */
 export function PwaRegister() {
   useEffect(() => installThemeColorMeta(), []);
   useEffect(() => {
