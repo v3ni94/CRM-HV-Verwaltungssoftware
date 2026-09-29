@@ -1,0 +1,16 @@
+{"id": "L01", "class": "debtor_full", "decisions": ["100001", "100001", "100001", "100001", "100001"], "amounts": ["250.00", "250.00", "250.00", "250.00", "250.00"], "expect": {"proposal": true, "recurring": true, "threshold": 3}}
+{"id": "L02", "class": "debtor_full", "decisions": ["100001", "100001", "100002"], "amounts": ["250.00", "250.00", "250.00"], "expect": {"proposal": false, "recurring": false, "threshold": 5}}
+{"id": "L03", "class": "recurring_expense", "decisions": ["040100", "040100", "040100"], "amounts": ["-80.00", "-80.00", "-80.00"], "expect": {"proposal": true, "recurring": true, "threshold": 3}}
+{"id": "L04", "class": "recurring_expense", "decisions": ["040100", "040100", "040100", "040100"], "amounts": ["-80.00", "-82.00", "-80.00", "-85.00"], "expect": {"proposal": false, "recurring": false, "threshold": 5}}
+{"id": "L05", "class": "recurring_expense", "decisions": ["040100", "040100", "040100", "040100", "040100"], "amounts": ["-80.00", "-82.00", "-80.00", "-85.00", "-81.00"], "expect": {"proposal": true, "recurring": false, "threshold": 5}}
+{"id": "L06", "class": "debtor_full", "decisions": ["100001", "100001", "100001", "!100001"], "amounts": ["250.00", "250.00", "250.00", "250.00"], "expect": {"proposal": false, "recurring": false, "threshold": 5}}
+{"id": "L07", "class": "debtor_full", "decisions": ["100001", "100001", "b:100001", "b:100001"], "amounts": ["250.00", "250.00", "250.00", "250.00"], "expect": {"proposal": true, "recurring": true, "threshold": 3}}
+{"id": "L08", "class": "debtor_full", "decisions": ["100001", "b:100001", "b:100001", "b:100001"], "amounts": ["250.00", "250.00", "250.00", "250.00"], "expect": {"proposal": false, "recurring": true, "threshold": 3}}
+{"id": "L09", "class": "creditor_invoice", "decisions": ["070001", "070001", "070001", "070001", "070001", "070001"], "amounts": ["-1190.00", "-1190.00", "-500.00", "-1190.00", "-800.00", "-1190.00"], "expect": {"proposal": true, "recurring": false, "threshold": 5}}
+{"id": "L10", "class": "debtor_full", "decisions": ["100001", "100001", "100001", "!100001", "100001", "100001", "100001"], "amounts": ["250.00", "250.00", "250.00", "250.00", "250.00", "250.00", "250.00"], "expect": {"proposal": true, "recurring": true, "threshold": 3}}
+{"id": "M01", "level": "L1", "metrics": {"n_decided": 20, "n_accepted_unchanged": 19, "n_modified": 1}, "expect": {"eligible": true}}
+{"id": "M02", "level": "L1", "metrics": {"n_decided": 20, "n_accepted_unchanged": 18, "n_modified": 2}, "expect": {"eligible": false}}
+{"id": "M03", "level": "L2", "current": "L1", "metrics": {"n_decided": 50, "n_accepted_unchanged": 49, "n_modified": 1, "days_at_level": 30}, "expect": {"eligible": true}}
+{"id": "M04", "level": "L2", "current": "L1", "metrics": {"n_decided": 50, "n_accepted_unchanged": 49, "n_modified": 1, "days_at_level": 29}, "expect": {"eligible": false}}
+{"id": "M05", "level": "L3", "current": "L2", "class": "debtor_collective", "metrics": {"n_decided": 500, "n_accepted_unchanged": 500}, "expect": {"eligible": false}}
+{"id": "M06", "level": "L3", "current": "L2", "metrics": {"n_decided": 100, "n_accepted_unchanged": 100, "days_at_level": 60, "n_auto": 200, "n_auto_reversed": 1}, "expect": {"eligible": true}}

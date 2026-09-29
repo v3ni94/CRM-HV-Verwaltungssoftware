@@ -20,6 +20,7 @@ from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, log
 from tests.integration.test_m5_contracts import _unit
 from tests.integration.test_m8_import import BUCKET, _settings
 from tests.integration.test_m11_banking import _camt, _ntry, _upload
+from tests.integration.test_m12_automation_levels import _set_level
 
 pytestmark = pytest.mark.integration
 B = "/api/v1/banking"
@@ -70,7 +71,9 @@ def _ok(response: Any, status: int = 200) -> Any:
     return response.json()
 
 
-def test_matching_set_and_controlled_automation(client: TestClient, world: World) -> None:
+def test_matching_set_and_controlled_automation(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
     h = bearer(login(client, world, "m12admin"))
     acc_user = bearer(login(client, world, "m12acc"))
     prop = _ok(
@@ -222,6 +225,11 @@ def test_matching_set_and_controlled_automation(client: TestClient, world: World
     # Automation is off by default: nothing is posted.
     assert _ok(client.post(f"{B}/auto-post", headers=h)) == {"enabled": False, "posted": 0}
     _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test M12"}, headers=h))
+    # Since step S6 the runner also needs the decision log and level L2 of the class
+    # (rule M12-05); the level is set here as the approved request would (four eyes in
+    # test_m12_automation_levels).
+    _ok(client.put(f"{B}/learning", json={"enabled": True, "reason": "Test M12"}, headers=h))
+    _set_level(_settings(database, redis_url), world.tenant_a, "debtor_full", "L2")
     assert _ok(client.post(f"{B}/auto-post", headers=h))["posted"] == 0  # no active rule
 
     rule = _ok(
@@ -560,7 +568,7 @@ def test_d39_payment_determination_is_not_overridden_by_account_priority(
 
 
 def test_a45_matching_metrics_coverage_and_error_rate_per_period(
-    client: TestClient, world: World
+    client: TestClient, world: World, database: Database, redis_url: str
 ) -> None:
     """A45 (M12 acceptance): synthetic March set with a correct automatic hit, a wrong automatic
     hit (reversed by the reviewer), an ambiguous purpose (manual), an IBAN only case (manual)
@@ -741,6 +749,8 @@ def test_a45_matching_metrics_coverage_and_error_rate_per_period(
         )
     )
     _ok(client.put(f"{B}/automation", json={"enabled": True, "reason": "Test A45"}, headers=h))
+    _ok(client.put(f"{B}/learning", json={"enabled": True, "reason": "Test A45"}, headers=h))
+    _set_level(_settings(database, redis_url), world.tenant_a, "debtor_full", "L2")
     auto = _ok(client.post(f"{B}/auto-post", headers=h))
     assert auto["posted"] == 3  # K1, K2 (wrong) and K6 (April); K3 ambiguous, K4 IBAN only
     booked = {
