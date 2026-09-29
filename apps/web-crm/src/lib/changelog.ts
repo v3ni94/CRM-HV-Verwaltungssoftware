@@ -17,6 +17,21 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.43.0",
+    date: "29.09.2026",
+    title: "KI-Assistent mit Datenzugriff",
+    changes: [
+      "KI-Assistent beantwortet Fragen zu Kontakten, Objekten, Einheiten, Verträgen und Tickets aus den eigenen Daten, jeweils nur im Rahmen der eigenen Berechtigungen und des Mandanten; Antworten enthalten Links zu den gefundenen Datensätzen, findet die Plattform nichts, sagt der Assistent das ausdrücklich.",
+      "Fragen wie \"Wo finde ich ...\" verweisen auf die passende Seite und den Handbuchabschnitt.",
+      "Vorschläge im Chat passend zur Seite und zum geöffneten Datensatz (Kontakt, Objekt, WEG, Einheit, Vertrag, Ticket, Übergabeprotokoll, Postfach); der Chat führt ein Gespräch mit Rückfragen und bezieht Seite, Datensatz und bisherigen Verlauf ein.",
+      "Ohne freigegebenen KI-Anbieter oder bei erreichtem Budget zeigt der Chat die Treffer der Plattformsuche mit Hinweis.",
+      "Änderungen über den Chat (Kontaktdaten, Notiz, Ticket) entstehen nur als Vorschlag mit Bestätigung; Bankverbindungen nie über den Chat. Telefonnummern, E-Mail-Adressen und Bankverbindungen verlassen die Plattform nur maskiert (Migration 0223).",
+      "Korrekturen aus der Gegenprüfung des Assistenten: Datensatzinhalte können keine Aktionen oder Links auslösen, jede Aktion wird gegen die Berechtigung des Zielendpunkts geprüft.",
+      "Neues Handbuchkapitel KI-Assistent im Chat; Lückenanalyse und Fahrplan lernende Buchhaltung sowie Plan Bedienung auf Handy und Tablet unter docs/plans.",
+      "Bank, FinTS: Institutsliste der Deutschen Kreditwirtschaft (Stand 20.08.2026) übernommen; der Fehler beim Abruf der Bankparameter erklärt die möglichen Ursachen (Adresse, noch nicht freigeschaltete Produktregistrierung).",
+    ],
+  },
+  {
     version: "1.42.1",
     date: "28.09.2026",
     title: "Release-Skript mit Compose v5",

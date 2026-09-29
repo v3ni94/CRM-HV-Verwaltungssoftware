@@ -5,6 +5,17 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.43.0 (29.09.2026) KI-Assistent mit Datenzugriff
+
+- KI-Assistent beantwortet Fragen zu Kontakten, Objekten, Einheiten, Verträgen und Tickets aus den eigenen Daten, jeweils nur im Rahmen der eigenen Berechtigungen und des Mandanten; Antworten enthalten Links zu den gefundenen Datensätzen, findet die Plattform nichts, sagt der Assistent das ausdrücklich.
+- Fragen wie "Wo finde ich ..." verweisen auf die passende Seite und den Handbuchabschnitt.
+- Vorschläge im Chat passend zur Seite und zum geöffneten Datensatz (Kontakt, Objekt, WEG, Einheit, Vertrag, Ticket, Übergabeprotokoll, Postfach); der Chat führt ein Gespräch mit Rückfragen und bezieht Seite, Datensatz und bisherigen Verlauf ein.
+- Ohne freigegebenen KI-Anbieter oder bei erreichtem Budget zeigt der Chat die Treffer der Plattformsuche mit Hinweis.
+- Änderungen über den Chat (Kontaktdaten, Notiz, Ticket) entstehen nur als Vorschlag mit Bestätigung; Bankverbindungen nie über den Chat. Telefonnummern, E-Mail-Adressen und Bankverbindungen verlassen die Plattform nur maskiert (Migration 0223).
+- Korrekturen aus der Gegenprüfung des Assistenten: Datensatzinhalte können keine Aktionen oder Links auslösen, jede Aktion wird gegen die Berechtigung des Zielendpunkts geprüft.
+- Neues Handbuchkapitel KI-Assistent im Chat; Lückenanalyse und Fahrplan lernende Buchhaltung sowie Plan Bedienung auf Handy und Tablet unter docs/plans.
+- Bank, FinTS: Institutsliste der Deutschen Kreditwirtschaft (Stand 20.08.2026) übernommen; der Fehler beim Abruf der Bankparameter erklärt die möglichen Ursachen (Adresse, noch nicht freigeschaltete Produktregistrierung).
+
 ## 1.42.1 (28.09.2026) Release-Skript mit Compose v5
 
 - Release-Skript: die Prüfung der Images vor dem Einspielen berücksichtigt nur noch die eigenen Images für API, CRM und Portal; Compose v5 nennt zusätzlich die Images der abhängigen Dienste (Postgres, Redis, Objektspeicher, Virenscanner), was bisher zum Abbruch vor jeder Änderung führte. Fehlt eines der drei eigenen Images, bricht das Skript weiterhin vor jeder Änderung ab.
