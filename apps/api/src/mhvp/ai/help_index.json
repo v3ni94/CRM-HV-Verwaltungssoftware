@@ -4865,6 +4865,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Übergabeprotokoll am eigenen Handy",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Mieter, Gehilfen und andere Beteiligte füllen ein Übergabeprotokoll auf dem eigenen Handy oder Tablet aus, wenn die Verwaltung sie dazu eingeladen hat (Stand 29.09.2026, Umfang M30-06). - Einladung: per QR Code vor Ort oder per Link aus der Einladungsmail. Nach der Anmeldung ersc",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Mitarbeiterzugang und Portalrechte je Rolle",
   "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
   "href": null,

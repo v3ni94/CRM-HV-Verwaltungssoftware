@@ -183,6 +183,40 @@ Angenommen, Abgelehnt, Storniert) und Aktionen:
    und durchläuft den Belegeingang und Rechnungseingang wie jede Eingangsrechnung (Kapitel
    Belegeingang).
 
+## Übergabeprotokoll am eigenen Handy
+
+Mieter, Gehilfen und andere Beteiligte füllen ein Übergabeprotokoll auf dem eigenen Handy
+oder Tablet aus, wenn die Verwaltung sie dazu eingeladen hat (Stand 29.09.2026, Umfang
+M30-06).
+
+- Einladung: per QR Code vor Ort oder per Link aus der Einladungsmail. Nach der Anmeldung
+  erscheint im Menü der Eintrag Übergabe; er führt jederzeit zurück zum Protokoll, auch nach
+  einem Absprung in einen anderen Bereich.
+- Aufbau: die Abschnitte Objekt, Beteiligte, Kaution, Zähler, Räume, Mängel, Schlüssel,
+  Gegenstände, Bemerkungen, Unterschriften sowie Prüfung und Abschluss liegen als Reiter in
+  einer Zeile, die sich am Handy seitlich wischen lässt. Speichern liegt unten in Reichweite
+  des Daumens.
+- Fotos: Zähler, Räume, Mängel und Gegenstände nehmen ein Foto direkt beim Anlegen des
+  Eintrags auf (Foto aufnehmen öffnet die Kamera, Aus Galerie wählen die vorhandenen Fotos,
+  auch iPhone Fotos im HEIC Format). Jede Datei zeigt ihren Stand: Wartet, Wird hochgeladen,
+  Fertig oder Fehlgeschlagen mit Erneut versuchen. Fotos werden vor dem Senden verkleinert;
+  Ortsangaben und andere Metadaten entfernt der Server. Ein Tipp auf ein Foto öffnet es groß
+  im selben Fenster; Schließen führt zurück zum Protokoll.
+- Unterschrift: Einwilligungstext lesen, Beteiligten wählen, mit dem Finger oder Stift
+  unterschreiben. Rückgängig nimmt den letzten Strich zurück, Leeren die ganze Fläche. Ein
+  Drehen des Geräts erhält die Unterschrift.
+- Abschluss: Protokoll verbindlich abschließen fragt in einem Bestätigungsblatt nach; liegen
+  Hinweise vor, erscheinen sie zuerst und der Abschluss ist trotz Hinweisen möglich. Danach
+  ist das Protokoll festgeschrieben.
+- Lesefenster: nach dem Abschluss bleibt das Protokoll 14 Tage als Leseansicht erreichbar,
+  mit Zählerständen, Räumen, Mängeln, Fotos, Unterschriften und dem PDF. Das PDF öffnet im
+  selben Fenster; Zurück führt zum Protokoll. Interne Angaben der Verwaltung, frühere
+  Fassungen und Stornierungen sind nicht sichtbar.
+- Gerät: das Portal speichert keine Daten auf dem Gerät. Ohne Verbindung erscheint eine
+  Hinweisseite; nicht gespeicherte Eingaben müssen nach dem Wiederaufbau der Verbindung neu
+  erfasst werden. Auf dem iPad und iPhone lässt sich das Portal über Teilen und Zum
+  Home-Bildschirm ablegen.
+
 ## Mitarbeiterzugang und Portalrechte je Rolle
 
 Jede Mitarbeiterin und jeder Mitarbeiter erhält zusätzlich einen eigenen Portalzugang für

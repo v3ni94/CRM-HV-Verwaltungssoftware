@@ -223,6 +223,26 @@ Das Menü Benachrichtigungen zeigt ungelesene Hinweise, zum Beispiel fällige od
 
 Ein Klick auf eine Benachrichtigung öffnet den Betreff direkt: das Ticket, den Auftrag, die Mail im Postfach, das Dokument, den Vertrag, bei Wartungen die Objektakte, bei Fristen die Fristenliste und bei Terminen den Kalender mit geöffnetem Termin. Die angeklickte Benachrichtigung gilt danach als gelesen; alle anderen bleiben ungelesen. Benachrichtigungen ohne zugehörige Seite lassen sich mit einem Klick nur als gelesen markieren.
 
+## Bedienung auf Handy und Tablet
+
+Das CRM passt sich der Bildschirmbreite in drei Stufen an (Stand 29.09.2026, Plan M31):
+
+- Handy: das Menü öffnet über das Symbol links oben, Tabellen erscheinen als Karten, Aktionen
+  liegen unten in Reichweite des Daumens. Breite Tabellen lassen sich seitlich wischen.
+- Tablet hochkant: Menü über das Symbol, Inhalt in voller Breite.
+- Tablet quer: schmale Symbolleiste links, Ausklappen über den Knopf am Fuß der Leiste.
+
+## CRM als App auf dem Home Bildschirm
+
+Nach Freigabe des Betreibers (M30-08) lässt sich das CRM wie eine App ablegen: im Menü Konto
+(Kürzel oben rechts) der Eintrag Als App installieren. Android Chrome fragt direkt nach; auf
+dem iPad und iPhone zeigt der Eintrag die Schritte in Safari (Teilen, Zum Home-Bildschirm).
+Die App startet auf der Startseite im Vollbild, die Statusleiste folgt dem Tag oder
+Abendmodus. Die App speichert keine Daten auf dem Gerät; ohne Netz erscheint eine
+Hinweisseite mit Erneut versuchen. Nicht gespeicherte Eingaben gehen bei Verbindungsverlust
+verloren, daher vor Ort regelmäßig speichern (eine Offline Erfassung ist nicht freigegeben,
+M30-07).
+
 ## Darstellung
 
 Die Schaltfläche Darstellung wechselt zwischen System, Hell und Dunkel. Die Wahl gilt für den verwendeten Browser.

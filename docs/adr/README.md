@@ -22,5 +22,6 @@ flag until decided. Copy `0000-template.md` for a new record.
 | [0013](0013-responsive-primitives.md) | Responsive primitives for phone and tablet use of the CRM (plan M31) | Accepted, product protection |
 | [0014](0014-learning-bookkeeper.md) | Learning bookkeeper: staged automation, decision log `posting_decision`, reversal reason code, event consumer, learned rules (plan M12 S0 to S11) | Proposed, S0 to S3 and S7 implemented, operator decisions M12-05 to M12-08 open |
 | [0015](0015-lexoffice-master-data-and-drafts-outside-g1.md) | Lexware Office master data sync, invoice copies and drafts outside release gate G1 (rule INT-LEXO-01) | Proposed, operator decision LEXO-06 pending |
+| [0016](0016-crm-pwa-shell.md) | CRM as an installable shell without a data cache (manifest, service worker for offline page and icons only, middleware exception, plan M31 WP5, decision M30-08) | Accepted, product protection |
 
-Index checked against the files in this folder on 29.09.2026: ADR 0001 to 0015 each have one row; `0000-template.md` is the template. The learning bookkeeper ADR and the Lexware Office ADR were written as 0013 in parallel work packages and renumbered to 0014 and 0015 at integration.
+Index checked against the files in this folder on 29.09.2026: ADR 0001 to 0016 each have one row; `0000-template.md` is the template. The learning bookkeeper ADR and the Lexware Office ADR were written as 0013 in parallel work packages and renumbered to 0014 and 0015 at integration.
