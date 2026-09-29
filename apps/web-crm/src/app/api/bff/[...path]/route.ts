@@ -887,6 +887,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^accounting\/templates\/default$/ },
   { method: "POST", pattern: new RegExp(`^accounting/templates/${ID}/(release|submit-review|back-to-draft|versions)$`) },
   { method: "GET", pattern: new RegExp(`^accounting/templates/${ID}/export$`) },
+  // G1 Öffnung (M12-09): Checkliste, Ergebnis je Prüfpunkt, Antrag über den Freigabepfad.
+  { method: "GET", pattern: /^accounting\/g1-opening$/ },
+  { method: "PUT", pattern: /^accounting\/g1-opening\/items\/[A-Za-z0-9_]{1,32}$/ },
+  { method: "POST", pattern: /^accounting\/g1-opening\/request$/ },
   { method: "GET", pattern: /^accounting\/datev\/exports$/ },
   { method: "POST", pattern: new RegExp(`^accounting/datev/exports/${ID}/check$`) },
   { method: "GET", pattern: new RegExp(`^accounting/datev/exports/${ID}/check$`) },

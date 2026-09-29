@@ -5287,6 +5287,10 @@
       "title": "Buchhaltung, Kontenrahmen",
       "description": "Kontenrahmen je Mandant mit Freigabe durch Betreiber und Steuerberatung, Versionsverlauf und Export als CSV oder PDF."
     },
+    "g1Opening": {
+      "title": "Buchhaltung, G1 Öffnung",
+      "description": "Checkliste vor der produktiven Buchführung mit Stand aus dem System, Abnahmeergebnissen und Antrag auf die Freigabestufe G1."
+    },
     "taxes": {
       "title": "Buchhaltung, Steuern",
       "description": "Vorsteuer, Bauabzugsteuer, Paragraf 35a und Freigabegrenzen je Rolle als Entwurf, Schalter je Mandant."
@@ -10708,6 +10712,93 @@
     "colReleased": "Freigabe",
     "colBy": "Freigeber",
     "colComment": "Kommentar"
+  },
+  "G1Opening": {
+    "title": "G1 Öffnung",
+    "description": "Checkliste vor der produktiven Buchführung (Freigabestufe G1). Der Stand kommt aus dem System, die Ergebnisse trägt der Betreiber ein. Der Antrag läuft über den bestehenden Freigabepfad mit zweiter Person; diese Seite öffnet die Stufe nie selbst.",
+    "intro": "Reihenfolge nach der Öffnungsliste M12-09: Kontenrahmen mit der Steuerberatung freigeben, Anhang D Fälle durch die fachkundige Person abnehmen, Umsatzsteuerbehandlung prüfen, danach den Antrag auf G1 stellen. Die Entscheidung trifft eine zweite Person unter Plattform.",
+    "loadError": "Die Checkliste konnte nicht geladen werden.",
+    "savedMessage": "Ergebnis eingetragen.",
+    "requestedMessage": "Antrag auf G1 gestellt. Die Entscheidung trifft eine zweite Person unter Plattform, Freigabestufen.",
+    "record": "Ergebnis eintragen",
+    "columns": {
+      "key": "Kennung",
+      "title": "Prüfpunkt",
+      "status": "Ergebnis",
+      "date": "Datum",
+      "name": "Name"
+    },
+    "itemStatus": {
+      "open": "offen",
+      "passed": "bestanden",
+      "failed": "nicht bestanden"
+    },
+    "requestStatus": {
+      "requested": "beantragt",
+      "approved": "genehmigt",
+      "rejected": "abgelehnt",
+      "revoked": "widerrufen"
+    },
+    "chart": {
+      "released": "Kontenrahmen {code} Version {version} freigegeben am {date}",
+      "notReleased": "Kontenrahmen nicht freigegeben (Status {status})",
+      "missing": "Noch kein Kontenrahmen angelegt",
+      "status": {
+        "draft": "Entwurf",
+        "in_review": "zur Prüfung",
+        "released": "freigegeben"
+      }
+    },
+    "status": {
+      "title": "Stand aus dem System",
+      "chart": "Kontenrahmen (V8)",
+      "cases": "Anhang D Fälle abgenommen",
+      "manual": "Manuelle Prüfpunkte",
+      "levels": "Automatikstufen je Fallklasse",
+      "learningOn": "Lernender Buchhalter eingeschaltet",
+      "learningOff": "Lernender Buchhalter ausgeschaltet",
+      "gate": "Freigabestufe G1",
+      "gateOpen": "geöffnet",
+      "gateRequested": "beantragt, Entscheidung offen",
+      "gateClosed": "geschlossen",
+      "countOf": "{passed} von {total}"
+    },
+    "documents": {
+      "title": "Unterlagen",
+      "help": "Die Dokumente liegen im Repository und werden mit dem Antrag als Nachweis genannt.",
+      "kontenrahmen-pruefung": "Kontenrahmen-Prüfung",
+      "abnahme-anhang-d": "Abnahmeprotokoll Anhang D",
+      "verfahrensdokumentation": "Verfahrensdokumentation",
+      "d-cases": "Fachliche Abnahmefälle D01 bis D58"
+    },
+    "cases": {
+      "title": "Anhang D Fälle mit Freigabestufe G1",
+      "help": "Ergebnis der fachlichen Abnahme je Fall nach docs/acceptance/abnahme-anhang-d.md. Ein Test im Code ist keine Abnahme; eingetragen wird das Ergebnis der fachkundigen Person."
+    },
+    "manual": {
+      "title": "Manuelle Prüfpunkte",
+      "help": "Punkte der Öffnungsliste, die das System nicht selbst ableiten kann."
+    },
+    "form": {
+      "title": "Ergebnis für {key}",
+      "status": "Ergebnis",
+      "date": "Datum",
+      "name": "Name der bestätigenden Person",
+      "note": "Vermerk",
+      "save": "Speichern",
+      "cancel": "Abbrechen"
+    },
+    "request": {
+      "title": "Antrag auf Freigabestufe G1",
+      "help": "Der Antrag wird als regulärer Freigabeantrag gestellt (Vier-Augen-Prinzip). Die Nachweiszeile entsteht aus dem Stand dieser Seite. Ohne freigegebenen Kontenrahmen wird die Genehmigung abgelehnt.",
+      "pending": "Offener Antrag: {scope}",
+      "scope": "Freigegebener Funktionsumfang und Objektgruppe",
+      "comment": "Kommentar",
+      "submit": "Antrag auf G1 stellen",
+      "alreadyOpen": "Die Freigabestufe G1 ist für diesen Mandanten geöffnet.",
+      "blocked": "Ein Antrag ist bereits offen.",
+      "noRight": "Der Antrag erfordert das Recht Freigabestufen beantragen."
+    }
   },
   "FullImport": {
     "title": "Vollimport Immoware24 mit Stichtag",

@@ -654,6 +654,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["accounting:read"],
   },
   {
+    id: "buchhaltung-g1-oeffnung",
+    title: "Buchhaltung, G1 Öffnung",
+    breadcrumb: [ROOT, "Buchhaltung", "G1 Öffnung"],
+    href: "/einstellungen/buchhaltung/g1-oeffnung",
+    keywords: ["g1", "freigabestufe", "produktive buchführung", "abnahme anhang d", "checkliste öffnung"],
+    permission: ["accounting:read"],
+  },
+  {
     id: "buchhaltung-steuern",
     title: "Buchhaltung, Steuern",
     breadcrumb: [ROOT, "Buchhaltung", "Steuern"],

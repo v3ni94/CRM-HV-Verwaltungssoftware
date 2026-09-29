@@ -8397,6 +8397,68 @@
         "title": "ChangeIn",
         "type": "object"
       },
+      "ChartState": {
+        "properties": {
+          "code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Code"
+          },
+          "released": {
+            "title": "Released",
+            "type": "boolean"
+          },
+          "released_at": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Released At"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Version"
+          }
+        },
+        "required": [
+          "released",
+          "code",
+          "version",
+          "released_at",
+          "status"
+        ],
+        "title": "ChartState",
+        "type": "object"
+      },
       "ChartTemplateOut": {
         "properties": {
           "accounts": {
@@ -21344,6 +21406,113 @@
         "title": "FullRunOut",
         "type": "object"
       },
+      "G1AcceptanceStatus": {
+        "enum": [
+          "open",
+          "passed",
+          "failed"
+        ],
+        "title": "G1AcceptanceStatus",
+        "type": "string"
+      },
+      "G1OpeningOut": {
+        "properties": {
+          "automation_levels": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Automation Levels",
+            "type": "object"
+          },
+          "can_request": {
+            "title": "Can Request",
+            "type": "boolean"
+          },
+          "cases": {
+            "items": {
+              "$ref": "#/components/schemas/mhvp__accounting__g1_opening__ItemOut"
+            },
+            "title": "Cases",
+            "type": "array"
+          },
+          "cases_passed": {
+            "title": "Cases Passed",
+            "type": "integer"
+          },
+          "cases_total": {
+            "title": "Cases Total",
+            "type": "integer"
+          },
+          "chart": {
+            "$ref": "#/components/schemas/ChartState"
+          },
+          "documents": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Documents",
+            "type": "object"
+          },
+          "gate_open": {
+            "title": "Gate Open",
+            "type": "boolean"
+          },
+          "learning_bookkeeper_enabled": {
+            "title": "Learning Bookkeeper Enabled",
+            "type": "boolean"
+          },
+          "manual": {
+            "items": {
+              "$ref": "#/components/schemas/mhvp__accounting__g1_opening__ItemOut"
+            },
+            "title": "Manual",
+            "type": "array"
+          },
+          "manual_passed": {
+            "title": "Manual Passed",
+            "type": "integer"
+          },
+          "manual_total": {
+            "title": "Manual Total",
+            "type": "integer"
+          },
+          "open_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/GateRequestSummary"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "requests": {
+            "items": {
+              "$ref": "#/components/schemas/GateRequestSummary"
+            },
+            "title": "Requests",
+            "type": "array"
+          }
+        },
+        "required": [
+          "chart",
+          "cases",
+          "cases_total",
+          "cases_passed",
+          "manual",
+          "manual_total",
+          "manual_passed",
+          "automation_levels",
+          "learning_bookkeeper_enabled",
+          "gate_open",
+          "open_request",
+          "requests",
+          "can_request",
+          "documents"
+        ],
+        "title": "G1OpeningOut",
+        "type": "object"
+      },
       "G5EvidenceIn": {
         "additionalProperties": false,
         "properties": {
@@ -21512,6 +21681,41 @@
           "decision_comment"
         ],
         "title": "GateRequestOut",
+        "type": "object"
+      },
+      "GateRequestSummary": {
+        "properties": {
+          "four_eyes": {
+            "title": "Four Eyes",
+            "type": "boolean"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "requested_by": {
+            "format": "uuid",
+            "title": "Requested By",
+            "type": "string"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "status",
+          "scope",
+          "requested_by",
+          "four_eyes"
+        ],
+        "title": "GateRequestSummary",
         "type": "object"
       },
       "GateStateOut": {
@@ -25107,81 +25311,53 @@
         "title": "InvoiceTaxOut",
         "type": "object"
       },
-      "ItemOut": {
+      "ItemIn": {
+        "additionalProperties": false,
         "properties": {
-          "author_name": {
+          "confirmed_by_name": {
             "anyOf": [
               {
+                "maxLength": 200,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Author Name"
+            "title": "Confirmed By Name"
           },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "direction": {
-            "title": "Direction",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "last_error": {
+          "confirmed_on": {
             "anyOf": [
               {
+                "format": "date",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Last Error"
+            "title": "Confirmed On"
           },
-          "local_id": {
-            "format": "uuid",
-            "title": "Local Id",
-            "type": "string"
-          },
-          "remote_id": {
+          "note": {
             "anyOf": [
               {
+                "maxLength": 2000,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Remote Id"
+            "title": "Note"
           },
-          "state": {
-            "title": "State",
-            "type": "string"
+          "status": {
+            "$ref": "#/components/schemas/G1AcceptanceStatus"
           }
         },
         "required": [
-          "id",
-          "kind",
-          "direction",
-          "local_id",
-          "remote_id",
-          "author_name",
-          "state",
-          "last_error",
-          "created_at"
+          "status"
         ],
-        "title": "ItemOut",
+        "title": "ItemIn",
         "type": "object"
       },
       "JobSettingsIn": {
@@ -45280,53 +45456,6 @@
         "title": "ReportType",
         "type": "string"
       },
-      "RequestIn": {
-        "additionalProperties": false,
-        "properties": {
-          "applicant_contact_id": {
-            "format": "uuid",
-            "title": "Applicant Contact Id",
-            "type": "string"
-          },
-          "legal_entity_id": {
-            "format": "uuid",
-            "title": "Legal Entity Id",
-            "type": "string"
-          },
-          "requested_on": {
-            "format": "date",
-            "title": "Requested On",
-            "type": "string"
-          },
-          "scope_kinds": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 4,
-            "title": "Scope Kinds",
-            "type": "array"
-          },
-          "scope_text": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scope Text"
-          }
-        },
-        "required": [
-          "legal_entity_id",
-          "applicant_contact_id",
-          "requested_on"
-        ],
-        "title": "RequestIn",
-        "type": "object"
-      },
       "RequestOut": {
         "properties": {
           "applicant_contact_id": {
@@ -51825,7 +51954,7 @@
           "items": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/ItemOut"
+              "$ref": "#/components/schemas/mhvp__integrations__schadenstool__schemas__ItemOut"
             },
             "title": "Items",
             "type": "array"
@@ -55863,6 +55992,94 @@
         "title": "WorkspaceBulkIn",
         "type": "object"
       },
+      "mhvp__accounting__g1_opening__ItemOut": {
+        "properties": {
+          "confirmed_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed By Name"
+          },
+          "confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed On"
+          },
+          "item_key": {
+            "title": "Item Key",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_key",
+          "title",
+          "status",
+          "confirmed_on",
+          "confirmed_by_name",
+          "note"
+        ],
+        "title": "ItemOut",
+        "type": "object"
+      },
+      "mhvp__accounting__g1_opening__RequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "scope": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "RequestIn",
+        "type": "object"
+      },
       "mhvp__ai__schemas__ProviderIn": {
         "additionalProperties": false,
         "properties": {
@@ -56583,6 +56800,130 @@
           "name"
         ],
         "title": "TenantOut",
+        "type": "object"
+      },
+      "mhvp__hoa__inspection__RequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "applicant_contact_id": {
+            "format": "uuid",
+            "title": "Applicant Contact Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "requested_on": {
+            "format": "date",
+            "title": "Requested On",
+            "type": "string"
+          },
+          "scope_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "title": "Scope Kinds",
+            "type": "array"
+          },
+          "scope_text": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Text"
+          }
+        },
+        "required": [
+          "legal_entity_id",
+          "applicant_contact_id",
+          "requested_on"
+        ],
+        "title": "RequestIn",
+        "type": "object"
+      },
+      "mhvp__integrations__schadenstool__schemas__ItemOut": {
+        "properties": {
+          "author_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Author Name"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Error"
+          },
+          "local_id": {
+            "format": "uuid",
+            "title": "Local Id",
+            "type": "string"
+          },
+          "remote_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Remote Id"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "kind",
+          "direction",
+          "local_id",
+          "remote_id",
+          "author_name",
+          "state",
+          "last_error",
+          "created_at"
+        ],
+        "title": "ItemOut",
         "type": "object"
       },
       "mhvp__platform__schemas__TenantOut": {
@@ -59524,6 +59865,120 @@
           }
         },
         "summary": "Vorschlagswerte laden (Betreiberentscheidung 25.09.2026, V7)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/g1-opening": {
+      "get": {
+        "operationId": "overview_api_v1_accounting_g1_opening_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/G1OpeningOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Checkliste zur Öffnung der Freigabestufe G1",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/g1-opening/items/{item_key}": {
+      "put": {
+        "operationId": "set_item_api_v1_accounting_g1_opening_items__item_key__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_key",
+            "required": true,
+            "schema": {
+              "title": "Item Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ItemIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/mhvp__accounting__g1_opening__ItemOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ergebnis eines Prüfpunkts eintragen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/g1-opening/request": {
+      "post": {
+        "operationId": "file_request_api_v1_accounting_g1_opening_request_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__accounting__g1_opening__RequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GateRequestSummary"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Freigabe G1 beantragen (Vier Augen)",
         "tags": [
           "Buchhaltung"
         ]
@@ -81539,7 +81994,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/RequestIn"
+                "$ref": "#/components/schemas/mhvp__hoa__inspection__RequestIn"
               }
             }
           },

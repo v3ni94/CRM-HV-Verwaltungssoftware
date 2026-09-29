@@ -18,6 +18,7 @@ from mhvp.accounting.chart_release_routers import router as chart_release_router
 from mhvp.accounting.datev_check_routers import router as datev_check_router
 from mhvp.accounting.datev_mapping_routers import router as datev_mapping_router
 from mhvp.accounting.direct_debit_routers import router as direct_debit_router
+from mhvp.accounting.g1_opening_routers import router as g1_opening_router
 from mhvp.accounting.rent_invoice_routers import router as rent_invoice_router
 from mhvp.accounting.routers import intake_router as accounting_intake_router
 from mhvp.accounting.routers import router as accounting_router
@@ -261,6 +262,7 @@ def create_app(
     app.include_router(data_quality_router, prefix=API_PREFIX)
     app.include_router(ops_router, prefix=API_PREFIX)
     app.include_router(accounting_router, prefix=API_PREFIX)
+    app.include_router(g1_opening_router, prefix=API_PREFIX)
     app.include_router(accounting_intake_router, prefix=API_PREFIX)
     app.include_router(accounting_xrechnung_router, prefix=API_PREFIX)
     app.include_router(accounting_audit_export_router, prefix=API_PREFIX)

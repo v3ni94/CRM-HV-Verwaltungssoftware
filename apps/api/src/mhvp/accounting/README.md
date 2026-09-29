@@ -166,3 +166,16 @@ entry (`journal_entry.reversal_reason_code`, migration 0232) and carried by the 
 optional for clients. Bank returns pass `bank_return`, run reversals `run_reversal`. The bank
 side consumes the event in `mhvp.banking.events_consumer`; accounting never imports banking.
 Index `ix_journal_entry_bank_transaction` (tenant, bank transaction, partial) serves that lookup.
+
+## G1 opening checklist (M12-09, 29.09.2026)
+
+`g1_opening.py` and `g1_opening_routers.py`: `GET /accounting/g1-opening` derives the state of
+the opening list (released chart of accounts, accepted annex D cases, manual items, automation
+levels, gate G1 state and requests, document paths); `PUT /accounting/g1-opening/items/{key}`
+records the operator's result per annex D case or manual item in the table `g1_acceptance`
+(migration 0242, RLS, `accounting:approve`); `POST /accounting/g1-opening/request` files a
+regular `release_gate_request` for G1 with an evidence line composed from the checklist
+(`release_gates:create`, person only). The decision stays with a second person on the platform
+page (ADR 0003); nothing here opens a gate. Operator documents:
+`docs/acceptance/kontenrahmen-pruefung.md`, `docs/acceptance/abnahme-anhang-d.md`,
+`docs/handbuch/verfahrensdokumentation.md` chapter 7. Tests: `tests/integration/test_g1_opening.py`.
