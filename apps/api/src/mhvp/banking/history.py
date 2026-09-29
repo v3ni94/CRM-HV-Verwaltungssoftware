@@ -1,4 +1,4 @@
-"""Memory of the learning bookkeeper (ADR 0013, rule M12-04, plan M12 S3 and S7).
+"""Memory of the learning bookkeeper (ADR 0014, rule M12-04, plan M12 S3 and S7).
 
 Two read only views over the decision log and the posted invoices, both behind the tenant
 switch ``learning_bookkeeper_enabled`` (default off) and both bound to one legal entity (B01,

@@ -1,4 +1,4 @@
-"""Banking event consumer (ADR 0013): a ``bank_transaction.reviewed`` event without a reason
+"""Banking event consumer (ADR 0014): a ``bank_transaction.reviewed`` event without a reason
 is skipped, the log never invents one (rule 0.1.3); with a reason the pending round of an
 ignored transaction is closed as ignored with exactly that reason."""
 

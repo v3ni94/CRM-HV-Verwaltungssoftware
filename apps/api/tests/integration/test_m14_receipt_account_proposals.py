@@ -1,4 +1,4 @@
-"""Creditor memory in the receipt intake, step S7 (ADR 0013, rule M12-04, plan M12, 9.2):
+"""Creditor memory in the receipt intake, step S7 (ADR 0014, rule M12-04, plan M12, 9.2):
 cost account proposals per invoice line from the confirmed invoices and the bank decisions
 of the same creditor in the same ledger, source Verlauf, decision diff captured.
 

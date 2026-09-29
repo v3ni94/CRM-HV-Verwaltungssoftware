@@ -1,4 +1,4 @@
-"""Feature extraction for the stage 1 posting proposal (ADR 0013, plan M12 3.1 no. 3).
+"""Feature extraction for the stage 1 posting proposal (ADR 0014, plan M12 3.1 no. 3).
 
 ``collect`` assembles, read only, everything ``posting_proposal.propose`` needs for one bank
 transaction from the ledger of the transaction's legal entity (B01): the transaction dict,

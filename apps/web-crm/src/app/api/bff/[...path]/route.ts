@@ -320,7 +320,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // upload with column mapping, bank reconciliation B09, bank rules with the four eyes life
   // cycle (propose, approve, activate with cap and evidence, disable). The automation runner
   // (`POST /banking/auto-post`) and the switch (`PUT /banking/automation`) stay outside on
-  // purpose: activation is gated by an open operator decision (ADR 0013, plan section 4).
+  // purpose: activation is gated by an open operator decision (ADR 0014, plan section 4).
   { method: "GET", pattern: /^banking\/transactions$/ },
   { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(review|learn)$`) },
   { method: "POST", pattern: /^banking\/bulk-confirm$/ },

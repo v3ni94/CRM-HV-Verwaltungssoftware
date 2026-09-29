@@ -2137,7 +2137,7 @@
       "loading": "Loading setting.",
       "on": "switched on",
       "off": "switched off (default)",
-      "gated": "Display only. Switching on requires the open operator decision whether automation may create comparison postings before G1 (ADR 0013) and the automation run with follow up review (step S6). Until then the switch stays locked here."
+      "gated": "Display only. Switching on requires the open operator decision whether automation may create comparison postings before G1 (ADR 0014) and the automation run with follow up review (step S6). Until then the switch stays locked here."
     }
   },
   "Payments": {

@@ -1,4 +1,4 @@
-"""Domain event types of the banking module (ADR 0013, plan M12 S0).
+"""Domain event types of the banking module (ADR 0014, plan M12 S0).
 
 One place for the names so producers (routers, services) and the consumer
 (``mhvp.banking.events_consumer``) cannot drift apart. Events are written in the same

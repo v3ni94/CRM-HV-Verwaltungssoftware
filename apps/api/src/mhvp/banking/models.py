@@ -692,7 +692,7 @@ class BankCsvMapping(IdMixin, TimestampMixin, TenantMixin, Base):
     mapping: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
 
 
-# --- Learning bookkeeper: decision log (ADR 0013, rule M12-04, plan M12 S1) -------------------
+# --- Learning bookkeeper: decision log (ADR 0014, rule M12-04, plan M12 S1) -------------------
 
 
 class PostingDecisionStatus(StrEnum):
@@ -714,7 +714,7 @@ POSTING_DECISION_STATUSES = tuple(s.value for s in PostingDecisionStatus)
 
 
 class PostingDecision(IdMixin, TimestampMixin, TenantMixin, Base):
-    """Proposal and decision log per bank transaction and round (ADR 0013, M12-04).
+    """Proposal and decision log per bank transaction and round (ADR 0014, M12-04).
 
     Append only in the sense of B03: a row is inserted as ``pending`` (snapshot of all stage 1
     proposals, engine and rule version, ``features_hash``) or directly in a closed state when a

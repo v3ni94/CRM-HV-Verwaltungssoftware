@@ -118,7 +118,7 @@ class TenantSettingsOut(BaseModel):
     ai_learning_examples_enabled: bool = False
     # ADR 0010 Nachtrag 27.09.2026: Aufbewahrung der Lernbeispiele in Monaten (Standard 24).
     ai_learning_examples_retention_months: int = 24
-    # ADR 0013, M12-04: Entscheidungsprotokoll des lernenden Buchhalters (Standard aus, nur
+    # ADR 0014, M12-04: Entscheidungsprotokoll des lernenden Buchhalters (Standard aus, nur
     # lesend hier; Änderung über ``PUT /banking/learning`` mit Grund und Ereignis).
     learning_bookkeeper_enabled: bool = False
     # Lern-Workflow (rule M9-11): consistent manual decisions before a rule is proposed.

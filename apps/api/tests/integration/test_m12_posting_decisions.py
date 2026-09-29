@@ -1,4 +1,4 @@
-"""Learning bookkeeper, steps S0 and S1 (ADR 0013, rule M12-04, plan M12): decision log per
+"""Learning bookkeeper, steps S0 and S1 (ADR 0014, rule M12-04, plan M12): decision log per
 bank transaction behind the tenant switch ``learning_bookkeeper_enabled`` (default off).
 
 Covered with fixed expected values (rule 0.1.8): switch off writes nothing; switch needs

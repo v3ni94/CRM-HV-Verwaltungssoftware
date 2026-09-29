@@ -1,4 +1,4 @@
-"""Decision log of the learning bookkeeper (ADR 0013, rule M12-04, plan M12 S1).
+"""Decision log of the learning bookkeeper (ADR 0014, rule M12-04, plan M12 S1).
 
 Writes ``posting_decision`` rows: a ``pending`` snapshot of the stage 1 proposals per bank
 transaction (computed by the Celery task after every import, ``compute_for_run``), refreshed

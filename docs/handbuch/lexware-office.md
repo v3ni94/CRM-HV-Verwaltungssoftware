@@ -24,7 +24,7 @@ Dauerrechnungen mit `accounting:create`, Rechnungskopien am Ticket mit `tickets:
    zuordnen. Die Hausverwaltung ist mit der verwaltenden Gesellschaft vorbelegt, die anderen
    Arten werden vom Betreiber gesetzt.
 
-Bis zur Freigabe von ADR 0013 durch die Geschäftsführung bleiben die Funktionsschalter aus
+Bis zur Freigabe von ADR 0015 durch die Geschäftsführung bleiben die Funktionsschalter aus
 (docs/OPEN_QUESTIONS.md LEXO-06).
 
 ## Kontakte zuordnen

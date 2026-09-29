@@ -119,7 +119,7 @@ class TransactionOut(BaseModel):
 class DuplicateReviewIn(_In):
     decision: str = Field(pattern="^(keep|ignore)$")
     reason: str = Field(min_length=3, max_length=2000)
-    # Learning bookkeeper (ADR 0013): the pending decision round the person saw; a stale id
+    # Learning bookkeeper (ADR 0014): the pending decision round the person saw; a stale id
     # is refused with 409 ``MHVP-BANK-0021``. Optional, ignored while the switch is off.
     proposal_id: uuid.UUID | None = None
 
@@ -145,7 +145,7 @@ class LearningSwitchIn(_In):
 
 
 class PostingDecisionOut(BaseModel):
-    """One round of ``posting_decision`` (ADR 0013)."""
+    """One round of ``posting_decision`` (ADR 0014)."""
 
     id: uuid.UUID
     bank_transaction_id: uuid.UUID
@@ -257,7 +257,7 @@ async def import_statement(
 def _queue_proposals(
     session: Any, request: Request, tenant_id: uuid.UUID, run_id: uuid.UUID
 ) -> None:
-    """Proposal snapshots of the learning bookkeeper (ADR 0013) are computed by the Celery task
+    """Proposal snapshots of the learning bookkeeper (ADR 0014) are computed by the Celery task
     ``mhvp.banking.compute_proposals`` after the import committed, never inside the import
     request. The hook runs only after a successful commit; the task itself is a no-op for
     tenants without the switch. With ``ai_inline`` (development and tests, no worker) the
@@ -386,7 +386,7 @@ class BookIn(_In):
     # Skonto against ``counter_account_id`` (7.3); the personal account is settled by
     # amount plus discount.
     discount: Decimal = Field(default=Decimal("0.00"), ge=0)
-    # Learning bookkeeper (ADR 0013, plan M12 3.3): the pending decision round the person
+    # Learning bookkeeper (ADR 0014, plan M12 3.3): the pending decision round the person
     # booked from and the proposal chosen in it (index into the snapshot). A different
     # proposal is a choice, not a modification; the diff is computed against ``chosen``.
     # Both optional and ignored while ``learning_bookkeeper_enabled`` is off.
@@ -584,7 +584,7 @@ async def posting_proposals(
             for p in ai_rows
         ]
         blocked = await gateway.posting_block_reason(session)
-        # Learning bookkeeper (ADR 0013): the pending decision round, when the switch is on
+        # Learning bookkeeper (ADR 0014): the pending decision round, when the switch is on
         # and the snapshot job already ran; the CRM passes ``proposal_id`` and ``chosen`` back
         # with the booking or rejection. Reading never writes a row.
         learning = await proposals.learning_enabled(session)
@@ -632,7 +632,7 @@ async def _book(
     if body.counter_account_id is not None:
         counter = await session.get(LedgerAccount, body.counter_account_id)
         counter_number = counter.number if counter is not None else None
-    # Decision log (ADR 0013): the booking closes the pending round with the diff against the
+    # Decision log (ADR 0014): the booking closes the pending round with the diff against the
     # chosen proposal; no-op while the tenant switch is off.
     decision = await proposals.record_booking(
         session,
@@ -792,7 +792,7 @@ async def reject_proposals(
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> PostingDecisionOut | None:
     """Closes the pending decision round as ``rejected`` with the reason and opens the next
-    round (ADR 0013, M12-04). Nothing is booked or ignored. With ``ai_proposal_id`` the stored
+    round (ADR 0014, M12-04). Nothing is booked or ignored. With ``ai_proposal_id`` the stored
     AI proposal is marked rejected and, when the tenant records learning examples, handed to
     ``mhvp.ai.examples.record_rejection``. Returns ``null`` while the learning switch is off
     (the AI rejection is still recorded)."""
@@ -857,7 +857,7 @@ async def reject_proposals(
 
 @router.get(
     "/transactions/{tx_id}/decisions",
-    summary="Vorschlags- und Entscheidungsprotokoll eines Umsatzes (ADR 0013)",
+    summary="Vorschlags- und Entscheidungsprotokoll eines Umsatzes (ADR 0014)",
 )
 async def list_decisions(
     tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -968,7 +968,7 @@ async def _rule_event(
     event_type: str,
     payload: dict[str, Any] | None = None,
 ) -> None:
-    """Lifecycle event of a bank rule (ADR 0013, plan M12 S0): proposed, approved, activated,
+    """Lifecycle event of a bank rule (ADR 0014, plan M12 S0): proposed, approved, activated,
     disabled; ``superseded`` and ``downgraded`` follow with the learning module (S5, S6)."""
     await emit(
         session,
@@ -1246,7 +1246,7 @@ async def get_learning(
 async def set_learning(
     body: LearningSwitchIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, bool]:
-    """``tenant_settings.learning_bookkeeper_enabled`` (ADR 0013, M12-04): accounting:approve
+    """``tenant_settings.learning_bookkeeper_enabled`` (ADR 0014, M12-04): accounting:approve
     plus tenant_settings:update, reason and event, default off. Switching on starts the
     proposal snapshots with the next import; switching off stops writing, existing rows stay
     (retention, OPEN_QUESTIONS M12-06). Nothing is posted by the switch."""

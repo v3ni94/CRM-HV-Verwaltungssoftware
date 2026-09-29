@@ -1,4 +1,4 @@
-"""Pure decision helpers of the learning bookkeeper (ADR 0013, plan M12 3.3): which proposal a
+"""Pure decision helpers of the learning bookkeeper (ADR 0014, plan M12 3.3): which proposal a
 booking refers to and how the booked ``BookIn`` differs from it. No database, no side effects,
 so the expected results of ``tests/unit/test_posting_decision_diff.py`` are fixed in advance
 (rule 0.1.8).

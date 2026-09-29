@@ -1,4 +1,4 @@
-# ADR 0013: Lexware Office master data sync, invoice copies and drafts outside release gate G1
+# ADR 0015: Lexware Office master data sync, invoice copies and drafts outside release gate G1
 
 - Status: Proposed (operator decision pending, docs/OPEN_QUESTIONS.md LEXO-06)
 - Date: 2026-09-29

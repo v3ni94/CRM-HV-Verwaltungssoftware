@@ -1,7 +1,7 @@
 # M-lexoffice: Lexware Office Erweiterung
 
 Betreiberauftrag 28.09.2026 (Spezifikation im Arbeitsbereich, Betreiberentscheidungen 1 bis 4
-vom 28.09.2026). Regel INT-LEXO-01, ADR 0013, Betreiberdoku docs/integrations/lexoffice.md.
+vom 28.09.2026). Regel INT-LEXO-01, ADR 0015, Betreiberdoku docs/integrations/lexoffice.md.
 
 ## Umfang
 

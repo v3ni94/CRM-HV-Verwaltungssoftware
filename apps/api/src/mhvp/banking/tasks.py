@@ -434,7 +434,7 @@ async def _finapi_fetch_once(
                 run.status, run.errors = "failed", [str(exc)]
                 counts = {"new": 0}
             await session.flush()
-        # After the commit of the import (ADR 0013): proposal snapshots of this run.
+        # After the commit of the import (ADR 0014): proposal snapshots of this run.
         await _proposals_after_import(settings, tenant_id, run_id)
         return counts
     finally:
@@ -856,7 +856,7 @@ async def _fints_step_once(
             )
             await session.flush()
             status_value, run_id = fs.status.value, fs.sync_run_id
-        # After the commit of the import (ADR 0013): proposal snapshots of this run.
+        # After the commit of the import (ADR 0014): proposal snapshots of this run.
         await _proposals_after_import(settings, tenant_id, run_id)
         return {"status": status_value, **counts}
     finally:
@@ -870,7 +870,7 @@ def fints_step(tenant_id: str, session_id: str) -> dict[str, Any]:
     )
 
 
-# --- Learning bookkeeper (ADR 0013, plan M12 S0 and S1) ---------------------------------------
+# --- Learning bookkeeper (ADR 0014, plan M12 S0 and S1) ---------------------------------------
 
 
 async def compute_proposals_once(

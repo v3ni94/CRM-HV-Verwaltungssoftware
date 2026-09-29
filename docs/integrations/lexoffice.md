@@ -55,7 +55,7 @@ bereinigt (Deeplink in der Prüfliste).
    (Konfiguration des Mandanten, Vorbelegung nur für die verwaltende Gesellschaft).
 6. Kontakte zuordnen und Schalter aktivieren: Abgleichslauf, Prüfung je Zeile, danach die
    Schalter `sync_contacts`, `sync_names`, `invoice_copies`, `invoice_drafts` nach Freigabe der
-   Geschäftsführung (ADR 0013).
+   Geschäftsführung (ADR 0015).
 
 ## Datenabfluss
 
@@ -117,7 +117,7 @@ ID der angelegten Vorlage wird anschließend erfasst (Deeplink
 
 - `POST /api/v1/integrations/lexoffice/export/invoices` und `.../export/contacts`
   (Berechtigung `accounting:create`, Freigabestufe G1). Der Kontaktexport schreibt zusätzlich
-  die Verknüpfungstabelle (eine Wahrheit für Kontakte, ADR 0013).
+  die Verknüpfungstabelle (eine Wahrheit für Kontakte, ADR 0015).
 - `POST /api/v1/integrations/lexoffice/import/receipts`: `GET /v1/voucherlist` mit
   `voucherType=purchaseinvoice`, `voucherStatus` (Standard `any`) und `updatedDateFrom`
   (aus `updated_at_from`, auf das Datum in Europe/Berlin gekürzt). Weiterverwendung offen

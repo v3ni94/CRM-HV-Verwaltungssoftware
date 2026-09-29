@@ -484,7 +484,7 @@ class ErrorCodes:
         (
             "The proposal_id of the booking, rejection or ignore does not name the pending "
             "decision round of this transaction (posting_decision): the snapshot was refreshed "
-            "or already closed. Reload the proposals and decide again (ADR 0013, M12-04)."
+            "or already closed. Reload the proposals and decide again (ADR 0014, M12-04)."
         ),
     )
     BILLING_PREFIX_MISSING = ErrorCode(

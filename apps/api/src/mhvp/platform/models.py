@@ -437,7 +437,7 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ai_learning_examples_retention_months: Mapped[int] = mapped_column(
         Integer, nullable=False, default=24, server_default=text("24")
     )
-    # Lernender Buchhalter (ADR 0013, Regel M12-04, Migration 0232): bei true schreibt die
+    # Lernender Buchhalter (ADR 0014, Regel M12-04, Migration 0232): bei true schreibt die
     # Plattform je Bankumsatz das Vorschlags- und Entscheidungsprotokoll ``posting_decision``
     # (Snapshot der Stufe-1-Vorschläge, Entscheidung der Person mit Diff, Ablehnung mit
     # Grund). Standard aus, weil der Speicher Zahlerdaten (IBAN-Fingerabdrücke, Zwecktoken)

@@ -1,4 +1,4 @@
-# ADR 0013: Learning bookkeeper (staged automation, decision log, learned rules)
+# ADR 0014: Learning bookkeeper (staged automation, decision log, learned rules)
 
 - Status: Proposed (steps S0 and S1 implemented; operator decisions M12-05 to M12-08 open)
 - Date: 2026-09-28

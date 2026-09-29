@@ -380,7 +380,7 @@ async def export_contacts(
                         run_id=run.id,
                     )
                 )
-            # One truth for contacts going forward (ADR 0013): the contact link table.
+            # One truth for contacts going forward (ADR 0015): the contact link table.
             link = await session.scalar(
                 select(LexofficeContactLink).where(
                     LexofficeContactLink.config_id == config.id,

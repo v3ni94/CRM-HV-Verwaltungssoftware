@@ -1,4 +1,4 @@
-"""Pure helpers of the learning bookkeeper (ADR 0013, plan M12 S0 and S1): decision diff,
+"""Pure helpers of the learning bookkeeper (ADR 0014, plan M12 S0 and S1): decision diff,
 reference proposal, feature hash, consolidated rule matching and the reversal reason code.
 Expected values are fixed in advance (rule 0.1.8); no database."""
 

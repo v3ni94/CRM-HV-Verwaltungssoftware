@@ -138,7 +138,7 @@ class EntryStatus(StrEnum):
 
 
 class ReversalReason(StrEnum):
-    """Reason code of a reversal (B03, ADR 0013). The free text ``reversal_reason`` stays
+    """Reason code of a reversal (B03, ADR 0014). The free text ``reversal_reason`` stays
     mandatory; the code makes corrections countable for the learning bookkeeper (an
     ``automation_error`` downgrades the rule that posted the entry, plan M12 S6). Codes are
     product standards, no tax or legal classification."""
@@ -332,7 +332,7 @@ class JournalEntry(IdMixin, TimestampMixin, TenantMixin, Base):
         Index("ix_journal_entry_ledger_status", "tenant_id", "ledger_id", "status"),
         Index("ix_journal_entry_ledger_booking_date", "tenant_id", "ledger_id", "booking_date"),
         # Postings per bank transaction (history and reversal lookup of the learning
-        # bookkeeper, ADR 0013, migration 0232).
+        # bookkeeper, ADR 0014, migration 0232).
         Index(
             "ix_journal_entry_bank_transaction",
             "tenant_id",

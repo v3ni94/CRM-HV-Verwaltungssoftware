@@ -7,7 +7,7 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 /** Tenant automation switch (`tenant_settings.auto_posting_enabled`, default off), read only.
- *  Switching it on is gated by an open operator decision (plan M12 section 4 item 4, ADR 0013:
+ *  Switching it on is gated by an open operator decision (plan M12 section 4 item 4, ADR 0014:
  *  whether automation may create comparison postings before G1) and by the runner of step S6,
  *  so the CRM shows the state and does not offer `PUT /banking/automation`. */
 export function AutomationSwitchCard() {

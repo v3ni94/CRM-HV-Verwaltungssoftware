@@ -6,7 +6,7 @@ file, amount against open items, invoice number and payee IBAN against open paya
 without any AI call and classifies the transaction (full settlement, partial payment,
 collective transfer, return, deposit, supplier invoice, unclear).
 
-Stage 1d (plan M12 S3, ADR 0013) adds the memory of the platform, still deterministic and still
+Stage 1d (plan M12 S3, ADR 0014) adds the memory of the platform, still deterministic and still
 only a proposal: the source ``history`` repeats what persons booked for the same counterparty
 (IBAN fingerprint or creditor id) in the same legal entity and direction, with the number of
 consistent cases and contradictions (reversals, other accounts); the source ``invoice``
@@ -69,7 +69,7 @@ KIND_HISTORY = "history"  # last confirmed account assignment of the same counte
 KIND_TRANSFER = "transfer"  # recognised transfer pair between own accounts (D04)
 KIND_ACCOUNT_TEXT = "account_text"  # booking text of one ledger account found in the purpose
 
-# Stage 1d history (ADR 0013, plan 3.1 no. 3 and 3.3, assumption A-074): base confidence,
+# Stage 1d history (ADR 0014, plan 3.1 no. 3 and 3.3, assumption A-074): base confidence,
 # increment per consistent case, cap, minimum evidence, and the factor per contradiction
 # (a reversal or another account for the same counterparty). Product protection standards,
 # not empirical values; the anonymised test set (M12-02) re-evaluates them.
@@ -609,7 +609,7 @@ def _history_pattern(entry: dict[str, Any]) -> tuple[str, ...]:
 
 
 def _history_proposal(tx: dict[str, Any], open_items: list[dict[str, Any]]) -> Proposal | None:
-    """Stage 1d memory (ADR 0013, plan 3.3): the account pattern of the last confirmed decision
+    """Stage 1d memory (ADR 0014, plan 3.3): the account pattern of the last confirmed decision
     of a person for the same counterparty, legal entity and direction; ``count`` consistent
     cases (bulk confirmations with lower weight), ``contradictions`` (reversals of the same
     pattern, other patterns) halve the confidence each; at least two consistent cases; never

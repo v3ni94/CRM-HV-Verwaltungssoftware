@@ -189,7 +189,7 @@ describe("AutomationSwitchCard", () => {
     const calls = mockApi([]);
     renderIntl(<AutomationSwitchCard />);
     await waitFor(() => expect(screen.getByTestId("automation-state")).toHaveTextContent("ausgeschaltet (Standard)"));
-    expect(screen.getByText(/ADR 0013/)).toBeInTheDocument();
+    expect(screen.getByText(/ADR 0014/)).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
     expect(calls.every((c) => !c.url.includes("/banking/automation"))).toBe(true);
   });

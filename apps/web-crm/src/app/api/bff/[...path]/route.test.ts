@@ -245,7 +245,7 @@ describe("BFF proxy", () => {
     ["GET", "imports/immoware24/files/not-a-uuid/rows"],
     ["POST", "imports/immoware24/fields"],
     ["POST", "banking/payment-batches"],
-    // BK-2: the automation runner and the switch stay outside (ADR 0013, operator decision open).
+    // BK-2: the automation runner and the switch stay outside (ADR 0014, operator decision open).
     ["POST", "banking/auto-post"],
     ["POST", "banking/automation"],
     ["PUT", "banking/automation"],

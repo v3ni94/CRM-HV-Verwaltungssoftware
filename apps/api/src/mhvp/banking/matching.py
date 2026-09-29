@@ -324,7 +324,7 @@ async def book_payment(
     partner is left untouched. Callers lock with :func:`lock_for_booking`."""
     pair = await _transfer_partner(session, tx) if tx.transfer_pair_id is not None else None
     # A transaction whose posting was reversed (B03) is bookable again, once: the reversal
-    # closed the first posting and the new posting is the correction (ADR 0013, Storno plus
+    # closed the first posting and the new posting is the correction (ADR 0014, Storno plus
     # Neubuchung). A pair half is checked by ``_transfer_partner``; everything else unchanged.
     reopened = tx.journal_entry_id is not None and (
         pair is not None or await _effective_entry(session, tx.journal_entry_id) is None

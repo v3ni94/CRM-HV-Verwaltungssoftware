@@ -95,7 +95,7 @@ Aktivierung laufen unter Bankregeln.
 
 Menü Bank, Bankregeln. Die Seite zeigt oben den Automatikschalter des Mandanten nur lesend
 (Standard ausgeschaltet); das Einschalten setzt die offene Betreiberentscheidung zur Automatik
-vor G1 (ADR 0013) und den Automatiklauf mit Nachkontrolle voraus (BK2-03).
+vor G1 (ADR 0014) und den Automatiklauf mit Nachkontrolle voraus (BK2-03).
 
 Regel vorschlagen: Name, Rechtsträger, IBAN der Gegenpartei (gespeichert als Fingerabdruck),
 Name enthält, Verwendungszweck als regulärer Ausdruck, Betragsspanne, Priorität und das Konto

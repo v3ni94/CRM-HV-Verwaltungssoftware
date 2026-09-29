@@ -1,4 +1,4 @@
-"""Banking event consumer: watermark job over ``domain_event`` (ADR 0013, plan M12 S0).
+"""Banking event consumer: watermark job over ``domain_event`` (ADR 0014, plan M12 S0).
 
 Pattern ``mhvp.automation.services.process_tenant``: the beat task reads new rows of
 ``domain_event`` since the tenant's watermark (``banking_event_watermark``, ordered by

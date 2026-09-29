@@ -1,4 +1,4 @@
-"""Learning bookkeeper, steps S0 and S1 (ADR 0013, rule M12-04, plan M12).
+"""Learning bookkeeper, steps S0 and S1 (ADR 0014, rule M12-04, plan M12).
 
 * ``journal_entry.reversal_reason_code``: reason code of a reversal (B03, ``ReversalReason``),
   free text stays mandatory.

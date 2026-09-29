@@ -5,7 +5,7 @@ drop below ``evaluate.STAGE1_THRESHOLD``. Hand written edge cases cover what the
 does not: rule below and above its limit, approved but inactive rule, two combinations that
 add up (unclear), purpose determination (D39), AI stage never postable.
 
-Stage 1d (plan M12 S3, ADR 0013): the cases of the classes ``history``,
+Stage 1d (plan M12 S3, ADR 0014): the cases of the classes ``history``,
 ``recurring_expense``, ``linked_invoice`` and ``transfer_pair`` additionally fix the expected
 confidence, account number, periodicity label and the absence of a source
 (``test_stage1d_expectations_are_met_exactly``); the hand written cases below pin the

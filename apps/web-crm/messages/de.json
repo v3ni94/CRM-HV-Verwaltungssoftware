@@ -2137,7 +2137,7 @@
       "loading": "Einstellung wird geladen.",
       "on": "eingeschaltet",
       "off": "ausgeschaltet (Standard)",
-      "gated": "Nur Anzeige. Das Einschalten setzt die offene Betreiberentscheidung voraus, ob die Automatik vor G1 Vergleichsbuchungen erzeugen darf (ADR 0013), und den Automatiklauf mit Nachkontrolle (Schritt S6). Bis dahin bleibt der Schalter hier gesperrt."
+      "gated": "Nur Anzeige. Das Einschalten setzt die offene Betreiberentscheidung voraus, ob die Automatik vor G1 Vergleichsbuchungen erzeugen darf (ADR 0014), und den Automatiklauf mit Nachkontrolle (Schritt S6). Bis dahin bleibt der Schalter hier gesperrt."
     }
   },
   "Payments": {

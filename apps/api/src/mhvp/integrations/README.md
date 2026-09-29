@@ -11,7 +11,7 @@ External accounting/CRM integrations that are neither banking (`mhvp.banking`) n
   invoices/contacts (`/export/invoices`, `/export/contacts`, gated by release gate G1 and the
   per tenant feature flag, default off) and explicit import of vouchers as `ReceiptDraft`
   (`/import/receipts`, no gate, no posting). Export and import stay one logged call each.
-  The extension `lexoffice_ext` (rule INT-LEXO-01, ADR 0013) adds an outbound queue that a
+  The extension `lexoffice_ext` (rule INT-LEXO-01, ADR 0015) adds an outbound queue that a
   Celery job processes every minute: rows are written only by person triggered actions
   (applied contact change, review decision, accepted invoice copy, invoice draft) and each
   row re-checks the config switches before any call. No autonomous creation, no finalize.

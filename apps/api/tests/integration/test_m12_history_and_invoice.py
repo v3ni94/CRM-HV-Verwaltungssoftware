@@ -1,4 +1,4 @@
-"""Learning bookkeeper, step S3 (ADR 0013, rule M12-04, plan M12): stage 1d memory and the
+"""Learning bookkeeper, step S3 (ADR 0014, rule M12-04, plan M12): stage 1d memory and the
 account assignment from a linked posted invoice, both proposals only.
 
 Fixed expected values (rule 0.1.8): the history source appears from the second confirmed

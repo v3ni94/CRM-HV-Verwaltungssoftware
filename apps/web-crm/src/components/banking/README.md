@@ -13,7 +13,7 @@ allowlist (`src/app/api/bff/[...path]/route.ts`); authorization stays with the A
 | `StatementImport` | CAMT.053 and MT940 upload, bank CSV with preview, column mapping and saved mappings per account | `POST /documents`, `POST /banking/imports`, `POST /banking/imports/csv(/preview)`, `GET/POST /banking/csv-mappings` |
 | `BankReconciliation` | B09 view per statement, read only | `GET /banking/accounts/{id}/reconciliation` |
 | `BankRules` | Rule life cycle: propose, approve (other person), activate with amount cap and uploaded test evidence, disable | `GET/POST /banking/rules`, `POST /banking/rules/{id}/(approve|activate|disable)`, `GET /accounting/ledgers`, `POST /documents` |
-| `AutomationSwitchCard` | Tenant automation switch, read only (activation gated by ADR 0013 and step S6) | `GET /tenant/settings` |
+| `AutomationSwitchCard` | Tenant automation switch, read only (activation gated by ADR 0014 and step S6) | `GET /tenant/settings` |
 | `MatchingMetricsCard`, `BankAccountOverview`, `FinApiConnections`, `FinTsConnections`, `OrderActions`, `DirectDebitRunActions`, `PropertyBankAccounts`, `BankAccountSelect` | Earlier bank components (metrics, accounts, connections, payment and direct debit runs) | see the component headers |
 
 Marked hooks waiting for API operations of plan M12 step S1 (docs/OPEN_QUESTIONS.md BK2-01):

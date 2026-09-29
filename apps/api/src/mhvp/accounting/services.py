@@ -474,7 +474,7 @@ async def reverse(
 ) -> JournalEntry:
     """Reversal with swapped lines, reference, reason, reason code and author (B03); undoes
     open item effects. ``reason_code`` (``ReversalReason``) classifies the correction for the
-    learning bookkeeper (ADR 0013); it never replaces the free text reason."""
+    learning bookkeeper (ADR 0014); it never replaces the free text reason."""
     if entry.status is not EntryStatus.POSTED:
         raise ProblemError(
             ErrorCodes.CONFLICT, detail="Nur gebuchte Sätze können storniert werden."

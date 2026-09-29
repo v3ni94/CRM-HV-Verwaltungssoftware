@@ -156,7 +156,7 @@ booking_date)`, `journal_line(journal_entry_id)`, `journal_line(account_id)`,
   change (`supersedes_id`), history, CSV/PDF export. Gate G1 is approved only with a
   released template (`MHVP-GATE-0004`, checked in `mhvp.platform.routers._decide`).
 
-## Reversal reason code (B03 addendum 28.09.2026, ADR 0013)
+## Reversal reason code (B03 addendum 28.09.2026, ADR 0014)
 
 `services.reverse` takes `reason_code: ReversalReason` (`input_error`, `wrong_assignment`,
 `wrong_amount`, `wrong_date`, `duplicate`, `bank_return`, `run_reversal`, `automation_error`,

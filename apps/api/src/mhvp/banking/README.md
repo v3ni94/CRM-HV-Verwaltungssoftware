@@ -152,7 +152,7 @@ Vorschlag oder Entwurf, nichts löst eine Zahlung aus.
 - Migration `0197_payment_submission`; Regel `docs/rules/M15-01-pain-versions.md`; Runbook
   `docs/runbooks/zahllauf-test.md`; Test `tests/integration/test_m15_payment_submission.py`.
 
-## Lernender Buchhalter: Entscheidungsprotokoll (ADR 0013, rule M12-04, plan M12 S0 and S1)
+## Lernender Buchhalter: Entscheidungsprotokoll (ADR 0014, rule M12-04, plan M12 S0 and S1)
 
 Ground truth for every later learning step, behind `tenant_settings.learning_bookkeeper_enabled`
 (default off; `GET`/`PUT /banking/learning`, accounting:approve plus tenant_settings:update,
