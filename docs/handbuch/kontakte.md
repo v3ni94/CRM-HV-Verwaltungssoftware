@@ -138,6 +138,18 @@ E-Mail-Adressen, Bankverbindungen, Typen, Rollen und Schlagworte werden weiterhi
 Bearbeiten im Formular gepflegt. Die Verknüpfungsleiste unter dem Kopf führt zu den Objekten,
 Einheiten und Verträgen des Kontakts sowie zu seinen Tickets.
 
+## Anrufen und E-Mail vom Handy
+
+Die Reiter der Kontaktseite bilden am Handy eine Zeile, die sich seitlich wischen lässt;
+alle zehn Reiter bleiben erreichbar, der aktive Reiter ist hervorgehoben. Im Kopf der
+Kontaktseite stehen die Knöpfe Anrufen und E-Mail, sobald eine Telefonnummer oder eine
+E-Mail-Adresse erfasst ist; sie öffnen die Telefon- oder Mail-App des Geräts mit der
+Hauptnummer beziehungsweise der Hauptadresse. Im Reiter Kommunikation sind alle
+Telefonnummern und E-Mail-Adressen antippbar. Die Einheitenseite verlinkt Mieter und
+Eigentümer auf ihre Kontakte, von dort stehen dieselben Knöpfe bereit. Das CRM protokolliert
+diese Anrufe nicht selbst; die Anrufliste im Reiter Kommunikation kommt weiter aus der
+Telefonanlage.
+
 ## Häufige Fehler
 
 - **IBAN oder BIC ungültig**: Formatprüfung schlägt fehl; Eingabe ohne Leerzeichen und

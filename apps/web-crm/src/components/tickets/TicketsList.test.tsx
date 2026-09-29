@@ -29,7 +29,12 @@ describe("TicketsList bulk bar", () => {
 
     const rowCheckboxes = screen.getAllByLabelText("Ticket auswählen");
     await userEvent.click(rowCheckboxes[0]!);
-    expect(screen.getByTestId("bulk-bar")).toBeInTheDocument();
+    const bar = screen.getByTestId("bulk-bar");
+    expect(bar).toBeInTheDocument();
+    // M31: viewport fixed BottomBar above the home indicator, corner of the AI launcher kept free.
+    expect(bar.className).toContain("fixed inset-x-0 bottom-0");
+    expect(bar.className).toContain("pr-[5.5rem]");
+    expect(bar).toHaveAttribute("role", "toolbar");
     expect(screen.getByText(/1.*ausgewählt/)).toBeInTheDocument();
 
     await userEvent.click(screen.getByText("Status anwenden"));

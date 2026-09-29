@@ -122,7 +122,7 @@ export function MailList({
       </div>
       {checked.size > 0 ? (
         <div
-          className="sticky top-0 z-10 flex flex-wrap items-center gap-2 rounded-lg border border-gold bg-surface-2 px-3 py-2"
+          className="sticky top-[var(--mhvp-header-h)] z-10 flex flex-wrap items-center gap-2 rounded-lg border border-gold bg-surface-2 px-3 py-2"
           role="toolbar"
           aria-label={t("bulkToolbar")}
           data-testid="mail-bulk-bar"

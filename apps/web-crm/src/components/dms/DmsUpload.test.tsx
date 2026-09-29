@@ -88,4 +88,22 @@ describe("DmsUpload", () => {
       { entity_type: "contact", entity_id: CONTACT, role: "original" },
     ]);
   });
+
+  it("offers a file chooser with images, HEIC and PDF and a camera input with capture (M31)", async () => {
+    const bodies: FormData[] = [];
+    vi.stubGlobal("fetch", fetchFor(bodies));
+    renderIntl(<DmsUpload />);
+    const file = screen.getByLabelText("Datei");
+    expect(file).toHaveAttribute("accept", "image/jpeg,image/png,image/heic,image/heif,application/pdf");
+    expect(file).not.toHaveAttribute("capture");
+    const camera = screen.getByLabelText("Kamera");
+    expect(camera).toHaveAttribute("accept", "image/*");
+    expect(camera).toHaveAttribute("capture", "environment");
+    await screen.findByRole("option", { name: "523 Musterstraße 49" });
+    await userEvent.selectOptions(screen.getByLabelText("Objekt"), PROPERTY);
+    await userEvent.upload(camera, new File(["jpg"], "foto.jpg", { type: "image/jpeg" }));
+    await userEvent.click(screen.getByRole("button", { name: "Hochladen" }));
+    await screen.findByTestId("dms-upload-done");
+    expect((bodies[0]?.get("file") as File).name).toBe("foto.jpg");
+  });
 });

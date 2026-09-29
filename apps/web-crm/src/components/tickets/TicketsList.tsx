@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useMemo, useState } from "react";
 
+import { BottomBar, BOTTOM_BAR_SPACE } from "@/components/ui/BottomBar";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { ResolutionDialog, isClosingStatus, type Resolution } from "@/components/tickets/ResolutionDialog";
 import { ATTENTION_BORDER, type Attention } from "@/components/tickets/attention";
@@ -94,7 +95,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
   }
 
   return (
-    <div className="flex flex-col gap-4 pb-20">
+    <div className={`flex flex-col gap-4 ${BOTTOM_BAR_SPACE}`}>
       <AttentionLegend />
       <ul className="flex flex-col gap-2 sm:hidden" data-testid="tickets-cards">
         {tickets.map((tk) => (
@@ -192,10 +193,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
         </table>
       </div>
       {selectedIds.length > 0 ? (
-        <div
-          className="fixed inset-x-0 bottom-0 z-10 flex flex-col gap-2 border-t border-border bg-raised p-3 shadow-lg sm:flex-row sm:items-center"
-          data-testid="bulk-bar"
-        >
+        <BottomBar testId="bulk-bar" label={t("selected")}>
           <span className="font-medium">
             {selectedIds.length} {t("selected")}
           </span>
@@ -219,7 +217,7 @@ export function TicketsList({ initialTickets, canApprove }: { initialTickets: Ti
               {t("bulkLimitHint")}
             </span>
           ) : null}
-        </div>
+        </BottomBar>
       ) : null}
       {askResolution && selectedIds.length > 0 ? (
         <div className="fixed inset-x-0 bottom-28 z-20 mx-auto w-full max-w-lg px-3 sm:bottom-20">

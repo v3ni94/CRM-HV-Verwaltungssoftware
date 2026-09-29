@@ -148,20 +148,11 @@ export function DmsDocumentsPanel({ entity, id }: { entity: "ticket" | "property
                   <td className="text-xs text-muted">{doc.tags.join(", ")}</td>
                   <td>
                     <div className="flex flex-wrap gap-2">
-                      <a
-                        href={`/api/bff/dms-documents/${String(doc.id)}/file?kind=preview`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={ui.buttonSm}
-                      >
+                      {/* Same tab links (M31, no target=_blank); the download carries the attribute. */}
+                      <a href={`/api/bff/dms-documents/${String(doc.id)}/file?kind=preview`} className={ui.buttonSm}>
                         {t("actions.preview")}
                       </a>
-                      <a
-                        href={`/api/bff/dms-documents/${String(doc.id)}/file?kind=download`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={ui.buttonSm}
-                      >
+                      <a href={`/api/bff/dms-documents/${String(doc.id)}/file?kind=download`} download className={ui.buttonSm}>
                         {t("actions.download")}
                       </a>
                     </div>

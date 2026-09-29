@@ -127,7 +127,7 @@ function MailActionBar({
   onMarkDone: () => void;
 }) {
   const t = useTranslations("Mail");
-  const sticky = position === "top" ? "sticky top-0 z-10 -mx-1 border-b border-border-soft bg-surface/95 px-1 py-2 backdrop-blur" : "";
+  const sticky = position === "top" ? "sticky top-[var(--mhvp-header-h)] z-10 -mx-1 border-b border-border-soft bg-surface/95 px-1 py-2 backdrop-blur" : "";
   return (
     <div
       className={`flex flex-wrap items-center gap-2 ${sticky}`}

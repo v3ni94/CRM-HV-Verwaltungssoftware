@@ -70,6 +70,9 @@ export function matchingPlaybooks(playbooks: ReplyPlaybook[], category: string |
  *  das Postfach des Tickets versendet. Es wird nichts ohne Klick angelegt. M20-03: mit der
  *  Mandanteneinstellung Direktversand (Standard aus) sendet das Backend eine einfache Antwort
  *  eines Nutzers mit Freigaberecht sofort; die Antwort kommt dann mit Status sent zurück. */
+/** Attachment types the reply accepts: images (including HEIC from iPhones) and PDF (M31). */
+export const UPLOAD_ACCEPT = "image/jpeg,image/png,image/heic,image/heif,application/pdf";
+
 export function TicketReplyPanel({
   ticketId,
   canSend,
@@ -426,10 +429,29 @@ export function TicketReplyPanel({
                   type="file"
                   className="sr-only"
                   aria-label={t("upload")}
+                  accept={UPLOAD_ACCEPT}
                   disabled={uploading}
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) void upload(file);
+                  }}
+                />
+              </label>
+              {/* Camera on phones and tablets (M31): a second input with capture; desktops show a
+               *  plain file chooser for it. No client side resizing here (shared in a later wave). */}
+              <label className={ui.buttonSm}>
+                {t("camera")}
+                <input
+                  type="file"
+                  className="sr-only"
+                  aria-label={t("camera")}
+                  accept="image/*"
+                  capture="environment"
+                  disabled={uploading}
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) void upload(file);
+                    e.target.value = "";
                   }}
                 />
               </label>

@@ -3995,6 +3995,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Heute und Protokoll öffnen am Handy",
+  "source": "Handbuch: Kalender",
+  "href": "/kalender",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Knopf Heute springt zum aktuellen Monat (in der Wochenansicht zur aktuellen Woche) und rollt den ersten Eintrag des heutigen Tages unter die Kopfzeile; heutige Einträge sind hinterlegt. Ein Übergabetermin zeigt am Handy den Knopf Protokoll öffnen als Hauptaktion und führt dir",
+  "file": "docs/handbuch/kalender.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Häufige Fehler",
   "source": "Handbuch: Kalender",
   "href": "/kalender",
@@ -4171,6 +4181,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Im Reiter Stammdaten lassen sich Anrede, Briefanrede, Titel, Vor- und Nachname beziehungsweise Firma und Rechtsform, Position, Geburtsdatum, Sprache, bevorzugter Kanal und Notizen an Ort und Stelle ändern (Stift am Feld oder \"Bearbeiten\" im Abschnittskopf, Recht Kontakte ändern).",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Anrufen und E-Mail vom Handy",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Reiter der Kontaktseite bilden am Handy eine Zeile, die sich seitlich wischen lässt; alle zehn Reiter bleiben erreichbar, der aktive Reiter ist hervorgehoben. Im Kopf der Kontaktseite stehen die Knöpfe Anrufen und E-Mail, sobald eine Telefonnummer oder eine E-Mail-Adresse erf",
   "file": "docs/handbuch/kontakte.md"
  },
  {

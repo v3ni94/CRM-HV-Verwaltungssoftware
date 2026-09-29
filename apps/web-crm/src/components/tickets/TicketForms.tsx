@@ -200,7 +200,7 @@ export function TicketEdit({
   };
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-end gap-2">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4" data-testid="ticket-edit-fields">
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("status")}</span>
           <select className={ui.input} value={status} disabled={busy} onChange={(e) => {

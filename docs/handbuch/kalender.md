@@ -49,6 +49,21 @@ vorher, und ersetzt keine eigene Fristenkontrolle bei rechtlich bedeutsamen Term
 (siehe Kapitel Datenübernahmen sowie den Umgang mit gerichtlichen Fristen außerhalb
 dieser Plattform).
 
+## Heute und Protokoll öffnen am Handy
+
+Der Knopf Heute springt zum aktuellen Monat (in der Wochenansicht zur aktuellen Woche) und
+rollt den ersten Eintrag des heutigen Tages unter die Kopfzeile; heutige Einträge sind
+hinterlegt. Ein Übergabetermin zeigt am Handy den Knopf Protokoll öffnen als
+Hauptaktion und führt direkt zum Übergabeprotokoll; andere erzeugte Einträge behalten
+Zur Quelle. Die Hinweise Wiederkehrend und Erinnerung stehen als Text in der Zeile, es gibt
+keine Hinweise mehr, die erst beim Überfahren mit der Maus erscheinen. Die Werkzeugleiste
+liegt am Handy in zwei Zeilen: Pfeile, Monat und Heute oben, darunter der Wechsel zwischen
+Monat und Woche sowie Aktualisieren und Termin anlegen. Termin anlegen und die
+Termin-Details öffnen am Handy und am Tablet als Bodenblatt, die Knöpfe Abbrechen und
+Termin anlegen bleiben unten über der Tastatur sichtbar. Löschen liegt am Handy hinter
+Mehr; am Tablet und am Rechner steht der Knopf wie bisher in der Zeile. Die Wochenansicht
+zeigt sieben Spalten erst ab 1024 px, darunter eine Tagesliste.
+
 ## Häufige Fehler
 
 - **Google-Kalender erscheint nicht**: Postfach wurde vor Einführung der

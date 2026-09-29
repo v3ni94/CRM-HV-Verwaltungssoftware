@@ -2950,6 +2950,20 @@
     "toListing": "Open listing"
   },
   "Tickets": {
+    "sections": {
+      "label": "Sections",
+      "bearbeiten": "Edit",
+      "checkliste": "Checklist",
+      "mail": "Mail",
+      "anhaenge": "Attachments",
+      "auftraege": "Work orders",
+      "vorschlaege": "Proposals",
+      "schaden": "Damage",
+      "beirat": "Board",
+      "kommentare": "Comments",
+      "verlauf": "History",
+      "dokumente": "Documents"
+    },
     "createAnchor": "Create ticket",
     "links": {
       "parent": "Parent ticket"
@@ -3156,6 +3170,7 @@
       "addAttachment": "Add attachment",
       "upload": "Upload file",
       "uploading": "Uploading...",
+      "camera": "Camera",
       "uploadFailed": "The file could not be uploaded.",
       "searchDocuments": "Search document",
       "searchPlaceholder": "Title or file name",
@@ -10056,6 +10071,7 @@
       "title": "Upload document",
       "intro": "The document is assigned to the property or unit and filed in Drive (owner and tenant files) and Paperless once filing through the object takeover system is switched on.",
       "file": "File",
+      "camera": "Camera",
       "property": "Property",
       "unit": "Unit",
       "choose": "Please choose",

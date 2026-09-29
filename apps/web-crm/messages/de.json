@@ -2950,6 +2950,20 @@
     "toListing": "Zur Anzeige"
   },
   "Tickets": {
+    "sections": {
+      "label": "Abschnitte",
+      "bearbeiten": "Bearbeiten",
+      "checkliste": "Checkliste",
+      "mail": "Mail",
+      "anhaenge": "Anhänge",
+      "auftraege": "Aufträge",
+      "vorschlaege": "Vorschläge",
+      "schaden": "Schaden",
+      "beirat": "Beirat",
+      "kommentare": "Kommentare",
+      "verlauf": "Verlauf",
+      "dokumente": "Dokumente"
+    },
     "createAnchor": "Ticket anlegen",
     "links": {
       "parent": "Übergeordnetes Ticket"
@@ -3156,6 +3170,7 @@
       "addAttachment": "Anhang hinzufügen",
       "upload": "Datei hochladen",
       "uploading": "Wird hochgeladen...",
+      "camera": "Kamera",
       "uploadFailed": "Die Datei konnte nicht hochgeladen werden.",
       "searchDocuments": "Dokument suchen",
       "searchPlaceholder": "Titel oder Dateiname",
@@ -10056,6 +10071,7 @@
       "title": "Dokument hochladen",
       "intro": "Das Dokument wird dem Objekt oder der Einheit zugeordnet und in Drive (Eigentümer- und Mieterakten) und Paperless abgelegt, sobald die Ablage über die Objektübernahme eingeschaltet ist.",
       "file": "Datei",
+      "camera": "Kamera",
       "property": "Objekt",
       "unit": "Einheit",
       "choose": "Bitte wählen",

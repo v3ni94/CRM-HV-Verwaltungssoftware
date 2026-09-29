@@ -8,6 +8,9 @@ import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+/** Accepted upload types: images including HEIC and PDF (M31). */
+const UPLOAD_ACCEPT = "image/jpeg,image/png,image/heic,image/heif,application/pdf";
+
 type PropertyItem = { id: string; number: string; name: string };
 type UnitItem = { id: string; number: string; label: string | null };
 type CategoryItem = { id: string; code: string; name: string; drive_folder: string | null };
@@ -40,6 +43,7 @@ export function DmsUpload() {
   const [contact, setContact] = useState<ContactItem | null>(null);
   const [title, setTitle] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
+  const cameraRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState<{ id: string; filing: Filing | null } | null>(null);
@@ -100,7 +104,7 @@ export function DmsUpload() {
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const file = fileRef.current?.files?.[0];
+    const file = fileRef.current?.files?.[0] ?? cameraRef.current?.files?.[0];
     if (!file || !propertyId) {
       setError(t("errors.missing"));
       return;
@@ -127,6 +131,7 @@ export function DmsUpload() {
     setDone({ id: res.data.id, filing: filing.ok ? filing.data : null });
     setTitle("");
     if (fileRef.current) fileRef.current.value = "";
+    if (cameraRef.current) cameraRef.current.value = "";
   };
 
   const contractLabel = (c: ContractItem) =>
@@ -141,7 +146,12 @@ export function DmsUpload() {
       <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => void submit(e)} data-testid="dms-upload-form">
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">{t("file")}</span>
-          <input ref={fileRef} type="file" className={ui.input} aria-label={t("file")} />
+          <input ref={fileRef} type="file" className={ui.input} aria-label={t("file")} accept={UPLOAD_ACCEPT} />
+        </label>
+        {/* Camera on phones and tablets (M31): second input with capture, the first chosen file wins. */}
+        <label className="flex flex-col gap-1 text-sm">
+          <span className="text-muted">{t("camera")}</span>
+          <input ref={cameraRef} type="file" className={ui.input} aria-label={t("camera")} accept="image/*" capture="environment" />
         </label>
         <label className="flex flex-col gap-1 text-sm">
           <span className="text-muted">{t("property")}</span>

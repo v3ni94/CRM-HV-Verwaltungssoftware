@@ -116,7 +116,7 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
   return (
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
-      <a href="#ticket-anlegen" className={`${ui.buttonSm} self-start`} data-testid="ticket-create-anchor">
+      <a href="#ticket-anlegen" className={`${ui.primary} self-start`} data-testid="ticket-create-anchor">
         {t("createAnchor")}
       </a>
       <div id="ticket-anlegen">

@@ -91,7 +91,7 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
               </a>
             ) : null}
             {filing.paperless_id ? (
-              <a href={`/api/bff/dms-documents/${String(filing.paperless_id)}/file?kind=preview`} target="_blank" rel="noreferrer" className={ui.buttonSm}>
+              <a href={`/api/bff/dms-documents/${String(filing.paperless_id)}/file?kind=preview`} className={ui.buttonSm}>
                 {t("filing.paperless")}
               </a>
             ) : null}

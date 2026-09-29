@@ -21,6 +21,7 @@ import { TicketHistory, type TicketEventRow } from "@/components/tickets/TicketH
 import { TicketMailAttachments, type TicketMailAttachment } from "@/components/tickets/TicketMailAttachments";
 import { TicketMergeDialog } from "@/components/tickets/TicketMergeDialog";
 import { TicketProposals } from "@/components/tickets/TicketProposals";
+import { TicketSectionNav, type TicketSection } from "@/components/tickets/TicketSectionNav";
 import { TicketMailSection } from "@/components/tickets/TicketMailSection";
 import { TicketWorkOrders, type TicketWorkOrderRow } from "@/components/tickets/TicketWorkOrders";
 import { SafeText } from "@/components/ui/SafeText";
@@ -32,6 +33,9 @@ import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
+
+/** Scroll margin of an anchor section: app header plus the sticky section row (M31). */
+const SECTION_SCROLL = "scroll-mt-[calc(var(--mhvp-header-h)+3rem)]";
 
 export default async function TicketPage({ params }: { params: Promise<{ ticketId: string }> }) {
   const { ticketId } = await params;
@@ -91,9 +95,19 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   });
   const followUpOf = data.follow_up_of ? toRef(data.follow_up_of as Parameters<typeof toRef>[0]) : null;
   const followUps = ((data.follow_ups ?? []) as Parameters<typeof toRef>[0][]).map(toRef);
+  // Anchor sections of the detail (M31): only the blocks that are rendered for this ticket.
+  const sections: TicketSection[] = [
+    ...(mergedInto ? [] : (["bearbeiten", "checkliste", "mail", "anhaenge", "auftraege", "vorschlaege", "schaden"] as const)),
+    ...(!mergedInto && data.property_id ? (["beirat"] as const) : []),
+    "kommentare",
+    "verlauf",
+    "dokumente",
+  ];
+  const section = `flex min-w-0 flex-col gap-2 ${SECTION_SCROLL}`;
   return (
     <div className="flex min-w-0 max-w-full flex-col gap-4">
       <PageHeader breadcrumb={[{ href: "/tickets", label: t("title") }]} title={`#${String(data.number)} ${String(data.title ?? "")}`} />
+      <TicketSectionNav sections={sections} />
       <EntityLinksBar
         links={[
           { type: "property", id: data.property_id ? String(data.property_id) : null, label: property?.data?.name ? String(property.data.name) : null },
@@ -138,26 +152,30 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
           <SlaBadge ticketId={ticketId} canManage={canManageSla} />
           <TicketAppointmentButton ticketId={ticketId} ticketTitle={data.title ? String(data.title) : `#${String(data.number)}`} />
           <TicketAttachInvoiceButton ticketId={ticketId} hasProperty={Boolean(data.property_id)} />
-          <TicketEdit
-            id={ticketId}
-            status={String(data.status)}
-            priority={String(data.priority)}
-            dueOn={data.due_on ? String(data.due_on) : null}
-            canChangeAnyStatus={canChangeAnyStatus}
-            internalDescription={data.internal_description ? String(data.internal_description) : ""}
-          />
-          <TicketFlowPanel
-            ticketId={ticketId}
-            processCode={processCode}
-            flow={flow}
-            canUpdate={me.data?.permissions.includes("tickets:update") ?? false}
-          />
-          <TicketChecklist
-            ticketId={ticketId}
-            checklist={checklist}
-            extraFieldDefs={extraFieldDefs}
-            extraFieldValues={extraFieldValues}
-          />
+          <section id="bearbeiten" className={section}>
+            <TicketEdit
+              id={ticketId}
+              status={String(data.status)}
+              priority={String(data.priority)}
+              dueOn={data.due_on ? String(data.due_on) : null}
+              canChangeAnyStatus={canChangeAnyStatus}
+              internalDescription={data.internal_description ? String(data.internal_description) : ""}
+            />
+            <TicketFlowPanel
+              ticketId={ticketId}
+              processCode={processCode}
+              flow={flow}
+              canUpdate={me.data?.permissions.includes("tickets:update") ?? false}
+            />
+          </section>
+          <section id="checkliste" className={section}>
+            <TicketChecklist
+              ticketId={ticketId}
+              checklist={checklist}
+              extraFieldDefs={extraFieldDefs}
+              extraFieldValues={extraFieldValues}
+            />
+          </section>
           <DeadlineCreatePanel
             sourceType="ticket"
             sourceId={ticketId}
@@ -182,41 +200,57 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
       ) : null}
       {mergedInto ? null : (
         <>
-          <TicketMailSection
-            ticketId={ticketId}
-            canReply={canReply}
-            category={data.category ? String(data.category) : null}
-            processCode={processCode}
-            propertyId={data.property_id ? String(data.property_id) : null}
-          />
-          <LexofficeInvoiceCopyCard
-            ticketId={ticketId}
-            canUpdate={me.data?.permissions.includes("tickets:update") ?? false}
-            canLinkContacts={me.data?.permissions.includes("contacts:update") ?? false}
-          />
-          <TicketMailAttachments attachments={attachments} />
-          <TicketWorkOrders orders={workOrders} />
-          <TicketProposals ticketId={ticketId} />
-          <SchadenstoolPanel ticketId={ticketId} canUpdate={me.data?.permissions.includes("tickets:update") ?? false} />
-          {data.property_id ? (
-            <TicketBoardPanel
+          <section id="mail" className={section}>
+            <TicketMailSection
               ticketId={ticketId}
-              workOrders={workOrders.map((o) => ({ id: o.id, description: o.description }))}
-              canSubmit={me.data?.permissions.includes("tickets:update") ?? false}
-              canManagePolicy={me.data?.permissions.includes("tickets:approve") ?? false}
+              canReply={canReply}
+              category={data.category ? String(data.category) : null}
+              processCode={processCode}
+              propertyId={data.property_id ? String(data.property_id) : null}
             />
+          </section>
+          <section id="lexoffice" className={section}>
+            <LexofficeInvoiceCopyCard
+              ticketId={ticketId}
+              canUpdate={me.data?.permissions.includes("tickets:update") ?? false}
+              canLinkContacts={me.data?.permissions.includes("contacts:update") ?? false}
+            />
+          </section>
+          <section id="anhaenge" className={section}>
+            <TicketMailAttachments attachments={attachments} />
+          </section>
+          <section id="auftraege" className={section}>
+            <TicketWorkOrders orders={workOrders} />
+          </section>
+          <section id="vorschlaege" className={section}>
+            <TicketProposals ticketId={ticketId} />
+          </section>
+          <section id="schaden" className={section}>
+            <SchadenstoolPanel ticketId={ticketId} canUpdate={me.data?.permissions.includes("tickets:update") ?? false} />
+          </section>
+          {data.property_id ? (
+            <section id="beirat" className={section}>
+              <TicketBoardPanel
+                ticketId={ticketId}
+                workOrders={workOrders.map((o) => ({ id: o.id, description: o.description }))}
+                canSubmit={me.data?.permissions.includes("tickets:update") ?? false}
+                canManagePolicy={me.data?.permissions.includes("tickets:approve") ?? false}
+              />
+            </section>
           ) : null}
         </>
       )}
-      <section className="flex min-w-0 flex-col gap-2">
+      <section id="kommentare" className={section}>
         <h2 className={ui.h2}>{t("comments")}</h2>
         <TicketComments comments={comments} />
       </section>
-      <section className="flex flex-col gap-1">
+      <section id="verlauf" className={`flex flex-col gap-1 ${SECTION_SCROLL}`}>
         <h2 className={ui.h2}>{t("history")}</h2>
         <TicketHistory events={events} />
       </section>
-      <DmsDocumentsPanel entity="ticket" id={ticketId} />
+      <section id="dokumente" className={section}>
+        <DmsDocumentsPanel entity="ticket" id={ticketId} />
+      </section>
       <AuditLogPanel entityType="ticket" entityId={ticketId} />
     </div>
   );
