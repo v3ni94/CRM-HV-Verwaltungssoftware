@@ -729,6 +729,82 @@ class ErrorCodes:
             "lexoffice feature flag enabled for the tenant; both default closed/off."
         ),
     )
+    # Lexware Office extension (rule INT-LEXO-01, docs/integrations/lexoffice.md).
+    LEXOFFICE_AVV_MISSING = ErrorCode(
+        "MHVP-LEXO-0006",
+        422,
+        "Auftragsverarbeitungsvertrag nicht bestätigt",
+        "A Lexware Office config can only be enabled after the AVV date and member are recorded.",
+    )
+    LEXOFFICE_FORBIDDEN_FIELD = ErrorCode(
+        "MHVP-LEXO-0007",
+        422,
+        "Feld darf nicht übertragen werden",
+        "A payload would change a bank, mandate or tax field; those never leave the platform.",
+    )
+    LEXOFFICE_CONTACT_NOT_LINKED = ErrorCode(
+        "MHVP-LEXO-0008",
+        409,
+        "Kontakt ist nicht mit Lexware Office verknüpft",
+        "The action needs a contact link in a synced state for this config.",
+    )
+    LEXOFFICE_RECIPIENT_UNVERIFIED = ErrorCode(
+        "MHVP-LEXO-0009",
+        422,
+        "Rechnungsempfänger nicht bestätigt",
+        "The requester is not the invoice recipient or the recipient could not be resolved.",
+    )
+    LEXOFFICE_REMOTE_CONFLICT = ErrorCode(
+        "MHVP-LEXO-0010",
+        409,
+        "Datensatz in Lexware Office zwischenzeitlich geändert",
+        "The remote contact changed since the baseline; resolve keep_crm or keep_lexoffice.",
+    )
+    LEXOFFICE_MANUAL_REQUIRED = ErrorCode(
+        "MHVP-LEXO-0011",
+        409,
+        "Manuelle Pflege in Lexware Office erforderlich",
+        "Multi entry lists, kind change or archived contact: the platform never writes here.",
+    )
+    LEXOFFICE_INVOICE_NOT_FOUND = ErrorCode(
+        "MHVP-LEXO-0012",
+        404,
+        "Rechnung in Lexware Office nicht gefunden",
+        "No finalized invoice with this voucher number in the configured organisation.",
+    )
+    LEXOFFICE_ORGANIZATION_MISMATCH = ErrorCode(
+        "MHVP-LEXO-0013",
+        409,
+        "API Schlüssel gehört zu einer anderen Lexware Organisation",
+        "The organisation id returned by Lexware differs from the one stored on the config.",
+    )
+    LEXOFFICE_CONNECTION_TEST_REQUIRED = ErrorCode(
+        "MHVP-LEXO-0014",
+        422,
+        "Verbindungstest vor Aktivierung erforderlich",
+        "Enable needs a successful connection test with the current API key.",
+    )
+    LEXOFFICE_DRAFT_RECIPIENT_LOCKED = ErrorCode(
+        "MHVP-LEXO-0015",
+        422,
+        "Empfänger eines Entwurfs mit Rechnungskopie kann nicht geändert werden",
+        "Recipients of a draft carrying a Lexware invoice file are locked to the contact.",
+    )
+    LEXOFFICE_FEATURE_DISABLED = ErrorCode(
+        "MHVP-LEXO-0016",
+        403,
+        "Funktion für diese Lexware Organisation nicht aktiviert",
+        "The feature switch (sync_contacts, invoice_copies, invoice_drafts) is off.",
+    )
+    LEXOFFICE_KIND_UNMAPPED = ErrorCode(
+        "MHVP-LEXO-0017",
+        422,
+        "Rechnungsart ist keiner Gesellschaft zugeordnet",
+        (
+            "The invoice kind (broker, consulting, management) has no legal entity mapping, or "
+            "the mapped legal entity has no Lexware Office config (settings UI)."
+        ),
+    )
     # Claims adjuster (Schadenstool, rule INT-SDT-01, docs/integrations/schadenstool.md).
     SCHADENSTOOL_NOT_ENABLED = ErrorCode(
         "MHVP-SDT-0001",

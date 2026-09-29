@@ -7,7 +7,8 @@ Only the endpoints listed there as verified are called:
 - ``GET /v1/profile``            connectivity/API key test
 - ``POST /v1/contacts``          create a contact
 - ``POST /v1/vouchers``          create a voucher (purchase or sales side, payload passthrough)
-- ``GET /v1/voucherlist``        list/filter vouchers (paging, ``updatedAtFrom``)
+- ``GET /v1/voucherlist``        list/filter vouchers (voucherType, voucherStatus, paging,
+                                 date filters)
 - ``GET /v1/vouchers/{id}``      read one voucher
 - ``POST /v1/files``             upload a file, returns a file id
 - ``POST /v1/invoices``          create a sales invoice (payload passthrough)
@@ -109,14 +110,34 @@ class LexofficeClient:
         return str(body["id"])
 
     def list_voucherlist(
-        self, *, page: int = 0, updated_at_from: str | None = None, voucher_type: str | None = None
+        self,
+        voucher_type: str,
+        voucher_status: str = "any",
+        *,
+        page: int = 0,
+        size: int = 25,
+        updated_date_from: str | None = None,
+        created_date_from: str | None = None,
+        voucher_number: str | None = None,
+        contact_id: str | None = None,
     ) -> dict[str, Any]:
-        """``GET /v1/voucherlist`` (paging, ``updatedAtFrom`` filter, both documented)."""
-        params: dict[str, Any] = {"page": page}
-        if updated_at_from:
-            params["updatedAtFrom"] = updated_at_from
-        if voucher_type:
-            params["voucherType"] = voucher_type
+        """``GET /v1/voucherlist``. ``voucherType`` and ``voucherStatus`` are mandatory per the
+        vendor documentation (verified 28.09.2026); date filters are ``yyyy-MM-dd`` and named
+        ``updatedDateFrom``/``createdDateFrom`` (``updatedAtFrom`` does not exist)."""
+        params: dict[str, Any] = {
+            "voucherType": voucher_type,
+            "voucherStatus": voucher_status,
+            "page": page,
+            "size": size,
+        }
+        if updated_date_from:
+            params["updatedDateFrom"] = updated_date_from
+        if created_date_from:
+            params["createdDateFrom"] = created_date_from
+        if voucher_number:
+            params["voucherNumber"] = voucher_number
+        if contact_id:
+            params["contactId"] = contact_id
         return dict(self._request("GET", "/v1/voucherlist", params=params).json())
 
     def get_voucher(self, voucher_id: str) -> dict[str, Any]:

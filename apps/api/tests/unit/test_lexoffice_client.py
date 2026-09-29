@@ -117,10 +117,15 @@ def test_list_voucherlist_passes_paging_and_updated_at_from(
 ) -> None:
     fake = FakeLexoffice()
     client = _client(monkeypatch, fake)
-    result = client.list_voucherlist(page=0, updated_at_from="2026-01-01T00:00:00Z")
+    result = client.list_voucherlist(
+        "purchaseinvoice", "any", page=0, updated_date_from="2026-09-01"
+    )
     assert result["content"][0]["id"] == "v-0"
     sent = fake.requests[-1]
-    assert sent.url.params["updatedAtFrom"] == "2026-01-01T00:00:00Z"
+    assert sent.url.params["voucherType"] == "purchaseinvoice"
+    assert sent.url.params["voucherStatus"] == "any"
+    assert sent.url.params["updatedDateFrom"] == "2026-09-01"
+    assert "updatedAtFrom" not in sent.url.params
 
 
 def test_get_voucher(monkeypatch: pytest.MonkeyPatch) -> None:

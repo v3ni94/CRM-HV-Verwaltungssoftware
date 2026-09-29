@@ -79,6 +79,9 @@ class LexofficeExportResult(BaseModel):
 
 class LexofficeImportReceiptsIn(_In):
     updated_at_from: datetime | None = None
+    # Mandatory voucherStatus of GET /v1/voucherlist (verified 28.09.2026); "any" keeps the
+    # previous behaviour.
+    voucher_status: str = Field(default="any", max_length=32)
     max_pages: int = Field(default=1, ge=1, le=20)
 
 
