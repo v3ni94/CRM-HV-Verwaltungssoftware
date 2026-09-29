@@ -151,3 +151,11 @@ explicit accept by a member with `tenant_settings:update`.
 * Tests: `tests/unit/test_rule_proposal_learning.py`, `tests/integration/test_m9_rule_proposals.py`,
   `tests/integration/test_a80_rule_assignment_chain.py`, CRM `RuleProposals.test.tsx`.
 
+
+## Process flows (rule M19-11, 29.09.2026)
+
+`set_ticket_field` accepts the field `process_code` (a code of `mhvp.tickets.flows.PROCESS_CODES`
+or a `$field` reference). The action loads the tenant's active template of that process and
+calls `mhvp.tickets.flows.apply_flow` (category, checklist once, role, link status, deadline
+proposals as type only). Without an active template the action fails with a rule error; a
+rule never removes a process code and never changes the status.

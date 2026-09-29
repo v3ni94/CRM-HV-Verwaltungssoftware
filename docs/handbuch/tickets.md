@@ -33,6 +33,41 @@ Unter Einstellungen, Ticketvorlagen werden Checklisten und Zusatzfelder für
 wiederkehrende Vorgänge gepflegt (zum Beispiel Vermietung, Kaution). Eine Vorlage legt
 Kategorie, Standardpriorität, Team und SLA-Regel fest.
 
+## Vorgangsarten und Prozessflows
+
+Jede eingehende Mail erhält im KI-Vorschlag eine Vorgangsart aus einem festen Katalog:
+Kündigung, Vermietung, Versicherungsschaden, Reparaturanfrage, Beschwerde, Buchhaltung,
+Übergabe, Mieterhöhung, Gericht, Übernahme neues Objekt, Abgabe altes Objekt, Kaution. Die
+Vorgangsart wird zuerst aus Schlüsselwörtern in Betreff und Text bestimmt und, wenn ein
+KI-Anbieter freigegeben ist, durch die KI ergänzt. Angezeigt werden Vorgangsart, Sicherheit in
+Prozent und der Grund (die gefundenen Wörter oder der Grund der KI). Die Sicherheit ist ein
+Hinweis, keine Freigabe.
+
+Schaltfläche Vorgangsart übernehmen an der Mail: legt das Ticket an, falls noch keines
+besteht (Kontakt und Objekt aus der Zuordnung der Mail), und wendet den Prozessflow der
+Vorlage an. Am Ticket selbst steht im Abschnitt Prozessflow die Auswahl der Vorgangsart mit
+Flow anwenden. Angewendet wird:
+
+- Kategorie und Vorgangsart (Badge in Liste und Detail, Filter Vorgangsart in der Liste).
+- Checkliste der Vorlage, einmalig; vorhandene Punkte und Haken bleiben erhalten.
+- Zuständige Rolle (Anzeige, keine automatische Zuweisung an eine Person).
+- Erforderliche Verknüpfungen (Kontakt, Einheit, Objekt, Vertrag) mit Status vorhanden oder
+  fehlt.
+- Fristvorschläge: nur der Fristtyp aus dem Katalog (zum Beispiel Kündigung, Vertragsende,
+  Auszug). Datum und Dauer trägt der Bearbeiter am Ticket (Fälligkeit) oder im Kalender ein;
+  es wird keine Frist automatisch angelegt.
+- Zu sammelnde Unterlagen als Liste.
+
+Ein zweites Anwenden derselben Vorgangsart verdoppelt nichts. Status, Abschluss, Buchungen
+und Zahlungen bleiben unberührt. Eine Automatisierungsregel kann die Vorgangsart über die
+Aktion Feld setzen (Feld Vorgangsart) anwenden.
+
+Unter Einstellungen, Ticketvorlagen legt Prozesskatalog einspielen für jede Vorgangsart eine
+Vorlage an, sofern noch keine besteht; bestehende Vorlagen bleiben unverändert. Je Vorlage
+lassen sich Vorgangsart, zuständige Rolle, erforderliche Verknüpfungen, verknüpfte Fristtypen
+und Unterlagen bearbeiten. Die Checklisten der eingespielten Vorlagen folgen den
+Handlungsanweisungen zu Mieterwechsel, Übergabe, Kaution, Mieterhöhung und Verwalterwechsel.
+
 ## Zusammenführen
 
 Im Ticketdetail über die Aktion Zusammenführen: Zielticket über Nummer oder Titel suchen,

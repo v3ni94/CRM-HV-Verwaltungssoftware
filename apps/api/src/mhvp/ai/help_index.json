@@ -4899,6 +4899,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Vorgangsarten und Prozessflows",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Jede eingehende Mail erhält im KI-Vorschlag eine Vorgangsart aus einem festen Katalog: Kündigung, Vermietung, Versicherungsschaden, Reparaturanfrage, Beschwerde, Buchhaltung, Übergabe, Mieterhöhung, Gericht, Übernahme neues Objekt, Abgabe altes Objekt, Kaution. Die Vorgangsart wi",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zusammenführen",
   "source": "Handbuch: Tickets",
   "href": "/tickets",

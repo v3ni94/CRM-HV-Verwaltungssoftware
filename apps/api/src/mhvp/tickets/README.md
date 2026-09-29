@@ -207,3 +207,39 @@ Frist, Art `info`/`consent`), Rückmeldungen im Portal (`/portal/board/submissio
 (`/tickets/board/policy`). Alles steht als `ticket_event` im Verlauf. Das Votum ist
 Information; Auftragsfreigabe und Zahlung bleiben bei der Verwaltung
 (`docs/rules/M19-02-beiratsbeteiligung.md`).
+
+## Prozessflows (`flows.py`, rule M19-11, migration 0235)
+
+Operator request of 29.09.2026. Fixed catalogue of twelve process codes (`PROCESS_CODES`:
+`kuendigung`, `vermietung`, `versicherungsschaden`, `reparaturanfrage`, `beschwerde`,
+`buchhaltung`, `uebergabe`, `mieterhoehung`, `gericht`, `objektuebernahme`, `objektabgabe`,
+`kaution`), each with German label, checklist (from the handbook pages where one exists),
+responsible role code, required links (`LINK_KINDS`), linked deadline type codes (only codes
+of `mhvp.workspace.jobs.DEADLINE_KINDS`, never a duration) and document kinds.
+
+* `seed_process_templates(session, tenant_id)`: idempotent per tenant, creates one
+  `TicketTemplate` per code (`process_code`, `responsible_role`, `required_links`,
+  `deadline_type_codes`, `document_kinds`; partial unique index per tenant and code); a
+  template edited by the tenant is kept. Called by `POST /tickets/process-catalogue/seed`
+  (`tickets:approve` or `tenant_settings:update`) and by `python -m mhvp.platform.seed`.
+  `GET /tickets/process-catalogue` lists the catalogue with the tenant's template ids.
+* `apply_flow(session, ticket, tpl, actor_user_id, source)`: sets `process_code` and
+  `category`, fills topic and team only when empty, appends the template checklist once
+  (`instantiate_checklist`, existing keys and done marks stay), writes `ticket.flow`
+  (`build_flow`: role, required links with status, deadline proposals `{type, status:
+  proposed, due_on: null}`, document kinds, source) and one `TicketEvent` `flow_applied`.
+  Idempotent: the same code again only refreshes the link status. Never a status change,
+  never a posting, never a created deadline.
+* Entry points: `POST /tickets/{id}/apply-process` (`tickets:update`),
+  `POST /mail/messages/{id}/apply-process` (`communication:update` plus `tickets:update`;
+  creates the ticket from the mail when missing, `tickets:create`, contact and property of
+  the mail fill gaps), automation action `set_ticket_field` with field `process_code`.
+  `GET /tickets?process_code=` filters, `_ticket_out` returns `process_code`, `process_label`
+  and `flow`.
+* Classification: `mhvp.communication.mail.process_category` (keywords, subject hits count
+  twice, confidence 0.5, 0.75 or 0.9), stored as `classification.process` on ingest; the
+  `classify_email` task (prompt v2) adds `process_code`, `process_confidence`,
+  `process_reason`; `suggest.merge_suggestion` keeps only catalogue codes and falls back to
+  the keywords otherwise.
+* Tests: `tests/unit/test_m19_process_flows.py`, `tests/integration/test_m19_process_flows.py`;
+  Vitest `TicketProcessBadge.test.tsx`, `TicketTemplatesAdmin.test.tsx`.
