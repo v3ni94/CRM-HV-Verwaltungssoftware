@@ -30,6 +30,17 @@ export function todayIso(now: Date = new Date()): string {
   return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
+/** Plain editable form of a quantity for an input: no thousands separator, comma as decimal
+ *  separator, trailing zeros removed ("1000.50000000" -> "1000,5"). `formatQty` groups
+ *  thousands with a dot, which `decimalForApi` would read as a decimal point. */
+export function editableQty(value: string | null | undefined): string {
+  if (value == null || value === "") return "";
+  const match = /^(-?)(\d+)(?:\.(\d*))?$/.exec(String(value).trim());
+  if (!match) return String(value);
+  const frac = (match[3] ?? "").replace(/0+$/, "");
+  return `${match[1]}${match[2]}${frac ? `,${frac}` : ""}`;
+}
+
 function isZero(value: string | null | undefined): boolean {
   return value != null && /^-?0+(\.0*)?$/.test(value);
 }
@@ -77,6 +88,10 @@ export function AllocationKeysPanel({ propertyId, canEdit, canCreate }: { proper
 
   const saveExpected = async (key: SummaryKey) => {
     const raw = (expectedDraft[key.id] ?? "").trim();
+    if (raw !== "" && !DECIMAL.test(raw)) {
+      setError(t("invalidExpected"));
+      return;
+    }
     setBusy(true);
     setError(null);
     const res = await bff(`/api/bff/properties/${propertyId}/allocation-keys/${key.id}`, {
@@ -218,7 +233,7 @@ export function AllocationKeysPanel({ propertyId, canEdit, canCreate }: { proper
                           aria-label={t("expectedInput", { code: k.code })}
                           className={`${ui.input} w-28 text-right`}
                           inputMode="decimal"
-                          value={expectedDraft[k.id] ?? (k.expected_total == null ? "" : formatQty(k.expected_total))}
+                          value={expectedDraft[k.id] ?? editableQty(k.expected_total)}
                           onChange={(e) => setExpectedDraft((p) => ({ ...p, [k.id]: e.target.value }))}
                         />
                         {expectedDraft[k.id] !== undefined ? (

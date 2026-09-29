@@ -8078,6 +8078,7 @@
     "saveExpected": "Save",
     "expectedHint": "Expected total: operator value without default, to be verified, for example the total of the co-ownership shares per declaration of division. Leave empty when there is no expected total (for example persons).",
     "expectedSaved": "Expected total for {code} saved.",
+    "invalidExpected": "Expected total: digits with up to eight decimals only, no thousands separator (for example 10000 or 1000.5).",
     "noExpected": "no expected total",
     "matches": "matches",
     "warningTitle": "Sum check",

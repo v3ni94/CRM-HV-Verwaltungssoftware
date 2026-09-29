@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 
 import { jsonResponse, renderIntl } from "@/test/intl";
 
-import { AllocationKeysPanel, todayIso, type AllocationSummary } from "./AllocationKeysPanel";
+import { AllocationKeysPanel, editableQty, todayIso, type AllocationSummary } from "./AllocationKeysPanel";
 
 const refresh = vi.fn();
 vi.mock("next/navigation", () => ({ useRouter: () => ({ refresh }) }));
@@ -110,7 +110,7 @@ describe("AllocationKeysPanel", () => {
     const fetchMock = mockFetch();
     renderIntl(<AllocationKeysPanel propertyId={PID} canEdit canCreate={false} />);
     const input = await screen.findByLabelText("Sollsumme MEA");
-    expect(input).toHaveValue("1.000");
+    expect(input).toHaveValue("1000");
     expect(screen.queryByText("Speichern")).toBeNull();
     await userEvent.clear(input);
     await userEvent.type(input, "750,5");
@@ -149,5 +149,13 @@ describe("AllocationKeysPanel", () => {
     renderIntl(<AllocationKeysPanel propertyId={PID} canEdit canCreate />);
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(screen.queryByTestId("allocation-value-form")).toBeNull();
+  });
+});
+
+describe("editableQty", () => {
+  it("prefills the expected total without thousands separators so a saved edit keeps its magnitude", () => {
+    expect(editableQty("1000.00000000")).toBe("1000");
+    expect(editableQty("10000.50000000")).toBe("10000,5");
+    expect(editableQty(null)).toBe("");
   });
 });

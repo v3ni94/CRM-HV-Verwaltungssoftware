@@ -8078,6 +8078,7 @@
     "saveExpected": "Speichern",
     "expectedHint": "Sollsumme: Betreiberwert ohne Vorgabe, zu verifizieren, zum Beispiel die Summe der Miteigentumsanteile laut Teilungserklärung. Leer lassen, wenn es keine Sollsumme gibt (zum Beispiel Personen).",
     "expectedSaved": "Sollsumme für {code} gespeichert.",
+    "invalidExpected": "Sollsumme: nur Ziffern mit bis zu acht Nachkommastellen, ohne Tausendertrennzeichen (zum Beispiel 10000 oder 1000,5).",
     "noExpected": "keine Sollsumme",
     "matches": "stimmt überein",
     "warningTitle": "Summenprüfung",
