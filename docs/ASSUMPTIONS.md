@@ -1012,9 +1012,9 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 
 | Feld | Inhalt |
 | --- | --- |
-| Annahme | Fälligkeit der Nachkontrolle: nächster Werktag Montag bis Freitag ohne Feiertagskalender (`mhvp.banking.review.next_working_day`). |
-| Begründung | Der Master-Prompt verlangt eine Tagesprüfung; ein Feiertagskalender je Bundesland existiert in der Plattform noch nicht. |
-| Kennzeichnung | unkritisch: eine an einem Feiertag fällige Nachkontrolle sperrt die Klasse einen Tag früher, nie später |
-| Betroffene Bereiche | Nachkontrolle, Runner-Sperre |
-| Überprüfung spätestens bei Meilenstein | mit dem Feiertagskalender der Fristenverwaltung |
+| Annahme | Fälligkeit der Nachkontrolle: nächster Werktag Montag bis Freitag ohne bundesweite Feiertage und ohne die Feiertage Nordrhein-Westfalens (Fronleichnam, Allerheiligen), deterministische Tabelle `mhvp.banking.holidays` (Ostern nach der Gaußschen Osterformel in der Form von Lichtenberg), kein externer Dienst, kein Feiertag anderer Länder, keine regionalen Sonderfälle (etwa Augsburger Friedensfest). |
+| Begründung | Der Master-Prompt verlangt eine Tagesprüfung; beide Mandanten haben ihren Sitz in NRW. Die Tabelle dient nur der Fälligkeit der Nachkontrolle, nie einer gesetzlichen Frist. |
+| Kennzeichnung | unkritisch: eine Nachkontrolle, die auf einen nicht tabellierten Feiertag fällt, sperrt die Klasse einen Tag früher, nie später. Fortschreibung 29.09.2026: zuvor ohne Feiertagskalender. |
+| Betroffene Bereiche | Nachkontrolle, Runner-Sperre, Rückläufer-Items |
+| Überprüfung spätestens bei Meilenstein | mit dem Feiertagskalender der Fristenverwaltung (Bundesland je Mandant) |
 | Datum | 29.09.2026 |
