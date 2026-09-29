@@ -6262,7 +6262,11 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Übergabeprotokolle */
+        /**
+         * Übergabeprotokolle
+         * @description ``handover_date`` filters one day (chip "Heute"), ``handover_from`` and ``handover_to``
+         *     an inclusive range (chip "Diese Woche"); both are server side (M31 WP2).
+         */
         get: operations["list_protocols_api_v1_handover_protocols_get"];
         put?: never;
         /** Übergabeprotokoll anlegen */
@@ -6306,6 +6310,29 @@ export interface paths {
         head?: never;
         /** Protokollfelder ändern (Autosave) */
         patch: operations["patch_protocol_api_v1_handover_protocols__protocol_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Änderung nach Unterschrift (Inhalt mit Änderungsgrund wieder freigeben)
+         * @description M30-09 (operator decision 28.09.2026): once a signature exists the content is locked.
+         *     This action records reason, time and user in the protocol history, marks every signature
+         *     as given before the change (they have to be repeated) and reopens the content. 409 when
+         *     the protocol is completed or holds no valid signature.
+         */
+        post: operations["change_after_signature_api_v1_handover_protocols__protocol_id__changes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/handover/protocols/{protocol_id}/complete": {
@@ -6375,6 +6402,28 @@ export interface paths {
         post?: never;
         /** Foto oder Anhang entfernen */
         delete: operations["delete_document_api_v1_handover_protocols__protocol_id__documents__document_id__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/handover/protocols/{protocol_id}/documents/{document_id}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vorschaubild eines Fotos (abgeleitet, nicht gespeichert)
+         * @description Derived view (M30-08): the stored photo scaled to 320 px on the fly as JPEG, never
+         *     stored, ``Cache-Control: private, no-store`` (no browser cache, operator question open).
+         *     Only photos and image attachments linked to this protocol; signatures and PDF are 404.
+         */
+        get: operations["document_thumbnail_api_v1_handover_protocols__protocol_id__documents__document_id__thumbnail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -14358,6 +14407,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/handover/{protocol_id}/documents/{document_id}/thumbnail": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vorschaubild eines Fotos (abgeleitet, nicht gespeichert)
+         * @description Portal twin of the CRM thumbnail (M30-08): only with a handover grant, only photos and
+         *     image attachments of the granted protocol, no-store.
+         */
+        get: operations["document_thumbnail_api_v1_portal_handover__protocol_id__documents__document_id__thumbnail_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/handover/{protocol_id}/hints": {
         parameters: {
             query?: never;
@@ -21570,17 +21640,6 @@ export interface components {
             /** Year */
             year: number;
         };
-        /** ChangeIn */
-        ChangeIn: {
-            /** Field */
-            field: string;
-            /** Label */
-            label?: ("work" | "mobile" | "private" | "fax" | "other") | null;
-            /** New */
-            new?: string | null;
-            /** Old */
-            old?: string | null;
-        };
         /** ChartTemplateOut */
         ChartTemplateOut: {
             /** Accounts */
@@ -23104,7 +23163,7 @@ export interface components {
         /** CorrectIn */
         CorrectIn: {
             /** Changes */
-            changes: components["schemas"]["ChangeIn"][];
+            changes: components["schemas"]["mhvp__tickets__proposals__ChangeIn"][];
             /** Contact Id */
             contact_id?: string | null;
         };
@@ -36763,6 +36822,14 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * ChangeIn
+         * @description "Änderung nach Unterschrift" (M30-09): the reason is mandatory.
+         */
+        mhvp__handover__routers__ChangeIn: {
+            /** Reason */
+            reason: string;
+        };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
             /**
@@ -36948,6 +37015,17 @@ export interface components {
             valid_from: string;
             /** Valid To */
             valid_to?: string | null;
+        };
+        /** ChangeIn */
+        mhvp__tickets__proposals__ChangeIn: {
+            /** Field */
+            field: string;
+            /** Label */
+            label?: ("work" | "mobile" | "private" | "fax" | "other") | null;
+            /** New */
+            new?: string | null;
+            /** Old */
+            old?: string | null;
         };
     };
     responses: never;
@@ -50194,6 +50272,9 @@ export interface operations {
                 kind?: string | null;
                 property_id?: string | null;
                 unit_id?: string | null;
+                handover_date?: string | null;
+                handover_from?: string | null;
+                handover_to?: string | null;
                 include_archived?: boolean;
                 page?: number;
                 page_size?: number;
@@ -50364,6 +50445,43 @@ export interface operations {
             };
         };
     };
+    change_after_signature_api_v1_handover_protocols__protocol_id__changes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__handover__routers__ChangeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     complete_api_v1_handover_protocols__protocol_id__complete_post: {
         parameters: {
             query?: never;
@@ -50493,6 +50611,38 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    document_thumbnail_api_v1_handover_protocols__protocol_id__documents__document_id__thumbnail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": unknown;
+                };
             };
             /** @description Validation Error */
             422: {
@@ -67472,6 +67622,38 @@ export interface operations {
                 };
                 content: {
                     "application/octet-stream": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    document_thumbnail_api_v1_portal_handover__protocol_id__documents__document_id__thumbnail_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                protocol_id: string;
+                document_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": unknown;
                 };
             };
             /** @description Validation Error */

@@ -46,6 +46,8 @@ STEPS = (
     "attachments",
     "summary",
     "signatures",
+    # Client step of the defects list (M31 WP2); appended so existing values keep their order.
+    "defects",
 )
 
 
@@ -282,3 +284,28 @@ class HandoverSignature(IdMixin, TimestampMixin, TenantMixin, Base):
     signed_location: Mapped[str | None] = mapped_column(String(200))
     comment: Mapped[str | None] = mapped_column(String(255))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
+    # Set by "Änderung nach Unterschrift" (M30-09, operator decision 28.09.2026): the signature
+    # was given before the content changed and no longer counts; the row and its file stay as
+    # evidence, the person has to sign again.
+    invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    invalidated_change_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("handover_change.id", ondelete="SET NULL"),
+        nullable=True,
+    )
+
+
+class HandoverChange(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Protocol history entry "Änderung nach Unterschrift" (M30-09): once a signature exists
+    the content is locked; a change needs this explicit action with a mandatory reason. The
+    row records who unlocked the content, when and why, and how many signatures it set aside.
+    It is shown in the read view and printed in the PDF; it is never deleted."""
+
+    __tablename__ = "handover_change"
+
+    protocol_id: Mapped[uuid.UUID] = _protocol_fk()
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    changed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    changed_by_name: Mapped[str | None] = mapped_column(String(200))
+    signatures_invalidated: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

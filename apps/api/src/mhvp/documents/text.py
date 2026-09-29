@@ -25,6 +25,7 @@ ALLOWED_MIME_TYPES: frozenset[str] = frozenset(
         "image/png",
         "image/tiff",
         "image/heic",
+        "image/heif",
         "text/plain",
         "text/csv",
         "application/xml",

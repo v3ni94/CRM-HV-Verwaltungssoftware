@@ -19,6 +19,7 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
 from mhvp.handover.models import (
     LOCKED_STATUSES,
+    HandoverChange,
     HandoverDefect,
     HandoverItem,
     HandoverKey,
@@ -61,6 +62,107 @@ def require_unlocked(protocol: HandoverProtocol) -> None:
             detail="Das Protokoll ist abgeschlossen und schreibgeschützt. "
             "Änderungen sind nur über eine neue Version möglich.",
         )
+
+
+# Content lock after the first signature (M30-09, operator decision 28.09.2026) ---------------
+
+# Protocol fields that stay editable while the content is locked: the step pointer and the
+# internal fields, which are never part of the signed PDF.
+CONTENT_FREE_FIELDS = frozenset(
+    {"current_step", "internal_contact", "internal_note", "management_number"}
+)
+
+
+def valid_signatures(signatures: list[HandoverSignature]) -> list[HandoverSignature]:
+    return [s for s in signatures if s.invalidated_at is None]
+
+
+async def content_locked(session: AsyncSession, protocol: HandoverProtocol) -> bool:
+    """True while at least one signature that has not been set aside exists on an open
+    protocol: rooms, defects, meters, keys, items, notes, photos and the protocol fields of the
+    PDF are then read only until "Änderung nach Unterschrift" records a reason."""
+    if is_locked(protocol):
+        return False
+    found = await session.scalar(
+        select(HandoverSignature.id)
+        .where(
+            HandoverSignature.protocol_id == protocol.id,
+            HandoverSignature.invalidated_at.is_(None),
+        )
+        .limit(1)
+    )
+    return found is not None
+
+
+async def require_content_unlocked(session: AsyncSession, protocol: HandoverProtocol) -> None:
+    require_unlocked(protocol)
+    if await content_locked(session, protocol):
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Es liegt bereits eine Unterschrift vor, der Inhalt ist gesperrt. "
+            "Änderungen sind nur über die Aktion Änderung nach Unterschrift mit "
+            "Änderungsgrund möglich; alle Unterschriften müssen danach erneut geleistet werden.",
+        )
+
+
+async def record_change(
+    session: AsyncSession,
+    protocol: HandoverProtocol,
+    *,
+    reason: str,
+    user_id: uuid.UUID | None,
+    user_name: str | None,
+) -> HandoverChange:
+    """ "Änderung nach Unterschrift": records reason, time and user in the protocol history,
+    marks every valid signature as given before the change and reopens the content. The
+    signature rows and their files stay as evidence; each person has to sign again."""
+    require_unlocked(protocol)
+    if not await content_locked(session, protocol):
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Es liegt keine gültige Unterschrift vor, der Inhalt ist nicht gesperrt.",
+        )
+    stamp = now()
+    change = HandoverChange(
+        tenant_id=protocol.tenant_id,
+        protocol_id=protocol.id,
+        reason=reason,
+        changed_at=stamp,
+        changed_by=user_id,
+        changed_by_name=user_name,
+        created_by=user_id,
+    )
+    session.add(change)
+    await session.flush()
+    rows = (
+        await session.scalars(
+            select(HandoverSignature).where(
+                HandoverSignature.protocol_id == protocol.id,
+                HandoverSignature.invalidated_at.is_(None),
+            )
+        )
+    ).all()
+    for sig in rows:
+        sig.invalidated_at = stamp
+        sig.invalidated_change_id = change.id
+    change.signatures_invalidated = len(rows)
+    if protocol.status == "signature_pending":
+        protocol.status = "in_progress"
+    protocol.updated_by = user_id
+    await session.flush()
+    return change
+
+
+async def changes_of(session: AsyncSession, protocol_id: uuid.UUID) -> list[HandoverChange]:
+    return list(
+        (
+            await session.scalars(
+                select(HandoverChange)
+                .where(HandoverChange.protocol_id == protocol_id)
+                .order_by(HandoverChange.changed_at)
+            )
+        ).all()
+    )
 
 
 def iban_is_valid(iban: str) -> bool:
@@ -130,6 +232,7 @@ async def load_full(session: AsyncSession, protocol: HandoverProtocol) -> dict[s
         ).all()
     )
     out["documents"] = await documents_of(session, protocol.id)
+    out["changes"] = await changes_of(session, protocol.id)
     return out
 
 
@@ -180,7 +283,23 @@ async def documents_of(session: AsyncSession, protocol_id: uuid.UUID) -> list[di
                 "kind": _document_kind(document, link, sub),
             }
         )
+        # Derived preview (M30-08): rendered on the fly, never stored, no browser cache.
+        out[-1]["thumbnail_url"] = (
+            f"/api/v1/handover/protocols/{protocol_id}/documents/{document.id}/thumbnail"
+            if is_thumbnail_source(out[-1])
+            else None
+        )
     return out
+
+
+THUMBNAIL_MIME_TYPES = frozenset({"image/jpeg", "image/png", "image/webp"})
+
+
+def is_thumbnail_source(document: dict[str, Any]) -> bool:
+    """Photos of sub records and image attachments get a preview; signatures and PDFs not."""
+    return document["kind"] in ("photo", "attachment") and (
+        document["mime_type"] in THUMBNAIL_MIME_TYPES
+    )
 
 
 def _document_kind(document: Document, link: DocumentLink, sub: DocumentLink | None) -> str:
@@ -193,27 +312,47 @@ def _document_kind(document: Document, link: DocumentLink, sub: DocumentLink | N
     return "attachment"
 
 
+HINT_TEXTS: dict[str, str] = {
+    "no_address": "Für dieses Protokoll wurde keine Objektadresse angegeben.",
+    "no_participants": "Es wurden keine beteiligten Personen erfasst.",
+    "no_meters": "Es wurden keine Zählerstände erfasst.",
+    "no_rooms": "Es wurden keine Räume erfasst.",
+    "no_keys": "Es wurden keine Schlüssel erfasst.",
+    "no_signature": "Es liegt keine Unterschrift vor.",
+    "signatures_invalidated": "Nach einer Änderung nach Unterschrift wurde noch nicht erneut "
+    "unterschrieben.",
+    "no_date": "Das Übergabedatum fehlt.",
+    "iban_invalid": "Die IBAN für die Kautionsrückzahlung erscheint formal ungültig.",
+}
+
+
+def completion_hint_codes(full: dict[str, Any]) -> list[str]:
+    """Stable codes of the hints before completion (M31 WP2: the step bar marks the step from
+    the code, never from the text). Same order as the texts."""
+    p: HandoverProtocol = full["protocol"]
+    codes = []
+    if address_line(p) == "":
+        codes.append("no_address")
+    if not full["participants"]:
+        codes.append("no_participants")
+    if not full["meters"]:
+        codes.append("no_meters")
+    if not full["rooms"]:
+        codes.append("no_rooms")
+    if not full["keys"]:
+        codes.append("no_keys")
+    if not valid_signatures(full["signatures"]):
+        codes.append("signatures_invalidated" if full["signatures"] else "no_signature")
+    if p.handover_date is None:
+        codes.append("no_date")
+    if p.deposit_iban and not iban_is_valid(p.deposit_iban):
+        codes.append("iban_invalid")
+    return codes
+
+
 def completion_hints(full: dict[str, Any]) -> list[str]:
     """Hints before completion; none of them blocks the completion (product decision)."""
-    p: HandoverProtocol = full["protocol"]
-    hints = []
-    if address_line(p) == "":
-        hints.append("Für dieses Protokoll wurde keine Objektadresse angegeben.")
-    if not full["participants"]:
-        hints.append("Es wurden keine beteiligten Personen erfasst.")
-    if not full["meters"]:
-        hints.append("Es wurden keine Zählerstände erfasst.")
-    if not full["rooms"]:
-        hints.append("Es wurden keine Räume erfasst.")
-    if not full["keys"]:
-        hints.append("Es wurden keine Schlüssel erfasst.")
-    if not full["signatures"]:
-        hints.append("Es liegt keine Unterschrift vor.")
-    if p.handover_date is None:
-        hints.append("Das Übergabedatum fehlt.")
-    if p.deposit_iban and not iban_is_valid(p.deposit_iban):
-        hints.append("Die IBAN für die Kautionsrückzahlung erscheint formal ungültig.")
-    return hints
+    return [HINT_TEXTS[code] for code in completion_hint_codes(full)]
 
 
 def party_roles(kind: str) -> tuple[str, str, str, str]:
@@ -316,6 +455,7 @@ async def create_version(
                 "participant_id": id_map["participants"].get(sig.participant_id)
                 if sig.participant_id
                 else None,
+                "invalidated_change_id": None,
                 "created_by": user_id,
             },
         )

@@ -145,3 +145,35 @@ def test_heic_orientation_applied_before_stripping() -> None:
 def test_heic_garbage_is_rejected() -> None:
     with pytest.raises(ImageSanitizeError):
         sanitize_image(b"\x00\x00\x00\x18ftypheic kaputt", "image/heic")
+
+
+def test_heif_bytes_pass_check_upload_and_are_stored_as_jpeg() -> None:
+    """M31 WP2: image/heif (the iPhone gallery type) is on the allow list like image/heic and
+    goes through the same sanitizer; the stored result is a JPEG without metadata."""
+    from mhvp.documents.services import check_upload
+    from mhvp.handover.images import output_mime_type
+
+    raw = _heic_with_exif((600, 300))
+    check_upload("image/heif", raw, 10 * 1024 * 1024)
+    out = sanitize_image(raw, "image/heif")
+    assert out.startswith(b"\xff\xd8\xff")
+    assert b"TestCam" not in out
+    assert output_mime_type("image/heif") == "image/jpeg"
+
+
+def test_thumbnail_is_small_jpeg_for_jpeg_and_png() -> None:
+    """M30-08: the preview is a JPEG with the longest edge at most 320 px, for PNG too."""
+    from mhvp.handover.images import thumbnail
+
+    out = thumbnail(sanitize_image(_jpeg_with_exif((3000, 1500)), "image/jpeg"), "image/jpeg")
+    with Image.open(io.BytesIO(out)) as img:
+        assert img.format == "JPEG"
+        assert img.size == (320, 160)
+    png = io.BytesIO()
+    Image.new("RGBA", (100, 400), (0, 0, 255, 255)).save(png, format="PNG")
+    out = thumbnail(png.getvalue(), "image/png")
+    with Image.open(io.BytesIO(out)) as img:
+        assert img.format == "JPEG"
+        assert img.size == (80, 320)
+    with pytest.raises(ImageSanitizeError):
+        thumbnail(b"%PDF-1.4", "application/pdf")

@@ -29,7 +29,7 @@ from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
 from mhvp.handover import pdf as pdf_renderer
 from mhvp.handover import services as svc
-from mhvp.handover.images import ImageSanitizeError, output_mime_type, sanitize_image
+from mhvp.handover.images import ImageSanitizeError, output_mime_type, sanitize_image, thumbnail
 from mhvp.handover.models import STATUSES, STEPS, HandoverProtocol, HandoverSignature
 from mhvp.workspace.services import local_today
 
@@ -233,6 +233,12 @@ class MeterTransferIn(_In):
     confirm: bool = False
 
 
+class ChangeIn(_In):
+    """ "Änderung nach Unterschrift" (M30-09): the reason is mandatory."""
+
+    reason: str = Field(min_length=3, max_length=2000)
+
+
 class VersionIn(_In):
     reason: str = Field(min_length=3, max_length=2000)
 
@@ -318,6 +324,19 @@ async def _full_out(session: Any, p: HandoverProtocol) -> dict[str, Any]:
     out["documents"] = full["documents"]
     out["contract"] = await _contract_summary(session, p.contract_id)
     out["hints"] = svc.completion_hints(full)
+    out["hint_codes"] = svc.completion_hint_codes(full)
+    out["content_locked"] = await svc.content_locked(session, p)
+    out["changes"] = [
+        {
+            "id": c.id,
+            "reason": c.reason,
+            "changed_at": c.changed_at,
+            "changed_by": c.changed_by,
+            "changed_by_name": c.changed_by_name,
+            "signatures_invalidated": c.signatures_invalidated,
+        }
+        for c in full["changes"]
+    ]
     out["versions"] = [
         {
             "id": v.id,
@@ -363,13 +382,24 @@ async def list_protocols(
     kind: str | None = Query(default=None, pattern="^(rental|sale|general)$"),
     property_id: uuid.UUID | None = None,
     unit_id: uuid.UUID | None = None,
+    handover_date: date | None = None,
+    handover_from: date | None = None,
+    handover_to: date | None = None,
     include_archived: bool = False,
     page: Page = 1,
     page_size: PageSize = 50,
     principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
+    """``handover_date`` filters one day (chip "Heute"), ``handover_from`` and ``handover_to``
+    an inclusive range (chip "Diese Woche"); both are server side (M31 WP2)."""
     async with tenant_tx(request, principal) as session:
         query = select(HandoverProtocol)
+        if handover_date:
+            query = query.where(HandoverProtocol.handover_date == handover_date)
+        if handover_from:
+            query = query.where(HandoverProtocol.handover_date >= handover_from)
+        if handover_to:
+            query = query.where(HandoverProtocol.handover_date <= handover_to)
         if q:
             like = f"%{q.strip()}%"
             query = query.where(
@@ -490,6 +520,8 @@ async def patch_protocol(
         p = await _get(session, protocol_id)
         svc.require_unlocked(p)
         changes = body.model_dump(exclude_unset=True)
+        if any(k not in svc.CONTENT_FREE_FIELDS for k in changes):
+            await svc.require_content_unlocked(session, p)
         if "unit_id" in changes and changes["unit_id"] and changes["unit_id"] != p.unit_id:
             changes = {**(await svc.prefill(session, changes["unit_id"])), **changes}
         if changes.get("contract_id"):
@@ -536,7 +568,7 @@ async def upload_document(
     mime = output_mime_type(mime)  # A72: HEIC is stored as JPEG
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
-        svc.require_unlocked(p)
+        await svc.require_content_unlocked(session, p)
         links: list[tuple[str, uuid.UUID, LinkRole]] = [
             ("handover_protocol", p.id, LinkRole.ATTACHMENT)
         ]
@@ -568,6 +600,50 @@ async def upload_document(
         return next(d for d in docs if d["id"] == document.id)
 
 
+@router.get(
+    "/protocols/{protocol_id}/documents/{document_id}/thumbnail",
+    summary="Vorschaubild eines Fotos (abgeleitet, nicht gespeichert)",
+    response_class=Response,
+    responses={200: {"content": {"image/jpeg": {}}}},
+)
+async def document_thumbnail(
+    protocol_id: uuid.UUID,
+    document_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    """Derived view (M30-08): the stored photo scaled to 320 px on the fly as JPEG, never
+    stored, ``Cache-Control: private, no-store`` (no browser cache, operator question open).
+    Only photos and image attachments linked to this protocol; signatures and PDF are 404."""
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        docs = await svc.documents_of(session, p.id)
+        meta = next((d for d in docs if d["id"] == document_id), None)
+        if meta is None or not svc.is_thumbnail_source(meta):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        document = await session.get(Document, document_id)
+        if document is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        data = _blobs(request).get(document.storage_ref)
+    return thumbnail_response(data, str(document.mime_type))
+
+
+def thumbnail_response(data: bytes, mime: str) -> Response:
+    try:
+        small = thumbnail(data, mime, max_edge=320)
+    except ImageSanitizeError as exc:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND) from exc
+    return Response(
+        small,
+        media_type="image/jpeg",
+        headers={
+            "Cache-Control": "private, no-store",
+            "Content-Disposition": "inline",
+            "X-Content-Type-Options": "nosniff",
+        },
+    )
+
+
 @router.delete(
     "/protocols/{protocol_id}/documents/{document_id}",
     status_code=204,
@@ -581,7 +657,7 @@ async def delete_document(
 ) -> Response:
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
-        svc.require_unlocked(p)
+        await svc.require_content_unlocked(session, p)
         document = await session.get(Document, document_id)
         link = await session.scalar(
             select(DocumentLink).where(
@@ -666,6 +742,7 @@ async def add_signature(
                 select(HandoverSignature.id).where(
                     HandoverSignature.protocol_id == p.id,
                     HandoverSignature.participant_id == body.participant_id,
+                    HandoverSignature.invalidated_at.is_(None),
                 )
             )
             if existing:
@@ -760,7 +837,58 @@ async def hints(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
-        return {"hints": svc.completion_hints(await svc.load_full(session, p))}
+        full = await svc.load_full(session, p)
+        return {
+            "hints": svc.completion_hints(full),
+            "hint_codes": svc.completion_hint_codes(full),
+        }
+
+
+@router.post(
+    "/protocols/{protocol_id}/changes",
+    status_code=201,
+    summary="Änderung nach Unterschrift (Inhalt mit Änderungsgrund wieder freigeben)",
+)
+async def change_after_signature(
+    protocol_id: uuid.UUID,
+    body: ChangeIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """M30-09 (operator decision 28.09.2026): once a signature exists the content is locked.
+    This action records reason, time and user in the protocol history, marks every signature
+    as given before the change (they have to be repeated) and reopens the content. 409 when
+    the protocol is completed or holds no valid signature."""
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        names = await _user_names(session, {principal.user_id})
+        change = await svc.record_change(
+            session,
+            p,
+            reason=body.reason.strip(),
+            user_id=principal.user_id,
+            user_name=names.get(principal.user_id) if principal.user_id else None,
+        )
+        await _event(
+            session,
+            principal,
+            "handover.changed_after_signature",
+            p,
+            change_id=str(change.id),
+            reason=change.reason,
+            signatures_invalidated=change.signatures_invalidated,
+        )
+        return await _full_out(session, p)
+
+
+async def _user_names(session: Any, ids: set[uuid.UUID | None]) -> dict[uuid.UUID, str]:
+    from mhvp.platform.models import User
+
+    wanted = {i for i in ids if i is not None}
+    if not wanted:
+        return {}
+    rows = await session.execute(select(User.id, User.display_name).where(User.id.in_(wanted)))
+    return {r.id: r.display_name for r in rows.all()}
 
 
 @router.post(
@@ -1819,6 +1947,15 @@ async def revoke_portal_access(
 # Sections (generic, placed last so that the specific routes above win) ------------------------
 
 
+async def _require_section_writable(session: Any, p: HandoverProtocol, section: str) -> None:
+    """Participants stay editable after a signature (a further signer may be added); every
+    other section is protocol content and locked by the first signature (M30-09)."""
+    if section == "participants":
+        svc.require_unlocked(p)
+    else:
+        await svc.require_content_unlocked(session, p)
+
+
 def _section(name: str) -> tuple[type[Any], type[_In]]:
     if name not in svc.SECTIONS:
         raise ProblemError(ErrorCodes.VALIDATION, detail=f"Unbekannter Abschnitt {name!r}.")
@@ -1882,7 +2019,7 @@ async def create_item(
     body = await _body(request, schema)
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
-        svc.require_unlocked(p)
+        await _require_section_writable(session, p, section)
         data = body.model_dump()
         await _validate_refs(session, section, p, data)
         if section == "participants" and data.get("contact_id"):
@@ -1948,7 +2085,7 @@ async def order_items(
     model, _ = _section(section)
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
-        svc.require_unlocked(p)
+        await _require_section_writable(session, p, section)
         for index, item_id in enumerate(body.ids):
             row = await session.get(model, item_id)
             if row is not None and row.protocol_id == p.id:
@@ -1969,7 +2106,7 @@ async def patch_item(
     body = await _body(request, schema)
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
-        svc.require_unlocked(p)
+        await _require_section_writable(session, p, section)
         row = await session.get(model, item_id)
         if row is None or row.protocol_id != p.id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
@@ -2000,7 +2137,7 @@ async def delete_item(
     model, _ = _section(section)
     async with tenant_tx(request, principal) as session:
         p = await _get(session, protocol_id)
-        svc.require_unlocked(p)
+        await _require_section_writable(session, p, section)
         row = await session.get(model, item_id)
         if row is None or row.protocol_id != p.id:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)

@@ -106,3 +106,25 @@ def sanitize_image(data: bytes, content_type: str, max_edge: int = DEFAULT_MAX_E
     else:
         clean.save(out, format="WEBP", quality=90)
     return out.getvalue()
+
+
+def thumbnail(data: bytes, content_type: str, max_edge: int = 320) -> bytes:
+    """Small JPEG preview of a stored (already sanitized) image, rendered on the fly (M30-08).
+
+    Nothing is stored; the caller sends it with ``Cache-Control: private, no-store``. PNG and
+    WEBP become JPEG as well, so the browser always gets one small format."""
+    if _FORMATS.get(_normalize(content_type)) is None:
+        raise ImageSanitizeError(f"unsupported type {content_type}")
+    try:
+        with Image.open(io.BytesIO(data)) as src:
+            src.load()
+            img = ImageOps.exif_transpose(src)
+    except (UnidentifiedImageError, OSError, ValueError, Image.DecompressionBombError) as exc:
+        raise ImageSanitizeError(str(exc)) from exc
+    if max(img.size) > max_edge:
+        img.thumbnail((max_edge, max_edge), Image.Resampling.LANCZOS)
+    clean = Image.new("RGB", img.size, (255, 255, 255))
+    clean.paste(img.convert("RGBA"), mask=img.convert("RGBA").getchannel("A"))
+    out = io.BytesIO()
+    clean.save(out, format="JPEG", quality=82, optimize=True)
+    return out.getvalue()

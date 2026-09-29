@@ -510,12 +510,19 @@ def render(
                 column.append(Image(io.BytesIO(png), width=w, height=w * ih / iw))
             except Exception:
                 column.append(Paragraph("<font color='#6B6C70'>Bild nicht lesbar</font>", _small))
+        invalid = getattr(sig, "invalidated_at", None)
         column.append(
             Paragraph(
                 f"<b>{_esc(sig.signer_name or 'Ohne Namen')}</b><br/>"
                 f"{_esc(svc.role_label(sig.signer_role, p.kind))}<br/>"
                 f"{_esc(fmt_datetime(sig.signed_at))}"
                 + (f", {_esc(sig.signed_location)}" if sig.signed_location else "")
+                + (
+                    f"<br/><b>Vor der Änderung vom {_esc(fmt_datetime(invalid))} geleistet, "
+                    "gilt nicht mehr; erneute Unterschrift erforderlich.</b>"
+                    if invalid
+                    else ""
+                )
                 + f"<br/><font color='{MUTED}'>SHA-256 {_esc(sig.sha256[:16])}…</font>",
                 _small,
             )
@@ -529,6 +536,26 @@ def render(
         table = Table(rows2, colWidths=[(PAGE_W - LEFT - RIGHT) / 2] * 2)
         table.setStyle(TableStyle([("VALIGN", (0, 0), (-1, -1), "TOP")]))
         story.append(table)
+    # Änderungen nach Unterschrift (M30-09): reason, time and user of every content unlock.
+    changes = full.get("changes") or []
+    if changes:
+        story.append(Spacer(1, 3 * mm))
+        story.append(Paragraph("Änderungen nach Unterschrift", _h2))
+        story.append(
+            _grid(
+                ["Zeitpunkt", "Bearbeiter", "Änderungsgrund", "Unterschriften"],
+                [
+                    [
+                        fmt_datetime(c.changed_at),
+                        c.changed_by_name or "Unbekannt",
+                        c.reason,
+                        f"{c.signatures_invalidated} ungültig, erneut erforderlich",
+                    ]
+                    for c in changes
+                ],
+                [32 * mm, 35 * mm, 65 * mm, 38 * mm],
+            )
+        )
     if p.completed_at:
         story.append(Spacer(1, 3 * mm))
         story.append(

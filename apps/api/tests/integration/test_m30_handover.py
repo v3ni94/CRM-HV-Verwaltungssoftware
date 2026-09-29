@@ -1122,3 +1122,272 @@ def test_staff_portal_handovers_read_endpoints(client: TestClient, world: World)
         assert client.get(f"{PHS}/{pid}", headers=staff).status_code == 403
     finally:
         client.put("/api/v1/tenant/portal-role-permissions", json={}, headers=h)
+
+
+def test_wp2_steps_hint_codes_thumbnail_and_date_filter(client: TestClient, world: World) -> None:
+    """M31 WP2 server side: every client step including defects is a valid current_step;
+    hint_codes run parallel to hints in CRM output; the thumbnail is a derived JPEG with the
+    longest edge 320 and no-store, 404 for the PDF, a signature and a document of another
+    protocol, 403 without contracts:read; handover_date filters the list."""
+    h = bearer(login(client, world, "m30admin"))
+    p = _ok(client.post(H, json={"kind": "rental"}, headers=h), 201)
+    pid = p["id"]
+    steps = (
+        "object",
+        "participants",
+        "deposit",
+        "internal",
+        "meters",
+        "rooms",
+        "defects",
+        "keys",
+        "items",
+        "notes",
+        "attachments",
+        "summary",
+        "signatures",
+    )
+    for step in steps:
+        out = _ok(client.patch(f"{H}/{pid}", json={"current_step": step}, headers=h))
+        assert out["current_step"] == step
+    assert client.patch(f"{H}/{pid}", json={"current_step": "foo"}, headers=h).status_code == 422
+
+    full = _ok(client.get(f"{H}/{pid}", headers=h))
+    assert full["hint_codes"] == [
+        "no_address",
+        "no_participants",
+        "no_meters",
+        "no_rooms",
+        "no_keys",
+        "no_signature",
+    ]  # the handover date is prefilled on creation, so no_date is absent
+    assert len(full["hints"]) == len(full["hint_codes"])
+    assert full["content_locked"] is False
+    assert full["changes"] == []
+    hints = _ok(client.get(f"{H}/{pid}/hints", headers=h))
+    assert hints["hint_codes"] == full["hint_codes"]
+
+    room = _ok(client.post(f"{H}/{pid}/rooms", json={"name": "Bad"}, headers=h), 201)
+    from PIL import Image
+
+    big = io.BytesIO()
+    Image.new("RGB", (1600, 1200), (10, 200, 10)).save(big, "JPEG")
+    photo = _ok(
+        client.post(
+            f"{H}/{pid}/documents",
+            files={"file": ("bad.jpg", big.getvalue(), "image/jpeg")},
+            data={"section": "rooms", "item_id": room["id"]},
+            headers=h,
+        ),
+        201,
+    )
+    assert (
+        photo["thumbnail_url"]
+        == f"/api/v1/handover/protocols/{pid}/documents/{photo['id']}/thumbnail"
+    )
+    thumb = client.get(photo["thumbnail_url"], headers=h)
+    assert thumb.status_code == 200, thumb.text
+    assert thumb.headers["content-type"] == "image/jpeg"
+    assert thumb.headers["cache-control"] == "private, no-store"
+    with Image.open(io.BytesIO(thumb.content)) as img:
+        assert img.size == (320, 240)
+    # Nothing was stored: still exactly one document linked to the protocol.
+    assert len(_ok(client.get(f"{H}/{pid}", headers=h))["documents"]) == 1
+
+    today = local_today()
+    _ok(client.patch(f"{H}/{pid}", json={"handover_date": today.isoformat()}, headers=h))
+
+    # Not a thumbnail source: signature (PNG evidence) and the PDF.
+    sig = _ok(
+        client.post(
+            f"{H}/{pid}/signatures",
+            json={
+                "image": "data:image/png;base64," + base64.b64encode(_signature_png()).decode(),
+                "signer_name": "Zeuge",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    docs = _ok(client.get(f"{H}/{pid}", headers=h))["documents"]
+    sig_doc = next(d for d in docs if d["id"] == sig["document_id"])
+    assert sig_doc["thumbnail_url"] is None
+    assert (
+        client.get(f"{H}/{pid}/documents/{sig['document_id']}/thumbnail", headers=h).status_code
+        == 404
+    )
+    # Document of another protocol: 404 even though it exists in the tenant.
+    other = _ok(client.post(H, json={"kind": "general"}, headers=h), 201)
+    assert (
+        client.get(f"{H}/{other['id']}/documents/{photo['id']}/thumbnail", headers=h).status_code
+        == 404
+    )
+    # No contracts:read (foreign tenant): 404 through RLS; read only member of the tenant: 200.
+    hb = bearer(login(client, world, "m30other"))
+    assert client.get(photo["thumbnail_url"], headers=hb).status_code == 404
+    hr = bearer(login(client, world, "m30reader"))
+    assert client.get(photo["thumbnail_url"], headers=hr).status_code == 200
+
+    # handover_date filter for the chip "Heute" and the week range (the date was set above,
+    # before the signature locked the content); the other protocol moves to yesterday.
+    _ok(
+        client.patch(
+            f"{H}/{other['id']}",
+            json={"handover_date": (today - timedelta(days=1)).isoformat()},
+            headers=h,
+        )
+    )
+    ids = {
+        x["id"]
+        for x in _ok(client.get(H, params={"handover_date": today.isoformat()}, headers=h))["items"]
+    }
+    assert pid in ids
+    assert other["id"] not in ids
+    week = _ok(
+        client.get(
+            H,
+            params={
+                "handover_from": (today - timedelta(days=today.weekday())).isoformat(),
+                "handover_to": (today + timedelta(days=6 - today.weekday())).isoformat(),
+            },
+            headers=h,
+        )
+    )
+    assert pid in {x["id"] for x in week["items"]}
+
+
+def test_change_after_signature_locks_content_and_records_history(
+    client: TestClient, world: World
+) -> None:
+    """M30-09 (operator decision 28.09.2026): before any signature everything is editable;
+    after the first signature rooms, defects, meters, keys, photos and protocol fields answer
+    409; participants and internal fields stay open; "Änderung nach Unterschrift" needs a
+    reason, records time and user, marks every signature as given before the change and
+    reopens the content; the invalidated signature no longer counts (hint, duplicate check)
+    and the PDF prints the history."""
+    h = bearer(login(client, world, "m30admin"))
+    _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
+    p = _ok(client.post(H, json={"kind": "rental"}, headers=h), 201)
+    pid = p["id"]
+    room = _ok(client.post(f"{H}/{pid}/rooms", json={"name": "Küche"}, headers=h), 201)
+    meter = _ok(client.post(f"{H}/{pid}/meters", json={"number": "E-9"}, headers=h), 201)
+    mover = _ok(
+        client.post(
+            f"{H}/{pid}/participants", json={"role": "moving_in", "last_name": "A"}, headers=h
+        ),
+        201,
+    )
+    # Freely editable before a signature, and the unlock action is refused (nothing to unlock).
+    _ok(client.patch(f"{H}/{pid}/rooms/{room['id']}", json={"name": "Küche EG"}, headers=h))
+    assert client.post(f"{H}/{pid}/changes", json={"reason": "Test"}, headers=h).status_code == 409
+
+    png = "data:image/png;base64," + base64.b64encode(_signature_png()).decode()
+    sig = _ok(
+        client.post(
+            f"{H}/{pid}/signatures",
+            json={"image": png, "participant_id": mover["id"], "signer_name": "A"},
+            headers=h,
+        ),
+        201,
+    )
+    full = _ok(client.get(f"{H}/{pid}", headers=h))
+    assert full["content_locked"] is True
+    assert full["status"] == "signature_pending"
+    assert "no_signature" not in full["hint_codes"]
+
+    # Content is locked: sections, photos and protocol fields answer 409 with a clear text.
+    locked = client.patch(f"{H}/{pid}/rooms/{room['id']}", json={"name": "x"}, headers=h)
+    assert locked.status_code == 409
+    assert "Änderung nach Unterschrift" in locked.json()["detail"]
+    assert client.post(f"{H}/{pid}/rooms", json={"name": "Bad"}, headers=h).status_code == 409
+    assert client.delete(f"{H}/{pid}/meters/{meter['id']}", headers=h).status_code == 409
+    assert client.post(f"{H}/{pid}/keys", json={"key_type": "x"}, headers=h).status_code == 409
+    assert (
+        client.post(f"{H}/{pid}/rooms/order", json={"ids": [room["id"]]}, headers=h).status_code
+        == 409
+    )
+    assert (
+        client.post(
+            f"{H}/{pid}/documents",
+            files={"file": ("f.jpg", _jpeg(), "image/jpeg")},
+            data={"section": "rooms", "item_id": room["id"]},
+            headers=h,
+        ).status_code
+        == 409
+    )
+    assert client.patch(f"{H}/{pid}", json={"street": "Neu"}, headers=h).status_code == 409
+    # Still open: step pointer, internal fields, participants (a further signer), signatures.
+    _ok(client.patch(f"{H}/{pid}", json={"current_step": "keys"}, headers=h))
+    _ok(client.patch(f"{H}/{pid}", json={"internal_note": "intern"}, headers=h))
+    _ok(
+        client.post(
+            f"{H}/{pid}/participants", json={"role": "witness", "last_name": "Z"}, headers=h
+        ),
+        201,
+    )
+    assert (
+        client.post(
+            f"{H}/{pid}/signatures",
+            json={"image": png, "participant_id": mover["id"]},
+            headers=h,
+        ).status_code
+        == 409
+    )
+
+    # Änderung nach Unterschrift: reason mandatory, history entry, signatures set aside.
+    assert client.post(f"{H}/{pid}/changes", json={}, headers=h).status_code == 422
+    assert client.post(f"{H}/{pid}/changes", json={"reason": "x"}, headers=h).status_code == 422
+    changed = _ok(
+        client.post(f"{H}/{pid}/changes", json={"reason": "Zählernummer falsch"}, headers=h), 201
+    )
+    assert changed["content_locked"] is False
+    assert changed["status"] == "in_progress"
+    assert len(changed["changes"]) == 1
+    entry = changed["changes"][0]
+    assert entry["reason"] == "Zählernummer falsch"
+    assert entry["changed_by"] == str(world.users["m30admin"])
+    assert entry["changed_by_name"] == "m30admin"
+    assert entry["signatures_invalidated"] == 1
+    assert entry["changed_at"]
+    old_sig = next(s for s in changed["signatures"] if s["id"] == sig["id"])
+    assert old_sig["invalidated_at"] == entry["changed_at"]
+    assert old_sig["invalidated_change_id"] == entry["id"]
+    assert "signatures_invalidated" in changed["hint_codes"]
+    assert "no_signature" not in changed["hint_codes"]
+
+    # Content editable again; the person signs again (the old signature does not block).
+    _ok(client.patch(f"{H}/{pid}/meters/{meter['id']}", json={"number": "E-10"}, headers=h))
+    sig2 = _ok(
+        client.post(
+            f"{H}/{pid}/signatures",
+            json={"image": png, "participant_id": mover["id"], "signer_name": "A"},
+            headers=h,
+        ),
+        201,
+    )
+    full = _ok(client.get(f"{H}/{pid}", headers=h))
+    assert full["content_locked"] is True
+    assert "signatures_invalidated" not in full["hint_codes"]
+    assert {s["id"] for s in full["signatures"]} == {sig["id"], sig2["id"]}
+
+    # PDF preview prints the history and marks the old signature; the reason is in the text.
+    pdf = client.get(f"{H}/{pid}/pdf", headers=h)
+    assert pdf.status_code == 200
+    text = "".join(page.extract_text() for page in PdfReader(io.BytesIO(pdf.content)).pages)
+    assert "Änderungen nach Unterschrift" in text
+    assert "Zählernummer falsch" in text
+    assert "erneute Unterschrift erforderlich" in text
+
+    # Read only member cannot record a change (contracts:update missing).
+    hr = bearer(login(client, world, "m30reader"))
+    assert client.post(f"{H}/{pid}/changes", json={"reason": "nein"}, headers=hr).status_code == 403
+
+    # Completion still works (force because of hints); the new version copies both signature
+    # rows with their invalidation marker and no change history of its own.
+    done = _ok(client.post(f"{H}/{pid}/complete", json={"force": True}, headers=h))
+    assert done["locked"] is True
+    assert done["content_locked"] is False
+    v2 = _ok(client.post(f"{H}/{pid}/versions", json={"reason": "Nachtrag"}, headers=h), 201)
+    assert len(v2["signatures"]) == 2
+    assert sum(1 for s in v2["signatures"] if s["invalidated_at"]) == 1
+    assert v2["changes"] == []

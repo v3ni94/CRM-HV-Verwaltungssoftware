@@ -116,6 +116,18 @@ def _public(full: dict[str, Any], grant: AccessGrant) -> dict[str, Any]:
     out = {k: v for k, v in full.items() if k not in HIDDEN_FIELDS and k != "versions"}
     out["notes"] = [n for n in full.get("notes", []) if not n.get("is_internal")]
     out["access"] = {"right": grant.right, "valid_to": grant.valid_to}
+    # Previews go through the portal path with grant check (M30-08), not the CRM path.
+    out["documents"] = [
+        {
+            **d,
+            "thumbnail_url": (
+                f"/api/v1/portal/handover/{full['id']}/documents/{d['id']}/thumbnail"
+                if d.get("thumbnail_url")
+                else None
+            ),
+        }
+        for d in full.get("documents", [])
+    ]
     return out
 
 
@@ -325,6 +337,31 @@ async def document_content(
 
 
 # Signatures ------------------------------------------------------------------------------------
+
+
+@router.get(
+    "/{protocol_id}/documents/{document_id}/thumbnail",
+    summary="Vorschaubild eines Fotos (abgeleitet, nicht gespeichert)",
+    response_class=Response,
+    responses={200: {"content": {"image/jpeg": {}}}},
+)
+async def document_thumbnail(
+    protocol_id: uuid.UUID, document_id: uuid.UUID, request: Request, ctx: Ctx
+) -> Response:
+    """Portal twin of the CRM thumbnail (M30-08): only with a handover grant, only photos and
+    image attachments of the granted protocol, no-store."""
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        p, _ = await _granted(session, account, protocol_id)
+        docs = await svc.documents_of(session, p.id)
+        meta = next((d for d in docs if d["id"] == document_id), None)
+        if meta is None or not svc.is_thumbnail_source(meta):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        document = await session.get(Document, document_id)
+        if document is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        data = BlobStore(request.app.state.settings).get(document.storage_ref)
+    return crm.thumbnail_response(data, str(document.mime_type))
 
 
 @router.post("/{protocol_id}/signatures", status_code=201, summary="Unterschrift speichern")

@@ -8166,63 +8166,6 @@
         "title": "CertificateOut",
         "type": "object"
       },
-      "ChangeIn": {
-        "additionalProperties": false,
-        "properties": {
-          "field": {
-            "maxLength": 64,
-            "title": "Field",
-            "type": "string"
-          },
-          "label": {
-            "anyOf": [
-              {
-                "enum": [
-                  "work",
-                  "mobile",
-                  "private",
-                  "fax",
-                  "other"
-                ],
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Label"
-          },
-          "new": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "New"
-          },
-          "old": {
-            "anyOf": [
-              {
-                "maxLength": 300,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Old"
-          }
-        },
-        "required": [
-          "field"
-        ],
-        "title": "ChangeIn",
-        "type": "object"
-      },
       "ChartTemplateOut": {
         "properties": {
           "accounts": {
@@ -13115,7 +13058,7 @@
         "properties": {
           "changes": {
             "items": {
-              "$ref": "#/components/schemas/ChangeIn"
+              "$ref": "#/components/schemas/mhvp__tickets__proposals__ChangeIn"
             },
             "maxItems": 20,
             "title": "Changes",
@@ -41443,7 +41386,7 @@
           "current_step": {
             "anyOf": [
               {
-                "pattern": "^(object|participants|deposit|internal|meters|rooms|keys|items|notes|attachments|summary|signatures)$",
+                "pattern": "^(object|participants|deposit|internal|meters|rooms|keys|items|notes|attachments|summary|signatures|defects)$",
                 "type": "string"
               },
               {
@@ -55573,6 +55516,23 @@
         "title": "TenantOut",
         "type": "object"
       },
+      "mhvp__handover__routers__ChangeIn": {
+        "additionalProperties": false,
+        "description": "\"Änderung nach Unterschrift\" (M30-09): the reason is mandatory.",
+        "properties": {
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ChangeIn",
+        "type": "object"
+      },
       "mhvp__platform__schemas__TenantOut": {
         "properties": {
           "id": {
@@ -56091,6 +56051,63 @@
           "id"
         ],
         "title": "ProviderOut",
+        "type": "object"
+      },
+      "mhvp__tickets__proposals__ChangeIn": {
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "maxLength": 64,
+            "title": "Field",
+            "type": "string"
+          },
+          "label": {
+            "anyOf": [
+              {
+                "enum": [
+                  "work",
+                  "mobile",
+                  "private",
+                  "fax",
+                  "other"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Label"
+          },
+          "new": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "New"
+          },
+          "old": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Old"
+          }
+        },
+        "required": [
+          "field"
+        ],
+        "title": "ChangeIn",
         "type": "object"
       }
     }
@@ -76471,6 +76488,7 @@
     },
     "/api/v1/handover/protocols": {
       "get": {
+        "description": "``handover_date`` filters one day (chip \"Heute\"), ``handover_from`` and ``handover_to``\nan inclusive range (chip \"Diese Woche\"); both are server side (M31 WP2).",
         "operationId": "list_protocols_api_v1_handover_protocols_get",
         "parameters": [
           {
@@ -76556,6 +76574,57 @@
                 }
               ],
               "title": "Unit Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "handover_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Handover Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "handover_from",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Handover From"
+            }
+          },
+          {
+            "in": "query",
+            "name": "handover_to",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Handover To"
             }
           },
           {
@@ -76806,6 +76875,62 @@
         ]
       }
     },
+    "/api/v1/handover/protocols/{protocol_id}/changes": {
+      "post": {
+        "description": "M30-09 (operator decision 28.09.2026): once a signature exists the content is locked.\nThis action records reason, time and user in the protocol history, marks every signature\nas given before the change (they have to be repeated) and reopens the content. 409 when\nthe protocol is completed or holds no valid signature.",
+        "operationId": "change_after_signature_api_v1_handover_protocols__protocol_id__changes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/mhvp__handover__routers__ChangeIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Change After Signature Api V1 Handover Protocols  Protocol Id  Changes Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Änderung nach Unterschrift (Inhalt mit Änderungsgrund wieder freigeben)",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
     "/api/v1/handover/protocols/{protocol_id}/complete": {
       "post": {
         "operationId": "complete_api_v1_handover_protocols__protocol_id__complete_post",
@@ -77013,6 +77138,56 @@
           }
         },
         "summary": "Foto oder Anhang entfernen",
+        "tags": [
+          "handover"
+        ]
+      }
+    },
+    "/api/v1/handover/protocols/{protocol_id}/documents/{document_id}/thumbnail": {
+      "get": {
+        "description": "Derived view (M30-08): the stored photo scaled to 320 px on the fly as JPEG, never\nstored, ``Cache-Control: private, no-store`` (no browser cache, operator question open).\nOnly photos and image attachments linked to this protocol; signatures and PDF are 404.",
+        "operationId": "document_thumbnail_api_v1_handover_protocols__protocol_id__documents__document_id__thumbnail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschaubild eines Fotos (abgeleitet, nicht gespeichert)",
         "tags": [
           "handover"
         ]
@@ -102343,6 +102518,56 @@
           }
         },
         "summary": "Foto, Anhang oder Unterschrift anzeigen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/handover/{protocol_id}/documents/{document_id}/thumbnail": {
+      "get": {
+        "description": "Portal twin of the CRM thumbnail (M30-08): only with a handover grant, only photos and\nimage attachments of the granted protocol, no-store.",
+        "operationId": "document_thumbnail_api_v1_portal_handover__protocol_id__documents__document_id__thumbnail_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "protocol_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Protocol Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "image/jpeg": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschaubild eines Fotos (abgeleitet, nicht gespeichert)",
         "tags": [
           "Portal"
         ]

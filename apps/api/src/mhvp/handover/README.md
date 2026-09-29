@@ -58,3 +58,25 @@ Schließt die Lücken der Anleitung Mieterwechsel (`docs/handbuch/anleitung-miet
   `handover.meters.transferred`. CRM: Block "Zählerstände übernehmen" im Abschnitt Zähler
   (`HandoverMeterTransfer.tsx`, Rückfrage vor der Übernahme). Regel `docs/rules/M30-07.md`.
 * Tests: `tests/integration/test_package_f_handover_folders.py`.
+
+## Tablet und Handy, Inhaltssperre nach Unterschrift (M31 WP2, 29.09.2026)
+
+- `STEPS` enthält `defects` (Client Schritt Mängel); `current_step` akzeptiert alle 13 Schritte.
+- Vollausgabe (`GET /protocols/{id}`, Portal ebenso) trägt additiv `hint_codes` (Codes
+  parallel zu `hints`: `no_address`, `no_participants`, `no_meters`, `no_rooms`, `no_keys`,
+  `no_signature`, `signatures_invalidated`, `no_date`, `iban_invalid`), `content_locked`
+  und `changes`; jedes Dokument trägt `thumbnail_url` (null für Unterschriften, PDF und
+  Nichtbilder).
+- `GET /protocols/{id}/documents/{doc}/thumbnail` (Regel M30-08): abgeleitetes JPEG, längste
+  Kante 320 px, `Cache-Control: private, no-store`, nichts wird gespeichert; Portal Pendant
+  `GET /portal/handover/{id}/documents/{doc}/thumbnail` mit Grant.
+- `GET /protocols` filtert mit `handover_date` (ein Tag) oder `handover_from` und
+  `handover_to` (Bereich).
+- Regel M30-09: nach der ersten gültigen Unterschrift antworten die Inhaltsabschnitte
+  (Zähler, Räume, Mängel, Schlüssel, Gegenstände, Bemerkungen), Fotos und Anhänge sowie
+  Protokollfelder außer `current_step` und den internen Feldern mit 409. `POST
+  /protocols/{id}/changes` (`reason` Pflicht) schreibt `handover_change` (Grund, Zeitpunkt,
+  Bearbeiter), kennzeichnet alle gültigen Unterschriften (`invalidated_at`,
+  `invalidated_change_id`) und gibt den Inhalt frei; das PDF druckt den Verlauf. Migration
+  0239.
+- `image/heif` ist wie `image/heic` zulässig und wird als JPEG abgelegt.
