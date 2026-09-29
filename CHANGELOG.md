@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.44.1 (29.09.2026) Gmail-Rückkanal freischalten
+
+- Einstellungen, Postfächer: Schaltfläche Testlauf bestätigen mit Vermerk, danach ist die Stufe erledigen des Gmail-Rückkanals wählbar; bisher war die Bestätigung nur über die Schnittstelle möglich.
+
 ## 1.44.0 (29.09.2026) Lückenpakete, Gmail-Abgleich, Buchhaltungsgedächtnis, Lexware Office, Prozessflows, Handy und Tablet
 
 - Postfach, Rückkanal Gmail: Was in Gmail archiviert, mit Label versehen, in den Papierkorb verschoben oder wiederhergestellt wird, wird in der Plattform nachvollzogen; das Sammelpostfach entscheidet über die Erledigung, Erledigt gilt für jede Kopie einer Mail, Tickets werden nach Betreibervorgabe geschlossen; Vorschau je Postfach unter Einstellungen, Postfächer, Standard aus (Migration 0224).

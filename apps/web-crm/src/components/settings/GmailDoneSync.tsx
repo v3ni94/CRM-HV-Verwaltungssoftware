@@ -68,6 +68,23 @@ export function GmailDoneSync({
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const spikeConfirmed = Boolean(values.gmail_spike_confirmed_at);
+  const [spikeRef, setSpikeRef] = useState("");
+
+  async function confirmSpike() {
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    const res = await bff<GmailDoneSyncSettings & { version: number }>(
+      "/api/bff/tenant/settings/gmail-spike-confirm",
+      { method: "POST", body: JSON.stringify({ protocol_ref: spikeRef.trim() }) },
+    );
+    setBusy(false);
+    if (res.ok) {
+      setValues({ ...values, ...res.data });
+      setEtag(res.data.version);
+      setMessage(t("spikeConfirmed"));
+    } else setError(res.message);
+  }
 
   const set = <K extends keyof GmailDoneSyncSettings>(key: K, value: GmailDoneSyncSettings[K]) =>
     setValues((prev) => ({ ...prev, [key]: value }));
@@ -140,6 +157,30 @@ export function GmailDoneSync({
             );
           })}
         </fieldset>
+        {!spikeConfirmed && canUpdate ? (
+          <div className="flex flex-col gap-2 rounded border border-border-soft p-3" data-testid="gmail-spike-confirm">
+            <p className={ui.help}>{t("spikeHelp")}</p>
+            <label className="flex flex-col gap-1 text-sm">
+              {t("spikeRef")}
+              <input
+                className={ui.input}
+                value={spikeRef}
+                onChange={(e) => setSpikeRef(e.target.value)}
+                maxLength={500}
+                data-testid="gmail-spike-ref"
+              />
+            </label>
+            <button
+              type="button"
+              className={ui.secondary}
+              disabled={busy || spikeRef.trim().length === 0}
+              onClick={confirmSpike}
+              data-testid="gmail-spike-confirm-button"
+            >
+              {t("spikeConfirm")}
+            </button>
+          </div>
+        ) : null}
         <div className="flex flex-col gap-1">
           {SWITCHES.map((key) => (
             <label key={key} className="flex items-center gap-2 text-sm">

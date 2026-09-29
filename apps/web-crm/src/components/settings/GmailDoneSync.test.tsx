@@ -68,3 +68,29 @@ describe("GmailDoneSync", () => {
     expect(screen.getByText("Die Änderung erfordert das Recht Mandanteneinstellungen ändern.")).toBeInTheDocument();
   });
 });
+
+describe("GmailDoneSync spike confirmation", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("confirms the test run with a note and unlocks the mode done", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      if (String(input).endsWith("/api/bff/tenant/settings/gmail-spike-confirm") && init?.method === "POST") {
+        return jsonResponse({
+          ...GMAIL_DONE_SYNC_DEFAULTS,
+          gmail_spike_confirmed_at: "2026-09-29T06:40:00Z",
+          version: 9,
+        });
+      }
+      return jsonResponse({ title: "unerwartet" }, 500);
+    });
+    renderIntl(<GmailDoneSync initial={GMAIL_DONE_SYNC_DEFAULTS} version={7} canUpdate />);
+    const user = userEvent.setup();
+    expect(screen.getByTestId("gmail-spike-confirm-button")).toBeDisabled();
+    await user.type(screen.getByTestId("gmail-spike-ref"), "29.09.2026 08:38 info@ archiviert");
+    await user.click(screen.getByTestId("gmail-spike-confirm-button"));
+    await waitFor(() => expect(screen.getByTestId("gmail-mode-done")).toBeEnabled());
+    expect(screen.queryByTestId("gmail-spike-confirm")).not.toBeInTheDocument();
+    const [, init] = fetchMock.mock.calls[0]!;
+    expect(JSON.parse(String(init?.body))).toEqual({ protocol_ref: "29.09.2026 08:38 info@ archiviert" });
+  });
+});

@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.44.1",
+    date: "29.09.2026",
+    title: "Gmail-Rückkanal freischalten",
+    changes: [
+      "Einstellungen, Postfächer: Schaltfläche Testlauf bestätigen mit Vermerk, danach ist die Stufe erledigen des Gmail-Rückkanals wählbar; bisher war die Bestätigung nur über die Schnittstelle möglich.",
+    ],
+  },
+  {
     version: "1.44.0",
     date: "29.09.2026",
     title: "Lückenpakete, Gmail-Abgleich, Buchhaltungsgedächtnis, Lexware Office, Prozessflows, Handy und Tablet",
