@@ -379,6 +379,8 @@ Tests:
 - tsc --noEmit schließt den e2e Ordner ein (tsconfig), make lint grün, pnpm install --frozen-lockfile mit aktualisiertem Lockfile grün.
 - Nicht in CI ausführbar und im Bericht als nicht ausgeführt zu melden: WebKit und Safari Läufe; sie laufen über docs/acceptance/M31-geraetepruefung.md.
 
+Messwerte des ersten Laufs (29.09.2026, Umsetzung WP4, ohne Backend): CRM Playwright smoke.spec, pwa.spec und shell.mobile.spec in allen vier Projekten 10 Tests in 9,8 s; Portal alle Projekte 11 Tests in rund 11 s. Die @backend @mobile Specs konnten in der Umsetzungsumgebung nicht ausgeführt werden (keine Datenbank, kein Redis), sie sind nur per tsc und eslint geprüft; ihre Laufzeit im Projekt phone wird mit dem ersten CI Lauf des Jobs e2e-backend nachgetragen (Ziel unter 4 Minuten, Budgets 25 Minuten web und 30 Minuten e2e-backend unverändert). Der Job e2e-backend läuft mit MHVP_E2E_PW_ARGS="--project chromium --project phone"; die Tablet Projekte laufen lokal.
+
 Abnahme:
 
 - Ein Reviewer kann mit pnpm --filter @mhvp/web-crm exec playwright test --project phone (390 px) und --project tablet (820 px Hoch) sowie --project tablet-landscape (1024 px Quer) die Shell Smoke Specs lokal laufen lassen; jede Assertion nennt Element und Maß im Fehlerfall.

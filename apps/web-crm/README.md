@@ -13,7 +13,8 @@ search). See `docs/plans/`.
 | `pnpm --filter @mhvp/web-crm lint` | ESLint, no warnings allowed |
 | `pnpm --filter @mhvp/web-crm typecheck` | `tsc --noEmit` |
 | `pnpm --filter @mhvp/web-crm test` | Vitest component and route tests |
-| `pnpm --filter @mhvp/web-crm e2e` | Playwright smoke tests (tests tagged `@backend` are skipped) |
+| `pnpm --filter @mhvp/web-crm e2e` | Playwright smoke tests in all projects (tests tagged `@backend` are skipped) |
+| `pnpm --filter @mhvp/web-crm exec playwright test --project phone` | one viewport project: `chromium` (desktop), `phone` (390x844), `tablet` (820x1180), `tablet-landscape` (1024x768) |
 | `scripts/e2e-backend.sh` (repo root) | Playwright including `@backend` tests against a real API (see below) |
 
 In the Compose dev stack the app is served at `http://crm.localhost`.
@@ -89,6 +90,29 @@ German and field errors are mapped to the form fields (`src/lib/problem.ts`).
 Editing a contact omits `bank_accounts`, so the API keeps them (they are only delivered
 masked and may be referenced by SEPA mandates). Changing bank accounts needs its own flow
 (planned together with the four-eyes rule for IBAN changes).
+
+## Tests on phone and tablet viewports (M31 WP4)
+
+`playwright.config.ts` defines four projects. `chromium` (Desktop Chrome) runs every spec
+except the ones tagged `@mobile`; `phone`, `tablet` and `tablet-landscape` run only the
+`@mobile` specs with `isMobile` and `hasTouch`, so Chromium reports a coarse pointer and the 44 px
+targets of `src/lib/ui.ts` (`pointer-coarse` variants) are what is measured. iPhone and iPad
+presets are left out on purpose: CI has no WebKit; Safari and iPadOS are checked by hand
+(`docs/acceptance/M31-geraetepruefung.md`).
+
+- `e2e/mobile-layout.ts`: `expectNoHorizontalOverflow` (element wise against the visual
+  viewport, because `main` clips overflow and `scrollWidth` alone is blind), `expectTouchTarget`
+  (44 px), `expectHeaderOneRow` (at most 72 px), `expectCoarsePointer` (fails in the desktop
+  project with a hint), `expectFontSizeAtLeast` (16 px inputs on phones).
+- `e2e/shell.mobile.spec.ts` (`@mobile`, no backend): login page.
+- `e2e/handover.mobile.backend.spec.ts` and `e2e/pages.mobile.backend.spec.ts` (`@backend
+  @mobile`): shell, handover list, the complete handover path (steps, room, defect with the
+  photo `e2e/fixtures/photo.jpg`, meter, signature, completion, read view) and the data pages.
+  `scripts/e2e-backend.sh` runs them in the `phone` project by default; tablet viewports with
+  `MHVP_E2E_PW_ARGS="--project tablet"` or `"--project tablet-landscape"`.
+- Source guards in vitest: `src/lib/table-wrapper.test.ts` (no naked `<table` outside
+  `ui.tableScroll`, `ui.tableCard`, an `overflow-x-auto` element or a `ResponsiveList`) and
+  `src/lib/no-fixed-width.test.ts` (no pixel width above 360 px in a className).
 
 ## E2E against the API
 

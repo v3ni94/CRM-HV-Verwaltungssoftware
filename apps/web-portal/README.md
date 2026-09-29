@@ -15,9 +15,20 @@ through `/api/bff/[...path]` (allowlist of `/api/v1/portal/handover*`), binaries
 | `pnpm --filter @mhvp/web-portal lint` | ESLint, no warnings allowed |
 | `pnpm --filter @mhvp/web-portal typecheck` | `tsc --noEmit` |
 | `pnpm --filter @mhvp/web-portal test` | Vitest component and route tests |
-| `pnpm --filter @mhvp/web-portal e2e` | Playwright smoke tests |
+| `pnpm --filter @mhvp/web-portal e2e` | Playwright smoke tests in all projects (`chromium`, `phone`, `tablet`, `tablet-landscape`; `@backend` specs need `scripts/e2e-backend.sh`) |
 
 In the Compose dev stack the app is served at `http://portal.localhost`.
+
+## Tests on phone and tablet viewports (M31 WP4)
+
+Same layout as the CRM (`apps/web-crm/README.md`): the projects `phone` (390x844), `tablet`
+(820x1180) and `tablet-landscape` (1024x768) run only the specs tagged `@mobile` with a coarse
+pointer; `chromium` runs the rest. `e2e/mobile-layout.ts` holds the assertions,
+`e2e/shell.mobile.spec.ts` checks home and login without a backend, and
+`e2e/handover.mobile.backend.spec.ts` (`@backend @mobile`) the helper path: menu entry
+Übergabe, protocol without overflow, camera and gallery inputs, signature canvas. Source guards:
+`src/lib/table-wrapper.test.ts` and `src/lib/no-fixed-width.test.ts`. Safari and iPadOS are
+checked by hand (`docs/acceptance/M31-geraetepruefung.md`).
 
 ## Contract (`docs/plans/M1.md` section 4.5)
 
