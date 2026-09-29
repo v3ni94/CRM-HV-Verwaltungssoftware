@@ -1,5 +1,5 @@
 """property_creditor: creditors (contacts with role dienstleister) linked to a property for
-the tab "Dienstleister/Handwerker" (rule M11-05). Link with trade, since, source (proposal,
+the tab "Dienstleister/Handwerker" (rule M11-08). Link with trade, since, source (proposal,
 manual, backfill) and the bank transaction that led to it. Master data only, RLS per tenant.
 
 Revision ID: 0240

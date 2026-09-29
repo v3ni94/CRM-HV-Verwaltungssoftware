@@ -1,4 +1,4 @@
-"""Creditors per property (rule M11-05): link a contact with role ``dienstleister`` to a
+"""Creditors per property (rule M11-08): link a contact with role ``dienstleister`` to a
 property, create a creditor contact from a bank transaction's counterparty, backfill links from
 existing creditor postings and invoices, and the list for the tab "Dienstleister/Handwerker".
 

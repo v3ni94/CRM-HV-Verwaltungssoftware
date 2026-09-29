@@ -45,6 +45,11 @@ sich die abgeleiteten Rollen einmalig über die API neu berechnen (POST
 Im Reiter Kommunikation steht zusätzlich der Abschnitt Portalzugang mit der Einladung in das
 Portal (Einladungscode, Link und QR-Code, nur einmal sichtbar, Einzelheiten im Kapitel Portal).
 
+Kontakte mit der Rolle Dienstleister zeigen im Reiter Beziehungen zusätzlich den Abschnitt
+Objekte als Dienstleister: die Objekte, an denen der Kontakt als Kreditor verknüpft ist, mit
+Gewerk, Beginn und Quelle (aus Buchung, von Hand, nachgezogen). Gepflegt wird die Verknüpfung
+auf der Objektseite im Reiter Dienstleister/Handwerker.
+
 ## Bevollmächtigte und Zustellregel
 
 Unter den Objektbezügen steht der Abschnitt Bevollmächtigte und Zustellregel. Ein Kontakt kann

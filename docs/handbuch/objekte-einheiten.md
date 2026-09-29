@@ -182,6 +182,22 @@ Zusatzfelder vom Typ Verknüpfung. In der Oberfläche sichtbar sind davon die
 Dienstleisterverhältnisse (Objektdetail) und die Zählerwechsel (Objektseite und
 Einheitenseite).
 
+## Dienstleister/Handwerker
+
+Der Reiter Dienstleister/Handwerker der Objektseite listet alle Kreditoren des Objekts mit
+Gewerk, Kontaktdaten (Telefonnummer als Anruf, E-Mail als Mailto), letzter Rechnung (Datum und
+Betrag), Summe der noch nicht gebuchten Rechnungen des Belegeingangs, Anzahl der Aufträge und
+Beginn der Verknüpfung; der Name führt zur Kontaktseite. Ein Filter nach Gewerk grenzt die
+Liste ein. Verknüpfungen entstehen auf drei Wegen: beim Buchen über Kreditor anlegen im
+Buchungsdialog (Quelle aus Buchung), von Hand über Kreditor verknüpfen mit Kontaktsuche und
+Gewerk (Quelle von Hand; der Kontakt erhält die Rolle Dienstleister, falls sie fehlt) oder über
+Aus Buchungen nachziehen (Quelle nachgezogen: gebuchte Ausgänge des Objekts an Kontakte mit
+Kreditorenrolle und Rechnungen des Objekts; mehrfach ausführbar, legt nichts doppelt an).
+Gewerk ändern und Lösen brauchen das Schreibrecht Objekte; Lösen entfernt nur die
+Verknüpfung, der Kontakt bleibt. Offene Posten der Buchhaltung je Kreditor sind noch nicht
+abgebildet (offener Punkt M11-08-Q1). Das Dienstleisterverhältnis mit Vertragsart, Laufzeit,
+Kundennummer und Kreditorenkonto bleibt ein eigener Abschnitt.
+
 ## Verweise
 
 - Kapitel Datenübernahmen: Objekte und Kontakte aus Immoware24-Listen anlegen.

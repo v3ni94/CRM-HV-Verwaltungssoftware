@@ -2795,6 +2795,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Einrichtung in drei Schritten",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Abschnitt Einrichtung in drei Schritten (oben auf der Bankseite, Konto einrichten) führt ein neues Bankkonto vom Bankzugang bis zur Buchung je Objekt: 1. Bankzugang: FinTS (PIN/TAN, Konten und Umsätze werden bei der Bank abgerufen; Bank verbinden öffnet den bekannten Dialog) ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Datei-Upload",
   "source": "Handbuch: Banking",
   "href": "/bank",
@@ -4691,6 +4701,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Zähler, Wartungen und Prüfpflichten sowie Zusatzfelder werden seit dem 28.09.2026 auf der Objektseite gepflegt (Handlungsanweisung Stammdaten, Abschnitte Zähler, Wartungen und Zusatzfelder). Über die Schnittstelle stehen je Objekt außerdem bereit: Zählerstände (Ablesungen), Diens",
+  "file": "docs/handbuch/objekte-einheiten.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Dienstleister/Handwerker",
+  "source": "Handbuch: Objekte und Einheiten",
+  "href": "/objekte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Reiter Dienstleister/Handwerker der Objektseite listet alle Kreditoren des Objekts mit Gewerk, Kontaktdaten (Telefonnummer als Anruf, E-Mail als Mailto), letzter Rechnung (Datum und Betrag), Summe der noch nicht gebuchten Rechnungen des Belegeingangs, Anzahl der Aufträge und ",
   "file": "docs/handbuch/objekte-einheiten.md"
  },
  {

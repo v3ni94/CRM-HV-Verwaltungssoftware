@@ -3889,6 +3889,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/transactions/{transaction_id}/counterparty-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Gegenpartei eines Umsatzes als Kontakt (IBAN oder Name, kein Beweis) */
+        get: operations["counterparty_contact_api_v1_banking_transactions__transaction_id__counterparty_contact_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/transactions/{transaction_id}/creditor-contact": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Kreditor anlegen: Kontakt mit Rolle Dienstleister, IBAN zur Freigabe */
+        post: operations["creditor_from_transaction_api_v1_banking_transactions__transaction_id__creditor_contact_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/transactions/{tx_id}/ai-posting": {
         parameters: {
             query?: never;
@@ -4805,6 +4839,23 @@ export interface paths {
         head?: never;
         /** Zustellregel oder Gültigkeit einer Beziehung ändern */
         patch: operations["patch_contact_relation_api_v1_contacts__contact_id__contact_relations__relation_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/contacts/{contact_id}/creditor-properties": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Objekte als Dienstleister */
+        get: operations["creditor_properties_api_v1_contacts__contact_id__creditor_properties_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/contacts/{contact_id}/duplicates": {
@@ -15295,6 +15346,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/properties/creditors/backfill": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Kreditorenverknüpfungen aus vorhandenen Buchungen und Rechnungen nachziehen
+         * @description Idempotent per tenant: a second run creates nothing. Only contacts with the creditor
+         *     role (bank transactions) or with an invoice of the property are linked.
+         */
+        post: operations["backfill_creditors_api_v1_properties_creditors_backfill_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/properties/{property_id}": {
         parameters: {
             query?: never;
@@ -15573,6 +15645,42 @@ export interface paths {
         head?: never;
         /** Ansprechpartner ändern (Kategorie, Zeitraum, Portalsichtbarkeit) */
         patch: operations["patch_property_contact_api_v1_properties__property_id__contacts__assignment_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/creditors": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Dienstleister/Handwerker des Objekts */
+        get: operations["list_creditors_api_v1_properties__property_id__creditors_get"];
+        put?: never;
+        /** Kreditor mit dem Objekt verknüpfen (Rolle Dienstleister wird ergänzt) */
+        post: operations["add_creditor_api_v1_properties__property_id__creditors_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/creditors/{link_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Verknüpfung lösen (der Kontakt bleibt) */
+        delete: operations["unlink_creditor_api_v1_properties__property_id__creditors__link_id__delete"];
+        options?: never;
+        head?: never;
+        /** Gewerk oder Beginn ändern */
+        patch: operations["patch_creditor_api_v1_properties__property_id__creditors__link_id__patch"];
         trace?: never;
     };
     "/api/v1/properties/{property_id}/dms-documents": {
@@ -20304,6 +20412,18 @@ export interface components {
             /** Trigger Kind */
             trigger_kind?: string | null;
         };
+        /** BackfillIn */
+        BackfillIn: {
+            /** Property Id */
+            property_id?: string | null;
+        };
+        /** BackfillOut */
+        BackfillOut: {
+            /** Created */
+            created: number;
+            /** Scanned */
+            scanned: number;
+        };
         /**
          * BandSegment
          * @description Segment of the letterhead colour band as share of the page width (M6).
@@ -23297,10 +23417,93 @@ export interface components {
             /** Label */
             label: string;
         };
+        /** CounterpartyContactOut */
+        CounterpartyContactOut: {
+            /**
+             * Basis
+             * @description iban oder name; kein Beweis
+             */
+            basis?: string | null;
+            /** Contact Id */
+            contact_id: string | null;
+            /** Counterpart Name */
+            counterpart_name: string | null;
+            /** Display Name */
+            display_name: string | null;
+            /** Has Counterpart Iban */
+            has_counterpart_iban: boolean;
+            /** Is Creditor */
+            is_creditor: boolean;
+            /** Linked To Property */
+            linked_to_property: boolean;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+        };
+        /** CreditorFromTransactionIn */
+        CreditorFromTransactionIn: {
+            /**
+             * Link Property
+             * @default true
+             */
+            link_property: boolean;
+            /** Name */
+            name?: string | null;
+            /** Trade */
+            trade?: string | null;
+        };
+        /** CreditorFromTransactionOut */
+        CreditorFromTransactionOut: {
+            /**
+             * Bank Account Pending
+             * @description IBAN aus dem Umsatz wartet auf die Freigabe durch eine zweite Person.
+             */
+            bank_account_pending: boolean;
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Created */
+            created: boolean;
+            /** Display Name */
+            display_name: string;
+            /** Link Id */
+            link_id: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+        };
         /** CreditorIdIn */
         CreditorIdIn: {
             /** Sepa Creditor Id */
             sepa_creditor_id?: string | null;
+        };
+        /** CreditorPropertyOut */
+        CreditorPropertyOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Property Name */
+            property_name: string;
+            /** Property Number */
+            property_number: string;
+            /** Since */
+            since: string | null;
+            source: components["schemas"]["PropertyCreditorSource"];
+            /** Trade */
+            trade: string | null;
         };
         /** CrmVoteIn */
         CrmVoteIn: {
@@ -31841,6 +32044,75 @@ export interface components {
             /** Visible In Portal For */
             visible_in_portal_for?: string[] | null;
         };
+        /** PropertyCreditorIn */
+        PropertyCreditorIn: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Since */
+            since?: string | null;
+            /** Trade */
+            trade?: string | null;
+        };
+        /** PropertyCreditorOut */
+        PropertyCreditorOut: {
+            /**
+             * Contact Id
+             * Format: uuid
+             */
+            contact_id: string;
+            /** Contact Name */
+            contact_name: string;
+            /** Contact Roles */
+            contact_roles: string[];
+            /** Email */
+            email: string | null;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Last Invoice Amount */
+            last_invoice_amount: string | null;
+            /** Last Invoice Date */
+            last_invoice_date: string | null;
+            /**
+             * Open Invoice Amount
+             * @description Summe der Rechnungen des Kreditors am Objekt, die noch nicht gebucht sind (Belegeingang); keine offenen Posten der Buchhaltung.
+             */
+            open_invoice_amount?: string | null;
+            /** Phone */
+            phone: string | null;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Since */
+            since: string | null;
+            source: components["schemas"]["PropertyCreditorSource"];
+            /** Source Transaction Id */
+            source_transaction_id: string | null;
+            /** Trade */
+            trade: string | null;
+            /** Work Orders Count */
+            work_orders_count: number;
+        };
+        /** PropertyCreditorPatch */
+        PropertyCreditorPatch: {
+            /** Since */
+            since?: string | null;
+            /** Trade */
+            trade?: string | null;
+        };
+        /**
+         * PropertyCreditorSource
+         * @description How a creditor got linked to a property (rule M11-08).
+         * @enum {string}
+         */
+        PropertyCreditorSource: "proposal" | "manual" | "backfill";
         /** PropertyIn */
         PropertyIn: {
             /** Allocation Loss Risk Percent */
@@ -45258,6 +45530,72 @@ export interface operations {
             };
         };
     };
+    counterparty_contact_api_v1_banking_transactions__transaction_id__counterparty_contact_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transaction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CounterpartyContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    creditor_from_transaction_api_v1_banking_transactions__transaction_id__creditor_contact_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                transaction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreditorFromTransactionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditorFromTransactionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get: {
         parameters: {
             query?: never;
@@ -47334,6 +47672,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["RelationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    creditor_properties_api_v1_contacts__contact_id__creditor_properties_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                contact_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CreditorPropertyOut"][];
                 };
             };
             /** @description Validation Error */
@@ -69518,6 +69887,39 @@ export interface operations {
             };
         };
     };
+    backfill_creditors_api_v1_properties_creditors_backfill_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BackfillIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BackfillOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_property_api_v1_properties__property_id__get: {
         parameters: {
             query?: never;
@@ -70248,6 +70650,140 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PropertyContactOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_creditors_api_v1_properties__property_id__creditors_get: {
+        parameters: {
+            query?: {
+                trade?: string | null;
+            };
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyCreditorOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    add_creditor_api_v1_properties__property_id__creditors_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyCreditorIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyCreditorOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    unlink_creditor_api_v1_properties__property_id__creditors__link_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_creditor_api_v1_properties__property_id__creditors__link_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+                link_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PropertyCreditorPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PropertyCreditorOut"];
                 };
             };
             /** @description Validation Error */

@@ -772,7 +772,7 @@ class MaintenanceItem(IdMixin, TimestampMixin, TenantMixin, Base):
 
 
 class PropertyCreditorSource(StrEnum):
-    """How a creditor got linked to a property (rule M11-05)."""
+    """How a creditor got linked to a property (rule M11-08)."""
 
     PROPOSAL = "proposal"  # created or confirmed from a posting proposal / bank transaction
     MANUAL = "manual"  # added on the property tab
@@ -781,7 +781,7 @@ class PropertyCreditorSource(StrEnum):
 
 class PropertyCreditor(IdMixin, TimestampMixin, TenantMixin, Base):
     """Creditor (contact with role ``dienstleister``) linked to a property: the list
-    "Dienstleister/Handwerker" of the property page (rule M11-05). Master data only: no
+    "Dienstleister/Handwerker" of the property page (rule M11-08). Master data only: no
     money, no bank account. Distinct from ``ServiceProviderRelation`` (a provider contract
     with term, customer number and creditor account), which stays unchanged."""
 

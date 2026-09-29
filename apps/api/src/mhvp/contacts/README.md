@@ -99,3 +99,11 @@ is the block list. The approval logic of bank accounts is unchanged. Rule entry
 `PATCH /contacts/{id}` (`ContactPatch`) changes master data fields only; the merged record is
 validated as `ContactIn`, `If-Match` against `version`, audit diff as on `PUT`. Addresses,
 phones, e-mails, identifiers, dates, bank accounts, types, roles and tags stay on `PUT`.
+
+## Creditor contacts from bank transactions (rule M11-08, 29.09.2026)
+
+`mhvp.properties.creditors.create_creditor_from_transaction` creates a company contact with
+role `dienstleister` through `services.apply_fields` and `services.write_children`, so the
+counterparty IBAN of the transaction starts as a `pending` bank account and follows the
+existing four eyes release (M5-01); nothing here approves an IBAN. `GET
+/contacts/{id}/creditor-properties` lists the properties a contact is linked to as creditor.

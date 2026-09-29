@@ -230,3 +230,14 @@ apply unchanged. `models.BankCsvMapping` stores a user defined column mapping pe
 (migration 0168). Endpoints: `POST /banking/imports/csv/preview` (detected format, rows,
 errors, nothing saved), `POST /banking/imports/csv`, `POST`/`GET /banking/csv-mappings`.
 Tests: `tests/unit/test_csv_formats.py`.
+
+## Einrichtung in drei Schritten (rule M11-08, 29.09.2026)
+
+The wizard on `/bank` (`apps/web-crm/src/components/banking/BankSetupWizard.tsx`) adds no
+banking endpoint: a FinTS account is assigned with `POST /banking/fints/accounts/{id}/assign`
+(`property_id`, `legal_entity_id`, `kind`, `holder`), the file path creates the internal
+account with `POST /properties/{id}/bank-accounts`; statements are then matched by IBAN
+fingerprint as before. The legal entity is derived in the browser from
+`GET /properties/{id}/legal-entities` with the same owner table as
+`properties.services.ACCOUNT_OWNERS` (6.9.1); the API check stays authoritative. Creditor
+contacts from a transaction live in `mhvp.properties.routers_creditors`.

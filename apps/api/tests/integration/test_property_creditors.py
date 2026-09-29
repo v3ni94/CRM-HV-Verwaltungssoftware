@@ -1,4 +1,4 @@
-"""Creditors per property (rule M11-05): link, trade, unlink, filter, contact section,
+"""Creditors per property (rule M11-08): link, trade, unlink, filter, contact section,
 "Kreditor anlegen" from a bank transaction (contact with role dienstleister, IBAN pending for
 four eyes, link to the property of the account), idempotent backfill from booked postings,
 permissions (403) and tenant separation. Expected values are fixed (rule 0.1.8)."""

@@ -3491,6 +3491,43 @@
         "title": "AutomationRulePatch",
         "type": "object"
       },
+      "BackfillIn": {
+        "additionalProperties": false,
+        "properties": {
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          }
+        },
+        "title": "BackfillIn",
+        "type": "object"
+      },
+      "BackfillOut": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "integer"
+          },
+          "scanned": {
+            "title": "Scanned",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "scanned",
+          "created"
+        ],
+        "title": "BackfillOut",
+        "type": "object"
+      },
       "BandSegment": {
         "additionalProperties": false,
         "description": "Segment of the letterhead colour band as share of the page width (M6).",
@@ -13212,6 +13249,170 @@
         "title": "CostItemIn",
         "type": "object"
       },
+      "CounterpartyContactOut": {
+        "properties": {
+          "basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "iban oder name; kein Beweis",
+            "title": "Basis"
+          },
+          "contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contact Id"
+          },
+          "counterpart_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Counterpart Name"
+          },
+          "display_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Display Name"
+          },
+          "has_counterpart_iban": {
+            "title": "Has Counterpart Iban",
+            "type": "boolean"
+          },
+          "is_creditor": {
+            "title": "Is Creditor",
+            "type": "boolean"
+          },
+          "linked_to_property": {
+            "title": "Linked To Property",
+            "type": "boolean"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id",
+          "display_name",
+          "is_creditor",
+          "property_id",
+          "linked_to_property",
+          "counterpart_name",
+          "has_counterpart_iban"
+        ],
+        "title": "CounterpartyContactOut",
+        "type": "object"
+      },
+      "CreditorFromTransactionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "link_property": {
+            "default": true,
+            "title": "Link Property",
+            "type": "boolean"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade"
+          }
+        },
+        "title": "CreditorFromTransactionIn",
+        "type": "object"
+      },
+      "CreditorFromTransactionOut": {
+        "properties": {
+          "bank_account_pending": {
+            "description": "IBAN aus dem Umsatz wartet auf die Freigabe durch eine zweite Person.",
+            "title": "Bank Account Pending",
+            "type": "boolean"
+          },
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "display_name": {
+            "title": "Display Name",
+            "type": "string"
+          },
+          "link_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Link Id"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contact_id",
+          "display_name",
+          "created",
+          "property_id",
+          "link_id",
+          "bank_account_pending"
+        ],
+        "title": "CreditorFromTransactionOut",
+        "type": "object"
+      },
       "CreditorIdIn": {
         "additionalProperties": false,
         "properties": {
@@ -13230,6 +13431,65 @@
           }
         },
         "title": "CreditorIdIn",
+        "type": "object"
+      },
+      "CreditorPropertyOut": {
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "property_name": {
+            "title": "Property Name",
+            "type": "string"
+          },
+          "property_number": {
+            "title": "Property Number",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PropertyCreditorSource"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "property_number",
+          "property_name",
+          "trade",
+          "since",
+          "source"
+        ],
+        "title": "CreditorPropertyOut",
         "type": "object"
       },
       "CrmVoteIn": {
@@ -39320,6 +39580,235 @@
         },
         "title": "PropertyContactPatch",
         "type": "object"
+      },
+      "PropertyCreditorIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade"
+          }
+        },
+        "required": [
+          "contact_id"
+        ],
+        "title": "PropertyCreditorIn",
+        "type": "object"
+      },
+      "PropertyCreditorOut": {
+        "properties": {
+          "contact_id": {
+            "format": "uuid",
+            "title": "Contact Id",
+            "type": "string"
+          },
+          "contact_name": {
+            "title": "Contact Name",
+            "type": "string"
+          },
+          "contact_roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Contact Roles",
+            "type": "array"
+          },
+          "email": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Email"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "last_invoice_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Invoice Amount"
+          },
+          "last_invoice_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Last Invoice Date"
+          },
+          "open_invoice_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Summe der Rechnungen des Kreditors am Objekt, die noch nicht gebucht sind (Belegeingang); keine offenen Posten der Buchhaltung.",
+            "title": "Open Invoice Amount"
+          },
+          "phone": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Phone"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "source": {
+            "$ref": "#/components/schemas/PropertyCreditorSource"
+          },
+          "source_transaction_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Transaction Id"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade"
+          },
+          "work_orders_count": {
+            "title": "Work Orders Count",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "property_id",
+          "contact_id",
+          "contact_name",
+          "contact_roles",
+          "trade",
+          "since",
+          "source",
+          "source_transaction_id",
+          "phone",
+          "email",
+          "last_invoice_date",
+          "last_invoice_amount",
+          "work_orders_count"
+        ],
+        "title": "PropertyCreditorOut",
+        "type": "object"
+      },
+      "PropertyCreditorPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "since": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Since"
+          },
+          "trade": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Trade"
+          }
+        },
+        "title": "PropertyCreditorPatch",
+        "type": "object"
+      },
+      "PropertyCreditorSource": {
+        "description": "How a creditor got linked to a property (rule M11-08).",
+        "enum": [
+          "proposal",
+          "manual",
+          "backfill"
+        ],
+        "title": "PropertyCreditorSource",
+        "type": "string"
       },
       "PropertyIn": {
         "additionalProperties": false,
@@ -68278,6 +68767,102 @@
         ]
       }
     },
+    "/api/v1/banking/transactions/{transaction_id}/counterparty-contact": {
+      "get": {
+        "operationId": "counterparty_contact_api_v1_banking_transactions__transaction_id__counterparty_contact_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CounterpartyContactOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gegenpartei eines Umsatzes als Kontakt (IBAN oder Name, kein Beweis)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{transaction_id}/creditor-contact": {
+      "post": {
+        "operationId": "creditor_from_transaction_api_v1_banking_transactions__transaction_id__creditor_contact_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "transaction_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Transaction Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreditorFromTransactionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreditorFromTransactionOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kreditor anlegen: Kontakt mit Rolle Dienstleister, IBAN zur Freigabe",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/banking/transactions/{tx_id}/ai-posting": {
       "get": {
         "operationId": "get_ai_posting_api_v1_banking_transactions__tx_id__ai_posting_get",
@@ -71647,6 +72232,53 @@
         "summary": "Zustellregel oder Gültigkeit einer Beziehung ändern",
         "tags": [
           "Kontakte"
+        ]
+      }
+    },
+    "/api/v1/contacts/{contact_id}/creditor-properties": {
+      "get": {
+        "operationId": "creditor_properties_api_v1_contacts__contact_id__creditor_properties_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "contact_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contact Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/CreditorPropertyOut"
+                  },
+                  "title": "Response Creditor Properties Api V1 Contacts  Contact Id  Creditor Properties Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Objekte als Dienstleister",
+        "tags": [
+          "Objekte"
         ]
       }
     },
@@ -105168,6 +105800,48 @@
         ]
       }
     },
+    "/api/v1/properties/creditors/backfill": {
+      "post": {
+        "description": "Idempotent per tenant: a second run creates nothing. Only contacts with the creditor\nrole (bank transactions) or with an invoice of the property are linked.",
+        "operationId": "backfill_creditors_api_v1_properties_creditors_backfill_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackfillIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackfillOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kreditorenverknüpfungen aus vorhandenen Buchungen und Rechnungen nachziehen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/properties/{property_id}": {
       "get": {
         "operationId": "get_property_api_v1_properties__property_id__get",
@@ -106355,6 +107029,228 @@
           }
         },
         "summary": "Ansprechpartner ändern (Kategorie, Zeitraum, Portalsichtbarkeit)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/creditors": {
+      "get": {
+        "operationId": "list_creditors_api_v1_properties__property_id__creditors_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "trade",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 100,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Trade"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/PropertyCreditorOut"
+                  },
+                  "title": "Response List Creditors Api V1 Properties  Property Id  Creditors Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Dienstleister/Handwerker des Objekts",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "post": {
+        "operationId": "add_creditor_api_v1_properties__property_id__creditors_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyCreditorIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyCreditorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kreditor mit dem Objekt verknüpfen (Rolle Dienstleister wird ergänzt)",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/creditors/{link_id}": {
+      "delete": {
+        "operationId": "unlink_creditor_api_v1_properties__property_id__creditors__link_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verknüpfung lösen (der Kontakt bleibt)",
+        "tags": [
+          "Objekte"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_creditor_api_v1_properties__property_id__creditors__link_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "link_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Link Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PropertyCreditorPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PropertyCreditorOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Gewerk oder Beginn ändern",
         "tags": [
           "Objekte"
         ]

@@ -10,6 +10,35 @@ tägliche Bankarbeit vollständig in der Oberfläche: Buchen mit Gegenkonto, Tei
 Splits, Ausgänge, Umbuchungen, Dublettenklärung, Massenbestätigung, Bankregeln und
 Bankabstimmung (Regel UI-BANK-01).
 
+## Einrichtung in drei Schritten
+
+Der Abschnitt Einrichtung in drei Schritten (oben auf der Bankseite, Konto einrichten) führt ein
+neues Bankkonto vom Bankzugang bis zur Buchung je Objekt:
+
+1. Bankzugang: FinTS (PIN/TAN, Konten und Umsätze werden bei der Bank abgerufen; Bank
+   verbinden öffnet den bekannten Dialog) oder Kontoauszug als Datei (CAMT.053, MT940, CSV;
+   das Konto wird mit seiner IBAN angelegt, Auszüge werden danach unter Datei-Upload
+   hochgeladen und über die IBAN erkannt).
+2. Konto: bei FinTS ein noch nicht zugeordnetes Konto der Bankverbindung, beim Dateiweg die
+   IBAN und der Bankname.
+3. Objekt und Kontoart: Objekt wählen und die Kontoart festlegen (Mietkonto, WEG-Konto,
+   Rücklagenkonto, Kautionskonto). Der Rechtsträger folgt aus dem Objekt: WEG-Konto und
+   Rücklagenkonto gehören der Gemeinschaft, Mietkonto und Kautionskonto dem Eigentümer; die
+   Verwaltung ist nie Inhaberin verwalteter Gelder (Regel B01). Gibt es mehrere passende
+   Rechtsträger (mehrere Eigentümer), wird einer gewählt. Der Kontoinhaber wird mit dem Namen
+   des Rechtsträgers vorbelegt.
+
+Der Abschluss zeigt, was jetzt passiert: Umsätze dieses Kontos erscheinen in der Umsatzliste
+und werden für das Objekt gegen einen Debitor (Mieter, Eigentümer) oder einen Kreditor
+(Dienstleister) gebucht; Vorschläge sind keine Buchung. Kreditoren werden Kontakte: im
+Buchungsdialog steht bei einem Ausgang an eine unbekannte Gegenpartei die Schaltfläche
+Kreditor anlegen. Sie legt einen Kontakt mit der Rolle Dienstleister an, merkt die IBAN aus dem
+Umsatz zur Freigabe durch eine zweite Person vor (nie automatisch freigegeben) und verknüpft
+den Kreditor mit dem Objekt des Kontos (Reiter Dienstleister/Handwerker). Ist die Gegenpartei
+laut IBAN oder Name schon Kontakt, zeigt der Dialog das mit dem Hinweis kein Beweis und bietet
+nur die Verknüpfung an. Bis zur Freigabestufe G1 sind die Buchungen Vergleichsbuchhaltung.
+Zuordnungen brauchen das Freigaberecht Bank (FinTS) oder das Schreibrecht Objekte (Dateiweg).
+
 ## Datei-Upload
 
 Über Kontoauszug und Importieren lässt sich ein Auszug hochladen. Zulässig sind CAMT.053

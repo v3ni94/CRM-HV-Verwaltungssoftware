@@ -1,4 +1,4 @@
-"""Creditors per property (rule M11-05): tab "Dienstleister/Handwerker", creditor contact
+"""Creditors per property (rule M11-08): tab "Dienstleister/Handwerker", creditor contact
 from a bank transaction, backfill, and the contact's properties as creditor.
 
 Permissions: ``properties:read`` for the list, ``properties:update`` for link, trade, unlink

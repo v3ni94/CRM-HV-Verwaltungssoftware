@@ -143,3 +143,26 @@ meters, maintenance items and custom field values only via import or API):
 * Web: `apps/web-crm/src/components/properties/ContactPersonsPanel.tsx`, `MetersPanel.tsx`,
   `MaintenancePanel.tsx`, `CustomFieldsPanel.tsx`, `OwnersDetails.tsx` on the property page;
   handbook `docs/handbuch/anleitung-stammdaten.md`.
+
+## Creditors per property (rule M11-08, 29.09.2026)
+
+* `models.PropertyCreditor` (table `property_creditor`, migration 0240, RLS): contact with
+  role `dienstleister` linked to a property with `trade`, `since`, `source` (`proposal`,
+  `manual`, `backfill`) and `source_transaction_id`; unique per tenant, property and contact.
+  Distinct from `ServiceProviderRelation` (provider contract with term and creditor account).
+* `creditors.py`: `link` (idempotent, adds the creditor role), `find_counterparty_contact`
+  (IBAN fingerprint of a not rejected contact bank account, then exact name; a hint, never
+  proof), `create_creditor_from_transaction` (company contact from the counterparty name, the
+  counterparty IBAN as pending bank account for the four eyes release of M5-01, never approved
+  here), `backfill` (booked outgoing transactions to contacts with the creditor role plus
+  invoices of the property's ledgers; idempotent per tenant), `list_for_property` (contact
+  data, last invoice, sum of unposted invoices, work order count).
+* `routers_creditors.py`: `GET/POST /properties/{id}/creditors`,
+  `PATCH/DELETE /properties/{id}/creditors/{link_id}`, `POST /properties/creditors/backfill`,
+  `GET /contacts/{id}/creditor-properties`,
+  `GET /banking/transactions/{id}/counterparty-contact`,
+  `POST /banking/transactions/{id}/creditor-contact` (`contacts:create` plus
+  `properties:update` when linking). Tests: `tests/integration/test_property_creditors.py`.
+* Web: `PropertyCreditorsPanel.tsx` (tab Dienstleister/Handwerker), `CreditorContactButton.tsx`
+  in the booking dialog, `CreditorPropertiesSection.tsx` on the contact page,
+  `BankSetupWizard.tsx` on `/bank` (existing assign and bank account endpoints only).
