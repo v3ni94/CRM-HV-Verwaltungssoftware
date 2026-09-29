@@ -284,6 +284,19 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^imports\/immoware24\/vollimport(\/exporttypen)?$/ },
   { method: "POST", pattern: /^imports\/immoware24\/vollimport(\/vorpruefung)?$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/vollimport/${ID}(/pdf)?$`) },
+  // Migration von Immoware24 ohne Parallelbetrieb (6.9.10, M8-03): Status, Journal, Salden,
+  // Abgleich, Wechsel des führenden Systems (Freigaben bleiben in der API).
+  { method: "GET", pattern: /^imports\/migration\/(status|journal-columns|switch-requests)$/ },
+  { method: "PUT", pattern: /^imports\/migration\/journal-columns$/ },
+  { method: "GET", pattern: new RegExp(`^imports/migration/ledgers/${ID}(/journal|/opening-balances)?$`) },
+  { method: "PUT", pattern: new RegExp(`^imports/migration/ledgers/${ID}/(cutoff|opening-balances)$`) },
+  { method: "POST", pattern: new RegExp(`^imports/migration/ledgers/${ID}/(journal|switch-requests|opening-balances/import)$`) },
+  { method: "GET", pattern: new RegExp(`^imports/migration/opening-balances/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^imports/migration/opening-balances/${ID}/(release|post)$`) },
+  { method: "GET", pattern: new RegExp(`^imports/migration/properties/${ID}/reconciliation$`) },
+  { method: "POST", pattern: new RegExp(`^imports/migration/properties/${ID}/reconciliation$`) },
+  { method: "GET", pattern: new RegExp(`^imports/migration/reconciliation/${ID}(/pdf)?$`) },
+  { method: "POST", pattern: new RegExp(`^imports/migration/switch-requests/${ID}/(approve|reject)$`) },
   { method: "POST", pattern: /^imports\/reconciliation-reports$/ },
   { method: "PUT", pattern: /^imports\/reconciliation-reports\/columns$/ },
   { method: "GET", pattern: new RegExp(`^imports/reconciliation-reports/${ID}(/csv)?$`) },
@@ -923,7 +936,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */
 const MULTIPART = new RegExp(
-  `^(documents|mail/messages/${ID}/attachments/upload|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|imports/immoware24/vollimport(/vorpruefung)?|letting/listings/${ID}/images|metering/assignments-import/(preview|apply)|metering/connections/${ID}/heiwako-import/preview)$`,
+  `^(documents|mail/messages/${ID}/attachments/upload|letting/flow-import/preview|handover/protocols/${ID}/documents|imports/immoware24/lists/(objektdaten|kontakte|zuordnung|adressen)|imports/immoware24/vollimport(/vorpruefung)?|imports/migration/ledgers/${ID}/opening-balances/import|letting/listings/${ID}/images|metering/assignments-import/(preview|apply)|metering/connections/${ID}/heiwako-import/preview)$`,
 );
 /** Upper bound for proxied uploads; the API enforces its own document_max_bytes. */
 const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
