@@ -290,10 +290,10 @@ async def add_schedule(session: AsyncSession, contract: Contract, row: PaymentSc
     session.add(row)
 
 
-async def end_contract(session: AsyncSession, contract: Contract, end: date) -> None:
-    """End a contract; later payments and schedules are rejected, open ones are closed."""
-    if end < contract.start_date:
-        raise invalid("Das Vertragsende liegt vor dem Vertragsbeginn.")
+async def check_no_later_rows(session: AsyncSession, contract: Contract, end: date) -> None:
+    """Payments or schedules starting after ``end`` block ending the contract there. Shared
+    by ``end_contract`` and the ownership transfer preview, so the preview refuses exactly
+    what the transfer would refuse (a row starting on the title transfer date included)."""
     models: tuple[Any, ...] = (ContractPayment, PaymentSchedule)
     for model in models:
         later = await session.scalar(
@@ -301,6 +301,15 @@ async def end_contract(session: AsyncSession, contract: Contract, end: date) -> 
         )
         if later is not None:
             raise invalid("Nach dem Vertragsende gibt es noch Zahlungen oder Zahlungspläne.")
+
+
+async def end_contract(session: AsyncSession, contract: Contract, end: date) -> None:
+    """End a contract; later payments and schedules are rejected, open ones are closed."""
+    if end < contract.start_date:
+        raise invalid("Das Vertragsende liegt vor dem Vertragsbeginn.")
+    await check_no_later_rows(session, contract, end)
+    models: tuple[Any, ...] = (ContractPayment, PaymentSchedule)
+    for model in models:
         rows = (
             await session.scalars(
                 select(model).where(

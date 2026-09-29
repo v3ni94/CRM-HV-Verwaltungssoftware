@@ -377,3 +377,55 @@ def test_validation_permission_and_tenant_separation(client: TestClient, world: 
         == 404
     )
     assert _ok(client.get(f"/api/v1/contracts/{sid}", headers=h), 200)["end_date"] is None
+
+
+def test_row_starting_on_transfer_date_blocks_preview_and_transfer(
+    client: TestClient, world: World
+) -> None:
+    """A payment starting on the title transfer date lies after the seller's end (the day
+    before): the preview refuses it exactly like the transfer, nothing is changed."""
+    h = bearer(login(client, world, "otadmin"))
+    seller, _ = _setup(client, h, "704")
+    sid = seller["id"]
+    _ok(
+        client.post(
+            f"/api/v1/contracts/{sid}/payments",
+            json=_payment("hoa_fee", "320.00", DATE),
+            headers=h,
+        )
+    )
+    preview = client.get(
+        f"/api/v1/contracts/{sid}/ownership-transfer/preview",
+        params={"title_transfer_date": DATE},
+        headers=h,
+    )
+    assert preview.status_code == 422, preview.text
+    assert "Zahlungen oder Zahlungspläne" in preview.json()["detail"]
+    buyer = _party(client, h, "Spaet")
+    transfer = client.post(
+        f"/api/v1/contracts/{sid}/ownership-transfer",
+        json={"new_party_id": buyer, "title_transfer_date": DATE, "acquisition_kind": "purchase"},
+        headers=h,
+    )
+    assert transfer.status_code == 422, transfer.text
+    old = _ok(client.get(f"/api/v1/contracts/{sid}", headers=h), 200)
+    assert old["end_date"] is None
+    assert sorted((p["gross"], p["valid_to"]) for p in old["payments"]) == [
+        ("250.00", "2024-12-31"),
+        ("300.00", "2026-03-31"),
+        ("320.00", None),
+        ("50.00", None),
+    ]
+    # One day later the new amount is valid on the date and is carried over.
+    later = _ok(
+        client.get(
+            f"/api/v1/contracts/{sid}/ownership-transfer/preview",
+            params={"title_transfer_date": "2026-04-02"},
+            headers=h,
+        ),
+        200,
+    )
+    assert [(p["payment_type_code"], p["gross"]) for p in later["payments"]] == [
+        ("hoa_fee", "320.00"),
+        ("reserve", "50.00"),
+    ]

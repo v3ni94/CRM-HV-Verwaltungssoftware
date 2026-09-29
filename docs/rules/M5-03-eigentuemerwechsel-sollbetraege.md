@@ -18,7 +18,9 @@
 - Das bisherige Eigentum endet am Vortag: Zahlungen und Zahlungspläne enden dort wie bei
   jeder Beendigung (`end_contract`), vertragsbezogene Umlagewerte ebenso
   (`close_allocation_values`; Werte mit Beginn nach dem Ende bleiben unverändert). Zahlungen
-  oder Zahlungspläne mit Beginn nach dem Übergang lehnen den Wechsel wie bisher ab.
+  oder Zahlungspläne mit Beginn am oder nach dem Übergang lehnen den Wechsel wie bisher ab;
+  die Vorschau prüft dieselbe Bedingung und antwortet dann ebenfalls mit 422
+  (`check_no_later_rows`), damit sie nichts als übernommen zeigt, was der Wechsel ablehnt.
 - Übernahme (Standard an): jede am Übergang gültige Zahlung, der gültige Zahlungsplan und
   jeder gültige Umlagewert werden mit `valid_from = Übergang` und dem ursprünglichen
   `valid_to` (offen bleibt offen) am neuen Vertrag angelegt; Beträge, Steuersatz,

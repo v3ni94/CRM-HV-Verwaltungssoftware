@@ -863,6 +863,8 @@ async def ownership_transfer_preview(
     async with tenant_tx(request, principal) as session:
         old = await _get(session, Contract, contract_id)
         _check_transferable(old, title_transfer_date)
+        # Same refusal as the transfer itself: rows starting on or after the date block it.
+        await svc.check_no_later_rows(session, old, title_transfer_date - timedelta(days=1))
         amounts = await svc.standing_amounts(session, old, title_transfer_date)
         party = await session.get(Party, old.party_id)
         return s.OwnershipTransferPreviewOut(
