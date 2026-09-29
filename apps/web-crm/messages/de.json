@@ -6964,7 +6964,17 @@
       "failed": "Die Extraktion ist fehlgeschlagen: {reason}",
       "extracting": "Der Beleg wird ausgewertet. Die Anzeige aktualisiert sich automatisch.",
       "decided": "Über diesen Entwurf wurde bereits entschieden.",
-      "confirmHint": "Anlegen ist erst möglich mit Sachkonto, Aussteller, Rechnungsnummer, Rechnungsdatum, Netto, Umsatzsteuer und Brutto; eine eingetragene IBAN und gesichtete Widersprüche müssen bestätigt sein."
+      "confirmHint": "Anlegen ist erst möglich mit Sachkonto, Aussteller, Rechnungsnummer, Rechnungsdatum, Netto, Umsatzsteuer und Brutto; eine eingetragene IBAN und gesichtete Widersprüche müssen bestätigt sein.",
+      "history": {
+        "label": "Verlauf",
+        "proposal": "{account} ({name}), {count, plural, one {# mal} other {# mal}} beim Aussteller",
+        "detail": "{reason}, zuletzt {date}",
+        "take": "Übernehmen",
+        "taken": "Konto aus dem Verlauf übernommen; bitte prüfen.",
+        "none": "Kein Verlauf für diesen Aussteller in diesem Buchungskreis.",
+        "note": "Vorschlag aus bestätigten Rechnungen und Bankbuchungen des Ausstellers. Umlagefähigkeit, Kostenart und Umsatzsteuer werden nicht aus dem Vorschlag übernommen; die Auswahl bleibt eine Entscheidung der prüfenden Person.",
+        "notInList": "Konto nicht in der Auswahl dieses Buchungskreises."
+      }
     }
   },
   "OwnerStatements": {

@@ -12,6 +12,8 @@
   are immutable, nothing is ever deleted. At most one pending row per transaction.
 * ``banking_event_watermark``: position of the banking event consumer (pattern
   ``automation_watermark``). RLS.
+* ``receipt_draft.account_proposal_decision`` (step S7): cost account proposals from the
+  creditor's history and the reviewer's decision per line at confirmation (JSONB, nullable).
 
 Revision ID: 0232
 Revises: 0223
@@ -243,8 +245,16 @@ def upgrade() -> None:
     for statement in tenant_rls_statements("banking_event_watermark"):
         op.execute(statement)
 
+    op.add_column(
+        "receipt_draft",
+        sa.Column(
+            "account_proposal_decision", postgresql.JSONB(astext_type=sa.Text()), nullable=True
+        ),
+    )
+
 
 def downgrade() -> None:
+    op.drop_column("receipt_draft", "account_proposal_decision")
     for statement in drop_tenant_rls_statements("banking_event_watermark"):
         op.execute(statement)
     op.drop_table("banking_event_watermark")

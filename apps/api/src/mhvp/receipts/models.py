@@ -91,6 +91,12 @@ class ReceiptDraft(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
     error: Mapped[str | None] = mapped_column(Text)
+    # Learning bookkeeper (plan M12 S7, migration 0232): the cost account proposals from the
+    # creditor's history as recomputed at confirmation and the reviewer's decision per line
+    # (``mhvp.banking.history.account_decision``: proposed, final, diff, outcome). Written
+    # once by ``confirm`` and only with ``learning_bookkeeper_enabled``; never read back into
+    # an invoice (allocation, operating cost type and VAT are not derived from it).
+    account_proposal_decision: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     invoice_id: Mapped[uuid.UUID | None] = _fk("invoice.id", nullable=True)
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

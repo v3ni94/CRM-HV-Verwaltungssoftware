@@ -49,7 +49,9 @@ async def _draft(session: Any, draft_id: uuid.UUID) -> ReceiptDraft:
     return row
 
 
-async def _out(session: Any, draft: ReceiptDraft) -> s.ReceiptDraftOut:
+async def _out(
+    session: Any, draft: ReceiptDraft, *, account_proposals: dict[str, Any] | None = None
+) -> s.ReceiptDraftOut:
     """Flush and refresh first: ``updated_at`` (server side ``onupdate``) is expired after a
     flush and must not be lazy loaded from an async session."""
     await session.flush()
@@ -57,13 +59,62 @@ async def _out(session: Any, draft: ReceiptDraft) -> s.ReceiptDraftOut:
     data: dict[str, Any] = {
         name: getattr(draft, name)
         for name in s.ReceiptDraftOut.model_fields
-        if name != "iban_candidates"
+        if name not in ("iban_candidates", "account_proposals")
     }
     # The encrypted candidate list never leaves the API; only the masked view does.
     data["iban_candidates"] = [
         s.ReceiptIbanCandidateOut(**c) for c in extraction.masked_iban_candidates(draft)
     ]
+    data["account_proposals"] = (
+        s.ReceiptAccountProposalsOut(**account_proposals) if account_proposals else None
+    )
     return s.ReceiptDraftOut(**data)
+
+
+def _line_texts(draft: ReceiptDraft, count: int | None = None) -> list[str | None]:
+    """Wording per new invoice line: the XML lines of an e-invoice, else one line."""
+    texts: list[str | None] = [
+        (ln.get("description") if isinstance(ln, dict) else None) for ln in draft.xml_lines or []
+    ]
+    if count is not None:
+        texts = (texts + [None] * count)[:count]
+    return texts or [None]
+
+
+async def _account_proposals(
+    session: Any,
+    draft: ReceiptDraft,
+    *,
+    ledger_id: uuid.UUID | None,
+    provider_contact_id: uuid.UUID | None,
+    line_count: int | None = None,
+) -> dict[str, Any]:
+    """Cost account proposals per line from the creditor's history (plan M12 S7,
+    ``mhvp.banking.history.creditor_account_history``), only with the tenant switch
+    ``learning_bookkeeper_enabled``; ledger and provider must exist in the tenant (RLS)."""
+    from mhvp.accounting.models import Ledger
+    from mhvp.banking import history
+    from mhvp.banking.proposals import learning_enabled
+    from mhvp.contacts.models import Contact
+
+    out: dict[str, Any] = {
+        "enabled": await learning_enabled(session),
+        "ledger_id": ledger_id,
+        "provider_contact_id": provider_contact_id,
+    }
+    if not out["enabled"] or ledger_id is None or provider_contact_id is None:
+        return out
+    if await session.get(Ledger, ledger_id) is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Buchungskreis nicht gefunden.")
+    if await session.get(Contact, provider_contact_id) is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Aussteller nicht gefunden.")
+    found = await history.creditor_account_history(
+        session,
+        ledger_id=ledger_id,
+        provider_contact_id=provider_contact_id,
+        line_texts=_line_texts(draft, line_count),
+    )
+    return {**out, **found}
 
 
 async def _event(
@@ -166,7 +217,7 @@ async def _start(
         draft_id, run_id = draft.id, draft.task_run_id
     if run_id is not None:  # a plain XRechnung needs no provider call
         await _dispatch(request, principal, run_id)
-    return await get_draft(draft_id, request, principal)
+    return await _read(request, principal, draft_id)
 
 
 @router.post("/drafts", status_code=202, summary="Beleg erfassen (KI-Entwurf aus Dokument)")
@@ -257,11 +308,41 @@ async def list_drafts(
 
 @router.get("/drafts/{draft_id}", summary="Belegentwurf lesen")
 async def get_draft(
-    draft_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    draft_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+    ledger_id: uuid.UUID | None = Query(
+        default=None, description="Mit provider_contact_id: Kontovorschläge aus dem Verlauf"
+    ),
+    provider_contact_id: uuid.UUID | None = Query(default=None),
+) -> s.ReceiptDraftOut:
+    """With ``ledger_id`` and ``provider_contact_id`` the answer carries ``account_proposals``
+    (plan M12 S7, source Verlauf): the cost accounts persons chose on earlier invoices and
+    bank transactions of the same creditor in the same ledger, per line. Only with
+    ``learning_bookkeeper_enabled``; reading never writes."""
+    return await _read(
+        request, principal, draft_id, ledger_id=ledger_id, provider_contact_id=provider_contact_id
+    )
+
+
+async def _read(
+    request: Request,
+    principal: TenantPrincipal,
+    draft_id: uuid.UUID,
+    *,
+    ledger_id: uuid.UUID | None = None,
+    provider_contact_id: uuid.UUID | None = None,
 ) -> s.ReceiptDraftOut:
     async with tenant_tx(request, principal) as session:
         draft = await extraction.materialize(session, await _draft(session, draft_id))
-        return await _out(session, draft)
+        proposals = None
+        if draft.status == ReceiptDraftStatus.PROPOSED.value and (
+            ledger_id is not None or provider_contact_id is not None
+        ):
+            proposals = await _account_proposals(
+                session, draft, ledger_id=ledger_id, provider_contact_id=provider_contact_id
+            )
+        return await _out(session, draft, account_proposals=proposals)
 
 
 async def _open(session: Any, draft_id: uuid.UUID) -> ReceiptDraft:
@@ -322,12 +403,37 @@ async def confirm_draft(
         await session.flush()
         from mhvp.ai import imports
 
+        # Plan M12 S7: the account proposals of the creditor's history are recomputed for
+        # the confirmed ledger and provider (before the new invoice exists) and compared with
+        # the accounts the reviewer confirmed; the diff is stored on the draft and in the
+        # event. Nothing is taken over from the proposal.
+        from mhvp.banking import history as bank_history
+
+        proposals = await _account_proposals(
+            session,
+            draft,
+            ledger_id=data.ledger_id,
+            provider_contact_id=data.provider_contact_id,
+            line_count=len(data.lines),
+        )
+        decision = (
+            bank_history.account_decision(proposals, [ln.account_id for ln in data.lines])
+            if proposals.get("enabled")
+            else None
+        )
         summary = await imports.apply_invoice(session, import_run, principal, data)
         import_run.summary = summary
         draft.invoice_id = uuid.UUID(summary["invoice_id"])
         await _carry_over(session, draft)
         draft.status = ReceiptDraftStatus.CONFIRMED.value
         draft.decided_by, draft.decided_at = principal.user_id, datetime.now(UTC)
+        if decision is not None:
+            draft.account_proposal_decision = {
+                **decision,
+                "ledger_id": str(data.ledger_id),
+                "provider_contact_id": str(data.provider_contact_id),
+                "computed_at": datetime.now(UTC).isoformat(),
+            }
         if body.note:
             draft.questions = [*draft.questions, f"Prüfvermerk: {body.note}"]
         await _close_proposal(session, draft, Decision.MODIFIED, principal)
@@ -339,6 +445,8 @@ async def confirm_draft(
             invoice_id=summary["invoice_id"],
             iban_confirmed=bool(data.payee_iban),
             import_run_id=str(import_run.id),
+            account_proposal_outcome=decision["outcome"] if decision else None,
+            account_proposal_diff=decision["diff"] if decision else None,
         )
         return await _out(session, draft)
 

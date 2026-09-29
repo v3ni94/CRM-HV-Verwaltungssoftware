@@ -55,6 +55,46 @@ class ReceiptIbanCandidateOut(BaseModel):
     source: Literal["local"]
 
 
+class ReceiptAccountProposalOut(BaseModel):
+    """One cost account from the creditor's history for one invoice line (plan M12 S7,
+    ``mhvp.banking.history.creditor_account_history``). Only the account identity and the
+    counts: allocation category, operating cost type, § 35a and VAT are never part of it."""
+
+    account_id: uuid.UUID
+    account_number: str
+    name: str
+    count: int
+    count_invoices: int
+    count_posted: int
+    count_bank: int
+    last_used_on: str | None
+    source: Literal["history"]
+    line_index: int | None
+    reason: str
+
+
+class ReceiptAccountProposalLineOut(BaseModel):
+    index: int
+    proposals: list[ReceiptAccountProposalOut]
+
+
+class ReceiptAccountProposalsOut(BaseModel):
+    """Result of ``GET /receipts/drafts/{id}?ledger_id=&provider_contact_id=``: ``enabled``
+    is the tenant switch ``learning_bookkeeper_enabled``; with the switch off the lines are
+    empty. Source label in the CRM: Verlauf."""
+
+    enabled: bool
+    ledger_id: uuid.UUID | None = None
+    provider_contact_id: uuid.UUID | None = None
+    lines: list[ReceiptAccountProposalLineOut] = Field(default_factory=list)
+    creditor_account: dict[str, Any] | None = None
+    sources: dict[str, int] = Field(default_factory=dict)
+    note: str = (
+        "Vorschlag aus dem Verlauf des Ausstellers, keine Buchung. Umlagefähigkeit, "
+        "Kostenart und Umsatzsteuer werden nicht aus dem Vorschlag übernommen."
+    )
+
+
 class ReceiptDraftOut(_Out):
     id: uuid.UUID
     document_id: uuid.UUID
@@ -74,6 +114,10 @@ class ReceiptDraftOut(_Out):
     xml_payment: dict[str, Any] | None = None
     conflicts: list[ReceiptConflictOut] = Field(default_factory=list)
     findings: list[str] = Field(default_factory=list)
+    # Plan M12 S7: filled by ``GET /drafts/{id}`` when ``ledger_id`` and
+    # ``provider_contact_id`` are given; the decision per line after ``confirm``.
+    account_proposals: ReceiptAccountProposalsOut | None = None
+    account_proposal_decision: dict[str, Any] | None = None
     error: str | None
     invoice_id: uuid.UUID | None
     decided_by: uuid.UUID | None

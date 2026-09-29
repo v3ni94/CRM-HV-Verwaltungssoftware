@@ -6964,7 +6964,17 @@
       },
       "xmlPayment": "Payment details according to XML (IBAN masked)",
       "xmlPaymentNone": "none",
-      "confirmHint": "Creating requires cost account, issuer, invoice number, invoice date, net, VAT and gross; an entered IBAN and reviewed contradictions must be confirmed."
+      "confirmHint": "Creating requires cost account, issuer, invoice number, invoice date, net, VAT and gross; an entered IBAN and reviewed contradictions must be confirmed.",
+      "history": {
+        "label": "History",
+        "proposal": "{account} ({name}), {count, plural, one {# time} other {# times}} for this issuer",
+        "detail": "{reason}, last {date}",
+        "take": "Take over",
+        "taken": "Account taken from the history; please review.",
+        "none": "No history for this issuer in this ledger.",
+        "note": "Proposal from confirmed invoices and bank postings of the issuer. Allocation, cost type and VAT are never derived from it; the choice remains the reviewer's decision.",
+        "notInList": "Account is not in the selection of this ledger."
+      }
     }
   },
   "OwnerStatements": {
