@@ -18,3 +18,13 @@ Plans: `docs/plans/M26.md`, `docs/plans/M28-makler.md`. Rules: `docs/rules/M26-r
 * `tasks.py`: Celery job deleting prospect records after their deletion date (data minimisation).
 
 Gates: no money flows; sending to portals or FLOWFACT is not implemented (M28 stage 3 open).
+
+## Addendum 29.09.2026 (rent increase letter on the letterhead, M12 gaps)
+
+* `routers.py`: `POST /letting/rent-increases/{id}/letter/pdf` (`contracts:approve`) files the
+  letter of `rentlaw.letter_body` on the tenant letterhead as a document of the case, contract,
+  unit, property and tenant, optional ticket link and dispatch record
+  (`mhvp.documents.letter_records`). The process step `send` stays behind G3, the portal
+  channel is refused while G3 is closed, e-mail only as a draft for the mail approval; the PDF
+  carries the draft marking until the legal review is documented.
+

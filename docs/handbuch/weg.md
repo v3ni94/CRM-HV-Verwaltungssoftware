@@ -35,9 +35,18 @@ Ersteller), beschlossen. Der Beschluss wird mit Beschlussdatum über Beschluss z
 Stand erfassen aufgenommen; er ist an den berechneten Stand gebunden. Ändert sich der Plan
 danach, ist eine neue Version nötig, der alte Beschluss bleibt an der alten Version.
 
-Nach dem Beschluss übernimmt Vorschüsse übernehmen die beschlossenen Hausgeld- und
-Rücklagenbeträge als Zahlungen in die Eigentumsverhältnisse (Kapitel Verträge); daraus
-entstehen die monatlichen Sollstellungen.
+Nach dem Beschluss zeigt Vorschau Vorschüsse je Einheit und Komponente das
+Eigentumsverhältnis zum Wirksamkeitsbeginn, den bisherigen und den beschlossenen monatlichen
+Sollbetrag und die Aktion (anlegen, unverändert, kein Betrag, kein Eigentumsverhältnis).
+Vorschau bestätigen und übernehmen legt die Sollbeträge ab Wirksamkeitsbeginn in den
+Eigentumsverhältnissen an (Kapitel Verträge, Abschnitt Sollbeträge) und schließt den
+vorherigen Sollbetrag am Vortag; die Bestätigung muss eine andere Person als der Ersteller
+des Plans geben, die Übernahme ist an den berechneten Stand gebunden und wird je Plan nur
+einmal ausgeführt (Regel W02). Die Zeilen sind Stammdaten der Verträge und keiner
+Freigabestufe unterworfen; die monatlichen Sollstellungen daraus erzeugt erst der
+Sollstellungslauf hinter G1. Bereits gebuchte Monate ab Wirksamkeitsbeginn zeigt die
+Vorschau als Hinweis; sie werden nicht erneut nachgefordert, eine Anpassung ist eine
+Korrektur der Buchhaltung.
 
 ## Hausgeldabrechnung
 

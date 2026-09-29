@@ -100,12 +100,12 @@ eingearbeitet):
 | --- | --- | --- |
 | Stammdaten | Kein Rückschreiben nach Immoware24 | Doppelpflege im Parallelbetrieb |
 | Verwalterwechsel | Pflichtunterlagen der Vollständigkeitsprüfung nur über die Schnittstelle | Pflege durch Administrator |
-| Verwalterwechsel | Nachforderungsschreiben nur als Textentwurf ohne Briefbogen und Versandnachweis | Brief manuell erstellen und ablegen |
-| Verwalterwechsel | Kein Export der Objektakte bei Abgabe an einen Nachfolger | manuelle Zusammenstellung |
+| Verwalterwechsel | Nachforderungsschreiben: Versand nur außerhalb (Post) oder über die Mailfreigabe | Versand erfassen, nicht auslösen |
+| Verwalterwechsel | Objektakte-Export ohne Dokumente, die nur in Google Drive liegen, und ohne Buchungsjournale | Ergänzung von Hand, rechtlicher Umfang offen (M12-L3) |
 | Verwalterwechsel | Eröffnungsbestände der Vorverwaltung wegen G1 nicht produktiv übernehmbar | Führung im bisherigen System |
 | Eigentümerwechsel | Regel W07 fachlich nicht freigegeben, Freigabepunkt P01 offen | keine Aufteilung nach eigener Annahme |
 | Mieterhöhung | Versand erfassen bis G3 gesperrt, damit Zustimmung und Übernahme nicht erreichbar | neue Miete nach Zustimmung von Hand im Abschnitt Sollbeträge des Vertrags erfassen, parallel im führenden System pflegen |
-| Mieterhöhung | Musterschreiben ohne Briefbogen-PDF | Brief manuell |
+| Mieterhöhung | Versandnachweis am Schreiben ändert den Status des Falls nicht (Versand erfassen bis G3) | Zugangsdatum getrennt erfassen |
 | Mieterhöhung | Keine automatische Prüfung für Modernisierung, Index, Staffel | rechtliche Prüfung im Einzelfall |
 | Objektordner | Aufbewahrungsprofile noch Entwürfe | keine Löschung |
 
@@ -174,6 +174,15 @@ und Freigabestufen im verlinkten Kapitel und in docs/rules):
   und verschwinden aus der Objektliste; Reaktivierung nur durch den Superadmin.
 - **Kautionsabrechnung als PDF** ([Verträge](vertraege.md)): die Kautionsabrechnung lässt sich
   im Briefbogen des Mandanten als PDF erzeugen und am Vertrag ablegen.
+- **Schreiben auf Briefbogen mit Versandnachweis** ([Verwalterwechsel](anleitung-verwalterwechsel.md),
+  [Mieterhöhung](anleitung-mieterhoehung.md)): Nachforderungsschreiben und
+  Mieterhöhungsschreiben als PDF auf dem Briefbogen, als Dokument abgelegt, mit Versandweg,
+  Datum, Benutzer und Sendungsnummer; die Plattform versendet nichts.
+- **Wirtschaftsplan in die Zahlungspläne** ([WEG](weg.md)): beschlossene Vorschüsse mit
+  Vorschau und Bestätigung durch eine zweite Person als Sollbeträge der Eigentumsverhältnisse.
+- **Objektakte-Export** ([Verwalterwechsel](anleitung-verwalterwechsel.md), Abgabe): ZIP mit
+  Dokumenten, Stammdatenblättern, offenen Posten und Übergabeprotokoll für den Nachfolger,
+  mit Datenschutzhinweis und protokolliertem Abruf.
 
 ## Anmelden und Mandant wählen
 

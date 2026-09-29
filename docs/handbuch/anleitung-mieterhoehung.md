@@ -65,10 +65,14 @@ Entwurf.
 
 ### 2. Schreiben vorbereiten
 
-Abschnitt Schreiben (Entwurf) zeigt ein Musterschreiben mit Platzhaltern. Text auf den
-Briefbogen der Hausverwaltung Müller GmbH übernehmen, rechtlich prüfen lassen, das Ergebnis der
-Prüfung als Dokument hochladen (Verwaltung, DMS, Suche im Archiv, Dokument hochladen mit
-Einheit; Titel zum Beispiel `Mieterhöhung WE 03, rechtliche Prüfung, 20.09.2026`).
+Abschnitt Schreiben (Entwurf) zeigt ein Musterschreiben mit Platzhaltern. Abschnitt Schreiben
+auf Briefbogen und Versandnachweis (Recht `contracts:approve`) erzeugt dasselbe Schreiben auf
+dem hinterlegten Briefbogen des Mandanten als PDF an den Hauptkontakt der Mietpartei und legt
+es am Fall, am Vertrag, an der Einheit, am Objekt und am Mieter ab; optional mit Ticket. Bis
+zur dokumentierten rechtlichen Prüfung trägt das PDF die Kennzeichnung ENTWURF. Text rechtlich
+prüfen lassen, das Ergebnis der Prüfung als Dokument hochladen (Verwaltung, DMS, Suche im
+Archiv, Dokument hochladen mit Einheit; Titel zum Beispiel `Mieterhöhung WE 03, rechtliche
+Prüfung, 20.09.2026`).
 
 ### 3. Freigeben (zweite Person)
 
@@ -85,8 +89,12 @@ Der Schritt ist gesperrt, solange G3 geschlossen ist. Bis dahin:
 - Auf der Fallseite im Abschnitt Zugangsdatum den Zugang des Schreibens beim Mieter erfassen
   (Recht `contracts:approve`). Der Status des Falls ändert sich nicht; erst mit freigegebenem
   Regelwerk zeigt der Fall daraus abgeleitete Hinweise.
-- Versandweg und Zugangsnachweis im Ticket zur Einheit festhalten und den Zugangsnachweis als
-  Dokument ablegen (04 Mieterakte).
+- Im Abschnitt Schreiben auf Briefbogen und Versandnachweis den Versand erfassen: Versandweg
+  Post mit Versanddatum, Nachweisart und Sendungsnummer, oder E-Mail als Entwurf zur
+  Mailfreigabe. Die Plattform versendet nichts; der Portalweg ist bis G3 gesperrt. Der
+  Versandnachweis wird mit Datum, Benutzer und Referenz am Dokument festgehalten, der Status
+  des Falls bleibt unverändert (Versand erfassen als Prozessschritt bleibt hinter G3).
+- Zugangsnachweis als Dokument ablegen (04 Mieterakte).
 
 ### 5. Zustimmung oder Ablehnung
 
@@ -165,7 +173,8 @@ Kalender.
   pflegen, solange der Parallelbetrieb läuft.
 - Dauer des Fristtyps Mieterhöhung noch nicht hinterlegt (WS-01-Q1); bis dahin Fälligkeit je
   Frist eintragen.
-- Musterschreiben ohne Briefbogen-PDF.
+- Der Versandnachweis am Schreiben ändert den Status des Falls nicht; der Prozessschritt
+  Versand erfassen bleibt bis G3 gesperrt (M12-L1).
 - Keine automatische Prüfung für Modernisierung, Index- und Staffelmiete.
 - Regelwerk wirkt erst nach Freigabe je Regel durch den Betreiber; laut Regeldatei bis dahin
   Entwurf. Den aktuellen Status zeigt System, Plattform, Mietrecht: Regelwerk.

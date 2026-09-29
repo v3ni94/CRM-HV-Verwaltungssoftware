@@ -2904,7 +2904,24 @@
       "sourceRequired": "Bitte die Quelle der Frist angeben.",
       "save": "Frist speichern",
       "saved": "Frist gespeichert."
-    }
+    },
+    "previewTitle": "Übernahme in die Zahlungspläne (W02)",
+    "preview": "Vorschau Vorschüsse",
+    "previewIntro": "Je Einheit und Komponente der Sollbetrag ab Wirksamkeitsbeginn. Die Zeilen sind Stammdaten des Vertrags (keine Freigabestufe); die Sollstellung liest sie erst mit G1. Bestätigung durch eine zweite Person, nicht den Ersteller des Plans.",
+    "current": "Bisher",
+    "new": "Neu ab {date}",
+    "action": "Aktion",
+    "actions": {
+      "create": "anlegen",
+      "unchanged": "unverändert",
+      "zero": "kein Betrag",
+      "no_contract": "kein Eigentumsverhältnis"
+    },
+    "postedMonths": "Bereits gebuchte Monate ab Wirksamkeitsbeginn: {count}. Sie werden nicht erneut nachgefordert; eine Anpassung ist eine Korrektur der Buchhaltung hinter G1.",
+    "confirmApplyPreview": "Vorschau bestätigen und übernehmen",
+    "applied": "Übernommen: {count} Sollbeträge angelegt.",
+    "alreadyApplied": "Bereits übernommen am {date}.",
+    "counts": "{create} anlegen, {unchanged} unverändert, {no_contract} ohne Eigentumsverhältnis"
   },
   "RentIncrease": {
     "title": "Mieterhöhungen",
@@ -7390,7 +7407,8 @@
       "complete": "Alle Pflichtunterlagen sind vorhanden.",
       "draftAction": "Nachforderungsschreiben als Entwurf erzeugen",
       "satisfiedCount": "{count, plural, one {# Pflichtunterlage vorhanden} other {# Pflichtunterlagen vorhanden}}",
-      "draftLabel": "Entwurf (nicht versendet)"
+      "draftLabel": "Entwurf (nicht versendet)",
+      "letterAnchor": "Briefbogen-PDF mit Versandnachweis"
     },
     "rules": {
       "title": "Klassifikationsregeln",
@@ -11660,7 +11678,8 @@
       "done": "abgeschlossen"
     },
     "readOnly": "Zum Abhaken ist das Recht properties:update erforderlich.",
-    "startedAt": "gestartet am {date}"
+    "startedAt": "gestartet am {date}",
+    "letterLink": "Nachforderungsschreiben auf Briefbogen"
   },
   "Ui": {
     "close": "Schließen",
@@ -11736,5 +11755,69 @@
     "knownByIban": "Gegenpartei laut IBAN: {name} (kein Beweis).",
     "knownByName": "Gegenpartei laut Name: {name} (kein Beweis).",
     "linkToProperty": "Als Kreditor mit dem Objekt verknüpfen"
+  },
+  "LetterRecord": {
+    "title": "Schreiben auf Briefbogen und Versandnachweis",
+    "intro": "Erzeugt das Schreiben auf dem hinterlegten Briefbogen als PDF, legt es als Dokument ab und erfasst den Versand (Weg, Datum, Benutzer, Sendungsnummer). Die Plattform versendet nichts: Post außerhalb, E-Mail nur über die Mailfreigabe.",
+    "recipient": "Empfänger",
+    "recipientSearch": "Kontakt suchen (mindestens 2 Zeichen)",
+    "recipientClear": "Auswahl entfernen",
+    "recipientTenant": "Hauptkontakt der Mietpartei",
+    "letterDate": "Briefdatum",
+    "ticket": "Ticket verknüpfen",
+    "ticketNone": "Kein Ticket",
+    "record": "Versand erfassen",
+    "channel": "Versandweg",
+    "channels": {
+      "none": "Nur ablegen, kein Versandnachweis",
+      "post": "Post",
+      "email": "E-Mail (Entwurf zur Mailfreigabe)",
+      "portal": "Portal"
+    },
+    "sentOn": "Versanddatum",
+    "evidenceKind": "Nachweisart",
+    "evidence": {
+      "none": "Ohne",
+      "registered_mail": "Einschreiben",
+      "courier": "Kurier",
+      "hand_delivery": "Persönliche Übergabe",
+      "email_log": "Mailprotokoll",
+      "portal_read": "Portal gelesen",
+      "other": "Sonstiges"
+    },
+    "evidenceRef": "Sendungsnummer oder Referenz",
+    "create": "PDF ablegen",
+    "creating": "Wird erzeugt",
+    "created": "Abgelegt: {title}",
+    "openDocument": "Dokument öffnen",
+    "dispatchRecorded": "Versand erfasst: {channel}, Status {status}",
+    "portalGate": "Portalzustellung erst mit Freigabestufe G3.",
+    "recipientRequired": "Bitte einen Empfänger wählen.",
+    "readOnly": "Zum Ablegen fehlt das Recht {permission}."
+  },
+  "ObjektakteExport": {
+    "title": "Objektakte-Export für den Nachfolger",
+    "intro": "Stellt die Objektakte als ZIP zusammen: Dokumente je Kategorie, Stammdatenblätter (Einheiten, Eigentümer, Mieter, Verträge, Zähler), offene Posten und Übergabeprotokoll. Der Export läuft im Hintergrund und wird als Dokument am Objekt abgelegt; jeder Abruf wird protokolliert.",
+    "requiresTermination": "Der Export ist möglich, sobald die Beendigung der Verwaltung erfasst ist.",
+    "start": "Export vorbereiten",
+    "confirmTitle": "Export bestätigen",
+    "note": "Notiz (optional)",
+    "acknowledge": "Ich habe den Datenschutzhinweis gelesen; der Export wird nur an den nachfolgenden Verwalter über einen gesicherten Weg weitergegeben.",
+    "confirm": "Export starten",
+    "cancel": "Abbrechen",
+    "started": "Export gestartet, das ZIP erscheint hier nach Abschluss.",
+    "runs": "Exporte",
+    "none": "Noch kein Export.",
+    "status": {
+      "queued": "wartet",
+      "running": "läuft",
+      "done": "fertig",
+      "failed": "fehlgeschlagen"
+    },
+    "download": "ZIP herunterladen",
+    "downloads": "{count, plural, =0 {noch nicht abgerufen} one {# Abruf} other {# Abrufe}}",
+    "counts": "{documents} Dokumente, {units} Einheiten, {owners} Eigentümer, {tenants} Mieter, {open_items} offene Posten",
+    "readOnly": "Zum Export sind die Rechte properties:update und documents:read erforderlich.",
+    "refresh": "Aktualisieren"
   }
 }

@@ -215,3 +215,17 @@ Im Abgleich mit dem Ordnerinhalt am 26.09.2026 fehlten oben:
 Einstellungen: `MHVP_OBJEKTAKTE_PREVIEWS_DIR` (Standard `/data/previews`), `MHVP_OBJEKTAKTE_MODELS_DIR`
 (Standard `/data/models`). Tests: `tests/unit/test_m35_{rekey,reconciliation,drive_quota,local_model}.py`,
 `tests/integration/test_m35_previews.py`, `tests/integration/test_m35_reconciliation_local_model.py`.
+
+## Objektakte export for the successor manager (M12 gaps, 29.09.2026)
+
+* `export.py`: ZIP per run (documents by category, master data sheets, open items, handover
+  log, personal data note), `export_routers.py`: `GET/POST /properties/{id}/objektakte-export`,
+  `GET .../{export_id}`, `GET .../{export_id}/download` (event `objektakte_export.downloaded`),
+  permissions `properties:update` plus `documents:read`, confirmation and acknowledged personal
+  data note required, only after a recorded termination. Table `objektakte_export` (migration
+  0246), Celery job `mhvp.objektakte.export_property`. Excluded on purpose: internal notes,
+  tickets, bank data, portal accounts, AI proposals, Drive only documents (listed in the log).
+* `completeness_routers.py`: `POST .../completeness/nachforderungsschreiben/pdf` files the
+  Nachforderungsschreiben on the tenant letterhead with dispatch record and ticket link
+  (`mhvp.documents.letter_records`). Tests: `tests/integration/test_m12_letters_plan_export.py`.
+

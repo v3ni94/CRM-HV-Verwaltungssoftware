@@ -116,10 +116,17 @@ Objektseite; deren Pflege erfolgt über den Import oder die Schnittstelle.
    derzeit nur über die Schnittstelle gepflegt (Recht `objektakte:approve`); eine Seite dafür
    gibt es nicht.
 2. Schaltfläche Nachforderungsschreiben als Entwurf erzeugen: Entwurf (nicht versendet) mit
-   der Liste der fehlenden Unterlagen. Text prüfen, auf den Briefbogen der Hausverwaltung
-   Müller GmbH übernehmen, durch die Geschäftsführung freigeben lassen, versenden und das
-   versandte Schreiben als Dokument am Objekt ablegen.
-3. Verwaltung, Objektakte, Listen aus der Objektakte: Anforderungsliste über alle Objekte für
+   der Liste der fehlenden Unterlagen zum Prüfen des Textes.
+3. Schaltfläche Briefbogen-PDF mit Versandnachweis (Recht `documents:create`): Empfänger
+   (Vorverwaltung) suchen, Briefdatum, optional Ticket verknüpfen, Versandweg wählen (Post
+   mit Versanddatum, Nachweisart und Sendungsnummer; E-Mail als Entwurf zur Mailfreigabe;
+   Portal), dann PDF ablegen. Die Plattform erzeugt das Schreiben auf dem hinterlegten
+   Briefbogen des Mandanten, legt es als Dokument am Objekt, am Empfänger und am Ticket ab
+   und erfasst den Versand mit Datum, Benutzer und Referenz. Versendet wird nichts: Post
+   außerhalb der Software nach Freigabe durch die Geschäftsführung, E-Mail nur über die
+   Mailfreigabe. Die Checkliste Verwalterwechsel führt beim Schritt Vollständigkeit direkt zu
+   dieser Schaltfläche.
+4. Verwaltung, Objektakte, Listen aus der Objektakte: Anforderungsliste über alle Objekte für
    die Nachverfolgung.
 
 ### 8. Checkliste, Fristen und Wiedervorlagen
@@ -186,8 +193,21 @@ Nachfolgender Verwalter, Nachfolgender Eigentümer, Kündigungsschreiben (Datei 
 Notiz; Weiter, dann Verwaltung beenden. Das Objekt wird deaktiviert, alle Daten bleiben
 erhalten. Wieder aktivieren kann nur der Superadmin (Regel `docs/rules/M4-05-objekt-deaktivieren.md`).
 Die Kündigung selbst ist vorher durch die Geschäftsführung freizugeben. Umfang und Frist der
-Herausgabe an den Nachfolger: rechtlich zu prüfen durch Rechtsanwalt [Platzhalter]. Einen
-Export der Objektakte für den Nachfolger bietet die Oberfläche nicht an.
+Herausgabe an den Nachfolger: rechtlich zu prüfen durch Rechtsanwalt [Platzhalter].
+
+Objektakte-Export für den Nachfolger (Objektseite, Abschnitt Objektakte-Export, sichtbar nach
+erfasster Beendigung; Rechte `properties:update` und `documents:read`): Export vorbereiten,
+Datenschutzhinweis lesen und bestätigen, optional Notiz, Export starten. Der Export läuft im
+Hintergrund und legt ein ZIP als Dokument am Objekt ab (Kategorie Objektakte-Export):
+`01_Dokumente` mit allen Dokumenten des Objekts je Kategorie, `02_Stammdaten` mit Einheiten,
+Eigentümern, Mietern, Verträgen samt Sollbeträgen und Zählern als CSV, `03_Offene_Posten` mit
+den offenen Posten der Buchungskreise des Objekts zum Exporttag, `04_Uebergabe` mit
+Übergabeprotokoll (Beendigung, Nachfolger, Checklisten, Inhalt, Hinweise) und Datenschutzhinweis.
+Jeder Abruf des ZIP wird mit Benutzer protokolliert. Nicht enthalten sind interne Notizen,
+Tickets und Kommentare, Bankverbindungen, Portalzugänge und KI-Vorschläge; Dokumente, die nur
+in Google Drive liegen, werden im Übergabeprotokoll genannt und nicht kopiert. Welche
+Unterlagen der Nachfolger verlangen darf, bleibt rechtlich zu prüfen (M12-L3); der Export
+ersetzt diese Prüfung nicht.
 
 ## Lücken in der Software
 
@@ -197,7 +217,9 @@ Export der Objektakte für den Nachfolger bietet die Oberfläche nicht an.
   Frist von Hand eintragen.
 - Ansprechpartner des Objekts (Beirat) nicht in der Oberfläche pflegbar.
 - Pflichtunterlagen der Vollständigkeitsprüfung nur über die Schnittstelle pflegbar.
-- Nachforderungsschreiben nur als Textentwurf, kein Briefbogen-PDF und kein Versandnachweis.
-- Kein Export der Objektakte bei Abgabe an einen Nachfolger.
+- Der Versand des Nachforderungsschreibens erfolgt außerhalb der Plattform (Post) oder über
+  die Mailfreigabe; ein Postdienst ist für dieses Schreiben nicht angebunden.
+- Der Objektakte-Export enthält keine Dokumente, die nur in Google Drive liegen, und keine
+  Buchungsjournale; offene Posten nur als Liste zum Exporttag.
 - Offene Posten, Salden und Rücklagenstände der Vorverwaltung lassen sich wegen G1 nicht
   produktiv als Eröffnungsbestand übernehmen.
