@@ -46,12 +46,7 @@ export function DuplicateWarning({
               <td className="py-1 pr-2 tabular-nums">{Math.round(c.score * 100)} %</td>
               <td className="py-1 pr-2">{c.reasons.join(", ")}</td>
               <td className="py-1 text-right">
-                <a
-                  href={`/kontakte/${c.contact.id}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="underline"
-                >
+                <a href={`/kontakte/${c.contact.id}`} className="underline">
                   {t("open")}
                 </a>
               </td>

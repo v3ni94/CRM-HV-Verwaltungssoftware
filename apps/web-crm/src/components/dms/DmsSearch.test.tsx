@@ -43,6 +43,9 @@ describe("DmsSearch", () => {
     expect(search).toContain("object_number=523");
     expect(screen.getByRole("link", { name: "Vorschau" })).toHaveAttribute("href", "/api/bff/dms-documents/7/file?kind=preview");
     expect(screen.getByRole("link", { name: "Download" })).toHaveAttribute("href", "/api/bff/dms-documents/7/file?kind=download");
+    // Same tab preview and a download attribute instead of target=_blank (ADR 0017).
+    expect(screen.getByRole("link", { name: "Vorschau" })).not.toHaveAttribute("target");
+    expect(screen.getByRole("link", { name: "Download" })).toHaveAttribute("download");
   });
 
   it("shows the configuration hint for 502", async () => {

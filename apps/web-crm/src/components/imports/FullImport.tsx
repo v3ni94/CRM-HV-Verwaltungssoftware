@@ -336,7 +336,7 @@ export function RunResult({ report }: { report: RunReport }) {
       {report.abgleich.some((e) => e.entitaet === "mietvertraege" || e.entitaet === "eigentuemervertraege") && <p className={ui.help}>{t("contractsHelp")}</p>}
       {report.id && (
         <p className="text-sm">
-          <a className="font-medium hover:underline" href={`${API}/${report.id}/pdf`} target="_blank" rel="noreferrer">
+          <a className="font-medium hover:underline" href={`${API}/${report.id}/pdf`}>
             {t("pdfLink")}
           </a>
         </p>
@@ -530,7 +530,7 @@ export function FullImport() {
                       <button type="button" className={ui.buttonSm} onClick={() => void openRun(r.id)}>
                         {t("open")}
                       </button>
-                      <a className="text-sm font-medium hover:underline" href={`${API}/${r.id}/pdf`} target="_blank" rel="noreferrer">
+                      <a className="text-sm font-medium hover:underline" href={`${API}/${r.id}/pdf`}>
                         {t("pdfLink")}
                       </a>
                     </td>

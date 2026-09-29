@@ -138,22 +138,12 @@ export function TransactionMatcher({
           {splits.map((s) => (
             <span key={s.open_item_id} className="flex gap-1">
               {data?.ledger_id ? (
-                <a
-                  className="underline"
-                  href={`/buchhaltung/${data.ledger_id}#open-item-${s.open_item_id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a className="underline" href={`/buchhaltung/${data.ledger_id}#open-item-${s.open_item_id}`}>
                   {t("openItemLink")}
                 </a>
               ) : null}
               {s.contract_id ? (
-                <a
-                  className="underline"
-                  href={`/vertraege/${s.contract_id}`}
-                  target="_blank"
-                  rel="noreferrer"
-                >
+                <a className="underline" href={`/vertraege/${s.contract_id}`}>
                   {t("contractLink")}
                 </a>
               ) : null}

@@ -71,6 +71,9 @@ describe("TransactionMatcher", () => {
     expect(openItemLinks[0]).toHaveAttribute("href", `/buchhaltung/${LEDGER}#open-item-${OI}`);
     const contractLinks = screen.getAllByRole("link", { name: "Vertrag" });
     expect(contractLinks[0]).toHaveAttribute("href", `/vertraege/${CONTRACT}`);
+    // In app pages open in the same tab (ADR 0017).
+    expect(openItemLinks[0]).not.toHaveAttribute("target");
+    expect(contractLinks[0]).not.toHaveAttribute("target");
     await userEvent.click(screen.getAllByText("Zuordnen und buchen")[1]!);
     await waitFor(() => expect(refresh).toHaveBeenCalled());
     const body = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);

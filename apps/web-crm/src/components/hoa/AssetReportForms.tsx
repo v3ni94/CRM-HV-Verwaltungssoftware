@@ -136,7 +136,7 @@ export function AssetReportActions({ id, status, manualItems }: { id: string; st
           </button>
         ) : null}
         {status !== "draft" ? (
-          <a className={ui.secondary} href={`/api/bff/hoa/asset-reports/${id}/pdf`} target="_blank" rel="noreferrer">
+          <a className={ui.secondary} href={`/api/bff/hoa/asset-reports/${id}/pdf`}>
             {t("pdfDraft")}
           </a>
         ) : null}

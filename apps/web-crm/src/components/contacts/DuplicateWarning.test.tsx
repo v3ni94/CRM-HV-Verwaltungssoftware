@@ -46,6 +46,8 @@ describe("DuplicateWarning", () => {
       "href",
       "/kontakte/01920000-0000-7000-8000-000000000001",
     );
+    // Same tab (ADR 0017): an installed app would lose its session in a new tab.
+    expect(screen.getByRole("link", { name: "Öffnen" })).not.toHaveAttribute("target");
   });
 
   it("offers save anyway and cancel", async () => {

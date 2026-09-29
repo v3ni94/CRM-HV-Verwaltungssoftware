@@ -48,9 +48,15 @@ login page. The operator released the shell and the matcher exception on 28.09.2
 ## Consequences
 
 - Links that open a new tab (`target="_blank"`) lose the session of an installed iOS app in
-  the external tab. WP5 removed them from the portal protocol; the CRM still has 29
-  occurrences in 20 files (list in the pull request of WP5). They are to be reviewed per case
-  in a follow up (same tab, download or a sheet), starting with the handover editor.
+  the external tab. WP5 removed them from the portal protocol; the CRM had 29 occurrences in
+  20 files (list in the pull request of WP5). Follow up of 29.09.2026 (M31 WP4): every link to
+  an in app file or page opens in the same tab (asset report PDF, DMS preview, import report
+  PDF, rent invoice PDF, Objektakte document, duplicate contact, open item and contract of the
+  transaction matcher) or carries the `download` attribute (DMS download, Immoware file). The
+  16 remaining `target="_blank"` links point to other origins on purpose (Lexware Office deep
+  links, Google Drive folders and files, the finAPI web form, legal sources, the portal
+  invitation URL); a new tab is the right behaviour there. Component tests assert the absence
+  of `target` where a test exists.
 - Tests: `src/middleware.test.ts` (shell files open, pages and API locked, neighbours such as
   `/icons/x.svg` locked), `src/components/shell/InstallHint.test.tsx`, `src/lib/theme.test.ts`
   (meta follows `data-theme`), `src/app/manifest.test.ts`, `e2e/pwa.spec.ts` (manifest, icons,
