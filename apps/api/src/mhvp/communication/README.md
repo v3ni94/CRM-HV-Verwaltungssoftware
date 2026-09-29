@@ -200,7 +200,11 @@ Gmail are read per mailbox copy and, in mode `done`, complete or reopen the copy
   user already archived or trashed (their state stays).
 * Settle period (`gmail_settle_seconds`, default 600): a completion waits (`settle_pending`),
   beat `communication-gmail-settle` (60 s) executes it after a fresh check; a return into the
-  inbox before drops it. Work labels (`gmail_keep_open_labels`) keep a mail open.
+  inbox before drops it. Work labels (`gmail_keep_open_labels`, label names) keep a mail
+  open: the history carries label ids, `sync_mailbox` maps them once per run through
+  `labels.list` (`GmailClient.label_names`); removing the label while the copy stays out
+  of the inbox decides the group again. Only a label on an authoritative copy blocks the
+  automatic ticket close. Copies of deleted or disabled mailboxes never decide or block.
 * Reconcile (`gmail_state.reconcile_mailbox`): profile history id first, complete inbox
   listing, candidates of the last 90 days older than the grace period, own expected states
   without a call, at most `gmail_state_reconcile_limit` single reads, returners as
@@ -221,8 +225,10 @@ Gmail are read per mailbox copy and, in mode `done`, complete or reopen the copy
   `gmail_restore_inbox`, `archive_status` restore_pending, restored, restore_failed).
 * API: `gmail_sync` (`state` synchron, abweichend, ausstehend, geloescht, unbekannt, aus and
   `copies` per mailbox, hidden copies as `visible: false`), filter `sync_state`,
-  `GET /mail/messages/{id}/sync-events`, mailbox fields `sync_back_enabled`,
-  `gmail_last_sync_at`, `gmail_state_reconcile_*`, `sync_back_warning`.
+  `GET /mail/messages/{id}/sync-events` (label events of mailboxes the user may not read
+  are left out, like `visible: false`), mailbox fields `sync_back_enabled`,
+  `gmail_last_sync_at`, `gmail_state_reconcile_*`, `sync_back_warning` (running counter
+  `fallback_attributions`: own actions recognised by the expected state alone).
 * Domain events: `message.gmail_state_changed` (effect per decision), `message.completed`,
   `message.reopened`, `message.gmail_restore_requested`; `ticket.status_changed` carries
   `source` and `auto_close` for automation conditions (`payload.source ne gmail`).

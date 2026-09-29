@@ -14,7 +14,7 @@ Data take over (idempotent through ``WHERE ... IS NULL``): rows archived by the 
 requested but open archivings get the expected state; done rows get their ``done_source``.
 
 Revision ID: 0224
-Revises: 0222
+Revises: 0223
 Create Date: 2026-09-28
 """
 
@@ -28,7 +28,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0224"
-down_revision: str | None = "0222"
+down_revision: str | None = "0223"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
