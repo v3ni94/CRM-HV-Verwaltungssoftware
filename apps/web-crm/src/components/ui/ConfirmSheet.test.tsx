@@ -6,7 +6,7 @@ import { renderIntl } from "@/test/intl";
 
 import { ConfirmSheet, useConfirm } from "./ConfirmSheet";
 
-vi.mock("next/navigation", () => ({ usePathname: () => "/makler/uebergabe" }));
+vi.mock("next/navigation", () => ({ usePathname: () => "/makler/uebergabe", useSearchParams: () => new URLSearchParams() }));
 
 function Host({ danger = false }: { danger?: boolean }) {
   const { confirm, confirmSheet } = useConfirm();

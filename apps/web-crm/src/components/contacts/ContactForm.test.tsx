@@ -9,6 +9,8 @@ import { ContactForm } from "./ContactForm";
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, refresh: vi.fn(), back: vi.fn() }),
+  usePathname: () => "/kontakte/neu",
+  useSearchParams: () => new URLSearchParams(),
 }));
 
 const ID = "01920000-0000-7000-8000-00000000000a";
