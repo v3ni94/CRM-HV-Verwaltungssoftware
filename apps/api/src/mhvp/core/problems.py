@@ -487,6 +487,46 @@ class ErrorCodes:
             "or already closed. Reload the proposals and decide again (ADR 0014, M12-04)."
         ),
     )
+    BANK_LEVEL_NOT_ELIGIBLE = ErrorCode(
+        "MHVP-BANK-0022",
+        409,
+        "Automatikstufe nicht erreichbar",
+        (
+            "The case class does not meet the eligibility figures for the requested level "
+            "(decisions in the window, precision of shown proposals, days at the previous "
+            "level, automatic error rate) or is capped below it (plan M12 3.4, rule M12-05)."
+        ),
+    )
+    BANK_LEVEL_TOO_LOW = ErrorCode(
+        "MHVP-BANK-0023",
+        409,
+        "Automatikstufe zu niedrig",
+        (
+            "The one click acceptance needs level L1 for the case class of the transaction "
+            "and a deterministically verified proposal; the automatic runner needs L2 or L3. "
+            "Book through the full dialog instead (rule M12-05)."
+        ),
+    )
+    BANK_RULE_PROPOSAL_WIDENED = ErrorCode(
+        "MHVP-BANK-0024",
+        422,
+        "Regelvorschlag darf nur verengt werden",
+        (
+            "Accepting a learned rule proposal may narrow the amount band and add purpose "
+            "tokens, never widen the band, drop the counterparty key or change the account "
+            "(plan M12 3.3, rule M12-06)."
+        ),
+    )
+    BANK_AUTO_POST_REFUSED = ErrorCode(
+        "MHVP-BANK-0025",
+        409,
+        "Automatikbuchung abgelehnt",
+        (
+            "The deterministic verifier of the case class refused the posting at posting "
+            "time (fingerprint mismatch, chronology, account lock criteria, period lock, "
+            "limits, overdue review or missing evidence chain). The transaction stays open."
+        ),
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,

@@ -123,6 +123,13 @@ class TenantSettingsOut(BaseModel):
     learning_bookkeeper_enabled: bool = False
     # Lern-Workflow (rule M9-11): consistent manual decisions before a rule is proposed.
     rule_proposal_threshold: int = 5
+    # Lernende Bankregeln (Regel M12-06): Schwellen für Regelvorschläge aus Buchungen.
+    bank_rule_proposal_threshold: int = 5
+    bank_rule_recurring_threshold: int = 3
+    # Automatikstufen je Fallklasse (Regel M12-05, nur lesend; Änderung über
+    # ``/banking/automation``) und der Schalter der Ausgangsautomatik (M12-05 offen).
+    bookkeeping_automation: dict[str, str] = Field(default_factory=dict)
+    auto_posting_outgoing_enabled: bool = False
     # Messdienstleister module switch (default off).
     metering_module_enabled: bool = False
     # Rule H03: Verbrauchsinformation monthly job, notifications and template verification
@@ -201,6 +208,8 @@ class TenantSettingsPatch(BaseModel):
     ai_learning_examples_enabled: bool | None = None
     ai_learning_examples_retention_months: int | None = Field(default=None, ge=1, le=120)
     rule_proposal_threshold: int | None = Field(default=None, ge=2, le=50)
+    bank_rule_proposal_threshold: int | None = Field(default=None, ge=2, le=50)
+    bank_rule_recurring_threshold: int | None = Field(default=None, ge=2, le=50)
     metering_module_enabled: bool | None = None
     consumption_info_enabled: bool | None = None
     consumption_info_notifications_enabled: bool | None = None

@@ -206,6 +206,142 @@ class BankRule(IdMixin, TimestampMixin, TenantMixin, Base):
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     max_amount: Mapped[Decimal | None] = mapped_column(MONEY)
     test_evidence_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    # Learned rules (plan M12 S5, migration 0241): the accepted proposal the rule was created
+    # from, contradictions observed while active (reversal with reason code automation_error,
+    # other account for the same key) and the learned rule that replaced this one
+    # (``bank_rule.superseded``). A rule change is always a new row.
+    learned_from_proposal_id: Mapped[uuid.UUID | None] = _fk("bank_rule_proposal.id", nullable=True)
+    contradiction_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    superseded_by_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class RuleProposalStatus(StrEnum):
+    """Life cycle of a learned rule proposal (plan M12 3.3, S5)."""
+
+    PROPOSED = "proposed"
+    WITHDRAWN = "withdrawn"  # a contradiction ended the streak
+    ACCEPTED = "accepted"  # a person created the BankRule (state proposed) from it
+    REJECTED = "rejected"  # a person rejected it; proposed again at twice the evidence
+    SUPERSEDED = "superseded"  # an equivalent rule already exists
+
+
+class BankRuleProposal(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Rule proposal from repeated identical decisions of persons (ADR 0014, plan M12 S5).
+
+    Pattern key per legal entity (B01): direction, counterparty (IBAN fingerprint or creditor
+    id) and the account persons booked against. The row carries the evidence (decision ids,
+    transactions, period, amount band, purpose tokens, persons) and the derived match. A
+    proposal books nothing and activates nothing: acceptance creates a ``BankRule`` in state
+    ``proposed`` that then walks the existing four eyes path (approve by another person,
+    activate with amount cap and test evidence). Contains payer data (fingerprints, tokens),
+    written only with ``learning_bookkeeper_enabled``."""
+
+    __tablename__ = "bank_rule_proposal"
+    __table_args__ = (
+        Index(
+            "uq_bank_rule_proposal_open",
+            "tenant_id",
+            "pattern_key",
+            unique=True,
+            postgresql_where=text("status = 'proposed'"),
+        ),
+        Index("ix_bank_rule_proposal_key", "tenant_id", "pattern_key"),
+    )
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
+    pattern_key: Mapped[str] = mapped_column(String(200), nullable=False)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=RuleProposalStatus.PROPOSED.value
+    )
+    direction: Mapped[str] = mapped_column(String(6), nullable=False)  # credit | debit
+    case_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    counterpart_iban_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    creditor_id: Mapped[str | None] = mapped_column(String(64))
+    account_number: Mapped[str] = mapped_column(String(6), nullable=False)
+    account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    action_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    amount_min: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    amount_max: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    purpose_tokens: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    recurring: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    threshold: Mapped[int] = mapped_column(Integer, nullable=False)
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    evidence_count: Mapped[Decimal] = mapped_column(Numeric(6, 1), nullable=False)
+    rejected_evidence_count: Mapped[Decimal | None] = mapped_column(Numeric(6, 1))
+    reason: Mapped[str | None] = mapped_column(Text)
+    rule_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class LevelRequestStatus(StrEnum):
+    REQUESTED = "requested"
+    APPROVED = "approved"
+    REJECTED = "rejected"
+
+
+class BookkeepingLevelRequest(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Raising the automation level of one case class (plan M12 3.4, S4), pattern
+    ``release_gate_request``: requested by one person with the eligibility report as evidence,
+    approved or rejected by another person (never a platform admin). Lowering a level needs
+    no request. Approval writes ``tenant_settings.bookkeeping_automation`` and emits
+    ``bookkeeping_level.changed``; nothing here opens a gate."""
+
+    __tablename__ = "bookkeeping_level_request"
+
+    case_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    level_from: Mapped[str] = mapped_column(String(4), nullable=False)
+    level_to: Mapped[str] = mapped_column(String(4), nullable=False)
+    reason: Mapped[str] = mapped_column(Text, nullable=False)
+    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default=LevelRequestStatus.REQUESTED.value
+    )
+    requested_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    decision_comment: Mapped[str | None] = mapped_column(Text)
+
+
+class ReviewStatus(StrEnum):
+    OPEN = "open"
+    OK = "ok"
+    CORRECTED = "corrected"
+    CANCELLED = "cancelled"
+
+
+class ReviewKind(StrEnum):
+    DAILY = "daily"  # L2: every automatic posting, due next working day
+    SAMPLE = "sample"  # L3: deterministic sample (debtor_full, transfer_pair only)
+    RETURN = "return"  # a returned payment of an automatically posted transaction
+
+
+class AutoPostingReview(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Review queue of automatic postings (7.4 no. 4, plan M12 S6): one item per automatic
+    posting (L2 daily, L3 sample) or returned payment, due on a date; an overdue item blocks
+    the class in the runner until a person with ``accounting:review`` closed it (ok, corrected
+    by reversal plus new posting, cancelled by reversal only)."""
+
+    __tablename__ = "auto_posting_review"
+    __table_args__ = (
+        Index("ix_auto_posting_review_open", "tenant_id", "status", "due_on"),
+        Index("ix_auto_posting_review_decision", "tenant_id", "posting_decision_id"),
+    )
+
+    posting_decision_id: Mapped[uuid.UUID] = _fk("posting_decision.id")
+    bank_transaction_id: Mapped[uuid.UUID] = _fk("bank_transaction.id")
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+    rule_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    case_kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    kind: Mapped[str] = mapped_column(String(8), nullable=False, default=ReviewKind.DAILY.value)
+    due_on: Mapped[date] = mapped_column(Date, nullable=False)
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default=ReviewStatus.OPEN.value)
+    note: Mapped[str | None] = mapped_column(Text)
+    reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class OrderStatus(StrEnum):
@@ -792,6 +928,10 @@ class PostingDecision(IdMixin, TimestampMixin, TenantMixin, Base):
     supersedes_id: Mapped[uuid.UUID | None] = _fk("posting_decision.id", nullable=True)
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Runner (S6): fingerprint of the deterministic verification at posting time and the day
+    # the review is due; both only on ``auto_posted`` rows.
+    verifier_fingerprint: Mapped[str | None] = mapped_column(String(64))
+    review_due_on: Mapped[date | None] = mapped_column(Date)
 
 
 class BankingEventWatermark(IdMixin, TenantMixin, Base):

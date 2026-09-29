@@ -391,6 +391,12 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         ai_learning_examples_retention_months=row.ai_learning_examples_retention_months,
         learning_bookkeeper_enabled=row.learning_bookkeeper_enabled,
         rule_proposal_threshold=row.rule_proposal_threshold,
+        bank_rule_proposal_threshold=row.bank_rule_proposal_threshold,
+        bank_rule_recurring_threshold=row.bank_rule_recurring_threshold,
+        bookkeeping_automation={
+            str(k): str(v) for k, v in (row.bookkeeping_automation or {}).items()
+        },
+        auto_posting_outgoing_enabled=row.auto_posting_outgoing_enabled,
         metering_module_enabled=row.metering_module_enabled,
         consumption_info_enabled=row.consumption_info_enabled,
         consumption_info_notifications_enabled=row.consumption_info_notifications_enabled,
@@ -473,6 +479,8 @@ async def patch_settings(
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "rule_proposal_threshold": row.rule_proposal_threshold,
+            "bank_rule_proposal_threshold": row.bank_rule_proposal_threshold,
+            "bank_rule_recurring_threshold": row.bank_rule_recurring_threshold,
             "metering_module_enabled": row.metering_module_enabled,
             "consumption_info_enabled": row.consumption_info_enabled,
             "consumption_info_notifications_enabled": row.consumption_info_notifications_enabled,
@@ -503,6 +511,12 @@ async def patch_settings(
         if body.rule_proposal_threshold is not None:
             # Lern-Workflow (rule M9-11): threshold of the rule proposals, change recorded.
             row.rule_proposal_threshold = body.rule_proposal_threshold
+        if body.bank_rule_proposal_threshold is not None:
+            # Regel M12-06: Schwelle der gelernten Bankregeln (Annahme A-085), protokolliert.
+            row.bank_rule_proposal_threshold = body.bank_rule_proposal_threshold
+        if body.bank_rule_recurring_threshold is not None:
+            # Regel M12-06: niedrigere Schwelle wiederkehrender Muster (Annahme A-085).
+            row.bank_rule_recurring_threshold = body.bank_rule_recurring_threshold
         if body.metering_module_enabled is not None:
             # Messdienstleister module switch per tenant, change recorded in the event.
             row.metering_module_enabled = body.metering_module_enabled
@@ -547,6 +561,8 @@ async def patch_settings(
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "rule_proposal_threshold": row.rule_proposal_threshold,
+            "bank_rule_proposal_threshold": row.bank_rule_proposal_threshold,
+            "bank_rule_recurring_threshold": row.bank_rule_recurring_threshold,
             "metering_module_enabled": row.metering_module_enabled,
             "consumption_info_enabled": row.consumption_info_enabled,
             "consumption_info_notifications_enabled": row.consumption_info_notifications_enabled,

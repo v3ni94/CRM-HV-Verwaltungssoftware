@@ -23,9 +23,23 @@ BANK_TRANSACTION_REVIEWED = "bank_transaction.reviewed"
 BANK_TRANSACTION_PROPOSAL_REJECTED = "bank_transaction.proposal_rejected"
 BANK_TRANSACTION_POSTING_REVERSED = "bank_transaction.posting_reversed"
 POSTING_DECISIONS_COMPUTED = "posting_decision.computed"
+# Runner and review (S6).
+BANK_TRANSACTION_AUTO_POSTED = "bank_transaction.auto_posted"
+BANK_TRANSACTION_CLARIFICATION = "bank_transaction.clarification_needed"
+BANK_TRANSACTION_CORRECTED = "bank_transaction.corrected"
+AUTO_POST_RUN_STOPPED = "bank_auto_post.run_stopped"
+AUTO_POSTING_REVIEWED = "auto_posting_review.decided"
+# Levels (S4) and learned rules (S5).
+BOOKKEEPING_LEVEL_REQUESTED = "bookkeeping_level.requested"
+BOOKKEEPING_LEVEL_CHANGED = "bookkeeping_level.changed"
+BANK_RULE_PROPOSAL_CREATED = "bank_rule_proposal.created"
+BANK_RULE_PROPOSAL_WITHDRAWN = "bank_rule_proposal.withdrawn"
+BANK_RULE_PROPOSAL_ACCEPTED = "bank_rule_proposal.accepted"
+BANK_RULE_PROPOSAL_REJECTED = "bank_rule_proposal.rejected"
 
 # Tenant switches.
 TENANT_LEARNING_BOOKKEEPER_CHANGED = "tenant.learning_bookkeeper_changed"
+TENANT_AUTO_POSTING_OUTGOING_CHANGED = "tenant.auto_posting_outgoing_changed"
 
 # Events of other modules the banking consumer reads (never imported from there: no import of
 # banking into accounting, plan 3.1 no. 9).

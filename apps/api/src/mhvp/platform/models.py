@@ -453,6 +453,27 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     rule_proposal_threshold: Mapped[int] = mapped_column(
         Integer, nullable=False, default=5, server_default=text("5")
     )
+    # Automatikstufen je Fallklasse (ADR 0014 Nachtrag S4, Regel M12-05, Migration 0241):
+    # {"debtor_full": "L1", ...}; fehlende Klassen stehen auf L0. Anhebung nur über
+    # ``bookkeeping_level_request`` (Antrag und Freigabe durch zwei Personen), Absenkung
+    # sofort; Klassendeckel in ``mhvp.banking.levels.CLASS_CAPS``. Kein Gate.
+    bookkeeping_automation: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    # Lernende Bankregeln (Regel M12-06, Migration 0241): Schwelle gleicher Entscheidungen bis
+    # zum Regelvorschlag (Standard 5, Annahme A-085) und die niedrigere Schwelle für
+    # wiederkehrende Muster mit gleicher Gegenpartei und gleichem Betrag (Standard 3, A-085).
+    bank_rule_proposal_threshold: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=5, server_default=text("5")
+    )
+    bank_rule_recurring_threshold: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=3, server_default=text("3")
+    )
+    # Ausgangsautomatik gegen Sachkonto (Stufe L2b, OPEN_QUESTIONS M12-05): Standard aus; ohne
+    # den Schalter bucht der Runner keine Klasse recurring_expense.
+    auto_posting_outgoing_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     # Erledigungsarten der Erledigungsnotiz je Mandant (Regel M19-07, Entscheidung M19-04 vom
     # 26.09.2026, ``mhvp.tickets.resolution_kinds``). Shape:
     # {"disabled": ["<code eingebauter Art>", ...], "custom": [{"code": str, "label": str}, ...]}.

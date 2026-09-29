@@ -64,8 +64,14 @@ METERING_PERMISSIONS: frozenset[str] = frozenset(
         METERING_BILLING_ORDER,
     }
 )
+# Nachkontrolle automatischer Buchungen (ADR 0014 Nachtrag S6, Regel M12-05): eigenes Recht,
+# damit die Person, die eine Regel aktiviert, nicht zwingend auch nachkontrolliert
+# (Produktschutz). Gespeichert wie jedes andere Recht als Ressource/Aktion.
+ACCOUNTING_REVIEW = "accounting:review"
 ALL_PERMISSIONS: frozenset[str] = (
-    frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS) | METERING_PERMISSIONS
+    frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
+    | METERING_PERMISSIONS
+    | {ACCOUNTING_REVIEW}
 )
 
 # Platform level permissions (M9-04a, operator decision 26.09.2026): held only by API keys
@@ -119,7 +125,7 @@ _MASTER_R = _r("contacts") | _r("properties") | _r("contracts") | _r("documents"
 
 # Accounting (M10): postings in non-leading ledgers; approve = Festschreibung, opening balances.
 _ACC_RW = _rw("accounting")
-_ACC_APPROVE = _ACC_RW | {"accounting:approve", "accounting:export"}
+_ACC_APPROVE = _ACC_RW | {"accounting:approve", "accounting:export", ACCOUNTING_REVIEW}
 
 # Onlinebanking (M11-finapi): connecting, re-authorizing and disconnecting a bank connection,
 # and seeing unassigned accounts, needs banking:approve in addition to accounting rights.
