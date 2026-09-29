@@ -34,6 +34,7 @@ from mhvp.billing.advance_routers import statement_router as advance_proposal_ro
 from mhvp.billing.ai_check_routers import router as statement_ai_check_router
 from mhvp.billing.allocability_routers import router as operating_cost_type_router
 from mhvp.billing.allocability_routers import statement_router as allocability_router
+from mhvp.billing.consumption_info_routers import router as consumption_info_router
 from mhvp.billing.heating_routers import router as heating_router
 from mhvp.billing.letter_routers import router as statement_letters_router
 from mhvp.billing.owner_statement_routers import router as owner_statement_router
@@ -114,6 +115,7 @@ from mhvp.platform.market_readiness import router as market_readiness_router
 from mhvp.platform.overview import router as platform_overview_router
 from mhvp.platform.routers import platform_router, tenant_router
 from mhvp.portal.board import router as portal_board_router
+from mhvp.portal.consumption_info import router as portal_consumption_info_router
 from mhvp.portal.form_routers import admin as portal_form_admin_router
 from mhvp.portal.form_routers import router as portal_form_router
 from mhvp.portal.mandates import admin as portal_mandate_admin_router
@@ -274,6 +276,7 @@ def create_app(
     app.include_router(fints_router, prefix=API_PREFIX)
     app.include_router(billing_router, prefix=API_PREFIX)
     app.include_router(heating_router, prefix=API_PREFIX)
+    app.include_router(consumption_info_router, prefix=API_PREFIX)
     app.include_router(statement_letters_router, prefix=API_PREFIX)
     app.include_router(owner_statement_router, prefix=API_PREFIX)
     app.include_router(statement_ai_check_router, prefix=API_PREFIX)
@@ -332,6 +335,7 @@ def create_app(
     app.include_router(portal_board_router, prefix=API_PREFIX)
     app.include_router(portal_board_submissions_router, prefix=API_PREFIX)
     app.include_router(portal_owner_router, prefix=API_PREFIX)
+    app.include_router(portal_consumption_info_router, prefix=API_PREFIX)
     app.include_router(portal_owner_meetings_router, prefix=API_PREFIX)
     app.include_router(portal_form_router, prefix=API_PREFIX)
     app.include_router(portal_form_admin_router, prefix=API_PREFIX)

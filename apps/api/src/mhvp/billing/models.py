@@ -8,10 +8,12 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
     ForeignKey,
+    Index,
     Integer,
     Numeric,
     String,
@@ -162,3 +164,32 @@ class StatementHeating(IdMixin, TimestampMixin, TenantMixin, Base):
     applied_item_id: Mapped[uuid.UUID | None] = _fk(
         "statement_cost_item.id", nullable=True, ondelete="SET NULL"
     )
+
+
+class ConsumptionInfo(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Monthly consumption information per unit (§ 6a HeizkostenV, rule H03, D26). One row per
+    tenant, unit and month (``month`` is the first day). ``values`` holds the computed figures
+    with their origin, ``data_basis`` the source rows of ``mhvp.metering``, ``missing`` the
+    flags of what could not be determined. The snapshot (HTML and the stored PDF document) is
+    frozen with the row; a rerun of the month never overwrites it (rule 0.1.7)."""
+
+    __tablename__ = "consumption_info"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "unit_id", "month", name="uq_consumption_info_unit_month"),
+        CheckConstraint("extract(day from month) = 1", name="month_first_day"),
+        Index("ix_consumption_info_property_month", "tenant_id", "property_id", "month"),
+    )
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id")
+    unit_id: Mapped[uuid.UUID] = _fk("unit.id")
+    contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
+    month: Mapped[date] = mapped_column(Date, nullable=False)
+    rule_version: Mapped[str] = mapped_column(String(64), nullable=False)
+    values: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    data_basis: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    missing: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    trigger: Mapped[str] = mapped_column(String(16), nullable=False, default="job")
+    snapshot_html: Mapped[str] = mapped_column(Text, nullable=False)
+    snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True, ondelete="SET NULL")
+    notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

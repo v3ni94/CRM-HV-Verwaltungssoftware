@@ -286,6 +286,11 @@ class Property(IdMixin, TimestampMixin, TenantMixin, Base):
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
     # Energieausweis: only on the building (operator decision 26.09.2026, migration 0149).
+    # Rule H03 (migration 0238): per property switch of the monthly Verbrauchsinformation;
+    # effective only together with the tenant switch ``consumption_info_enabled``.
+    consumption_info_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
 
 
 class PropertyTermination(IdMixin, TimestampMixin, TenantMixin, Base):

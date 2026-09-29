@@ -392,6 +392,9 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         learning_bookkeeper_enabled=row.learning_bookkeeper_enabled,
         rule_proposal_threshold=row.rule_proposal_threshold,
         metering_module_enabled=row.metering_module_enabled,
+        consumption_info_enabled=row.consumption_info_enabled,
+        consumption_info_notifications_enabled=row.consumption_info_notifications_enabled,
+        consumption_info_template_verified=row.consumption_info_template_verified,
         resolution_kinds=ResolutionKindsConfig.model_validate(row.resolution_kinds or {}),
         receivable_rules=ReceivableRulesConfig.model_validate(row.receivable_rules or {}),
         mail_approval_mode=row.mail_approval_mode,
@@ -422,6 +425,11 @@ GMAIL_SETTING_FIELDS = (
     "gmail_reconcile_grace_seconds",
     "gmail_keep_open_labels",
     "gmail_close_assigned_tickets",
+)
+CONSUMPTION_INFO_FIELDS = (
+    "consumption_info_enabled",
+    "consumption_info_notifications_enabled",
+    "consumption_info_template_verified",
 )
 
 
@@ -466,6 +474,9 @@ async def patch_settings(
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "rule_proposal_threshold": row.rule_proposal_threshold,
             "metering_module_enabled": row.metering_module_enabled,
+            "consumption_info_enabled": row.consumption_info_enabled,
+            "consumption_info_notifications_enabled": row.consumption_info_notifications_enabled,
+            "consumption_info_template_verified": row.consumption_info_template_verified,
             "resolution_kinds": row.resolution_kinds,
             "receivable_rules": row.receivable_rules,
             "mail_approval_mode": row.mail_approval_mode,
@@ -495,6 +506,11 @@ async def patch_settings(
         if body.metering_module_enabled is not None:
             # Messdienstleister module switch per tenant, change recorded in the event.
             row.metering_module_enabled = body.metering_module_enabled
+        # Rule H03: Verbrauchsinformation switches per tenant, every change recorded.
+        for field in CONSUMPTION_INFO_FIELDS:
+            value = getattr(body, field)
+            if value is not None:
+                setattr(row, field, value)
         if body.resolution_kinds is not None:
             # Regel M19-07, M19-04: Erledigungsarten je Mandant, Änderung protokolliert.
             row.resolution_kinds = body.resolution_kinds.model_dump(mode="json")
@@ -532,6 +548,9 @@ async def patch_settings(
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "rule_proposal_threshold": row.rule_proposal_threshold,
             "metering_module_enabled": row.metering_module_enabled,
+            "consumption_info_enabled": row.consumption_info_enabled,
+            "consumption_info_notifications_enabled": row.consumption_info_notifications_enabled,
+            "consumption_info_template_verified": row.consumption_info_template_verified,
             "resolution_kinds": row.resolution_kinds,
             "receivable_rules": row.receivable_rules,
             "mail_approval_mode": row.mail_approval_mode,

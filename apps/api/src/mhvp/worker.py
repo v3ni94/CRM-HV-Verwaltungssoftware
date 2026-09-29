@@ -53,6 +53,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.integrations.lexoffice_ext.tasks",
             "mhvp.imports.tasks",
             "mhvp.metering.tasks",
+            "mhvp.billing.consumption_info_tasks",
         ],
     )
     app.conf.update(
@@ -172,6 +173,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.banking.consent_reminders",
                 "schedule": crontab(hour=7, minute=5),
                 "options": {"queue": "io"},
+            },
+            # Verbrauchsinformation (rule H03, 15.1 heating.consumption_info): beat on days 1
+            # to 3 at 05:40, the task runs only on the first working day, per tenant with the
+            # switch on (default off), idempotent per unit and month.
+            "billing-consumption-info": {
+                "task": "mhvp.billing.consumption_info",
+                "schedule": crontab(day_of_month="1-3", hour=5, minute=40),
             },
             # Dunning previews on the 5th (15.1); approval and sending stay manual.
             "accounting-dunning-run": {

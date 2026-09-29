@@ -482,6 +482,18 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     metering_module_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # Verbrauchsinformation nach § 6a HeizkostenV (rule H03, migration 0238): monthly job per
+    # tenant (default off), portal notification (default off) and the operator's confirmation
+    # that the template content was verified; tenants see nothing before that confirmation.
+    consumption_info_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    consumption_info_notifications_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    consumption_info_template_verified: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     # Umlaufbeschluss mit abgesenkter Mehrheit (M25-02, migration 0166): default off, the
     # circular resolution then stays unanimous in text form only.
     hoa_circular_lower_majority_enabled: Mapped[bool] = mapped_column(

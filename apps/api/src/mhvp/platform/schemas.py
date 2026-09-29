@@ -125,6 +125,11 @@ class TenantSettingsOut(BaseModel):
     rule_proposal_threshold: int = 5
     # Messdienstleister module switch (default off).
     metering_module_enabled: bool = False
+    # Rule H03: Verbrauchsinformation monthly job, notifications and template verification
+    # (all default off; tenants see nothing until the template is verified).
+    consumption_info_enabled: bool = False
+    consumption_info_notifications_enabled: bool = False
+    consumption_info_template_verified: bool = False
     # Regel M19-07, M19-04: deaktivierte eingebaute und eigene Erledigungsarten.
     resolution_kinds: ResolutionKindsConfig = Field(default_factory=ResolutionKindsConfig)
     # M20-04 Vier-Augen-Prinzip beim Mailversand: all, external_only (Standard) oder off.
@@ -197,6 +202,9 @@ class TenantSettingsPatch(BaseModel):
     ai_learning_examples_retention_months: int | None = Field(default=None, ge=1, le=120)
     rule_proposal_threshold: int | None = Field(default=None, ge=2, le=50)
     metering_module_enabled: bool | None = None
+    consumption_info_enabled: bool | None = None
+    consumption_info_notifications_enabled: bool | None = None
+    consumption_info_template_verified: bool | None = None
     resolution_kinds: ResolutionKindsConfig | None = None
     mail_approval_mode: str | None = Field(default=None, pattern="^(all|external_only|off)$")
     receivable_rules: ReceivableRulesConfig | None = None

@@ -48,6 +48,8 @@ PORTAL_LIST_ROUTES: dict[str, str] = {
     "document": "/dokumente",
     "notice": "/aushaenge",
     "form": "/formulare",
+    # Rule H03: monthly consumption information (portal page /verbrauch).
+    "consumption_info": "/verbrauch",
 }
 
 # Targets that open the calendar with the entry focused (CRM page /kalender?termin=<id>).
