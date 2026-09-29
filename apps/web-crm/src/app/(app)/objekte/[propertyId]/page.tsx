@@ -17,6 +17,7 @@ import { MaintenancePanel, type MaintenanceRow } from "@/components/properties/M
 import { MetersPanel, type MeterRow } from "@/components/properties/MetersPanel";
 import { OwnersDetails } from "@/components/properties/OwnersDetails";
 import { ManagerChangeChecklist } from "@/components/properties/ManagerChangeChecklist";
+import { ObjektakteExportPanel } from "@/components/properties/ObjektakteExportPanel";
 import { PropertyCreditorsPanel } from "@/components/properties/PropertyCreditorsPanel";
 import { PropertyMasterData, type PropertyMaster } from "@/components/properties/PropertyMasterData";
 import { PropertyOwnerPanel, type CurrentOwner } from "@/components/properties/PropertyOwnerPanel";
@@ -131,6 +132,9 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
   const unitOptions = unitRows.map((u) => ({ id: u.id, number: u.number, label: u.label ?? null }));
   const accountOptions = [...accounts.labels].map(([id, label]) => ({ id, label })).sort((a, b) => a.label.localeCompare(b.label, "de"));
   const isSuperadmin = me.data?.is_superadmin ?? false;
+  const permissions = me.data?.permissions ?? [];
+  const canExport = permissions.includes("properties:update") && permissions.includes("documents:read");
+  const canCreateLetter = permissions.includes("documents:create");
   // Stammdaten in der Oberfläche (C1): Anlage von Gebäuden, Einheiten und Schlüsselwerten nur
   // bei laufender Verwaltung; ein beendetes Objekt bleibt lesbar.
   const canAdd = data.status !== "terminated";
@@ -195,6 +199,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       </div>
 
       <PropertyTermination propertyId={propertyId} status={data.status} termination={termination} canEdit={canEdit} isSuperadmin={isSuperadmin} />
+      {termination || data.status === "terminated" ? <ObjektakteExportPanel propertyId={propertyId} canExport={canExport} /> : null}
 
       <PropertyMasterData property={data as unknown as PropertyMaster} canEdit={canEdit && data.status !== "terminated"} />
 
@@ -292,7 +297,7 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       <PropertyNotices propertyId={propertyId} />
       <PropertyMeteringTab property={{ id: data.id, number: data.number, name: data.name, street: data.street, house_number: data.house_number, postal_code: data.postal_code, city: data.city }} permissions={me.data?.permissions ?? []} />
       <ConsumptionInfoPanel propertyId={propertyId} permissions={me.data?.permissions ?? []} />
-      <CompletenessPanel propertyId={propertyId} />
+      <CompletenessPanel propertyId={propertyId} canCreateLetter={canCreateLetter} />
       <ManagerChangeChecklist propertyId={propertyId} canEdit={canEdit} />
       {me.data?.permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel
