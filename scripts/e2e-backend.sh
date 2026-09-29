@@ -14,7 +14,13 @@
 # parallel run (A71): MHVP_E2E_API_PORT (8000), MHVP_E2E_WEB_PORT (3000), MHVP_E2E_PORTAL_PORT
 # (3001), NEXT_DIST_DIR (.next; e.g. .next-e2e for a separate build). MHVP_E2E_APPS selects the
 # apps ("web-crm web-portal"), MHVP_E2E_SKIP_BUILD=1 reuses an existing build, MHVP_E2E_PW_ARGS
-# passes extra arguments to Playwright (e.g. a spec file for a rerun).
+# passes arguments to Playwright (e.g. a spec file for a rerun). Its default is
+# "--project chromium --project phone": the desktop project runs every @backend spec, the phone
+# project (390x844, coarse pointer) runs only the specs tagged @mobile (M31 WP4:
+# handover.mobile.backend.spec.ts, pages.mobile.backend.spec.ts, portal handover.mobile). For the
+# tablet viewports run again with MHVP_E2E_PW_ARGS="--project tablet" or "--project
+# tablet-landscape"; a single spec on one viewport: MHVP_E2E_PW_ARGS="--project phone
+# e2e/handover.mobile.backend.spec.ts".
 #
 # Uploads (import assistant, portal photos) need an S3 endpoint. Without MHVP_S3_ENDPOINT_URL a
 # throwaway moto server is started on MHVP_E2E_S3_PORT (9100) via uvx (needs network access to
@@ -120,6 +126,6 @@ for app in $APPS; do
   fi
   echo "==> Playwright $app on port $port (E2E_BACKEND=1)"
   # shellcheck disable=SC2086
-  if ! E2E_BACKEND=1 E2E_PORT="$port" pnpm --filter "@mhvp/$app" e2e ${MHVP_E2E_PW_ARGS:-}; then status=1; fi
+  if ! E2E_BACKEND=1 E2E_PORT="$port" pnpm --filter "@mhvp/$app" e2e ${MHVP_E2E_PW_ARGS:---project chromium --project phone}; then status=1; fi
 done
 exit $status

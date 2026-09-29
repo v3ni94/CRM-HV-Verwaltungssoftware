@@ -153,10 +153,10 @@ export function DmsSearch() {
                   <span className="text-xs text-muted">{[doc.document_type, doc.correspondent, doc.company].filter(Boolean).join(" · ")}</span>
                   {doc.tags.length > 0 ? <span className="truncate text-xs text-muted">{doc.tags.join(", ")}</span> : null}
                   <div className="mt-auto flex flex-wrap gap-2">
-                    <a href={fileUrl(doc.id, "preview")} target="_blank" rel="noreferrer" className={ui.buttonSm}>
+                    <a href={fileUrl(doc.id, "preview")} className={ui.buttonSm}>
                       {t("actions.preview")}
                     </a>
-                    <a href={fileUrl(doc.id, "download")} target="_blank" rel="noreferrer" className={ui.buttonSm}>
+                    <a href={fileUrl(doc.id, "download")} download className={ui.buttonSm}>
                       {t("actions.download")}
                     </a>
                   </div>

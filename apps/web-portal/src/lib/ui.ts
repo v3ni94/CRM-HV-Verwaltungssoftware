@@ -1,20 +1,22 @@
-/** Shared Tailwind class sets on the @mhvp/ui tokens (docs/design/tokens.md). Colour only as
+/** Shared Tailwind class sets on the @mhvp/ui tokens (docs/design/tokens.md). Touch targets stay
+ *  44 px on every device with a coarse pointer (Tailwind `pointer-fine` variant, M31); inputs use
+ *  16 px below `sm` against the iOS focus zoom. Colour only as
  *  meaning: accent marks interactive state (focus, hover, markers), primary actions are neutral,
  *  cards use hairlines without shadows, numbers use tabular figures. */
 export const ui = {
   input:
-    "w-full min-h-11 rounded-md border border-field-line bg-field-bg px-3 py-2 text-sm text-fg placeholder:text-subtle transition-shadow duration-150 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:min-h-10",
+    "w-full min-h-11 rounded-md border border-field-line bg-field-bg px-3 py-2 text-base text-fg placeholder:text-subtle transition-shadow duration-150 focus:border-accent focus:outline-none focus-visible:ring-2 focus-visible:ring-focus sm:pointer-fine:min-h-10 sm:text-sm",
   label: "block text-xs font-medium text-muted",
   help: "text-xs text-subtle",
   error: "text-xs text-danger-fg",
   button:
-    "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-fg transition duration-150 hover:border-accent hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 sm:min-h-10",
+    "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-border bg-surface px-3 py-2 text-sm font-medium text-fg transition duration-150 hover:border-accent hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 sm:pointer-fine:min-h-10",
   primary:
-    "inline-flex min-h-11 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-sm font-medium text-primary-fg transition duration-150 hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:opacity-50 sm:min-h-10",
+    "inline-flex min-h-11 items-center gap-1.5 rounded-md bg-primary px-3.5 py-2 text-sm font-medium text-primary-fg transition duration-150 hover:bg-primary-hover focus:outline-none focus-visible:ring-2 focus-visible:ring-focus focus-visible:ring-offset-2 disabled:opacity-50 sm:pointer-fine:min-h-10",
   secondary:
-    "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-fg/20 bg-transparent px-3.5 py-2 text-sm font-medium text-fg transition duration-150 hover:border-accent hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 sm:min-h-10",
+    "inline-flex min-h-11 items-center gap-1.5 rounded-md border border-fg/20 bg-transparent px-3.5 py-2 text-sm font-medium text-fg transition duration-150 hover:border-accent hover:bg-surface-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 sm:pointer-fine:min-h-10",
   danger:
-    "inline-flex min-h-11 items-center gap-1.5 rounded-md bg-danger-bg px-3.5 py-2 text-sm font-medium text-danger-fg transition duration-150 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 sm:min-h-10",
+    "inline-flex min-h-11 items-center gap-1.5 rounded-md bg-danger-bg px-3.5 py-2 text-sm font-medium text-danger-fg transition duration-150 hover:opacity-90 focus:outline-none focus-visible:ring-2 focus-visible:ring-focus disabled:opacity-50 sm:pointer-fine:min-h-10",
   formActions: "flex w-full flex-col gap-2 sm:w-auto sm:flex-row",
   actionFull: "w-full justify-center sm:w-auto",
   buttonSm:

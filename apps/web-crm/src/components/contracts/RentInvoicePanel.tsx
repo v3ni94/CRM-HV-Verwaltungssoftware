@@ -153,7 +153,7 @@ export function RentInvoicePanel({ contractId, vatOption, canUpdate }: Props) {
                     </span>
                   </td>
                   <td className="flex flex-wrap gap-2">
-                    <a className={ui.buttonSm} href={`/api/bff/contracts/${contractId}/rent-invoices/${r.id}/pdf`} target="_blank" rel="noreferrer">
+                    <a className={ui.buttonSm} href={`/api/bff/contracts/${contractId}/rent-invoices/${r.id}/pdf`}>
                       {t("pdf")}
                     </a>
                     {canUpdate && r.kind !== "credit_note" && r.status === "issued" ? (

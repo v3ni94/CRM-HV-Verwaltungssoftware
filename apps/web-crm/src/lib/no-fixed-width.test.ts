@@ -5,18 +5,12 @@ import path from "node:path";
  *  source file under `src/` may hard code a pixel width above 360px in a className string
  *  (e.g. `w-[420px]`, `min-w-[500px]`), since that reliably causes horizontal overflow on a
  *  375px phone viewport. Widths at or below 360px, and any non-pixel unit (rem, vw, %, ch),
- *  are allowed. `bank`, `tickets` and `kalender` areas are excluded: they are owned by other
- *  agents in this workstream and audited separately. */
+ *  are allowed. The ticket and calendar exceptions were removed after the WP3 sweep (M31 WP4,
+ *  29.09.2026); `start`, `bank` and `banking` were checked on 29.09.2026 and hold no offending
+ *  width either, so the exclusion list is empty. */
 
 const ROOT = path.resolve(import.meta.dirname, "..");
-const EXCLUDED_DIRS = [
-  path.join(ROOT, "app", "(app)", "start"),
-  path.join(ROOT, "app", "(app)", "tickets"),
-  path.join(ROOT, "app", "(app)", "bank"),
-  path.join(ROOT, "app", "(app)", "kalender"),
-  path.join(ROOT, "components", "tickets"),
-  path.join(ROOT, "components", "banking"),
-];
+const EXCLUDED_DIRS: string[] = [];
 
 function listFiles(dir: string): string[] {
   const out: string[] = [];

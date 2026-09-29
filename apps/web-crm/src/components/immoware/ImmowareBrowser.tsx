@@ -264,12 +264,7 @@ function DocumentsTab() {
                     <td>
                       {!doc.is_collection ? (
                         <div className="flex flex-wrap items-center gap-2">
-                          <a
-                            href={`/api/bff/immoware/documents/${doc.id}/file`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className={ui.buttonSm}
-                          >
+                          <a href={`/api/bff/immoware/documents/${doc.id}/file`} download className={ui.buttonSm}>
                             {t("documents.download")}
                           </a>
                           {takenOver[doc.id] ? (

@@ -46,6 +46,8 @@ describe("M24-02 asset report and M24-03 loan display forms", () => {
     renderIntl(<AssetReportActions id={ID} status="calculated" manualItems={[]} />);
     expect(screen.getByText("Ausgabe freigeben (G4)")).toBeTruthy();
     expect(screen.getByText("PDF-Entwurf").getAttribute("href")).toBe(`/api/bff/hoa/asset-reports/${ID}/pdf`);
+    // In app file: same tab, so an installed app keeps its session (ADR 0017).
+    expect(screen.getByText("PDF-Entwurf")).not.toHaveAttribute("target");
   });
 
   it("saves the loan display with key, components and basis via PUT", async () => {

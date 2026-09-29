@@ -207,12 +207,7 @@ export function ReviewCenter({ categories }: { categories: CategoryOption[] }) {
             {openCaseId === c.id ? (
               <div className="mt-3 flex flex-col gap-2 border-t border-border pt-3">
                 {c.document_preview_url ? (
-                  <a
-                    href={c.document_preview_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm underline"
-                  >
+                  <a href={c.document_preview_url} className="text-sm underline">
                     {t("review.openDocument")}
                   </a>
                 ) : null}

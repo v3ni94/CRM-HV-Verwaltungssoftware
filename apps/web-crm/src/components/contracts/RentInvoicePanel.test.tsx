@@ -40,6 +40,7 @@ describe("RentInvoicePanel", () => {
     expect(screen.getByText("1.190,00 EUR")).toBeInTheDocument();
     expect(screen.getByText("Entwurf")).toBeInTheDocument();
     expect(screen.getByText("PDF").getAttribute("href")).toBe("/api/bff/contracts/c1/rent-invoices/i1/pdf");
+    expect(screen.getByText("PDF")).not.toHaveAttribute("target");
     expect(screen.queryByText("Mietrechnung erzeugen")).not.toBeInTheDocument();
     expect(screen.queryByText("Gutschrift")).not.toBeInTheDocument();
   });

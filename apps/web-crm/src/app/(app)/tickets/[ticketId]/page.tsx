@@ -97,7 +97,7 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
   const followUps = ((data.follow_ups ?? []) as Parameters<typeof toRef>[0][]).map(toRef);
   // Anchor sections of the detail (M31): only the blocks that are rendered for this ticket.
   const sections: TicketSection[] = [
-    ...(mergedInto ? [] : (["bearbeiten", "checkliste", "mail", "anhaenge", "auftraege", "vorschlaege", "schaden"] as const)),
+    ...(mergedInto ? [] : (["bearbeiten", "checkliste", "mail", "lexoffice", "anhaenge", "auftraege", "vorschlaege", "schaden"] as const)),
     ...(!mergedInto && data.property_id ? (["beirat"] as const) : []),
     "kommentare",
     "verlauf",

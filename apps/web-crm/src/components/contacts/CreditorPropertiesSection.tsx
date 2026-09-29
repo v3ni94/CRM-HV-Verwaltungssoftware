@@ -2,6 +2,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 
 import { formatDate } from "@/lib/format";
+import { ui } from "@/lib/ui";
 
 export type CreditorProperty = {
   id: string;
@@ -26,7 +27,8 @@ export function CreditorPropertiesSection({ rows }: { rows: CreditorProperty[] }
       {rows.length === 0 ? (
         <p className="text-sm text-muted">{t("empty")}</p>
       ) : (
-        <table className="w-full text-sm">
+        <div className={ui.tableScroll}>
+          <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-border text-left text-xs text-muted">
               <th className="py-1.5 pr-2 font-medium">{t("property")}</th>
@@ -50,6 +52,7 @@ export function CreditorPropertiesSection({ rows }: { rows: CreditorProperty[] }
             ))}
           </tbody>
         </table>
+        </div>
       )}
     </section>
   );

@@ -10,6 +10,9 @@ const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE;
 // Tests tagged @backend need a running API with seeded data (scripts/e2e-backend.sh).
 const withBackend = process.env.E2E_BACKEND === "1";
 
+// Shared launch options of every project (only the local Chromium override so far).
+const launch = executablePath ? { launchOptions: { executablePath } } : {};
+
 export default defineConfig({
   testDir: "./e2e",
   ...(withBackend ? {} : { grepInvert: /@backend/ }),
@@ -24,10 +27,50 @@ export default defineConfig({
   },
   projects: [
     {
+      // Desktop with a mouse: every spec except the @mobile ones.
       name: "chromium",
+      grepInvert: /@mobile/,
       use: {
         ...devices["Desktop Chrome"],
-        ...(executablePath ? { launchOptions: { executablePath } } : {}),
+        ...launch,
+      },
+    },
+    // Phone and tablet projects (M31 WP4) run only the specs tagged @mobile, so the existing
+    // @backend specs are not repeated per viewport. isMobile and hasTouch make Chromium report
+    // a coarse pointer, which the 44 px targets of lib/ui.ts depend on (pointer-coarse).
+    // iPhone and iPad presets are left out on purpose: CI has no WebKit; Safari and iPadOS are
+    // checked by hand (docs/acceptance/M31-geraetepruefung.md).
+    {
+      name: "phone",
+      grep: /@mobile/,
+      use: {
+        ...devices["Pixel 7"],
+        viewport: { width: 390, height: 844 },
+        ...launch,
+      },
+    },
+    {
+      name: "tablet",
+      grep: /@mobile/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 820, height: 1180 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+        ...launch,
+      },
+    },
+    {
+      name: "tablet-landscape",
+      grep: /@mobile/,
+      use: {
+        ...devices["Desktop Chrome"],
+        viewport: { width: 1024, height: 768 },
+        deviceScaleFactor: 2,
+        isMobile: true,
+        hasTouch: true,
+        ...launch,
       },
     },
   ],
