@@ -3,6 +3,11 @@ import { axe } from "vitest-axe";
 
 import { renderIntl } from "@/test/intl";
 
+import { HandoverFill } from "@/components/handover/HandoverFill";
+import { protocol } from "@/components/handover/HandoverFill.test.fixture";
+import { PhotoLightbox } from "@/components/handover/PhotoLightbox";
+import { SignaturePad } from "@/components/handover/SignaturePad";
+
 import { HoaAccountTable } from "./HoaAccountTable";
 import { NewTicket } from "./NewTicket";
 import { NoticeList } from "./NoticeList";
@@ -144,5 +149,32 @@ describe.each(["day", "evening"] as const)("Barrierefreiheit (axe), Modus %s", (
   it("HoaAccountTable (Kontoauszug/Vertrag) has no violations", async () => {
     const { container } = renderIntl(<HoaAccountTable account={hoaAccount()} />);
     await expectNoViolations(container);
+  });
+
+  // M31 WP5: the handover protocol on the participant's own phone.
+  it("HandoverFill section tabs have no violations", async () => {
+    const { container } = renderIntl(<HandoverFill initial={protocol({ current_step: "rooms" })} />);
+    await expectNoViolations(container);
+  });
+
+  it("PhotoLightbox has no violations", async () => {
+    const { container } = renderIntl(
+      <PhotoLightbox
+        photos={[{ id: "a", src: "/api/portal-files/portal/handover/x/documents/a/content", title: "Küche" }]}
+        index={0}
+        onClose={() => undefined}
+        onIndex={() => undefined}
+      />,
+    );
+    await expectNoViolations(container);
+  });
+
+  it("SignaturePad has no violations", async () => {
+    vi.spyOn(HTMLCanvasElement.prototype, "getContext").mockReturnValue(null);
+    const { container } = renderIntl(
+      <SignaturePad base="/api/bff/portal/handover/x" kind="rental" participants={[]} signatures={[]} disabled={false} onSaved={() => undefined} />,
+    );
+    await expectNoViolations(container);
+    vi.restoreAllMocks();
   });
 });

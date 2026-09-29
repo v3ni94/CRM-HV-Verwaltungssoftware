@@ -75,7 +75,8 @@
       "close": "Close menu",
       "label": "Main navigation",
       "submissions": "Board submissions",
-      "security": "Security"
+      "security": "Security",
+      "handover": "Handover"
     },
     "notifications": {
       "title": "Notifications",
@@ -318,7 +319,21 @@
     "photos": {
       "add": "Photo",
       "uploading": "Uploading",
-      "remove": "Remove photo"
+      "remove": "Remove photo",
+      "camera": "Take photo",
+      "gallery": "Choose from gallery",
+      "open": "Enlarge photo {title}",
+      "confirmRemove": "Remove photo? The file is deleted from this protocol.",
+      "confirmRemoveKept": "Remove the photo from this version? The file remains in the earlier version.",
+      "withEntry": "Photo for the entry (optional)",
+      "status": {
+        "queued": "Queued",
+        "uploading": "Uploading",
+        "done": "Done",
+        "failed": "Failed"
+      },
+      "retry": "Retry",
+      "unsupported": "File type not supported. Please choose JPEG, PNG or HEIC."
     },
     "fields": {
       "address": "Address",
@@ -503,7 +518,9 @@
       "empty": "Please sign first.",
       "none": "No signature recorded yet.",
       "noName": "Without name",
-      "confirmDelete": "Really delete the signature?"
+      "confirmDelete": "Really delete the signature?",
+      "undo": "Undo",
+      "device": "Please hand the device over for signing."
     },
     "hints": {
       "title": "Notes (no obstacle to completion):"
@@ -562,7 +579,36 @@
       "photos": "Photos"
     },
     "pdfDraft": "Preview (draft)",
-    "pdfFinal": "Protocol as PDF"
+    "pdfFinal": "Protocol as PDF",
+    "lightbox": {
+      "close": "Close",
+      "previous": "Previous photo",
+      "next": "Next photo",
+      "counter": "Photo {index} of {count}"
+    },
+    "sections": "Sections",
+    "confirm": {
+      "yes": "Yes, complete",
+      "no": "Cancel",
+      "deleteYes": "Delete"
+    },
+    "read": {
+      "title": "Read view",
+      "intro": "The protocol is completed. This view shows the recorded data; changes are no longer possible.",
+      "object": "Property",
+      "date": "Handover on",
+      "participants": "Participants",
+      "meters": "Meter readings",
+      "rooms": "Rooms and defects",
+      "keys": "Keys",
+      "items": "Items",
+      "notes": "Remarks",
+      "signatures": "Signatures",
+      "signedAt": "signed on {date}",
+      "noDefects": "No defects recorded.",
+      "withoutRoom": "Without room",
+      "photos": "Photos"
+    }
   },
   "Meetings": {
     "title": "Meetings",
@@ -650,14 +696,21 @@
     "title": "Submissions to the advisory board",
     "roleNotice": "The management submits matters to you as a board member for information or for an opinion. Your vote is information for the management; the order and any payment stay with the management.",
     "empty": "No submission.",
-    "kinds": { "info": "For information", "consent": "For an opinion" },
+    "kinds": {
+      "info": "For information",
+      "consent": "For an opinion"
+    },
     "dueOn": "Answer by {date}",
     "overdue": "deadline passed",
     "closed": "closed",
     "amount": "Amount per quote: {amount}",
     "tally": "So far: {approve} approve, {reject} reject, {comment} comment of {members} members",
     "myVotes": "Your answers",
-    "vote": { "approve": "Approve", "reject": "Reject", "comment": "Comment" },
+    "vote": {
+      "approve": "Approve",
+      "reject": "Reject",
+      "comment": "Comment"
+    },
     "comment": "Comment (required for a comment)",
     "approve": "Approve",
     "reject": "Reject",

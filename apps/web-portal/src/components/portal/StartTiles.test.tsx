@@ -3,7 +3,7 @@ import { screen } from "@testing-library/react";
 import { renderIntl } from "@/test/intl";
 
 import { StartTiles } from "./StartTiles";
-import type { Me } from "./types";
+import { type Me, showsHandover } from "./types";
 
 function me(overrides: Partial<Me> = {}): Me {
   return { contact_id: "c1", roles: ["tenant"], contracts: [], ...overrides };
@@ -63,5 +63,23 @@ describe("StartTiles", () => {
     renderIntl(<StartTiles me={me({ roles: ["board", "owner"] })} />);
     expect(screen.getByText("Prüfungsraum des Beirats öffnen")).toBeInTheDocument();
     expect(screen.getByText("Kontoauszug ansehen")).toBeInTheDocument();
+  });
+
+  it("shows the handover tile for helpers and participants with a grant, not for providers (M31 WP5)", () => {
+    renderIntl(<StartTiles me={me({ roles: ["helper"] })} />);
+    expect(screen.getByText("Übergabeprotokolle")).toBeInTheDocument();
+  });
+});
+
+describe("showsHandover", () => {
+  it("is the one rule for the navigation entry and the start tile", () => {
+    expect(showsHandover(me({ roles: ["helper"] }))).toBe(true);
+    expect(showsHandover(me({ roles: ["participant"] }))).toBe(true);
+    expect(showsHandover(me({ roles: ["tenant_or_owner"] }))).toBe(true);
+    expect(showsHandover(me({ roles: ["owner"] }))).toBe(true);
+    expect(showsHandover(me({ roles: [] }))).toBe(false);
+    expect(showsHandover(me({ roles: ["board"] }))).toBe(false);
+    expect(showsHandover(me({ roles: ["provider"] }))).toBe(false);
+    expect(showsHandover(me({ roles: [], permissions: ["handover:read"] }))).toBe(true);
   });
 });

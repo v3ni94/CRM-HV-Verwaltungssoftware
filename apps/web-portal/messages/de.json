@@ -75,7 +75,8 @@
       "close": "Menü schließen",
       "label": "Hauptnavigation",
       "submissions": "Beiratsvorlagen",
-      "security": "Sicherheit"
+      "security": "Sicherheit",
+      "handover": "Übergabe"
     },
     "notifications": {
       "title": "Benachrichtigungen",
@@ -318,7 +319,21 @@
     "photos": {
       "add": "Foto",
       "uploading": "Wird hochgeladen",
-      "remove": "Foto entfernen"
+      "remove": "Foto entfernen",
+      "camera": "Foto aufnehmen",
+      "gallery": "Aus Galerie wählen",
+      "open": "Foto {title} vergrößern",
+      "confirmRemove": "Foto entfernen? Die Datei wird aus diesem Protokoll gelöscht.",
+      "confirmRemoveKept": "Foto aus dieser Fassung entfernen? Die Datei bleibt in der früheren Fassung erhalten.",
+      "withEntry": "Foto zum Eintrag (optional)",
+      "status": {
+        "queued": "Wartet",
+        "uploading": "Wird hochgeladen",
+        "done": "Fertig",
+        "failed": "Fehlgeschlagen"
+      },
+      "retry": "Erneut versuchen",
+      "unsupported": "Dateityp nicht unterstützt. Bitte JPEG, PNG oder HEIC wählen."
     },
     "fields": {
       "address": "Adresse",
@@ -503,7 +518,9 @@
       "empty": "Bitte zuerst unterschreiben.",
       "none": "Noch keine Unterschrift erfasst.",
       "noName": "Ohne Namen",
-      "confirmDelete": "Unterschrift wirklich löschen?"
+      "confirmDelete": "Unterschrift wirklich löschen?",
+      "undo": "Rückgängig",
+      "device": "Bitte das Gerät zum Unterschreiben weiterreichen."
     },
     "hints": {
       "title": "Hinweise (kein Abschlusshindernis):"
@@ -562,7 +579,36 @@
       "photos": "Fotos"
     },
     "pdfDraft": "Vorschau (Entwurf)",
-    "pdfFinal": "Protokoll als PDF"
+    "pdfFinal": "Protokoll als PDF",
+    "lightbox": {
+      "close": "Schließen",
+      "previous": "Vorheriges Foto",
+      "next": "Nächstes Foto",
+      "counter": "Foto {index} von {count}"
+    },
+    "sections": "Abschnitte",
+    "confirm": {
+      "yes": "Ja, abschließen",
+      "no": "Abbrechen",
+      "deleteYes": "Löschen"
+    },
+    "read": {
+      "title": "Leseansicht",
+      "intro": "Das Protokoll ist abgeschlossen. Diese Ansicht zeigt die erfassten Angaben; Änderungen sind nicht mehr möglich.",
+      "object": "Objekt",
+      "date": "Übergabe am",
+      "participants": "Beteiligte",
+      "meters": "Zählerstände",
+      "rooms": "Räume und Mängel",
+      "keys": "Schlüssel",
+      "items": "Gegenstände",
+      "notes": "Bemerkungen",
+      "signatures": "Unterschriften",
+      "signedAt": "unterschrieben am {date}",
+      "noDefects": "Keine Mängel erfasst.",
+      "withoutRoom": "Ohne Raumzuordnung",
+      "photos": "Fotos"
+    }
   },
   "Meetings": {
     "title": "Versammlungen",
@@ -650,14 +696,21 @@
     "title": "Vorlagen an den Verwaltungsbeirat",
     "roleNotice": "Die Verwaltung legt Ihnen als Beiratsmitglied Vorgänge zur Kenntnis oder um ein Votum vor. Ihr Votum ist eine Information für die Verwaltung; die Beauftragung und jede Zahlung bleiben bei der Verwaltung.",
     "empty": "Keine Vorlage vorhanden.",
-    "kinds": { "info": "Zur Kenntnis", "consent": "Um Votum" },
+    "kinds": {
+      "info": "Zur Kenntnis",
+      "consent": "Um Votum"
+    },
     "dueOn": "Rückmeldung bis {date}",
     "overdue": "Frist abgelaufen",
     "closed": "abgeschlossen",
     "amount": "Betrag laut Angebot: {amount}",
     "tally": "Bisher: {approve} Zustimmung, {reject} Ablehnung, {comment} Kommentar von {members} Mitgliedern",
     "myVotes": "Ihre Rückmeldungen",
-    "vote": { "approve": "Zustimmung", "reject": "Ablehnung", "comment": "Kommentar" },
+    "vote": {
+      "approve": "Zustimmung",
+      "reject": "Ablehnung",
+      "comment": "Kommentar"
+    },
     "comment": "Kommentar (bei Kommentar Pflicht)",
     "approve": "Zustimmen",
     "reject": "Ablehnen",

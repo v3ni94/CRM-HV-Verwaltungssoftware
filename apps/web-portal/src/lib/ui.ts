@@ -39,6 +39,17 @@ export const ui = {
   /** Wrapper for data tables: horizontal scrolling on narrow screens instead of page overflow. */
   tableScroll: "-mx-4 overflow-x-auto px-4 sm:mx-0 sm:px-0",
   tableStickyCol: "mhvp-table--sticky-col",
+  /** Section bar of the handover protocol (M31 WP5, twin of the CRM class set): one swipeable
+   *  row on phones (snap points, hidden scrollbar), wrapping from `sm`. Items use `tab` and
+   *  `tabActive`, both 44 px high. */
+  tabBar: "-mx-4 flex gap-1 overflow-x-auto px-4 [scrollbar-width:none] snap-x scroll-px-4 sm:mx-0 sm:flex-wrap sm:px-0",
+  tab: "shrink-0 snap-start inline-flex min-h-11 items-center gap-1.5 rounded-full px-3.5 text-sm font-medium text-muted transition duration-150 hover:bg-surface-2 hover:text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+  tabActive:
+    "shrink-0 snap-start inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent-soft px-3.5 text-sm font-semibold text-fg focus:outline-none focus-visible:ring-2 focus-visible:ring-focus",
+  /** Sticky action row at the bottom of a form on phones (safe area of the home indicator), a
+   *  plain row from `sm`. */
+  bottomBar:
+    "sticky bottom-0 z-20 -mx-4 flex flex-wrap items-center gap-2 border-t border-border bg-bg px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] sm:static sm:z-auto sm:mx-0 sm:border-0 sm:bg-transparent sm:p-0",
   srOnly: "sr-only",
   pageGap: "flex flex-col gap-6",
   sectionGap: "flex flex-col gap-4",

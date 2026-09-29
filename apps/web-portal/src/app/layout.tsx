@@ -26,6 +26,9 @@ export async function generateMetadata(): Promise<Metadata> {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // Installed app: content may extend under the notch; the body keeps the side insets and the
+  // footer the bottom inset (M31 WP5, same as the CRM root layout).
+  viewportFit: "cover",
   // Browser chrome follows the header surface (surface-2 of tokens.css) of the matching mode.
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#faf9f7" },
@@ -41,7 +44,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <head>
         <script dangerouslySetInnerHTML={{ __html: PORTAL_THEME_SCRIPT }} />
       </head>
-      <body className="min-h-screen antialiased">
+      <body
+        className="min-h-screen antialiased"
+        style={{
+          paddingLeft: "env(safe-area-inset-left)",
+          paddingRight: "env(safe-area-inset-right)",
+        }}
+      >
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
         <ThemeController />
         <PwaRegister />

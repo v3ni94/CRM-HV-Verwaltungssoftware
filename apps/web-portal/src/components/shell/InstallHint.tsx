@@ -12,6 +12,13 @@ type BeforeInstallPromptEvent = Event & {
 
 const DISMISSED_KEY = "mhvp-portal-install-hint-dismissed";
 
+/** iPhone, iPod and iPad, including iPadOS 13 and later, which reports itself as a Mac
+ *  ("MacIntel") but, unlike a Mac, has more than one touch point (M31 WP5). */
+export function isAppleTouchDevice(nav: Pick<Navigator, "userAgent" | "platform" | "maxTouchPoints">): boolean {
+  if (/iphone|ipad|ipod/i.test(nav.userAgent)) return true;
+  return nav.platform === "MacIntel" && nav.maxTouchPoints > 1;
+}
+
 function readDismissed(): boolean {
   try {
     return window.localStorage.getItem(DISMISSED_KEY) === "1";
@@ -43,7 +50,7 @@ export function InstallHint() {
     const standalone =
       window.matchMedia?.("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true;
     if (standalone) return;
-    const isIos = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const isIos = isAppleTouchDevice(navigator);
     if (isIos) {
       setIos(true);
       setHidden(false);

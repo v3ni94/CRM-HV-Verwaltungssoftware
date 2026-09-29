@@ -12,10 +12,24 @@ export type Me = {
     start_date: string | null;
     end_date: string | null;
   }[];
+  /** Portal permissions of a staff account (M2-08); absent or empty for external users. */
+  permissions?: string[];
 };
 
 export function isProvider(me: Me): boolean {
   return me.roles.includes("provider");
+}
+
+/** Roles whose portal account can carry a handover grant (M30 Stufe 3): participants and
+ *  helpers invited from the protocol, tenants and owners with a protocol of their own. Staff
+ *  with the portal permission handover:read see the tenant wide list. The navigation entry
+ *  and the start tile use this one rule (M31 WP5), so both stay in sync. */
+const HANDOVER_ROLES = ["helper", "participant", "tenant", "owner", "tenant_or_owner"];
+
+export function showsHandover(me: Me): boolean {
+  if (isProvider(me)) return false;
+  if (me.permissions?.includes("handover:read")) return true;
+  return me.roles.some((role) => HANDOVER_ROLES.includes(role));
 }
 
 export type PortalDocument = {

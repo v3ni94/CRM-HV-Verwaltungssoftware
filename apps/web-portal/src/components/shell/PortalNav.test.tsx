@@ -58,4 +58,20 @@ describe("PortalNav", () => {
     expect(screen.getByRole("link", { name: "Meldungen" })).toHaveAttribute("aria-current", "page");
     expect(screen.getByRole("link", { name: "Dokumente" })).not.toHaveAttribute("aria-current");
   });
+
+  it("renders the Übergabe entry as a 44 px target when the layout passes it (M31 WP5)", () => {
+    pathname.value = "/uebergabe/0192";
+    render(
+      <PortalNav
+        links={[...links, { href: "/uebergabe", label: "Übergabe" }]}
+        label="Hauptnavigation"
+        openLabel="Menü öffnen"
+        closeLabel="Menü schließen"
+      />,
+    );
+    const link = screen.getByRole("link", { name: "Übergabe" });
+    expect(link).toHaveAttribute("href", "/uebergabe");
+    expect(link).toHaveAttribute("aria-current", "page");
+    expect(link.className).toContain("min-h-11");
+  });
 });

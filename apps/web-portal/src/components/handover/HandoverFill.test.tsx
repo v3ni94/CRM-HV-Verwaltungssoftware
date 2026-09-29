@@ -4,73 +4,11 @@ import userEvent from "@testing-library/user-event";
 import { jsonResponse, renderIntl } from "@/test/intl";
 
 import { HandoverFill, parseDecimal } from "./HandoverFill";
-import type { Full } from "./types";
+import { ID, protocol } from "./HandoverFill.test.fixture";
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), refresh: vi.fn() }),
 }));
-
-const ID = "0192abcd-0000-7000-8000-000000000070";
-
-function protocol(overrides: Partial<Full> = {}): Full {
-  return {
-    id: ID,
-    number: "UP-20260925-003",
-    version: 1,
-    parent_id: null,
-    change_reason: null,
-    kind: "rental",
-    status: "in_progress",
-    current_step: "rooms",
-    property_id: null,
-    unit_id: null,
-    street: "Portalweg",
-    house_number: "1",
-    postal_code: "40789",
-    city: "Monheim am Rhein",
-    object_label: null,
-    building: null,
-    floor: null,
-    unit_number: null,
-    unit_label: null,
-    unit_position: null,
-    handover_date: null,
-    handover_start: null,
-    handover_end: null,
-    hide_time_information: false,
-    handover_location: null,
-    ticket_number: null,
-    reference_number: null,
-    rental_contract_number: null,
-    general_note: null,
-    deposit_amount: null,
-    deposit_account_holder: null,
-    deposit_iban: null,
-    deposit_bic: null,
-    deposit_bank_name: null,
-    deposit_note: null,
-    deposit_iban_verified: false,
-    deposit_separate_statement: false,
-    completed_at: null,
-    archived_at: null,
-    pdf_document_id: null,
-    locked: false,
-    finalized: false,
-    address: "Portalweg 1, 40789 Monheim am Rhein",
-    participants: [],
-    meters: [],
-    rooms: [],
-    defects: [],
-    keys: [],
-    items: [],
-    notes: [],
-    signatures: [],
-    documents: [],
-    hints: ["Es wurden keine Räume erfasst."],
-    access: { right: "edit", valid_to: null },
-    ...overrides,
-  };
-}
 
 describe("HandoverFill", () => {
   afterEach(() => vi.restoreAllMocks());
@@ -126,12 +64,11 @@ describe("HandoverFill", () => {
 
   it("shows the hints before completing and offers the forced completion", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}, 200));
-    vi.spyOn(window, "confirm").mockReturnValue(false);
     renderIntl(<HandoverFill initial={protocol({ current_step: "summary" })} />);
     await userEvent.click(screen.getByText("Protokoll verbindlich abschließen"));
     expect(screen.getByTestId("hints")).toHaveTextContent("Es wurden keine Räume erfasst.");
     expect(screen.getByText("Trotz Hinweisen verbindlich abschließen")).toBeInTheDocument();
-    expect(window.confirm).not.toHaveBeenCalled();
+    expect(screen.queryByTestId("confirm-sheet")).toBeNull();
   });
 
   it("is read only once the access is read or the protocol is locked", () => {
@@ -153,6 +90,91 @@ describe("HandoverFill", () => {
       `/api/portal-files/portal/handover/${ID}/pdf`,
     );
     expect(screen.getByText(/abrufbar bis 09.10.2026/)).toBeInTheDocument();
+  });
+});
+
+describe("HandoverFill on phone and tablet (M31 WP5)", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("renders the sections as 44 px tabs and opens the PDF in the same tab", () => {
+    renderIntl(<HandoverFill initial={protocol({ current_step: "summary" })} />);
+    const nav = screen.getByRole("navigation", { name: "Abschnitte" });
+    for (const tab of nav.querySelectorAll("button")) expect(tab.className).toContain("min-h-11");
+    expect(screen.getByRole("button", { name: "Prüfung und Abschluss" })).toHaveAttribute("aria-current", "page");
+    const pdf = screen.getByText("Vorschau (Entwurf)");
+    expect(pdf).toHaveAttribute("href", `/api/portal-files/portal/handover/${ID}/pdf`);
+    expect(pdf).not.toHaveAttribute("target");
+    expect(document.querySelector("a[target='_blank']")).toBeNull();
+  });
+
+  it("completes through the ConfirmSheet instead of window.confirm", async () => {
+    const calls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      calls.push(`${init?.method ?? "GET"} ${String(input)}`);
+      if (String(input).endsWith("/complete")) {
+        return jsonResponse(protocol({ hints: [], status: "completed", locked: true, finalized: true, current_step: "summary" }));
+      }
+      return jsonResponse({}, 200);
+    });
+    const confirmSpy = vi.spyOn(window, "confirm");
+    renderIntl(<HandoverFill initial={protocol({ current_step: "summary", hints: [] })} />);
+    await userEvent.click(screen.getByText("Protokoll verbindlich abschließen"));
+    const sheet = screen.getByRole("alertdialog");
+    expect(sheet).toHaveTextContent("Ist die Übergabe vollständig abgeschlossen?");
+    expect(calls.filter((c) => c.includes("/complete"))).toHaveLength(0);
+    await userEvent.click(screen.getByRole("button", { name: "Ja, abschließen" }));
+    await waitFor(() => expect(calls).toContain(`POST /api/bff/portal/handover/${ID}/complete`));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    await waitFor(() => expect(screen.getByText(/kann nicht mehr geändert werden/)).toBeInTheDocument());
+  });
+
+  it("captures the photo with the new defect: camera and gallery inputs, POST before the upload", async () => {
+    const calls: { method: string; url: string; body: unknown }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      const method = init?.method ?? "GET";
+      calls.push({ method, url, body: init?.body });
+      if (method === "POST" && url.endsWith("/defects")) return jsonResponse({ id: "0192abcd-0000-7000-8000-000000000099" }, 201);
+      if (method === "POST" && url.endsWith("/documents")) return jsonResponse({ id: "doc" }, 201);
+      return jsonResponse(protocol({ current_step: "defects" }));
+    });
+    renderIntl(<HandoverFill initial={protocol({ current_step: "defects" })} />);
+    await userEvent.click(screen.getByText("Mangel hinzufügen"));
+    const camera = screen.getByTestId("photo-input-camera") as HTMLInputElement;
+    const gallery = screen.getByTestId("photo-input-gallery") as HTMLInputElement;
+    expect(camera).toHaveAttribute("capture", "environment");
+    expect(camera.accept).toContain("image/heic");
+    expect(gallery).not.toHaveAttribute("capture");
+    expect(gallery).toHaveAttribute("multiple");
+    await userEvent.type(screen.getByLabelText("Titel"), "Riss");
+    await userEvent.upload(gallery, new File(["x"], "riss.jpg", { type: "image/jpeg" }));
+    expect(screen.getByText("riss.jpg")).toBeInTheDocument();
+    expect(screen.getByText("Wartet")).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Speichern"));
+    await waitFor(() => expect(calls.some((c) => c.url.endsWith("/documents"))).toBe(true));
+    const posts = calls.filter((c) => c.method === "POST").map((c) => c.url);
+    expect(posts[0]).toBe(`/api/bff/portal/handover/${ID}/defects`);
+    expect(posts[1]).toBe(`/api/bff/portal/handover/${ID}/documents`);
+    const form = calls.find((c) => c.url.endsWith("/documents"))?.body as FormData;
+    expect(form.get("section")).toBe("defects");
+    expect(form.get("item_id")).toBe("0192abcd-0000-7000-8000-000000000099");
+  });
+
+  it("names the right consequence when removing a photo (version 1 deletes, later versions keep the file)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse({}, 200));
+    const doc = { id: "doc1", title: "Zähler", filename: "z.jpg", mime_type: "image/jpeg", size: 1, kind: "photo" as const, section: "meters", item_id: "m1", created_at: "2026-09-20T10:00:00Z" };
+    const meter = { id: "m1", meter_type: "electricity", custom_type: null, number: "1", value: "1", unit: "kWh", read_on: null, location: null, comment: null };
+    const { unmount } = renderIntl(<HandoverFill initial={protocol({ current_step: "meters", meters: [meter], documents: [doc] })} />);
+    await userEvent.click(screen.getByRole("button", { name: "Foto entfernen" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Die Datei wird aus diesem Protokoll gelöscht.");
+    await userEvent.click(screen.getByRole("button", { name: "Abbrechen" }));
+    expect(fetch).not.toHaveBeenCalled();
+    unmount();
+    renderIntl(<HandoverFill initial={protocol({ current_step: "meters", version: 2, meters: [meter], documents: [doc] })} />);
+    await userEvent.click(screen.getByRole("button", { name: "Foto entfernen" }));
+    expect(screen.getByRole("alertdialog")).toHaveTextContent("Die Datei bleibt in der früheren Fassung erhalten.");
+    await userEvent.click(screen.getByRole("button", { name: "Foto Zähler vergrößern" }));
+    expect(screen.getByRole("dialog", { name: "Zähler" })).toBeInTheDocument();
   });
 });
 

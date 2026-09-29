@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { HandoverFill } from "@/components/handover/HandoverFill";
+import { HandoverReadCard } from "@/components/handover/HandoverReadCard";
 import type { Full } from "@/components/handover/types";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
@@ -19,6 +20,10 @@ export default async function HandoverFillPage({ params }: { params: Promise<{ i
   if (response.status === 404) notFound();
   if (!data) throw new Error(String(error));
   const protocol = data as unknown as Full;
+  // A participant in the 14 day read window (right read) gets the read card without a single
+  // input element (M31 WP5, scope M30-06); the editor stays for edit grants and for locked
+  // protocols of an edit grant (same data, read only fields).
+  const readCard = protocol.access.right === "read";
   return (
     <div className={ui.pageGap}>
       <div>
@@ -31,7 +36,11 @@ export default async function HandoverFillPage({ params }: { params: Promise<{ i
         </h1>
         {protocol.address ? <p className="text-sm text-muted">{protocol.address}</p> : null}
       </div>
-      <HandoverFill initial={protocol} />
+      {readCard ? (
+        <HandoverReadCard p={protocol} files={`/api/portal-files/portal/handover/${protocol.id}`} />
+      ) : (
+        <HandoverFill initial={protocol} />
+      )}
     </div>
   );
 }

@@ -4,8 +4,12 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { bff } from "@/lib/bff";
+import { downscaleImage, isImageAccepted } from "@/lib/image-downscale";
 import { ui } from "@/lib/ui";
 
+import { ConfirmSheet } from "./ConfirmSheet";
+import { PhotoLightbox, type LightboxPhoto } from "./PhotoLightbox";
+import { PhotoPicker, type PhotoJob } from "./PhotoPicker";
 import { SignaturePad } from "./SignaturePad";
 import {
   FIELDS,
@@ -58,6 +62,47 @@ const DEPOSIT_FIELDS: FieldDef[] = [
 ];
 
 type T = (key: string, values?: Record<string, string | number>) => string;
+
+/** Pending confirmation shown in the ConfirmSheet (M31 WP5) instead of window.confirm. */
+type Confirm = { title: string; text?: string; confirmLabel: string; danger?: boolean; action: () => Promise<void> | void };
+
+/** Uploads the files of one entry one after the other (capture first: the entry is posted
+ *  before its photos), reporting the status per file. Returns the failed files for a retry. */
+export async function uploadPhotos(
+  base: string,
+  section: Section,
+  itemId: string,
+  files: File[],
+  setJobs: (update: (jobs: PhotoJob[]) => PhotoJob[]) => void,
+  unsupported: string,
+): Promise<File[]> {
+  const failed: File[] = [];
+  for (const file of files) {
+    const key = `${file.name}-${file.size}-${file.lastModified}`;
+    const patch = (status: PhotoJob["status"], message?: string) =>
+      setJobs((jobs) => jobs.map((j) => (j.key === key ? { ...j, status, message } : j)));
+    if (!isImageAccepted(file.type) && file.type !== "") {
+      patch("failed", unsupported);
+      continue;
+    }
+    patch("uploading");
+    const data = new FormData();
+    data.append("file", await downscaleImage(file));
+    data.append("section", section);
+    data.append("item_id", itemId);
+    const res = await bff(`${base}/documents`, { method: "POST", body: data });
+    if (res.ok) patch("done");
+    else {
+      patch("failed", res.message);
+      failed.push(file);
+    }
+  }
+  return failed;
+}
+
+export function jobsOf(files: File[]): PhotoJob[] {
+  return files.map((f) => ({ key: `${f.name}-${f.size}-${f.lastModified}`, name: f.name, status: "queued" }));
+}
 
 function valueOf(item: Record<string, unknown>, field: FieldDef): string | boolean {
   const v = item[field.name];
@@ -210,9 +255,14 @@ export function HandoverFill({ initial }: { initial: Full }) {
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [showHints, setShowHints] = useState(false);
+  const [confirm, setConfirm] = useState<Confirm | null>(null);
+  const [lightbox, setLightbox] = useState<number | null>(null);
   const editable = p.access.right === "edit" && !p.locked;
   const base = `/api/bff/portal/handover/${p.id}`;
   const files = `/api/portal-files/portal/handover/${p.id}`;
+  const gallery: LightboxPhoto[] = p.documents
+    .filter((d) => d.kind === "photo")
+    .map((d) => ({ id: d.id, src: `${files}/documents/${d.id}/content`, title: d.title }));
 
   async function reload() {
     const res = await bff<Full>(base);
@@ -235,12 +285,7 @@ export function HandoverFill({ initial }: { initial: Full }) {
     if (editable) void bff(base, { method: "PATCH", body: JSON.stringify({ current_step: next }) });
   }
 
-  async function complete(force: boolean) {
-    if (!force && p.hints.length > 0) {
-      setShowHints(true);
-      return;
-    }
-    if (!window.confirm(t(force ? "complete.confirmForce" : "complete.confirm"))) return;
+  async function doComplete(force: boolean) {
     setBusy(true);
     setError(null);
     const res = await bff<Full>(`${base}/complete`, { method: "POST", body: JSON.stringify({ force }) });
@@ -252,17 +297,33 @@ export function HandoverFill({ initial }: { initial: Full }) {
     } else setError(res.message);
   }
 
+  function complete(force: boolean) {
+    if (!force && p.hints.length > 0) {
+      setShowHints(true);
+      return;
+    }
+    setConfirm({
+      title: t(force ? "complete.force" : "complete.action"),
+      text: t(force ? "complete.confirmForce" : "complete.confirm"),
+      confirmLabel: t("confirm.yes"),
+      danger: force,
+      action: () => doComplete(force),
+    });
+  }
+
   const onError = (m: string | null) => setError(m);
+  const ask = (c: Confirm) => setConfirm(c);
+  const openPhoto = (id: string) => setLightbox(gallery.findIndex((g) => g.id === id));
 
   return (
     <div className="flex flex-col gap-4" data-testid="handover-fill">
       {!editable ? <p className={ui.notice}>{t("locked")}</p> : <p className="text-sm text-muted">{t("intro")}</p>}
-      <nav className="flex flex-wrap gap-1" aria-label={t("tabs.summary")}>
+      <nav className={ui.tabBar} aria-label={t("sections")}>
         {TABS.map((name) => (
           <button
             key={name}
             type="button"
-            className={`${ui.buttonSm} ${tab === name ? "border-gold bg-gold-soft" : ""}`}
+            className={tab === name ? ui.tabActive : ui.tab}
             aria-current={tab === name ? "page" : undefined}
             onClick={() => switchTab(name)}
           >
@@ -299,6 +360,8 @@ export function HandoverFill({ initial }: { initial: Full }) {
           disabled={!editable}
           onChanged={reload}
           onError={onError}
+          ask={ask}
+          openPhoto={openPhoto}
           t={t}
         />
       ) : null}
@@ -324,12 +387,19 @@ export function HandoverFill({ initial }: { initial: Full }) {
                   <button
                     type="button"
                     className={ui.buttonSm}
-                    onClick={async () => {
-                      if (!window.confirm(t("signature.confirmDelete"))) return;
-                      const res = await bff(`${base}/signatures/${s.id}`, { method: "DELETE" });
-                      if (res.ok) await reload();
-                      else setError(res.message);
-                    }}
+                    onClick={() =>
+                      ask({
+                        title: t("delete"),
+                        text: t("signature.confirmDelete"),
+                        confirmLabel: t("confirm.deleteYes"),
+                        danger: true,
+                        action: async () => {
+                          const res = await bff(`${base}/signatures/${s.id}`, { method: "DELETE" });
+                          if (res.ok) await reload();
+                          else setError(res.message);
+                        },
+                      })
+                    }
                   >
                     {t("delete")}
                   </button>
@@ -370,8 +440,10 @@ export function HandoverFill({ initial }: { initial: Full }) {
               </ul>
             </div>
           ) : null}
-          <div className="flex flex-wrap gap-2">
-            <a href={`${files}/pdf`} target="_blank" rel="noopener" className={ui.button}>
+          <div className={editable ? ui.bottomBar : "flex flex-wrap gap-2"}>
+            {/* Same tab on purpose: an installed portal (iOS standalone) loses the session in an
+                external tab; Zurück leads back to the protocol (M31 WP5). */}
+            <a href={`${files}/pdf`} className={ui.button}>
               {p.finalized ? t("pdfFinal") : t("pdfDraft")}
             </a>
             {editable ? (
@@ -392,6 +464,24 @@ export function HandoverFill({ initial }: { initial: Full }) {
             <p className={ui.help}>{t("access.read", { date: p.access.valid_to.split("-").reverse().join(".") })}</p>
           ) : null}
         </div>
+      ) : null}
+      <ConfirmSheet
+        open={confirm !== null}
+        title={confirm?.title ?? ""}
+        text={confirm?.text}
+        confirmLabel={confirm?.confirmLabel ?? ""}
+        cancelLabel={t("confirm.no")}
+        danger={confirm?.danger}
+        busy={busy}
+        onCancel={() => setConfirm(null)}
+        onConfirm={async () => {
+          const c = confirm;
+          setConfirm(null);
+          if (c) await c.action();
+        }}
+      />
+      {lightbox != null && lightbox >= 0 ? (
+        <PhotoLightbox photos={gallery} index={lightbox} onClose={() => setLightbox(null)} onIndex={setLightbox} />
       ) : null}
     </div>
   );
@@ -426,7 +516,7 @@ function ProtocolForm({
     >
       <Fields id={id} fields={fields} form={form} onChange={(n, v) => setForm((f) => ({ ...f, [n]: v }))} disabled={disabled} t={t} />
       {!disabled ? (
-        <div>
+        <div className={ui.bottomBar}>
           <button type="submit" className={ui.primary} disabled={busy}>
             {t("save")}
           </button>
@@ -444,6 +534,8 @@ function SectionList({
   disabled,
   onChanged,
   onError,
+  ask,
+  openPhoto,
   t,
 }: {
   section: Section;
@@ -453,6 +545,8 @@ function SectionList({
   disabled: boolean;
   onChanged: () => Promise<void>;
   onError: (m: string | null) => void;
+  ask: (c: Confirm) => void;
+  openPhoto: (id: string) => void;
   t: T;
 }) {
   const items = p[section];
@@ -460,11 +554,18 @@ function SectionList({
   const fields = FIELDS[section];
   const tRole = (r: string) => (r ? t(`roles.${r}`) : "");
 
-  async function remove(item: Item) {
-    if (!window.confirm(t("confirmDelete"))) return;
-    const res = await bff(`${base}/${section}/${item.id}`, { method: "DELETE" });
-    if (res.ok) await onChanged();
-    else onError(res.message);
+  function remove(item: Item) {
+    ask({
+      title: t("delete"),
+      text: t("confirmDelete"),
+      confirmLabel: t("confirm.deleteYes"),
+      danger: true,
+      action: async () => {
+        const res = await bff(`${base}/${section}/${item.id}`, { method: "DELETE" });
+        if (res.ok) await onChanged();
+        else onError(res.message);
+      },
+    });
   }
 
   return (
@@ -511,10 +612,13 @@ function SectionList({
                 files={files}
                 section={section}
                 itemId={item.id}
+                version={p.version}
                 docs={p.documents.filter((d) => d.item_id === item.id)}
                 disabled={disabled}
                 onChanged={onChanged}
                 onError={onError}
+                ask={ask}
+                openPhoto={openPhoto}
                 t={t}
               />
             ) : null}
@@ -530,6 +634,7 @@ function SectionList({
               item={null}
               rooms={p.rooms}
               fields={fields}
+              withPhotos={PHOTO_SECTIONS.includes(section)}
               onDone={async () => {
                 setEditing(null);
                 await onChanged();
@@ -556,6 +661,7 @@ function ItemForm({
   item,
   rooms,
   fields,
+  withPhotos,
   onDone,
   onError,
   t,
@@ -565,12 +671,17 @@ function ItemForm({
   item: Item | null;
   rooms: Item[];
   fields: FieldDef[];
+  /** Capture first (M31 WP5): a new meter, room, defect or item takes its photo in the same
+   *  step; the entry is posted first, then the photos are uploaded one by one with a status. */
+  withPhotos?: boolean;
   onDone: () => Promise<void>;
   onError: (m: string | null) => void;
   t: T;
 }) {
   const [form, setForm] = useState(() => initialForm(item, fields));
   const [busy, setBusy] = useState(false);
+  const [pending, setPending] = useState<File[]>([]);
+  const [jobs, setJobs] = useState<PhotoJob[]>([]);
   return (
     <form
       className="flex flex-col gap-3"
@@ -578,13 +689,29 @@ function ItemForm({
         e.preventDefault();
         setBusy(true);
         onError(null);
-        const res = await bff(item ? `${base}/${section}/${item.id}` : `${base}/${section}`, {
+        const res = await bff<Item>(item ? `${base}/${section}/${item.id}` : `${base}/${section}`, {
           method: item ? "PATCH" : "POST",
           body: JSON.stringify(toBody(form, fields)),
         });
+        if (!res.ok) {
+          setBusy(false);
+          onError(res.message);
+          return;
+        }
+        const createdId = item ? item.id : res.data.id;
+        if (pending.length > 0 && createdId) {
+          setJobs(jobsOf(pending));
+          const failed = await uploadPhotos(base, section, createdId, pending, setJobs, t("photos.unsupported"));
+          if (failed.length > 0) {
+            // The entry is saved; the failed files stay listed for a retry from the card.
+            setBusy(false);
+            setPending([]);
+            await onDone();
+            return;
+          }
+        }
         setBusy(false);
-        if (res.ok) await onDone();
-        else onError(res.message);
+        await onDone();
       }}
     >
       <Fields
@@ -597,11 +724,21 @@ function ItemForm({
         rooms={rooms}
         t={t}
       />
-      <div className="flex gap-2">
+      {withPhotos ? (
+        <div className="flex flex-col gap-1">
+          <span className={ui.label}>{t("photos.withEntry")}</span>
+          <PhotoPicker
+            onFiles={(list) => setPending((files) => [...files, ...list])}
+            jobs={jobs.length > 0 ? jobs : jobsOf(pending)}
+            disabled={busy}
+          />
+        </div>
+      ) : null}
+      <div className={ui.bottomBar}>
         <button type="submit" className={ui.primary} disabled={busy}>
           {t("save")}
         </button>
-        <button type="button" className={ui.button} onClick={onDone}>
+        <button type="button" className={ui.button} onClick={onDone} disabled={busy}>
           {t("cancel")}
         </button>
       </div>
@@ -614,78 +751,95 @@ function Photos({
   files,
   section,
   itemId,
+  version,
   docs,
   disabled,
   onChanged,
   onError,
+  ask,
+  openPhoto,
   t,
 }: {
   base: string;
   files: string;
   section: Section;
   itemId: string;
+  version: number;
   docs: Doc[];
   disabled: boolean;
   onChanged: () => Promise<void>;
   onError: (m: string | null) => void;
+  ask: (c: Confirm) => void;
+  openPhoto: (id: string) => void;
   t: T;
 }) {
+  const [jobs, setJobs] = useState<PhotoJob[]>([]);
+  const [failed, setFailed] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
-  async function upload(list: FileList | null) {
-    if (!list?.length) return;
+  async function upload(list: File[]) {
+    if (!list.length) return;
     setBusy(true);
-    for (const file of Array.from(list)) {
-      const data = new FormData();
-      data.append("file", file);
-      data.append("section", section);
-      data.append("item_id", itemId);
-      const res = await bff(`${base}/documents`, { method: "POST", body: data });
-      if (!res.ok) onError(res.message);
-    }
+    setJobs((jobs) => [...jobs.filter((j) => j.status !== "done"), ...jobsOf(list)]);
+    const rest = await uploadPhotos(base, section, itemId, list, setJobs, t("photos.unsupported"));
+    setFailed(rest);
     setBusy(false);
     await onChanged();
+    setJobs((jobs) => jobs.filter((j) => j.status === "failed"));
   }
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {docs.map((d) => (
-        <span key={d.id} className="relative">
-          <a href={`${files}/documents/${d.id}/content`} target="_blank" rel="noopener">
-            {/* eslint-disable-next-line @next/next/no-img-element -- protected same-origin blob, no optimizer */}
-            <img
-              src={`${files}/documents/${d.id}/content`}
-              alt={d.title}
-              className="h-16 w-16 rounded border border-border object-cover"
-            />
-          </a>
-          {!disabled ? (
-            <button
-              type="button"
-              className="absolute -right-1 -top-1 rounded-full bg-surface px-1 text-xs shadow-card"
-              aria-label={t("photos.remove")}
-              onClick={async () => {
-                const res = await bff(`${base}/documents/${d.id}`, { method: "DELETE" });
-                if (res.ok) await onChanged();
-                else onError(res.message);
-              }}
-            >
-              ×
-            </button>
-          ) : null}
-        </span>
-      ))}
+    <div className="flex flex-col gap-2">
+      {docs.length > 0 ? (
+        <ul className="flex flex-wrap items-center gap-2">
+          {docs.map((d) => (
+            <li key={d.id} className="relative">
+              <button
+                type="button"
+                className="block rounded-md focus:outline-none focus-visible:ring-2 focus-visible:ring-focus"
+                aria-label={t("photos.open", { title: d.title })}
+                onClick={() => openPhoto(d.id)}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element -- protected same-origin blob, no optimizer */}
+                <img src={`${files}/documents/${d.id}/content`} alt={d.title} className="h-20 w-20 rounded-md border border-border object-cover" />
+              </button>
+              {!disabled ? (
+                <button
+                  type="button"
+                  className="absolute -right-1 -top-1 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-surface text-xs shadow-card"
+                  aria-label={t("photos.remove")}
+                  onClick={() =>
+                    ask({
+                      title: t("photos.remove"),
+                      // Version 1 has no earlier version keeping the file: the file is deleted;
+                      // a later version only drops the link and the earlier version keeps it.
+                      text: t(version > 1 ? "photos.confirmRemoveKept" : "photos.confirmRemove"),
+                      confirmLabel: t("confirm.deleteYes"),
+                      danger: true,
+                      action: async () => {
+                        const res = await bff(`${base}/documents/${d.id}`, { method: "DELETE" });
+                        if (res.ok) await onChanged();
+                        else onError(res.message);
+                      },
+                    })
+                  }
+                >
+                  ×
+                </button>
+              ) : null}
+            </li>
+          ))}
+        </ul>
+      ) : null}
       {!disabled ? (
-        <label className={`${ui.buttonSm} cursor-pointer`}>
-          {busy ? t("photos.uploading") : t("photos.add")}
-          <input
-            type="file"
-            accept="image/jpeg,image/png"
-            capture="environment"
-            multiple
-            className="sr-only"
-            onChange={(e) => upload(e.target.files)}
-            disabled={busy}
-          />
-        </label>
+        <PhotoPicker
+          compact
+          onFiles={(list) => void upload(list)}
+          jobs={jobs}
+          onRetry={(job) => {
+            const file = failed.find((f) => `${f.name}-${f.size}-${f.lastModified}` === job.key);
+            if (file) void upload([file]);
+          }}
+          disabled={busy}
+        />
       ) : null}
     </div>
   );

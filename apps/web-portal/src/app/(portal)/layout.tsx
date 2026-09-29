@@ -5,7 +5,7 @@ import { InstallHint } from "@/components/shell/InstallHint";
 import { LogoutButton } from "@/components/shell/LogoutButton";
 import { PortalNav } from "@/components/shell/PortalNav";
 import { ThemeSwitch } from "@/components/shell/ThemeToggle";
-import type { Me } from "@/components/portal/types";
+import { type Me, showsHandover } from "@/components/portal/types";
 import { serverApi } from "@/lib/api-server";
 
 /** Signed-in area of the portal: slim header with role aware navigation, content, footer note.
@@ -44,6 +44,9 @@ export default async function PortalLayout({ children }: { children: React.React
         { href: "/zaehlerstand", label: t("nav.meter") },
         { href: "/daten", label: t("nav.data") },
         { href: "/lastschrift", label: t("nav.mandate") },
+        // M31 WP5: Übergabeprotokoll for helpers, participants, tenants and owners with a grant
+        // (same rule as the start tile, showsHandover), so the protocol stays one tap away.
+        ...(me && showsHandover(me) ? [{ href: "/uebergabe", label: t("nav.handover") }] : []),
         // A51: owner pages (read only), shown only with the owner role.
         ...(me?.roles.includes("owner")
           ? [
@@ -96,7 +99,11 @@ export default async function PortalLayout({ children }: { children: React.React
         <InstallHint />
         {children}
       </main>
-      <footer className="mx-auto w-full max-w-4xl px-4 py-4 text-xs text-subtle">
+      <footer
+        className="mx-auto w-full max-w-4xl px-4 py-4 text-xs text-subtle"
+        /* Above the home indicator of an installed app (M31 WP5). */
+        style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
+      >
         {t("footer")} <Link href="/barrierefreiheit" className="underline hover:text-fg">{t("accessibilityLink")}</Link>
       </footer>
     </div>

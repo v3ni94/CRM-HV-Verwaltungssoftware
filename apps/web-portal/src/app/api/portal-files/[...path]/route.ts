@@ -8,6 +8,9 @@ import { problemJson } from "@/lib/problem";
 const ID = "[0-9a-fA-F-]{36}";
 const ALLOWED: RegExp[] = [
   new RegExp(`^portal/handover/${ID}/documents/${ID}/content$`),
+  // Thumbnail variant of a protocol photo (M31 WP2 endpoint, 320 px, no metadata); the same
+  // no-store rule as every file path (operator decision 6 of M31 pending).
+  new RegExp(`^portal/handover/${ID}/documents/${ID}/thumbnail$`),
   new RegExp(`^portal/handover/${ID}/pdf$`),
   new RegExp(`^portal/documents/${ID}/download$`),
   // Anlage eines Aushangs (Schwarzes Brett, A54); visibility follows the notice.

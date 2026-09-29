@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import Link from "next/link";
 
-import type { Me } from "@/components/portal/types";
+import { type Me, showsHandover } from "@/components/portal/types";
 import { ui } from "@/lib/ui";
 
 /** Rollenabhängige Kacheln der Startseite: Dienstleister sehen nur ihre Aufträge, Mieter und
@@ -26,7 +26,7 @@ export function StartTiles({ me, newNotices = 0 }: { me: Me; newNotices?: number
         { href: "/konto", label: t("start.account") },
         { href: "/zaehlerstand", label: t("start.meter") },
         { href: "/daten", label: t("start.data") },
-        { href: "/uebergabe", label: t("start.handover") },
+        ...(showsHandover(me) ? [{ href: "/uebergabe", label: t("start.handover") }] : []),
         // A51: owner tiles (read only), owners only.
         ...(me.roles.includes("owner")
           ? [
