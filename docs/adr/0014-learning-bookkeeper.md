@@ -1,6 +1,6 @@
 # ADR 0014: Learning bookkeeper (staged automation, decision log, learned rules)
 
-- Status: Proposed (steps S0 to S7 implemented; addendum S4 to S6 of 29.09.2026 below; operator decisions M12-05 and M12-08 open, M12-06 and M12-07 decided with conditions)
+- Status: Proposed (steps S0 to S7 implemented; addendum S4 to S6 and addendum 2 of 29.09.2026 below; operator decisions M12-05 and M12-08 open, M12-06 and M12-07 decided with conditions, M12-09 no. 6 awaits confirmation of the anonymisation)
 - Date: 2026-09-28
 
 ## Context
@@ -151,6 +151,43 @@ Consequences:
   and direct debit runs; return items as review items; retention job (guard trigger forbids
   deletes); weekly digest and B09 coupling of L3 (M12-08). Listed in the rule files and
   `docs/OPEN_QUESTIONS.md` M12-09.
+
+## Addendum 2, 29.09.2026: exclusion, returns, evidence chain B05, retention, holidays
+
+Decisions:
+
+1. Exclusion (rule M12-05): the runner sets `journal_entry.auto_review_pending` with every
+   review item; the guard trigger of posted entries ignores this column (no financial
+   content). Accounting reads its own column and never imports banking:
+   `services.unreviewed_auto_accounts` excludes the debtor accounts in `dunning.preview`
+   (case `excluded` with reason), `direct_debit.select_due` (block reason) and
+   `settlement.items_for` (409 `MHVP-BANK-0026`). Closing the item clears the flag.
+2. Returns: `review.register_returns` runs in the snapshot job after every import; a
+   returned payment of an automatically posted transaction opens an item of kind `return`
+   (`return_transaction_id`), flags the entry again and counts a contradiction on the rule
+   (`bank_return`, no downgrade). The reversal stays a person's decision (B03).
+3. Evidence chain B05 (rule B05): table `bank_clarification` (one row per transaction,
+   status open, in_clarification, no_document_required with reason of a person, resolved
+   with document; ticket as responsible task). The runner opens the row instead of posting;
+   `features.collect` carries the status; the verifier of `recurring_expense` consumes it.
+   List `GET /banking/clarifications` ("Buchungen ohne Beleg") before the period lock, the
+   lock reports `unclarified_bank_movements`, audit export table `belegkette`.
+4. Retention (operator decision M12-06, 24 months): anonymisation instead of deletion,
+   because the guard forbids deletes. `learning.anonymise_expired` (nightly
+   `mhvp.banking.learning_retention`) nulls the payer fingerprint and the proposal texts
+   and sets `anonymised_at`; the guard allows exactly this change once per closed row. The
+   difference to the literal condition is put to the operator (OPEN_QUESTIONS M12-09 no. 6).
+5. Holidays: `mhvp.banking.holidays` (nationwide plus NRW, deterministic) in
+   `review.next_working_day` (A-088 updated).
+
+Consequences: migration 0243 (down_revision 0241, idempotent, RLS on `bank_clarification`,
+both guard functions replaced with `CREATE OR REPLACE` and restored on downgrade), error
+code `MHVP-BANK-0026`, events `auto_posting_review.return_opened`,
+`bank_clarification.opened`, `bank_clarification.decided`, beat entry
+`banking-learning-retention` (03:50), `RULE_VERSION 2026.09.29-3`,
+`VERIFIER_VERSION 2026.09.29-2`. Tests: `tests/unit/test_bank_holidays.py`,
+`tests/unit/test_learning_retention.py`, `tests/unit/test_bank_verifiers.py` (evidence by
+status), `tests/integration/test_m12_automation_levels.py::test_exclusion_returns_clarification_and_retention`.
 
 ## Alternatives considered
 

@@ -22,8 +22,10 @@ checks common to all classes:
   against a later date.
 
 ``recurring_expense`` (L2b) additionally needs the evidence chain (B05): a linked posted
-invoice or the rule flag ``no_receipt_required`` set by a person; otherwise the result is
-``clarification`` (the transaction gets a clarification event instead of a posting).
+invoice, a clarification row of the transaction resolved with a document or decided by a
+person as ``no_document_required`` (``mhvp.banking.clarifications``), or the rule flag
+``no_receipt_required`` set by a person; otherwise the result is ``clarification`` (the
+transaction gets a clarification row with responsible ticket instead of a posting).
 """
 
 from __future__ import annotations
@@ -38,8 +40,9 @@ from typing import Any
 
 from mhvp.banking import levels
 from mhvp.banking import posting_proposal as pp
+from mhvp.banking.clarifications import evidence_complete
 
-VERIFIER_VERSION = "2026.09.29-1"
+VERIFIER_VERSION = "2026.09.29-2"
 # Counter accounts the runner never books against (category), independent of the rule.
 FORBIDDEN_CATEGORIES = frozenset({"bank", "system"})
 DEPOSIT_KEYWORDS = ("kaution", "deposit")
@@ -345,8 +348,10 @@ def verify_recurring_expense(
         if not (min(amounts) <= amount <= max(amounts)):
             reasons.append("Betrag außerhalb der beobachteten Spanne")
     reasons.extend(_account_reasons(ctx, [account]))
-    evidence = bool(tx.get("linked_invoices")) or bool(
-        (ctx.rule.get("match") or {}).get("no_receipt_required")
+    evidence = (
+        bool(tx.get("linked_invoices"))
+        or evidence_complete(tx.get("clarification"))
+        or bool((ctx.rule.get("match") or {}).get("no_receipt_required"))
     )
     if reasons:
         return _refuse(kind, reasons, str(ctx.rule.get("id")))

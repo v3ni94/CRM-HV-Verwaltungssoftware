@@ -2249,7 +2249,28 @@
       "code_wrong_amount": "Wrong amount",
       "code_wrong_date": "Wrong date",
       "code_duplicate": "Duplicate",
-      "code_other": "Other"
+      "code_other": "Other",
+      "returnHint": "The bank returned the payment. Until decided, the automatic posting is excluded from dunning, settlement proposal and direct debit runs; Correct reverses with a reason code."
+    },
+    "clarifications": {
+      "title": "Postings without document",
+      "intro": "Unposted bank movements with clarification status and responsible task (B05). Clear the list before every period lock: link the document or decide with a reason that no document is required. The list posts nothing.",
+      "loading": "Loading clarifications.",
+      "empty": "No unposted bank movements without document.",
+      "status_open": "Open",
+      "status_in_clarification": "In clarification",
+      "status_no_document_required": "No document required",
+      "status_resolved": "Resolved",
+      "ticket": "Task created",
+      "inClarification": "Set in clarification",
+      "decide": "Decide",
+      "reason": "Reason",
+      "documentId": "Document id",
+      "decideHint": "No document required needs a reason of the logged in person; Resolved needs the linked document. The decision opens a new proposal round for the transaction.",
+      "noDocumentRequired": "No document required",
+      "resolved": "Resolved with document",
+      "cancel": "Cancel",
+      "decided": "Clarification status set: {status}."
     }
   },
   "Payments": {

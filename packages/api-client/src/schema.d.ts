@@ -3266,6 +3266,45 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/clarifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Buchungen ohne Beleg (Klärungsstatus B05)
+         * @description The list before the period lock: every unposted bank movement with clarification
+         *     status of the legal entity (or ledger) up to ``until``; ``open_only=false`` includes the
+         *     decided rows (no document required with reason, resolved with document).
+         */
+        get: operations["list_clarifications_api_v1_banking_clarifications_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/banking/clarifications/{row_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Klärungsstatus setzen (accounting:update) */
+        post: operations["decide_clarification_api_v1_banking_clarifications__row_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/connections": {
         parameters: {
             query?: never;
@@ -22463,6 +22502,17 @@ export interface components {
             resolution_id?: string | null;
             /** Status */
             status?: string | null;
+        };
+        /** ClarificationDecisionIn */
+        ClarificationDecisionIn: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Document Id */
+            document_id?: string | null;
+            /** Reason */
+            reason?: string | null;
+            /** Status */
+            status: string;
         };
         /**
          * ClassificationPatternType
@@ -44790,6 +44840,79 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["BankBulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_clarifications_api_v1_banking_clarifications_get: {
+        parameters: {
+            query?: {
+                legal_entity_id?: string | null;
+                ledger_id?: string | null;
+                until?: string | null;
+                open_only?: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    decide_clarification_api_v1_banking_clarifications__row_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                row_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClarificationDecisionIn"];
             };
         };
         responses: {

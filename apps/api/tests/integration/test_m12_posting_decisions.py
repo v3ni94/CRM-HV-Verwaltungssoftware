@@ -377,7 +377,7 @@ def test_decision_log_behind_switch_and_full_cycle(
 
     # Idempotent per run: a second computation adds nothing.
     again = asyncio.run(compute_proposals_once(settings, world.tenant_a, run_id))
-    assert again == {"checked": 3, "computed": 0, "skipped": 3}
+    assert again == {"checked": 3, "computed": 0, "skipped": 3, "auto_returns": 0}
     assert len(_decisions(client, h, t1)) == 1
 
     # Refresh when the facts change: a new open item of the second owner changes the hash of

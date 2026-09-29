@@ -1060,8 +1060,10 @@ async def _automation_tables(
     and ``regelvorschlaege`` (bank_rule_proposal) plus ``bankregeln`` (bank_rule states)."""
     from mhvp.banking.models import (
         AutoPostingReview,
+        BankClarification,
         BankRule,
         BankRuleProposal,
+        BankTransaction,
         BookkeepingLevelRequest,
         PostingDecision,
     )
@@ -1314,7 +1316,67 @@ async def _automation_tables(
             for r in rules
         ],
     )
-    return [entscheidungen, nachkontrolle, automatikstufen, regelvorschlaege, bankregeln]
+    # B05 evidence chain: every clarification row of the legal entity whose bank movement
+    # falls into the period (open, in clarification, no document required, resolved).
+    clarification_rows = (
+        await session.execute(
+            select(BankClarification, BankTransaction)
+            .join(BankTransaction, BankTransaction.id == BankClarification.bank_transaction_id)
+            .where(
+                BankClarification.legal_entity_id == ledger.legal_entity_id,
+                BankTransaction.booking_date.between(start, end),
+            )
+            .order_by(BankTransaction.booking_date, BankClarification.created_at)
+        )
+    ).all()
+    belegkette = Table(
+        "belegkette",
+        [
+            "Klärung-ID",
+            "Umsatz-ID",
+            "Buchungstag",
+            "Betrag",
+            "Gegenpartei",
+            "Status",
+            "Gründe",
+            "Regel-ID",
+            "Begründung",
+            "Beleg-ID",
+            "Ticket-ID",
+            "Zuständig",
+            "Entschieden von",
+            "Entschieden am",
+            "Umsatzstatus",
+        ],
+        [
+            [
+                c.id,
+                c.bank_transaction_id,
+                t.booking_date,
+                t.amount,
+                t.counterpart_name,
+                c.status,
+                "; ".join(c.reasons or []),
+                c.rule_id,
+                c.reason,
+                c.document_id,
+                c.ticket_id,
+                c.assignee_user_id,
+                c.decided_by,
+                c.decided_at,
+                t.status.value,
+            ]
+            for c, t in clarification_rows
+        ],
+    )
+    return [
+        entscheidungen,
+        nachkontrolle,
+        automatikstufen,
+        regelvorschlaege,
+        bankregeln,
+        belegkette,
+    ]
 
 
 def _contact_name(contact: Any) -> str:

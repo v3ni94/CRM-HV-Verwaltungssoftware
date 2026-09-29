@@ -687,3 +687,88 @@ def proposal_out(row: BankRuleProposal) -> dict[str, Any]:
         "decided_at": row.decided_at,
         "created_at": row.created_at,
     }
+
+
+# Retention of the learning store (operator decision M12-06 of 28.09.2026: 24 months). The
+# guard trigger of ``posting_decision`` forbids every delete (B03, ADR 0014), so the run
+# anonymises instead of deleting: payer fingerprint and proposal evidence are nulled, the
+# decision outcome (status, final, diff, reason, entry, decided by and at) stays for the
+# audit. The difference to the literal condition is documented in OPEN_QUESTIONS M12-09.
+LEARNING_RETENTION_MONTHS = 24
+_PROPOSAL_EVIDENCE_KEYS = ("reasoning", "evidence", "label", "text")
+
+
+def anonymise_features(features: dict[str, Any]) -> dict[str, Any]:
+    out = dict(features)
+    if "counterpart_iban_fingerprint" in out:
+        out["counterpart_iban_fingerprint"] = None
+    return out
+
+
+def anonymise_proposals(proposals: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Keeps source, kind, confidence, splits and account of every shown proposal; drops the
+    free text with identifiers (reasoning, evidence, labels)."""
+    out: list[dict[str, Any]] = []
+    for p in proposals:
+        out.append({k: v for k, v in p.items() if k not in _PROPOSAL_EVIDENCE_KEYS})
+    return out
+
+
+async def anonymise_expired(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    *,
+    now: datetime | None = None,
+    months: int = LEARNING_RETENTION_MONTHS,
+) -> dict[str, int]:
+    """Anonymises closed decisions and closed rule proposals of one tenant older than the
+    retention period. Evidence of rules that are still proposed, approved or active is kept
+    (the proposal rows of those rules are skipped). Pending rows are never touched."""
+    from mhvp.ai.examples import retention_cutoff
+
+    cutoff = retention_cutoff(now or datetime.now(UTC), months)
+    counts = {"decisions": 0, "proposals": 0}
+    decisions = list(
+        await session.scalars(
+            select(PostingDecision)
+            .where(
+                PostingDecision.tenant_id == tenant_id,
+                PostingDecision.status != PostingDecisionStatus.PENDING.value,
+                PostingDecision.anonymised_at.is_(None),
+                PostingDecision.created_at < cutoff,
+            )
+            .order_by(PostingDecision.created_at)
+            .with_for_update()
+        )
+    )
+    stamp = datetime.now(UTC)
+    for row in decisions:
+        row.features = anonymise_features(row.features or {})
+        row.proposals = anonymise_proposals(row.proposals or [])
+        row.anonymised_at = stamp
+        counts["decisions"] += 1
+    proposals = list(
+        await session.scalars(
+            select(BankRuleProposal)
+            .where(
+                BankRuleProposal.tenant_id == tenant_id,
+                BankRuleProposal.status != RuleProposalStatus.PROPOSED.value,
+                BankRuleProposal.anonymised_at.is_(None),
+                BankRuleProposal.created_at < cutoff,
+            )
+            .order_by(BankRuleProposal.created_at)
+            .with_for_update()
+        )
+    )
+    for proposal in proposals:
+        if proposal.rule_id is not None:
+            rule = await session.get(BankRule, proposal.rule_id)
+            if rule is not None and rule.approval_state is not RuleState.DISABLED:
+                continue  # evidence of a living rule stays for its lifetime
+        proposal.counterpart_iban_fingerprint = None
+        proposal.purpose_tokens = []
+        proposal.evidence = {}
+        proposal.anonymised_at = stamp
+        counts["proposals"] += 1
+    await session.flush()
+    return counts

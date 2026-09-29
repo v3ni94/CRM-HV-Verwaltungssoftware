@@ -32,6 +32,7 @@ const item: ReviewItem = {
   final: { settlements: [{ open_item_id: "oi", amount: "250.00" }], counter_account_number: null },
   verifier_fingerprint: "f".repeat(64),
   reversed: false,
+  return_transaction_id: null,
 };
 
 function mockApi() {
@@ -39,7 +40,13 @@ function mockApi() {
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = String(input);
     calls.push({ url, init });
-    if (url.endsWith("/banking/auto-posting/reviews")) return jsonResponse([item, { ...item, id: "late", overdue: true, kind: "sample", due_on: "2026-09-20" }]);
+    if (url.endsWith("/banking/auto-posting/reviews")) {
+      return jsonResponse([
+        item,
+        { ...item, id: "late", overdue: true, kind: "sample", due_on: "2026-09-20" },
+        { ...item, id: "ret", kind: "return", return_transaction_id: "tx-ret" },
+      ]);
+    }
     if (url.endsWith(`/banking/auto-posting/reviews/${ITEM}`)) return jsonResponse({ ...item, status: "ok" });
     if (url.endsWith(`/accounting/ledgers/${LEDGER}/accounts`)) {
       return jsonResponse([
@@ -60,12 +67,14 @@ describe("AutoPostingReview", () => {
     const calls = mockApi();
     renderIntl(<AutoPostingReview canReview canBook />);
     const rows = await screen.findAllByTestId("review-item");
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(3);
     expect(rows[0]).toHaveTextContent("Eigentümer Muster");
     expect(rows[0]).toHaveTextContent("250,00 EUR");
     expect(rows[0]).toHaveTextContent("Tagesprüfung");
     expect(rows[1]).toHaveTextContent("überfällig");
     expect(rows[1]).toHaveTextContent("Stichprobe");
+    expect(rows[2]).toHaveTextContent("Rückläufer");
+    expect(rows[2]).toHaveTextContent("Die Bank hat die Zahlung zurückgegeben");
     await userEvent.click(within(rows[0]!).getByRole("button", { name: "In Ordnung" }));
     await waitFor(() => expect(calls.some((c) => c.url.endsWith(`/banking/auto-posting/reviews/${ITEM}`) && c.init?.method === "POST")).toBe(true));
     expect(JSON.parse(String(calls.find((c) => c.url.endsWith(`/reviews/${ITEM}`))?.init?.body))).toEqual({ outcome: "ok" });

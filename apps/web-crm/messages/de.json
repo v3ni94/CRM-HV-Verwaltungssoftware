@@ -2249,7 +2249,28 @@
       "code_wrong_amount": "Falscher Betrag",
       "code_wrong_date": "Falsches Datum",
       "code_duplicate": "Doppelt",
-      "code_other": "Sonstiges"
+      "code_other": "Sonstiges",
+      "returnHint": "Die Bank hat die Zahlung zurückgegeben (Rücklastschrift). Die Automatikbuchung ist bis zur Entscheidung von Mahnlauf, Tilgungsvorschlag und Lastschriftlauf ausgenommen; Korrigieren storniert mit Grundcode."
+    },
+    "clarifications": {
+      "title": "Buchungen ohne Beleg",
+      "intro": "Unbelegte Bankbewegungen mit Klärungsstatus und verantwortlicher Aufgabe (B05). Vor jeder Festschreibung leeren: Beleg verknüpfen oder mit Begründung als Kein Beleg erforderlich entscheiden. Die Liste bucht nichts.",
+      "loading": "Klärungen werden geladen.",
+      "empty": "Keine unbelegten Bankbewegungen.",
+      "status_open": "Offen",
+      "status_in_clarification": "In Klärung",
+      "status_no_document_required": "Kein Beleg erforderlich",
+      "status_resolved": "Erledigt",
+      "ticket": "Aufgabe angelegt",
+      "inClarification": "In Klärung setzen",
+      "decide": "Entscheiden",
+      "reason": "Begründung",
+      "documentId": "Beleg-ID",
+      "decideHint": "Kein Beleg erforderlich braucht eine Begründung der angemeldeten Person; Erledigt braucht den verknüpften Beleg. Die Entscheidung öffnet eine neue Vorschlagsrunde für den Umsatz.",
+      "noDocumentRequired": "Kein Beleg erforderlich",
+      "resolved": "Erledigt mit Beleg",
+      "cancel": "Abbrechen",
+      "decided": "Klärungsstatus gesetzt: {status}."
     }
   },
   "Payments": {

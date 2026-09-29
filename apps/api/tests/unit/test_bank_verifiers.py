@@ -365,6 +365,30 @@ def test_recurring_expense_needs_switch_history_band_and_evidence_chain() -> Non
         ctx=_ctx(flagged, outgoing_enabled=True),
     )
     assert out.ok is True
+    # B05 clarification row of the movement: resolved with a document or decided by a
+    # person as "kein Beleg erforderlich" completes the chain; open or undecided does not.
+    for clarification, expected in [
+        ({"status": "resolved", "document_id": "doc-1", "decided_by_person": True}, True),
+        ({"status": "resolved", "document_id": None, "decided_by_person": True}, False),
+        ({"status": "no_document_required", "document_id": None, "decided_by_person": True}, True),
+        (
+            {"status": "no_document_required", "document_id": None, "decided_by_person": False},
+            False,
+        ),
+        ({"status": "in_clarification", "document_id": None, "decided_by_person": False}, False),
+        ({"status": "open", "document_id": None, "decided_by_person": False}, False),
+        (None, False),
+    ]:
+        out = v.verify(
+            "recurring_expense",
+            _tx("-80.00", "Wartung", history=_history(3), clarification=clarification),
+            [],
+            open_items=[],
+            payables=[],
+            ctx=_ctx(EXPENSE_RULE, outgoing_enabled=True),
+        )
+        assert out.ok is expected, clarification
+        assert out.clarification is (not expected), clarification
     off_band = _tx(
         "-150.00", "Wartung", history=_history(3), linked_invoices=[{"invoice_id": "i1"}]
     )

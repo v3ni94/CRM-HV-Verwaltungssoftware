@@ -141,6 +141,30 @@ Automatikschalter des Mandanten, das Entscheidungsprotokoll und der Schalter der
 Ausgangsautomatik sind Voraussetzung; vor G1 bucht die Automatik nur im nicht führenden
 Buchungskreis (Vergleichsbuchung, Betreiberentscheidung vom 28.09.2026).
 
+## Nachkontrolle, Mahnlauf und Rückläufer
+
+Solange eine Automatikbuchung nicht nachkontrolliert ist, lässt die Plattform den betroffenen
+Schuldner in Ruhe: der Mahnlauf schließt das Konto mit dem Grund „Automatikbuchung ohne
+abgeschlossene Nachkontrolle“ aus, der Tilgungsvorschlag antwortet mit einem Hinweis, der
+Lastschriftlauf sperrt die Posten des Kontos. Mit In Ordnung, Korrigieren oder einem Storno
+ist die Sperre aufgehoben. Gibt die Bank eine automatisch gebuchte Zahlung zurück
+(Rücklastschrift), erscheint unter Bank, Nachkontrolle ein Eintrag der Art Rückläufer an der
+Automatikbuchung; die Sperre gilt erneut, die Regel zählt einen Widerspruch. Der Storno bleibt
+Entscheidung der Person (Korrigieren mit Grundcode). Die Fälligkeit der Nachkontrolle ist der
+nächste Werktag ohne bundesweite und nordrhein-westfälische Feiertage.
+
+## Buchungen ohne Beleg
+
+Die Bankseite zeigt die Liste „Buchungen ohne Beleg“: Bankbewegungen, die der Automatiklauf
+mangels Beleg nicht gebucht hat. Jede Zeile trägt einen Klärungsstatus (Offen, In Klärung,
+Kein Beleg erforderlich, Erledigt) und eine Aufgabe „Beleg fehlt“. Entscheiden: Kein Beleg
+erforderlich verlangt eine Begründung der angemeldeten Person, Erledigt den verknüpften Beleg;
+danach erhält der Umsatz eine neue Vorschlagsrunde und wird beim nächsten Import oder Lauf
+unter den übrigen Bedingungen gebucht. Vor jeder Festschreibung ist die Liste zu leeren; die
+Festschreibung meldet die Zahl offener Klärungen bis zum Stichtag. Der Prüfexport führt jede
+Klärung mit Status, Begründung, Beleg und Aufgabe. Ein fehlender Beleg wird nie durch einen
+erfundenen ersetzt.
+
 ## Buchung korrigieren
 
 Eine gebuchte Buchung wird nie geändert. Korrigieren (Bank, Nachkontrolle, oder über die

@@ -245,6 +245,7 @@ async def select_due(
         query = query.where(OpenItem.id.in_(wanted))
     items = (await session.scalars(query.order_by(OpenItem.due_date, OpenItem.id))).all()
     busy = await _items_in_active_runs(session)
+    unreviewed = await acc.unreviewed_auto_accounts(session, ledger)
     for item in items:
         rest = await acc.remaining(session, item.id)
         if rest <= 0:
@@ -261,6 +262,10 @@ async def select_due(
         selection.candidates.append(candidate)
         if item.id in busy:
             candidate.block_reason = "bereits in einem Lastschriftlauf enthalten"
+            continue
+        if item.account_id in unreviewed:
+            # Rule M12-05: no collection on a debtor whose automatic posting is unreviewed.
+            candidate.block_reason = acc.UNREVIEWED_AUTO_REASON
             continue
         if contract is None:
             candidate.block_reason = "keine Vertragspartei zur Sollstellung"

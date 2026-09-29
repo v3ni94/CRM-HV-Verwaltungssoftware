@@ -9218,6 +9218,57 @@
         "title": "ClaimPatch",
         "type": "object"
       },
+      "ClarificationDecisionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "assignee_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee User Id"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "status": {
+            "pattern": "^(open|in_clarification|no_document_required|resolved)$",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "ClarificationDecisionIn",
+        "type": "object"
+      },
       "ClassificationPatternType": {
         "description": "M35 Stufe 3 (docs/plans/M35-objektakte-uebernahme.md section 4, rule stage): the four\npattern kinds the task requires. Only `FILENAME_REGEX` and `TEXT_KEYWORD` have a matching\nseed from the objektakte reference rules (docs/rules/M35-02.md); `SENDER_DOMAIN` and\n`DRIVE_FOLDER` are supported by the schema and service but unseeded until a tenant, or a\nlater stage, adds one.",
         "enum": [
@@ -67686,6 +67737,161 @@
           }
         },
         "summary": "Massenbestätigung mit Vorschau (je Umsatz ganz oder gar nicht)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/clarifications": {
+      "get": {
+        "description": "The list before the period lock: every unposted bank movement with clarification\nstatus of the legal entity (or ledger) up to ``until``; ``open_only=false`` includes the\ndecided rows (no document required with reason, resolved with document).",
+        "operationId": "list_clarifications_api_v1_banking_clarifications_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "legal_entity_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Legal Entity Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ledger Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "open_only",
+            "required": false,
+            "schema": {
+              "default": true,
+              "title": "Open Only",
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Clarifications Api V1 Banking Clarifications Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Buchungen ohne Beleg (Klärungsstatus B05)",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/clarifications/{row_id}": {
+      "post": {
+        "operationId": "decide_clarification_api_v1_banking_clarifications__row_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "row_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Row Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClarificationDecisionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Decide Clarification Api V1 Banking Clarifications  Row Id  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Klärungsstatus setzen (accounting:update)",
         "tags": [
           "Bank"
         ]

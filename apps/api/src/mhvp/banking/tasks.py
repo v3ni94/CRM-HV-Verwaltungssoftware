@@ -881,7 +881,7 @@ async def compute_proposals_once(
     the file and CSV endpoints queue it as an after-commit hook, the finAPI and FinTS tasks
     call it once their own import transaction committed. A tenant without
     ``learning_bookkeeper_enabled`` gets no rows."""
-    from mhvp.banking import proposals, runner
+    from mhvp.banking import proposals, review, runner
 
     _ensure_crypto(settings)
     engine = create_async_engine(
@@ -891,6 +891,13 @@ async def compute_proposals_once(
     try:
         async with tenant_transaction(factory, tenant_id) as session:
             counts = await proposals.compute_for_run(session, run_id)
+            # Returns of automatically posted payments open review items of kind ``return``
+            # (rule M12-05); nothing when the learning bookkeeper is off (no auto postings).
+            if await proposals.learning_enabled(session):
+                returns = await review.register_returns(
+                    session, tenant_id=tenant_id, today=local_today()
+                )
+                counts["auto_returns"] = len(returns)
         # Runner of levels L2 and L3 (S6) after the snapshots, in its own transaction: the
         # advisory lock serialises parallel imports, G1 is asked from the job resolver, a
         # non leading ledger is allowed by the operator decision M12-07.
@@ -951,6 +958,46 @@ async def levels_refresh_once(settings: Settings, *, today: date | None = None) 
 @shared_task(name="mhvp.banking.levels_refresh")
 def levels_refresh() -> dict[str, Any]:
     return asyncio.run(levels_refresh_once(get_settings()))
+
+
+async def learning_retention_once(
+    settings: Settings, *, now: datetime | None = None
+) -> dict[str, Any]:
+    """Nightly retention run of the learning store (operator decision M12-06, 24 months):
+    anonymises closed decisions and closed rule proposals per active tenant
+    (``learning.anonymise_expired``); nothing is deleted (guard trigger, B03)."""
+    from mhvp.banking import learning
+
+    _ensure_crypto(settings)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    totals: dict[str, Any] = {"tenants": 0, "decisions": 0, "proposals": 0, "errors": []}
+    try:
+        factory = create_session_factory(engine)
+        async with platform_transaction(factory) as session:
+            tenant_ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in tenant_ids:
+            try:
+                async with tenant_transaction(factory, tenant_id) as session:
+                    counts = await learning.anonymise_expired(session, tenant_id, now=now)
+            except Exception as exc:
+                log.warning("learning retention failed", extra={"tenant_id": str(tenant_id)})
+                totals["errors"].append(f"{tenant_id}: {exc.__class__.__name__}")
+                continue
+            totals["tenants"] += 1
+            totals["decisions"] += counts["decisions"]
+            totals["proposals"] += counts["proposals"]
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.banking.learning_retention", acks_late=True)
+def learning_retention() -> dict[str, Any]:
+    return asyncio.run(learning_retention_once(get_settings()))
 
 
 @shared_task(name="mhvp.banking.compute_proposals")
