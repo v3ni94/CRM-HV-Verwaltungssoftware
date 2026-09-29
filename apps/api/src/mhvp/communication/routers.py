@@ -4,6 +4,7 @@ through a Vier-Augen-Freigabe: submit -> approve (by someone else) -> sent, or r
 
 import logging
 import uuid
+from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from email.message import EmailMessage
 from email.utils import make_msgid
@@ -286,6 +287,15 @@ async def _sync_for(
 
     if not rows:
         return {}
+    readable = await _readable_mailboxes(session, principal, rows)
+    return await gmail_state.sync_info_for(session, rows, readable=readable)
+
+
+async def _readable_mailboxes(
+    session: AsyncSession, principal: TenantPrincipal, rows: list[Message]
+) -> Callable[[uuid.UUID | None], bool] | None:
+    """Predicate for the mailboxes of ``rows`` the user may read; None for administrators
+    (every mailbox)."""
     readable = None
     if not principal.has("tenant_settings:update"):
         allowed = set(
@@ -300,7 +310,7 @@ async def _sync_for(
         def readable(mailbox_id: uuid.UUID | None) -> bool:
             return mailbox_id is None or mailbox_id in allowed
 
-    return await gmail_state.sync_info_for(session, rows, readable=readable)
+    return readable
 
 
 def _playbook_out(p: Playbook) -> dict[str, Any]:
@@ -1113,8 +1123,10 @@ async def message_sync_events(
     message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     """Ereignisse ``message.gmail_state_changed``, ``message.completed``, ``message.reopened``
-    und ``message.gmail_restore_requested`` aller Kopien der Gruppe, älteste zuerst."""
-    from mhvp.communication.gmail_state import SYNC_EVENT_TYPES
+    und ``message.gmail_restore_requested`` aller Kopien der Gruppe, älteste zuerst.
+    Labelereignisse einer Kopie in einem Postfach, das der Nutzer nicht lesen darf, fehlen
+    (wie ``visible: false`` im Maildetail, offener Punkt Beschäftigtendatenschutz)."""
+    from mhvp.communication.gmail_state import EVENT_STATE_CHANGED, SYNC_EVENT_TYPES
     from mhvp.core.events import DomainEvent
 
     async with tenant_tx(request, principal) as session:
@@ -1122,7 +1134,10 @@ async def message_sync_events(
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await assert_message_accessible(session, principal, row)
-        ids = [m.id for m in await duplicates.group_members(session, row)] or [row.id]
+        members = await duplicates.group_members(session, row) or [row]
+        ids = [m.id for m in members]
+        readable = await _readable_mailboxes(session, principal, list(members))
+        mailbox_of = {m.id: m.mailbox_id for m in members}
         events = await session.scalars(
             select(DomainEvent)
             .where(
@@ -1141,6 +1156,9 @@ async def message_sync_events(
                 "payload": e.payload,
             }
             for e in events
+            if readable is None
+            or e.type != EVENT_STATE_CHANGED
+            or readable(mailbox_of.get(e.entity_id) if e.entity_id is not None else None)
         ]
 
 
@@ -1179,7 +1197,10 @@ async def reconcile_mailbox_state(
                 raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from exc
             finally:
                 await client.aclose()
-        if box.gmail_state_reconcile_status in ("queued", "running"):
+        # 409 only while a run is executing; a queued request whose job never started
+        # (worker or broker gone) may be queued again, the mailbox lock of the job and the
+        # replay guard keep two runs harmless.
+        if box.gmail_state_reconcile_status == "running":
             raise ProblemError(ErrorCodes.RECONCILE_RUNNING)
         box.gmail_state_reconcile_status = "queued"
         tenant_id = principal.tenant_id
