@@ -30,8 +30,11 @@ test("manifest and icons are served without a session and describe MHVP", async 
 
 test("service worker registers and the offline page is served, pages stay behind the login", async ({ page, request }) => {
   await page.goto("/anmelden");
+  // PwaRegister lives in the signed in app shell ((app)/layout.tsx), which needs a backend;
+  // registering here proves that the worker file is served and parses with the root scope.
   const scope = await page.evaluate(async () => {
-    const registration = await navigator.serviceWorker.ready;
+    const registration = await navigator.serviceWorker.register("/sw.js", { scope: "/" });
+    await navigator.serviceWorker.ready;
     return registration.scope;
   });
   expect(scope).toMatch(/\/$/);
