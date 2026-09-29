@@ -43,6 +43,16 @@ Mehrdeutige Zeilen zeigen die Kandidaten. Der Filter "Abweichend" listet verknü
 deren CRM Stand nach einem Import oder einer Massenaktion nicht übertragen wurde; "Abweichende
 abgleichen" stellt sie nach Bestätigung in die Warteschlange.
 
+Am Kontakt (Reiter Stammdaten) zeigt ein Abzeichen "Lexware: Status" die Verknüpfung je
+Organisation, mit "abweichend", wenn der CRM Stand seit dem letzten Abgleich geändert wurde.
+Der Abschnitt Lexware Office darunter listet jede Organisation mit Status, letztem Abgleich
+und Deeplink. Mit Kontakte ändern stehen die Entscheidungen direkt am Kontakt: Verknüpfen und
+In Lexware Office anlegen (als Kunde) bei einem Vorschlag, Jetzt abgleichen bei verknüpften
+Kontakten, CRM Stand übernehmen oder Lexware Stand übernehmen bei einem Konflikt. Die
+Gegenüberstellung der Felder bleibt im Reiter Kontakte zuordnen der Einstellungen (Link Zu
+den Zuordnungen). Ohne Vorschlagszeile wird der Abgleich in den Einstellungen gestartet; der
+Kontakt bietet dann keine Verknüpfung an.
+
 ## Adressänderung
 
 Nach einer im CRM angewandten Änderung (Bearbeiten des Kontakts, angenommener Vorschlag aus
@@ -75,6 +85,30 @@ der rechnungsstellenden Gesellschaft. Der Empfänger des Entwurfs ist gesperrt; 
 erfolgt durch eine zweite Person. Rechnungen, die in Lexware Office noch Entwurf sind, werden
 nicht abgerufen.
 
+Im Ticket erscheint die Karte "Rechnungskopie aus Lexware Office" (Tickets ändern). Je
+Anfrage: Rechnungsnummer, Status (Suche läuft, Rechnung gefunden, Mehrere Rechnungen, Nur
+Entwurf in Lexware Office, Nur Gutschrift gefunden, Nicht gefunden, Abruf läuft,
+Antwortentwurf erstellt, Fehlgeschlagen, Abgelehnt), die Treffer je Gesellschaft mit Datum,
+Belegstatus, Bruttobetrag und Deeplink sowie die Empfängerprüfung mit dem Namen des
+verknüpften Rechnungsempfängers. Der Hinweis zur Absenderadresse ist nur ein Hinweis, nie die
+Prüfung. Aktionen:
+
+- Rechnungskopie anfordern: legt eine Anfrage mit der wörtlichen Nummer an (Telefon,
+  Schalter).
+- Diese Rechnung wählen: bei mehreren Treffern, danach wird erneut geprüft.
+- Korrigieren: neue Rechnungsnummer (Suche läuft erneut) oder anfragenden Kontakt aus der
+  Kontaktsuche korrigieren. Ist der Rechnungsempfänger im CRM nicht verknüpft, verknüpft
+  "Empfänger mit diesem Kontakt verknüpfen" (Kontakte ändern) den Lexware Empfänger mit dem
+  gewählten Kontakt und prüft erneut.
+- PDF abrufen und Antwortentwurf erstellen: nur bei Rechnung gefunden und bestätigtem
+  Anfragenden; der Entwurf erscheint im Mailverlauf (Antwortentwurf öffnen) und braucht die
+  zweite Freigabe.
+- Ablehnen mit Grund: schließt die Anfrage ohne Abruf.
+
+In der Mailbearbeitung zeigt der KI-Vorschlag den Chip "Rechnungskopie erkannt: <Nummer>"
+mit Link zum Ticket, sobald die Plattform für diese Mail eine Anfrage angelegt hat; der Chip
+löst nichts aus.
+
 ## Rechnungsentwurf
 
 `POST /integrations/lexoffice/invoice-drafts/preview` und `.../invoice-drafts` mit
@@ -82,6 +116,19 @@ Rechnungsart (oder Organisation), Kontakt, Belegdatum, Steuerart, Positionen, Le
 und Texten. Die Gesellschaft ergibt sich aus der Rechnungsart. Der Entwurf wird in Lexware
 Office angelegt und dort fertiggestellt (Deeplink in der Antwort). Nicht verknüpfte Kontakte
 werden als Adresse im Text übertragen.
+
+Im CRM: am Kontakt (Reiter Stammdaten, Abschnitt Lexware Office) öffnet "Rechnungsentwurf
+erstellen" (Buchhaltung anlegen) das Formular. Rechnungsart (Makler, Beratung,
+Hausverwaltung; die Gesellschaft folgt der Zuordnung in den Einstellungen), Belegdatum,
+Steuerart (Netto, Brutto, Steuerfrei), Positionen mit Bezeichnung, Menge, Einheit,
+Einzelpreis als Betrag mit Komma (zum Beispiel 1.234,56) und Steuersatz 0, 7 oder 19
+Prozent, Leistung (ohne Datum, Leistungsdatum, Leistungszeitraum), Titel, Einleitung und
+Schlusstext. Steuerfrei erlaubt nur 0 Prozent. Die Kontrollsummen im Formular werden lokal
+berechnet; "Vorschau prüfen" holt die Vorschau der Plattform mit Gesellschaft, Summen und der
+Herkunft der Adresse (Lexware Verknüpfung oder CRM Text). Erst danach legt "Als Entwurf
+anlegen" den Entwurf in die Warteschlange; der Deeplink erscheint nach der Übertragung in den
+Einstellungen (Warteschlange, Rechnungsentwürfe). Verbindlich sind die Summen aus Lexware
+Office.
 
 ## Dauerrechnungen
 

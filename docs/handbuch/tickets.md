@@ -198,6 +198,17 @@ die Antwort als eingereichter Entwurf in den Postausgang. Ein Versandfehler ersc
 im Verlauf als fehlgeschlagen mit Fehlertext; der Entwurf bleibt zur erneuten Freigabe
 erhalten.
 
+Passende Playbooks: Hat das Ticket eine Kategorie oder Vorgangsart, zeigt das Antwortformular
+die freigegebenen Playbooks (Einstellungen, Wissen) mit Antworttext, deren Kategorie oder
+Schlagwort der Kategorie oder Vorgangsart entspricht, mit Anzahl der Nutzungen. Die Auswahl
+erfolgt im Browser, da die Playbook-Liste nur nach Status und Titel filtert; ein Objektbezug
+ist bei Playbooks nicht hinterlegt, das Objekt des Tickets grenzt daher nicht ein. Einfügen
+übernimmt den Antworttext in den Entwurf (bei vorhandenem Text darunter angehängt), sendet
+aber nichts. "passt" und "passt nicht" zählen die Rückmeldung am Playbook (sichtbar unter
+Einstellungen, Wissen); die Nutzungszahl steigt nur beim Anwenden aus der Mail, nicht beim
+Einfügen im Ticket. Antwortvorlagen bleiben der verbindliche Weg, Playbooks sind eine
+Empfehlung.
+
 Direktversand oder Freigabe (Betreiberentscheidung vom 26.09.2026): Wer das Recht
 Kommunikation freigeben hat, versendet seine Antwort aus dem Ticket sofort über das Postfach
 des Tickets; die Freigabe durch dieselbe Person wird protokolliert (Meldung Antwort direkt
@@ -367,5 +378,7 @@ abzustimmen.
 
 Bittet ein Kontakt um eine bereits gestellte Rechnung, entsteht am Ticket eine Anfrage mit der
 erkannten Rechnungsnummer; nach Prüfung des Empfängers wird die Rechnungsdatei abgerufen und
-ein Antwortentwurf an die bekannte Adresse erstellt (zweite Freigabe). Details in
-[Lexware Office](lexware-office.md).
+ein Antwortentwurf an die bekannte Adresse erstellt (zweite Freigabe). Die Karte
+"Rechnungskopie aus Lexware Office" im Ticket zeigt Status, Treffer und Empfängerprüfung und
+bietet Anfordern, Korrigieren, Empfänger verknüpfen, Abrufen und Ablehnen. Details in
+[Lexware Office](lexware-office.md), Abschnitt Rechnungskopie.
