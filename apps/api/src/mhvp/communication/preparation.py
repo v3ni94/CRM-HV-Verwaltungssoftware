@@ -242,46 +242,17 @@ async def _knowledge_context(
     property_id: uuid.UUID | None,
     question: str | None = None,
 ) -> tuple[str, list[dict[str, Any]]]:
-    """Knowledge entries of the tenant and the property, newest first; with a ``question`` and
-    stored embeddings the entries are ranked by similarity instead (M7-03, keyword and recency
-    order stay the fallback).
+    """Knowledge entries of the tenant and the property for the draft: the shared selection of
+    ``mhvp.ai.knowledge`` (M34-01 approved and valid only, one row per group, ranked by
+    similarity when embeddings exist, capped by count and characters, usage recorded). Returns
+    the context text plus the entries used (id, group_id, version, title) so the caller can
+    name them in the AI answer's proof (Nachweis)."""
+    from mhvp.ai import knowledge
 
-    M34-01: only entries with ``status=approved`` (four eyes release), not superseded by a newer
-    version and, if a validity period is set, currently inside it, are used. Returns the context
-    text plus the list of entries actually used (id, version, title) so the caller can name them
-    in the AI answer's proof (Nachweis)."""
-    today = datetime.now(UTC).date()
-    query = select(AiKnowledgeEntry).where(
-        AiKnowledgeEntry.deleted_at.is_(None),
-        AiKnowledgeEntry.status == AiKnowledgeStatus.APPROVED,
-        AiKnowledgeEntry.superseded_at.is_(None),
-        (AiKnowledgeEntry.valid_from.is_(None)) | (AiKnowledgeEntry.valid_from <= today),
-        (AiKnowledgeEntry.valid_until.is_(None)) | (AiKnowledgeEntry.valid_until >= today),
+    text, used = await knowledge.context(
+        session, tenant_id=tenant_id, property_id=property_id, question=question
     )
-    if property_id is not None:
-        query = query.where(
-            (AiKnowledgeEntry.property_id.is_(None)) | (AiKnowledgeEntry.property_id == property_id)
-        )
-    else:
-        query = query.where(AiKnowledgeEntry.property_id.is_(None))
-    rows = list(await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc())))
-    if not rows:
-        return "-", []
-    if question:
-        from mhvp.ai import embeddings
-
-        ranked = await embeddings.rank_knowledge(
-            session, question, rows, tenant_id=tenant_id, actor=None, limit=30
-        )
-        if ranked:
-            rows = ranked
-    used = rows[:30]
-    text = "\n".join(f"- ({r.kind.value}) {r.title}: {r.content}" for r in used)
-    used_refs = [
-        {"id": str(r.id), "group_id": str(r.group_id), "version": r.version, "title": r.title}
-        for r in used
-    ]
-    return text, used_refs
+    return text, [u.as_dict() for u in used]
 
 
 async def _run_gateway_task(

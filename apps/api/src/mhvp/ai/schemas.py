@@ -212,6 +212,10 @@ class RunOut(_Out):
     # Set when the "large" tier was chosen automatically because the input would not fit the
     # configured tier's context window ("Großes Modell wegen Umfang gewählt").
     model_tier_reason: str | None = None
+    # Staff feedback on the answer ("helpful" / "unhelpful"), audit 29.09.2026.
+    feedback: str | None = None
+    # Knowledge entries that fed the answer (ids), for the proof and the feedback propagation.
+    knowledge_ids: list[uuid.UUID] = Field(default_factory=list)
     # Non fatal notices, e.g. a chunk that could not be processed or a row/result count mismatch.
     warnings: list[str] = Field(default_factory=list)
     # answer_question: links of the platform lookup and the deterministic hit list text (the
@@ -369,6 +373,19 @@ class KnowledgeEntryOut(_Out):
     created_at: datetime
     updated_at: datetime
     created_by: uuid.UUID | None
+    # Usage and feedback counters (audit 29.09.2026) and the stale hint (approved entry not
+    # touched for ``knowledge.STALE_AFTER_DAYS``; no legal meaning).
+    usage_count: int = 0
+    last_used_at: datetime | None = None
+    helpful_count: int = 0
+    unhelpful_count: int = 0
+    stale: bool = False
+
+
+class FeedbackIn(_In):
+    """POST /ai/runs/{id}/feedback, /ai/knowledge/{id}/feedback, /mail/playbooks/{id}/feedback."""
+
+    helpful: bool
 
 
 class KnowledgeRejectIn(_In):

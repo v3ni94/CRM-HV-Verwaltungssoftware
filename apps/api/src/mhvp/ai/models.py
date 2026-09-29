@@ -20,6 +20,7 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
@@ -152,6 +153,9 @@ class AiTaskRun(IdMixin, TimestampMixin, TenantMixin, Base):
     duration_ms: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     status: Mapped[RunStatus] = mapped_column(_enum(RunStatus, "ai_run_status"), nullable=False)
     error: Mapped[str | None] = mapped_column(Text)
+    # Staff feedback on the answer ("helpful" / "unhelpful", audit 29.09.2026); propagated to
+    # the knowledge entries the run used (input_ref["knowledge_ids"]).
+    feedback: Mapped[str | None] = mapped_column(String(16))
 
 
 class ImportRun(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -278,6 +282,15 @@ class AiKnowledgeEntry(IdMixin, TimestampMixin, TenantMixin, Base):
         Index("ix_ai_knowledge_entry_tenant_property", "tenant_id", "property_id"),
         Index("ix_ai_knowledge_entry_tenant_kind", "tenant_id", "kind"),
         Index("ix_ai_knowledge_entry_group", "tenant_id", "group_id"),
+        # Partial index on the rows the context query reads (mhvp.ai.knowledge), migration 0237.
+        Index(
+            "ix_ai_knowledge_entry_live_approved",
+            "tenant_id",
+            "property_id",
+            postgresql_where=text(
+                "status = 'approved' AND superseded_at IS NULL AND deleted_at IS NULL"
+            ),
+        ),
     )
 
     property_id: Mapped[uuid.UUID | None] = _fk("property.id", nullable=True, ondelete="CASCADE")
@@ -320,6 +333,16 @@ class AiKnowledgeEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     rejected_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     rejection_reason: Mapped[str | None] = mapped_column(Text)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Usage and feedback (audit 29.09.2026, mhvp.ai.knowledge): how often the entry entered a
+    # run and how staff rated the answers it fed. Counters only, no automatic consequence.
+    usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    helpful_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    unhelpful_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
 
 
 class EmbeddingSourceKind(StrEnum):

@@ -330,6 +330,13 @@ class Playbook(IdMixin, TimestampMixin, TenantMixin, Base):
     )  # draft, active, archived
     usage_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Staff feedback on a suggested playbook (audit 29.09.2026): counters only.
+    helpful_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
+    unhelpful_count: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )
     created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 

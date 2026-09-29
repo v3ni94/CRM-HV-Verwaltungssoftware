@@ -17,6 +17,7 @@ from mhvp.ai import (
     gateway,
     imports,
     jobs,
+    knowledge,
     lookup,
     providers,
     tasks,
@@ -836,6 +837,7 @@ async def get_run(
         out.input_stats = dict(ref.get("input_stats") or {})
         out.progress = ref.get("progress")
         out.model_tier_reason = ref.get("model_tier_reason")
+        out.knowledge_ids = [uuid.UUID(str(x)) for x in ref.get("knowledge_ids") or []]
         out.warnings = list(ref.get("warnings") or [])
         if ref.get("lookup") is not None:
             out.links = [s.ChatLink.model_validate(x) for x in lookup.links_of(ref["lookup"])]
@@ -844,6 +846,33 @@ async def get_run(
             select(AiProposal.id).where(AiProposal.task_run_id == run.id)
         )
         return out
+
+
+@router.post("/ai/runs/{run_id}/feedback", summary="Antwort bewerten")
+async def run_feedback(
+    run_id: uuid.UUID,
+    body: s.FeedbackIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.RunOut:
+    """Feedback "hilfreich / nicht hilfreich" on a chat answer (audit 29.09.2026): stored on
+    the run and propagated to the knowledge entries that fed it (``input_ref["knowledge_ids"]``).
+    A second vote replaces the first one (the counters move accordingly). Feedback never
+    changes an entry's status."""
+    async with tenant_tx(request, principal) as session:
+        run = await _get(session, AiTaskRun, run_id)
+        if run.created_by is not None and run.created_by != principal.user_id:
+            raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="not the run's author")
+        previous = run.feedback
+        verdict = "helpful" if body.helpful else "unhelpful"
+        ids = [uuid.UUID(str(x)) for x in (run.input_ref or {}).get("knowledge_ids") or []]
+        if previous != verdict:
+            if previous is not None:
+                await knowledge.record_feedback(session, ids, previous == "helpful", undo=True)
+            await knowledge.record_feedback(session, ids, body.helpful)
+            run.feedback = verdict
+            await _event(session, principal, "ai_run.feedback", run.id, helpful=body.helpful)
+    return await get_run(run_id, request, principal)
 
 
 # Proposals and import runs ----------------------------------------------------------------
@@ -1251,6 +1280,29 @@ async def _knowledge_entry(session: Any, entry_id: uuid.UUID) -> Any:
     return row
 
 
+def _knowledge_out(row: AiKnowledgeEntry) -> s.KnowledgeEntryOut:
+    out = s.KnowledgeEntryOut.model_validate(row)
+    out.stale = knowledge.is_stale(row)
+    return out
+
+
+@router.post("/ai/knowledge/{entry_id}/feedback", summary="Wissenseintrag bewerten")
+async def knowledge_feedback(
+    entry_id: uuid.UUID,
+    body: s.FeedbackIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> s.KnowledgeEntryOut:
+    """Feedback "hilfreich / nicht hilfreich" on one entry (audit 29.09.2026). Counters only:
+    no state change, no automatic withdrawal; the release workflow stays with the reviewers."""
+    async with tenant_tx(request, principal) as session:
+        row = await _knowledge_entry(session, entry_id)
+        await knowledge.record_feedback(session, [row.id], body.helpful)
+        await session.refresh(row)
+        await _event(session, principal, "ai_knowledge.feedback", row.id, helpful=body.helpful)
+        return _knowledge_out(row)
+
+
 @router.get("/ai/knowledge", summary="Wissensbasis")
 async def list_knowledge(
     request: Request,
@@ -1272,7 +1324,7 @@ async def list_knowledge(
         if kind is not None:
             query = query.where(AiKnowledgeEntry.kind == kind)
         rows = (await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc()))).all()
-        return [s.KnowledgeEntryOut.model_validate(r) for r in rows]
+        return [_knowledge_out(r) for r in rows]
 
 
 @router.get("/ai/knowledge/{entry_id}/versions", summary="Versionsverlauf")
@@ -1285,7 +1337,7 @@ async def list_knowledge_versions(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         query = select(AiKnowledgeEntry).where(AiKnowledgeEntry.group_id == anchor.group_id)
         rows = (await session.scalars(query.order_by(AiKnowledgeEntry.version.asc()))).all()
-        return [s.KnowledgeEntryOut.model_validate(r) for r in rows]
+        return [_knowledge_out(r) for r in rows]
 
 
 @router.post("/ai/knowledge", status_code=201, summary="Wissenseintrag anlegen")
@@ -1314,7 +1366,7 @@ async def create_knowledge(
         session.add(row)
         await session.flush()
         await _event(session, principal, "ai_knowledge.created", row.id, kind=body.kind.value)
-        return s.KnowledgeEntryOut.model_validate(row)
+        return _knowledge_out(row)
 
 
 @router.put("/ai/knowledge/{entry_id}", summary="Wissenseintrag ändern (neue Version)")
@@ -1348,7 +1400,7 @@ async def update_knowledge(
                 session, principal, "ai_knowledge.updated", current.id, kind=body.kind.value
             )
             await session.refresh(current)
-            return s.KnowledgeEntryOut.model_validate(current)
+            return _knowledge_out(current)
         now = datetime.now(UTC)
         current.superseded_at = now
         new_row = AiKnowledgeEntry(
@@ -1376,7 +1428,7 @@ async def update_knowledge(
             previous_id=str(current.id),
             version=new_row.version,
         )
-        return s.KnowledgeEntryOut.model_validate(new_row)
+        return _knowledge_out(new_row)
 
 
 @router.post("/ai/knowledge/{entry_id}/submit", summary="Wissenseintrag zur Prüfung einreichen")
@@ -1396,7 +1448,7 @@ async def submit_knowledge(
         await session.flush()
         await _event(session, principal, "ai_knowledge.submitted", row.id)
         await session.refresh(row)
-        return s.KnowledgeEntryOut.model_validate(row)
+        return _knowledge_out(row)
 
 
 @router.post("/ai/knowledge/{entry_id}/approve", summary="Wissenseintrag freigeben")
@@ -1422,7 +1474,7 @@ async def approve_knowledge(
         await session.flush()
         await _event(session, principal, "ai_knowledge.approved", row.id)
         await session.refresh(row)
-        return s.KnowledgeEntryOut.model_validate(row)
+        return _knowledge_out(row)
 
 
 @router.post("/ai/knowledge/{entry_id}/reject", summary="Wissenseintrag zurückweisen")
@@ -1453,7 +1505,7 @@ async def reject_knowledge(
         await session.flush()
         await _event(session, principal, "ai_knowledge.rejected", row.id, reason=body.reason)
         await session.refresh(row)
-        return s.KnowledgeEntryOut.model_validate(row)
+        return _knowledge_out(row)
 
 
 @router.post("/ai/knowledge/{entry_id}/withdraw", summary="Wissenseintrag zurückziehen")
@@ -1471,7 +1523,7 @@ async def withdraw_knowledge(
         await session.flush()
         await _event(session, principal, "ai_knowledge.withdrawn", row.id)
         await session.refresh(row)
-        return s.KnowledgeEntryOut.model_validate(row)
+        return _knowledge_out(row)
 
 
 @router.delete("/ai/knowledge/{entry_id}", status_code=204, summary="Wissenseintrag löschen")

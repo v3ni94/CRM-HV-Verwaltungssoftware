@@ -298,6 +298,32 @@ async def retrieve_keyword(
     return list(rows)
 
 
+async def knowledge_context(session: AsyncSession, run: AiTaskRun, question: str) -> str:
+    """Knowledge base block of a chat run ("" when nothing applies): tenant wide entries plus
+    those of the property in focus (``context.entity_type == "property"``). Records the used
+    ids in ``run.input_ref["knowledge_ids"]``."""
+    from mhvp.ai import knowledge
+
+    context = run.input_ref.get("context") or {}
+    property_id: uuid.UUID | None = None
+    if context.get("entity_type") == "property" and context.get("entity_id"):
+        try:
+            property_id = uuid.UUID(str(context["entity_id"]))
+        except ValueError:
+            property_id = None
+    text, used = await knowledge.context(
+        session,
+        tenant_id=run.tenant_id,
+        property_id=property_id,
+        question=question,
+        actor=run.created_by,
+    )
+    if not used:
+        return ""
+    run.input_ref = {**run.input_ref, "knowledge_ids": [str(u.id) for u in used]}
+    return "Freigegebene Wissensbasis des Mandanten (Vorrang vor Dokumenttext):\n" + text
+
+
 async def _document_name(session: AsyncSession, document_id: uuid.UUID) -> str:
     document = await session.get(Document, document_id)
     return document.filename if document is not None else str(document_id)
@@ -399,7 +425,13 @@ async def build_input(session: AsyncSession, blobs: BlobStore, run: AiTaskRun) -
         # Multi turn (rule AI-LOOKUP-01): the stored conversation is the history; platform hits
         # of this question follow as data. Both are masked with the rest of the input.
         history = await conversation_history(session, run)
-        records = "\n\n".join(p for p in (history, lookup.prompt_text(ref.get("lookup"))) if p)
+        # Approved knowledge entries (M34-01) in front of the documents, so a released rule of
+        # the tenant outranks raw document text (audit 29.09.2026, mhvp.ai.knowledge); capped
+        # by count and characters, the used ids stay on the run for proof and feedback.
+        knowledge_text = await knowledge_context(session, run, question)
+        records = "\n\n".join(
+            p for p in (history, knowledge_text, lookup.prompt_text(ref.get("lookup"))) if p
+        )
 
     async def _assemble(ids: list[uuid.UUID], max_chars: int) -> tuple[str, dict[str, int]]:
         parts = [] if separate else [instruction]
