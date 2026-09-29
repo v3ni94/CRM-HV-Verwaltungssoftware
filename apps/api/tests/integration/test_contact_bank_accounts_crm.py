@@ -387,3 +387,75 @@ def test_authorization_and_tenant_separation(client: TestClient, world: World) -
     ):
         response = client.post(path, json=body, headers=other)
         assert response.status_code == 404, response.text
+
+
+def test_put_rewrite_refused_while_change_pending(client: TestClient, world: World) -> None:
+    """``PUT /contacts/{id}`` with ``bank_accounts`` deletes and recreates the rows; while an
+    end request or a new version waits for the second person this is refused, so the four
+    eyes request cannot vanish by cascade. Omitting ``bank_accounts`` still works."""
+    clerk = bearer(login(client, world, "cbclerk"))
+    approver = bearer(login(client, world, "cbapprover"))
+    contact_id = _create(client, clerk, "put", bank_accounts=[_account(IBAN_A)])
+    account = client.get(f"/api/v1/contacts/{contact_id}", headers=clerk).json()["bank_accounts"][0]
+    assert (
+        client.post(
+            f"/api/v1/contacts/{contact_id}/bank-accounts/{account['id']}/approve",
+            headers=approver,
+        ).status_code
+        == 200
+    )
+    proposed = client.post(
+        f"/api/v1/contacts/{contact_id}/bank-accounts/{account['id']}/end",
+        json={"valid_to": "2026-12-31"},
+        headers=clerk,
+    )
+    assert proposed.status_code == 200, proposed.text
+    change = proposed.json()["pending_change"]
+    assert change is not None
+
+    rewrite = client.put(
+        f"/api/v1/contacts/{contact_id}",
+        json=_person("put", bank_accounts=[_account(IBAN_A)]),
+        headers=clerk,
+    )
+    assert rewrite.status_code == 409, rewrite.text
+    assert rewrite.json()["code"] == "MHVP-CONT-0002"
+    body = _person("put")
+    body.pop("bank_accounts")
+    without = client.put(f"/api/v1/contacts/{contact_id}", json=body, headers=clerk)
+    assert without.status_code == 200, without.text
+    # The pending request survived and can still be decided.
+    still = client.get(f"/api/v1/contacts/{contact_id}", headers=clerk).json()["bank_accounts"][0]
+    assert still["pending_change"] is not None
+    assert still["pending_change"]["id"] == change["id"]
+    decided = client.post(
+        f"/api/v1/contacts/{contact_id}/bank-accounts/{account['id']}/changes/{change['id']}/approve",
+        headers=approver,
+    )
+    assert decided.status_code == 200, decided.text
+    assert decided.json()["valid_to"] == "2026-12-31"
+
+    # Same for a pending new version (replace).
+    contact2 = _create(client, clerk, "put2", bank_accounts=[_account(IBAN_B)])
+    old = client.get(f"/api/v1/contacts/{contact2}", headers=clerk).json()["bank_accounts"][0]
+    assert (
+        client.post(
+            f"/api/v1/contacts/{contact2}/bank-accounts/{old['id']}/approve", headers=approver
+        ).status_code
+        == 200
+    )
+    assert (
+        client.post(
+            f"/api/v1/contacts/{contact2}/bank-accounts/{old['id']}/replace",
+            json=_account(IBAN_C, valid_from="2026-10-01"),
+            headers=clerk,
+        ).status_code
+        == 201
+    )
+    rewrite2 = client.put(
+        f"/api/v1/contacts/{contact2}",
+        json=_person("put2", bank_accounts=[_account(IBAN_B), _account(IBAN_C)]),
+        headers=clerk,
+    )
+    assert rewrite2.status_code == 409, rewrite2.text
+    assert rewrite2.json()["code"] == "MHVP-CONT-0002"

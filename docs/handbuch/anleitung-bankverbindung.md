@@ -98,8 +98,9 @@ Reiter Bankverbindungen, an der freigegebenen Bankverbindung Beenden: Gültig bi
 Weitere Wege bleiben bestehen: Vorschlag aus dem Portal (Reiter Portal-Freigaben, Nachweis
 prüfen, Übernehmen, IBAN danach zur Freigabe) und Schnittstelle (`POST
 /api/v1/contacts/{id}/bank-accounts`, `.../replace`, `.../end`; `PUT /api/v1/contacts/{id}`
-mit vollständiger Liste `bank_accounts` schreibt alle Bankverbindungen neu und ist nur für
-Schnittstellenzugänge gedacht). Keine IBAN im Notizfeld oder in Ticketnotizen erfassen.
+mit vollständiger Liste `bank_accounts` schreibt alle Bankverbindungen neu, ist nur für
+Schnittstellenzugänge gedacht und wird abgewiesen, solange am Kontakt eine neue Version oder
+eine Beendigung auf Freigabe wartet). Keine IBAN im Notizfeld oder in Ticketnotizen erfassen.
 
 ### 3. Freigabe durch eine zweite Person
 

@@ -159,6 +159,7 @@ async def write_children(
             continue  # omitted: bank accounts stay as they are (ids referenced by mandates)
         if model is ContactBankAccount:
             await _check_accounts_unreferenced(session, contact_id)
+            await _check_no_pending_changes(session, contact_id)
         await session.execute(delete(model).where(model.contact_id == contact_id))
     _single_primary(data.addresses)
     _single_primary(data.phones)
@@ -640,6 +641,39 @@ async def _check_accounts_unreferenced(session: AsyncSession, contact_id: uuid.U
             detail=(
                 "Eine Bankverbindung ist mit einem SEPA-Mandat verknüpft und kann nicht "
                 "ersetzt werden. Bankverbindungen beim Ändern weglassen."
+            ),
+        )
+
+
+async def _check_no_pending_changes(session: AsyncSession, contact_id: uuid.UUID) -> None:
+    """A PUT rewrite deletes and recreates the bank account rows; that would cascade delete
+    a pending end request and drop ``replaces_account_id`` of a pending new version, so a
+    four eyes request of the CRM screen (M5-01 addendum) would vanish without a decision.
+    Refused until the second person has decided."""
+    pending_change = await session.scalar(
+        select(ContactBankAccountChange.id)
+        .where(
+            ContactBankAccountChange.contact_id == contact_id,
+            ContactBankAccountChange.status == BankAccountApproval.PENDING,
+        )
+        .limit(1)
+    )
+    pending_replacement = await session.scalar(
+        select(ContactBankAccount.id)
+        .where(
+            ContactBankAccount.contact_id == contact_id,
+            ContactBankAccount.replaces_account_id.is_not(None),
+            ContactBankAccount.approval_status == BankAccountApproval.PENDING,
+        )
+        .limit(1)
+    )
+    if pending_change is not None or pending_replacement is not None:
+        raise ProblemError(
+            ErrorCodes.CONTACT_BANK_CHANGE_PENDING,
+            detail=(
+                "Eine Bankverbindung dieses Kontakts wartet auf die Freigabe einer Änderung; "
+                "erst entscheiden, dann Bankverbindungen neu schreiben oder beim Ändern "
+                "weglassen."
             ),
         )
 
