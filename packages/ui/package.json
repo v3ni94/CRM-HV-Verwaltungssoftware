@@ -7,6 +7,7 @@
     ".": "./src/index.ts",
     "./theme-mode": "./src/theme-mode.ts",
     "./theme-switch": "./src/ThemeSwitch.tsx",
+    "./signature-canvas": "./src/signature-canvas.ts",
     "./tokens.css": "./src/tokens.css",
     "./theme.css": "./src/theme.css",
     "./base.css": "./src/base.css"
