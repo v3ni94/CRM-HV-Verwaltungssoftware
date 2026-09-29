@@ -185,10 +185,18 @@ class ConsumptionInfo(IdMixin, TimestampMixin, TenantMixin, Base):
     contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
     month: Mapped[date] = mapped_column(Date, nullable=False)
     rule_version: Mapped[str] = mapped_column(String(64), nullable=False)
-    values: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    data_basis: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
-    missing: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
-    trigger: Mapped[str] = mapped_column(String(16), nullable=False, default="job")
+    values: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    data_basis: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    missing: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    trigger: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="job", server_default="job"
+    )
     snapshot_html: Mapped[str] = mapped_column(Text, nullable=False)
     snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True, ondelete="SET NULL")

@@ -302,10 +302,13 @@ class HandoverChange(IdMixin, TimestampMixin, TenantMixin, Base):
     It is shown in the read view and printed in the PDF; it is never deleted."""
 
     __tablename__ = "handover_change"
+    __table_args__ = (Index("ix_handover_change_tenant_id", "tenant_id"),)
 
     protocol_id: Mapped[uuid.UUID] = _protocol_fk()
     reason: Mapped[str] = mapped_column(Text, nullable=False)
     changed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     changed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     changed_by_name: Mapped[str | None] = mapped_column(String(200))
-    signatures_invalidated: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    signatures_invalidated: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default="0"
+    )

@@ -253,7 +253,10 @@ class BankRuleProposal(IdMixin, TimestampMixin, TenantMixin, Base):
     legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
     pattern_key: Mapped[str] = mapped_column(String(200), nullable=False)
     status: Mapped[str] = mapped_column(
-        String(16), nullable=False, default=RuleProposalStatus.PROPOSED.value
+        String(16),
+        nullable=False,
+        default=RuleProposalStatus.PROPOSED.value,
+        server_default="proposed",
     )
     direction: Mapped[str] = mapped_column(String(6), nullable=False)  # credit | debit
     case_kind: Mapped[str] = mapped_column(String(24), nullable=False)
@@ -264,10 +267,16 @@ class BankRuleProposal(IdMixin, TimestampMixin, TenantMixin, Base):
     action_kind: Mapped[str] = mapped_column(String(16), nullable=False)
     amount_min: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
     amount_max: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
-    purpose_tokens: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
-    recurring: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    purpose_tokens: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    recurring: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     threshold: Mapped[int] = mapped_column(Integer, nullable=False)
-    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    evidence: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     evidence_count: Mapped[Decimal] = mapped_column(Numeric(6, 1), nullable=False)
     rejected_evidence_count: Mapped[Decimal | None] = mapped_column(Numeric(6, 1))
     reason: Mapped[str | None] = mapped_column(Text)
@@ -290,14 +299,22 @@ class BookkeepingLevelRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     ``bookkeeping_level.changed``; nothing here opens a gate."""
 
     __tablename__ = "bookkeeping_level_request"
+    __table_args__ = (
+        Index("ix_bookkeeping_level_request_class", "tenant_id", "case_kind", "status"),
+    )
 
     case_kind: Mapped[str] = mapped_column(String(24), nullable=False)
     level_from: Mapped[str] = mapped_column(String(4), nullable=False)
     level_to: Mapped[str] = mapped_column(String(4), nullable=False)
     reason: Mapped[str] = mapped_column(Text, nullable=False)
-    evidence: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    evidence: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     status: Mapped[str] = mapped_column(
-        String(16), nullable=False, default=LevelRequestStatus.REQUESTED.value
+        String(16),
+        nullable=False,
+        default=LevelRequestStatus.REQUESTED.value,
+        server_default="requested",
     )
     requested_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
@@ -336,9 +353,13 @@ class AutoPostingReview(IdMixin, TimestampMixin, TenantMixin, Base):
     journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
     rule_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     case_kind: Mapped[str] = mapped_column(String(24), nullable=False)
-    kind: Mapped[str] = mapped_column(String(8), nullable=False, default=ReviewKind.DAILY.value)
+    kind: Mapped[str] = mapped_column(
+        String(8), nullable=False, default=ReviewKind.DAILY.value, server_default="daily"
+    )
     due_on: Mapped[date] = mapped_column(Date, nullable=False)
-    status: Mapped[str] = mapped_column(String(12), nullable=False, default=ReviewStatus.OPEN.value)
+    status: Mapped[str] = mapped_column(
+        String(12), nullable=False, default=ReviewStatus.OPEN.value, server_default="open"
+    )
     note: Mapped[str | None] = mapped_column(Text)
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
