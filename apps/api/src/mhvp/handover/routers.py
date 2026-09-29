@@ -787,7 +787,11 @@ async def transfer_meters(
     if not body.confirm:
         raise ProblemError(ErrorCodes.HANDOVER_TRANSFER_NOT_CONFIRMED)
     async with tenant_tx(request, principal) as session:
-        p = await _get(session, protocol_id)
+        # Row lock on the protocol: two concurrent takeovers of the same protocol run one
+        # after the other, so the second one sees the links and creates nothing.
+        p = await session.get(HandoverProtocol, protocol_id, with_for_update=True)
+        if p is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if p.status == "cancelled":
             raise ProblemError(
                 ErrorCodes.VALIDATION, detail="Ein storniertes Protokoll wird nicht übernommen."

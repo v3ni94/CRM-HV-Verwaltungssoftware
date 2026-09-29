@@ -220,9 +220,30 @@ def test_contract_link_and_meter_transfer(client: TestClient, world: World) -> N
     assert [x["item_id"] for x in again["already_transferred"]] == [matched["id"]]
     assert len(_ok(client.get(f"/api/v1/meters/{unit_meter['id']}/readings", headers=h))) == 1
 
-    # Takeover works on a completed protocol too (the usual case after signing).
+    # Takeover works on a completed protocol too (the usual case after signing). The locked
+    # row keeps its content: only the link meter_reading_id is written, meter_id stays.
+    late = _ok(
+        client.post(
+            f"{H}/{pid}/meters",
+            json={"meter_type": "electricity", "number": "E 1", "value": "12350"},
+            headers=h,
+        ),
+        201,
+    )
     _ok(client.patch("/api/v1/tenant/settings", json={"company": COMPANY}, headers=h))
     _ok(client.post(f"{H}/{pid}/complete", json={"force": True}, headers=h))
+    after = _ok(client.post(transfer, json={"confirm": True}, headers=h))
+    assert [x["item_id"] for x in after["created"]] == [late["id"]]
+    assert after["created"][0]["meter_id"] == unit_meter["id"]
+    assert len(after["already_transferred"]) == 1
+    full = _ok(client.get(f"{H}/{pid}", headers=h))
+    assert full["locked"] is True
+    late_row = next(m for m in full["meters"] if m["id"] == late["id"])
+    assert late_row["meter_reading_id"] == after["created"][0]["meter_reading_id"]
+    assert late_row["meter_id"] is None
+    assert Decimal(late_row["value"]) == Decimal("12350")
+    readings = _ok(client.get(f"/api/v1/meters/{unit_meter['id']}/readings", headers=h))
+    assert len(readings) == 2
     assert _ok(client.post(transfer, json={"confirm": True}, headers=h))["created"] == []
 
     # Nothing matchable: protocol without unit, 409 with the registered code.

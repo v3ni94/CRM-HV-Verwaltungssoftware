@@ -522,9 +522,13 @@ async def transfer_meter_readings(
         )
         session.add(reading)
         await session.flush()
+        # Only the takeover link is written to the protocol row. The resolved meter is
+        # recorded on the row while the protocol is still open; a completed protocol is
+        # locked and its content (including ``meter_id``) stays as signed.
         row.meter_reading_id = reading.id
-        row.meter_id = meter.id
-        row.updated_by = actor
+        if not is_locked(protocol):
+            row.meter_id = meter.id
+            row.updated_by = actor
         created.append(
             {
                 **item,
