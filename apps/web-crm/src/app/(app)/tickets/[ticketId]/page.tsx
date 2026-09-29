@@ -6,6 +6,7 @@ import { AuditLogPanel } from "@/components/common/AuditLogPanel";
 import { ContactRoleBadges } from "@/components/common/ContactRoleBadges";
 import { EntityLinksBar } from "@/components/common/EntityLinksBar";
 import { DmsDocumentsPanel } from "@/components/documents/DmsDocumentsPanel";
+import { LexofficeInvoiceCopyCard } from "@/components/lexoffice/LexofficeInvoiceCopyCard";
 import { SchadenstoolPanel } from "@/components/tickets/SchadenstoolPanel";
 import { SlaBadge } from "@/components/tickets/SlaBadge";
 import { TicketAppointmentButton } from "@/components/tickets/TicketAppointmentButton";
@@ -182,6 +183,11 @@ export default async function TicketPage({ params }: { params: Promise<{ ticketI
       {mergedInto ? null : (
         <>
           <TicketMailSection ticketId={ticketId} canReply={canReply} />
+          <LexofficeInvoiceCopyCard
+            ticketId={ticketId}
+            canUpdate={me.data?.permissions.includes("tickets:update") ?? false}
+            canLinkContacts={me.data?.permissions.includes("contacts:update") ?? false}
+          />
           <TicketMailAttachments attachments={attachments} />
           <TicketWorkOrders orders={workOrders} />
           <TicketProposals ticketId={ticketId} />

@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { useTranslations } from "next-intl";
 
+import { LexofficeInvoiceCopyChip } from "@/components/lexoffice/LexofficeInvoiceCopyChip";
 import { TicketProcessBadge } from "@/components/tickets/TicketProcessBadge";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
@@ -130,6 +131,12 @@ export function SuggestionCard({
           {processDone ? <span className="text-muted">{processDone}</span> : null}
         </div>
       ) : null}
+      <LexofficeInvoiceCopyChip
+        messageId={message.id}
+        ticketId={message.ticket_id}
+        intent={message.suggestion.intent ?? null}
+        invoiceNumber={message.suggestion.invoice_number ?? null}
+      />
       {status === "none" || status === "pending" ? <p className="text-xs text-muted">{t(`status.${status}`)}</p> : null}
       {status === "failed" || status === "skipped" ? (
         <p className="text-xs text-muted">{t(`status.${status}`, { reason: message.suggestion.reason || "" })}</p>

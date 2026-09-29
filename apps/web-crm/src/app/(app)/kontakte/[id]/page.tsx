@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
+import { LexofficeContactBadge, LexofficeContactSection } from "@/components/lexoffice/LexofficeContactStatus";
 import { CallsPanel, type CallOut } from "@/components/contacts/CallsPanel";
 import { BankAccountsSection } from "@/components/contacts/BankAccountsSection";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
@@ -197,8 +198,9 @@ export default async function ContactDetailPage({
               : ""}
             {contact.blocked ? `, ${t("blocked")}` : ""}
           </p>
-          <p className="mt-1">
+          <p className="mt-1 flex flex-wrap items-center gap-2">
             <RolePills roles={contact.roles} />
+            <LexofficeContactBadge contactId={contact.id} />
           </p>
         </div>
         <div className="ml-auto">
@@ -265,6 +267,12 @@ export default async function ContactDetailPage({
             value={formatDateTime(contact.updated_at)}
           />
         </dl>
+        <LexofficeContactSection
+          contactId={contact.id}
+          contactName={contact.display_name}
+          canUpdate={canEditRelations}
+          canCreateDraft={me.data?.permissions.includes("accounting:create") ?? false}
+        />
         </>
       ) : null}
 

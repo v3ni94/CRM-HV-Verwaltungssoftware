@@ -67,6 +67,9 @@ export type Message = {
     process_code?: string | null;
     process_confidence?: number | null;
     process_reason?: string | null;
+    // Rechnungskopie (INT-LEXO-01): Erkennung der Plattform, nur Hinweis.
+    intent?: string | null;
+    invoice_number?: string | null;
   };
   suggestion_status: "none" | "pending" | "ready" | "failed" | "skipped";
   // Gmail archive tracking (operator 27.09.2026): pending, archived, skipped, failed,
