@@ -93,36 +93,36 @@ gekennzeichnet. Schreibweisen und Pflichtfelder: [Erfassungsstandards](erfassung
 ### Lücken in der Software
 
 Stellen, an denen die Anleitungen einen manuellen Schritt oder die Schnittstelle verlangen.
-Gesammelt aus den Anleitungen, Stand 28.09.2026:
+Gesammelt aus den Anleitungen, Stand 29.09.2026 (Lückenpakete A bis F der Version 1.44.0
+eingearbeitet):
 
 | Bereich | Lücke | Folge im Ablauf |
 | --- | --- | --- |
-| Stammdaten | Kein Anlageformular für Gebäude, Einheiten und Umlageschlüsselwerte | Anlage nur per Import oder Schnittstelle |
-| Stammdaten | Objekteigentümer (Mietverwaltung), Ansprechpartner, Zähler, Wartungen, Zusatzfelder nicht in der Oberfläche pflegbar | Import oder Schnittstelle |
 | Stammdaten | Kein Rückschreiben nach Immoware24 | Doppelpflege im Parallelbetrieb |
-| Verwalterwechsel | Kein Fristtyp und keine Checkliste Verwalterwechsel | Ticket mit Fälligkeit und Kalender |
 | Verwalterwechsel | Pflichtunterlagen der Vollständigkeitsprüfung nur über die Schnittstelle | Pflege durch Administrator |
 | Verwalterwechsel | Nachforderungsschreiben nur als Textentwurf ohne Briefbogen und Versandnachweis | Brief manuell erstellen und ablegen |
 | Verwalterwechsel | Kein Export der Objektakte bei Abgabe an einen Nachfolger | manuelle Zusammenstellung |
 | Verwalterwechsel | Eröffnungsbestände der Vorverwaltung wegen G1 nicht produktiv übernehmbar | Führung im bisherigen System |
-| Eigentümerwechsel | Keine Schaltfläche Eigentümerwechsel | nur `POST /api/v1/contracts/{id}/ownership-transfer` |
-| Eigentümerwechsel | Sollbeträge werden nicht auf den neuen Vertrag übertragen | Nacherfassung über WEG, Vorschüsse übernehmen oder Schnittstelle |
 | Eigentümerwechsel | Regel W07 fachlich nicht freigegeben, Freigabepunkt P01 offen | keine Aufteilung nach eigener Annahme |
-| Mieterwechsel | Übergabeprotokoll ohne Verknüpfung zum Vertrag in der Oberfläche | Protokollnummer im Ticket vermerken |
-| Mieterwechsel | Zählerstände aus dem Protokoll nicht in die Zählerstände der Einheit übernommen | zusätzlich unter Zählerstände zur Beendigung erfassen |
-| Mieterwechsel | Keine Prüfung der Kündigungsfrist, kein Fristtyp Kautionsabrechnung | Ticket mit Fälligkeit |
-| Verträge | Sollbeträge (Miete, Vorauszahlungen) nicht in der Oberfläche erfassbar | Import oder Schnittstelle |
-| Mieterhöhung | Versand erfassen bis G3 gesperrt, damit Zustimmung und Übernahme nicht erreichbar | neue Miete im führenden System pflegen |
-| Mieterhöhung | Zugangsdatum nur über die Schnittstelle | Frist von Hand im Ticket |
-| Mieterhöhung | Kein Fristtyp Mieterhöhung, Musterschreiben ohne Briefbogen-PDF | Ticket mit Fälligkeit, Brief manuell |
+| Mieterhöhung | Versand erfassen bis G3 gesperrt, damit Zustimmung und Übernahme nicht erreichbar | neue Miete nach Zustimmung von Hand im Abschnitt Sollbeträge des Vertrags erfassen, parallel im führenden System pflegen |
+| Mieterhöhung | Musterschreiben ohne Briefbogen-PDF | Brief manuell |
 | Mieterhöhung | Keine automatische Prüfung für Modernisierung, Index, Staffel | rechtliche Prüfung im Einzelfall |
-| Bankverbindung | Keine Oberfläche, um an einem bestehenden Kontakt eine Bankverbindung hinzuzufügen, zu ändern oder zu beenden | Portalvorschlag oder Schnittstelle |
-| Bankverbindung | Keine Vier-Augen-Freigabe für Bankkonten der Rechtsträger | organisatorische Freigabe |
-| Bankverbindung | `contacts:approve` nur in Administratorrollen | eigene Rolle Freigabe anlegen |
-| Objektordner | Keine Standardkategorie für 04_Mieterakte und 05_Eigentümerakte | Ablage über die Objektübernahme oder Ordner von Hand prüfen |
-| Objektordner | Elf Unterordner der Mieter- und Eigentümerakte im CRM nicht beschrieben | Bezeichnungen der Objektübernahme verwenden |
-| Objektordner | Upload in der Dokumentsuche nur mit Objekt und Einheit, ohne Kategorie, Vertrag oder Kontakt | Verknüpfung über den Vorgang |
 | Objektordner | Aufbewahrungsprofile noch Entwürfe | keine Löschung |
+
+Am 29.09.2026 geschlossen (Version 1.44.0): Anlageformulare für Gebäude, Einheiten und
+Umlageschlüsselwerte sowie Pflege von Objekteigentümern, Ansprechpartnern, Zählern, Wartungen
+und Zusatzfeldern auf der Objektseite ([Stammdaten](anleitung-stammdaten.md)); Schaltfläche
+Eigentümerwechsel mit Übernahme der Sollbeträge
+([Eigentümerwechsel](anleitung-eigentuemerwechsel.md)); Sollbeträge am Vertrag in der
+Oberfläche ([Verträge](vertraege.md)); Fristtypen und Checkliste Verwalterwechsel, Fristtyp
+Kautionsabrechnung mit Prüfung der Kündigungsfrist, Zugangsdatum und Fristtyp Mieterhöhung
+([Verwalterwechsel](anleitung-verwalterwechsel.md), [Mieterwechsel](anleitung-mieterwechsel.md),
+[Mieterhöhung](anleitung-mieterhoehung.md)); Übergabeprotokoll mit Vertragsverknüpfung und
+Übernahme der Zählerstände, Standardkategorien Mieterakte und Eigentümerakte mit
+Ordnerstruktur und Upload mit Kategorie, Vertrag und Kontakt
+([Objektordner](anleitung-objektordner.md)); Bankverbindungen an Kontakten hinzufügen, ändern
+und beenden mit Vier-Augen-Freigabe und Systemrolle Freigabe
+([Bankverbindung](anleitung-bankverbindung.md)).
 
 ## Neu in der Welle vom 27.09.2026
 

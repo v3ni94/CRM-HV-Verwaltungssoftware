@@ -213,6 +213,4 @@ erscheint als Typ Wiedervorlage in der Fristenliste.
   Zählerwechsel; Ablesungen weiter über die Einheitenseite, das Übergabeprotokoll oder die
   Schnittstelle.
 - Zusatzfelder vom Typ Verknüpfung (Kontakt, Dokument, Objekt) nur über die Schnittstelle.
-- Neue Bankverbindung an einem bestehenden Kontakt nicht in der Oberfläche erfassbar (siehe
-  [Bankverbindung](anleitung-bankverbindung.md)).
 - Kein Rückschreiben nach Immoware24; Doppelpflege im Parallelbetrieb.
