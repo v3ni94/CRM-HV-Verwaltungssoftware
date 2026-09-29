@@ -77,36 +77,38 @@ export function LexofficeOutbox({ configId, canManage }: { configId: string | nu
       </div>
       {rows.length === 0 ? <p className={ui.help}>{t("outbox.empty")}</p> : null}
       {rows.length > 0 ? (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("outbox.kind")}</th>
-              <th>{t("outbox.filter")}</th>
-              <th>{t("outbox.attempts")}</th>
-              <th>{t("outbox.next")}</th>
-              <th>{t("outbox.error")}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id}>
-                <td>{t(`outbox.kinds.${row.kind}` as never)}</td>
-                <td>{t(`outbox.status.${row.status}` as never)}</td>
-                <td className={ui.num}>{row.attempts}</td>
-                <td>{row.status === "pending" ? formatDateTime(row.next_attempt_at) : row.sent_at ? formatDateTime(row.sent_at) : ""}</td>
-                <td>{row.last_error ?? ""}</td>
-                <td>
-                  {canManage && row.status === "failed" ? (
-                    <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void retry(row.id)}>
-                      {t("outbox.retry")}
-                    </button>
-                  ) : null}
-                </td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("outbox.kind")}</th>
+                <th>{t("outbox.filter")}</th>
+                <th>{t("outbox.attempts")}</th>
+                <th>{t("outbox.next")}</th>
+                <th>{t("outbox.error")}</th>
+                <th />
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id}>
+                  <td>{t(`outbox.kinds.${row.kind}` as never)}</td>
+                  <td>{t(`outbox.status.${row.status}` as never)}</td>
+                  <td className={ui.num}>{row.attempts}</td>
+                  <td>{row.status === "pending" ? formatDateTime(row.next_attempt_at) : row.sent_at ? formatDateTime(row.sent_at) : ""}</td>
+                  <td>{row.last_error ?? ""}</td>
+                  <td>
+                    {canManage && row.status === "failed" ? (
+                      <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void retry(row.id)}>
+                        {t("outbox.retry")}
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
       {message ? (
         <p role="status" className={ui.success}>

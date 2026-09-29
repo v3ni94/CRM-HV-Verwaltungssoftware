@@ -202,127 +202,129 @@ export function CatalogAdmin({
           ) : entries.length === 0 ? (
             <p className={ui.help}>{t("empty")}</p>
           ) : (
-            <table className={ui.table} data-testid="catalog-entries">
-              <thead>
-                <tr>
-                  <th>{t("colOrder")}</th>
-                  <th>{t("colCode")}</th>
-                  <th>{t("colLabel")}</th>
-                  <th>{t("colKind")}</th>
-                  <th>{t("colActive")}</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
-                {entries.map((e) => (
-                  <tr key={e.id} className={e.active ? "" : "text-muted"}>
-                    <td>
-                      {editing?.id === e.id ? (
-                        <input
-                          className={ui.input}
-                          type="number"
-                          aria-label={t("colOrder")}
-                          value={editing.sort_order}
-                          onChange={(ev) =>
-                            setEditing({
-                              ...editing,
-                              sort_order: ev.target.value,
-                            })
-                          }
-                        />
-                      ) : (
-                        e.sort_order
-                      )}
-                    </td>
-                    <td>
-                      <code className="text-xs">{e.code}</code>
-                    </td>
-                    <td>
-                      {editing?.id === e.id ? (
-                        <input
-                          className={ui.input}
-                          aria-label={t("colLabel")}
-                          value={editing.label}
-                          maxLength={200}
-                          onChange={(ev) =>
-                            setEditing({ ...editing, label: ev.target.value })
-                          }
-                        />
-                      ) : (
-                        e.label
-                      )}
-                    </td>
-                    <td>
-                      {e.is_system ? (
-                        <span className={ui.badgeGold}>{t("system")}</span>
-                      ) : (
-                        <span className={ui.badge}>{t("own")}</span>
-                      )}
-                    </td>
-                    <td>
-                      <input
-                        type="checkbox"
-                        checked={e.active}
-                        disabled={readOnly}
-                        aria-label={t("activeFor", { label: e.label })}
-                        onChange={() => toggle(e)}
-                      />
-                    </td>
-                    <td className="whitespace-nowrap">
-                      {canManage ? (
-                        editing?.id === e.id ? (
-                          <span className="flex gap-1">
-                            <button
-                              type="button"
-                              className={ui.buttonSm}
-                              disabled={busy}
-                              onClick={() => void saveEdit()}
-                            >
-                              {t("save")}
-                            </button>
-                            <button
-                              type="button"
-                              className={ui.buttonSm}
-                              disabled={busy}
-                              onClick={() => setEditing(null)}
-                            >
-                              {t("cancel")}
-                            </button>
-                          </span>
+            <div className={ui.tableScroll}>
+              <table className={ui.table} data-testid="catalog-entries">
+                <thead>
+                  <tr>
+                    <th>{t("colOrder")}</th>
+                    <th>{t("colCode")}</th>
+                    <th>{t("colLabel")}</th>
+                    <th>{t("colKind")}</th>
+                    <th>{t("colActive")}</th>
+                    <th />
+                  </tr>
+                </thead>
+                <tbody>
+                  {entries.map((e) => (
+                    <tr key={e.id} className={e.active ? "" : "text-muted"}>
+                      <td>
+                        {editing?.id === e.id ? (
+                          <input
+                            className={ui.input}
+                            type="number"
+                            aria-label={t("colOrder")}
+                            value={editing.sort_order}
+                            onChange={(ev) =>
+                              setEditing({
+                                ...editing,
+                                sort_order: ev.target.value,
+                              })
+                            }
+                          />
                         ) : (
-                          <span className="flex gap-1">
-                            <button
-                              type="button"
-                              className={ui.buttonSm}
-                              disabled={busy}
-                              onClick={() =>
-                                setEditing({
-                                  id: e.id,
-                                  label: e.label,
-                                  sort_order: String(e.sort_order),
-                                })
-                              }
-                            >
-                              {t("edit")}
-                            </button>
-                            {e.is_system ? null : (
+                          e.sort_order
+                        )}
+                      </td>
+                      <td>
+                        <code className="text-xs">{e.code}</code>
+                      </td>
+                      <td>
+                        {editing?.id === e.id ? (
+                          <input
+                            className={ui.input}
+                            aria-label={t("colLabel")}
+                            value={editing.label}
+                            maxLength={200}
+                            onChange={(ev) =>
+                              setEditing({ ...editing, label: ev.target.value })
+                            }
+                          />
+                        ) : (
+                          e.label
+                        )}
+                      </td>
+                      <td>
+                        {e.is_system ? (
+                          <span className={ui.badgeGold}>{t("system")}</span>
+                        ) : (
+                          <span className={ui.badge}>{t("own")}</span>
+                        )}
+                      </td>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={e.active}
+                          disabled={readOnly}
+                          aria-label={t("activeFor", { label: e.label })}
+                          onChange={() => toggle(e)}
+                        />
+                      </td>
+                      <td className="whitespace-nowrap">
+                        {canManage ? (
+                          editing?.id === e.id ? (
+                            <span className="flex gap-1">
                               <button
                                 type="button"
                                 className={ui.buttonSm}
                                 disabled={busy}
-                                onClick={() => remove(e)}
+                                onClick={() => void saveEdit()}
                               >
-                                {t("delete")}
+                                {t("save")}
                               </button>
-                            )}
-                          </span>
-                        )
-                      ) : null}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                              <button
+                                type="button"
+                                className={ui.buttonSm}
+                                disabled={busy}
+                                onClick={() => setEditing(null)}
+                              >
+                                {t("cancel")}
+                              </button>
+                            </span>
+                          ) : (
+                            <span className="flex gap-1">
+                              <button
+                                type="button"
+                                className={ui.buttonSm}
+                                disabled={busy}
+                                onClick={() =>
+                                  setEditing({
+                                    id: e.id,
+                                    label: e.label,
+                                    sort_order: String(e.sort_order),
+                                  })
+                                }
+                              >
+                                {t("edit")}
+                              </button>
+                              {e.is_system ? null : (
+                                <button
+                                  type="button"
+                                  className={ui.buttonSm}
+                                  disabled={busy}
+                                  onClick={() => remove(e)}
+                                >
+                                  {t("delete")}
+                                </button>
+                              )}
+                            </span>
+                          )
+                        ) : null}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
           {canManage ? (
             <div className="flex flex-wrap items-end gap-2">

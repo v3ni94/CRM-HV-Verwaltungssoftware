@@ -86,28 +86,30 @@ export function WorkOrderProposals({ initial }: { initial: WorkOrderProposalsDat
       </p>
       {data.proposals.length === 0 ? <p className="text-sm text-muted">{t("proposals.empty")}</p> : null}
       {data.proposals.length > 0 ? (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("proposals.startsAt")}</th>
-              <th>{t("proposals.note")}</th>
-              <th>{t("proposals.status")}</th>
-              <th>{t("proposals.decidedAt")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {data.proposals.map((p) => (
-              <tr key={p.id} data-testid={`proposal-${p.status}`}>
-                <td>{formatDateTime(p.starts_at)}</td>
-                <td>{p.note ?? ""}</td>
-                <td>
-                  <span className={BADGE[p.status]}>{t(`proposals.statuses.${p.status}`)}</span>
-                </td>
-                <td>{p.decided_at ? formatDateTime(p.decided_at) : ""}</td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("proposals.startsAt")}</th>
+                <th>{t("proposals.note")}</th>
+                <th>{t("proposals.status")}</th>
+                <th>{t("proposals.decidedAt")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {data.proposals.map((p) => (
+                <tr key={p.id} data-testid={`proposal-${p.status}`}>
+                  <td>{formatDateTime(p.starts_at)}</td>
+                  <td>{p.note ?? ""}</td>
+                  <td>
+                    <span className={BADGE[p.status]}>{t(`proposals.statuses.${p.status}`)}</span>
+                  </td>
+                  <td>{p.decided_at ? formatDateTime(p.decided_at) : ""}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
       {data.ticket_id ? (
         <Link href={`/tickets/${data.ticket_id}`} className="text-sm hover:underline">

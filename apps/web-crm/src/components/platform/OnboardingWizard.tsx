@@ -306,42 +306,44 @@ export function TenantExport({ tenants }: { tenants: Tenant[] }) {
         </button>
       </div>
       {requests.length ? (
-        <table className={`${ui.table} w-full text-sm`}>
-          <thead>
-            <tr>
-              <th className="text-left">{t("purpose")}</th>
-              <th className="text-left">{t("status")}</th>
-              <th className="text-left">{t("downloads")}</th>
-              <th className="text-left">{t("actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {requests.map((r) => (
-              <tr key={r.id}>
-                <td>{t(`purpose_${r.purpose}`)}</td>
-                <td>{t(`status_${r.status}`)}</td>
-                <td>{r.downloads}</td>
-                <td className="flex gap-2">
-                  {r.status === "requested" ? (
-                    <>
-                      <button type="button" className={ui.buttonSm} onClick={() => void decide(r.id, "approve")}>
-                        {t("approve")}
-                      </button>
-                      <button type="button" className={ui.buttonSm} onClick={() => void decide(r.id, "reject")}>
-                        {t("reject")}
-                      </button>
-                    </>
-                  ) : null}
-                  {r.status === "approved" ? (
-                    <a className={ui.buttonSm} href={`/api/bff/platform/tenants/${tenantId}/export-requests/${r.id}/download`} download>
-                      {t("download")}
-                    </a>
-                  ) : null}
-                </td>
+        <div className={ui.tableScroll}>
+          <table className={`${ui.table} w-full text-sm`}>
+            <thead>
+              <tr>
+                <th className="text-left">{t("purpose")}</th>
+                <th className="text-left">{t("status")}</th>
+                <th className="text-left">{t("downloads")}</th>
+                <th className="text-left">{t("actions")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {requests.map((r) => (
+                <tr key={r.id}>
+                  <td>{t(`purpose_${r.purpose}`)}</td>
+                  <td>{t(`status_${r.status}`)}</td>
+                  <td>{r.downloads}</td>
+                  <td className="flex gap-2">
+                    {r.status === "requested" ? (
+                      <>
+                        <button type="button" className={ui.buttonSm} onClick={() => void decide(r.id, "approve")}>
+                          {t("approve")}
+                        </button>
+                        <button type="button" className={ui.buttonSm} onClick={() => void decide(r.id, "reject")}>
+                          {t("reject")}
+                        </button>
+                      </>
+                    ) : null}
+                    {r.status === "approved" ? (
+                      <a className={ui.buttonSm} href={`/api/bff/platform/tenants/${tenantId}/export-requests/${r.id}/download`} download>
+                        {t("download")}
+                      </a>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : (
         <p className={ui.help}>{t("noRequests")}</p>
       )}

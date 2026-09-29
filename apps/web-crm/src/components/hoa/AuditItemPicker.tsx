@@ -157,41 +157,43 @@ export function AuditItemPicker({
           </p>
           {result.items.length === 0 ? <p className="text-sm text-muted">{t("audit.picker.empty")}</p> : null}
           {result.items.length > 0 ? (
-            <table className={ui.table}>
-              <thead>
-                <tr>
-                  <th>{t("audit.picker.date")}</th>
-                  <th>{t("audit.picker.number")}</th>
-                  <th>{t("audit.picker.booking")}</th>
-                  <th>{t("audit.picker.accounts")}</th>
-                  <th className="text-right">{t("amount")}</th>
-                  <th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {result.items.map((c) => (
-                  <tr key={c.journal_entry_id}>
-                    <td>{formatDate(c.booking_date)}</td>
-                    <td>{c.number ?? ""}</td>
-                    <td>
-                      {c.text}
-                      {c.invoice_number ? <span className="text-xs text-muted"> · {t("audit.picker.invoice", { number: c.invoice_number })}</span> : null}
-                    </td>
-                    <td>{c.accounts.map((a) => a.number).join(", ")}</td>
-                    <td className="text-right">{formatEur(c.amount)}</td>
-                    <td>
-                      {c.selected ? (
-                        <span className={ui.badge}>{t("audit.picker.selected")}</span>
-                      ) : (
-                        <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void add(c)}>
-                          {t("audit.picker.add")}
-                        </button>
-                      )}
-                    </td>
+            <div className={ui.tableScroll}>
+              <table className={ui.table}>
+                <thead>
+                  <tr>
+                    <th>{t("audit.picker.date")}</th>
+                    <th>{t("audit.picker.number")}</th>
+                    <th>{t("audit.picker.booking")}</th>
+                    <th>{t("audit.picker.accounts")}</th>
+                    <th className="text-right">{t("amount")}</th>
+                    <th></th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {result.items.map((c) => (
+                    <tr key={c.journal_entry_id}>
+                      <td>{formatDate(c.booking_date)}</td>
+                      <td>{c.number ?? ""}</td>
+                      <td>
+                        {c.text}
+                        {c.invoice_number ? <span className="text-xs text-muted"> · {t("audit.picker.invoice", { number: c.invoice_number })}</span> : null}
+                      </td>
+                      <td>{c.accounts.map((a) => a.number).join(", ")}</td>
+                      <td className="text-right">{formatEur(c.amount)}</td>
+                      <td>
+                        {c.selected ? (
+                          <span className={ui.badge}>{t("audit.picker.selected")}</span>
+                        ) : (
+                          <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void add(c)}>
+                            {t("audit.picker.add")}
+                          </button>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           ) : null}
         </>
       ) : null}

@@ -63,62 +63,64 @@ export function PricingAdmin({ initial }: { initial: Pricing }) {
       {groups.map((kind) => (
         <section key={kind} className={ui.card}>
           <h2 className={ui.h2}>{t(`kind_${kind}`)}</h2>
-          <table className={`${ui.table} mt-2 w-full text-sm`}>
-            <thead>
-              <tr>
-                <th className="text-left">{t("label")}</th>
-                <th className="text-left">{t("range")}</th>
-                <th className="text-left">{t("amount")}</th>
-                <th className="text-left">{t("unit")}</th>
-                <th className="text-left">{t("actions")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pricing.items
-                .filter((i) => i.kind === kind)
-                .map((item) => (
-                  <tr key={item.id} className={item.active ? "" : "opacity-60"}>
-                    <td>{item.label}</td>
-                    <td>
-                      {item.kind === "tier"
-                        ? `${item.min_units ?? 0} ${item.max_units !== null ? t("upTo", { max: item.max_units }) : t("andMore")}`
-                        : item.kind === "trial"
-                          ? item.trial_days !== null
-                            ? t("days", { days: item.trial_days })
-                            : t("open")
-                          : ""}
-                    </td>
-                    <td>
-                      <input
-                        aria-label={`${t("amount")} ${item.label}`}
-                        className={`${ui.input} w-28`}
-                        inputMode="decimal"
-                        placeholder={t("open")}
-                        value={drafts[item.id] ?? item.amount ?? ""}
-                        onChange={(e) => setDrafts({ ...drafts, [item.id]: e.target.value })}
-                      />
-                      {item.amount_missing ? <span className={`${ui.badgeWarning} ml-2`}>{t("missing")}</span> : null}
-                    </td>
-                    <td>{t(`unit_${item.unit}`)}</td>
-                    <td className="flex gap-2">
-                      <button
-                        type="button"
-                        className={ui.buttonSm}
-                        onClick={() => {
-                          const raw = (drafts[item.id] ?? item.amount ?? "").replace(",", ".").trim();
-                          void save(item, raw ? { amount: raw } : { clear_amount: true });
-                        }}
-                      >
-                        {t("save")}
-                      </button>
-                      <button type="button" className={ui.buttonSm} onClick={() => void save(item, { active: !item.active })}>
-                        {item.active ? t("deactivate") : t("activate")}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-            </tbody>
-          </table>
+          <div className={ui.tableScroll}>
+            <table className={`${ui.table} mt-2 w-full text-sm`}>
+              <thead>
+                <tr>
+                  <th className="text-left">{t("label")}</th>
+                  <th className="text-left">{t("range")}</th>
+                  <th className="text-left">{t("amount")}</th>
+                  <th className="text-left">{t("unit")}</th>
+                  <th className="text-left">{t("actions")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {pricing.items
+                  .filter((i) => i.kind === kind)
+                  .map((item) => (
+                    <tr key={item.id} className={item.active ? "" : "opacity-60"}>
+                      <td>{item.label}</td>
+                      <td>
+                        {item.kind === "tier"
+                          ? `${item.min_units ?? 0} ${item.max_units !== null ? t("upTo", { max: item.max_units }) : t("andMore")}`
+                          : item.kind === "trial"
+                            ? item.trial_days !== null
+                              ? t("days", { days: item.trial_days })
+                              : t("open")
+                            : ""}
+                      </td>
+                      <td>
+                        <input
+                          aria-label={`${t("amount")} ${item.label}`}
+                          className={`${ui.input} w-28`}
+                          inputMode="decimal"
+                          placeholder={t("open")}
+                          value={drafts[item.id] ?? item.amount ?? ""}
+                          onChange={(e) => setDrafts({ ...drafts, [item.id]: e.target.value })}
+                        />
+                        {item.amount_missing ? <span className={`${ui.badgeWarning} ml-2`}>{t("missing")}</span> : null}
+                      </td>
+                      <td>{t(`unit_${item.unit}`)}</td>
+                      <td className="flex gap-2">
+                        <button
+                          type="button"
+                          className={ui.buttonSm}
+                          onClick={() => {
+                            const raw = (drafts[item.id] ?? item.amount ?? "").replace(",", ".").trim();
+                            void save(item, raw ? { amount: raw } : { clear_amount: true });
+                          }}
+                        >
+                          {t("save")}
+                        </button>
+                        <button type="button" className={ui.buttonSm} onClick={() => void save(item, { active: !item.active })}>
+                          {item.active ? t("deactivate") : t("activate")}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
         </section>
       ))}
       <section className={`${ui.card} flex flex-col gap-3 sm:max-w-md`}>

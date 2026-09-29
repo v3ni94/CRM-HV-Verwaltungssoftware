@@ -69,43 +69,45 @@ export function DmsFolderStructure({ canEnsureDefaults = false }: { canEnsureDef
       {info ? <p className={ui.success}>{info}</p> : null}
       {open && folders ? (
         <>
-          <table className={ui.table}>
-            <thead>
-              <tr>
-                <th>{t("folder")}</th>
-                <th>{t("content")}</th>
-                <th>{t("categories")}</th>
-                <th>{t("subfolders")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {folders.map((f) => (
-                <tr key={f.folder}>
-                  <td className="whitespace-nowrap font-medium">{f.folder}</td>
-                  <td>{f.description}</td>
-                  <td>{f.categories.length ? f.categories.map((c) => c.name).join(", ") : t("noCategory")}</td>
-                  <td>
-                    {f.per_unit_and_person ? (
-                      f.subfolders.length ? (
-                        <ul className="list-disc pl-4">
-                          {f.subfolders.map((s) => (
-                            <li key={s.name}>
-                              {s.name}
-                              {s.document_types.length ? <span className="text-muted"> ({s.document_types.join(", ")})</span> : null}
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
-                        <span className="text-muted">{t("subfoldersUnknown")}</span>
-                      )
-                    ) : (
-                      <span className="text-muted">{t("noSubfolders")}</span>
-                    )}
-                  </td>
+          <div className={ui.tableScroll}>
+            <table className={ui.table}>
+              <thead>
+                <tr>
+                  <th>{t("folder")}</th>
+                  <th>{t("content")}</th>
+                  <th>{t("categories")}</th>
+                  <th>{t("subfolders")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {folders.map((f) => (
+                  <tr key={f.folder}>
+                    <td className="whitespace-nowrap font-medium">{f.folder}</td>
+                    <td>{f.description}</td>
+                    <td>{f.categories.length ? f.categories.map((c) => c.name).join(", ") : t("noCategory")}</td>
+                    <td>
+                      {f.per_unit_and_person ? (
+                        f.subfolders.length ? (
+                          <ul className="list-disc pl-4">
+                            {f.subfolders.map((s) => (
+                              <li key={s.name}>
+                                {s.name}
+                                {s.document_types.length ? <span className="text-muted"> ({s.document_types.join(", ")})</span> : null}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : (
+                          <span className="text-muted">{t("subfoldersUnknown")}</span>
+                        )
+                      ) : (
+                        <span className="text-muted">{t("noSubfolders")}</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
           <p className={ui.help}>{t("legalNote")}</p>
           {missingStandard ? (
             <div className="flex flex-wrap items-center gap-2">

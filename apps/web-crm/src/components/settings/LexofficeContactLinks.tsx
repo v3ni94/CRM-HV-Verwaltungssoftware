@@ -163,26 +163,28 @@ export function LexofficeContactLinks({ configId, canDecide }: { configId: strin
               {row.conflict ? (
                 <div className="mt-2">
                   <p className={ui.warning}>{t("links.conflictTitle")}</p>
-                  <table className={ui.table}>
-                    <thead>
-                      <tr>
-                        <th />
-                        <th>{t("links.conflictCrm")}</th>
-                        <th>{t("links.conflictRemote")}</th>
-                        <th>{t("links.conflictBaseline")}</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {Object.entries(row.conflict).map(([field, values]) => (
-                        <tr key={field}>
-                          <td>{field}</td>
-                          <td>{show(values.crm)}</td>
-                          <td>{show(values.lexoffice)}</td>
-                          <td>{show(values.baseline)}</td>
+                  <div className={ui.tableScroll}>
+                    <table className={ui.table}>
+                      <thead>
+                        <tr>
+                          <th />
+                          <th>{t("links.conflictCrm")}</th>
+                          <th>{t("links.conflictRemote")}</th>
+                          <th>{t("links.conflictBaseline")}</th>
                         </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                      </thead>
+                      <tbody>
+                        {Object.entries(row.conflict).map(([field, values]) => (
+                          <tr key={field}>
+                            <td>{field}</td>
+                            <td>{show(values.crm)}</td>
+                            <td>{show(values.lexoffice)}</td>
+                            <td>{show(values.baseline)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                   {canDecide ? (
                     <div className={ui.formActions}>
                       <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void post(`contacts/links/${row.id}/resolve-conflict`, { resolution: "keep_crm" })}>

@@ -105,26 +105,28 @@ function SettlementView({ s }: { s: DepositSettlementOut }) {
         <dd>{formatEur(s.interest_recorded)}</dd>
       </dl>
       {s.interest_years.length > 0 ? (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("settlement.year")}</th>
-              <th>{t("settlement.rate")}</th>
-              <th>{t("settlement.days")}</th>
-              <th>{t("settlement.interest")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {s.interest_years.map((y) => (
-              <tr key={y.year}>
-                <td>{y.year}</td>
-                <td>{y.rate ? `${formatDecimal(y.rate, 5)} %` : t("settlement.entered")}</td>
-                <td>{y.days}</td>
-                <td>{formatEur(y.amount)}</td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("settlement.year")}</th>
+                <th>{t("settlement.rate")}</th>
+                <th>{t("settlement.days")}</th>
+                <th>{t("settlement.interest")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {s.interest_years.map((y) => (
+                <tr key={y.year}>
+                  <td>{y.year}</td>
+                  <td>{y.rate ? `${formatDecimal(y.rate, 5)} %` : t("settlement.entered")}</td>
+                  <td>{y.days}</td>
+                  <td>{formatEur(y.amount)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
       <dl className="grid gap-1 sm:grid-cols-2">
         <dt className={ui.label}>{t("settlement.interestTotal")}</dt>

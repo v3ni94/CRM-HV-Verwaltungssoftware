@@ -65,36 +65,38 @@ export function ChannelsByLevelEditor({
   return (
     <div className="flex flex-col gap-2" data-testid="channels-editor">
       <p className="text-xs font-medium">{t("channelEditor.title")}</p>
-      <table className="text-xs">
-        <thead>
-          <tr>
-            <th className="text-left font-medium">{t("channelEditor.level")}</th>
-            {CHANNEL_ORDER.map((c) => (
-              <th key={c} className="px-2 font-medium">
-                {t(`channelEditor.${c}`)}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {CHANNEL_LEVELS.map((level) => (
-            <tr key={level}>
-              <td>{t("channelEditor.levelN", { level })}</td>
+      <div className={ui.tableScroll}>
+        <table className="text-xs">
+          <thead>
+            <tr>
+              <th className="text-left font-medium">{t("channelEditor.level")}</th>
               {CHANNEL_ORDER.map((c) => (
-                <td key={c} className="px-2 text-center">
-                  <input
-                    type="checkbox"
-                    aria-label={t("channelEditor.checkbox", { level, channel: t(`channelEditor.${c}`) })}
-                    checked={(draft[String(level)] ?? []).includes(c)}
-                    disabled={!canManage || busy}
-                    onChange={() => toggle(level, c)}
-                  />
-                </td>
+                <th key={c} className="px-2 font-medium">
+                  {t(`channelEditor.${c}`)}
+                </th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {CHANNEL_LEVELS.map((level) => (
+              <tr key={level}>
+                <td>{t("channelEditor.levelN", { level })}</td>
+                {CHANNEL_ORDER.map((c) => (
+                  <td key={c} className="px-2 text-center">
+                    <input
+                      type="checkbox"
+                      aria-label={t("channelEditor.checkbox", { level, channel: t(`channelEditor.${c}`) })}
+                      checked={(draft[String(level)] ?? []).includes(c)}
+                      disabled={!canManage || busy}
+                      onChange={() => toggle(level, c)}
+                    />
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       <p className="text-xs text-muted">{t("channelEditor.smsHint")}</p>
       {canManage ? (
         <div className="flex items-center gap-2">

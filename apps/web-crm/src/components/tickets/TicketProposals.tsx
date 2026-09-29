@@ -213,24 +213,26 @@ export function TicketProposals({ ticketId }: { ticketId: string }) {
               </p>
             ) : null}
             {!isEditing ? (
-              <table className={`${ui.table} mt-2 text-sm`}>
-                <thead>
-                  <tr>
-                    <th>{t("field")}</th>
-                    <th>{t("old")}</th>
-                    <th>{t("new")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {changes.map((c) => (
-                    <tr key={c.field}>
-                      <td>{t(`fields.${c.field}`)}</td>
-                      <td className="text-muted line-through">{oldValue(c, p.contact)}</td>
-                      <td className="font-medium">{c.new ?? ""}</td>
+              <div className={ui.tableScroll}>
+                <table className={`${ui.table} mt-2 text-sm`}>
+                  <thead>
+                    <tr>
+                      <th>{t("field")}</th>
+                      <th>{t("old")}</th>
+                      <th>{t("new")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {changes.map((c) => (
+                      <tr key={c.field}>
+                        <td>{t(`fields.${c.field}`)}</td>
+                        <td className="text-muted line-through">{oldValue(c, p.contact)}</td>
+                        <td className="font-medium">{c.new ?? ""}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : (
               <form
                 className="mt-2 flex flex-col gap-2"

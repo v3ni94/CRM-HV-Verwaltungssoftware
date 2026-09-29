@@ -31,38 +31,40 @@ export function ContractMandates({ mandates, defaultMandateId, directDebit }: { 
       {mandates.length === 0 ? (
         <p className={ui.help}>{t("mandates.none")}</p>
       ) : (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("mandates.reference")}</th>
-              <th>{t("mandates.role")}</th>
-              <th>{t("mandates.iban")}</th>
-              <th>{t("mandates.signedAt")}</th>
-              <th>{t("mandates.validUntil")}</th>
-              <th>{t("mandates.paymentTypes")}</th>
-              <th>{t("mandates.status")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {mandates.map((m) => (
-              <tr key={m.id}>
-                <td>
-                  {m.reference}
-                  <span className="block text-xs text-subtle">{m.creditor_id}</span>
-                </td>
-                <td>{m.id === defaultMandateId ? t("mandates.default") : t("mandates.additional")}</td>
-                <td>{m.iban_masked ?? ""}</td>
-                <td>{formatDate(m.signed_at)}</td>
-                <td>{m.valid_until ? formatDate(m.valid_until) : t("mandates.openEnd")}</td>
-                <td>
-                  {m.payment_type_codes.length === 0 ? t("mandates.allTypes") : m.payment_type_codes.join(", ")}
-                  {m.exclude_special_levy ? <span className="block text-xs text-subtle">{t("mandates.excludeSpecialLevy")}</span> : null}
-                </td>
-                <td>{t(`mandates.statuses.${m.status}`)}</td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("mandates.reference")}</th>
+                <th>{t("mandates.role")}</th>
+                <th>{t("mandates.iban")}</th>
+                <th>{t("mandates.signedAt")}</th>
+                <th>{t("mandates.validUntil")}</th>
+                <th>{t("mandates.paymentTypes")}</th>
+                <th>{t("mandates.status")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {mandates.map((m) => (
+                <tr key={m.id}>
+                  <td>
+                    {m.reference}
+                    <span className="block text-xs text-subtle">{m.creditor_id}</span>
+                  </td>
+                  <td>{m.id === defaultMandateId ? t("mandates.default") : t("mandates.additional")}</td>
+                  <td>{m.iban_masked ?? ""}</td>
+                  <td>{formatDate(m.signed_at)}</td>
+                  <td>{m.valid_until ? formatDate(m.valid_until) : t("mandates.openEnd")}</td>
+                  <td>
+                    {m.payment_type_codes.length === 0 ? t("mandates.allTypes") : m.payment_type_codes.join(", ")}
+                    {m.exclude_special_levy ? <span className="block text-xs text-subtle">{t("mandates.excludeSpecialLevy")}</span> : null}
+                  </td>
+                  <td>{t(`mandates.statuses.${m.status}`)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

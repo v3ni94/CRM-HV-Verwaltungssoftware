@@ -124,54 +124,52 @@ export function DmsDocumentsPanel({ entity, id }: { entity: "ticket" | "property
       ) : rows.length === 0 ? (
         <p className="text-sm text-muted">{t("empty")}</p>
       ) : (
-        <div className={`${ui.card} overflow-x-auto p-0`}>
-          <div className="overflow-x-auto">
-            <table className={ui.table} data-testid="dms-documents">
-              <thead>
-                <tr>
-                  <th>{t("columns.title")}</th>
-                  <th>{t("columns.date")}</th>
-                  <th>{t("columns.correspondent")}</th>
-                  <th>{t("columns.documentType")}</th>
-                  {showCompany ? <th>{t("columns.company")}</th> : null}
-                  <th>{t("columns.tags")}</th>
-                  <th>{t("columns.actions")}</th>
+        <div className={ui.tableCard}>
+          <table className={ui.table} data-testid="dms-documents">
+            <thead>
+              <tr>
+                <th>{t("columns.title")}</th>
+                <th>{t("columns.date")}</th>
+                <th>{t("columns.correspondent")}</th>
+                <th>{t("columns.documentType")}</th>
+                {showCompany ? <th>{t("columns.company")}</th> : null}
+                <th>{t("columns.tags")}</th>
+                <th>{t("columns.actions")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((doc) => (
+                <tr key={doc.id}>
+                  <td className="font-medium">{doc.title}</td>
+                  <td className="tabular-nums text-muted">{formatDate(doc.created ?? doc.added)}</td>
+                  <td>{doc.correspondent ?? ""}</td>
+                  <td>{doc.document_type ?? ""}</td>
+                  {showCompany ? <td>{doc.company ?? ""}</td> : null}
+                  <td className="text-xs text-muted">{doc.tags.join(", ")}</td>
+                  <td>
+                    <div className="flex flex-wrap gap-2">
+                      <a
+                        href={`/api/bff/dms-documents/${String(doc.id)}/file?kind=preview`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={ui.buttonSm}
+                      >
+                        {t("actions.preview")}
+                      </a>
+                      <a
+                        href={`/api/bff/dms-documents/${String(doc.id)}/file?kind=download`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className={ui.buttonSm}
+                      >
+                        {t("actions.download")}
+                      </a>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {rows.map((doc) => (
-                  <tr key={doc.id}>
-                    <td className="font-medium">{doc.title}</td>
-                    <td className="tabular-nums text-muted">{formatDate(doc.created ?? doc.added)}</td>
-                    <td>{doc.correspondent ?? ""}</td>
-                    <td>{doc.document_type ?? ""}</td>
-                    {showCompany ? <td>{doc.company ?? ""}</td> : null}
-                    <td className="text-xs text-muted">{doc.tags.join(", ")}</td>
-                    <td>
-                      <div className="flex flex-wrap gap-2">
-                        <a
-                          href={`/api/bff/dms-documents/${String(doc.id)}/file?kind=preview`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={ui.buttonSm}
-                        >
-                          {t("actions.preview")}
-                        </a>
-                        <a
-                          href={`/api/bff/dms-documents/${String(doc.id)}/file?kind=download`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={ui.buttonSm}
-                        >
-                          {t("actions.download")}
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
       {loaded && !error && total > PAGE_SIZE ? (

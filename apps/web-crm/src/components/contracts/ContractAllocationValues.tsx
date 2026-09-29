@@ -81,28 +81,30 @@ export function ContractAllocationValues({
       {rows.length === 0 ? (
         <p className={ui.help}>{t("allocation.none")}</p>
       ) : (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("allocation.key")}</th>
-              <th>{t("allocation.value")}</th>
-              <th>{t("allocation.validFrom")}</th>
-              <th>{t("allocation.validTo")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td>{r.allocation_key_name ?? r.allocation_key_code ?? r.allocation_key_id}</td>
-                <td>
-                  {formatDecimal(r.value, 2)} {r.unit_of_measure ?? ""}
-                </td>
-                <td>{formatDate(r.valid_from)}</td>
-                <td>{r.valid_to ? formatDate(r.valid_to) : t("allocation.open")}</td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("allocation.key")}</th>
+                <th>{t("allocation.value")}</th>
+                <th>{t("allocation.validFrom")}</th>
+                <th>{t("allocation.validTo")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td>{r.allocation_key_name ?? r.allocation_key_code ?? r.allocation_key_id}</td>
+                  <td>
+                    {formatDecimal(r.value, 2)} {r.unit_of_measure ?? ""}
+                  </td>
+                  <td>{formatDate(r.valid_from)}</td>
+                  <td>{r.valid_to ? formatDate(r.valid_to) : t("allocation.open")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {canUpdate && keys.length > 0 ? (
         <form onSubmit={submit} className="mt-3 grid gap-3 sm:grid-cols-5" noValidate data-testid="allocation-value-form">

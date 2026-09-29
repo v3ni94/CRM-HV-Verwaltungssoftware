@@ -263,9 +263,11 @@ function Block({ title, children }: { title: string; children: React.ReactNode }
   return (
     <div>
       <h3 className={ui.subtitle}>{title}</h3>
-      <table className="mhvp-table mt-1">
-        <tbody>{children}</tbody>
-      </table>
+      <div className={ui.tableScroll}>
+        <table className="mhvp-table mt-1">
+          <tbody>{children}</tbody>
+        </table>
+      </div>
     </div>
   );
 }

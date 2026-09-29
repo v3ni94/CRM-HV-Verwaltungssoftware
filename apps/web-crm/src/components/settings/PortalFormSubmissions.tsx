@@ -99,34 +99,36 @@ export function PortalFormSubmissions({ templateId }: { templateId: string }) {
         <p className="text-sm text-muted">{filter ? t("submissions.emptyFiltered") : t("submissions.empty")}</p>
       ) : null}
       {rows !== null && rows.length > 0 ? (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("submissions.date")}</th>
-              <th>{t("submissions.account")}</th>
-              <th>{t("submissions.ticket")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td>{formatDateTime(r.created_at)}</td>
-                <td>
-                  <Link href={`/kontakte/${r.contact_id}`} className="hover:underline">
-                    {r.contact_name}
-                  </Link>{" "}
-                  <span className="text-xs text-muted">({t(`submissions.accountStatus.${r.account_status}`)})</span>
-                </td>
-                <td>
-                  <Link href={`/tickets/${r.ticket_id}`} className="font-medium hover:underline">
-                    {t("submissions.ticketNumber", { number: String(r.ticket_number) })}
-                  </Link>{" "}
-                  <span className={ui.badge}>{tt(`statuses.${r.ticket_status}`)}</span>
-                </td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("submissions.date")}</th>
+                <th>{t("submissions.account")}</th>
+                <th>{t("submissions.ticket")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td>{formatDateTime(r.created_at)}</td>
+                  <td>
+                    <Link href={`/kontakte/${r.contact_id}`} className="hover:underline">
+                      {r.contact_name}
+                    </Link>{" "}
+                    <span className="text-xs text-muted">({t(`submissions.accountStatus.${r.account_status}`)})</span>
+                  </td>
+                  <td>
+                    <Link href={`/tickets/${r.ticket_id}`} className="font-medium hover:underline">
+                      {t("submissions.ticketNumber", { number: String(r.ticket_number) })}
+                    </Link>{" "}
+                    <span className={ui.badge}>{tt(`statuses.${r.ticket_status}`)}</span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       ) : null}
     </div>
   );

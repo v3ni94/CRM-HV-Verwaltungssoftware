@@ -111,28 +111,30 @@ export function BillingPeriodsPanel({ periods }: { periods: BillingPeriodRow[] }
         kinds.map((kind) => (
           <div key={kind} className="mt-2">
             <h3 className={ui.subtitle}>{t(`kinds.${kind}`)}</h3>
-            <table className={ui.table}>
-              <thead>
-                <tr>
-                  <th>{t("from")}</th>
-                  <th>{t("to")}</th>
-                  <th>{t("boardOnlineAudit")}</th>
-                  <th>{t("notes")}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {periods
-                  .filter((p) => p.kind === kind)
-                  .map((p) => (
-                    <tr key={p.id}>
-                      <td>{formatDate(p.valid_from)}</td>
-                      <td>{formatDate(p.valid_to)}</td>
-                      <td>{p.board_online_audit ? tc("yes") : tc("no")}</td>
-                      <td>{p.notes ?? ""}</td>
-                    </tr>
-                  ))}
-              </tbody>
-            </table>
+            <div className={ui.tableScroll}>
+              <table className={ui.table}>
+                <thead>
+                  <tr>
+                    <th>{t("from")}</th>
+                    <th>{t("to")}</th>
+                    <th>{t("boardOnlineAudit")}</th>
+                    <th>{t("notes")}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {periods
+                    .filter((p) => p.kind === kind)
+                    .map((p) => (
+                      <tr key={p.id}>
+                        <td>{formatDate(p.valid_from)}</td>
+                        <td>{formatDate(p.valid_to)}</td>
+                        <td>{p.board_online_audit ? tc("yes") : tc("no")}</td>
+                        <td>{p.notes ?? ""}</td>
+                      </tr>
+                    ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ))
       )}
@@ -169,28 +171,30 @@ export function PortalDocumentsPanel({ rows }: { rows: PortalDocumentRow[] }) {
       {rows.length === 0 ? (
         <Empty text={t("empty")} />
       ) : (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("document")}</th>
-              <th>{t("visibleFor")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...rows]
-              .sort((a, b) => a.sort_order - b.sort_order)
-              .map((r) => (
-                <tr key={r.id}>
-                  <td>
-                    <Link href={`/dokumente/${r.document_id}`} className="hover:underline">
-                      {r.title || r.document_id}
-                    </Link>
-                  </td>
-                  <td>{r.visible_for.length ? r.visible_for.map((v) => t(`visibility.${v}`)).join(", ") : t("nobody")}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("document")}</th>
+                <th>{t("visibleFor")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {[...rows]
+                .sort((a, b) => a.sort_order - b.sort_order)
+                .map((r) => (
+                  <tr key={r.id}>
+                    <td>
+                      <Link href={`/dokumente/${r.document_id}`} className="hover:underline">
+                        {r.title || r.document_id}
+                      </Link>
+                    </td>
+                    <td>{r.visible_for.length ? r.visible_for.map((v) => t(`visibility.${v}`)).join(", ") : t("nobody")}</td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

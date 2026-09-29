@@ -208,61 +208,63 @@ export function PostalOutbox({
         ) : jobs.length === 0 ? (
           <p className={ui.small}>{t("empty")}</p>
         ) : (
-          <table className={ui.table}>
-            <thead>
-              <tr>
-                <th>{t("colRecipient")}</th>
-                <th>{t("colDocument")}</th>
-                <th>{t("colProvider")}</th>
-                <th>{t("colStatus")}</th>
-                <th>{t("colTracking")}</th>
-                <th>{t("colCreated")}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {jobs.map((job) => (
-                <tr key={job.id}>
-                  <td className="whitespace-pre-line align-top">{job.recipient_address}</td>
-                  <td className="align-top">
-                    {job.filename ?? job.document_id}
-                    {job.dunning_case_id ? <span className={`${ui.badge} ml-2`}>{t("dunning")}</span> : null}
-                    {job.options.registered ? <span className={`${ui.badge} ml-2`}>{t(`registered.${job.options.registered}`)}</span> : null}
-                  </td>
-                  <td className="align-top">
-                    {t(`provider.${job.provider}` as "provider.manual")}
-                    {job.provider_job_id && job.provider !== "manual" ? <div className={ui.small}>{job.provider_job_id}</div> : null}
-                  </td>
-                  <td className="align-top">
-                    <StatusPill label={t(`status.${job.status}`)} variant={VARIANT[job.status]} />
-                    {job.error ? <div className={ui.error}>{job.error}</div> : null}
-                  </td>
-                  <td className="align-top">
-                    {job.tracking_code ?? ""}
-                    {job.tracking_status ? <div className={ui.small}>{job.tracking_status}</div> : null}
-                  </td>
-                  <td className="align-top">{formatDateTime(job.submitted_at ?? job.created_at)}</td>
-                  <td className="align-top">
-                    <div className="flex flex-wrap gap-1">
-                      <button type="button" className={ui.buttonSm} onClick={() => void openJob(job)}>
-                        {t("details")}
-                      </button>
-                      {canWrite && job.provider !== "manual" && OPEN.has(job.status) ? (
-                        <button type="button" className={ui.buttonSm} onClick={() => void action(job, "refresh")}>
-                          {t("refresh")}
-                        </button>
-                      ) : null}
-                      {canWrite && OPEN.has(job.status) ? (
-                        <button type="button" className={ui.buttonSm} onClick={() => void action(job, "cancel")}>
-                          {t("cancel")}
-                        </button>
-                      ) : null}
-                    </div>
-                  </td>
+          <div className={ui.tableScroll}>
+            <table className={ui.table}>
+              <thead>
+                <tr>
+                  <th>{t("colRecipient")}</th>
+                  <th>{t("colDocument")}</th>
+                  <th>{t("colProvider")}</th>
+                  <th>{t("colStatus")}</th>
+                  <th>{t("colTracking")}</th>
+                  <th>{t("colCreated")}</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {jobs.map((job) => (
+                  <tr key={job.id}>
+                    <td className="whitespace-pre-line align-top">{job.recipient_address}</td>
+                    <td className="align-top">
+                      {job.filename ?? job.document_id}
+                      {job.dunning_case_id ? <span className={`${ui.badge} ml-2`}>{t("dunning")}</span> : null}
+                      {job.options.registered ? <span className={`${ui.badge} ml-2`}>{t(`registered.${job.options.registered}`)}</span> : null}
+                    </td>
+                    <td className="align-top">
+                      {t(`provider.${job.provider}` as "provider.manual")}
+                      {job.provider_job_id && job.provider !== "manual" ? <div className={ui.small}>{job.provider_job_id}</div> : null}
+                    </td>
+                    <td className="align-top">
+                      <StatusPill label={t(`status.${job.status}`)} variant={VARIANT[job.status]} />
+                      {job.error ? <div className={ui.error}>{job.error}</div> : null}
+                    </td>
+                    <td className="align-top">
+                      {job.tracking_code ?? ""}
+                      {job.tracking_status ? <div className={ui.small}>{job.tracking_status}</div> : null}
+                    </td>
+                    <td className="align-top">{formatDateTime(job.submitted_at ?? job.created_at)}</td>
+                    <td className="align-top">
+                      <div className="flex flex-wrap gap-1">
+                        <button type="button" className={ui.buttonSm} onClick={() => void openJob(job)}>
+                          {t("details")}
+                        </button>
+                        {canWrite && job.provider !== "manual" && OPEN.has(job.status) ? (
+                          <button type="button" className={ui.buttonSm} onClick={() => void action(job, "refresh")}>
+                            {t("refresh")}
+                          </button>
+                        ) : null}
+                        {canWrite && OPEN.has(job.status) ? (
+                          <button type="button" className={ui.buttonSm} onClick={() => void action(job, "cancel")}>
+                            {t("cancel")}
+                          </button>
+                        ) : null}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

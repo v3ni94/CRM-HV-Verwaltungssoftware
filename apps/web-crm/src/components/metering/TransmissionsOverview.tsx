@@ -65,42 +65,44 @@ export function TransmissionsOverview({ canPoll, reloadKey = 0 }: { canPoll: boo
       {rows.length === 0 ? (
         <p className="text-sm text-muted">{t("transmission.overviewEmpty")}</p>
       ) : (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("transmission.overviewKind")}</th>
-              <th>{t("transmission.overviewAssignment")}</th>
-              <th>{t("transmission.overviewCreated")}</th>
-              <th>{t("table.status")}</th>
-              <th>{t("transmission.transaction")}</th>
-              {canPoll ? <th /> : null}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row) => (
-              <tr key={row.id} data-testid={`overview-${row.kind}-${row.status}`}>
-                <td>{t(`transmission.kind.${row.kind}`)}</td>
-                <td className="font-mono text-xs">
-                  {String(row.payload.billingunit ?? "")} <span className="text-muted">{row.property_assignment_id.slice(0, 8)}</span>
-                </td>
-                <td className="tabular-nums">{formatDateTime(row.created_at)}</td>
-                <td>
-                  <StatusPill variant={STATUS_VARIANT[row.status] ?? "neutral"} label={t(`transmission.status.${row.status}`)} />
-                </td>
-                <td className="font-mono text-xs">{row.provider_transaction_id ?? ""}</td>
-                {canPoll ? (
-                  <td>
-                    {row.kind === "billing_unit_setup" && row.status === "waiting_provider" ? (
-                      <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => poll(row)} data-testid={`overview-poll-${row.id}`}>
-                        {t("transmission.poll")}
-                      </button>
-                    ) : null}
-                  </td>
-                ) : null}
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("transmission.overviewKind")}</th>
+                <th>{t("transmission.overviewAssignment")}</th>
+                <th>{t("transmission.overviewCreated")}</th>
+                <th>{t("table.status")}</th>
+                <th>{t("transmission.transaction")}</th>
+                {canPoll ? <th /> : null}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.id} data-testid={`overview-${row.kind}-${row.status}`}>
+                  <td>{t(`transmission.kind.${row.kind}`)}</td>
+                  <td className="font-mono text-xs">
+                    {String(row.payload.billingunit ?? "")} <span className="text-muted">{row.property_assignment_id.slice(0, 8)}</span>
+                  </td>
+                  <td className="tabular-nums">{formatDateTime(row.created_at)}</td>
+                  <td>
+                    <StatusPill variant={STATUS_VARIANT[row.status] ?? "neutral"} label={t(`transmission.status.${row.status}`)} />
+                  </td>
+                  <td className="font-mono text-xs">{row.provider_transaction_id ?? ""}</td>
+                  {canPoll ? (
+                    <td>
+                      {row.kind === "billing_unit_setup" && row.status === "waiting_provider" ? (
+                        <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => poll(row)} data-testid={`overview-poll-${row.id}`}>
+                          {t("transmission.poll")}
+                        </button>
+                      ) : null}
+                    </td>
+                  ) : null}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

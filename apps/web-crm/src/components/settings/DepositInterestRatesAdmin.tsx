@@ -72,32 +72,34 @@ export function DepositInterestRatesAdmin({ rates, canManage }: { rates: Referen
         {rates.length === 0 ? (
           <p className={ui.help}>{t("empty")}</p>
         ) : (
-          <table className={ui.table}>
-            <thead>
-              <tr>
-                <th>{t("year")}</th>
-                <th>{t("rate")}</th>
-                <th>{t("note")}</th>
-                {canManage ? <th /> : null}
-              </tr>
-            </thead>
-            <tbody>
-              {rates.map((r) => (
-                <tr key={r.id}>
-                  <td>{r.year}</td>
-                  <td>{formatDecimal(r.rate, 5)} %</td>
-                  <td>{r.note ?? ""}</td>
-                  {canManage ? (
-                    <td>
-                      <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => remove(r.year)}>
-                        {t("remove")}
-                      </button>
-                    </td>
-                  ) : null}
+          <div className={ui.tableScroll}>
+            <table className={ui.table}>
+              <thead>
+                <tr>
+                  <th>{t("year")}</th>
+                  <th>{t("rate")}</th>
+                  <th>{t("note")}</th>
+                  {canManage ? <th /> : null}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {rates.map((r) => (
+                  <tr key={r.id}>
+                    <td>{r.year}</td>
+                    <td>{formatDecimal(r.rate, 5)} %</td>
+                    <td>{r.note ?? ""}</td>
+                    {canManage ? (
+                      <td>
+                        <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => remove(r.year)}>
+                          {t("remove")}
+                        </button>
+                      </td>
+                    ) : null}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </section>
       {canManage ? (

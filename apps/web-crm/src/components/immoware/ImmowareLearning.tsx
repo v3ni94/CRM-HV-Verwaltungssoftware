@@ -229,28 +229,30 @@ function WebdavFacts({ facts, t }: { facts: Record<string, unknown>; t: ReturnTy
           {t("detail.webdav.objectNumberShare")}: <strong>{shareText(facts.object_number_share)}</strong>
         </span>
       </div>
-      <table className={ui.table}>
-        <thead>
-          <tr>
-            <th>{t("detail.webdav.columns.path")}</th>
-            <th>{t("detail.webdav.columns.depth")}</th>
-            <th>{t("detail.webdav.columns.files")}</th>
-            <th>{t("detail.webdav.columns.bytes")}</th>
-            <th>{t("detail.webdav.columns.objectNumber")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {folders.map((f, i) => (
-            <tr key={i}>
-              <td>{String(f.path ?? "")}</td>
-              <td>{String(f.depth ?? "")}</td>
-              <td>{String(f.file_count ?? 0)}</td>
-              <td>{String(f.total_bytes ?? 0)}</td>
-              <td>{f.has_object_number ? "✓" : ""}</td>
+      <div className={ui.tableScroll}>
+        <table className={ui.table}>
+          <thead>
+            <tr>
+              <th>{t("detail.webdav.columns.path")}</th>
+              <th>{t("detail.webdav.columns.depth")}</th>
+              <th>{t("detail.webdav.columns.files")}</th>
+              <th>{t("detail.webdav.columns.bytes")}</th>
+              <th>{t("detail.webdav.columns.objectNumber")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {folders.map((f, i) => (
+              <tr key={i}>
+                <td>{String(f.path ?? "")}</td>
+                <td>{String(f.depth ?? "")}</td>
+                <td>{String(f.file_count ?? 0)}</td>
+                <td>{String(f.total_bytes ?? 0)}</td>
+                <td>{f.has_object_number ? "✓" : ""}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
@@ -277,22 +279,24 @@ function CarddavFacts({ facts, t }: { facts: Record<string, unknown>; t: ReturnT
             {t("detail.carddav.shareWithAddress")}: <strong>{shareText(facts.share_with_address)}</strong>
           </span>
         </div>
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("detail.carddav.columns.field")}</th>
-              <th>{t("detail.carddav.columns.count")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(usage).map(([field, count]) => (
-              <tr key={field}>
-                <td>{field}</td>
-                <td>{count}</td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("detail.carddav.columns.field")}</th>
+                <th>{t("detail.carddav.columns.count")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {Object.entries(usage).map(([field, count]) => (
+                <tr key={field}>
+                  <td>{field}</td>
+                  <td>{count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
       {duplicates.length > 0 ? (
         <div className={ui.card}>
@@ -325,61 +329,67 @@ function CaldavFacts({ facts, t }: { facts: Record<string, unknown>; t: ReturnTy
             {t("detail.caldav.allDayShare")}: <strong>{shareText(facts.all_day_share)}</strong>
           </span>
         </div>
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("detail.caldav.columns.field")}</th>
-              <th>{t("detail.caldav.columns.count")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(usage).map(([field, count]) => (
-              <tr key={field}>
-                <td>{field}</td>
-                <td>{count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      <div className={ui.card}>
-        <h3 className={ui.h2}>{t("detail.caldav.eventsPerMonth")}</h3>
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("detail.caldav.columns.month")}</th>
-              <th>{t("detail.caldav.columns.count")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(months).map(([month, count]) => (
-              <tr key={month}>
-                <td>{month}</td>
-                <td>{count}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-      {prefixes.length > 0 ? (
-        <div className={ui.card}>
-          <h3 className={ui.h2}>{t("detail.caldav.topPrefixes")}</h3>
+        <div className={ui.tableScroll}>
           <table className={ui.table}>
             <thead>
               <tr>
-                <th>{t("detail.caldav.columns.prefix")}</th>
+                <th>{t("detail.caldav.columns.field")}</th>
                 <th>{t("detail.caldav.columns.count")}</th>
               </tr>
             </thead>
             <tbody>
-              {prefixes.map((p) => (
-                <tr key={p.prefix}>
-                  <td>{p.prefix}</td>
-                  <td>{p.count}</td>
+              {Object.entries(usage).map(([field, count]) => (
+                <tr key={field}>
+                  <td>{field}</td>
+                  <td>{count}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+        </div>
+      </div>
+      <div className={ui.card}>
+        <h3 className={ui.h2}>{t("detail.caldav.eventsPerMonth")}</h3>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("detail.caldav.columns.month")}</th>
+                <th>{t("detail.caldav.columns.count")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {Object.entries(months).map(([month, count]) => (
+                <tr key={month}>
+                  <td>{month}</td>
+                  <td>{count}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      {prefixes.length > 0 ? (
+        <div className={ui.card}>
+          <h3 className={ui.h2}>{t("detail.caldav.topPrefixes")}</h3>
+          <div className={ui.tableScroll}>
+            <table className={ui.table}>
+              <thead>
+                <tr>
+                  <th>{t("detail.caldav.columns.prefix")}</th>
+                  <th>{t("detail.caldav.columns.count")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prefixes.map((p) => (
+                  <tr key={p.prefix}>
+                    <td>{p.prefix}</td>
+                    <td>{p.count}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : null}
     </div>

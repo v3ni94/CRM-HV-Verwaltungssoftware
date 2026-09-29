@@ -1035,34 +1035,36 @@ export function ReceiptIntake({
                   count: (selected.xml_lines ?? []).length,
                 })}
               </summary>
-              <table className={`${ui.table} mt-2`}>
-                <thead>
-                  <tr>
-                    <th>{t("review.xmlLineColumns.position")}</th>
-                    <th>{t("review.xmlLineColumns.description")}</th>
-                    <th className="num">
-                      {t("review.xmlLineColumns.quantity")}
-                    </th>
-                    <th className="num">{t("review.xmlLineColumns.net")}</th>
-                    <th className="num">{t("review.xmlLineColumns.vat")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(selected.xml_lines ?? []).map((ln, i) => (
-                    <tr key={i}>
-                      <td>{ln.position ?? ""}</td>
-                      <td>{ln.description ?? ""}</td>
-                      <td className="num">
-                        {[ln.quantity, ln.unit].filter(Boolean).join(" ")}
-                      </td>
-                      <td className="num">{ln.net ? formatEur(ln.net) : ""}</td>
-                      <td className="num">
-                        {ln.vat_percent ? `${ln.vat_percent} %` : ""}
-                      </td>
+              <div className={ui.tableScroll}>
+                <table className={`${ui.table} mt-2`}>
+                  <thead>
+                    <tr>
+                      <th>{t("review.xmlLineColumns.position")}</th>
+                      <th>{t("review.xmlLineColumns.description")}</th>
+                      <th className="num">
+                        {t("review.xmlLineColumns.quantity")}
+                      </th>
+                      <th className="num">{t("review.xmlLineColumns.net")}</th>
+                      <th className="num">{t("review.xmlLineColumns.vat")}</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {(selected.xml_lines ?? []).map((ln, i) => (
+                      <tr key={i}>
+                        <td>{ln.position ?? ""}</td>
+                        <td>{ln.description ?? ""}</td>
+                        <td className="num">
+                          {[ln.quantity, ln.unit].filter(Boolean).join(" ")}
+                        </td>
+                        <td className="num">{ln.net ? formatEur(ln.net) : ""}</td>
+                        <td className="num">
+                          {ln.vat_percent ? `${ln.vat_percent} %` : ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </details>
           ) : null}
           {selected.xml_payment ? (

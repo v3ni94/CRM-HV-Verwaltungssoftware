@@ -257,63 +257,65 @@ export function CustomFieldsAdmin({
           grouped.map((g) => (
             <div key={g.entity} className="mt-3">
               <h3 className="text-sm font-semibold">{entityLabel(g.entity)}</h3>
-              <table
-                className={ui.table}
-                data-testid={`custom-fields-${g.entity}`}
-              >
-                <thead>
-                  <tr>
-                    <th>{t("colLabel")}</th>
-                    <th>{t("colKey")}</th>
-                    <th>{t("colType")}</th>
-                    <th>{t("colGroup")}</th>
-                    <th>{t("colRequired")}</th>
-                    <th>{t("colMain")}</th>
-                    <th />
-                  </tr>
-                </thead>
-                <tbody>
-                  {g.list.map((f) => (
-                    <tr key={f.id}>
-                      <td>{f.label}</td>
-                      <td>
-                        <code className="text-xs">{f.key}</code>
-                      </td>
-                      <td>{typeLabel(f.field_type)}</td>
-                      <td>{f.group ?? ""}</td>
-                      <td>{f.required ? t("yes") : t("no")}</td>
-                      <td>{f.visible_in_main ? t("yes") : t("no")}</td>
-                      <td className="whitespace-nowrap">
-                        {canManage ? (
-                          <span className="flex gap-1">
-                            <button
-                              type="button"
-                              className={ui.buttonSm}
-                              disabled={busy}
-                              onClick={() => {
-                                setEditingId(f.id);
-                                setDraft(toDraft(f));
-                                setMessage(null);
-                                setError(null);
-                              }}
-                            >
-                              {t("edit")}
-                            </button>
-                            <button
-                              type="button"
-                              className={ui.buttonSm}
-                              disabled={busy}
-                              onClick={() => void remove(f)}
-                            >
-                              {t("delete")}
-                            </button>
-                          </span>
-                        ) : null}
-                      </td>
+              <div className={ui.tableScroll}>
+                <table
+                  className={ui.table}
+                  data-testid={`custom-fields-${g.entity}`}
+                >
+                  <thead>
+                    <tr>
+                      <th>{t("colLabel")}</th>
+                      <th>{t("colKey")}</th>
+                      <th>{t("colType")}</th>
+                      <th>{t("colGroup")}</th>
+                      <th>{t("colRequired")}</th>
+                      <th>{t("colMain")}</th>
+                      <th />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {g.list.map((f) => (
+                      <tr key={f.id}>
+                        <td>{f.label}</td>
+                        <td>
+                          <code className="text-xs">{f.key}</code>
+                        </td>
+                        <td>{typeLabel(f.field_type)}</td>
+                        <td>{f.group ?? ""}</td>
+                        <td>{f.required ? t("yes") : t("no")}</td>
+                        <td>{f.visible_in_main ? t("yes") : t("no")}</td>
+                        <td className="whitespace-nowrap">
+                          {canManage ? (
+                            <span className="flex gap-1">
+                              <button
+                                type="button"
+                                className={ui.buttonSm}
+                                disabled={busy}
+                                onClick={() => {
+                                  setEditingId(f.id);
+                                  setDraft(toDraft(f));
+                                  setMessage(null);
+                                  setError(null);
+                                }}
+                              >
+                                {t("edit")}
+                              </button>
+                              <button
+                                type="button"
+                                className={ui.buttonSm}
+                                disabled={busy}
+                                onClick={() => void remove(f)}
+                              >
+                                {t("delete")}
+                              </button>
+                            </span>
+                          ) : null}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           ))
         )}

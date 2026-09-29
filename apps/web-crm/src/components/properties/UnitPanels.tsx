@@ -29,29 +29,31 @@ export function VacancyValuesPanel({ rows }: { rows: VacancyValueRow[] }) {
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-muted">{t("vacancyValues.empty")}</p>
       ) : (
-        <table className={ui.table}>
-          <thead>
-            <tr>
-              <th>{t("key")}</th>
-              <th className="num">{t("value")}</th>
-              <th>{t("validFrom")}</th>
-              <th>{t("validTo")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((v) => (
-              <tr key={v.id}>
-                <td>
-                  {v.key_name ?? v.key_code}
-                  {v.key_name && v.key_code ? <span className="text-muted"> ({v.key_code})</span> : null}
-                </td>
-                <td className="num">{formatQty(v.value)}</td>
-                <td>{formatDate(v.valid_from)}</td>
-                <td>{formatDate(v.valid_to)}</td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table}>
+            <thead>
+              <tr>
+                <th>{t("key")}</th>
+                <th className="num">{t("value")}</th>
+                <th>{t("validFrom")}</th>
+                <th>{t("validTo")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((v) => (
+                <tr key={v.id}>
+                  <td>
+                    {v.key_name ?? v.key_code}
+                    {v.key_name && v.key_code ? <span className="text-muted"> ({v.key_code})</span> : null}
+                  </td>
+                  <td className="num">{formatQty(v.value)}</td>
+                  <td>{formatDate(v.valid_from)}</td>
+                  <td>{formatDate(v.valid_to)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

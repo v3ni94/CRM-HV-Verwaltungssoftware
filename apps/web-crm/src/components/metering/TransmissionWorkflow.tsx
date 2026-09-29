@@ -153,31 +153,33 @@ export function TransmissionWorkflow({
             </p>
           </div>
         </div>
-        <table className={ui.table} data-testid="setup-units">
-          <thead>
-            <tr>
-              <th>{t("transmission.setupUnitInternal")}</th>
-              <th>{t("transmission.setupUnitExternal")}</th>
-              <th>{t("transmission.setupOccupancy")}</th>
-              <th>{t("transmission.setupKnown")}</th>
-              <th>{t("transmission.setupMatched")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {units.map((u) => (
-              <tr key={u.external_unit_number}>
-                <td>
-                  {u.unit_number}
-                  {u.unit_label ? ` (${u.unit_label})` : ""}
-                </td>
-                <td className="font-mono">{u.external_unit_number}</td>
-                <td>{t(`occupancy.${u.occupancy_status}`)}</td>
-                <td>{u.known_at_provider ? t("transmission.setupKnownYes") : t("transmission.setupKnownNo")}</td>
-                <td>{u.matched === null ? t("transmission.setupPending") : u.matched ? t("transmission.setupMatchedYes") : t("transmission.setupMatchedNo")}</td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table} data-testid="setup-units">
+            <thead>
+              <tr>
+                <th>{t("transmission.setupUnitInternal")}</th>
+                <th>{t("transmission.setupUnitExternal")}</th>
+                <th>{t("transmission.setupOccupancy")}</th>
+                <th>{t("transmission.setupKnown")}</th>
+                <th>{t("transmission.setupMatched")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {units.map((u) => (
+                <tr key={u.external_unit_number}>
+                  <td>
+                    {u.unit_number}
+                    {u.unit_label ? ` (${u.unit_label})` : ""}
+                  </td>
+                  <td className="font-mono">{u.external_unit_number}</td>
+                  <td>{t(`occupancy.${u.occupancy_status}`)}</td>
+                  <td>{u.known_at_provider ? t("transmission.setupKnownYes") : t("transmission.setupKnownNo")}</td>
+                  <td>{u.matched === null ? t("transmission.setupPending") : u.matched ? t("transmission.setupMatchedYes") : t("transmission.setupMatchedNo")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         {row.status === "waiting_provider" ? <p className={ui.notice}>{t("transmission.waitingHint")}</p> : null}
         {row.status === "completed" ? (
           <p className={row.summary.remote_confirmed ? ui.notice : ui.alert} data-testid="setup-result">

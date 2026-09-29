@@ -368,40 +368,42 @@ export function LexofficeKindMappingForm({ initial, legalEntities, canManage }: 
     <form onSubmit={save} className={`${ui.card} flex flex-col gap-3`}>
       <h2 className={ui.h2}>{t("kinds.heading")}</h2>
       <p className={ui.help}>{t("kinds.intro")}</p>
-      <table className={ui.table}>
-        <thead>
-          <tr>
-            <th>{t("kinds.kind")}</th>
-            <th>{t("kinds.legalEntity")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((r) => (
-            <tr key={r.kind}>
-              <td>
-                <label htmlFor={`lx-kind-${r.kind}`}>{r.label}</label>
-              </td>
-              <td>
-                <select
-                  id={`lx-kind-${r.kind}`}
-                  className={ui.input}
-                  value={r.legal_entity_id ?? ""}
-                  disabled={busy || !canManage}
-                  onChange={(e) => setRows((prev) => prev.map((x) => (x.kind === r.kind ? { ...x, legal_entity_id: e.target.value || null } : x)))}
-                >
-                  <option value="">{t("kinds.unassigned")}</option>
-                  {legalEntities.map((le) => (
-                    <option key={le.id} value={le.id}>
-                      {le.name}
-                    </option>
-                  ))}
-                </select>
-                {r.legal_entity_id && !r.config_id ? <p className={ui.help}>{t("kinds.noConfig")}</p> : null}
-              </td>
+      <div className={ui.tableScroll}>
+        <table className={ui.table}>
+          <thead>
+            <tr>
+              <th>{t("kinds.kind")}</th>
+              <th>{t("kinds.legalEntity")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rows.map((r) => (
+              <tr key={r.kind}>
+                <td>
+                  <label htmlFor={`lx-kind-${r.kind}`}>{r.label}</label>
+                </td>
+                <td>
+                  <select
+                    id={`lx-kind-${r.kind}`}
+                    className={ui.input}
+                    value={r.legal_entity_id ?? ""}
+                    disabled={busy || !canManage}
+                    onChange={(e) => setRows((prev) => prev.map((x) => (x.kind === r.kind ? { ...x, legal_entity_id: e.target.value || null } : x)))}
+                  >
+                    <option value="">{t("kinds.unassigned")}</option>
+                    {legalEntities.map((le) => (
+                      <option key={le.id} value={le.id}>
+                        {le.name}
+                      </option>
+                    ))}
+                  </select>
+                  {r.legal_entity_id && !r.config_id ? <p className={ui.help}>{t("kinds.noConfig")}</p> : null}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {canManage ? (
         <div className={ui.formActions}>
           <button type="submit" className={ui.primary} disabled={busy}>

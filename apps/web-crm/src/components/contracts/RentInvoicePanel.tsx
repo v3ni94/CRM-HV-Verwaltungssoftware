@@ -122,49 +122,51 @@ export function RentInvoicePanel({ contractId, vatOption, canUpdate }: Props) {
       ) : rows.length === 0 ? (
         <p className={`${ui.help} mt-3`}>{t("none")}</p>
       ) : (
-        <table className={`${ui.table} mt-3`}>
-          <thead>
-            <tr>
-              <th>{t("number")}</th>
-              <th>{t("kind")}</th>
-              <th>{t("period")}</th>
-              <th>{t("net")}</th>
-              <th>{t("vat")}</th>
-              <th>{t("gross")}</th>
-              <th>{t("status")}</th>
-              <th>{t("actions")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id}>
-                <td className={ui.mono}>{r.number}</td>
-                <td>{t(`kinds.${r.kind}`)}</td>
-                <td>
-                  {formatDate(r.period_start)} {t("to")} {formatDate(r.period_end)}
-                </td>
-                <td className={ui.num}>{formatEur(r.net_total)}</td>
-                <td className={ui.num}>{formatEur(r.vat_total)}</td>
-                <td className={ui.num}>{formatEur(r.gross_total)}</td>
-                <td>
-                  <span className={r.status === "cancelled" ? ui.badgeWarning : r.draft ? ui.badge : ui.badgeSuccess}>
-                    {r.status === "cancelled" ? t("cancelled") : r.draft ? t("draft") : t("issued")}
-                  </span>
-                </td>
-                <td className="flex flex-wrap gap-2">
-                  <a className={ui.buttonSm} href={`/api/bff/contracts/${contractId}/rent-invoices/${r.id}/pdf`} target="_blank" rel="noreferrer">
-                    {t("pdf")}
-                  </a>
-                  {canUpdate && r.kind !== "credit_note" && r.status === "issued" ? (
-                    <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void creditNote(r.id)}>
-                      {t("creditNote")}
-                    </button>
-                  ) : null}
-                </td>
+        <div className={ui.tableScroll}>
+          <table className={`${ui.table} mt-3`}>
+            <thead>
+              <tr>
+                <th>{t("number")}</th>
+                <th>{t("kind")}</th>
+                <th>{t("period")}</th>
+                <th>{t("net")}</th>
+                <th>{t("vat")}</th>
+                <th>{t("gross")}</th>
+                <th>{t("status")}</th>
+                <th>{t("actions")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id}>
+                  <td className={ui.mono}>{r.number}</td>
+                  <td>{t(`kinds.${r.kind}`)}</td>
+                  <td>
+                    {formatDate(r.period_start)} {t("to")} {formatDate(r.period_end)}
+                  </td>
+                  <td className={ui.num}>{formatEur(r.net_total)}</td>
+                  <td className={ui.num}>{formatEur(r.vat_total)}</td>
+                  <td className={ui.num}>{formatEur(r.gross_total)}</td>
+                  <td>
+                    <span className={r.status === "cancelled" ? ui.badgeWarning : r.draft ? ui.badge : ui.badgeSuccess}>
+                      {r.status === "cancelled" ? t("cancelled") : r.draft ? t("draft") : t("issued")}
+                    </span>
+                  </td>
+                  <td className="flex flex-wrap gap-2">
+                    <a className={ui.buttonSm} href={`/api/bff/contracts/${contractId}/rent-invoices/${r.id}/pdf`} target="_blank" rel="noreferrer">
+                      {t("pdf")}
+                    </a>
+                    {canUpdate && r.kind !== "credit_note" && r.status === "issued" ? (
+                      <button type="button" className={ui.buttonSm} disabled={busy} onClick={() => void creditNote(r.id)}>
+                        {t("creditNote")}
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
     </section>
   );

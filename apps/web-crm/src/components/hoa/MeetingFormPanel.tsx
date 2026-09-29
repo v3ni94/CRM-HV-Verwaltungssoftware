@@ -139,27 +139,29 @@ export function MeetingFormPanel({
       {attendance.length ? (
         <div className="flex flex-col gap-1">
           <span className={ui.label}>{t("attendance")}</span>
-          <table className="w-full text-sm" data-testid="attendance-list">
-            <thead>
-              <tr className="text-left text-xs text-muted">
-                <th className="py-1">{t("unit")}</th>
-                <th className="py-1">{t("owner")}</th>
-                <th className="py-1">{t("channel")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendance.map((row) => (
-                <tr key={row.contract_id} className="border-t border-border">
-                  <td className="py-1">{row.unit_number ?? ""}</td>
-                  <td className="py-1">{row.party_name ?? ""}</td>
-                  <td className="py-1">
-                    {KNOWN_CHANNEL.has(row.channel) ? t(`channels.${row.channel}`) : row.channel}
-                    {row.proxy_name ? ` (${row.proxy_name})` : ""}
-                  </td>
+          <div className={ui.tableScroll}>
+            <table className="w-full text-sm" data-testid="attendance-list">
+              <thead>
+                <tr className="text-left text-xs text-muted">
+                  <th className="py-1">{t("unit")}</th>
+                  <th className="py-1">{t("owner")}</th>
+                  <th className="py-1">{t("channel")}</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {attendance.map((row) => (
+                  <tr key={row.contract_id} className="border-t border-border">
+                    <td className="py-1">{row.unit_number ?? ""}</td>
+                    <td className="py-1">{row.party_name ?? ""}</td>
+                    <td className="py-1">
+                      {KNOWN_CHANNEL.has(row.channel) ? t(`channels.${row.channel}`) : row.channel}
+                      {row.proxy_name ? ` (${row.proxy_name})` : ""}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       ) : null}
     </section>

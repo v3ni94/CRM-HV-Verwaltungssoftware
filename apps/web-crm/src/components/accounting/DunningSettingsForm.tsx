@@ -476,27 +476,29 @@ export function DunningSettingsForm({
             {preview.paragraphs.slice(0, 2).map((paragraph, i) => (
               <p key={`a${i}`}>{paragraph}</p>
             ))}
-            <table className={ui.table}>
-              <caption className="text-left text-xs text-muted">{t("letterPreviewTable")}</caption>
-              <thead>
-                <tr>
-                  {preview.table.header.map((h) => (
-                    <th key={h}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {preview.table.rows.map((row, i) => (
-                  <tr key={i} className={i === preview.table.rows.length - 1 ? "font-semibold" : undefined}>
-                    {row.map((cell, j) => (
-                      <td key={j} className={j === 2 ? "text-right" : undefined}>
-                        {cell}
-                      </td>
+            <div className={ui.tableScroll}>
+              <table className={ui.table}>
+                <caption className="text-left text-xs text-muted">{t("letterPreviewTable")}</caption>
+                <thead>
+                  <tr>
+                    {preview.table.header.map((h) => (
+                      <th key={h}>{h}</th>
                     ))}
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {preview.table.rows.map((row, i) => (
+                    <tr key={i} className={i === preview.table.rows.length - 1 ? "font-semibold" : undefined}>
+                      {row.map((cell, j) => (
+                        <td key={j} className={j === 2 ? "text-right" : undefined}>
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
             {preview.paragraphs.slice(2).map((paragraph, i) => (
               <p key={`b${i}`}>{paragraph}</p>
             ))}

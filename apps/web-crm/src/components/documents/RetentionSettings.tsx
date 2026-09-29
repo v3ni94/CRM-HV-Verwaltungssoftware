@@ -294,39 +294,41 @@ export function RetentionSettings({
       <section className={`${ui.card} flex flex-col gap-3`}>
         <h2 id="retention-mapping-title" className="text-sm font-semibold">{t("mappingTitle")}</h2>
         <p className={ui.help}>{t("mappingHint")}</p>
-        <table className={ui.table} data-testid="retention-mapping">
-          <thead>
-            <tr>
-              <th>{t("colCategory")}</th>
-              <th>{t("colProfile")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {categories.map((c) => (
-              <tr key={c.id}>
-                <td>
-                  {c.name} <span className={ui.small}>{c.code}</span>
-                </td>
-                <td>
-                  <select
-                    className={ui.input}
-                    aria-label={t("colProfile")}
-                    value={c.retention_profile_id ?? ""}
-                    disabled={busy}
-                    onChange={(e) => void map(c, e.target.value)}
-                  >
-                    <option value="">{t("noProfile")}</option>
-                    {profiles.map((p) => (
-                      <option key={p.id} value={p.id}>
-                        {className(p.document_class)} ({period(p)})
-                      </option>
-                    ))}
-                  </select>
-                </td>
+        <div className={ui.tableScroll}>
+          <table className={ui.table} data-testid="retention-mapping">
+            <thead>
+              <tr>
+                <th>{t("colCategory")}</th>
+                <th>{t("colProfile")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {categories.map((c) => (
+                <tr key={c.id}>
+                  <td>
+                    {c.name} <span className={ui.small}>{c.code}</span>
+                  </td>
+                  <td>
+                    <select
+                      className={ui.input}
+                      aria-label={t("colProfile")}
+                      value={c.retention_profile_id ?? ""}
+                      disabled={busy}
+                      onChange={(e) => void map(c, e.target.value)}
+                    >
+                      <option value="">{t("noProfile")}</option>
+                      {profiles.map((p) => (
+                        <option key={p.id} value={p.id}>
+                          {className(p.document_class)} ({period(p)})
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
         <div>
           <button type="button" className={ui.secondary} disabled={busy} onClick={() => void apply()}>
             {t("apply")}

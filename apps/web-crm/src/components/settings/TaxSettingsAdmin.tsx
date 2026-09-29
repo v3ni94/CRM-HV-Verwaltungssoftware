@@ -254,67 +254,69 @@ export function TaxSettingsAdmin({
 
         <h3 id="tax-limits-title" className={`${ui.h3} mt-4`}>{t("limits.title")}</h3>
         <p className={ui.help}>{t("limits.help")}</p>
-        <table className={`${ui.table} mt-2`}>
-          <thead>
-            <tr>
-              <th>{t("limits.role")}</th>
-              <th>{t("limits.amount")}</th>
-              <th />
-            </tr>
-          </thead>
-          <tbody>
-            {settings.approval_limits.map((row, index) => (
-              <tr key={index}>
-                <td>
-                  <select
-                    className={ui.input}
-                    aria-label={t("limits.role")}
-                    value={row.role_code}
-                    disabled={!canManageSettings}
-                    onChange={(e) => limit(index, { role_code: e.target.value })}
-                  >
-                    <option value="">{t("limits.chooseRole")}</option>
-                    {roles.map((r) => (
-                      <option key={r.code} value={r.code}>
-                        {r.name} ({r.code})
-                      </option>
-                    ))}
-                  </select>
-                </td>
-                <td>
-                  <input
-                    className={ui.input}
-                    aria-label={t("limits.amount")}
-                    value={row.limit_amount}
-                    disabled={!canManageSettings}
-                    inputMode="decimal"
-                    onChange={(e) => limit(index, { limit_amount: e.target.value })}
-                  />
-                </td>
-                <td>
-                  {canManageSettings ? (
-                    <button
-                      type="button"
-                      className={ui.buttonSm}
-                      onClick={() =>
-                        setSettings({ ...settings, approval_limits: settings.approval_limits.filter((_, i) => i !== index) })
-                      }
-                    >
-                      {t("limits.remove")}
-                    </button>
-                  ) : null}
-                </td>
-              </tr>
-            ))}
-            {settings.approval_limits.length === 0 ? (
+        <div className={ui.tableScroll}>
+          <table className={`${ui.table} mt-2`}>
+            <thead>
               <tr>
-                <td colSpan={3} className={ui.help}>
-                  {t("limits.empty")}
-                </td>
+                <th>{t("limits.role")}</th>
+                <th>{t("limits.amount")}</th>
+                <th />
               </tr>
-            ) : null}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {settings.approval_limits.map((row, index) => (
+                <tr key={index}>
+                  <td>
+                    <select
+                      className={ui.input}
+                      aria-label={t("limits.role")}
+                      value={row.role_code}
+                      disabled={!canManageSettings}
+                      onChange={(e) => limit(index, { role_code: e.target.value })}
+                    >
+                      <option value="">{t("limits.chooseRole")}</option>
+                      {roles.map((r) => (
+                        <option key={r.code} value={r.code}>
+                          {r.name} ({r.code})
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <input
+                      className={ui.input}
+                      aria-label={t("limits.amount")}
+                      value={row.limit_amount}
+                      disabled={!canManageSettings}
+                      inputMode="decimal"
+                      onChange={(e) => limit(index, { limit_amount: e.target.value })}
+                    />
+                  </td>
+                  <td>
+                    {canManageSettings ? (
+                      <button
+                        type="button"
+                        className={ui.buttonSm}
+                        onClick={() =>
+                          setSettings({ ...settings, approval_limits: settings.approval_limits.filter((_, i) => i !== index) })
+                        }
+                      >
+                        {t("limits.remove")}
+                      </button>
+                    ) : null}
+                  </td>
+                </tr>
+              ))}
+              {settings.approval_limits.length === 0 ? (
+                <tr>
+                  <td colSpan={3} className={ui.help}>
+                    {t("limits.empty")}
+                  </td>
+                </tr>
+              ) : null}
+            </tbody>
+          </table>
+        </div>
         {canManageSettings ? (
           <div className={`${ui.formActions} mt-3`}>
             <button

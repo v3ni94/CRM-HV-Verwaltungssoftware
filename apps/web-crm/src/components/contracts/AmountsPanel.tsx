@@ -175,35 +175,37 @@ export function AmountsPanel({
       {rows.length === 0 ? (
         <p className={`${ui.help} mt-3`}>{t("amounts.none")}</p>
       ) : (
-        <table className={`${ui.table} mt-3`}>
-          <thead>
-            <tr>
-              <th>{t("amounts.kind")}</th>
-              <th>{t("amounts.net")}</th>
-              <th>{t("amounts.vat")}</th>
-              <th>{t("amounts.gross")}</th>
-              <th>{t("amounts.validFrom")}</th>
-              <th>{t("amounts.validTo")}</th>
-              <th>{t("amounts.reason")}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((r) => (
-              <tr key={r.id} data-testid={currentIds.has(r.id) ? "amount-row-current" : "amount-row"}>
-                <td>
-                  {typeLabel(paymentTypes, r.payment_type_code)}
-                  {currentIds.has(r.id) ? <span className={`${ui.badgeSuccess} ml-2`}>{t("amounts.current")}</span> : null}
-                </td>
-                <td className={ui.num}>{formatEur(r.net)}</td>
-                <td className={ui.num}>{formatDecimal(r.vat_percent, 2)} %</td>
-                <td className={ui.num}>{formatEur(r.gross)}</td>
-                <td>{formatDate(r.valid_from)}</td>
-                <td>{r.valid_to ? formatDate(r.valid_to) : t("amounts.open")}</td>
-                <td>{t(`amounts.reasons.${r.reason}`)}</td>
+        <div className={ui.tableScroll}>
+          <table className={`${ui.table} mt-3`}>
+            <thead>
+              <tr>
+                <th>{t("amounts.kind")}</th>
+                <th>{t("amounts.net")}</th>
+                <th>{t("amounts.vat")}</th>
+                <th>{t("amounts.gross")}</th>
+                <th>{t("amounts.validFrom")}</th>
+                <th>{t("amounts.validTo")}</th>
+                <th>{t("amounts.reason")}</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {rows.map((r) => (
+                <tr key={r.id} data-testid={currentIds.has(r.id) ? "amount-row-current" : "amount-row"}>
+                  <td>
+                    {typeLabel(paymentTypes, r.payment_type_code)}
+                    {currentIds.has(r.id) ? <span className={`${ui.badgeSuccess} ml-2`}>{t("amounts.current")}</span> : null}
+                  </td>
+                  <td className={ui.num}>{formatEur(r.net)}</td>
+                  <td className={ui.num}>{formatDecimal(r.vat_percent, 2)} %</td>
+                  <td className={ui.num}>{formatEur(r.gross)}</td>
+                  <td>{formatDate(r.valid_from)}</td>
+                  <td>{r.valid_to ? formatDate(r.valid_to) : t("amounts.open")}</td>
+                  <td>{t(`amounts.reasons.${r.reason}`)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       )}
       {canUpdate && paymentTypes.length > 0 ? (
         <form onSubmit={submit} className="mt-4 grid gap-3 sm:grid-cols-4" noValidate data-testid="amount-form">

@@ -114,65 +114,67 @@ function DifferenceList({ items, label }: { items: Difference[]; label: string }
 export function PrecheckTable({ checks }: { checks: Precheck[] }) {
   const t = useTranslations("FullImport");
   return (
-    <table className={ui.table} data-testid="fullimport-precheck">
-      <thead>
-        <tr>
-          <th>{t("colFile")}</th>
-          <th>{t("colKind")}</th>
-          <th>{t("colRows")}</th>
-          <th>{t("colEncoding")}</th>
-          <th>{t("colResult")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {checks.map((c) => (
-          <tr key={`${c.art}-${c.datei}`}>
-            <td>
-              {c.datei}
-              <div className={`${ui.mono} text-xs text-muted`}>{c.sha256.slice(0, 16)}</div>
-            </td>
-            <td>{c.art}</td>
-            <td className={ui.num}>{c.zeilen}</td>
-            <td>
-              {c.zeichensatz}, {c.trennzeichen}
-            </td>
-            <td>
-              <span className={c.ok ? ui.badgeSuccess : ui.badgeDanger}>{c.ok ? t("checkOk") : t("checkFailed")}</span>
-              <ul className="mt-1 text-xs">
-                {c.pflichtspalten_fehlend.length > 0 && (
-                  <li>
-                    {t("missingRequired")}: {c.pflichtspalten_fehlend.join(", ")}
-                  </li>
-                )}
-                {c.optionale_spalten_fehlend.length > 0 && (
-                  <li>
-                    {t("missingOptional")}: {c.optionale_spalten_fehlend.join(", ")}
-                  </li>
-                )}
-                {c.unbekannte_spalten.length > 0 && (
-                  <li>
-                    {t("unknownColumns")}: {c.unbekannte_spalten.join(", ")}
-                  </li>
-                )}
-                {c.dubletten.length > 0 && (
-                  <li>
-                    {t("duplicates")}: {c.dubletten.map((d) => `${d.schluessel} (${d.zeilen.join(", ")})`).join("; ")}
-                  </li>
-                )}
-                {c.pflichtfelder_fehlend.length > 0 && (
-                  <li>
-                    {t("missingFields")}: {c.pflichtfelder_fehlend.map((m) => `${t("row")} ${m.zeile} ${m.feld}`).join("; ")}
-                  </li>
-                )}
-                {c.hinweise.map((h) => (
-                  <li key={h}>{h}</li>
-                ))}
-              </ul>
-            </td>
+    <div className={ui.tableScroll}>
+      <table className={ui.table} data-testid="fullimport-precheck">
+        <thead>
+          <tr>
+            <th>{t("colFile")}</th>
+            <th>{t("colKind")}</th>
+            <th>{t("colRows")}</th>
+            <th>{t("colEncoding")}</th>
+            <th>{t("colResult")}</th>
           </tr>
-        ))}
-      </tbody>
-    </table>
+        </thead>
+        <tbody>
+          {checks.map((c) => (
+            <tr key={`${c.art}-${c.datei}`}>
+              <td>
+                {c.datei}
+                <div className={`${ui.mono} text-xs text-muted`}>{c.sha256.slice(0, 16)}</div>
+              </td>
+              <td>{c.art}</td>
+              <td className={ui.num}>{c.zeilen}</td>
+              <td>
+                {c.zeichensatz}, {c.trennzeichen}
+              </td>
+              <td>
+                <span className={c.ok ? ui.badgeSuccess : ui.badgeDanger}>{c.ok ? t("checkOk") : t("checkFailed")}</span>
+                <ul className="mt-1 text-xs">
+                  {c.pflichtspalten_fehlend.length > 0 && (
+                    <li>
+                      {t("missingRequired")}: {c.pflichtspalten_fehlend.join(", ")}
+                    </li>
+                  )}
+                  {c.optionale_spalten_fehlend.length > 0 && (
+                    <li>
+                      {t("missingOptional")}: {c.optionale_spalten_fehlend.join(", ")}
+                    </li>
+                  )}
+                  {c.unbekannte_spalten.length > 0 && (
+                    <li>
+                      {t("unknownColumns")}: {c.unbekannte_spalten.join(", ")}
+                    </li>
+                  )}
+                  {c.dubletten.length > 0 && (
+                    <li>
+                      {t("duplicates")}: {c.dubletten.map((d) => `${d.schluessel} (${d.zeilen.join(", ")})`).join("; ")}
+                    </li>
+                  )}
+                  {c.pflichtfelder_fehlend.length > 0 && (
+                    <li>
+                      {t("missingFields")}: {c.pflichtfelder_fehlend.map((m) => `${t("row")} ${m.zeile} ${m.feld}`).join("; ")}
+                    </li>
+                  )}
+                  {c.hinweise.map((h) => (
+                    <li key={h}>{h}</li>
+                  ))}
+                </ul>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -192,32 +194,34 @@ function PerObjectTable({ entity }: { entity: Entity }) {
         <input type="checkbox" checked={onlyDeviations} onChange={(e) => setOnlyDeviations(e.target.checked)} />
         {t("onlyDeviations")}
       </label>
-      <table className={ui.table}>
-        <thead>
-          <tr>
-            <th>{t("colObject")}</th>
-            <th>{t("colCountTarget")}</th>
-            <th>{t("colCountActual")}</th>
-            <th>{t("colSumTarget")}</th>
-            <th>{t("colSumActual")}</th>
-            <th>{t("colDeviation")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {shown.map((r) => (
-            <tr key={r.objekt}>
-              <td className={ui.mono}>{r.objekt}</td>
-              <td className={ui.num}>{r.soll_anzahl}</td>
-              <td className={ui.num}>{r.ist_anzahl}</td>
-              <td className={ui.num}>{formatEur(r.soll_summe)}</td>
-              <td className={ui.num}>{formatEur(r.ist_summe)}</td>
-              <td>
-                <span className={r.abweichung ? ui.badgeWarning : ui.badgeSuccess}>{r.abweichung ? t("checkFailed") : t("checkOk")}</span>
-              </td>
+      <div className={ui.tableScroll}>
+        <table className={ui.table}>
+          <thead>
+            <tr>
+              <th>{t("colObject")}</th>
+              <th>{t("colCountTarget")}</th>
+              <th>{t("colCountActual")}</th>
+              <th>{t("colSumTarget")}</th>
+              <th>{t("colSumActual")}</th>
+              <th>{t("colDeviation")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {shown.map((r) => (
+              <tr key={r.objekt}>
+                <td className={ui.mono}>{r.objekt}</td>
+                <td className={ui.num}>{r.soll_anzahl}</td>
+                <td className={ui.num}>{r.ist_anzahl}</td>
+                <td className={ui.num}>{formatEur(r.soll_summe)}</td>
+                <td className={ui.num}>{formatEur(r.ist_summe)}</td>
+                <td>
+                  <span className={r.abweichung ? ui.badgeWarning : ui.badgeSuccess}>{r.abweichung ? t("checkFailed") : t("checkOk")}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </details>
   );
 }
@@ -226,32 +230,34 @@ export function ReconciliationTable({ entities }: { entities: Entity[] }) {
   const t = useTranslations("FullImport");
   return (
     <div className="flex flex-col gap-2">
-      <table className={ui.table} data-testid="fullimport-reconciliation">
-        <thead>
-          <tr>
-            <th>{t("colEntity")}</th>
-            <th>{t("colTarget")}</th>
-            <th>{t("colActual")}</th>
-            <th>{t("colMatched")}</th>
-            <th>{t("colMissing")}</th>
-            <th>{t("colDuplicate")}</th>
-            <th>{t("colDeviating")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {entities.map((e) => (
-            <tr key={e.entitaet}>
-              <td>{e.entitaet}</td>
-              <td className={ui.num}>{e.soll}</td>
-              <td className={ui.num}>{e.ist}</td>
-              <td className={ui.num}>{e.uebereinstimmend}</td>
-              <td className={ui.num}>{e.fehlend.length}</td>
-              <td className={ui.num}>{e.doppelt.length}</td>
-              <td className={ui.num}>{e.abweichend.length}</td>
+      <div className={ui.tableScroll}>
+        <table className={ui.table} data-testid="fullimport-reconciliation">
+          <thead>
+            <tr>
+              <th>{t("colEntity")}</th>
+              <th>{t("colTarget")}</th>
+              <th>{t("colActual")}</th>
+              <th>{t("colMatched")}</th>
+              <th>{t("colMissing")}</th>
+              <th>{t("colDuplicate")}</th>
+              <th>{t("colDeviating")}</th>
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {entities.map((e) => (
+              <tr key={e.entitaet}>
+                <td>{e.entitaet}</td>
+                <td className={ui.num}>{e.soll}</td>
+                <td className={ui.num}>{e.ist}</td>
+                <td className={ui.num}>{e.uebereinstimmend}</td>
+                <td className={ui.num}>{e.fehlend.length}</td>
+                <td className={ui.num}>{e.doppelt.length}</td>
+                <td className={ui.num}>{e.abweichend.length}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
       {entities.map((e) => (
         <div key={`d-${e.entitaet}`} className="flex flex-col gap-1">
           <DifferenceList items={e.fehlend} label={`${e.entitaet}: ${t("colMissing")}`} />
@@ -498,39 +504,41 @@ export function FullImport() {
         ) : runs.length === 0 ? (
           <p className={ui.help}>{t("noRuns")}</p>
         ) : (
-          <table className={ui.table} data-testid="fullimport-runs">
-            <thead>
-              <tr>
-                <th>{t("colCreated")}</th>
-                <th>{t("colStatus")}</th>
-                <th>{t("cutoff")}</th>
-                <th>{t("colFiles")}</th>
-                <th>{t("colDifferences")}</th>
-                <th />
-              </tr>
-            </thead>
-            <tbody>
-              {runs.map((r) => (
-                <tr key={r.id}>
-                  <td>{formatDateTime(r.created_at)}</td>
-                  <td>{t(`status.${r.status}`)}</td>
-                  <td>{formatDate(r.cutoff_date)}</td>
-                  <td>{r.files.map((f) => `${f.art} (${f.zeilen})`).join(", ")}</td>
-                  <td className={ui.num}>
-                    <span className={r.differences === 0 ? ui.badgeSuccess : ui.badgeWarning}>{r.differences}</span>
-                  </td>
-                  <td className="flex gap-2">
-                    <button type="button" className={ui.buttonSm} onClick={() => void openRun(r.id)}>
-                      {t("open")}
-                    </button>
-                    <a className="text-sm font-medium hover:underline" href={`${API}/${r.id}/pdf`} target="_blank" rel="noreferrer">
-                      {t("pdfLink")}
-                    </a>
-                  </td>
+          <div className={ui.tableScroll}>
+            <table className={ui.table} data-testid="fullimport-runs">
+              <thead>
+                <tr>
+                  <th>{t("colCreated")}</th>
+                  <th>{t("colStatus")}</th>
+                  <th>{t("cutoff")}</th>
+                  <th>{t("colFiles")}</th>
+                  <th>{t("colDifferences")}</th>
+                  <th />
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {runs.map((r) => (
+                  <tr key={r.id}>
+                    <td>{formatDateTime(r.created_at)}</td>
+                    <td>{t(`status.${r.status}`)}</td>
+                    <td>{formatDate(r.cutoff_date)}</td>
+                    <td>{r.files.map((f) => `${f.art} (${f.zeilen})`).join(", ")}</td>
+                    <td className={ui.num}>
+                      <span className={r.differences === 0 ? ui.badgeSuccess : ui.badgeWarning}>{r.differences}</span>
+                    </td>
+                    <td className="flex gap-2">
+                      <button type="button" className={ui.buttonSm} onClick={() => void openRun(r.id)}>
+                        {t("open")}
+                      </button>
+                      <a className="text-sm font-medium hover:underline" href={`${API}/${r.id}/pdf`} target="_blank" rel="noreferrer">
+                        {t("pdfLink")}
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
         {selected && (
           <div className="mt-4">
