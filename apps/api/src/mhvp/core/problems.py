@@ -517,6 +517,16 @@ class ErrorCodes:
             "(plan M12 3.3, rule M12-06)."
         ),
     )
+    BANK_AUTO_REVIEW_PENDING = ErrorCode(
+        "MHVP-BANK-0026",
+        409,
+        "Automatikbuchung ohne Nachkontrolle",
+        (
+            "An automatic posting of the bank runner on this debtor account has an open "
+            "review item (rule M12-05). Dunning, settlement proposal and direct debit wait "
+            "until a person closed the review."
+        ),
+    )
     BANK_AUTO_POST_REFUSED = ErrorCode(
         "MHVP-BANK-0025",
         409,

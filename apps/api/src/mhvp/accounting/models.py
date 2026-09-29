@@ -375,6 +375,13 @@ class JournalEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     posted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     posted_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # Automatic posting of the bank runner whose review item is still open (rule M12-05):
+    # dunning, settlement proposal and direct debit runs leave the affected debtor accounts
+    # alone until a person closed the review. No financial content; the guard trigger of
+    # posted entries ignores this column (migration 0243).
+    auto_review_pending: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     # Opening balances need a second person (geprüfte Anfangsbestände, M10).
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 

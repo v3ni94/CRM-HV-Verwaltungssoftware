@@ -283,6 +283,7 @@ class BankRuleProposal(IdMixin, TimestampMixin, TenantMixin, Base):
     rule_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    anonymised_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class LevelRequestStatus(StrEnum):
@@ -363,6 +364,56 @@ class AutoPostingReview(IdMixin, TimestampMixin, TenantMixin, Base):
     note: Mapped[str | None] = mapped_column(Text)
     reviewed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     reviewed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Kind ``return``: the returned payment (Rücklastschrift) that opened the item.
+    return_transaction_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class ClarificationStatus(StrEnum):
+    """Clarification status of an unposted bank movement (B05 evidence chain)."""
+
+    OPEN = "open"
+    IN_CLARIFICATION = "in_clarification"
+    NO_DOCUMENT_REQUIRED = "no_document_required"  # decided by a person with a reason
+    RESOLVED = "resolved"  # document linked
+
+
+CLARIFICATION_STATUSES = tuple(s.value for s in ClarificationStatus)
+
+
+class BankClarification(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Evidence chain of an unposted bank movement (B05, rule M12-05): the runner opens a
+    row when the deterministic verifier of ``recurring_expense`` finds neither a linked
+    posted invoice nor a person's decision that no document is required; a person moves it
+    to ``in_clarification``, closes it as ``no_document_required`` with a reason or as
+    ``resolved`` with the document. A responsible ticket is created with the row. The list
+    "Buchungen ohne Beleg" shows every open row of a ledger before the period lock; the
+    audit export carries the rows. One row per transaction (unique)."""
+
+    __tablename__ = "bank_clarification"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "bank_transaction_id", name="uq_bank_clarification_transaction"
+        ),
+        CheckConstraint(
+            "status IN ({})".format(", ".join(f"'{s}'" for s in CLARIFICATION_STATUSES)),
+            name="ck_bank_clarification_status",
+        ),
+        Index("ix_bank_clarification_status", "tenant_id", "legal_entity_id", "status"),
+    )
+
+    bank_transaction_id: Mapped[uuid.UUID] = _fk("bank_transaction.id")
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
+    status: Mapped[str] = mapped_column(
+        String(24), nullable=False, default=ClarificationStatus.OPEN.value
+    )
+    reasons: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    rule_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    reason: Mapped[str | None] = mapped_column(Text)
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id", nullable=True)
+    assignee_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class OrderStatus(StrEnum):
@@ -953,6 +1004,9 @@ class PostingDecision(IdMixin, TimestampMixin, TenantMixin, Base):
     # the review is due; both only on ``auto_posted`` rows.
     verifier_fingerprint: Mapped[str | None] = mapped_column(String(64))
     review_due_on: Mapped[date | None] = mapped_column(Date)
+    # Retention run (operator decision M12-06, 24 months): payer fingerprint and proposal
+    # evidence nulled, outcome kept; the guard trigger allows exactly this update once.
+    anonymised_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class BankingEventWatermark(IdMixin, TenantMixin, Base):
