@@ -331,6 +331,18 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^banking\/rules$/ },
   { method: "POST", pattern: /^banking\/rules$/ },
   { method: "POST", pattern: new RegExp(`^banking/rules/${ID}/(approve|activate|disable)$`) },
+  // Automatikstufen, Ein-Klick, Korrigieren, gelernte Regelvorschläge und Nachkontrolle
+  // (ADR 0014 Nachtrag S4 bis S6, Regeln M12-05 und M12-06). Der Automatiklauf selbst
+  // (`POST /banking/auto-post`) bleibt außerhalb: er läuft nach Import und Sync.
+  { method: "GET", pattern: /^banking\/automation\/(levels|metrics)$/ },
+  { method: "POST", pattern: /^banking\/automation\/level-requests$/ },
+  { method: "POST", pattern: new RegExp(`^banking/automation/level-requests/${ID}/(approve|reject)$`) },
+  { method: "PUT", pattern: /^banking\/automation\/(levels|outgoing)$/ },
+  { method: "POST", pattern: new RegExp(`^banking/transactions/${ID}/(accept|correct)$`) },
+  { method: "GET", pattern: /^banking\/rule-proposals$/ },
+  { method: "POST", pattern: new RegExp(`^banking/rule-proposals/${ID}/(accept|reject)$`) },
+  { method: "GET", pattern: /^banking\/auto-posting\/reviews$/ },
+  { method: "POST", pattern: new RegExp(`^banking/auto-posting/reviews/${ID}$`) },
   // Ledger list, chart of accounts and open items for the booking dialog (accounting:read).
   { method: "GET", pattern: /^accounting\/ledgers$/ },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/(accounts|open-items)$`) },

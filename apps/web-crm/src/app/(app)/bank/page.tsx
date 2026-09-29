@@ -40,6 +40,12 @@ export default async function BankPage() {
         <Link href="/bank/abstimmung" className="hover:underline">
           {t("reconciliationLink")}
         </Link>
+        <Link href="/bank/nachkontrolle" className="hover:underline">
+          {t("reviewLink")}
+        </Link>
+        <Link href="/einstellungen/buchhaltung/automatik" className="hover:underline">
+          {t("levelsLink")}
+        </Link>
       </nav>
       <BankSetupWizard />
       <BankAccountOverview />

@@ -121,6 +121,7 @@ export function BulkConfirm({ transactions, legalEntityNames, onClose, onDone }:
           {t("title")}
         </h2>
         <p className="text-sm text-muted">{t("intro")}</p>
+        <p className={ui.help}>{t("levelHint")}</p>
         {error ? (
           <p role="alert" className={`${ui.alert} mt-3`}>
             {error}

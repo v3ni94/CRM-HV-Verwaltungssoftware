@@ -638,6 +638,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["accounting:read"],
   },
   {
+    id: "buchhaltung-automatik",
+    title: "Automatikstufen",
+    breadcrumb: [ROOT, "Buchhaltung", "Automatikstufen"],
+    href: "/einstellungen/buchhaltung/automatik",
+    keywords: ["automatik", "automatikstufe", "stufe", "l1", "l2", "ein-klick", "nachkontrolle", "regelautomatik", "bankabgleich"],
+    permission: ["accounting:read"],
+  },
+  {
     id: "buchhaltung-kontenrahmen",
     title: "Kontenrahmen",
     breadcrumb: [ROOT, "Buchhaltung", "Kontenrahmen"],

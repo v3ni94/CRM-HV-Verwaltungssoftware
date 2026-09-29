@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
 import { AutomationSwitchCard } from "@/components/banking/AutomationSwitchCard";
+import { BankRuleProposals } from "@/components/banking/BankRuleProposals";
 import { BankRules } from "@/components/banking/BankRules";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
@@ -25,6 +26,7 @@ export default async function BankRulesPage() {
         </Link>
       </p>
       <AutomationSwitchCard />
+      <BankRuleProposals canApprove={permissions.includes("accounting:approve")} />
       <BankRules
         canCreate={permissions.includes("accounting:create")}
         canApprove={permissions.includes("accounting:approve")}
