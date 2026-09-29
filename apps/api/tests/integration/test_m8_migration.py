@@ -18,9 +18,10 @@ from mhvp.main import create_app
 from mhvp.platform import services
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, bearer, login
+from tests.integration.test_m5_contracts import _party, _unit
 from tests.integration.test_m8_import import BUCKET, XLSX, _settings, _stage, _xlsx
-from tests.integration.test_m10_ledger import A, _accounts, _party, _prop, _unit
-from tests.integration.test_m11_banking import IBAN_A, PAYER, _camt, _ntry, _upload
+from tests.integration.test_m10_ledger import A, _accounts, _prop
+from tests.integration.test_m11_banking import IBAN_A, _camt, _upload
 
 pytestmark = pytest.mark.integration
 M = "/api/v1/imports/migration"
@@ -36,7 +37,9 @@ async def _world(settings: Any) -> World:
     factory = create_session_factory(engine)
     try:
         a, _ = await services.provision_tenant(factory, slug=f"mig-{RUN}", name=f"Migration {RUN}")
-        b, _ = await services.provision_tenant(factory, slug=f"mig2-{RUN}", name=f"Migration2 {RUN}")
+        b, _ = await services.provision_tenant(
+            factory, slug=f"mig2-{RUN}", name=f"Migration2 {RUN}"
+        )
         world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
         specs: dict[str, tuple[bool, list[tuple[Any, str]]]] = {
             "migadmin": (False, [(a, "tenant_admin")]),
@@ -125,7 +128,9 @@ def _open_g1(client: TestClient, world: World, template: str) -> None:
     tenant_admin = bearer(login(client, world, "migadmin"))
     _ok(
         client.post(
-            f"{A}/templates/{template}/release", json={"comment": "Testfreigabe"}, headers=tenant_admin
+            f"{A}/templates/{template}/release",
+            json={"comment": "Testfreigabe"},
+            headers=tenant_admin,
         )
     )
     request_id = _ok(
@@ -189,17 +194,22 @@ def test_migration_journal_opening_balances_reconciliation_and_switch(
     ]
     staged = _stage(client, h, "journal", "journal.xlsx", _xlsx(rows), XLSX)
     body = {"source_file_id": staged["id"], "year": 2026, "year_complete": True}
-    assert client.post(f"{M}/ledgers/{ledger}/journal", json=body, headers=reader).status_code == 403
+    assert (
+        client.post(f"{M}/ledgers/{ledger}/journal", json=body, headers=reader).status_code == 403
+    )
     assert client.post(f"{M}/ledgers/{ledger}/journal", json=body, headers=other).status_code == 404
     imported = _ok(client.post(f"{M}/ledgers/{ledger}/journal", json=body, headers=h))
     assert (imported["imported"], imported["lines"]) == (2, 4)
     assert (imported["other_property"], imported["other_year"], imported["invalid"]) == (1, 1, 1)
-    assert imported["debit_total"] == "500.00" and imported["credit_total"] == "500.00"
-    assert imported["unbalanced"] == [] and imported["unmatched_accounts"] == []
+    assert imported["debit_total"] == "500.00"
+    assert imported["credit_total"] == "500.00"
+    assert imported["unbalanced"] == []
+    assert imported["unmatched_accounts"] == []
     again = _ok(client.post(f"{M}/ledgers/{ledger}/journal", json=body, headers=h))
     assert (again["imported"], again["existing"]) == (0, 2)
     journal = _ok(client.get(f"{M}/ledgers/{ledger}/journal", headers=h))
-    assert journal["summary"]["entries"] == 2 and journal["summary"]["year_complete"] is True
+    assert journal["summary"]["entries"] == 2
+    assert journal["summary"]["year_complete"] is True
     assert journal["entries"][0]["source_entry_id"] == "J1"
     assert journal["entries"][0]["document_ref"] == "SOLL-01"
     assert journal["entries"][0]["reconciled"] is False
@@ -211,48 +221,90 @@ def test_migration_journal_opening_balances_reconciliation_and_switch(
     #    bank 001200 +1.000,00, debtor +100,00, reserve 008000 -250,00
     #    -> net +850,00, counter line 009000 credit 850,00.
     lines = [
-        {"kind": "bank", "account_id": acc["001200"], "amount": "1000.00",
-         "property_bank_account_id": bank_account},
+        {
+            "kind": "bank",
+            "account_id": acc["001200"],
+            "amount": "1000.00",
+            "property_bank_account_id": bank_account,
+        },
         {"kind": "debtor", "account_id": acc[debtor], "amount": "100.00"},
         {"kind": "reserve", "account_id": acc["008000"], "amount": "-250.00"},
     ]
     ob_body = {"cutoff_date": "2026-01-31", "note": "Saldenliste 31.01.2026", "lines": lines}
     assert (
-        client.put(f"{M}/ledgers/{ledger}/opening-balances", json=ob_body, headers=reader).status_code
+        client.put(
+            f"{M}/ledgers/{ledger}/opening-balances", json=ob_body, headers=reader
+        ).status_code
         == 403
     )
     # Legal entity separation (E01): an account of ledger 862 cannot carry a balance of 861.
-    foreign = {**ob_body, "lines": [{"kind": "bank", "account_id": acc2["001200"], "amount": "1.00"}]}
+    foreign = {
+        **ob_body,
+        "lines": [{"kind": "bank", "account_id": acc2["001200"], "amount": "1.00"}],
+    }
     wrong = client.put(f"{M}/ledgers/{ledger}/opening-balances", json=foreign, headers=h)
-    assert wrong.status_code == 422 and _code(wrong) == "MHVP-ACC-0004"
-    wrong_kind = {**ob_body, "lines": [{"kind": "debtor", "account_id": acc["001200"], "amount": "1.00"}]}
-    assert client.put(f"{M}/ledgers/{ledger}/opening-balances", json=wrong_kind, headers=h).status_code == 422
+    assert wrong.status_code == 422
+    assert _code(wrong) == "MHVP-ACC-0004"
+    wrong_kind = {
+        **ob_body,
+        "lines": [{"kind": "debtor", "account_id": acc["001200"], "amount": "1.00"}],
+    }
+    assert (
+        client.put(f"{M}/ledgers/{ledger}/opening-balances", json=wrong_kind, headers=h).status_code
+        == 422
+    )
     balances = _ok(client.put(f"{M}/ledgers/{ledger}/opening-balances", json=ob_body, headers=h))
     assert balances["status"] == "draft"
-    assert balances["total_debit"] == "1100.00" and balances["total_credit"] == "250.00"
+    assert balances["total_debit"] == "1100.00"
+    assert balances["total_credit"] == "250.00"
     ob = balances["id"]
     assert client.get(f"{M}/opening-balances/{ob}", headers=other).status_code == 404
 
     # Posting before release and before the cut off date is refused.
     not_released = client.post(f"{M}/opening-balances/{ob}/post", headers=h)
-    assert not_released.status_code == 409 and _code(not_released) == "MHVP-MIG-0002"
+    assert not_released.status_code == 409
+    assert _code(not_released) == "MHVP-MIG-0002"
     # Release: same person 403, second person ok.
     same = client.post(f"{M}/opening-balances/{ob}/release", json={}, headers=h)
-    assert same.status_code == 403 and _code(same) == "MHVP-GATE-0002"
-    released = _ok(client.post(f"{M}/opening-balances/{ob}/release", json={"comment": "geprüft"}, headers=acc_user))
-    assert released["status"] == "released" and released["released_by"] == str(world.users["migacc"])
+    assert same.status_code == 403
+    assert _code(same) == "MHVP-GATE-0002"
+    released = _ok(
+        client.post(
+            f"{M}/opening-balances/{ob}/release", json={"comment": "geprüft"}, headers=acc_user
+        )
+    )
+    assert released["status"] == "released"
+    assert released["released_by"] == str(world.users["migacc"])
     # A released set is immutable.
-    assert client.put(f"{M}/ledgers/{ledger}/opening-balances", json=ob_body, headers=h).status_code == 409
+    assert (
+        client.put(f"{M}/ledgers/{ledger}/opening-balances", json=ob_body, headers=h).status_code
+        == 409
+    )
     no_cutoff = client.post(f"{M}/opening-balances/{ob}/post", headers=h)
-    assert no_cutoff.status_code == 409 and _code(no_cutoff) == "MHVP-MIG-0001"
-    _ok(client.put(f"{M}/ledgers/{ledger}/cutoff", json={"migration_cutoff": "2026-01-15"}, headers=h))
+    assert no_cutoff.status_code == 409
+    assert _code(no_cutoff) == "MHVP-MIG-0001"
+    _ok(
+        client.put(
+            f"{M}/ledgers/{ledger}/cutoff", json={"migration_cutoff": "2026-01-15"}, headers=h
+        )
+    )
     wrong_date = client.post(f"{M}/opening-balances/{ob}/post", headers=h)
-    assert wrong_date.status_code == 409 and _code(wrong_date) == "MHVP-MIG-0001"
-    _ok(client.put(f"{M}/ledgers/{ledger}/cutoff", json={"migration_cutoff": "2026-01-31"}, headers=h))
+    assert wrong_date.status_code == 409
+    assert _code(wrong_date) == "MHVP-MIG-0001"
+    _ok(
+        client.put(
+            f"{M}/ledgers/{ledger}/cutoff", json={"migration_cutoff": "2026-01-31"}, headers=h
+        )
+    )
     posted = _ok(client.post(f"{M}/opening-balances/{ob}/post", headers=h))
-    assert posted["status"] == "posted" and posted["journal_entry_id"]
+    assert posted["status"] == "posted"
+    assert posted["journal_entry_id"]
     entry = _ok(client.get(f"{A}/ledgers/{ledger}/entries/{posted['journal_entry_id']}", headers=h))
-    assert (entry["status"], entry["kind"], entry["source"]) == ("posted", "opening_balance", "migration")
+    assert (entry["status"], entry["kind"], entry["source"]) == (
+        "posted",
+        "opening_balance",
+        "migration",
+    )
     assert entry["booking_date"] == "2026-01-31"
     by_account = {line["account_id"]: line for line in entry["lines"]}
     assert by_account[acc["001200"]]["debit"] == "1000.00"
@@ -260,19 +312,34 @@ def test_migration_journal_opening_balances_reconciliation_and_switch(
     assert by_account[acc["009000"]]["credit"] == "850.00"
     # Repeated posting has no second effect (B08); the cut off date is now fixed.
     assert client.post(f"{M}/opening-balances/{ob}/post", headers=h).status_code == 409
-    assert client.put(f"{M}/ledgers/{ledger}/cutoff", json={"migration_cutoff": "2026-02-28"}, headers=h).status_code == 409
-    items = _ok(client.get(f"{A}/ledgers/{ledger}/open-items", params={"as_of": "2026-01-31"}, headers=h))
+    assert (
+        client.put(
+            f"{M}/ledgers/{ledger}/cutoff", json={"migration_cutoff": "2026-02-28"}, headers=h
+        ).status_code
+        == 409
+    )
+    items = _ok(
+        client.get(f"{A}/ledgers/{ledger}/open-items", params={"as_of": "2026-01-31"}, headers=h)
+    )
     assert [(i["account_number"], i["remaining"]) for i in items] == [(debtor, "100.00")]
     assert items[0]["contract_id"] is not None
 
     # 3. Reconciliation: statement with closing balance 999,99 -> one cent difference blocks.
     doc = _upload(client, h, "s1.xml", _camt("MIG-S1", IBAN_A, "999.99", "999.99", []))
     _ok(client.post(f"{B}/imports", json={"document_id": doc}, headers=h), 201)
-    report = _ok(client.post(f"{M}/properties/{prop['id']}/reconciliation", json={}, headers=h), 201)
-    assert report["as_of"] == "2026-01-31" and report["zero_difference"] is False
-    assert report["deviations"] == 1 and report["total_difference"] == "0.01"
+    report = _ok(
+        client.post(f"{M}/properties/{prop['id']}/reconciliation", json={}, headers=h), 201
+    )
+    assert report["as_of"] == "2026-01-31"
+    assert report["zero_difference"] is False
+    assert report["deviations"] == 1
+    assert report["total_difference"] == "0.01"
     bank_line = next(line for line in report["lines"] if line["metric"] == "bankstand")
-    assert (bank_line["source"], bank_line["platform"], bank_line["difference"]) == ("1000.00", "999.99", "-0.01")
+    assert (bank_line["source"], bank_line["platform"], bank_line["difference"]) == (
+        "1000.00",
+        "999.99",
+        "-0.01",
+    )
     assert report["document_id"] is not None
     metrics = {(line["metric"], line["key"]): line for line in report["lines"]}
     assert metrics[("kontosaldo", "001200")]["difference"] == "0.00"
@@ -280,35 +347,63 @@ def test_migration_journal_opening_balances_reconciliation_and_switch(
     assert metrics[("ruecklage", "008000")]["platform"] == "250.00"
     assert metrics[("journal", "2026")]["deviates"] is False
     pdf = client.get(f"{M}/reconciliation/{report['id']}/pdf", headers=h)
-    assert pdf.status_code == 200 and pdf.content.startswith(b"%PDF")
+    assert pdf.status_code == 200
+    assert pdf.content.startswith(b"%PDF")
     assert client.get(f"{M}/reconciliation/{report['id']}", headers=other).status_code == 404
 
     # 4. Switch: G1 closed -> refused with a message naming G1.
     closed = client.post(f"{M}/ledgers/{ledger}/switch-requests", json={}, headers=h)
-    assert closed.status_code == 403 and _code(closed) == "MHVP-GATE-0001"
-    assert "G1" in closed.json()["detail"] and "Immoware24" in closed.json()["detail"]
+    assert closed.status_code == 403
+    assert _code(closed) == "MHVP-GATE-0001"
+    assert "G1" in closed.json()["detail"]
+    assert "Immoware24" in closed.json()["detail"]
     _open_g1(client, world, template)
     blocked = client.post(f"{M}/ledgers/{ledger}/switch-requests", json={}, headers=h)
-    assert blocked.status_code == 409 and _code(blocked) == "MHVP-MIG-0003"
+    assert blocked.status_code == 409
+    assert _code(blocked) == "MHVP-MIG-0003"
     assert "0,01 EUR" in blocked.json()["detail"]
     # Corrected statement (closing 1.000,00) -> zero difference -> switch with second person.
     doc2 = _upload(client, h, "s2.xml", _camt("MIG-S2", IBAN_A, "1000.00", "1000.00", []))
     _ok(client.post(f"{B}/imports", json={"document_id": doc2}, headers=h), 201)
-    report2 = _ok(client.post(f"{M}/properties/{prop['id']}/reconciliation", json={}, headers=h), 201)
-    assert report2["zero_difference"] is True and report2["deviations"] == 0
+    report2 = _ok(
+        client.post(f"{M}/properties/{prop['id']}/reconciliation", json={}, headers=h), 201
+    )
+    assert report2["zero_difference"] is True
+    assert report2["deviations"] == 0
     assert report2["total_difference"] == "0.00"
     journal = _ok(client.get(f"{M}/ledgers/{ledger}/journal", headers=h))
     assert all(e["reconciled"] for e in journal["entries"])
     assert len(_ok(client.get(f"{M}/properties/{prop['id']}/reconciliation", headers=h))) == 2
-    assert client.post(f"{M}/ledgers/{ledger}/switch-requests", json={}, headers=reader).status_code == 403
-    request = _ok(client.post(f"{M}/ledgers/{ledger}/switch-requests", json={"comment": "Nulldifferenz"}, headers=h), 201)
+    assert (
+        client.post(f"{M}/ledgers/{ledger}/switch-requests", json={}, headers=reader).status_code
+        == 403
+    )
+    request = _ok(
+        client.post(
+            f"{M}/ledgers/{ledger}/switch-requests", json={"comment": "Nulldifferenz"}, headers=h
+        ),
+        201,
+    )
     assert request["status"] == "requested"
-    assert client.post(f"{M}/ledgers/{ledger}/switch-requests", json={}, headers=h).status_code == 409
+    assert (
+        client.post(f"{M}/ledgers/{ledger}/switch-requests", json={}, headers=h).status_code == 409
+    )
     same = client.post(f"{M}/switch-requests/{request['id']}/approve", json={}, headers=h)
-    assert same.status_code == 403 and _code(same) == "MHVP-GATE-0002"
-    assert client.post(f"{M}/switch-requests/{request['id']}/approve", json={}, headers=other).status_code == 404
-    approved = _ok(client.post(f"{M}/switch-requests/{request['id']}/approve", json={"comment": "ok"}, headers=acc_user))
-    assert approved["status"] == "approved" and approved["decided_by"] == str(world.users["migacc"])
+    assert same.status_code == 403
+    assert _code(same) == "MHVP-GATE-0002"
+    assert (
+        client.post(
+            f"{M}/switch-requests/{request['id']}/approve", json={}, headers=other
+        ).status_code
+        == 404
+    )
+    approved = _ok(
+        client.post(
+            f"{M}/switch-requests/{request['id']}/approve", json={"comment": "ok"}, headers=acc_user
+        )
+    )
+    assert approved["status"] == "approved"
+    assert approved["decided_by"] == str(world.users["migacc"])
     assert _ok(client.get(f"{A}/ledgers/{ledger}", headers=h))["leading_system"] == "mhvp"
     assert _ok(client.get(f"{A}/ledgers/{ledger2}", headers=h))["leading_system"] == "immoware24"
 
@@ -316,7 +411,11 @@ def test_migration_journal_opening_balances_reconciliation_and_switch(
     status = _ok(client.get(f"{M}/status", headers=h))
     row = next(p for p in status if p["property_number"] == "861")
     step = row["ledgers"][0]
-    assert (step["journal_imported"], step["opening_balances_entered"], step["released"]) == (True, True, True)
+    assert (step["journal_imported"], step["opening_balances_entered"], step["released"]) == (
+        True,
+        True,
+        True,
+    )
     assert (step["posted"], step["reconciled"], step["switched"]) == (True, True, True)
     assert row["report"]["zero_difference"] is True
     other_row = next(p for p in status if p["property_number"] == "862")
@@ -355,16 +454,22 @@ def test_balance_list_csv_import_and_column_configuration(client: TestClient, wo
     )
     assert accepted["errors"] == ["Datei als Windows-1252 (ANSI) gelesen, nicht als UTF-8"]
     balances = accepted["balances"]
-    assert balances["entered_via"] == "import" and balances["status"] == "draft"
-    assert {(line["account_number"], line["kind"], line["amount"]) for line in balances["lines"]} == {
+    assert balances["entered_via"] == "import"
+    assert balances["status"] == "draft"
+    assert {
+        (line["account_number"], line["kind"], line["amount"]) for line in balances["lines"]
+    } == {
         ("001200", "bank", "500.00"),
         (debtor, "debtor", "-20.00"),
         ("008000", "reserve", "-100.00"),
     }
-    assert acc["001200"] == next(line["account_id"] for line in balances["lines"] if line["kind"] == "bank")
+    assert acc["001200"] == next(
+        line["account_id"] for line in balances["lines"] if line["kind"] == "bank"
+    )
 
     columns = _ok(client.get(f"{M}/journal-columns", headers=h))
-    assert columns["customised"] is False and columns["columns"]["entry_id"] == "Buchungsnummer"
+    assert columns["customised"] is False
+    assert columns["columns"]["entry_id"] == "Buchungsnummer"
     invalid = client.put(f"{M}/journal-columns", json={"columns": {"entry_id": "Nr"}}, headers=h)
     assert invalid.status_code == 422
     saved = _ok(
@@ -383,5 +488,6 @@ def test_balance_list_csv_import_and_column_configuration(client: TestClient, wo
             headers=h,
         )
     )
-    assert saved["customised"] is True and saved["columns"]["debit"] == "S"
+    assert saved["customised"] is True
+    assert saved["columns"]["debit"] == "S"
     assert _ok(client.get(f"{M}/journal-columns", headers=h))["columns"]["entry_id"] == "Nr"
