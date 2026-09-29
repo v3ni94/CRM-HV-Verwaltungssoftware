@@ -5,6 +5,10 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.45.1 (29.09.2026) Korrektur Gmail Abruf, Volltextindex
+
+- Dokumente, Volltext: Der extrahierte Text eines Dokuments wird nun auch nach UTF-8 Bytes begrenzt (900.000 Bytes), damit der erzeugte Suchvektor unter der PostgreSQL Grenze von 1.048.575 Bytes bleibt. Zuvor scheiterte der Gmail Abruf an einem großen Anhang mit der Meldung string is too long for tsvector, und die betroffene Mail blieb ohne Ablage.
+
 ## 1.45.0 (29.09.2026) Handy und Tablet, Bankeinrichtung und Automatik, Lexware Office im Ticket, Verbrauchsinformation
 
 - CRM auf Handy und Tablet, Hülle: Das CRM lässt sich als App auf dem Startbildschirm ablegen (Manifest, Icons, Eintrag Als App installieren im Benutzermenü, Hinweis für iPadOS); der Service Worker hält nur die Offline Seite und die Icons vor, nie Daten, Seiten oder Dokumente (Betreiberentscheidung M30-08, ADR 0017, Annahme A-084).

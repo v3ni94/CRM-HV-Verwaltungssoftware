@@ -17,6 +17,14 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.45.1",
+    date: "29.09.2026",
+    title: "Korrektur Gmail Abruf, Volltextindex",
+    changes: [
+      "Dokumente, Volltext: Der extrahierte Text eines Dokuments wird nun auch nach UTF-8 Bytes begrenzt (900.000 Bytes), damit der erzeugte Suchvektor unter der PostgreSQL Grenze von 1.048.575 Bytes bleibt. Zuvor scheiterte der Gmail Abruf an einem großen Anhang mit der Meldung string is too long for tsvector, und die betroffene Mail blieb ohne Ablage.",
+    ],
+  },
+  {
     version: "1.45.0",
     date: "29.09.2026",
     title: "Handy und Tablet, Bankeinrichtung und Automatik, Lexware Office im Ticket, Verbrauchsinformation",

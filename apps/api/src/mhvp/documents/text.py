@@ -16,6 +16,21 @@ from mhvp.documents.models import TextStatus
 log = logging.getLogger(__name__)
 
 MAX_TEXT_CHARS = 1_000_000
+# ``document.search_vector`` is a generated tsvector over title, filename and ``ocr_text``;
+# PostgreSQL limits a tsvector to 1048575 bytes. Text is therefore capped by UTF-8 bytes,
+# with headroom for title and filename (Betreibermeldung 30.09.2026, Gmail-Abruf).
+MAX_TEXT_BYTES = 900_000
+
+
+def cap_text(text: str) -> str:
+    """Cut ``text`` to ``MAX_TEXT_CHARS`` characters and ``MAX_TEXT_BYTES`` UTF-8 bytes
+    without splitting a character."""
+    text = text[:MAX_TEXT_CHARS]
+    encoded = text.encode("utf-8")
+    if len(encoded) <= MAX_TEXT_BYTES:
+        return text
+    return encoded[:MAX_TEXT_BYTES].decode("utf-8", errors="ignore")
+
 
 # Accepted upload types (A-016). XML covers structured e-invoices (S02), kept unchanged.
 ALLOWED_MIME_TYPES: frozenset[str] = frozenset(
@@ -97,7 +112,7 @@ def extract(mime_type: str, data: bytes) -> tuple[str | None, TextStatus]:
     # like any other text column (Betreibermeldung 27.09.2026, Gmail-Abruf).
     if mime_type in ("text/plain", "text/csv", "application/xml", "text/xml", "message/rfc822"):
         cleaned = strip_nul(_decode(data)) or ""
-        return cleaned[:MAX_TEXT_CHARS], TextStatus.EXTRACTED
+        return cap_text(cleaned), TextStatus.EXTRACTED
     if mime_type == "application/pdf":
         try:
             reader = PdfReader(io.BytesIO(data))
@@ -107,7 +122,7 @@ def extract(mime_type: str, data: bytes) -> tuple[str | None, TextStatus]:
             return None, TextStatus.PENDING
         text = strip_nul(text) or ""
         if text:
-            return text[:MAX_TEXT_CHARS], TextStatus.EXTRACTED
+            return cap_text(text), TextStatus.EXTRACTED
         return None, TextStatus.PENDING
     if mime_type.startswith("image/"):
         return None, TextStatus.PENDING
