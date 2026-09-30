@@ -44,13 +44,15 @@ NAME_PLACEHOLDER = "[NAME]"
 
 def mask_text(text: str | None) -> str:
     """Replace IBANs, e-mail addresses, phone numbers and probable person names with a fixed
-    placeholder. Order matters: IBAN/e-mail/phone first, so a name-shaped fragment inside one
+    placeholder. Order matters: e-mail, IBAN and phone first, so a name-shaped fragment inside one
     of them (unlikely, but not impossible for an all-letter IBAN-like token) is already gone
     before the name pattern runs."""
     if not text:
         return ""
-    masked = _IBAN.sub(IBAN_PLACEHOLDER, text)
-    masked = _EMAIL.sub(EMAIL_PLACEHOLDER, masked)
+    # E-mail before IBAN: a local part such as ``max.ab12cd34ef56@`` would otherwise be cut
+    # into an IBAN placeholder and the rest never matched as an address (flaky test 30.09.2026).
+    masked = _EMAIL.sub(EMAIL_PLACEHOLDER, text)
+    masked = _IBAN.sub(IBAN_PLACEHOLDER, masked)
     masked = _PHONE.sub(PHONE_PLACEHOLDER, masked)
     masked = _NAME.sub(NAME_PLACEHOLDER, masked)
     return masked
@@ -70,8 +72,8 @@ def mask_identifiers(text: str | None) -> str:
     provider, rule 0.1.13)."""
     if not text:
         return ""
-    masked = _IBAN.sub(IBAN_PLACEHOLDER, text)
-    masked = _EMAIL.sub(EMAIL_PLACEHOLDER, masked)
+    masked = _EMAIL.sub(EMAIL_PLACEHOLDER, text)
+    masked = _IBAN.sub(IBAN_PLACEHOLDER, masked)
     return _PHONE.sub(PHONE_PLACEHOLDER, masked)
 
 

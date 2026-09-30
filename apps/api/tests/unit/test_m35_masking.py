@@ -51,3 +51,16 @@ def test_uuid_segments_are_not_masked_as_iban() -> None:
     text = '<datei id="01a0eafa-9f4e-7247-9fdd-eb23479b2b9e">Beschluss</datei>'
     assert mask_identifiers(text) == text
     assert mask_identifiers("IBAN DE89-3704-0044-0532-0130-00") == "IBAN [IBAN]"
+
+
+def test_email_with_iban_shaped_local_part_is_masked_as_email() -> None:
+    """A random local part (``ab12cd34ef56``) looks like an IBAN; the address must still
+    become one e-mail placeholder (flaky test_m7_ai on 30.09.2026)."""
+    from mhvp.objektakte.masking import mask_identifiers, mask_text
+
+    text = "E-Mail max.mustermann.ab12cd34ef56@example.org, IBAN DE89 3704 0044 0532 0130 00."
+    for fn in (mask_text, mask_identifiers):
+        out = fn(text)
+        assert "[E-MAIL]" in out
+        assert "@" not in out
+        assert out.count("[IBAN]") == 1
