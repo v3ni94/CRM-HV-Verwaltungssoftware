@@ -1907,7 +1907,7 @@ def test_broker_flowfact_sync_creates_entity(
 
     client, _ = clients
     h = bearer(login(client, world, "m26admin"))
-    _, unit = _prospect_unit(client, h, "772")
+    _, unit = _prospect_unit(client, h, "779")
     listing = _ok(
         client.post(f"{L}/listings", json={"unit_id": unit, "kind": "rental"}, headers=h), 201
     )
