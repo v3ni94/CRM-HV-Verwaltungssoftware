@@ -28,3 +28,10 @@ Gates: no money flows; sending to portals or FLOWFACT is not implemented (M28 st
   channel is refused while G3 is closed, e-mail only as a draft for the mail approval; the PDF
   carries the draft marking until the legal review is documented.
 
+
+## Welle 2 (P20, 30.09.2026)
+
+* `basis_checks.py`: Rechenprüfung für die Basen `index`, `modernization`, `graduated` aus `basis_data` (Regel `docs/rules/M26-BASIS-01-mieterhoehung-basen.md`); keine hinterlegten Gesetzeswerte, Quelldokument Pflicht.
+* `rentindex.py`: Mietspiegelwerte je Gemeinde (`/letting/rent-index`, CSV-Import mit Vorschau, Abfrage `/lookup`), Regel `M26-INDEX-01`.
+* `routers.py`: Leerstandsmaßnahmen (`vacancy_case`, `PUT /letting/vacancies/{unit_id}`, Anzeige aus Leerstand), Exposé als PDF im DMS (`POST /letting/units/{unit_id}/expose/pdf`), Suchprofil der Interessenten und Abgleich (`GET /letting/listings/{id}/prospect-matches`). Regeln `M26-VAC-01`, `M26-PROS-01`.
+* Migration `0269_letting_w2`. Offen: KI-Plausibilitätsprüfung (`docs/OPEN_QUESTIONS.md` P20-01), Bilder im Exposé-PDF.

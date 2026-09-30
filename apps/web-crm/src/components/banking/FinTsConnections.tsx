@@ -9,6 +9,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatDateTime, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { DisconnectedToggle, isDisconnected, useShowDisconnected } from "./DisconnectedToggle";
+
 export type FinTsInstitute = {
   blz: string;
   name: string;
@@ -560,6 +562,7 @@ function FinTsAccountTable({ connection, onChanged }: { connection: FinTsConnect
 export function FinTsConnections() {
   const t = useTranslations("FinTs");
   const [connections, setConnections] = useState<FinTsConnection[] | null>(null);
+  const [showDisconnected, setShowDisconnected] = useShowDisconnected();
   // null: unknown or endpoint unavailable (button stays); false: MHVP_FINTS_PRODUCT_ID missing.
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [dialog, setDialog] = useState(false);
@@ -627,6 +630,9 @@ export function FinTsConnections() {
     await act(`/api/bff/banking/fints/connections/${c.id}`, { method: "DELETE" }, t("disconnected"));
   }
 
+  const hiddenCount = (connections ?? []).filter((c) => isDisconnected(c.status)).length;
+  const visible = connections === null ? null : showDisconnected ? connections : connections.filter((c) => !isDisconnected(c.status));
+
   return (
     <section className={ui.card}>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -645,13 +651,14 @@ export function FinTsConnections() {
       ) : null}
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
       {message ? <p className={ui.notice}>{message}</p> : null}
-      {connections === null ? (
+      <DisconnectedToggle count={hiddenCount} show={showDisconnected} onChange={setShowDisconnected} />
+      {visible === null ? (
         <p className="mt-3 text-sm text-muted">{t("loading")}</p>
-      ) : connections.length === 0 ? (
+      ) : visible.length === 0 ? (
         <p className="mt-3 text-sm text-muted">{t("noConnections")}</p>
       ) : (
         <div className="mt-3 flex flex-col gap-3">
-          {connections.map((c) => (
+          {visible.map((c) => (
             <div key={c.id} className="rounded-lg border border-border p-3" data-testid="fints-connection">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium">

@@ -56,11 +56,11 @@ function PasswordForm() {
       </label>
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("newPassword")}</span>
-        <input type="password" required minLength={6} className={ui.input} value={next} onChange={(e) => setNext(e.target.value)} />
+        <input type="password" required minLength={12} className={ui.input} value={next} onChange={(e) => setNext(e.target.value)} />
       </label>
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("repeatPassword")}</span>
-        <input type="password" required minLength={6} className={ui.input} value={repeat} onChange={(e) => setRepeat(e.target.value)} />
+        <input type="password" required minLength={12} className={ui.input} value={repeat} onChange={(e) => setRepeat(e.target.value)} />
       </label>
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
       {message ? <p className="text-xs text-success-fg">{message}</p> : null}

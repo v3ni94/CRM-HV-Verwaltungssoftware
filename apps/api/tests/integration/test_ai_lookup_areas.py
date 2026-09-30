@@ -730,7 +730,7 @@ def test_calendar_entry_is_a_proposal_written_once_after_confirmation(
 def test_deadline_entry_is_a_proposal_with_reminders(
     client: TestClient, world: World, records: dict[str, str], fake: FakeProvider
 ) -> None:
-    admin = bearer(login(client, world, "lxadmin"))
+    admin = _release_provider(client, world)
     fake.queue.append(
         _answer(
             "Fristeintrag vorbereitet.",

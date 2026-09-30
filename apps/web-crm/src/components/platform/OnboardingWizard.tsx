@@ -28,6 +28,8 @@ type ExportRequest = {
   decided_by: string | null;
   downloads: number;
   created_at: string;
+  job_status?: "queued" | "running" | "ready" | "failed" | null;
+  job_error?: string | null;
 };
 
 const SLUG = /^[a-z0-9][a-z0-9-]{1,62}$/;
@@ -243,6 +245,7 @@ export function OnboardingWizard() {
 /** Tenant export (GDPR access and portability): request, second person approves, download. */
 export function TenantExport({ tenants }: { tenants: Tenant[] }) {
   const t = useTranslations("PlatformOnboarding");
+  const tj = useTranslations("PlatformLicensing");
   const [tenantId, setTenantId] = useState(tenants[0]?.id ?? "");
   const [purpose, setPurpose] = useState<"access" | "portability">("access");
   const [requests, setRequests] = useState<ExportRequest[]>([]);
@@ -271,6 +274,13 @@ export function TenantExport({ tenants }: { tenants: Tenant[] }) {
       method: "POST",
       body: JSON.stringify({}),
     });
+    if (!res.ok) setError(res.message);
+    await load(tenantId);
+  }
+
+  async function startJob(id: string) {
+    setError(null);
+    const res = await bff<ExportRequest>(`/api/bff/platform/tenants/${tenantId}/export-requests/${id}/run`, { method: "POST" });
     if (!res.ok) setError(res.message);
     await load(tenantId);
   }
@@ -333,7 +343,15 @@ export function TenantExport({ tenants }: { tenants: Tenant[] }) {
                         </button>
                       </>
                     ) : null}
-                    {r.status === "approved" ? (
+                    {r.status === "approved" && (!r.job_status || r.job_status === "failed") ? (
+                      <button type="button" className={ui.buttonSm} title={tj("exportJobHint")} onClick={() => void startJob(r.id)}>
+                        {tj("exportJobStart")}
+                      </button>
+                    ) : null}
+                    {r.status === "approved" && r.job_status && r.job_status !== "ready" ? (
+                      <span className="text-xs">{tj(`job_${r.job_status}`)}</span>
+                    ) : null}
+                    {r.status === "approved" && (!r.job_status || r.job_status === "ready") ? (
                       <a className={ui.buttonSm} href={`/api/bff/platform/tenants/${tenantId}/export-requests/${r.id}/download`} download>
                         {t("download")}
                       </a>

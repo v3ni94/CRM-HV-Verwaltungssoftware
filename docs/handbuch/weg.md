@@ -306,3 +306,28 @@ die Plattform berechnet keine Frist und leitet aus einem Status keinen Anspruch 
   unvollständig oder Zählbasis der Regel weicht vom Stimmprinzip der Auszählung ab.
 - Bereitstellungspaket enthält ein Dokument nicht: Das Dokument ist nicht für Eigentümer
   freigegeben (Sichtbarkeit am Dokument, Kapitel Dokumente und DMS).
+
+## Beiratsprüfung und Einsicht: Ergänzungen (Stand 30.09.2026)
+
+Hinweis: Diese Funktionen sind zunächst über die Schnittstelle verfügbar, eine Bedienoberfläche im CRM folgt.
+
+* Prüfauftrag: Im Feld Berechtigungsnachweis wird der Beschluss oder Auftrag des Beirats vermerkt, im Feld Datenstand das Stichtagsdatum der Daten. Beides erscheint im Prüfbericht. Ein nicht vorhandener Beirat wird nicht unterstellt, der Nachweis ist optional.
+* Prüfpositionen lassen sich nach Betrag, fehlendem Beleg, Risikohinweis und Prüfstatus filtern. Der Risikohinweis ist ein Vermerk der Prüfenden.
+* Jede Änderung einer Prüfposition steht mit altem und neuem Wert im Verlauf der Position.
+* Ein Prüfbericht kann je Version einmal bestätigt werden. Die Bestätigung ist kein Beschluss, keine Entlastung und keine Zahlungsfreigabe.
+* Ein Einsichtspaket kann befristet werden (1 bis 365 Tage) und lässt sich mit Begründung widerrufen. Danach ist der Abruf gesperrt, bis ein neues Paket bereitgestellt wird. Die Frist ist eine Produktfunktion und keine rechtliche Frist.
+
+## Rücklagen, Kosten aus der Buchhaltung, Einzelabrechnung (Stand 30.09.2026)
+
+* Zweckrücklagen legen Sie je Gemeinschaft an (Name, Zweck, Konto). Rücklagenpositionen im
+  Wirtschaftsplan ordnen Sie einer Rücklage zu; Entnahmen, Steuern, Gebühren und Zinsen erfassen
+  Sie je Abrechnung mit Beleg. Die Abrechnung zeigt die Entwicklung je Rücklage.
+* Kostenpositionen können Sie aus den gebuchten Belegen eines Kontos übernehmen. Das Paket zeigt
+  je Position, ob Buchung und Beleg verknüpft sind.
+* Für Lohnanteile nach § 35a EStG tragen Sie den belegten Betrag je Position ein. Der Ausweis dient
+  der Information der Eigentümer; die steuerliche Beurteilung bleibt beim Steuerberater.
+* Die Quelle einer Verteilung auf einen Teil der Einheiten wählen Sie als Beschluss oder Dokument.
+* Die Einzelabrechnung je Einheit steht als PDF Entwurf nach interner Freigabe bereit, nur mit
+  geöffneter Freigabestufe G4.
+* Der Wirtschaftsplan hat Bezeichnung, Stichtag, Zahlungsrhythmus, Fälligkeitstag, Fortgeltung
+  und Vergleichsgrundlage (Vorjahresabrechnung oder Vorplan) mit Abweichung je Position.

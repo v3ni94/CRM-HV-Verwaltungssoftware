@@ -34,7 +34,7 @@ from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 from mhvp.documents.models import Document, DocumentLink, LinkRole
 from mhvp.properties.models import AllocationKey, ManagementType, Property, Unit
-from mhvp.properties.services import check_catalog
+from mhvp.properties.services import check_catalog, check_custom_fields, check_ledger_account
 
 router = APIRouter(tags=["Verträge"])
 READ = require_permission("contracts:read")
@@ -227,6 +227,14 @@ async def _create(
         await _get(session, Party, body.sev_fee_debtor_party_id)
     account = await svc.debtor_account(session, principal.tenant_id, creditor, party, unit)
     data = body.model_dump(exclude={"legal_entity_id"})
+    data["custom_fields"] = await check_custom_fields(
+        session,
+        "contract",
+        body.custom_fields,
+        management_type=prop.management_type,
+        contract_kind=body.kind.value,
+        create=True,
+    )
     if body.sev_enabled and data["sev_fee_debtor_party_id"] is None:
         data["sev_fee_debtor_party_id"] = party.id
     contract = Contract(
@@ -980,6 +988,9 @@ async def add_payment(
         contract = await _get(session, Contract, contract_id)
         await check_catalog(session, "payment_type", body.payment_type_code)
         svc.check_amounts(body.payment_type_code, body.net, body.vat_percent, body.gross)
+        await check_ledger_account(
+            session, body.revenue_account_id, contract.property_id, "Das Ertragskonto"
+        )
         row = ContractPayment(
             tenant_id=principal.tenant_id, contract_id=contract.id, **body.model_dump()
         )
@@ -1070,6 +1081,10 @@ async def list_mandates(
     response: Response,
     party_id: uuid.UUID | None = None,
     status: MandateStatus | None = None,
+    expiring_until: date | None = Query(
+        default=None, description="Aktive Mandate mit valid_until bis zu diesem Datum (M5-05)"
+    ),
+    unused: bool | None = Query(default=None, description="true: noch nie verwendet"),
     limit: int = Query(default=200, ge=1, le=1000),
     page: int = Query(default=1, ge=1, description="Seite (ab 1), zusammen mit page_size"),
     page_size: int | None = Query(
@@ -1088,6 +1103,14 @@ async def list_mandates(
             query = query.where(SepaMandate.party_id == party_id)
         if status is not None:
             query = query.where(SepaMandate.status == status)
+        if expiring_until is not None:
+            query = query.where(
+                SepaMandate.status == MandateStatus.ACTIVE,
+                SepaMandate.valid_until.is_not(None),
+                SepaMandate.valid_until <= expiring_until,
+            )
+        if unused is not None:
+            query = query.where(SepaMandate.last_used_at.is_(None) == unused)
         rows = await paginate(
             session,
             query.order_by(SepaMandate.signed_at, SepaMandate.id),

@@ -68,9 +68,16 @@ METERING_PERMISSIONS: frozenset[str] = frozenset(
 # damit die Person, die eine Regel aktiviert, nicht zwingend auch nachkontrolliert
 # (Produktschutz). Gespeichert wie jedes andere Recht als Ressource/Aktion.
 ACCOUNTING_REVIEW = "accounting:review"
+# Datenschutz (P17): Register und Löschprofile pflegen (manage), lesen (read), Löschanträge und
+# Profile freigeben (approve, Vier-Augen). Gespeichert wie jedes andere Recht als
+# Ressource/Aktion; nur Administratorrollen erhalten sie über ``_ADMIN``.
+PRIVACY_PERMISSIONS: frozenset[str] = frozenset(
+    {"privacy:read", "privacy:manage", "privacy:approve"}
+)
 ALL_PERMISSIONS: frozenset[str] = (
     frozenset(f"{r}:{a}" for r in RESOURCES for a in ACTIONS)
     | METERING_PERMISSIONS
+    | PRIVACY_PERMISSIONS
     | {ACCOUNTING_REVIEW}
 )
 

@@ -127,6 +127,10 @@ class UsageOut(BaseModel):
     warning: bool
     blocked: bool
     by_task: dict[str, Decimal]
+    # M7-09 (9.1 Kosten, 9.3 Dashboard): runs and tokens per task in the same month.
+    runs_by_task: dict[str, int] = Field(default_factory=dict)
+    tokens_in_by_task: dict[str, int] = Field(default_factory=dict)
+    tokens_out_by_task: dict[str, int] = Field(default_factory=dict)
 
 
 class ConversationIn(_In):

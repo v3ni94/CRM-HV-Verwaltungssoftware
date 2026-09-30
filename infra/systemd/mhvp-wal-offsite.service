@@ -1,0 +1,13 @@
+# Hourly off-site copy of new WAL segments (M9-06, MASTER-PROMPT 16: hourly WAL backup).
+# Encrypts and uploads only segments that are not yet in the target bucket; the daily run
+# (mhvp-backup.service plus backup-offsite.sh) stays responsible for dump and documents.
+[Unit]
+Description=MHVP WAL off-site copy
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/mhvp
+EnvironmentFile=/opt/mhvp/.env.backup
+ExecStart=/opt/mhvp/scripts/backup-offsite.sh --wal-only

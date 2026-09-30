@@ -9,7 +9,7 @@ import uuid
 from datetime import UTC, datetime
 from typing import Any
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.portal.models import PortalAccount, PortalReadReceipt
@@ -59,3 +59,28 @@ async def for_document(session: AsyncSession, document_id: uuid.UUID) -> list[di
         }
         for r, contact_id in rows
     ]
+
+
+async def states_for_account(
+    session: AsyncSession, account: PortalAccount, document_ids: set[uuid.UUID]
+) -> dict[uuid.UUID, dict[str, datetime]]:
+    """Per document the first and last retrieval by this account (M21-02, SA-06): the basis of
+    the status "neu" (no receipt yet) and "gelesen" in the portal list. Read only; same
+    indication character as every receipt (see ``LEGAL_NOTE``)."""
+    if not document_ids:
+        return {}
+    rows = (
+        await session.execute(
+            select(
+                PortalReadReceipt.document_id,
+                func.min(PortalReadReceipt.occurred_at),
+                func.max(PortalReadReceipt.occurred_at),
+            )
+            .where(
+                PortalReadReceipt.account_id == account.id,
+                PortalReadReceipt.document_id.in_(document_ids),
+            )
+            .group_by(PortalReadReceipt.document_id)
+        )
+    ).all()
+    return {doc: {"first": first, "last": last} for doc, first, last in rows}

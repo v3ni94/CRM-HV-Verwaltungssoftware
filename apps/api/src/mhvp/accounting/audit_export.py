@@ -646,8 +646,7 @@ async def collect(
     )
 
     # Approvals: second person on opening balances, invoice review steps of invoices posted in
-    # the period (PÜ05). Dunning and payment approvals live in their own modules and are not
-    # part of the ledger scope of 7.7.
+    # the period (PÜ05). Dunning and payment approvals follow from ``_dunning_payment_approvals``.
     freigabe_rows: list[list[Any]] = []
     for e in entries:
         if e.approved_by is not None:
@@ -678,6 +677,7 @@ async def collect(
             freigabe_rows.append(
                 ["invoice", r.invoice_id, r.step, r.result, r.user_id, r.decided_at, r.reason]
             )
+    freigabe_rows.extend(await _dunning_payment_approvals(session, ledger, start, end))
     freigaben = Table(
         "freigaben",
         ["Objektart", "Objekt-ID", "Schritt", "Ergebnis", "Person", "Zeitpunkt", "Begründung"],
@@ -731,16 +731,20 @@ async def collect(
             )
         )
     contract_ids = {e.contract_id for e in entries if e.contract_id is not None}
+    unit_ids = [u.id for u in units]
+    contract_filter = [
+        Contract.legal_entity_id == ledger.legal_entity_id,
+        Contract.id.in_(list(contract_ids)) if contract_ids else Contract.id.is_(None),
+    ]
+    if unit_ids:
+        # M18-08: the master data history of contracts covers every contract of the units of
+        # the property, all versions, not only those booked in the period.
+        contract_filter.append(Contract.unit_id.in_(unit_ids))
     contracts = list(
         await session.scalars(
             select(Contract)
-            .where(
-                or_(
-                    Contract.legal_entity_id == ledger.legal_entity_id,
-                    Contract.id.in_(list(contract_ids)) if contract_ids else Contract.id.is_(None),
-                )
-            )
-            .order_by(Contract.number)
+            .where(or_(*contract_filter))
+            .order_by(Contract.number, Contract.version)
         )
     )
     party_ids = {c.party_id for c in contracts}
@@ -797,6 +801,38 @@ async def collect(
         stammdaten.rows.append(
             ["contact", ct.id, None, _contact_name(ct), None, ct.created_at, ct.updated_at]
         )
+    vertraege = Table(
+        "vertraege",
+        [
+            "Vertrag-ID",
+            "Nummer",
+            "Version",
+            "Art",
+            "Einheit-ID",
+            "Beginn",
+            "Ende",
+            "Kündigungsdatum",
+            "Freigabestatus",
+            "Angelegt am",
+            "Geändert am",
+        ],
+        [
+            [
+                c.id,
+                c.number,
+                c.version,
+                c.kind,
+                c.unit_id,
+                c.start_date,
+                c.end_date,
+                c.termination_date,
+                c.approval_status,
+                c.created_at,
+                c.updated_at,
+            ]
+            for c in contracts
+        ],
+    )
     history_ids: set[uuid.UUID] = (
         {ledger.id}
         | ({legal_entity.id} if legal_entity else set())
@@ -1041,6 +1077,7 @@ async def collect(
             freigaben,
             ereignisse,
             stammdaten,
+            vertraege,
             historie,
             schluessel,
             schluesselwerte,
@@ -1050,6 +1087,63 @@ async def collect(
         receipts=receipts,
         receipt_files=receipt_files,
     )
+
+
+async def _dunning_payment_approvals(
+    session: AsyncSession, ledger: Ledger, start: date, end: date
+) -> list[list[Any]]:
+    """Approvals of dunning runs and payment orders of the ledger in the period (M18-08, 7.7).
+    Same columns as the ``freigaben`` table; the approval of a dunning run carries the run
+    status as result, a payment approval the state of its snapshot binding."""
+    from mhvp.accounting.models import DunningCase, DunningRun
+    from mhvp.banking.models import PaymentApproval, PaymentOrder
+
+    rows: list[list[Any]] = []
+    runs = await session.scalars(
+        select(DunningRun)
+        .join(DunningCase, DunningCase.run_id == DunningRun.id)
+        .where(
+            DunningCase.ledger_id == ledger.id,
+            DunningRun.approved_by.is_not(None),
+            DunningRun.run_date.between(start, end),
+        )
+        .distinct()
+        .order_by(DunningRun.run_date, DunningRun.id)
+    )
+    for run in runs:
+        rows.append(
+            [
+                "dunning_run",
+                run.id,
+                "dunning_approval",
+                run.status,
+                run.approved_by,
+                run.updated_at,
+                None,
+            ]
+        )
+    approvals = await session.execute(
+        select(PaymentApproval, PaymentOrder)
+        .join(PaymentOrder, PaymentOrder.id == PaymentApproval.order_id)
+        .where(
+            PaymentOrder.ledger_id == ledger.id,
+            PaymentOrder.execution_date.between(start, end),
+        )
+        .order_by(PaymentApproval.decided_at, PaymentApproval.id)
+    )
+    for approval, order in approvals.all():
+        rows.append(
+            [
+                "payment_order",
+                order.id,
+                "payment_approval",
+                "invalidated" if approval.invalidated_at else "ok",
+                approval.user_id,
+                approval.decided_at,
+                None,
+            ]
+        )
+    return rows
 
 
 async def _automation_tables(

@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 
 import { AuditExportPanel, type AuditExportRun } from "@/components/accounting/AuditExportPanel";
 import { LiquidityReport, type LiquiditySnapshot } from "@/components/accounting/ReportsLiquidity";
+import { ReportsExplorer, type ExplorerAccount } from "@/components/accounting/ReportsExplorer";
 import { PaymentsByDebtor, type PaymentsByDebtorRow } from "@/components/accounting/ReportsPaymentsByDebtor";
 import { RevenueReport, type RevenueRow } from "@/components/accounting/ReportsRevenue";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -42,7 +43,7 @@ export default async function LedgerReportsPage({
     );
   }
 
-  const [liquidity, paymentsByDebtor, revenue, auditExports] = await Promise.all([
+  const [liquidity, paymentsByDebtor, revenue, auditExports, accounts] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/liquidity", {
       params: { path: { ledger_id: id }, query: { as_of: asOf } },
     }),
@@ -53,6 +54,7 @@ export default async function LedgerReportsPage({
       params: { path: { ledger_id: id }, query: { start, end } },
     }),
     api.GET("/api/v1/accounting/audit-exports", { params: { query: { ledger_id: id } } }),
+    api.GET("/api/v1/accounting/ledgers/{ledger_id}/accounts", { params: { path: { ledger_id: id } } }),
   ]);
 
   return (
@@ -124,6 +126,22 @@ export default async function LedgerReportsPage({
         ) : (
           <RevenueReport rows={revenue.data as unknown as RevenueRow[]} />
         )}
+      </section>
+
+      <section className="flex flex-col gap-2">
+        <h2 className={ui.h2}>{t("reports.explorer.title")}</h2>
+        <ReportsExplorer
+          ledgerId={id}
+          accounts={((accounts.data ?? []) as unknown as ExplorerAccount[]).map((a) => ({
+            id: a.id,
+            number: a.number,
+            name: a.name,
+            category: a.category,
+          }))}
+          defaultAsOf={asOf}
+          defaultStart={start}
+          defaultEnd={end}
+        />
       </section>
 
       <section className="flex flex-col gap-2">

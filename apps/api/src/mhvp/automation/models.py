@@ -89,6 +89,11 @@ class AutomationRule(IdMixin, TimestampMixin, TenantMixin, Base):
     active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default=text("false")
     )
+    # Permanent test mode (S15-04, section 15.2): an active rule in test mode evaluates and
+    # records a run with status ``dry_run`` but performs no action.
+    test_mode: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     # ``event`` (domain event type below) or ``schedule`` (schedule below).
     trigger_kind: Mapped[str] = mapped_column(
         String(16), nullable=False, default=TRIGGER_EVENT, server_default=text("'event'")
@@ -116,6 +121,38 @@ class AutomationRule(IdMixin, TimestampMixin, TenantMixin, Base):
     owner_user_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), ForeignKey("app_user.id", ondelete="SET NULL")
     )
+
+
+# Standard jobs of section 15.1 whose activation and time a tenant can configure (S15-03,
+# decision 12 a). The key is the beat entry name in ``mhvp.worker``; a job without a row runs as
+# scheduled globally. Switching a job off or moving it never opens a release gate.
+JOB_CATALOG: dict[str, str] = {
+    "documents-process-inbox": "Dokumenteneingang prüfen (Vorschläge)",
+    "banking-sync-all": "Bankabruf",
+    "banking-weekly-digest": "Wochenübersicht Bank",
+    "billing-consumption-info": "Verbrauchsinformation",
+    "accounting-receivable-run": "Sollstellungslauf",
+    "accounting-dunning-run": "Mahnlauf",
+    "workspace-reminders": "Erinnerungen",
+    "workspace-digest": "Tagesübersicht",
+    "workspace-compliance-deadlines": "Fristenhinweise",
+    "imports-reconciliation-report": "Abstimmungsbericht Übernahme",
+    "ops-backup-verify": "Wiederherstellungsprüfung",
+}
+
+
+class TenantJobSchedule(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Per tenant setting of one standard job: switch and optional start time (Europe/Berlin,
+    ``HH:MM``). Consumed through ``mhvp.automation.job_schedule.job_allowed``."""
+
+    __tablename__ = "tenant_job_schedule"
+    __table_args__ = (UniqueConstraint("tenant_id", "job_key", name="uq_tenant_job_schedule_key"),)
+
+    job_key: Mapped[str] = mapped_column(String(100), nullable=False)
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    run_at: Mapped[str | None] = mapped_column(String(5))
 
 
 class AutomationRun(IdMixin, TenantMixin, Base):

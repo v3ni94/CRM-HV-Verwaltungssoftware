@@ -43,3 +43,27 @@ def ensure_bucket(client: "S3Client", bucket: str) -> bool:
             raise
     client.create_bucket(Bucket=bucket)
     return True
+
+
+def presigned_download_url(
+    client: "S3Client", bucket: str, key: str, *, filename: str | None = None, expires: int = 300
+) -> str:
+    """Signed GET URL (section 12 Dateien, S12-06). Short lived; the caller has checked the
+    permission and tenant of the object before asking for it."""
+    params = {"Bucket": bucket, "Key": key}
+    if filename:
+        safe = filename.replace('"', "").replace("\r", "").replace("\n", "")
+        params["ResponseContentDisposition"] = f'attachment; filename="{safe}"'
+    return client.generate_presigned_url("get_object", Params=params, ExpiresIn=expires)
+
+
+def presigned_upload_url(
+    client: "S3Client", bucket: str, key: str, *, content_type: str, expires: int = 300
+) -> str:
+    """Signed PUT URL for a direct upload (S12-06). The content type is part of the signature,
+    so the client must send exactly this type; the API registers the object afterwards."""
+    return client.generate_presigned_url(
+        "put_object",
+        Params={"Bucket": bucket, "Key": key, "ContentType": content_type},
+        ExpiresIn=expires,
+    )

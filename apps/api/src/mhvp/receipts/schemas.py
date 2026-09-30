@@ -114,6 +114,13 @@ class ReceiptDraftOut(_Out):
     xml_payment: dict[str, Any] | None = None
     conflicts: list[ReceiptConflictOut] = Field(default_factory=list)
     findings: list[str] = Field(default_factory=list)
+    # S711-01, S711-04: variant, stored validation, archive hashes, further hybrid deviations.
+    e_invoice_profile: str | None = None
+    validation: dict[str, Any] | None = None
+    original_sha256: str | None = None
+    structured_sha256: str | None = None
+    structured_name: str | None = None
+    hybrid_deviations: list[dict[str, Any]] = Field(default_factory=list)
     # Plan M12 S7: filled by ``GET /drafts/{id}`` when ``ledger_id`` and
     # ``provider_contact_id`` are given; the decision per line after ``confirm``.
     account_proposals: ReceiptAccountProposalsOut | None = None
@@ -151,3 +158,15 @@ class ReceiptConfirmIn(_In):
 
 class ReceiptRejectIn(_In):
     reason: str | None = Field(default=None, max_length=1000)
+
+
+class ReceiptValidationIn(_In):
+    """Result of a validator run outside the platform (e.g. KoSIT with the XRechnung
+    configuration, P05). Stored as reported with name and version; it proves formal
+    validity only, never the service or the payment entitlement (7.11 S02)."""
+
+    validator: str = Field(min_length=2, max_length=100)
+    validator_version: str = Field(min_length=1, max_length=50)
+    configuration: str | None = Field(default=None, max_length=200)
+    result: Literal["valid", "invalid", "error"]
+    messages: list[str] = Field(default_factory=list, max_length=500)

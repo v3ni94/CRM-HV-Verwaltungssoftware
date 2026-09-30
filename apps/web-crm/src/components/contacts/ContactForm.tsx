@@ -263,6 +263,8 @@ export function ContactForm(props: Props) {
           <p className="text-xs text-muted">{t("isConsumerHelp")}</p>
         </div>
         <Text name="tags" label={t("tags")} register={register} errors={errors} className="sm:col-span-2" />
+        <Text name="ext_immoware24" label={t("extImmoware24")} register={register} errors={errors} />
+        <Text name="ext_lexoffice" label={t("extLexoffice")} register={register} errors={errors} />
         <label className="flex items-center gap-2 self-end text-sm">
           <input type="checkbox" {...register("blocked")} />
           {t("blocked")}

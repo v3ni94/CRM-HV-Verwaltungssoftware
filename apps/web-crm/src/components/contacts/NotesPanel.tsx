@@ -11,6 +11,104 @@ import { ui } from "@/lib/ui";
 
 type Note = components["schemas"]["NoteOut"];
 
+function NoteItem({ contactId, note }: { contactId: string; note: Note }) {
+  const t = useTranslations("Contacts");
+  const router = useRouter();
+  const [editing, setEditing] = useState(false);
+  const [text, setText] = useState(note.body);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const url = `/api/bff/contacts/${contactId}/notes/${note.id}`;
+
+  async function run(init: RequestInit) {
+    setBusy(true);
+    setError(null);
+    const result = await bff(url, init);
+    setBusy(false);
+    if (!result.ok) {
+      setError(result.message);
+      return false;
+    }
+    router.refresh();
+    return true;
+  }
+
+  async function save() {
+    if (!text.trim()) {
+      setError(t("notes.required"));
+      return;
+    }
+    if (await run({ method: "PATCH", body: JSON.stringify({ body: text.trim() }) })) setEditing(false);
+  }
+
+  return (
+    <li className={ui.card}>
+      <p className="mb-1 text-xs text-muted">
+        {formatDateTime(note.created_at)}
+        {note.category ? `, ${note.category}` : ""}
+        {note.pinned ? `, ${t("notes.pinned")}` : ""}
+        {note.follow_up_on ? `, ${t("notes.followUp")} ${formatDate(note.follow_up_on)}` : ""}
+      </p>
+      {note.title ? <p className="text-sm font-medium">{note.title}</p> : null}
+      {editing ? (
+        <div className="flex flex-col gap-2">
+          <label htmlFor={`note-edit-${note.id}`} className="sr-only">
+            {t("notes.body")}
+          </label>
+          <textarea
+            id={`note-edit-${note.id}`}
+            rows={3}
+            maxLength={20000}
+            className={ui.input}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+          />
+          <div className="flex gap-2">
+            <button type="button" className={ui.primary} disabled={busy} onClick={save}>
+              {t("notes.saveEdit")}
+            </button>
+            <button type="button" className={ui.button} onClick={() => setEditing(false)}>
+              {t("notes.cancel")}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <p className="whitespace-pre-wrap text-sm">{note.body}</p>
+      )}
+      {error ? (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      ) : null}
+      {editing ? null : (
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button type="button" className={ui.button} disabled={busy} onClick={() => setEditing(true)}>
+            {t("notes.edit")}
+          </button>
+          <button
+            type="button"
+            className={ui.button}
+            disabled={busy}
+            onClick={() => run({ method: "PATCH", body: JSON.stringify({ pinned: !note.pinned }) })}
+          >
+            {note.pinned ? t("notes.unpin") : t("notes.pin")}
+          </button>
+          <button
+            type="button"
+            className={ui.button}
+            disabled={busy}
+            onClick={() => {
+              if (window.confirm(t("notes.confirmDelete"))) void run({ method: "DELETE" });
+            }}
+          >
+            {t("notes.delete")}
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
 export function NotesPanel({ contactId, notes }: { contactId: string; notes: Note[] }) {
   const t = useTranslations("Contacts");
   const router = useRouter();
@@ -58,16 +156,7 @@ export function NotesPanel({ contactId, notes }: { contactId: string; notes: Not
       {notes.length ? (
         <ul className="flex flex-col gap-2">
           {notes.map((note) => (
-            <li key={note.id} className={ui.card}>
-              <p className="mb-1 text-xs text-muted">
-                {formatDateTime(note.created_at)}
-                {note.category ? `, ${note.category}` : ""}
-                {note.pinned ? `, ${t("notes.pinned")}` : ""}
-                {note.follow_up_on ? `, ${t("notes.followUp")} ${formatDate(note.follow_up_on)}` : ""}
-              </p>
-              {note.title ? <p className="text-sm font-medium">{note.title}</p> : null}
-              <p className="whitespace-pre-wrap text-sm">{note.body}</p>
-            </li>
+            <NoteItem key={note.id} contactId={contactId} note={note} />
           ))}
         </ul>
       ) : (

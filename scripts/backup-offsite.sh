@@ -25,6 +25,8 @@
 #                                                    (or "-" for stdin) and print the pruning
 #                                                    plan. For tests of the retention logic.
 #   scripts/backup-offsite.sh --skip-objects         database and WAL only
+#   scripts/backup-offsite.sh --wal-only             only new WAL segments (hourly, M9-06);
+#                                                    status in BACKUP_DIR/offsite-wal-status
 # Environment (infra/env.backup.example): BACKUP_DIR, BACKUP_S3_ENDPOINT_URL, BACKUP_S3_REGION,
 #   BACKUP_S3_BUCKET, BACKUP_S3_ACCESS_KEY_ID, BACKUP_S3_SECRET_ACCESS_KEY,
 #   BACKUP_AGE_PUBLIC_KEY (or BACKUP_AGE_RECIPIENT), optional BACKUP_WAL_DIR,
@@ -42,12 +44,14 @@ STAMP=""
 DRY_RUN=0
 LIST_FILE=""
 SKIP_OBJECTS=0
+WAL_ONLY=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --stamp) [[ $# -ge 2 ]] || { echo "backup-offsite: --stamp needs a value" >&2; exit 2; }; STAMP="$2"; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     --list) [[ $# -ge 2 ]] || { echo "backup-offsite: --list needs a file" >&2; exit 2; }; LIST_FILE="$2"; shift 2 ;;
     --skip-objects) SKIP_OBJECTS=1; shift ;;
+    --wal-only) WAL_ONLY=1; shift ;;
     -h|--help) sed -n '2,36p' "${BASH_SOURCE[0]}"; exit 0 ;;
     *) echo "backup-offsite: unknown argument $1" >&2; exit 2 ;;
   esac
@@ -63,7 +67,7 @@ export BACKUP_OFFSITE_KEEP_DAILY="${BACKUP_OFFSITE_KEEP_DAILY:-14}"
 export BACKUP_OFFSITE_KEEP_WEEKLY="${BACKUP_OFFSITE_KEEP_WEEKLY:-8}"
 export BACKUP_OFFSITE_KEEP_MONTHLY="${BACKUP_OFFSITE_KEEP_MONTHLY:-12}"
 export MHVP_OFFSITE_STAMP="$STAMP" MHVP_OFFSITE_DRY_RUN="$DRY_RUN" MHVP_OFFSITE_LIST_FILE="$LIST_FILE"
-export MHVP_OFFSITE_SKIP_OBJECTS="$SKIP_OBJECTS"
+export MHVP_OFFSITE_SKIP_OBJECTS="$SKIP_OBJECTS" MHVP_OFFSITE_WAL_ONLY="$WAL_ONLY"
 
 if [[ -z "$LIST_FILE" ]]; then
   missing=0
@@ -210,7 +214,9 @@ def masked(value: str) -> str:
 
 
 BACKUP_DIR = Path(os.environ["BACKUP_DIR"])
-STATUS_FILE = BACKUP_DIR / "offsite-status"
+WAL_ONLY = os.environ.get("MHVP_OFFSITE_WAL_ONLY") == "1"
+# The hourly WAL run (M9-06) has its own status file so that it never masks a missing daily run.
+STATUS_FILE = BACKUP_DIR / ("offsite-wal-status" if WAL_ONLY else "offsite-status")
 BUCKET = os.environ["BACKUP_S3_BUCKET"]
 ENDPOINT = os.environ["BACKUP_S3_ENDPOINT_URL"]
 RECIPIENT = os.environ["BACKUP_AGE_PUBLIC_KEY"]
@@ -327,8 +333,9 @@ log(f"run {stamp}: {len(db_files)} database file(s)")
 work = Path(tempfile.mkdtemp(prefix="mhvp-offsite-"))
 try:
     # ------------------------------------------------------------ 2. database artefacts
-    for p in db_files:
-        upload_verified(p, f"{run_prefix}/db/{p.name}")
+    if not WAL_ONLY:
+        for p in db_files:
+            upload_verified(p, f"{run_prefix}/db/{p.name}")
 
     # ------------------------------------------------------------ 3. WAL archive segments
     if WAL_DIR:
@@ -353,7 +360,9 @@ try:
 
     # ------------------------------------------------------------ 4. documents (bucket to bucket)
     manifest: dict = {"source_bucket": SRC_BUCKET, "objects": {}}
-    if SKIP_OBJECTS:
+    if WAL_ONLY:
+        log("objects: skipped (--wal-only)")
+    elif SKIP_OBJECTS:
         log("objects: skipped (--skip-objects)")
     elif not SRC_BUCKET:
         log("objects: BACKUP_SOURCE_S3_BUCKET not set, skipped")
@@ -404,8 +413,11 @@ try:
         upload_verified(menc, f"{run_prefix}/objects-manifest.json.age")
 
     # ------------------------------------------------------------ 5. retention
-    keys = list(list_keys(target, BUCKET, f"{PREFIX}/runs/"))
-    keep, delete = prune_plan(run_stamps(keys, PREFIX), KEEP_DAILY, KEEP_WEEKLY, KEEP_MONTHLY)
+    keys = [] if WAL_ONLY else list(list_keys(target, BUCKET, f"{PREFIX}/runs/"))
+    keep, delete = (
+        ([], []) if WAL_ONLY
+        else prune_plan(run_stamps(keys, PREFIX), KEEP_DAILY, KEEP_WEEKLY, KEEP_MONTHLY)
+    )
     if stamp in delete:
         raise RuntimeError("retention would delete the current run; check BACKUP_OFFSITE_KEEP_*")
     for old in delete:
@@ -417,10 +429,13 @@ try:
             target.delete_objects(Bucket=BUCKET, Delete={"Objects": [{"Key": k} for k in old_keys[i:i + 1000]], "Quiet": True})
         summary["pruned"] += 1
         log(f"ok   pruned run {old} ({len(old_keys)} keys)")
-    log(f"retention: keep {len(keep)} run(s), pruned {summary['pruned']}")
+    if WAL_ONLY:
+        log("retention: skipped (--wal-only)")
+    else:
+        log(f"retention: keep {len(keep)} run(s), pruned {summary['pruned']}")
 
     # ------------------------------------------------------------ 6. run summary
-    if not DRY_RUN:
+    if not DRY_RUN and not WAL_ONLY:
         status_doc = {k: summary[k] for k in ("stamp", "uploaded", "bytes", "objects_new", "objects_total", "wal", "pruned")}
         status_doc["files"] = [p.name for p in db_files]
         status_doc["at"] = dt.datetime.now(dt.UTC).strftime("%Y-%m-%dT%H:%M:%SZ")

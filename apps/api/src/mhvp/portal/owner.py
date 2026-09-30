@@ -27,6 +27,8 @@ from mhvp.workspace.services import local_today
 router = APIRouter(prefix="/portal", tags=["Portal"])
 
 OWNER_BASIS = "hoa_member_right"
+# M21-05: a representative sees the owner view of the represented owner (read only).
+OWNER_BASES = (OWNER_BASIS, access.REPRESENTATION_BASIS)
 # Property contact categories shown to owners (6.2 property_contact.category): caretaker and
 # emergency service. Board members and utilities stay out of this list.
 CONTACT_CATEGORIES = ("caretaker", "emergency")
@@ -47,7 +49,11 @@ async def _owner_scope(
     from mhvp.contracts.models import Contract, ContractKind
 
     active = await access.grants(session, account, today)
-    hoa_ids = {g.scope_id for g in active if g.legal_basis == OWNER_BASIS}
+    hoa_ids = {
+        g.scope_id
+        for g in active
+        if g.legal_basis in OWNER_BASES and g.scope_type == "legal_entity"
+    }
     if not hoa_ids:
         raise ProblemError(ErrorCodes.FORBIDDEN, detail="Nur für Eigentümer verfügbar.")
     contract_ids = {g.scope_id for g in active if g.scope_type == "contract"}

@@ -87,3 +87,23 @@ month inside the contract period). Everything answers 403 until the tenant switc
 `consumption_info_enabled` and the operator's `consumption_info_template_verified` are set; the
 operator's verification list, data basis ids and missing flags never reach the portal output
 (only the estimated marking). Portal notifications of kind `consumption_info` link to `/verbrauch`.
+
+## Dienstleister, Paket P11
+
+`POST /portal/work-orders/{id}/accept` (Annahme ohne Freigabe, Status bleibt), `decline` mit optionaler Begründung, Ereignis und Ticketverlauf je Portalschritt, `invoice_submissions` und `quote_document_id` in der Auftragsantwort, Duplikatprüfung der Rechnungsnummer (409). Regel `docs/rules/P11-tickets-w2.md`.
+
+## Package P13 (Lückenliste 30.09.2026)
+
+Rule `docs/rules/P13-portal-w2.md`, migration 0262.
+
+* `chat.py`: chat as a message channel at the ticket (external `TicketComment`), CRM reply with
+  notification, rule based pre-qualification proposal; AI stage only behind `chat_ai_prequalification_enabled`
+  and the gateway gate (no provider call yet).
+* `features.py`, `management.py`: tenant feature switches (all off by default), portal statistics,
+  representatives with power of attorney (read only grants with `legal_basis = representation`
+  derived in `access.sync_grants`), consent bound read only support view with access log.
+* `owner_extra.py`: owner tickets released for owners, resolved payments with validity and payee,
+  consumption information for self used units.
+* `forms.py`, `form_routers.py`: 14 element types, delivery as ticket or e-mail.
+* `routers.py`: `GET /portal/documents` with `is_new`, `last_opened_at`, `context`; `location`
+  on `POST /portal/tickets`; `GET /portal/me` with `features` and `representations`.

@@ -21,4 +21,20 @@ describe("UsagePanel", () => {
     expect(items[1]).toMatch(/^Zusammenfassung: 2,00/);
     expect(items[2]).toMatch(/^future_task: 0,50/);
   });
+
+  it("shows runs and tokens per task when the API delivers them (M7-09)", () => {
+    const usage = {
+      month: "2026-09",
+      spent_eur: "1.00",
+      budget_eur: "50.00",
+      warning: false,
+      blocked: false,
+      by_task: { summarize: "1.00" },
+      runs_by_task: { summarize: 3 },
+      tokens_in_by_task: { summarize: 1000 },
+      tokens_out_by_task: { summarize: 200 },
+    } as unknown as Usage;
+    renderIntl(<UsagePanel usage={usage} />);
+    expect(screen.getByRole("listitem").textContent).toMatch(/3 Läufe, 1200 Token|3 Läufe, 1\.200 Token/);
+  });
 });

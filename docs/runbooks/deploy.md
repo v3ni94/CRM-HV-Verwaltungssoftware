@@ -8,7 +8,10 @@ network (`infra/compose.prod.yaml`).
    server is logged in to ghcr.io with a read:packages token (`server-setup.md` section 4).
 2. On the server: `.env.staging` / `.env.prod` in `DEPLOY_PATH` (secrets never in git).
 3. `ENV=staging DEPLOY_HOST=... DEPLOY_PATH=... MHVP_IMAGE_REGISTRY=... MHVP_IMAGE_TAG=... make deploy`
-4. Check `/api/v1/health/ready` and `/api/v1/platform/ops/metrics`.
+4. Check `/api/v1/health/ready` and `/api/v1/platform/ops/metrics`. Staging: template
+   `infra/env.staging.example` (own secrets, hosts, database, bucket; M9-07) and, after the
+   deploy, `STAGING_API_URL=... STAGING_CRM_URL=... make staging-smoke` (reads only; refuses
+   hosts without `staging`).
 5. Production additionally needs `DEPLOY_CONFIRM=<tag>`; the script runs a backup before
    migrations. Rollback: previous tag, and for a failed migration restore the backup taken in
    step 5.

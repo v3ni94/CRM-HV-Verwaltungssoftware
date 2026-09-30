@@ -166,3 +166,12 @@ meters, maintenance items and custom field values only via import or API):
 * Web: `PropertyCreditorsPanel.tsx` (tab Dienstleister/Handwerker), `CreditorContactButton.tsx`
   in the booking dialog, `CreditorPropertiesSection.tsx` on the contact page,
   `BankSetupWizard.tsx` on `/bank` (existing assign and bank account endpoints only).
+
+## P16 follow-up maintenance (wave 2)
+
+`routers_p16.py`: `PATCH /properties/{id}/bank-accounts/{id}` (bank, notes, `valid_to`, ledger
+account, `bank_connection_id`; IBAN, kind and legal entity stay fixed), `PATCH
+/properties/{id}/service-providers/{id}`, `GET /units/{id}/vat-options` (history). New fields:
+`images` (document ids, checked against the tenant) on the property, `photo_document_id` on meter
+readings, `bank_connection_id` on bank accounts (migration 0265). Rule:
+`docs/rules/P16-stammdaten-pflege.md`.

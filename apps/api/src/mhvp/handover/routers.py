@@ -35,6 +35,7 @@ from mhvp.handover.models import (
     STATUSES,
     STEPS,
     HandoverClientWrite,
+    HandoverDefect,
     HandoverProtocol,
     HandoverSignature,
 )
@@ -98,6 +99,7 @@ class ProtocolPatch(_In):
     unit_position: str | None = Field(default=None, max_length=100)
     external_object_number: str | None = Field(default=None, max_length=100)
     owner_name: str | None = Field(default=None, max_length=200)
+    move_direction: str | None = Field(default=None, pattern="^(in|out)$")
     handover_date: date | None = None
     handover_start: time | None = None
     handover_end: time | None = None
@@ -1196,6 +1198,7 @@ async def complete(
                 detail="Es liegen Hinweise vor. Zum Abschluss trotz Hinweisen force=true senden: "
                 + " ".join(hints_),
             )
+        contract_dates = await _apply_contract_dates(session, principal, p)
         p.status = "completed"
         p.completed_at = datetime.now(UTC)
         p.completed_by = principal.user_id
@@ -1204,9 +1207,139 @@ async def complete(
         pdf = await _render(session, request, p, draft=False)
         document = await svc.store_pdf(session, _blobs(request), p, pdf, user_id=principal.user_id)
         await _event(
-            session, principal, "handover.completed", p, document_id=str(document.id), hints=hints_
+            session,
+            principal,
+            "handover.completed",
+            p,
+            document_id=str(document.id),
+            hints=hints_,
+            contract_dates=contract_dates,
         )
         return await _full_out(session, p)
+
+
+async def _apply_contract_dates(
+    session: Any, principal: TenantPrincipal, p: HandoverProtocol
+) -> dict[str, Any] | None:
+    """S13-02 (13.4): on binding completion of a rental handover the handover date becomes the
+    move-in (``in``) or move-out date (``out``) of the linked contract. An existing different
+    date is never overwritten (hint in the event instead); the contract change is audited."""
+    if p.kind != "rental" or not p.contract_id or not p.move_direction or not p.handover_date:
+        return None
+    from mhvp.contracts.models import Contract
+
+    contract = await session.get(Contract, p.contract_id)
+    if contract is None:
+        return None
+    field = "move_in_on" if p.move_direction == "in" else "move_out_on"
+    current = getattr(contract, field)
+    if current == p.handover_date:
+        return {"field": field, "result": "unchanged"}
+    if current is not None:
+        return {
+            "field": field,
+            "result": "kept",
+            "existing": current.isoformat(),
+            "handover_date": p.handover_date.isoformat(),
+        }
+    setattr(contract, field, p.handover_date)
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="contract.updated",
+        entity_type="contract",
+        entity_id=contract.id,
+        actor_user_id=principal.user_id,
+        payload={"fields": [field], "source": "handover", "protocol_number": p.number},
+        changes={field: {"old": None, "new": p.handover_date.isoformat()}},
+    )
+    return {"field": field, "result": "set", "date": p.handover_date.isoformat()}
+
+
+class DefectTicketsIn(_In):
+    defect_ids: list[uuid.UUID] | None = Field(default=None, max_length=200)
+
+
+_DEFECT_PRIORITY = {
+    "info": "low",
+    "low": "low",
+    "medium": "normal",
+    "high": "high",
+    "urgent": "urgent",
+}
+
+
+@router.post(
+    "/protocols/{protocol_id}/defects/tickets",
+    status_code=201,
+    summary="Mängel als Tickets anlegen",
+)
+async def defects_to_tickets(
+    protocol_id: uuid.UUID,
+    body: DefectTicketsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """S13-01 (13.4): one ticket per defect that is new or unclear (or explicitly named),
+    idempotent through ``handover_defect.ticket_id``. Needs ``tickets:create`` in addition."""
+    if not principal.has("tickets:create"):
+        raise ProblemError(ErrorCodes.FORBIDDEN, detail="Tickets anlegen ist nicht erlaubt.")
+    from mhvp.tickets.models import Priority
+    from mhvp.tickets.routers import TicketIn, create_ticket_in_session
+
+    async with tenant_tx(request, principal) as session:
+        p = await _get(session, protocol_id)
+        if p.status == "cancelled":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Protokoll ist storniert.")
+        query = (
+            select(HandoverDefect)
+            .where(HandoverDefect.protocol_id == p.id, HandoverDefect.ticket_id.is_(None))
+            .order_by(HandoverDefect.sort_order, HandoverDefect.created_at)
+        )
+        if body.defect_ids is not None:
+            query = query.where(HandoverDefect.id.in_(body.defect_ids))
+        else:
+            query = query.where(
+                or_(
+                    HandoverDefect.defect_status.is_(None),
+                    HandoverDefect.defect_status.in_(("new", "unclear")),
+                )
+            )
+        defects = list((await session.scalars(query)).all())
+        created: list[dict[str, Any]] = []
+        for defect in defects:
+            title = f"Mangel Übergabe {p.number}: {defect.title or defect.category or 'ohne Titel'}"
+            parts = [
+                f"Übergabeprotokoll {p.number}",
+                defect.location and f"Ort: {defect.location}",
+                defect.description,
+                defect.comment and f"Anmerkung: {defect.comment}",
+            ]
+            ticket = await create_ticket_in_session(
+                session,
+                TicketIn(
+                    title=title[:300],
+                    property_id=p.property_id,
+                    unit_id=p.unit_id,
+                    priority=Priority(_DEFECT_PRIORITY.get(defect.priority or "", "normal")),
+                    internal_description="\n".join(str(x) for x in parts if x),
+                ),
+                principal,
+            )
+            defect.ticket_id = ticket["id"]
+            created.append(
+                {"defect_id": defect.id, "ticket_id": ticket["id"], "number": ticket["number"]}
+            )
+        if created and not p.ticket_number:
+            p.ticket_number = str(created[0]["number"])
+        if created:
+            await _event(
+                session, principal, "handover.defect_tickets_created", p, count=len(created)
+            )
+        return {
+            "created": created,
+            "skipped": 0 if body.defect_ids is None else len(body.defect_ids) - len(created),
+        }
 
 
 @router.get(

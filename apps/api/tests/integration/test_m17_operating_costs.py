@@ -18,9 +18,12 @@ from mhvp.billing.calc import Share, distribute
 from mhvp.core.release_gates import ReleaseGate
 from mhvp.main import create_app
 from mhvp.platform import services
+from mhvp.workspace.services import local_today
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import PASSWORD, RUN, World, _settings, bearer, login
 from tests.integration.test_m5_contracts import _party
+
+_TODAY = local_today().isoformat()
 
 pytestmark = pytest.mark.integration
 A = "/api/v1/accounting"
@@ -391,7 +394,7 @@ def test_operating_cost_statement(clients: tuple[TestClient, TestClient], world:
     )
     closed = client.post(
         f"{S}/{st['id']}/transition",
-        json={"target": "issued", "delivered_at": "2026-09-30"},
+        json={"target": "issued", "delivered_at": _TODAY},
         headers=acc_user,
     )
     assert closed.status_code == 403
@@ -403,7 +406,7 @@ def test_operating_cost_statement(clients: tuple[TestClient, TestClient], world:
     issued = _ok(
         gated.post(
             f"{S}/{st['id']}/transition",
-            json={"target": "issued", "delivered_at": "2026-09-30"},
+            json={"target": "issued", "delivered_at": _TODAY},
             headers=gh,
         )
     )
@@ -866,7 +869,7 @@ def test_d28_rule_version_pinned_in_snapshot(
     _ok(
         gated.post(
             f"{S}/{st['id']}/transition",
-            json={"target": "issued", "delivered_at": "2026-09-30"},
+            json={"target": "issued", "delivered_at": _TODAY},
             headers=gh,
         )
     )

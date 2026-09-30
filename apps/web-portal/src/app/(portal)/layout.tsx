@@ -55,6 +55,7 @@ export default async function PortalLayout({ children }: { children: React.React
               { href: "/versammlungen", label: t("nav.meetings") },
               { href: "/ansprechpartner", label: t("nav.contacts") },
               { href: "/hausgeldkonto", label: t("nav.hoaAccount") },
+              { href: "/eigentum", label: t("nav.ownerOverview") },
             ]
           : []),
         ...(board ? [{ href: "/pruefung", label: t("nav.audit") }] : []),

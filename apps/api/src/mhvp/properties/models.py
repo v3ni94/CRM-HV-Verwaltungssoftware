@@ -282,6 +282,10 @@ class Property(IdMixin, TimestampMixin, TenantMixin, Base):
     managed_from: Mapped[date | None] = mapped_column(Date)
     managed_to: Mapped[date | None] = mapped_column(Date)
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
+    # M4-06 (migration 0265): image gallery as document references (DMS ids), in display order.
+    images: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     source_system: Mapped[str | None] = mapped_column(String(32))
     source_id: Mapped[str | None] = mapped_column(String(64))
@@ -743,6 +747,10 @@ class PropertyBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     # 4.2 Bankkonten: assigned bank ledger account (Sachkonto), reference only.
     ledger_account_id: Mapped[uuid.UUID | None] = _fk(
         "ledger_account.id", nullable=True, ondelete="SET NULL"
+    )
+    # M4-05 (migration 0265): link to the bank access (mhvp.banking), reference only.
+    bank_connection_id: Mapped[uuid.UUID | None] = _fk(
+        "bank_connection.id", nullable=True, ondelete="SET NULL"
     )
     # Default payment account of the legal entity (at most one per legal entity): the account
     # a dunning letter names for payment (M16-13). Never a deposit account.

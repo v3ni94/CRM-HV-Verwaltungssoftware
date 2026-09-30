@@ -6,7 +6,7 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -18,7 +18,15 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa import calc
 from mhvp.hoa.majority import SUBJECT_PATTERN, check_resolution
-from mhvp.hoa.models import EconomicPlan, HoaCostItem, HoaStatement, PlanItem, Resolution
+from mhvp.hoa.models import (
+    EconomicPlan,
+    HoaCostItem,
+    HoaReserve,
+    HoaReserveMovement,
+    HoaStatement,
+    PlanItem,
+    Resolution,
+)
 
 router = APIRouter(prefix="/hoa", tags=["WEG"])
 READ = require_permission("accounting:read")
@@ -35,14 +43,54 @@ class HoaPlanIn(HoaBaseIn):
     ledger_id: uuid.UUID
     year: int = Field(ge=2000, le=2100)
     valid_from: date
+    # M24-04: master data and comparison basis of the plan.
+    title: str | None = Field(default=None, max_length=200)
+    as_of_date: date | None = None
+    basis_statement_id: uuid.UUID | None = None
+    basis_plan_id: uuid.UUID | None = None
+    payment_rhythm: str = Field(default="monthly", pattern="^(monthly|quarterly|yearly)$")
+    due_day: int = Field(default=1, ge=1, le=28)
+    continues_until_new_plan: bool = True
 
 
 class HoaPlanItemIn(HoaBaseIn):
     label: str = Field(min_length=1, max_length=200)
     component: str = Field(pattern="^(hoa_fee|reserve)$")
-    amount: Decimal = Field(gt=0)
+    amount: Decimal = Field(gt=0, decimal_places=2)
     allocation_key_id: uuid.UUID
     account_id: uuid.UUID | None = None
+    basis_amount: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    reserve_id: uuid.UUID | None = None
+
+
+class HoaReserveIn(HoaBaseIn):
+    """Earmarked reserve of the GdWE (M24-01, W08)."""
+
+    ledger_id: uuid.UUID
+    name: str = Field(min_length=2, max_length=200)
+    purpose: str | None = Field(default=None, max_length=2000)
+    account_id: uuid.UUID | None = None
+    resolution_id: uuid.UUID | None = None
+
+
+class HoaReserveMovementIn(HoaBaseIn):
+    reserve_id: uuid.UUID
+    kind: str = Field(pattern="^(withdrawal|tax|fee|interest)$")
+    amount: Decimal = Field(gt=0, decimal_places=2)
+    purpose: str = Field(min_length=3, max_length=2000)
+    document_id: uuid.UUID | None = None
+    journal_entry_id: uuid.UUID | None = None
+    resolution_id: uuid.UUID | None = None
+
+
+class HoaCostsFromLedgerIn(HoaBaseIn):
+    """M24-02: take the posted costs of one account in the statement year as positions."""
+
+    account_id: uuid.UUID
+    allocation_key_id: uuid.UUID
+    basis: str = Field(min_length=3, max_length=2000)
+    basis_resolution_id: uuid.UUID | None = None
+    basis_document_id: uuid.UUID | None = None
 
 
 class HoaVotesIn(HoaBaseIn):
@@ -94,6 +142,11 @@ class HoaCostIn(HoaBaseIn):
     allocation_key_id: uuid.UUID
     basis: str = Field(min_length=3, max_length=2000)
     account_id: uuid.UUID | None = None
+    journal_entry_id: uuid.UUID | None = None
+    document_id: uuid.UUID | None = None
+    labour_cost_35a: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    basis_resolution_id: uuid.UUID | None = None
+    basis_document_id: uuid.UUID | None = None
 
 
 class ReconciliationNoteIn(HoaBaseIn):
@@ -142,7 +195,49 @@ def _plan_out(p: EconomicPlan) -> dict[str, Any]:
         "snapshot": p.snapshot,
         "resolution_id": p.resolution_id,
         "applied_at": p.applied_at,
+        "title": p.title,
+        "as_of_date": p.as_of_date,
+        "basis_statement_id": p.basis_statement_id,
+        "basis_plan_id": p.basis_plan_id,
+        "payment_rhythm": p.payment_rhythm,
+        "due_day": p.due_day,
+        "continues_until_new_plan": p.continues_until_new_plan,
+        "obsolete_at": p.obsolete_at,
+        "obsolete": p.obsolete_at is not None,
     }
+
+
+def _cost_out(i: HoaCostItem) -> dict[str, Any]:
+    return {
+        "id": i.id,
+        "label": i.label,
+        "amount": i.amount,
+        "basis": i.basis,
+        "allocation_key_id": i.allocation_key_id,
+        "account_id": i.account_id,
+        "journal_entry_id": i.journal_entry_id,
+        "document_id": i.document_id,
+        "labour_cost_35a": i.labour_cost_35a,
+        "basis_resolution_id": i.basis_resolution_id,
+        "basis_document_id": i.basis_document_id,
+    }
+
+
+async def _same_ledger_entry(
+    session: AsyncSession, ledger_id: uuid.UUID, entry_id: uuid.UUID | None
+) -> Any:
+    """Posted journal entry of the same ledger or 422 (M24-02 drilldown, no foreign entry)."""
+    from mhvp.accounting.models import EntryStatus, JournalEntry
+
+    if entry_id is None:
+        return None
+    entry = await session.get(JournalEntry, entry_id)
+    if entry is None or entry.ledger_id != ledger_id or entry.status is not EntryStatus.POSTED:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Buchung nicht gefunden, nicht gebucht oder aus anderem Buchungskreis.",
+        )
+    return entry
 
 
 def _st_out(s: HoaStatement) -> dict[str, Any]:
@@ -309,6 +404,16 @@ async def create_plan(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         await _hoa_ledger(session, body.ledger_id)
+        refs: list[tuple[Any, uuid.UUID | None]] = [
+            (HoaStatement, body.basis_statement_id),
+            (EconomicPlan, body.basis_plan_id),
+        ]
+        for model, ref in refs:
+            row = await session.get(model, ref) if ref else None
+            if ref and (row is None or row.ledger_id != body.ledger_id):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Plangrundlage aus anderem Buchungskreis."
+                )
         plan = EconomicPlan(
             tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
         )
@@ -332,6 +437,17 @@ async def add_plan_item(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nach der Berechnung nur über neue Version."
             )
+        if body.reserve_id is not None:
+            reserve = await session.get(HoaReserve, body.reserve_id)
+            if (
+                body.component != "reserve"
+                or reserve is None
+                or reserve.ledger_id != plan.ledger_id
+            ):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail="Rücklage nur für Rücklagenpositionen desselben Buchungskreises.",
+                )
         item = PlanItem(tenant_id=principal.tenant_id, plan_id=plan.id, **body.model_dump())
         session.add(item)
         await session.flush()
@@ -357,6 +473,19 @@ async def calculate_plan(
         result = await calc.plan_results(
             session, ledger.property_id, items, date(plan.year, 1, 1), date(plan.year, 12, 31)
         )
+        basis_items = (
+            list(
+                (
+                    await session.scalars(
+                        select(PlanItem).where(PlanItem.plan_id == plan.basis_plan_id)
+                    )
+                ).all()
+            )
+            if plan.basis_plan_id
+            else None
+        )
+        # M24-04: plan basis and deviation per item (information, part of the snapshot).
+        result["comparison"] = calc.plan_comparison(items, basis_items)
         plan.snapshot, plan.snapshot_hash = result, calc.digest(result)
         plan.status = StatementStatus.CALCULATED
         await session.flush()
@@ -536,6 +665,11 @@ async def apply_plan(
                 ErrorCodes.VALIDATION,
                 detail="Die Vorschau der Übernahme ist zu bestätigen (confirm).",
             )
+        if plan.payment_rhythm != "monthly":
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Übernahme als Vertragszahlung nur für monatliche Vorschüsse (M24-04).",
+            )
         if body.snapshot_hash != plan.snapshot_hash:
             raise ProblemError(
                 ErrorCodes.CONFLICT,
@@ -571,6 +705,19 @@ async def apply_plan(
             )
             created += 1
         plan.applied_at = datetime.now(UTC)
+        # M24-04: earlier applied plans of the ledger become obsolete (Fortgeltung ends).
+        for older in (
+            await session.scalars(
+                select(EconomicPlan).where(
+                    EconomicPlan.ledger_id == plan.ledger_id,
+                    EconomicPlan.id != plan.id,
+                    EconomicPlan.applied_at.is_not(None),
+                    EconomicPlan.obsolete_at.is_(None),
+                    EconomicPlan.valid_from <= plan.valid_from,
+                )
+            )
+        ).all():
+            older.obsolete_at = plan.applied_at
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -629,7 +776,15 @@ async def add_cost(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nach der Berechnung nur über neue Version."
             )
-        item = HoaCostItem(tenant_id=principal.tenant_id, statement_id=st.id, **body.model_dump())
+        if body.labour_cost_35a is not None and body.labour_cost_35a > body.amount:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Lohnanteil § 35a größer als der Betrag."
+            )
+        entry = await _same_ledger_entry(session, st.ledger_id, body.journal_entry_id)
+        data = body.model_dump()
+        if entry is not None and data["document_id"] is None:
+            data["document_id"] = entry.document_id
+        item = HoaCostItem(tenant_id=principal.tenant_id, statement_id=st.id, **data)
         session.add(item)
         await session.flush()
         return {"id": item.id}
@@ -668,6 +823,45 @@ async def calculate_statement(
             sum((i.amount for i in items), Decimal("0.00")),
             list(st.reconciliation_notes or []),
         )
+        # M24-07, M24-05, M24-01: key figures, § 35a block and reserves per position.
+        result["key_figures"] = calc.statement_key_figures(result)
+        result["section_35a"] = await calc.section_35a_block(session, st, ledger, items)
+        reserves = list(
+            (
+                await session.scalars(
+                    select(HoaReserve)
+                    .where(HoaReserve.ledger_id == st.ledger_id)
+                    .order_by(HoaReserve.name)
+                )
+            ).all()
+        )
+        if reserves:
+            plan = await session.scalar(
+                select(EconomicPlan)
+                .where(
+                    EconomicPlan.ledger_id == st.ledger_id,
+                    EconomicPlan.year == st.year,
+                    EconomicPlan.resolution_id.is_not(None),
+                )
+                .order_by(EconomicPlan.version.desc())
+            )
+            plan_items = (
+                list(
+                    (
+                        await session.scalars(select(PlanItem).where(PlanItem.plan_id == plan.id))
+                    ).all()
+                )
+                if plan
+                else []
+            )
+            movements = list(
+                (
+                    await session.scalars(
+                        select(HoaReserveMovement).where(HoaReserveMovement.statement_id == st.id)
+                    )
+                ).all()
+            )
+            result["reserve"]["positions"] = calc.reserve_positions(reserves, plan_items, movements)
         # M24-03: loans shown per unit only when the manager entered a loan with key and
         # basis; the shares are information and never change the result.
         if st.loan_allocation:
@@ -1124,15 +1318,192 @@ async def get_hoa_statement(
         items = (
             await session.scalars(select(HoaCostItem).where(HoaCostItem.statement_id == st.id))
         ).all()
-        return _st_out(st) | {
-            "cost_items": [
-                {
-                    "id": i.id,
-                    "label": i.label,
-                    "amount": i.amount,
-                    "basis": i.basis,
-                    "allocation_key_id": i.allocation_key_id,
-                }
-                for i in items
-            ]
-        }
+        return _st_out(st) | {"cost_items": [_cost_out(i) for i in items]}
+
+
+# Earmarked reserves and ledger costs (M24-01, M24-02) -----------------------------------
+
+
+def _reserve_out(r: HoaReserve) -> dict[str, Any]:
+    return {
+        "id": r.id,
+        "ledger_id": r.ledger_id,
+        "name": r.name,
+        "purpose": r.purpose,
+        "account_id": r.account_id,
+        "resolution_id": r.resolution_id,
+        "active": r.active,
+    }
+
+
+@router.post("/reserves", status_code=201, summary="Zweckgebundene Rücklage anlegen (W08)")
+async def create_reserve(
+    body: HoaReserveIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        await _hoa_ledger(session, body.ledger_id)
+        row = HoaReserve(
+            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+        )
+        session.add(row)
+        await session.flush()
+        return _reserve_out(row)
+
+
+@router.get("/reserves", summary="Rücklagen eines Buchungskreises")
+async def list_reserves(
+    ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = await session.scalars(
+            select(HoaReserve).where(HoaReserve.ledger_id == ledger_id).order_by(HoaReserve.name)
+        )
+        return [_reserve_out(r) for r in rows.all()]
+
+
+@router.post(
+    "/statements/{statement_id}/reserve-movements",
+    status_code=201,
+    summary="Mittelverwendung, Steuern, Gebühren oder Zinsen je Rücklage",
+)
+async def add_reserve_movement(
+    statement_id: uuid.UUID,
+    body: HoaReserveMovementIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id, with_for_update=True)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if st.status is not StatementStatus.DRAFT:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nach der Berechnung nur über neue Version."
+            )
+        reserve = await session.get(HoaReserve, body.reserve_id)
+        if reserve is None or reserve.ledger_id != st.ledger_id:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Rücklage aus anderem Buchungskreis.")
+        await _same_ledger_entry(session, st.ledger_id, body.journal_entry_id)
+        row = HoaReserveMovement(
+            tenant_id=principal.tenant_id, statement_id=st.id, **body.model_dump()
+        )
+        session.add(row)
+        await session.flush()
+        return {"id": row.id}
+
+
+@router.post(
+    "/statements/{statement_id}/costs/from-ledger",
+    status_code=201,
+    summary="Kostenpositionen aus gebuchten Belegen eines Kontos übernehmen (W12)",
+)
+async def costs_from_ledger(
+    statement_id: uuid.UUID,
+    body: HoaCostsFromLedgerIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """One position per posted entry on the account in the statement year (debit minus credit
+    of the account lines), linked to entry and receipt. Entries already taken are skipped;
+    a net credit is not taken and listed (correction by reversal stays in accounting)."""
+    from mhvp.accounting.models import EntryStatus, JournalEntry, JournalLine, LedgerAccount
+
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id, with_for_update=True)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if st.status is not StatementStatus.DRAFT:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Nach der Berechnung nur über neue Version."
+            )
+        account = await session.get(LedgerAccount, body.account_id)
+        if account is None or account.ledger_id != st.ledger_id:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Konto aus anderem Buchungskreis.")
+        taken = set(
+            (
+                await session.scalars(
+                    select(HoaCostItem.journal_entry_id).where(
+                        HoaCostItem.statement_id == st.id,
+                        HoaCostItem.journal_entry_id.is_not(None),
+                    )
+                )
+            ).all()
+        )
+        rows = (
+            await session.execute(
+                select(
+                    JournalEntry,
+                    func.sum(JournalLine.debit - JournalLine.credit),
+                )
+                .join(JournalLine, JournalLine.journal_entry_id == JournalEntry.id)
+                .where(
+                    JournalLine.account_id == account.id,
+                    JournalEntry.status == EntryStatus.POSTED,
+                    JournalEntry.booking_date.between(date(st.year, 1, 1), date(st.year, 12, 31)),
+                )
+                .group_by(JournalEntry.id)
+                .order_by(JournalEntry.booking_date, JournalEntry.number)
+            )
+        ).all()
+        created, skipped = [], []
+        for entry, net in rows:
+            amount = Decimal(net)
+            if entry.id in taken:
+                skipped.append({"journal_entry_id": entry.id, "reason": "already_taken"})
+                continue
+            if amount <= 0:
+                skipped.append({"journal_entry_id": entry.id, "reason": "net_credit"})
+                continue
+            item = HoaCostItem(
+                tenant_id=principal.tenant_id,
+                statement_id=st.id,
+                label=f"{account.number} {entry.text}"[:200],
+                amount=amount,
+                allocation_key_id=body.allocation_key_id,
+                basis=body.basis,
+                account_id=account.id,
+                journal_entry_id=entry.id,
+                document_id=entry.document_id,
+                basis_resolution_id=body.basis_resolution_id,
+                basis_document_id=body.basis_document_id,
+            )
+            session.add(item)
+            await session.flush()
+            created.append(_cost_out(item))
+        return {"created": created, "skipped": skipped}
+
+
+@router.get(
+    "/statements/{statement_id}/units/{unit_id}/pdf",
+    summary="Einzelabrechnung als PDF (Entwurf, nur mit Freigabestufe G4)",
+)
+async def unit_statement_pdf(
+    statement_id: uuid.UUID,
+    unit_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> Response:
+    from mhvp.hoa import statement_pdf
+
+    await ensure_release_gate_open(
+        ReleaseGate.G4, principal.tenant_id, request.app.state.release_gate_resolver
+    )
+    async with tenant_tx(request, principal) as session:
+        st = await session.get(HoaStatement, statement_id)
+        if st is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if st.snapshot is None or st.status in (StatementStatus.DRAFT, StatementStatus.CALCULATED):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Ausgabe nur nach interner Freigabe.")
+        unit = next((u for u in st.snapshot.get("units", []) if u["unit_id"] == str(unit_id)), None)
+        if unit is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        content = statement_pdf.render(st.year, st.snapshot, unit, st.snapshot_hash or "")
+        return Response(
+            content=content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": (
+                    f'attachment; filename="hausgeldabrechnung-{st.year}-{unit["unit_number"]}.pdf"'
+                )
+            },
+        )

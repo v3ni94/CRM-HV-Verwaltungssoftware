@@ -18,6 +18,14 @@ Ledger per legal entity, accounts, journal, open items (MASTER-PROMPT 6.4, 6.9, 
   overrides (`settings_for` returns `EffectiveSettings`, NULL on an object row inherits the
   tenant default, migration 0078, `docs/rules/M16-02.md`). Fees and interest only from
   configured values (`docs/rules/M16-01.md`).
+  Completion M16-20 (migration 0254, `docs/rules/M16-20.md`): delivery proofs per sent case
+  (`/dunning-cases/{id}/delivery-proofs`), Basiszinssatz history with source
+  (`/dunning-interest-rates`, pro rata split per period, `interest_detail` on the case),
+  structured blocks per open item (`/open-items/{id}/dunning-blocks`, `/dunning-blocks`),
+  check hints on the case (`check_hints`, no computed limitation date), interest as draft
+  receivable only on request (`/dunning-cases/{id}/interest-draft`, account 489100) and a
+  spread proposal from the debtor's consumer flag (`interest_spread_suggestion`, never
+  applied).
 * `dunning_letters.py`: dunning letter as PDF draft on the tenant letterhead
   (`mhvp.documents.letters`, DIN 5008). `POST /dunning-cases/{id}/letter-preview` (PDF, not
   filed), `POST /dunning-cases/{id}/letter` (filed, linked to the case), `POST
@@ -51,6 +59,17 @@ Ledger per legal entity, accounts, journal, open items (MASTER-PROMPT 6.4, 6.9, 
   pain.008.001.02 as a document; `GET /{id}/file` requires release gate G2. Nothing is sent to
   a bank. Pre-notifications are drafts per payer via `mhvp.communication.dispatch`.
 * Rule: `docs/rules/M15-02-pain008.md`. Plan: `docs/plans/M15.md`. Open: M15-01.
+
+
+### Bank feedback and lead days (M15-01, M15-06, rule M15-03)
+
+`direct_debit_feedback.py` records per order `accepted`, `rejected`, `collected` (actual
+amount) or `returned` (reason code) after the file was handed out, manually via `POST
+/accounting/direct-debits/{run_id}/bank-status` or from an imported report; nothing is posted.
+`GET /{run_id}/reconciliation` compares each order with its open item. Lead days per sequence
+type (`dd_lead_days_frst`, `dd_lead_days_rcur`) and pre-notification days from
+`payment_bank_config` are enforced only when entered (zu verifizieren); without them the
+pre-notification result carries a warning. B2B stays blocked (M15-05).
 
 ## Audit export (7.7, A26, D55, rule M18-02)
 
@@ -179,3 +198,60 @@ regular `release_gate_request` for G1 with an evidence line composed from the ch
 page (ADR 0003); nothing here opens a gate. Operator documents:
 `docs/acceptance/kontenrahmen-pruefung.md`, `docs/acceptance/abnahme-anhang-d.md`,
 `docs/handbuch/verfahrensdokumentation.md` chapter 7. Tests: `tests/integration/test_g1_opening.py`.
+
+## Ledger operations (gap list 30.09.2026, package P01)
+
+`ledger_ops.py`: cost account allocation (`GET/PUT /ledgers/{id}/accounts/{aid}/allocations`,
+cost accounts only, keys of the ledger property, total exactly 100 % or empty), creditor
+accounts per provider relation (`POST /ledgers/{id}/sync-creditors`, idempotent, links the
+relation; `ensure_creditor_for_relation` for the properties module), dedicated drafts for
+cost transfer (`POST /ledgers/{id}/entries/cost-transfer`, `EntryKind.COST_TRANSFER`) and
+interest (`POST /ledgers/{id}/entries/interest`, `EntryKind.INTEREST`, gross amount, no tax
+logic, OPEN_QUESTIONS P01-01). `AccountPatch` also takes `vat_option` and
+`relevant_for_cash_report`. Rule: `docs/rules/M10-W2-ledger-ops.md`. CRM pages:
+`/buchhaltung/[id]` (entry form, journal actions, lock), `/buchhaltung/[id]/konten`,
+`/buchhaltung/[id]/konten/[accountId]` (sheet, allocation).
+* `report_views.py`, `report_xlsx.py`, `report_routers.py`, `procedure_doc.py` (P10, migration 0259,
+  `docs/rules/P10-auswertungen.md`, `P10-steuerentwurf.md`, `S711-11-regelversion.md`): header per
+  evaluation (legal entity, period, key date, data state, filters, draft), month matrix, target/actual
+  receivables, bank account statement with bank balance comparison, XLSX output, draft VAT overview
+  and income/expense view (no EÜR), tax flags per account (`eur_relevant`, `ust_relevant`,
+  `mixed_use_review`, set by `accounting:approve`), rule version register, procedure documentation
+  draft from operating data. Audit export: tables `vertraege` and approvals of dunning runs and
+  payment orders in `freigaben`.
+
+## Receivable evidence and Verwalterhonorar lifecycle (gap list 30.09.2026, package P02)
+
+Rule `docs/rules/M13-05.md`, migration 0251.
+
+- Receivable items carry their legal basis (`contract_version`, `payment_schedule_id`,
+  `basis_valid_from`, `basis_reason`, `basis_document_id`). A month already posted whose
+  recomputed amount differs yields a manual difference item (`difference_of_item_id`,
+  `difference_amount`); it is never posted, the correction is reversal plus new run.
+- `GET /accounting/receivable-runs` lists runs (filters `period_month`, `scope`, `scope_id`,
+  `status`, paginated); the run detail filters items by `item_status`, `contract_id`,
+  `payment_type_code`.
+- Job `mhvp.accounting.receivable_run` (beat on the 1st, 05:00): preview only, per tenant with
+  `receivable_rules.monthly_preview_enabled`, once per month (scope `all`).
+- `mhvp.accounting.admin_fees`: list, read, change, end and delete (only without invoices) of
+  fee settings; `GET /accounting/admin-fees-periods` previews due service periods;
+  `invoice-issue?period_start=` issues one invoice per calendar aligned period
+  (`uq_admin_fee_invoice_period`); invoices can be listed, read, released and cancelled by a
+  credit note with its own gapless number. Credit notes produce no XRechnung yet (409).
+- The fee revenue posting is not implemented (OPEN_QUESTIONS P02-02, G1).
+
+## Invoice review checks, creditors, recurring plans (gap list 30.09.2026, package P03)
+
+- `invoice_checks`: further PÜ01 to PÜ04 findings (mandatory data checklist, service period
+  plausibility, stated discount, prepayment and retention, reverse charge and construction
+  withholding markers, service contract coverage, affiliation and conflict hints, credit note
+  reference and limit, content hash duplicates, IBAN against the superseded version). Called
+  from `invoices.evaluate`; hints only. `invoices.post` refuses a credit note whose reference
+  check fails (409).
+- `creditor_routers` (mounted by `routers`): `GET /accounting/ledgers/{id}/creditors`,
+  `.../creditors/{account_id}/open-items`, `.../statement`; `GET/PATCH/DELETE
+  /accounting/recurring-invoices[/{id}]`, `POST .../{id}/end`. Plans keep an anchor day for
+  month ends and link generated invoices by `invoice.recurring_plan_id`.
+- `xrechnung_credit`: UBL CreditNote 381 with BillingReference for a cancelled Verwalterhonorar
+  invoice (`GET /accounting/admin-fee-invoices/{id}/xrechnung-credit-note.xml` and `/check`).
+- Migration 0252; rule `docs/rules/M14-PU-W2-rechnungspruefung.md`.

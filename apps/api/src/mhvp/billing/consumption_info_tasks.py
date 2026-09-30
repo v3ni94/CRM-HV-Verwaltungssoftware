@@ -1,6 +1,5 @@
 """Celery job of the monthly consumption information (rule H03, section 15.1
-``heating.consumption_info``): beat on days 1 to 3 of the month, the task itself runs only on
-the first working day (Monday to Friday, public holidays not considered) for the previous
+``heating.consumption_info``): monthly on the 3rd (S15-05) for the previous
 month, per active tenant with the tenant switch on, idempotent per unit and month."""
 
 import asyncio
@@ -31,8 +30,8 @@ async def _active_tenants(factory: Any) -> list[uuid.UUID]:
 async def run_once(
     settings: Settings, today: date | None = None, *, force: bool = False
 ) -> dict[str, int]:
-    """Previous month for every active tenant. Without ``force`` only on the first working day
-    of the month; a later day reports ``not_due`` and changes nothing."""
+    """Previous month for every active tenant. Without ``force`` only on the 3rd of the
+    month; another day reports ``not_due`` and changes nothing."""
     from mhvp.documents.blobs import BlobStore
 
     today = today or local_today()
@@ -45,7 +44,9 @@ async def run_once(
         "notified": 0,
         "not_due": 0,
     }
-    if not force and today != consumption_info.first_working_day(today):
+    # S15-05: due on the 3rd of the month as in 15.1 (was: first working day, see
+    # docs/ASSUMPTIONS.md); a later day reports ``not_due`` and changes nothing.
+    if not force and today.day != 3:
         totals["not_due"] = 1
         return totals
     month = consumption_info.previous_month(today)

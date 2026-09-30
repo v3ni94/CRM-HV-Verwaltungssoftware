@@ -145,3 +145,12 @@ behind G1 with a second person decision. `migration_routers.py` serves
 `/api/v1/imports/migration`. Rule `docs/rules/M8-05-migrationsjournal.md`, handbook
 `docs/handbuch/migration-immoware.md`. Tests: `tests/integration/test_m8_migration.py`.
 
+
+## Übernahmejahr und Abnahmeprotokoll (30.09.2026, M8-08, M8-09)
+
+* `migration_year.year_expenses`: Ausgaben eines Jahres, Vorperiode aus `migrated_journal_*`
+  (vor dem Stichtag), Nachperiode aus dem aktiven Journal (ab dem Stichtag), ohne Eröffnungsbuchung
+  (D11). Endpunkt `GET /imports/migration/ledgers/{id}/year-expenses?year=`.
+* `migration_acceptance` (Migration 0268, RLS): Abnahmeprotokoll je Objekt mit Vier-Augen-Unterzeichnung;
+  Endpunkte unter `/imports/migration/properties/{id}/acceptance` und `/imports/migration/acceptance/{id}`.
+* Tests: `tests/integration/test_m8_year_acceptance.py`. Regel `docs/rules/M8-08-uebernahmejahr-abnahme.md`.

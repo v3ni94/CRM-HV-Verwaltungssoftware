@@ -30,10 +30,13 @@ import httpx
 
 from mhvp.banking.camt import RawTransaction
 from mhvp.banking.connectors import (
+    BalanceInfo,
     BankAccountInfo,
     BankSearchResult,
     ConnectionResult,
+    ConsentInfo,
     WebFormHandle,
+    refuse_payment_submission,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -548,6 +551,36 @@ class FinApiConnector:
                 break
             page += 1
         return out
+
+    def fetch_balance(self, account: BankAccountInfo) -> BalanceInfo:
+        """Balance from GET /accounts (the only verified source, docs section 2): the account
+        of ``account.external_account_id``; fields finAPI did not deliver stay ``None``."""
+        if account.external_account_id is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Konto ohne finAPI-Kontoreferenz.")
+        for a in self._client.list_accounts():
+            if a.account_id == account.external_account_id:
+                return BalanceInfo(
+                    booked=a.balance_booked,
+                    available=a.balance_available,
+                    currency=a.balance_currency,
+                    as_of=a.balance_as_of,
+                )
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="finAPI-Konto nicht gefunden.")
+
+    def consent_status(self, connection_ref: str) -> ConsentInfo:
+        """Status of the bank connection (GET /bankConnections/{id}, verified). The consent
+        expiry is not read: no expiry field is verified yet (OPEN_QUESTIONS M11-41), so
+        ``valid_until`` stays ``None`` and the reminder uses the manually kept date."""
+        details = self._client.get_bank_connection(connection_ref)
+        return ConsentInfo(
+            status=str(details.get("status") or "unknown"),
+            valid_until=None,
+            error_message=details.get("errorMessage"),
+        )
+
+    def submit_payment_batch(self, batch_ref: str) -> str:
+        refuse_payment_submission()
+        raise AssertionError  # pragma: no cover
 
     def refresh_consent(self, connection_ref: str) -> WebFormHandle:
         """Re-authorization is only reachable through a fresh WebForm (docs/integrations/

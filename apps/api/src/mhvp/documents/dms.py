@@ -44,6 +44,8 @@ class MirrorMeta:
     document_type: str | None = None
     drive_folder: str | None = None
     tags: list[str] = field(default_factory=list)
+    entity_type: str | None = None  # Paperless custom fields (11.2, M6-07)
+    entity_id: str | None = None
 
 
 @dataclass
@@ -59,6 +61,11 @@ class DocumentStore(Protocol):
 
     async def delete(self, ref: str) -> bool:
         """Remove the mirrored copy; True when deleted now, False when it was already gone."""
+        ...
+
+    async def update_meta(self, ref: str, meta: MirrorMeta) -> bool:
+        """Push changed metadata (title, category, link) to the copy (11.2, M6-06); False when
+        the copy no longer exists."""
         ...
 
 
@@ -185,6 +192,51 @@ class PaperlessStore:
             url, json={"tags": [*tags, tag_id]}, headers=self._headers
         )
         _raise_for(response, "tag")
+        return True
+
+    async def _custom_field_id(self, name: str) -> int:
+        url = f"{self._base}/api/custom_fields/"
+        found = await self._client.get(url, params={"name__iexact": name}, headers=self._headers)
+        _raise_for(found, "lookup custom_fields")
+        results = found.json().get("results", [])
+        if results:
+            return int(results[0]["id"])
+        created = await self._client.post(
+            url, json={"name": name, "data_type": "string"}, headers=self._headers
+        )
+        _raise_for(created, "create custom_fields")
+        return int(created.json()["id"])
+
+    async def update_meta(self, ref: str, meta: MirrorMeta) -> bool:
+        """PATCH title, document type, correspondent, category tags and the custom fields
+        ``entity_type`` and ``entity_id`` (11.2, M6-06, M6-07). Existing tags stay."""
+        if ref.startswith("task:") or not ref.isdigit():
+            raise DmsError("update_meta: reference is not a Paperless document id")
+        url = f"{self._base}/api/documents/{ref}/"
+        current = await self._client.get(url, headers=self._headers)
+        if current.status_code == 404:
+            return False
+        _raise_for(current, "meta lookup")
+        payload: dict[str, object] = {"title": meta.title}
+        if meta.correspondent:
+            payload["correspondent"] = await self._id_for("correspondents", meta.correspondent)
+        if meta.document_type:
+            payload["document_type"] = await self._id_for("document_types", meta.document_type)
+        tags = [int(t) for t in current.json().get("tags", [])]
+        for name in meta.tags:
+            tag_id = await self._id_for("tags", name)
+            if tag_id not in tags:
+                tags.append(tag_id)
+        payload["tags"] = tags
+        if meta.entity_type and meta.entity_id:
+            fields = {
+                int(f["field"]): f.get("value") for f in current.json().get("custom_fields", [])
+            }
+            fields[await self._custom_field_id("entity_type")] = meta.entity_type
+            fields[await self._custom_field_id("entity_id")] = meta.entity_id
+            payload["custom_fields"] = [{"field": k, "value": v} for k, v in fields.items()]
+        response = await self._client.patch(url, json=payload, headers=self._headers)
+        _raise_for(response, "update_meta")
         return True
 
 
@@ -323,6 +375,23 @@ class GoogleDriveStore:
         if response.status_code == 404:
             return False
         _raise_for(response, "delete")
+        return True
+
+    async def update_meta(self, ref: str, meta: MirrorMeta) -> bool:
+        """Description and the mhvp appProperties follow the index; the file stays in its folder
+        (moving between category folders is not mirrored, M6-06)."""
+        properties = {"mhvp_document_id": str(meta.document_id)}
+        if meta.entity_type and meta.entity_id:
+            properties.update(mhvp_entity_type=meta.entity_type, mhvp_entity_id=meta.entity_id)
+        response = await self._client.patch(
+            f"{self.FILES_URL}/{ref}",
+            params={"supportsAllDrives": "true"},
+            json={"description": meta.title, "appProperties": properties},
+            headers=await self._auth(),
+        )
+        if response.status_code == 404:
+            return False
+        _raise_for(response, "update_meta")
         return True
 
     async def trash(self, ref: str) -> bool:

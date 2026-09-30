@@ -101,8 +101,10 @@ def test_schema_rejects_extra_fields_and_missing_values() -> None:
 
 
 def test_prompt_exists_is_german_and_restricts_to_given_accounts() -> None:
-    prompt = tasks.prompt(AiTask.PROPOSE_POSTING)
+    # v1 stays the prompt of runs without examples; v2 (plan M12 S8) adds minimised examples.
+    prompt = tasks.prompt(AiTask.PROPOSE_POSTING, "v1")
     assert prompt.version == "v1"
+    assert tasks.prompt(AiTask.PROPOSE_POSTING).version == "v2"
     assert "ausschließlich Kontonummern aus accounts" in prompt.system
     assert "keine IBAN" in prompt.system
 

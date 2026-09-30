@@ -112,6 +112,17 @@ class Features:
         return loaded
 
 
+async def _location_numbers(session: AsyncSession, contract: Any) -> tuple[str | None, str | None]:
+    """Unit number and property number of the contract of an open item (M12-03)."""
+    if contract is None:
+        return None, None
+    from mhvp.properties.models import Property, Unit
+
+    unit = await session.get(Unit, contract.unit_id) if contract.unit_id else None
+    prop = await session.get(Property, contract.property_id) if contract.property_id else None
+    return (unit.number if unit else None), (prop.number if prop else None)
+
+
 async def _is_deposit_item(session: AsyncSession, item: dict[str, Any], contract: Any) -> bool:
     """Best effort ``is_deposit`` for a receivable open item (M12-01 remainder, operator
     22.09.2026 Kontierungsagent finding): ``OpenItem`` has no Forderungsart distinguishing a
@@ -406,6 +417,7 @@ async def collect(session: AsyncSession, tx: Any) -> Features:
                 if fp
             )
         entry = await session.get(JournalEntry, item["journal_entry_id"])
+        unit_number, property_number = await _location_numbers(session, contract)
         items.append(
             {
                 "id": item["id"],
@@ -420,6 +432,9 @@ async def collect(session: AsyncSession, tx: Any) -> Features:
                 "account_number": item["account_number"],
                 "debtor_key": str(account.party_id) if account and account.party_id else None,
                 "is_deposit": await _is_deposit_item(session, item, contract),
+                # M12-03: unit and property of the contract for the determination check.
+                "unit_number": unit_number,
+                "property_number": property_number,
             }
         )
     return Features(tx=tx_dict, rules=rules, open_items=items, payables=payables)

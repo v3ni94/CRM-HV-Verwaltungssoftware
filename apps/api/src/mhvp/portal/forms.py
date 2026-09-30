@@ -1,11 +1,12 @@
 """Portal forms (14, M21-01, A56): configurable form templates per tenant and their submissions.
 
 A template names the form, its ticket category, the audience (tenant, owner, all) and the
-fields (text, number, date, select, file; required or optional). A submission from the portal
-is a Vorgang: it creates a ticket in the template's category, the values become structured
-text in the public description, uploaded files become document links (attachments). The raw
-values stay on the submission row so the ticket text can be regenerated and audited. Nothing
-here touches money or a legal deadline; submissions are proposals handled by the office.
+fields (14 element types, see INPUT_TYPES and DISPLAY_TYPES; required or optional). A
+submission from the portal is a Vorgang: it creates a ticket in the template's category, the
+values become structured text in the public description, uploaded files become document
+links (attachments). The raw values stay on the submission row so the ticket text can be
+regenerated and audited. Nothing here touches money or a legal deadline; submissions are
+proposals handled by the office.
 """
 
 import re
@@ -22,12 +23,34 @@ from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
 
 AUDIENCES = ("tenant", "owner", "all")
-FIELD_TYPES = ("text", "number", "date", "select", "file")
+# SA-03: element types of the form builder. The display types carry no value.
+INPUT_TYPES = (
+    "text",
+    "textarea",
+    "number",
+    "date",
+    "time",
+    "select",
+    "radio",
+    "multiselect",
+    "checkbox",
+    "email",
+    "phone",
+    "file",
+)
+DISPLAY_TYPES = ("heading", "info")
+FIELD_TYPES = INPUT_TYPES + DISPLAY_TYPES
+CHOICE_TYPES = ("select", "radio", "multiselect")
+DELIVERIES = ("ticket", "email")
+MAX_HELP = 1000
 MAX_FIELDS = 40
 MAX_TEXT = 4000
 MAX_FILES_PER_FIELD = 10
 _KEY = re.compile(r"^[a-z0-9_]{1,60}$")
 _NUMBER = re.compile(r"^-?\d{1,12}([.,]\d{1,4})?$")
+_TIME = re.compile(r"^([01]\d|2[0-3]):[0-5]\d$")
+_EMAIL = re.compile(r"^[^@\s]{1,64}@[^@\s]{1,255}\.[^@\s]{2,}$")
+_PHONE = re.compile(r"^\+?[0-9 ()/\-]{5,30}$")
 
 
 def _fe(field: str, message: str) -> FieldError:
@@ -49,6 +72,12 @@ class PortalFormTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
     # Field shape: {"key", "label", "type", "required", "options": [..] | null}
     fields: Mapped[list[dict[str, Any]]] = mapped_column(JSONB, nullable=False, default=list)
+    # SA-03: delivery of a submission, as a ticket (default) or as an e-mail to a fixed address
+    # of the office; the e-mail variant still keeps the submission row and its ticket.
+    delivery: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="ticket", server_default="ticket"
+    )
+    delivery_email: Mapped[str | None] = mapped_column(String(320))
 
 
 class PortalFormSubmission(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -71,6 +100,21 @@ class PortalFormSubmission(IdMixin, TimestampMixin, TenantMixin, Base):
 
 
 # Pure helpers ---------------------------------------------------------------------------
+
+
+def normalise_delivery(delivery: str, email: str | None) -> tuple[str, str | None]:
+    """SA-03: delivery as ticket or e-mail; the e-mail variant needs a valid address."""
+    if delivery not in DELIVERIES:
+        raise ProblemError(ErrorCodes.VALIDATION, errors=[_fe("delivery", "Zustellung unbekannt.")])
+    address = (email or "").strip() or None
+    if delivery == "email" and (address is None or not _EMAIL.match(address)):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            errors=[
+                _fe("delivery_email", "Für die Zustellung per E-Mail fehlt eine gültige Adresse.")
+            ],
+        )
+    return delivery, address if delivery == "email" else None
 
 
 def audience_matches(audience: str, roles: set[str]) -> bool:
@@ -99,7 +143,10 @@ def normalise_fields(fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
             errors.append(_fe(f"{loc}.label", "Bezeichnung fehlt."))
         if ftype not in FIELD_TYPES:
             errors.append(_fe(f"{loc}.type", "Feldtyp unbekannt."))
-        if ftype == "select":
+        help_text = str(raw.get("help") or "").strip() or None
+        if help_text is not None and len(help_text) > MAX_HELP:
+            errors.append(_fe(f"{loc}.help", "Hilfetext zu lang."))
+        if ftype in CHOICE_TYPES:
             if not isinstance(options, list) or not options:
                 errors.append(_fe(f"{loc}.options", "Auswahl ohne Optionen."))
             else:
@@ -111,8 +158,9 @@ def normalise_fields(fields: list[dict[str, Any]]) -> list[dict[str, Any]]:
                 "key": key,
                 "label": label,
                 "type": ftype,
-                "required": bool(raw.get("required", False)),
+                "required": bool(raw.get("required", False)) and ftype not in DISPLAY_TYPES,
                 "options": options,
+                "help": help_text,
             }
         )
     if errors:
@@ -127,6 +175,7 @@ def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dic
     verified by the caller against the portal account (A55 rule)."""
     errors: list[FieldError] = []
     out: dict[str, Any] = {}
+    fields = [f for f in fields if f["type"] not in DISPLAY_TYPES]
     known = {f["key"] for f in fields}
     for key in values:
         if key not in known:
@@ -135,6 +184,20 @@ def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dic
         key, ftype, required = f["key"], f["type"], bool(f.get("required"))
         raw = values.get(key)
         loc = f"values.{key}"
+        if ftype == "checkbox":
+            checked = raw is True or (isinstance(raw, str) and raw.strip().lower() == "true")
+            unchecked = (
+                raw is None
+                or raw is False
+                or (isinstance(raw, str) and raw.strip().lower() in ("", "false"))
+            )
+            if not checked and not unchecked:
+                errors.append(_fe(loc, "Wert ungültig."))
+            elif required and not checked:
+                errors.append(_fe(loc, "Pflichtfeld."))
+            else:
+                out[key] = "true" if checked else "false"
+            continue
         empty = raw is None or (isinstance(raw, str | list) and len(raw) == 0)
         if empty:
             if required:
@@ -152,6 +215,13 @@ def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dic
                     errors.append(_fe(loc, "Anhang ungültig."))
             out[key] = list(dict.fromkeys(ids))
             continue
+        if ftype == "multiselect":
+            allowed = f.get("options") or []
+            if not isinstance(raw, list) or any(str(i) not in allowed for i in raw):
+                errors.append(_fe(loc, "Keine zulässige Auswahl."))
+            else:
+                out[key] = list(dict.fromkeys(str(i) for i in raw))
+            continue
         if not isinstance(raw, str | int | float) or isinstance(raw, bool):
             errors.append(_fe(loc, "Wert ungültig."))
             continue
@@ -165,7 +235,13 @@ def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dic
                 date.fromisoformat(text)
             except ValueError:
                 errors.append(_fe(loc, "Kein gültiges Datum (JJJJ-MM-TT)."))
-        elif ftype == "select" and text not in (f.get("options") or []):
+        elif ftype == "time" and not _TIME.match(text):
+            errors.append(_fe(loc, "Keine gültige Uhrzeit (HH:MM)."))
+        elif ftype == "email" and not _EMAIL.match(text):
+            errors.append(_fe(loc, "Keine gültige E-Mail-Adresse."))
+        elif ftype == "phone" and not _PHONE.match(text):
+            errors.append(_fe(loc, "Keine gültige Telefonnummer."))
+        elif ftype in ("select", "radio") and text not in (f.get("options") or []):
             errors.append(_fe(loc, "Keine zulässige Auswahl."))
         if not any(e.field == loc for e in errors):
             out[key] = text
@@ -180,12 +256,19 @@ def render_values(
     """Structured text for the ticket description (German UI formats, TT.MM.JJJJ)."""
     lines = [f"Formular: {template.name}", ""]
     for f in template.fields:
+        if f["type"] in DISPLAY_TYPES:
+            continue
         raw = values.get(f["key"])
+        if f["type"] == "checkbox":
+            lines.append(f"{f['label']}: {'ja' if raw == 'true' else 'nein'}")
+            continue
         if raw is None or raw == "" or raw == []:
             shown = "keine Angabe"
         elif f["type"] == "file":
             names = [attachments.get(i, i) for i in raw]
             shown = ", ".join(names)
+        elif f["type"] == "multiselect":
+            shown = ", ".join(str(i) for i in raw)
         elif f["type"] == "date":
             d = date.fromisoformat(str(raw))
             shown = f"{d:%d.%m.%Y}"

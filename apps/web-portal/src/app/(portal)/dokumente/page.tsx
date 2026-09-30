@@ -33,11 +33,18 @@ export default async function DocumentsPage() {
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
       {rows.length === 0 ? <p className={ui.notice}>{t("empty")}</p> : null}
+      {rows.length > 0 ? <p className="text-xs text-subtle">{t("readNote")}</p> : null}
       <ul className="flex flex-col gap-3">
         {rows.map((row) => (
           <li key={row.id} className={`${ui.card} flex flex-wrap items-center justify-between gap-2`}>
             <span className="flex flex-col gap-0.5">
-              <span className="font-medium">{row.title}</span>
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="font-medium">{row.title}</span>
+                <span className={ui.badge} data-testid="document-state">
+                  {row.is_new ? t("isNew") : t("read")}
+                </span>
+              </span>
+              {row.context ? <span className="text-xs text-subtle">{row.context}</span> : null}
               <span className="text-xs text-subtle">
                 {t("created")}{" "}
                 {format.dateTime(new Date(row.created_at), { day: "2-digit", month: "2-digit", year: "numeric" })}

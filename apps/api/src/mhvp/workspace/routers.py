@@ -38,7 +38,15 @@ log = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/workspace", tags=["Arbeitsplatz"])
 
-FILTER_RESOURCES = ("contacts", "properties", "units", "contracts", "documents", "imports")
+FILTER_RESOURCES = (
+    "contacts",
+    "properties",
+    "units",
+    "contracts",
+    "documents",
+    "imports",
+    "tickets",
+)
 MAX_BULK = 500
 MAX_RANGE_DAYS = 400
 STATS_READ = require_permission("tickets:read")
@@ -232,9 +240,12 @@ class FilterOut(BaseModel):
 
 
 class WorkspaceBulkIn(_In):
-    action: str = Field(pattern="^(contacts.add_tag|contacts.remove_tag|maintenance.done)$")
+    action: str = Field(
+        pattern="^(contacts.add_tag|contacts.remove_tag|maintenance.done|tickets.assign)$"
+    )
     ids: list[uuid.UUID] = Field(min_length=1, max_length=MAX_BULK)
     tag: str | None = Field(default=None, min_length=1, max_length=63)
+    assignee_user_id: uuid.UUID | None = None
 
 
 def _need(principal: TenantPrincipal, permission: str) -> None:
@@ -1669,6 +1680,38 @@ async def bulk(
                     )
                 )
                 changed = int(result.rowcount or 0)  # type: ignore[attr-defined]
+        elif body.action == "tickets.assign":
+            # M9-04: primary assignee for several tickets, through the ticket service so that
+            # history, notification and domain event stay as with a single assignment.
+            from mhvp.platform.models import Membership, MembershipStatus
+            from mhvp.tickets.models import Ticket
+            from mhvp.tickets.status import assign_ticket
+
+            _need(principal, "tickets:update")
+            if body.assignee_user_id is None:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Bearbeiter fehlt.")
+            tickets = (
+                await session.scalars(select(Ticket).where(Ticket.id.in_(ids)).with_for_update())
+            ).all()
+            if len(tickets) != len(ids):
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Unbekannte Tickets.")
+            member = await session.scalar(
+                select(Membership.id).where(
+                    Membership.tenant_id == principal.tenant_id,
+                    Membership.user_id == body.assignee_user_id,
+                    Membership.status == MembershipStatus.ACTIVE,
+                )
+            )
+            if member is None:
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Bearbeiter ist kein Mitglied.")
+            if any(t.merged_into_ticket_id is not None for t in tickets):
+                raise ProblemError(ErrorCodes.CONFLICT, detail="Ticket ist zusammengeführt.")
+            changed = 0
+            for ticket in tickets:
+                if await assign_ticket(
+                    session, ticket, body.assignee_user_id, principal.user_id, reason="sammelaktion"
+                ):
+                    changed += 1
         else:
             _need(principal, "properties:update")
             items = (

@@ -161,11 +161,21 @@ async def context_for_tenant(
     if all(levels.level_index(v) < levels.level_index(levels.L2) for v in current.values()):
         return None
     posted_today, per_rule = await _posted_today(session, today)
+    blocked = await levels.overdue_reviews(session, today=today)
+    # S10: an unconfirmed weekly digest of an earlier week blocks the sampled classes at L3
+    # (confirmation duty before the next week without daily review, M12-02).
+    sampled_l3 = [cls for cls in levels.SAMPLED_CLASSES if current.get(cls) == levels.L3]
+    if sampled_l3:
+        from mhvp.banking import digest
+
+        if await digest.l3_blocked(session, today=today):
+            for cls in sampled_l3:
+                blocked[cls] = max(int(blocked.get(cls, 0)), 1)
     return RunContext(
         tenant_id=tenant_id,
         today=today,
         levels=current,
-        blocked=await levels.overdue_reviews(session, today=today),
+        blocked=blocked,
         gate_open=gate_open,
         outgoing_enabled=bool(settings.auto_posting_outgoing_enabled),
         learning=True,

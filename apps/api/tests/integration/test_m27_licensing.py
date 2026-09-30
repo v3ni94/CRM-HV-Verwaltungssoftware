@@ -77,7 +77,10 @@ def test_license_usage_readiness(
     assert client.get(f"{P}/price-list", headers=h).status_code == 403  # tenant admin
     lic = {"tenant_id": tenant, "module": "core", "unit_quota": 2, "valid_from": "2031-01-01"}
     early = lic | {"module": "portal", "valid_from": "2000-01-01", "valid_until": "2000-12-31"}
-    assert client.post(f"{P}/licenses", json=early, headers=ph).status_code == 422  # no price
+    # M27-04: without a price list entry the licence follows the pricing structure.
+    structure_lic = _ok(client.post(f"{P}/licenses", json=early, headers=ph), 201)
+    assert structure_lic["price_per_unit"] is None
+    assert structure_lic["price_source"] == "structure"
     day = (date(2031, 1, 1) + timedelta(days=int(RUN, 36) % 20000)).isoformat()
     _ok(
         client.post(

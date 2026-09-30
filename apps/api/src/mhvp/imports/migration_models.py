@@ -275,3 +275,46 @@ class MigrationSwitchRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decision_comment: Mapped[str | None] = mapped_column(Text)
+
+
+class AcceptanceStatus(StrEnum):
+    DRAFT = "draft"
+    SIGNED = "signed"
+
+
+class MigrationAcceptance(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Acceptance record of the migration per property (13.1 Dokumentation der Abnahme, M8-09):
+    scope of the check, responsible persons, data that cannot be migrated, fallback plan and
+    archive and information concept before the old access is shut down. A signed record is
+    never changed; a correction is a new record."""
+
+    __tablename__ = "migration_acceptance"
+    __table_args__ = (Index("ix_migration_acceptance_property", "tenant_id", "property_id"),)
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
+    status: Mapped[str] = mapped_column(
+        String(16),
+        nullable=False,
+        default=AcceptanceStatus.DRAFT.value,
+        server_default=sql_text("'draft'"),
+    )
+    review_scope: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=sql_text("''")
+    )
+    responsible_persons: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=sql_text("'[]'::jsonb")
+    )
+    non_migratable_data: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=sql_text("''")
+    )
+    fallback_plan: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=sql_text("''")
+    )
+    archive_concept: Mapped[str] = mapped_column(
+        Text, nullable=False, default="", server_default=sql_text("''")
+    )
+    reconciliation_report_id: Mapped[uuid.UUID | None] = _fk(
+        "migration_reconciliation_report.id", nullable=True, ondelete="SET NULL"
+    )
+    signed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    signed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

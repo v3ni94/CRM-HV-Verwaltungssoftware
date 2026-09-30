@@ -8,6 +8,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -37,6 +38,10 @@ def _fk(target: str, *, nullable: bool = True, ondelete: str | None = None) -> A
     return mapped_column(
         UUID(as_uuid=True), ForeignKey(target, ondelete=ondelete), nullable=nullable
     )
+
+
+EXTERNAL_COMMENTS = ("none", "to_manager", "open")
+EXTERNAL_ATTACHMENTS = ("none", "initiator_only", "open")
 
 
 class TicketStatus(StrEnum):
@@ -154,6 +159,14 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
         Index("ix_ticket_status_number", "tenant_id", "status", "number"),
         Index("ix_ticket_assignee", "tenant_id", "assignee_user_id"),
         Index("ix_ticket_process_code", "tenant_id", "process_code"),
+        Index("ix_ticket_follow_up_date", "tenant_id", "follow_up_date"),
+        CheckConstraint(
+            "external_comments IN ('none','to_manager','open')", name="external_comments"
+        ),
+        CheckConstraint(
+            "external_attachments IN ('none','initiator_only','open')",
+            name="external_attachments",
+        ),
         Index(
             "uq_ticket_follow_up_of",
             "tenant_id",
@@ -225,6 +238,18 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     flow: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
+    # 6.6 (M19-03, M19-04, Migration 0260): Gebäudebezug, Beginn und Wiedervorlage je Datum
+    # sowie die Sichtbarkeit externer Kommentare und Anhänge. Die Sichtbarkeitsfelder sind
+    # Werte aus ``EXTERNAL_COMMENTS`` und ``EXTERNAL_ATTACHMENTS`` (CHECK in der Datenbank).
+    building_id: Mapped[uuid.UUID | None] = _fk("building.id")
+    start_date: Mapped[date | None] = mapped_column(Date)
+    follow_up_date: Mapped[date | None] = mapped_column(Date)
+    external_comments: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="none", server_default=text("'none'")
+    )
+    external_attachments: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="none", server_default=text("'none'")
+    )
 
 
 class TicketAssignee(IdMixin, TenantMixin, Base):
@@ -260,6 +285,10 @@ class TicketComment(IdMixin, TimestampMixin, TenantMixin, Base):
     document_ids: Mapped[list[uuid.UUID]] = mapped_column(
         ARRAY(UUID(as_uuid=True)), nullable=False, default=list
     )
+    # M19-07 (Migration 0260): archiviert statt gelöscht. Der Inhalt bleibt erhalten
+    # (Nachweis), wird aber in Ticketansicht und Portal nicht mehr angezeigt.
+    removed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    removed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
 class TicketEvent(IdMixin, TenantMixin, Base):

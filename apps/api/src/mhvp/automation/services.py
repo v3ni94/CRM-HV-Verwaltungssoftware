@@ -1762,6 +1762,7 @@ async def _run_rule(
             return None
     except Exception as exc:  # invalid stored tree: record and continue
         return await _record(session, tenant_id, rule, event, RUN_STATUS_FAILED, [], str(exc))
+    test_mode = bool(rule.test_mode)
     try:
         async with session.begin_nested():
             actions = await execute_actions(
@@ -1770,11 +1771,19 @@ async def _run_rule(
                 rule=rule,
                 event_id=event.id,
                 context=context,
-                dry_run=False,
+                # Test mode (S15-04): preview only, the run log keeps the result.
+                dry_run=test_mode,
                 settings=settings,
             )
             run = await _record(
-                session, tenant_id, rule, event, RUN_STATUS_EXECUTED, actions, None, now=now
+                session,
+                tenant_id,
+                rule,
+                event,
+                RUN_STATUS_DRY_RUN if test_mode else RUN_STATUS_EXECUTED,
+                actions,
+                None,
+                now=now,
             )
         return run
     except IntegrityError:

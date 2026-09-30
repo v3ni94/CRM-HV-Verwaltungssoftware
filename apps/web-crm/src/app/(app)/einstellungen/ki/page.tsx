@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { EmbeddingsStatus } from "@/components/ai/EmbeddingsStatus";
+import { AiPostingSwitch } from "@/components/banking/AiPostingPanel";
 import { KnowledgeSettings } from "@/components/ai/KnowledgeSettings";
 import { ProviderSettings } from "@/components/ai/ProviderSettings";
 import { RoutingSettings, type Strategy } from "@/components/ai/RoutingSettings";
@@ -49,6 +50,7 @@ export default async function AiSettingsPage() {
         </>
       )}
       <p className="text-xs text-muted">{t("openaiHint")}</p>
+      <AiPostingSwitch />
       <EmbeddingsStatus initial={null} />
       <KnowledgeSettings initial={knowledge.data ?? []} properties={propertyOptions} />
     </div>

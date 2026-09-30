@@ -243,3 +243,9 @@ of `mhvp.workspace.jobs.DEADLINE_KINDS`, never a duration) and document kinds.
   the keywords otherwise.
 * Tests: `tests/unit/test_m19_process_flows.py`, `tests/integration/test_m19_process_flows.py`;
   Vitest `TicketProcessBadge.test.tsx`, `TicketTemplatesAdmin.test.tsx`.
+
+## Paket P11 (Lückenliste 30.09.2026)
+
+* `order_routers.py`: `GET /work-orders`, `GET /work-orders/{id}`, Teams (`GET/PATCH/DELETE`), `GET /tickets/{id}/comments`, `DELETE /tickets/{id}/comments/{cid}` (archiviert, `removed_at`).
+* Migration 0260: Ticketfelder `building_id`, `start_date`, `follow_up_date`, `external_comments`, `external_attachments`, Kommentararchiv. Durchsetzung der Sichtbarkeitsfelder im Portal offen (OPEN_QUESTIONS P11-02).
+* Regel: `docs/rules/P11-tickets-w2.md`. Paperless im Ticket: `documents/paperless_search.py` `list_by_ticket` und `list_by_correspondent`.

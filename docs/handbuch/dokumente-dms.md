@@ -124,3 +124,9 @@ versendet).
 - Löschung bleibt "offen": Die Kopie in Drive oder das Schlagwort in Paperless konnte noch
   nicht gesetzt werden (Anbindung deaktiviert, DMS nicht erreichbar, fehlendes Recht). Den
   Fehlertext des Schritts prüfen, Anbindung beheben, dann erneut anstoßen.
+
+## Datenschutz: Löschantrag und Register (Entwurf)
+
+- Löschantrag erfassen (API `POST /privacy/erasure-requests`): Das System prüft sofort alle Sperren und zeigt sie am Antrag. Freigeben kann nur eine zweite Person, und nur ohne Sperre. Die Ausführung anonymisiert den Kontakt, Buchungen bleiben unberührt. Vorher muss das Löschprofil für Kontakte angelegt und von einer zweiten Person freigegeben sein.
+- Register der Auftragsverarbeiter und Verarbeitungstätigkeiten pflegen, daraus den Entwurf des Verarbeitungsverzeichnisses erzeugen (`GET /privacy/processing-records`). Der Entwurf ist vor Verwendung durch einen Rechtsanwalt zu prüfen.
+- Die Bedienung im CRM ist noch nicht vorhanden, bis dahin nur über die API.

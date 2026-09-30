@@ -271,7 +271,11 @@ def test_extract_invoice_proposal_and_apply_as_draft(
     invoice = _ok(client.get(f"{A}/invoices/{invoice_id}", headers=admin))
     assert invoice["review_status"] == "open"  # draft: nothing reviewed, released or posted
     assert invoice["posting_status"] == "unposted"
-    assert invoice["findings"] == ["Leistungszeitraum fehlt"]  # known IBAN, no duplicate yet
+    assert invoice["findings"] == [  # known IBAN, no duplicate yet
+        "Leistungszeitraum fehlt",
+        "Leistungsort fehlt (PÜ01)",
+        "Steuerangaben des Ausstellers fehlen (USt-IdNr. oder Steuernummer, PÜ01)",
+    ]
 
     # Second document, same invoice number and a different IBAN: both findings must show up.
     fake.queue.append({**INVOICE_OUTPUT, "invoice": {**INVOICE_OUTPUT["invoice"], "iban": OTHER}})

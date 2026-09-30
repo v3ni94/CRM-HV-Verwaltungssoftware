@@ -15,6 +15,7 @@ import { SafeText } from "@/components/ui/SafeText";
 import { StatusChip } from "@/components/ui/StatusChip";
 import { ui } from "@/lib/ui";
 
+import { CollapsibleBody, CompactView } from "./CompactView";
 import { DraftEditor } from "./DraftEditor";
 import type { Message } from "./MailWorkspace";
 import { PreparationCard } from "./PreparationCard";
@@ -527,6 +528,9 @@ export function MailDetail({
           }}
         />
       ) : null}
+      {message.direction === "in" && bodyLoaded && message.status !== "draft" ? (
+        <CompactView messageId={message.id} canUpdate onDraftCreated={(d) => onDraftCreated(d as unknown as Message)} />
+      ) : null}
       {message.direction === "in" ? <SuggestionCard message={message} onUpdated={onUpdated} onDraftCreated={onDraftCreated} /> : null}
       {message.direction === "in" ? <PreparationCard message={message} onDraftCreated={onDraftCreated} /> : null}
 
@@ -607,7 +611,9 @@ export function MailDetail({
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="mail-body">{bodyText}</SafeText>
+          <CollapsibleBody text={bodyText}>
+            {(shown) => <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="mail-body">{shown}</SafeText>}
+          </CollapsibleBody>
           {actionBar("bottom")}
         </div>
       )}

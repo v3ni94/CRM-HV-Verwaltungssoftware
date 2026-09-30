@@ -2,6 +2,7 @@ import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { BankSyncSettingsCard } from "@/components/banking/BankSyncSettingsCard";
 import { FinApiSettingsCard, type FinApiConfig } from "@/components/banking/FinApiSettingsCard";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -34,6 +35,7 @@ export default async function BankSettingsPage() {
         </Link>
       </p>
       <FinApiSettingsCard initial={initial} />
+      <BankSyncSettingsCard canEdit canRun={me.data.permissions.includes("accounting:update")} />
     </div>
   );
 }

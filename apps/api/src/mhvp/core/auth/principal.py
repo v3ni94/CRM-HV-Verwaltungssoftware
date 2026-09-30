@@ -41,6 +41,9 @@ class Principal:
     # Legal entity scope of the membership (A37, ``mhvp.core.auth.scope``): raw list from
     # ``Membership.legal_entity_ids``; only effective for scoped roles (tax_advisor).
     legal_entity_ids: tuple[uuid.UUID, ...] = ()
+    # Property assignment of the membership (3.4, M2-02, ``mhvp.core.auth.scope``): raw list
+    # from ``Membership.property_ids``; empty means unrestricted.
+    property_ids: tuple[uuid.UUID, ...] = ()
 
     def has(self, permission: str) -> bool:
         return permission in self.permissions
@@ -165,6 +168,7 @@ async def _from_bearer(request: Request, settings: Settings, raw: str) -> Princi
         is_platform_admin=is_admin,
         is_superadmin=is_superadmin,
         legal_entity_ids=_scope_ids(membership.legal_entity_ids),
+        property_ids=_scope_ids(membership.property_ids),
     )
 
 
@@ -234,6 +238,7 @@ def require_permission(permission: str) -> Callable[[Request], Awaitable[TenantP
             platform_access_reason=principal.platform_access_reason,
             is_superadmin=principal.is_superadmin,
             legal_entity_ids=principal.legal_entity_ids,
+            property_ids=principal.property_ids,
         )
 
     return dependency

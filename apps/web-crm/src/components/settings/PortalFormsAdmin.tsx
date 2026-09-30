@@ -8,13 +8,29 @@ import { StatusPill } from "@/components/ui/StatusPill";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-export type PortalFormFieldType = "text" | "number" | "date" | "select" | "file";
+export type PortalFormFieldType =
+  | "text"
+  | "textarea"
+  | "number"
+  | "date"
+  | "time"
+  | "select"
+  | "radio"
+  | "multiselect"
+  | "checkbox"
+  | "email"
+  | "phone"
+  | "file"
+  | "heading"
+  | "info";
+const CHOICE_TYPES: PortalFormFieldType[] = ["select", "radio", "multiselect"];
 export type PortalFormField = {
   key: string;
   label: string;
   type: PortalFormFieldType;
   required: boolean;
   options?: string[] | null;
+  help?: string | null;
 };
 export type PortalFormTemplate = {
   id: string;
@@ -22,12 +38,30 @@ export type PortalFormTemplate = {
   description: string | null;
   category: string;
   audience: "tenant" | "owner" | "all";
+  /** SA-03: Zustellung als Ticket (immer angelegt) oder zusätzlich per E-Mail. */
+  delivery?: "ticket" | "email";
+  delivery_email?: string | null;
   active: boolean;
   sort_order: number;
   fields: PortalFormField[];
 };
 
-const FIELD_TYPES: PortalFormFieldType[] = ["text", "number", "date", "select", "file"];
+const FIELD_TYPES: PortalFormFieldType[] = [
+  "text",
+  "textarea",
+  "number",
+  "date",
+  "time",
+  "select",
+  "radio",
+  "multiselect",
+  "checkbox",
+  "email",
+  "phone",
+  "file",
+  "heading",
+  "info",
+];
 const AUDIENCES: PortalFormTemplate["audience"][] = ["all", "tenant", "owner"];
 
 function slugify(label: string): string {
@@ -57,7 +91,7 @@ function FieldsEditor({ fields, onChange }: { fields: PortalFormField[]; onChang
           <li key={f.key} className="flex flex-wrap items-center gap-2 text-sm">
             <span className="flex-1">
               {f.label} <span className="text-xs text-muted">({t(`fieldTypes.${f.type}`)}</span>
-              {f.type === "select" && f.options ? <span className="text-xs text-muted">: {f.options.join(", ")}</span> : null}
+              {CHOICE_TYPES.includes(f.type) && f.options ? <span className="text-xs text-muted">: {f.options.join(", ")}</span> : null}
               <span className="text-xs text-muted">)</span>
             </span>
             <label className="flex items-center gap-1 text-xs text-muted">
@@ -87,7 +121,7 @@ function FieldsEditor({ fields, onChange }: { fields: PortalFormField[]; onChang
             </option>
           ))}
         </select>
-        {type === "select" ? (
+        {CHOICE_TYPES.includes(type) ? (
           <input
             className={ui.input}
             placeholder={t("optionsPlaceholder")}
@@ -99,11 +133,11 @@ function FieldsEditor({ fields, onChange }: { fields: PortalFormField[]; onChang
         <button
           type="button"
           className={ui.buttonSm}
-          disabled={!label.trim() || (type === "select" && !options.trim())}
+          disabled={!label.trim() || (CHOICE_TYPES.includes(type) && !options.trim())}
           onClick={() => {
             let key = slugify(label);
             while (fields.some((f) => f.key === key)) key = `${key}_2`;
-            const opts = type === "select" ? options.split(",").map((o) => o.trim()).filter(Boolean) : null;
+            const opts = CHOICE_TYPES.includes(type) ? options.split(",").map((o) => o.trim()).filter(Boolean) : null;
             onChange([...fields, { key, label: label.trim(), type, required: false, options: opts }]);
             setLabel("");
             setOptions("");
@@ -131,6 +165,8 @@ function TemplateForm({
   const [category, setCategory] = useState(initial?.category ?? "");
   const [audience, setAudience] = useState<PortalFormTemplate["audience"]>(initial?.audience ?? "all");
   const [fields, setFields] = useState<PortalFormField[]>(initial?.fields ?? []);
+  const [delivery, setDelivery] = useState<"ticket" | "email">(initial?.delivery ?? "ticket");
+  const [deliveryEmail, setDeliveryEmail] = useState(initial?.delivery_email ?? "");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -143,9 +179,21 @@ function TemplateForm({
       setError(t("errors.category"));
       return;
     }
+    if (delivery === "email" && !deliveryEmail.trim()) {
+      setError(t("errors.deliveryEmail"));
+      return;
+    }
     setBusy(true);
     setError(null);
-    const body = { name: name.trim(), description: description.trim() || null, category: category.trim(), audience, fields };
+    const body = {
+      name: name.trim(),
+      description: description.trim() || null,
+      category: category.trim(),
+      audience,
+      fields,
+      delivery,
+      delivery_email: delivery === "email" ? deliveryEmail.trim() : null,
+    };
     const res = initial
       ? await bff<PortalFormTemplate>(`/api/bff/portal-admin/forms/${initial.id}`, { method: "PATCH", body: JSON.stringify(body) })
       : await bff<PortalFormTemplate>("/api/bff/portal-admin/forms", { method: "POST", body: JSON.stringify(body) });
@@ -180,6 +228,20 @@ function TemplateForm({
         </select>
       </label>
       <FieldsEditor fields={fields} onChange={setFields} />
+      <label className="flex flex-col gap-1">
+        <span className={ui.label}>{t("delivery")}</span>
+        <select className={ui.input} value={delivery} onChange={(e) => setDelivery(e.target.value as "ticket" | "email")}>
+          <option value="ticket">{t("deliveries.ticket")}</option>
+          <option value="email">{t("deliveries.email")}</option>
+        </select>
+      </label>
+      {delivery === "email" ? (
+        <label className="flex flex-col gap-1">
+          <span className={ui.label}>{t("deliveryEmail")}</span>
+          <input type="email" className={ui.input} value={deliveryEmail} onChange={(e) => setDeliveryEmail(e.target.value)} />
+          <span className={ui.help}>{t("deliveryHelp")}</span>
+        </label>
+      ) : null}
       {error ? (
         <p role="alert" className={ui.alert}>
           {error}

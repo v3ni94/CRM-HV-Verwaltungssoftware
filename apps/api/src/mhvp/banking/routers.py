@@ -478,8 +478,8 @@ async def tx_candidates(
         }
 
 
-def _posting_out(proposal: Any) -> dict[str, Any]:
-    return {
+def _posting_out(proposal: Any, run: Any = None) -> dict[str, Any]:
+    out = {
         "id": proposal.id,
         "task_run_id": proposal.task_run_id,
         "entity_type": proposal.entity_type,
@@ -487,6 +487,18 @@ def _posting_out(proposal: Any) -> dict[str, Any]:
         "created_at": proposal.created_at,
         "proposed": proposal.proposed,
     }
+    # M12-04 (CRM display): model, provider and cost of the run next to the proposal.
+    if run is not None:
+        out["run"] = {
+            "provider": run.provider.value if run.provider is not None else None,
+            "model": run.model,
+            "prompt_version": run.prompt_version,
+            "status": run.status.value,
+            "cost_eur": str(run.cost_eur),
+            "tokens_in": run.tokens_in,
+            "tokens_out": run.tokens_out,
+        }
+    return out
 
 
 @router.post(
@@ -557,10 +569,26 @@ async def get_ai_posting(
     async with tenant_tx(request, principal) as session:
         if await session.get(BankTransaction, tx_id) is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        from mhvp.ai.models import AiTaskRun
+
         proposals = await ai_posting.proposals_for(session, tx_id)
+        runs = (
+            {
+                r.id: r
+                for r in (
+                    await session.scalars(
+                        select(AiTaskRun).where(
+                            AiTaskRun.id.in_([p.task_run_id for p in proposals if p.task_run_id])
+                        )
+                    )
+                ).all()
+            }
+            if proposals
+            else {}
+        )
         return {
             "bank_transaction_id": tx_id,
-            "proposals": [_posting_out(p) for p in proposals],
+            "proposals": [_posting_out(p, runs.get(p.task_run_id)) for p in proposals],
             "note": "Vorschlag der KI, keine Buchung.",
         }
 
@@ -1876,6 +1904,11 @@ class OrderOut(BaseModel):
     batch_id: uuid.UUID | None
     journal_entry_id: uuid.UUID | None
     approvals: int = 0
+    # M15-07 payouts without invoice and M15-02 bank reason code.
+    kind: str = "transfer"
+    open_item_id: uuid.UUID | None = None
+    payout_reason: str | None = None
+    bank_status_reason_code: str | None = None
 
 
 async def _order_out(session: Any, order: PaymentOrder) -> OrderOut:
@@ -2011,6 +2044,9 @@ async def create_batch(
                     ErrorCodes.CONFLICT,
                     detail="Zahlungsaufträge löst nur das führende System aus (13.1, 6.9.10).",
                 )
+        from mhvp.banking.payment_run import ensure_within_limits
+
+        await ensure_within_limits(session, orders)  # M15-04: limits agreed with the bank
         bank = await session.get(PropertyBankAccount, banks.pop())
         if bank is None:  # pragma: no cover
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
@@ -3629,3 +3665,276 @@ async def list_csv_mappings(
             .order_by(BankCsvMapping.label)
         )
         return [CsvMappingOut.model_validate(r) for r in rows.all()]
+
+
+# Sync configuration and manual full sync (8.2, M11-05) -------------------------------------
+
+
+class BankingSyncSettingIn(_In):
+    sync_hour: int = Field(ge=0, le=23)
+
+
+class BankingSyncSettingOut(BaseModel):
+    sync_hour: int
+    configured: bool
+
+
+@router.get("/sync/settings", summary="Uhrzeit des täglichen Bankabrufs lesen")
+async def get_sync_settings(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> BankingSyncSettingOut:
+    from mhvp.banking.models import BankSyncSetting
+    from mhvp.banking.tasks import DEFAULT_SYNC_HOUR
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(BankSyncSetting))
+        return BankingSyncSettingOut(
+            sync_hour=row.sync_hour if row else DEFAULT_SYNC_HOUR, configured=row is not None
+        )
+
+
+@router.put("/sync/settings", summary="Uhrzeit des täglichen Bankabrufs setzen")
+async def put_sync_settings(
+    body: BankingSyncSettingIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(FINAPI_SETTINGS),
+) -> BankingSyncSettingOut:
+    """Local hour (Europe/Berlin) of the daily sync of this tenant. The online fetch itself
+    still needs the connector's own opt-in (finAPI ``auto_fetch_enabled``)."""
+    from mhvp.banking.models import BankSyncSetting
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(BankSyncSetting).with_for_update())
+        if row is None:
+            row = BankSyncSetting(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+        before = row.sync_hour
+        row.sync_hour = body.sync_hour
+        row.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="bank_sync_setting.changed",
+            entity_type="bank_sync_setting",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            changes={"sync_hour": [before, body.sync_hour]},
+        )
+        return BankingSyncSettingOut(sync_hour=row.sync_hour, configured=True)
+
+
+class BankingSyncRunOut(BaseModel):
+    connections: int
+    not_configured: int
+    queued: int
+
+
+@router.post("/sync/run", status_code=202, summary="Gesamtabruf aller Bankkonten anstoßen")
+async def run_sync_now(
+    request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> BankingSyncRunOut:
+    """Manual full sync (8.2): the generic sync run for every connection (status, consent
+    warning) and one fetch task per assigned finAPI account, queued after the commit. Only
+    reads bank data; nothing is posted beyond what the released automation levels allow."""
+    from mhvp.banking.tasks import _finapi_scheduled_fetch_once, finapi_fetch, sync_tenant
+
+    async with tenant_tx(request, principal) as session:
+        counts = await sync_tenant(session, principal.tenant_id)
+        fetch, queued = await _finapi_scheduled_fetch_once(
+            session, principal.tenant_id, require_opt_in=False
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type=ev.BANK_SYNC_REQUESTED,
+            entity_type="bank_sync",
+            entity_id=None,
+            actor_user_id=principal.user_id,
+            payload={"connections": counts["connections"], "queued": fetch["queued"]},
+        )
+        tenant_id = principal.tenant_id
+
+        async def _start() -> None:
+            for run_id, link_id in queued:
+                finapi_fetch.delay(str(tenant_id), str(run_id), str(link_id), None, None)
+
+        after_commit(session, _start)
+        return BankingSyncRunOut(
+            connections=counts["connections"],
+            not_configured=counts["not_configured"],
+            queued=fetch["queued"],
+        )
+
+
+# Weekly L3 digest (plan M12 S10, M12-02) ----------------------------------------------------
+
+
+class BankingDigestOut(BaseModel):
+    id: uuid.UUID
+    legal_entity_id: uuid.UUID
+    week_start: date
+    auto_posted: int
+    sampled: int
+    reviews_open: int
+    findings: int
+    reconciliation_ok: bool
+    reconciliation: list[dict[str, Any]]
+    confirmed_at: datetime | None
+    confirmed_by: uuid.UUID | None
+
+
+class BankingDigestBuildIn(_In):
+    week_start: date
+
+
+def _digest_out(row: Any) -> BankingDigestOut:
+    return BankingDigestOut(
+        id=row.id,
+        legal_entity_id=row.legal_entity_id,
+        week_start=row.week_start,
+        auto_posted=row.auto_posted,
+        sampled=row.sampled,
+        reviews_open=row.reviews_open,
+        findings=row.findings,
+        reconciliation_ok=row.reconciliation_ok,
+        reconciliation=list(row.reconciliation or []),
+        confirmed_at=row.confirmed_at,
+        confirmed_by=row.confirmed_by,
+    )
+
+
+@router.get("/auto-posting/digests", summary="Wochendigest der Stufe L3")
+async def list_digests(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[BankingDigestOut]:
+    from mhvp.banking.models import AutoPostingDigest
+
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(
+                select(AutoPostingDigest).order_by(
+                    AutoPostingDigest.week_start.desc(), AutoPostingDigest.legal_entity_id
+                )
+            )
+        ).all()
+        return [_digest_out(r) for r in rows if _entity_allowed(principal, r.legal_entity_id)]
+
+
+@router.post("/auto-posting/digests/build", summary="Wochendigest erzeugen oder aktualisieren")
+async def build_digest(
+    body: BankingDigestBuildIn, request: Request, principal: TenantPrincipal = Depends(REVIEW)
+) -> list[BankingDigestOut]:
+    from mhvp.banking import digest
+
+    async with tenant_tx(request, principal) as session:
+        rows = await digest.build_week(
+            session,
+            tenant_id=principal.tenant_id,
+            week_start=body.week_start,
+            actor_user_id=principal.user_id,
+        )
+        return [_digest_out(r) for r in rows if _entity_allowed(principal, r.legal_entity_id)]
+
+
+@router.post(
+    "/auto-posting/digests/{digest_id}/confirm",
+    summary="Wochendigest bestätigen (accounting:review, B09 ohne Differenz)",
+)
+async def confirm_digest(
+    digest_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(REVIEW)
+) -> BankingDigestOut:
+    from mhvp.banking import digest
+    from mhvp.banking.models import AutoPostingDigest
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(AutoPostingDigest, digest_id, with_for_update=True)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        if principal.user_id is None:
+            raise ProblemError(ErrorCodes.FORBIDDEN)
+        return _digest_out(await digest.confirm(session, row, user_id=principal.user_id))
+
+
+# Payer IBAN into the four eyes release of contact bank accounts (7.4 no. 6, M12-03) --------
+
+CONTACTS_UPDATE = require_permission("contacts:update")
+
+
+class BankingPayerIbanContactOut(BaseModel):
+    contact_id: uuid.UUID
+    display_name: str
+
+
+class BankingPayerIbanCandidatesOut(BaseModel):
+    bank_transaction_id: uuid.UUID
+    proposable: bool
+    iban_known: bool
+    iban_suffix: str | None
+    contacts: list[BankingPayerIbanContactOut]
+
+
+class BankingPayerIbanIn(_In):
+    contact_id: uuid.UUID
+
+
+class BankingPayerIbanProposalOut(BaseModel):
+    bank_account_id: uuid.UUID
+    contact_id: uuid.UUID
+    iban_suffix: str
+    approval_status: str
+
+
+@router.get(
+    "/transactions/{tx_id}/payer-iban",
+    summary="Zahler-IBAN als Bankverbindung vorschlagen (Kandidaten)",
+)
+async def payer_iban_candidates(
+    tx_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> BankingPayerIbanCandidatesOut:
+    from mhvp.banking import payer_iban
+
+    async with tenant_tx(request, principal) as session:
+        tx = await session.get(BankTransaction, tx_id)
+        if tx is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_legal_entity_allowed(principal, tx.legal_entity_id)
+        return BankingPayerIbanCandidatesOut.model_validate(
+            await payer_iban.candidates(session, tx)
+        )
+
+
+@router.post(
+    "/transactions/{tx_id}/payer-iban",
+    status_code=201,
+    summary="Zahler-IBAN zur Vier-Augen-Freigabe vorschlagen (contacts:update)",
+)
+async def propose_payer_iban(
+    tx_id: uuid.UUID,
+    body: BankingPayerIbanIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CONTACTS_UPDATE),
+) -> BankingPayerIbanProposalOut:
+    """Creates a ``pending`` contact bank account; a second person with ``contacts:approve``
+    releases it (M5-01). The requester can never release the own proposal."""
+    from mhvp.banking import payer_iban
+
+    async with tenant_tx(request, principal) as session:
+        tx = await session.get(BankTransaction, tx_id, with_for_update=True)
+        if tx is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_legal_entity_allowed(principal, tx.legal_entity_id)
+        row = await payer_iban.propose(
+            session,
+            tx,
+            contact_id=body.contact_id,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+        )
+        return BankingPayerIbanProposalOut(
+            bank_account_id=row.id,
+            contact_id=row.contact_id,
+            iban_suffix=row.iban_suffix,
+            approval_status=str(row.approval_status.value),
+        )

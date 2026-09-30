@@ -44,6 +44,41 @@ WORKDAY = "Fälligkeit nach Werktag: Feiertagskalender offen"
 VAT_OUTPUT_CODE = "vat_output"
 COMMERCIAL_VAT_OPTIONS = {"commercial_full_vat", "commercial_reduced_vat"}
 ITEM_ONLY = {"contract_number", "calculation"}
+DIFFERENCE = (
+    "Planänderung nach Buchung: Differenz {diff} EUR zur gebuchten Sollstellung "
+    "({old} EUR). Korrektur per Storno des Laufs und neuer Sollstellung."
+)
+# (contract_id, payment_type_code) -> (posted item id, posted amount) of the period (B08).
+Posted = dict[tuple[uuid.UUID, str], tuple[uuid.UUID, Decimal]]
+
+
+def evidence(contract: Any, payment: Any, schedule: Any) -> dict[str, Any]:
+    """Legal basis of an item (7.5): contract version, applied payment plan and the start of
+    validity, reason and source document of the applied amount."""
+    reason = getattr(payment, "reason", None)
+    return {
+        "contract_version": contract.version,
+        "payment_schedule_id": schedule.id if schedule is not None else None,
+        "basis_valid_from": payment.valid_from,
+        "basis_reason": getattr(reason, "value", reason),
+        "basis_document_id": payment.document_id,
+        "difference_of_item_id": None,
+        "difference_amount": None,
+    }
+
+
+def as_difference(item: dict[str, Any], posted: tuple[uuid.UUID, Decimal]) -> dict[str, Any] | None:
+    """A component already posted for the period: nothing when the amount is unchanged,
+    otherwise a manual difference item (never posted by the run, rule 0.1.7)."""
+    posted_id, posted_amount = posted
+    diff = (Decimal(item["amount"]) - posted_amount).quantize(Decimal("0.01"))
+    if diff == 0:
+        return None
+    item["difference_of_item_id"] = posted_id
+    item["difference_amount"] = diff
+    item["status"] = ItemStatus.MANUAL
+    item["message"] = DIFFERENCE.format(diff=f"{diff:+}", old=posted_amount)
+    return item
 
 
 async def load_rules(session: AsyncSession) -> dict[str, Any]:
@@ -110,8 +145,8 @@ async def compute(
         (m.ledger_id, m.payment_type_code): m.account_id
         for m in (await session.scalars(select(PaymentTypeAccount))).all()
     }
-    posted = {
-        (i.contract_id, i.payment_type_code)
+    posted: Posted = {
+        (i.contract_id, i.payment_type_code): (i.id, i.amount)
         for i in (
             await session.scalars(
                 select(ReceivableItem).where(
@@ -181,14 +216,20 @@ async def compute(
                 "due_date": None,
                 "status": ItemStatus.READY,
                 "message": None,
+                **evidence(contract, p, schedule),
             }
 
             def mark(status: ItemStatus, message: str, item: dict[str, Any] = item) -> None:
                 if item["status"] is ItemStatus.READY:
                     item["status"], item["message"] = status, message
 
-            if (contract.id, p.payment_type_code) in posted:
-                continue  # already posted for this period (B08)
+            done = posted.get((contract.id, p.payment_type_code))
+            if done is not None:
+                # already posted for this period (B08); a changed amount is shown (7.5)
+                difference = as_difference(item, done)
+                if difference is not None:
+                    items.append(difference)
+                continue
             if (
                 partial_contract
                 or p.valid_from > first
@@ -221,7 +262,7 @@ def _compute_with_rules(
     schedule: Any,
     ledger: Ledger | None,
     mapping: dict[tuple[uuid.UUID, str], uuid.UUID],
-    posted: set[tuple[uuid.UUID, str]],
+    posted: Posted,
     first: date,
     rules: dict[str, Any],
 ) -> list[dict[str, Any]]:
@@ -236,8 +277,6 @@ def _compute_with_rules(
     for p in sorted(payments, key=lambda x: (x.payment_type_code, x.valid_from)):
         by_code.setdefault(p.payment_type_code, []).append(p)
     for code, rows in by_code.items():
-        if (contract.id, code) in posted:
-            continue  # already posted for this period (B08)
         current = rows[-1]
         rates = {p.vat_percent for p in rows}
         periods = [(p.valid_from, p.valid_to, p.net) for p in rows]
@@ -263,6 +302,7 @@ def _compute_with_rules(
             "status": ItemStatus.READY,
             "message": None,
             "calculation": calc,
+            **evidence(contract, current, schedule),
         }
 
         def mark(status: ItemStatus, message: str, item: dict[str, Any] = item) -> None:
@@ -336,6 +376,13 @@ def _compute_with_rules(
             item["amount"] = split["gross"]
         if item["amount"] <= 0:
             mark(ItemStatus.MANUAL, "Betrag nicht positiv (Minderung): gesondert prüfen")
+        done = posted.get((contract.id, code))
+        if done is not None:
+            # already posted for this period (B08); a changed amount is shown (7.5)
+            difference = as_difference(item, done)
+            if difference is not None:
+                items.append(difference)
+            continue
         items.append(item)
     return items
 

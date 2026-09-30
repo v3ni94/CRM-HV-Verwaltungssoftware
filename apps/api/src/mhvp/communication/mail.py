@@ -10,6 +10,7 @@ from email.message import EmailMessage
 from email.utils import getaddresses, parsedate_to_datetime
 from typing import Any
 
+from mhvp.communication.html import html_to_text, looks_like_markup
 from mhvp.core.text import strip_nul
 
 URGENT_WORDS = (
@@ -38,10 +39,15 @@ def parse(raw: bytes) -> dict[str, Any]:
         raise ValueError("Keine E-Mail")
     body = msg.get_body(preferencelist=("plain", "html"))
     text = body.get_content() if body is not None else ""
-    if body is not None and body.get_content_type() == "text/html":
-        text = re.sub(r"<[^>]+>", " ", text)
     html_part = msg.get_body(preferencelist=("html",))
     html = html_part.get_content() if html_part is not None else None
+    # Text preferably from text/plain; from HTML only via html_to_text, which drops style,
+    # script, head and comments (operator report 30.09.2026). A text/plain part that itself
+    # carries CSS (some newsletter generators) is replaced by the text of the HTML part.
+    if body is not None and body.get_content_type() == "text/html":
+        text = html_to_text(text)
+    elif html and looks_like_markup(text):
+        text = html_to_text(html) or text
     attachments = []
     inline_skipped = 0
     for part in msg.iter_attachments():

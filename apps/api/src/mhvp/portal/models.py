@@ -170,3 +170,77 @@ class SepaMandateProposal(IdMixin, TimestampMixin, TenantMixin, Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     decision_note: Mapped[str | None] = mapped_column(Text)
     contact_bank_account_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class PortalFeatureSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Portal feature switches per tenant (A.5 Verwalteransicht, M21-08). One row per tenant,
+    all switches off by default (Produktschutz): chat at the ticket, AI pre-qualification of
+    chat messages (additionally needs the approved AI provider with data processing
+    agreement) and the read only support view (additionally needs the user's consent)."""
+
+    __tablename__ = "portal_feature_setting"
+    __table_args__ = (UniqueConstraint("tenant_id", name="ux_portal_feature_setting_tenant"),)
+
+    chat_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    chat_ai_prequalification_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    support_login_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
+
+class PortalRepresentation(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Representative (Vertreter, Bevollmächtigter) of an owner (M21-05, 14 Eigentümer).
+
+    The representative's portal account receives read only grants derived from the contracts
+    of the represented contact, limited to the period of the power of attorney. The power of
+    attorney document is mandatory (Vertretungsnachweis); revoking ends the access at once."""
+
+    __tablename__ = "portal_representation"
+    __table_args__ = (
+        Index("ix_portal_representation_account", "tenant_id", "account_id"),
+        CheckConstraint(
+            "valid_to IS NULL OR valid_to >= valid_from", name="ck_portal_representation_period"
+        ),
+        CheckConstraint("status IN ('active', 'revoked')", name="ck_portal_representation_status"),
+    )
+
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
+    principal_contact_id: Mapped[uuid.UUID] = _fk("contact.id")
+    document_id: Mapped[uuid.UUID] = _fk("document.id")
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_to: Mapped[date | None] = mapped_column(Date)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="active", server_default="active"
+    )
+    note: Mapped[str | None] = mapped_column(String(500))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class PortalSupportConsent(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Consent of a portal user to a read only support view by the management (SA-02)."""
+
+    __tablename__ = "portal_support_consent"
+    __table_args__ = (Index("ix_portal_support_consent_account", "tenant_id", "account_id"),)
+
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PortalSupportAccess(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Log of every support view (SA-02): who, for which account, why, under which consent and
+    which areas were shown. Rows are never changed or deleted by the application."""
+
+    __tablename__ = "portal_support_access"
+    __table_args__ = (Index("ix_portal_support_access_account", "tenant_id", "account_id"),)
+
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
+    consent_id: Mapped[uuid.UUID] = _fk("portal_support_consent.id", ondelete="RESTRICT")
+    staff_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    reason: Mapped[str] = mapped_column(String(500), nullable=False)
+    areas: Mapped[str] = mapped_column(String(200), nullable=False)

@@ -67,3 +67,15 @@ scope) are read on every request, so locks take effect immediately; portal grant
 the cache. `invalidate_permissions(tenant_id)` runs after the commit of `set_member_roles`,
 `PUT /tenant/roles/{id}/permissions` and `sync_roles`; a change made in another process takes
 effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
+
+## Auth additions (package P14, 30.09.2026)
+
+- `auth/breached.py`: offline check against compromised passwords (bundled SHA-1 list, optional
+  file `MHVP_BREACHED_PASSWORDS_FILE`, `register_source`); used by `passwords.policy_violation`
+  (minimum 12, rule `docs/rules/M2-05-passwortregeln.md`).
+- `auth/scope.py`: property assignment (`allowed_property_ids`, `ensure_property_allowed`,
+  session variants) from `Membership.property_ids` (rule M2-02).
+- `auth/webauthn.py`: passkeys prepared, `AVAILABLE = False`, endpoints under
+  `/auth/webauthn/*` (rule M2-03).
+- `auth/portal_roles.py`: named portal roles and the derivation rule of 3.4 (S16-10).
+- CSRF and field encryption evidence: `docs/security/S16-csrf-and-field-encryption.md`.

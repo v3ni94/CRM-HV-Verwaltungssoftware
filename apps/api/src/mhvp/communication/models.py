@@ -44,7 +44,15 @@ class Mailbox(IdMixin, TimestampMixin, TenantMixin, Base):
     username: Mapped[str | None] = mapped_column(String(320))
     secret: Mapped[str | None] = mapped_column(EncryptedText())
     enabled: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    last_uid: Mapped[int | None] = mapped_column(Integer)
+    # IMAP cursor (M20-01): highest stored UID and the UIDVALIDITY it belongs to. BIGINT since
+    # IMAP UIDs are unsigned 32 bit values (migration 0261).
+    last_uid: Mapped[int | None] = mapped_column(BigInteger)
+    imap_uidvalidity: Mapped[int | None] = mapped_column(BigInteger)
+    # Stilvorgaben für KI-Antwortentwürfe (M20-02): {"tone": formell|sachlich|freundlich,
+    # "rules": str}. Das Standardpostfach gilt als Vorgabe des Mandanten (migration 0261).
+    reply_style: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     # Gmail: `secret` holds the OAuth refresh token; the history id is the incremental cursor.
     gmail_history_id: Mapped[str | None] = mapped_column(String(32))
     last_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

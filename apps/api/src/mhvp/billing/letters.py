@@ -63,6 +63,32 @@ def advance_proposal(costs: Decimal) -> Decimal:
     return (costs / MONTHS).quantize(CENT, rounding=ROUND_HALF_UP)
 
 
+def tenant_lines(snapshot: StatementSnapshot, contract_id: uuid.UUID | str) -> list[dict[str, Any]]:
+    """Cost breakdown of one contract from the snapshot only (6.5 statement_line, M17-02):
+    cost type, total amount, key, basis and the tenant's share. Positions
+    without a share of this contract are left out; nothing is recalculated (A01)."""
+    key = f"contract:{contract_id}"
+    out: list[dict[str, Any]] = []
+    for position in snapshot.inputs.get("positions", []):
+        share = position.get("split", {}).get(key)
+        if share is None:
+            continue
+        allocation_key = position.get("allocation_key") or {}
+        account = position.get("account") or {}
+        out.append(
+            {
+                "label": position["label"],
+                "total": position["amount"],
+                "allocation_key": allocation_key.get("code"),
+                "allocation_key_name": allocation_key.get("name"),
+                "operating_cost_type": account.get("operating_cost_type"),
+                "basis": position.get("basis"),
+                "share": share,
+            }
+        )
+    return out
+
+
 def result_kind(balance: Decimal) -> str:
     if balance > 0:
         return "nachzahlung"
@@ -107,6 +133,7 @@ def _body(
     balance: Decimal,
     proposal: Decimal | None,
     proposal_note: str | None,
+    cost_lines: list[dict[str, Any]] | None = None,
 ) -> str:
     lines = [
         html.escape(greeting),
@@ -129,6 +156,16 @@ def _body(
             )
         ),
     ]
+    if cost_lines:
+        # M17-02: Kostenaufstellung je Position (Kostenart, Gesamtbetrag, Schlüssel, Anteil).
+        rows = ["Kostenaufstellung (Kostenart, Gesamtkosten, Verteilung, Ihr Anteil):"]
+        for line in cost_lines:
+            key = line["allocation_key_name"] or line["allocation_key"] or "Einzelabrechnung"
+            rows.append(
+                f"{line['label']}: {fmt_eur(Decimal(line['total']))}, {key}, "
+                f"Ihr Anteil {fmt_eur(Decimal(line['share']))}"
+            )
+        lines.append("\n".join(html.escape(row) for row in rows))
     kind = result_kind(balance)
     if kind == "nachzahlung":
         lines.append(
@@ -291,6 +328,7 @@ async def _tenant_letter(
         balance=balance,
         proposal=proposal,
         proposal_note=proposal_note,
+        cost_lines=tenant_lines(snapshot, contract.id),
     )
     info = [
         ("Status", DRAFT_LABEL),

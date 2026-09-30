@@ -382,3 +382,28 @@ ein Antwortentwurf an die bekannte Adresse erstellt (zweite Freigabe). Die Karte
 "Rechnungskopie aus Lexware Office" im Ticket zeigt Status, Treffer und Empfängerprüfung und
 bietet Anfordern, Korrigieren, Empfänger verknüpfen, Abrufen und Ablehnen. Details in
 [Lexware Office](lexware-office.md), Abschnitt Rechnungskopie.
+
+## Aufträge, Teams, Kommentare und Dokumente (Paket P11)
+
+* Unter Aufträge (`/auftraege`) stehen alle Arbeitsaufträge mit Filter nach Status, Verweis auf das Ticket und den Auftrag mit Terminvorschlägen.
+* Teams lassen sich über die Schnittstelle ändern und löschen, solange dem Team keine Tickets oder Vorlagen zugeordnet sind.
+* Kommentare am Ticket werden archiviert, nicht gelöscht. Der Text bleibt als Nachweis gespeichert, ist aber in der Ticketansicht und im Portal nicht mehr sichtbar.
+* Der Reiter Dokumente im Ticket zeigt nur Dokumente mit Bezug zum Ticket (Titel, Dateiname oder Schlagwort nennt "Ticket <Nummer>"), zum Kontakt (Korrespondent) oder zum Objekt. Ohne Bezug erscheint eine leere Liste mit Hinweis. Dokumente, die nur dieselben Ziffern enthalten, werden nicht mehr angezeigt.
+* Dienstleister können im Portal einen Auftrag annehmen, mit Begründung ablehnen und den Stand ihrer Rechnungseinreichung sehen. Jede Änderung erscheint im Ticketverlauf.
+
+## Gespeicherte Filter und Sammelzuweisung (30.09.2026)
+
+Über der Ticketliste speichert die Leiste Gespeicherte Filter die aktuelle Suche und Filter unter
+einem Namen; ein Klick auf den Namen stellt sie wieder her. Dieselbe Leiste steht in der
+Objektliste, der Vertragsliste und der Dokumentenliste. Gespeicherte Filter gehören der
+angemeldeten Person.
+
+Die Schnittstelle `POST /workspace/bulk` mit der Aktion `tickets.assign` weist mehrere Tickets
+einer Person zu (Recht Tickets bearbeiten). Die Aktion gilt ganz oder gar nicht: Ist ein Ticket
+unbekannt oder zusammengeführt, ändert sich nichts. Verlauf, Benachrichtigung und Ereignis
+entstehen wie bei der Einzelzuweisung. Eine Bedienung in der Liste gibt es dafür noch nicht;
+die Statusänderung mehrerer Tickets steht in der Liste bereits zur Verfügung.
+
+## Kompaktansicht im Ticket
+
+Im Ticket erscheint zur letzten eingegangenen Mail dieselbe Kompaktansicht wie im Postfach (Zusammenfassung, offene Punkte, CRM Hinweis, Antwortvorschlag, Kurz senden mit Freigabe). Details siehe Kapitel Mail.

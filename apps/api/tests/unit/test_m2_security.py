@@ -49,10 +49,10 @@ def test_master_key_validation() -> None:
 
 
 def test_password_policy_and_hashing() -> None:
-    # Operator decision 26.09.2026 (M2-01): minimum length 6, maximum 128 unchanged.
-    assert passwords.MIN_LENGTH == 6
-    assert passwords.policy_violation("short") is not None  # 5 characters
-    assert passwords.policy_violation("sixchr") is None  # 6 characters
+    # Operator decision 9 a of 30.09.2026 (M2-05): minimum length 12, maximum 128 unchanged.
+    assert passwords.MIN_LENGTH == 12
+    assert passwords.policy_violation("elevenchars") is not None  # 11 characters
+    assert passwords.policy_violation("twelve chars") is None  # 12 characters
     assert passwords.policy_violation("x" * 128) is None
     assert passwords.policy_violation("x" * 129) is not None
     assert passwords.policy_violation(" leading space ok?") is not None

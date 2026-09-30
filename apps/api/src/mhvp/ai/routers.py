@@ -406,7 +406,13 @@ async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) ->
         ) or Decimal(0)
         rows = (
             await session.execute(
-                select(AiTaskRun.task, func.sum(AiTaskRun.cost_eur))
+                select(
+                    AiTaskRun.task,
+                    func.sum(AiTaskRun.cost_eur),
+                    func.count(AiTaskRun.id),
+                    func.coalesce(func.sum(AiTaskRun.tokens_in), 0),
+                    func.coalesce(func.sum(AiTaskRun.tokens_out), 0),
+                )
                 .where(AiTaskRun.created_at >= gateway.month_start(now))
                 .group_by(AiTaskRun.task)
             )
@@ -417,7 +423,10 @@ async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) ->
             budget_eur=Decimal(budget),
             warning=budget > 0 and spent >= Decimal(budget) * gateway.WARN_SHARE,
             blocked=budget <= 0 or spent >= Decimal(budget),
-            by_task={t.value: Decimal(v or 0).quantize(Decimal("0.0001")) for t, v in rows},
+            by_task={t.value: Decimal(v or 0).quantize(Decimal("0.0001")) for t, v, *_ in rows},
+            runs_by_task={t.value: int(n) for t, _, n, *_ in rows},
+            tokens_in_by_task={t.value: int(ti) for t, _, _, ti, _ in rows},
+            tokens_out_by_task={t.value: int(to) for t, _, _, _, to in rows},
         )
 
 

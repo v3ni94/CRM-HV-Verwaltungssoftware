@@ -28,6 +28,7 @@ from mhvp.communication import (
     signatures,
     transport,
 )
+from mhvp.communication.html import display_body, sanitize_html
 from mhvp.communication.models import MailApprovalDeputy, Mailbox, MailboxUser, Message, Playbook
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.db.tenancy import after_commit, platform_transaction, tenant_transaction
@@ -51,6 +52,11 @@ OAUTH_STATE_TTL = 600
 
 class _In(BaseModel):
     model_config = ConfigDict(extra="forbid")
+
+
+class MailReplyStyleIn(_In):
+    tone: str | None = Field(default=None, pattern="^(formell|sachlich|freundlich)$")
+    rules: str | None = Field(default=None, max_length=2000)
 
 
 class MailboxIn(_In):
@@ -147,6 +153,7 @@ def _mailbox_out(m: Mailbox, user_ids: list[uuid.UUID] | None = None) -> dict[st
         "archive_on_ticket_done": m.archive_on_ticket_done,
         "archive_scope_missing": m.archive_scope_missing,
         "is_collective": m.is_collective,
+        "reply_style": m.reply_style or {},
         "user_ids": user_ids or [],
         # Push status (read only): watch expiry and last accepted notification.
         "push_watch_expires_at": m.gmail_watch_expiration,
@@ -261,7 +268,7 @@ def _list_out(
     come from ``mhvp.communication.progress``; callers without a computed state get
     ``False``/``None`` (additive fields, older clients ignore them)."""
     out = {k: getattr(m, k) for k in _LIST_FIELDS}
-    out["body_preview"] = _preview(m.body)
+    out["body_preview"] = _preview(display_body(m.body, m.body_html))
     state = state or progress.NONE
     out["in_progress"] = state.in_progress
     out["handler_user_id"] = state.handler_user_id
@@ -275,7 +282,10 @@ def _out(
     m: Message, state: progress.Progress | None = None, sync: dict[str, Any] | None = None
 ) -> dict[str, Any]:
     out = _list_out(m, state, sync)
-    out["body"], out["body_html"] = m.body, m.body_html
+    # Read time repair (operator report 30.09.2026): stored bodies with CSS from the former
+    # extraction are derived again; HTML is sanitised again (idempotent, older rows).
+    out["body"] = display_body(m.body, m.body_html)
+    out["body_html"] = sanitize_html(m.body_html)
     return out
 
 
@@ -389,6 +399,8 @@ class MailboxPatchIn(_In):
     is_collective: bool | None = None
     # Rückkanal Gmail zu Plattform (rule M20-08) je Postfach.
     sync_back_enabled: bool | None = None
+    # Stilvorgaben für KI-Antwortentwürfe (M20-02); das Standardpostfach gilt mandantenweit.
+    reply_style: MailReplyStyleIn | None = None
 
 
 class ReconcileStateIn(_In):
@@ -778,22 +790,27 @@ def _oauth_result(
     return HTMLResponse(f"<p>{text}</p>", status_code=200 if address else 400)
 
 
-@router.post("/mailboxes/{mailbox_id}/sync", summary="Gmail-Posteingang jetzt abrufen")
+@router.post("/mailboxes/{mailbox_id}/sync", summary="Posteingang jetzt abrufen (Gmail oder IMAP)")
 async def sync_mailbox_now(
     mailbox_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(ADMIN)
 ) -> dict[str, Any]:
     from mhvp.communication.gmail import GmailError, sync_one
+    from mhvp.communication.imap import ImapError, sync_imap_mailbox
     from mhvp.communication.services import dispatch_forward_queue
 
     try:
         async with tenant_tx(request, principal) as session:
             box = await _live_mailbox(session, mailbox_id)
-            if box.kind != "gmail":
+            if box.kind == "imap":
+                # IMAP-Abruf (M20-01, Entscheidung 5 a), gleiche Pipeline wie Gmail.
+                result = await sync_imap_mailbox(session, request.app.state.settings, mailbox_id)
+            elif box.kind != "gmail":
                 raise ProblemError(
-                    ErrorCodes.CONFLICT, detail="Nur Gmail-Postfächer werden abgerufen."
+                    ErrorCodes.CONFLICT, detail="Dieses Postfach wird nicht abgerufen."
                 )
-            result = await sync_one(session, request.app.state.settings, mailbox_id)
-    except GmailError as exc:
+            else:
+                result = await sync_one(session, request.app.state.settings, mailbox_id)
+    except (GmailError, ImapError) as exc:
         # The failed sync rolled back; keep the reason visible on the mailbox.
         async with tenant_tx(request, principal) as session:
             failed = await session.get(Mailbox, mailbox_id, with_for_update=True)
@@ -2593,6 +2610,79 @@ async def recompute_suggestion(
         row.suggestion, row.suggestion_status = result, status
         await session.flush()
         return _out(row)
+
+
+async def _compact_thread(
+    session: AsyncSession, principal: TenantPrincipal, row: Message
+) -> list[Message]:
+    from mhvp.communication import compact
+
+    allowed = None
+    if not principal.has("tenant_settings:update"):
+        allowed = await _accessible_mailboxes(session, principal.user_id)
+    return await compact.load_thread(session, row, allowed)
+
+
+@router.get("/messages/{message_id}/compact", summary="Kompaktansicht einer Mail")
+async def message_compact(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Summary (stored AI result or deterministic excerpt), CRM hints from the assignment and
+    the reply proposal (operator request 30.09.2026). Read only; sending goes through the
+    existing draft and send path."""
+    from mhvp.communication import compact
+    from mhvp.contacts.models import Contact
+    from mhvp.tickets.models import Ticket
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.get(Message, message_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await assert_message_accessible(session, principal, row)
+        thread = await _compact_thread(session, principal, row)
+        can = {
+            "contacts": principal.has("contacts:read"),
+            "properties": principal.has("properties:read"),
+            "tickets": principal.has("tickets:read"),
+            "accounting": principal.has("accounting:read"),
+        }
+        contact = await session.get(Contact, row.contact_id) if row.contact_id else None
+        salutation = "Sehr geehrte Damen und Herren"
+        if contact is not None and contact.salutation and contact.last_name:
+            greeting = "Sehr geehrter Herr" if contact.salutation == "Herr" else "Sehr geehrte Frau"
+            salutation = f"{greeting} {contact.last_name}"
+        ticket = await session.get(Ticket, row.ticket_id) if row.ticket_id else None
+        body_text = display_body(row.body, row.body_html) or ""
+        return {
+            "message_id": row.id,
+            "thread_count": len(thread),
+            "summary": compact.summary_block(row, thread),
+            "crm": await compact.crm_block(session, row, can=can),
+            "reply": compact.reply_block(row, salutation, ticket.number if ticket else None),
+            "can_reply": row.direction == "in",
+            "body_long": len(body_text) > compact.EXCERPT_CHARS,
+        }
+
+
+@router.post("/messages/{message_id}/compact/summary", summary="Zusammenfassung (KI) erzeugen")
+async def message_compact_summary(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Runs the AI task ``summarize`` for the thread and stores the result under
+    ``suggestion.summary``; without a released provider nothing is stored (status skipped)
+    and the compact view keeps the deterministic excerpt."""
+    from mhvp.communication import compact
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id, principal)
+        thread = await _compact_thread(session, principal, row)
+        result = await compact.run_summary(request.app.state.settings, row, thread)
+        if result["status"] == "ready":
+            suggestion = dict(row.suggestion or {})
+            suggestion["summary"] = {k: v for k, v in result.items() if k != "status"}
+            row.suggestion = suggestion
+            await session.flush()
+        return result
 
 
 @router.post("/messages/{message_id}/preparation", summary="Mail-Vorbereitung berechnen")

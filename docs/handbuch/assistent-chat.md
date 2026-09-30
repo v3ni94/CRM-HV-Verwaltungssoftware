@@ -111,3 +111,9 @@ Fragen, Antworten, Links und Vorschläge bleiben im Assistentenprotokoll nachvol
 - Der Chat verschiebt keine Termine und verschickt keine Einladungen; das bleibt in der
   Kalenderseite.
 - Die Plattform wählt die Suchbereiche nach festen Regeln; die KI selbst löst keine Abfragen aus.
+
+## Ablehnungsgrund und Kostenübersicht (Nachtrag 30.09.2026)
+
+* Beim Ablehnen eines Kontakt- oder Chat-Vorschlags kann ein Grund eingetragen werden (freiwillig, höchstens 2.000 Zeichen). Er wird im Protokoll gespeichert und als Lernbeispiel verwendet.
+* Die Kostenübersicht in den KI-Einstellungen zeigt je Aufgabe zusätzlich die Zahl der Läufe und der Token im laufenden Monat.
+* Vor dem Aufruf eines externen Anbieters werden Straßen mit Hausnummer und Postleitzahl mit Ort durch Platzhalter ersetzt, Namen bleiben erhalten (Regel AI-MASK-02).

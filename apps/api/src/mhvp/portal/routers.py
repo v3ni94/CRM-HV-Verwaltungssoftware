@@ -16,7 +16,7 @@ from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import select, update
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth import service as auth_service
@@ -74,6 +74,9 @@ class PortalTicketIn(_In):
     title: str = Field(min_length=3, max_length=300)
     description: str = Field(min_length=3, max_length=20000)
     unit_id: uuid.UUID | None = None
+    # M21-03: where the damage is (room, building part, floor); free text, part of the public
+    # description of the ticket. No geo coordinates are collected (data minimisation).
+    location: str | None = Field(default=None, max_length=200)
     # A55: photos or PDFs uploaded by this portal account via POST /portal/uploads; linked to
     # the ticket as attachments (entity_type "ticket"). Never a document of someone else.
     document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=10)
@@ -105,6 +108,10 @@ class PortalDecideIn(_In):
 class PortalQuoteIn(_In):
     amount: Decimal = Field(gt=0)
     document_id: uuid.UUID | None = None
+
+
+class PortalDeclineIn(_In):
+    reason: str | None = Field(default=None, max_length=1000)
 
 
 class PortalAppointmentIn(_In):
@@ -819,7 +826,15 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
             else []
         )
         permissions = await access.staff_permissions(session, account)
+        from mhvp.portal import features as portal_features
+
+        feature_row = await portal_features.get_or_default(session)
+        representations = await portal_features.active_representations(session, account)
         return {
+            # M21-08: tenant feature switches the portal UI follows (chat, AI, support view).
+            "features": portal_features.feature_dict(feature_row),
+            # M21-05: powers of attorney held by this account (role switch in the UI).
+            "representations": representations,
             "contact_id": account.contact_id,
             "roles": sorted({g.role for g in active} | ({"provider"} if is_provider else set())),
             "contracts": [
@@ -870,7 +885,10 @@ async def documents(request: Request, ctx: Portal = Depends(portal_user)) -> lis
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
         docs = await access.visible_documents(session, account, local_today())
-        notes = await access.redaction_notes(session, {d.id for d in docs})
+        ids = {d.id for d in docs}
+        notes = await access.redaction_notes(session, ids)
+        states = await read_receipts.states_for_account(session, account, ids)
+        contexts = await _document_contexts(session, docs)
         return [
             {
                 "id": d.id,
@@ -879,9 +897,31 @@ async def documents(request: Request, ctx: Portal = Depends(portal_user)) -> lis
                 "created_at": d.created_at,
                 # E06, D31: a released version of a receipt carries the redaction note.
                 "redaction_note": notes.get(d.id),
+                # M21-02, SA-06: status neu/gelesen for this user, from the own read receipts
+                # (an indication, see read_receipts.LEGAL_NOTE).
+                "is_new": d.id not in states,
+                "first_opened_at": states.get(d.id, {}).get("first"),
+                "last_opened_at": states.get(d.id, {}).get("last"),
+                "context": contexts.get(d.id),
             }
             for d in docs
         ]
+
+
+async def _document_contexts(session: AsyncSession, docs: list[Any]) -> dict[uuid.UUID, str]:
+    """Short context text per document (category name), SA-06."""
+    from mhvp.documents.models import DocumentCategory
+
+    category_ids = {d.category_id for d in docs if d.category_id is not None}
+    if not category_ids:
+        return {}
+    rows = await session.execute(
+        select(DocumentCategory.id, DocumentCategory.name).where(
+            DocumentCategory.id.in_(category_ids)
+        )
+    )
+    names: dict[uuid.UUID, str] = {r[0]: r[1] for r in rows.all()}
+    return {d.id: names[d.category_id] for d in docs if d.category_id in names}
 
 
 @router.get("/documents/{document_id}", summary="Dokument öffnen (Abruf wird als Indiz vermerkt)")
@@ -1043,7 +1083,11 @@ async def create_ticket(
             tenant_id=principal.tenant_id,
             number=await next_number(session, principal.tenant_id, "ticket"),
             title=body.title,
-            public_description=body.description,
+            public_description=(
+                f"Standort: {body.location.strip()}\n\n{body.description}"
+                if body.location and body.location.strip()
+                else body.description
+            ),
             unit_id=body.unit_id,
             property_id=property_id,
             initiator_contact_id=account.contact_id,
@@ -1148,7 +1192,11 @@ async def tickets(request: Request, ctx: Portal = Depends(portal_user)) -> list[
             comments = (
                 await session.scalars(
                     select(TicketComment)
-                    .where(TicketComment.ticket_id == t.id, TicketComment.internal.is_(False))
+                    .where(
+                        TicketComment.ticket_id == t.id,
+                        TicketComment.internal.is_(False),
+                        TicketComment.removed_at.is_(None),
+                    )
                     .order_by(TicketComment.created_at)
                 )
             ).all()
@@ -1418,7 +1466,91 @@ async def _step(
             note=f"Portal: {note}",
         )
     )
+    previous = order.status
     order.status = target
+    await _announce_provider_step(session, order, previous, target, principal, note)
+
+
+async def _announce_provider_step(
+    session: AsyncSession,
+    order: Any,
+    previous: Any,
+    target: Any,
+    principal: TenantPrincipal,
+    note: str,
+) -> None:
+    """M22-04: a status change made by the provider in the portal is announced like the CRM
+    path: domain event ``work_order.<status>`` (source portal) and, for an order with a
+    ticket, a ticket history entry that the management and the resident see."""
+    await emit(
+        session,
+        tenant_id=order.tenant_id,
+        type=f"work_order.{target.value}",
+        entity_type="work_order",
+        entity_id=order.id,
+        actor_user_id=principal.user_id,
+        payload={"source": "portal", "from": previous.value, "note": note},
+    )
+    _ticket_history(session, order, previous.value, target.value, principal, note)
+
+
+def _ticket_history(
+    session: AsyncSession, order: Any, from_: str, to: str, principal: TenantPrincipal, note: str
+) -> None:
+    from mhvp.tickets.models import TicketEvent
+
+    if order.ticket_id is None:
+        return
+    session.add(
+        TicketEvent(
+            tenant_id=order.tenant_id,
+            ticket_id=order.ticket_id,
+            kind="work_order_status",
+            user_id=principal.user_id,
+            data={
+                "work_order_id": str(order.id),
+                "from": from_,
+                "to": to,
+                "source": "portal",
+                "note": note,
+            },
+        )
+    )
+
+
+PROVIDER_ACCEPT_NOTE = "Portal: Auftrag angenommen"
+
+
+async def _invoice_submissions(session: AsyncSession, order: Any) -> list[dict[str, Any]]:
+    """M22-05: submissions for this order with their processing state (proposed, accepted,
+    rejected) and the decision note of the management."""
+    rows = (
+        await session.scalars(
+            select(ChangeRequest)
+            .where(ChangeRequest.kind == "invoice_submission")
+            .order_by(ChangeRequest.created_at.desc())
+        )
+    ).all()
+    out: list[dict[str, Any]] = []
+    for row in rows:
+        try:
+            payload = json.loads(row.payload)
+        except ValueError:  # pragma: no cover - payload is written by submit_invoice
+            continue
+        if payload.get("work_order_id") != str(order.id):
+            continue
+        out.append(
+            {
+                "id": row.id,
+                "number": payload.get("number"),
+                "invoice_date": payload.get("invoice_date"),
+                "gross": payload.get("gross"),
+                "status": row.status,
+                "decision_note": row.decision_note,
+                "submitted_at": row.created_at,
+            }
+        )
+    return out
 
 
 async def _order(session: AsyncSession, o: Any) -> dict[str, Any]:
@@ -1433,11 +1565,28 @@ async def _order(session: AsyncSession, o: Any) -> dict[str, Any]:
             )
         )
     ).all()
+    from mhvp.tickets.models import WorkOrderEvent
+
+    accepted_at = await session.scalar(
+        select(WorkOrderEvent.created_at)
+        .where(
+            WorkOrderEvent.work_order_id == o.id,
+            WorkOrderEvent.note == PROVIDER_ACCEPT_NOTE,
+        )
+        .order_by(WorkOrderEvent.created_at)
+        .limit(1)
+    )
     return {
         "id": o.id,
         "description": o.description,
         "status": o.status.value,
         "quote_amount": o.quote_amount,
+        # M22-06: id of the quote document (download through the portal document endpoints);
+        # a quote without a document is flagged so the provider can add one.
+        "quote_document_id": o.quote_document_id,
+        "quote_document_missing": o.quote_amount is not None and o.quote_document_id is None,
+        "accepted_by_provider_at": accepted_at,
+        "invoice_submissions": await _invoice_submissions(session, o),
         "scheduled_at": o.scheduled_at,
         # A58: every proposal of this order with its status (proposed, accepted, declined,
         # superseded) and the execution photos linked as attachments.
@@ -1461,16 +1610,81 @@ async def work_orders(request: Request, ctx: Portal = Depends(portal_user)) -> l
         return [await _order(session, o) for o in rows.all()]
 
 
-@router.post("/work-orders/{order_id}/decline", summary="Auftrag ablehnen")
+@router.post("/work-orders/{order_id}/decline", summary="Auftrag ablehnen (mit Begründung)")
 async def decline(
-    order_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)
+    order_id: uuid.UUID,
+    request: Request,
+    body: PortalDeclineIn | None = None,
+    ctx: Portal = Depends(portal_user),
 ) -> dict[str, Any]:
     from mhvp.tickets.models import OrderStatus
 
     principal, account = ctx
+    reason = (body.reason or "").strip() if body else ""
     async with tenant_tx(request, principal) as session:
         order = await _own_order(session, account, order_id)
-        await _step(session, order, OrderStatus.REJECTED, principal, "abgelehnt")
+        await _step(
+            session,
+            order,
+            OrderStatus.REJECTED,
+            principal,
+            f"abgelehnt: {reason}" if reason else "abgelehnt",
+        )
+        return await _order(session, order)
+
+
+@router.post("/work-orders/{order_id}/accept", summary="Auftrag annehmen (ohne Angebot)")
+async def accept_order(
+    order_id: uuid.UUID, request: Request, ctx: Portal = Depends(portal_user)
+) -> dict[str, Any]:
+    """M22-03: the provider confirms an order. Not an approval: the status stays unchanged
+    (release, budget and board approval remain with the management); the confirmation is
+    written to the order history and announced. Idempotent."""
+    from mhvp.tickets.models import OrderStatus, WorkOrderEvent
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        order = await _own_order(session, account, order_id)
+        if order.status not in (OrderStatus.REQUESTED, OrderStatus.APPROVED):
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=f"Im Status {order.status.value} kann der Auftrag nicht angenommen werden.",
+            )
+        existing = await session.scalar(
+            select(WorkOrderEvent.id).where(
+                WorkOrderEvent.work_order_id == order.id,
+                WorkOrderEvent.note == PROVIDER_ACCEPT_NOTE,
+            )
+        )
+        if existing is None:
+            session.add(
+                WorkOrderEvent(
+                    tenant_id=order.tenant_id,
+                    work_order_id=order.id,
+                    from_status=order.status.value,
+                    to_status=order.status.value,
+                    user_id=principal.user_id,
+                    note=PROVIDER_ACCEPT_NOTE,
+                )
+            )
+            await emit(
+                session,
+                tenant_id=order.tenant_id,
+                type="work_order.provider_accepted",
+                entity_type="work_order",
+                entity_id=order.id,
+                actor_user_id=principal.user_id,
+                payload={"source": "portal"},
+            )
+            _ticket_history(
+                session,
+                order,
+                order.status.value,
+                order.status.value,
+                principal,
+                "Auftrag angenommen",
+            )
+            await session.flush()
         return await _order(session, order)
 
 
@@ -1770,6 +1984,26 @@ async def submit_invoice(
         if order.status.value != "done":
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Rechnung erst nach dokumentierter Ausführung."
+            )
+        from mhvp.accounting.models import Invoice
+
+        number = body.number.strip()
+        booked = await session.scalar(
+            select(Invoice.id).where(
+                Invoice.provider_contact_id == order.provider_contact_id,
+                func.lower(Invoice.number) == number.lower(),
+            )
+        )
+        pending = [
+            sub
+            for sub in await _invoice_submissions(session, order)
+            if str(sub["number"] or "").strip().lower() == number.lower()
+            and sub["status"] in ("proposed", "accepted")
+        ]
+        if booked is not None or pending:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Eine Rechnung mit dieser Rechnungsnummer liegt bereits vor.",
             )
         return await _propose(
             session,

@@ -77,6 +77,7 @@ async def patch_property(
             management_type=prop.management_type,
             entity_id=prop.id,
         )
+        await svc.check_documents_exist(session, merged.images, "Bilder")
         before = s.PropertyIn.model_validate(prop, from_attributes=True).model_dump(mode="json")
         for key, value in merged.model_dump().items():
             setattr(prop, key, value)

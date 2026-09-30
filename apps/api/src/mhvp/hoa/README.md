@@ -74,3 +74,27 @@ Checked against the folder contents on 26.09.2026, the following files were not 
   again. Rule `docs/rules/W02-wirtschaftsplan.md`; the rows are contract master data, the
   receivable run behind G1 reads them. Test: `tests/integration/test_m12_letters_plan_export.py`.
 
+
+## Prüfung und Einsicht, Erweiterung P08 (30.09.2026)
+
+* `GET /hoa/audits/{id}` mit Filtern `min_amount`, `max_amount`, `missing_document`, `has_risk`, `item_status`; Prüfauftrag mit `authorization_text` und `data_as_of`.
+* `PATCH /hoa/audit-items/{id}` mit `risk_note`; Verlauf `GET /hoa/audit-items/{id}/history` (Tabelle `audit_item_event`).
+* `POST /hoa/audits/{id}/reports/{version}/confirm`: einmalige Bestätigung einer Berichtsversion, kein Beschluss.
+* Einsichtspaket mit `valid_days`, Widerruf `POST /hoa/inspection-requests/{id}/revoke`, danach 409 beim Abruf.
+* Regel `docs/rules/P08-pruefung-einsicht.md`, Migration 0257.
+
+## Addendum 30.09.2026 (P07, M24-01 to M24-07)
+
+* Earmarked reserves `hoa_reserve` and movements `hoa_reserve_movement` (withdrawal, tax, fee,
+  interest with receipt or entry); `POST/GET /hoa/reserves`,
+  `POST /hoa/statements/{id}/reserve-movements`; snapshot `reserve.positions`.
+* `POST /hoa/statements/{id}/costs/from-ledger`: one cost position per posted entry of an
+  account in the year, linked to entry and receipt; package shows `receipt_status`,
+  `payment` drilldown and `missing_receipts`.
+* Cost items: `journal_entry_id`, `document_id`, `labour_cost_35a`, `basis_resolution_id`,
+  `basis_document_id` (structured W03 source replaces the term check).
+* Snapshot blocks `key_figures` (with debtors) and `section_35a`.
+* Plan master data (title, as_of_date, basis_statement_id, basis_plan_id, payment_rhythm,
+  due_day, continues_until_new_plan, obsolete_at) and `comparison` in the plan snapshot.
+* `GET /hoa/statements/{id}/units/{unit_id}/pdf`: unit statement PDF draft (G4, after approval).
+* Migration 0256. Rule: `docs/rules/M24-W2-abrechnung-plan.md`.

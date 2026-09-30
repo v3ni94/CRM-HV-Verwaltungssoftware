@@ -122,3 +122,21 @@ bestehen.
   Zeitraum oder es gibt keine Mietverträge im Zeitraum.
 - Intern freigeben abgewiesen: Ersteller und Freigebende müssen verschiedene Personen sein.
 - Ausgeben abgewiesen: Freigabestufe G3 ist geschlossen.
+
+## Anschreiben, Zugang und Belegeinsicht
+
+- Unterjährige Abrechnung: beim Anlegen "Unterjährige Abrechnung" ankreuzen und den Zweck
+  angeben. Ohne Zweck wird ein Zeitraum unter zwölf Monaten abgewiesen.
+- Im Entwurf lassen sich Kostenpositionen und Kopfdaten ändern oder entfernen. Nach der
+  Berechnung geht das nur über eine neue Version; der Differenzbericht zeigt die Änderungen
+  je Mieter.
+- Abschnitt "Anschreiben und Zugang je Mieter": Vorschau als PDF, Ablage als Entwurf je
+  Mieter mit Kostenaufstellung. Nach der internen Freigabe wird je Mieter der Zugang mit
+  Versandart, Datum und Nachweis erfasst. Die angezeigte Einwendungsfrist ist eine
+  Orientierung und je Fall zu prüfen.
+- Belegeinsicht: Anfragen der Mieter werden über die API erfasst (Eingang, Weg, Umfang),
+  danach Bereitstellung, Schwärzungsvermerk und Einwendung.
+- Ergebnisbuchung: nur mit Freigabestufe G3 im Status fällig; es entstehen Buchungsentwürfe,
+  die in der Buchhaltung geprüft und gebucht werden.
+- Verbrauchsinformation ohne Portal: in der Monatsliste zeigt "nicht zugestellt" die offenen
+  Einheiten; die Zustellung per Post, E-Mail oder Übergabe wird mit Nachweis erfasst.

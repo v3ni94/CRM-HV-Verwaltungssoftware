@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { AiPostingPanel } from "./AiPostingPanel";
+
 import {
   accountLabel,
   fromCents,
@@ -330,6 +332,7 @@ export function BookingDialog({ tx, partnerBankAccountId, initialSplits, onClose
             </ul>
           </section>
         ) : null}
+        {proposals ? <AiPostingPanel txId={tx.id} canRequest /> : null}
         {isTransfer ? (
           <section className="mt-4 flex flex-col gap-2">
             <h3 className={ui.h3}>{t("transferTitle")}</h3>

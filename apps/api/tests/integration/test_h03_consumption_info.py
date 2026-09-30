@@ -335,11 +335,11 @@ def test_h03_consumption_info(
     assert notes[0]["href"] == "/verbrauch"
     assert [r["month"] for r in _ok(c.get(f"{P}/consumption-info", headers=t2))] == ["2025-09-01"]
 
-    # Job: not due on a Saturday, due on the first working day (nothing new: idempotent).
+    # Job: not due on another day, due on the 3rd (15.1, S15-05; nothing new: idempotent).
     settings = _settings(database, redis_url)
-    assert asyncio.run(run_once(settings, date(2025, 10, 4)))["not_due"] == 1
+    assert asyncio.run(run_once(settings, date(2025, 10, 1)))["not_due"] == 1
     before = len(_ok(c.get(base, headers=h))["rows"])
-    totals = asyncio.run(run_once(settings, date(2025, 10, 1)))
+    totals = asyncio.run(run_once(settings, date(2025, 10, 3)))
     assert totals["not_due"] == 0
     assert totals["skipped"] >= 2  # September of this property already stored
     # Other tenants of the shared test database may add rows; this property gains none.

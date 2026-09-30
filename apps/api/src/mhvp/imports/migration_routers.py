@@ -10,7 +10,7 @@ answer 404 like the ledger endpoints.
 """
 
 import uuid
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -33,13 +33,16 @@ from mhvp.documents.models import Document, DocumentSource, LinkRole
 from mhvp.documents.services import store_document
 from mhvp.imports import migration as mig
 from mhvp.imports.migration_models import (
+    AcceptanceStatus,
     MigratedJournalEntry,
     MigratedJournalLine,
+    MigrationAcceptance,
     MigrationOpeningBalance,
     MigrationReconciliationReport,
     MigrationSwitchRequest,
     OpeningBalanceStatus,
 )
+from mhvp.imports.migration_year import year_expenses
 from mhvp.imports.models import ImportSourceFile
 from mhvp.platform.models import Tenant
 from mhvp.properties.models import LegalEntity, Property
@@ -886,3 +889,237 @@ async def reject_switch(
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> SwitchRequestOut:
     return await _decide(request, principal, request_id, False, body.comment)
+
+
+# Year view of the takeover year (D11, M8-08) ---------------------------------------------
+
+
+class MigYearAccountOut(BaseModel):
+    account_number: str
+    account_name: str
+    prior_period: Decimal
+    later_period: Decimal
+    total: Decimal
+
+
+class MigYearExpensesOut(BaseModel):
+    ledger_id: uuid.UUID
+    year: int
+    migration_cutoff: date | None
+    prior_period_total: Decimal
+    later_period_total: Decimal
+    total: Decimal
+    prior_year_complete: bool
+    accounts: list[MigYearAccountOut]
+
+
+@router.get(
+    "/ledgers/{ledger_id}/year-expenses",
+    summary="Ausgaben des Übernahmejahres (Vorperiode Migrationsjournal, Nachperiode Journal)",
+)
+async def get_year_expenses(
+    ledger_id: uuid.UUID,
+    request: Request,
+    year: int = Query(ge=2000, le=2100),
+    principal: TenantPrincipal = Depends(READ),
+) -> MigYearExpensesOut:
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        return MigYearExpensesOut(**await year_expenses(session, ledger, year))
+
+
+# Acceptance record (13.1, M8-09) ---------------------------------------------------------
+
+
+class MigAcceptancePerson(_In):
+    name: str = Field(min_length=1, max_length=200)
+    role: str = Field(min_length=1, max_length=200)
+
+
+class MigAcceptanceIn(_In):
+    review_scope: str = Field(default="", max_length=10000)
+    responsible_persons: list[MigAcceptancePerson] = Field(default_factory=list, max_length=50)
+    non_migratable_data: str = Field(default="", max_length=10000)
+    fallback_plan: str = Field(default="", max_length=10000)
+    archive_concept: str = Field(default="", max_length=10000)
+    reconciliation_report_id: uuid.UUID | None = None
+
+
+class MigAcceptanceOut(BaseModel):
+    id: uuid.UUID
+    property_id: uuid.UUID
+    status: str
+    review_scope: str
+    responsible_persons: list[dict[str, Any]]
+    non_migratable_data: str
+    fallback_plan: str
+    archive_concept: str
+    reconciliation_report_id: uuid.UUID | None
+    created_by: uuid.UUID | None
+    created_at: datetime
+    signed_by: uuid.UUID | None
+    signed_at: datetime | None
+
+
+def _acceptance_out(item: MigrationAcceptance) -> MigAcceptanceOut:
+    return MigAcceptanceOut(
+        id=item.id,
+        property_id=item.property_id,
+        status=item.status,
+        review_scope=item.review_scope,
+        responsible_persons=item.responsible_persons,
+        non_migratable_data=item.non_migratable_data,
+        fallback_plan=item.fallback_plan,
+        archive_concept=item.archive_concept,
+        reconciliation_report_id=item.reconciliation_report_id,
+        created_by=item.created_by,
+        created_at=item.created_at,
+        signed_by=item.signed_by,
+        signed_at=item.signed_at,
+    )
+
+
+async def _acceptance(
+    session: AsyncSession, acceptance_id: uuid.UUID, *, lock: bool = False
+) -> MigrationAcceptance:
+    query = select(MigrationAcceptance).where(MigrationAcceptance.id == acceptance_id)
+    if lock:
+        query = query.with_for_update()
+    item = await session.scalar(query)
+    if item is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return item
+
+
+async def _check_report(
+    session: AsyncSession, report_id: uuid.UUID | None, property_id: uuid.UUID
+) -> None:
+    if report_id is None:
+        return
+    report = await session.get(MigrationReconciliationReport, report_id)
+    if report is None or report.property_id != property_id:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+
+
+@router.get("/properties/{property_id}/acceptance", summary="Abnahmeprotokolle des Objekts")
+async def list_acceptances(
+    property_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[MigAcceptanceOut]:
+    async with tenant_tx(request, principal) as session:
+        prop = await _property(session, property_id)
+        rows = (
+            await session.scalars(
+                select(MigrationAcceptance)
+                .where(MigrationAcceptance.property_id == prop.id)
+                .order_by(MigrationAcceptance.created_at.desc())
+            )
+        ).all()
+        return [_acceptance_out(r) for r in rows]
+
+
+@router.post(
+    "/properties/{property_id}/acceptance",
+    status_code=201,
+    summary="Abnahmeprotokoll anlegen (Entwurf)",
+)
+async def create_acceptance(
+    property_id: uuid.UUID,
+    body: MigAcceptanceIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> MigAcceptanceOut:
+    async with tenant_tx(request, principal) as session:
+        prop = await _property(session, property_id)
+        await _check_report(session, body.reconciliation_report_id, prop.id)
+        item = MigrationAcceptance(
+            tenant_id=principal.tenant_id,
+            property_id=prop.id,
+            review_scope=body.review_scope,
+            responsible_persons=[p.model_dump() for p in body.responsible_persons],
+            non_migratable_data=body.non_migratable_data,
+            fallback_plan=body.fallback_plan,
+            archive_concept=body.archive_concept,
+            reconciliation_report_id=body.reconciliation_report_id,
+            created_by=principal.user_id,
+            updated_by=principal.user_id,
+        )
+        session.add(item)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="migration.acceptance_created",
+            entity_type="migration_acceptance",
+            entity_id=item.id,
+            actor_user_id=principal.user_id,
+            changes={},
+        )
+        return _acceptance_out(item)
+
+
+@router.put("/acceptance/{acceptance_id}", summary="Abnahmeprotokoll bearbeiten (nur Entwurf)")
+async def update_acceptance(
+    acceptance_id: uuid.UUID,
+    body: MigAcceptanceIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> MigAcceptanceOut:
+    async with tenant_tx(request, principal) as session:
+        item = await _acceptance(session, acceptance_id, lock=True)
+        if item.status != AcceptanceStatus.DRAFT.value:
+            raise ProblemError(
+                ErrorCodes.MIG_STATE, detail="Ein unterzeichnetes Protokoll wird nicht geändert."
+            )
+        await _check_report(session, body.reconciliation_report_id, item.property_id)
+        item.review_scope = body.review_scope
+        item.responsible_persons = [p.model_dump() for p in body.responsible_persons]
+        item.non_migratable_data = body.non_migratable_data
+        item.fallback_plan = body.fallback_plan
+        item.archive_concept = body.archive_concept
+        item.reconciliation_report_id = body.reconciliation_report_id
+        item.updated_by = principal.user_id
+        await session.flush()
+        return _acceptance_out(item)
+
+
+@router.post(
+    "/acceptance/{acceptance_id}/sign", summary="Abnahmeprotokoll unterzeichnen (zweite Person)"
+)
+async def sign_acceptance(
+    acceptance_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> MigAcceptanceOut:
+    async with tenant_tx(request, principal) as session:
+        item = await _acceptance(session, acceptance_id, lock=True)
+        if item.status != AcceptanceStatus.DRAFT.value:
+            raise ProblemError(ErrorCodes.MIG_STATE)
+        if not (
+            item.review_scope.strip()
+            and item.responsible_persons
+            and item.fallback_plan.strip()
+            and item.archive_concept.strip()
+        ):
+            raise ProblemError(
+                ErrorCodes.MIG_STATE,
+                detail=(
+                    "Prüfumfang, verantwortliche Personen, Rückfallplan und Archivkonzept "
+                    "sind vor der Unterzeichnung auszufüllen."
+                ),
+            )
+        mig._four_eyes(
+            principal.user_id, item.updated_by or item.created_by, principal.is_platform_admin
+        )
+        item.status = AcceptanceStatus.SIGNED.value
+        item.signed_by = principal.user_id
+        item.signed_at = datetime.now(UTC)
+        item.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="migration.acceptance_signed",
+            entity_type="migration_acceptance",
+            entity_id=item.id,
+            actor_user_id=principal.user_id,
+            changes={},
+        )
+        await session.flush()
+        return _acceptance_out(item)

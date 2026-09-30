@@ -13,7 +13,19 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Date, DateTime, Enum, ForeignKey, Index, Integer, Numeric, String, text
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    ForeignKey,
+    Index,
+    Integer,
+    Numeric,
+    String,
+    UniqueConstraint,
+    text,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -111,6 +123,16 @@ class DirectDebitOrder(IdMixin, TimestampMixin, TenantMixin, Base):
     due_date: Mapped[date] = mapped_column(Date, nullable=False)
     pre_notification_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
     pre_notification_dispatch_id: Mapped[uuid.UUID | None] = _fk("dispatch.id", nullable=True)
+    # M15-01: bank feedback per collection (rejection before settlement, collected amount,
+    # return with ISO 20022 reason code); recorded, never posted automatically.
+    bank_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="open", server_default="open"
+    )
+    bank_status_reason_code: Mapped[str | None] = mapped_column(String(8))
+    bank_status_reason: Mapped[str | None] = mapped_column(String(500))
+    collected_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    bank_transaction_id: Mapped[uuid.UUID | None] = _fk("bank_transaction.id", nullable=True)
+    bank_status_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class DirectDebitApproval(IdMixin, TenantMixin, Base):
@@ -128,3 +150,55 @@ class DirectDebitApproval(IdMixin, TenantMixin, Base):
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
     invalidated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class DirectDebitOrderStatus(StrEnum):
+    """Bank feedback per collection (M15-01); ``open`` until the bank reports."""
+
+    OPEN = "open"
+    ACCEPTED = "accepted"
+    REJECTED = "rejected"
+    COLLECTED = "collected"
+    RETURNED = "returned"
+
+
+class BankStatusReport(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Imported bank status report (pain.002 or camt.054, M15-02). The file checksum makes a
+    repeated import a no-op (B08); the per order result stays as evidence."""
+
+    __tablename__ = "bank_status_report"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "file_sha256", name="uq_bank_status_report_file"),
+    )
+
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    message_id: Mapped[str | None] = mapped_column(String(35))
+    original_message_id: Mapped[str | None] = mapped_column(String(35))
+    file_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
+    result: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+
+
+class PaymentRunSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Per tenant switch of the weekly payment run preview (S15-02, default off)."""
+
+    __tablename__ = "payment_run_setting"
+    __table_args__ = (UniqueConstraint("tenant_id", name="uq_payment_run_setting_tenant"),)
+
+    weekly_preview_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+
+
+class PaymentRunPreview(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Stored preview of a payment run (S15-02): lists only, creates no order and no file."""
+
+    __tablename__ = "payment_run_preview"
+    __table_args__ = (Index("ix_payment_run_preview_tenant_created", "tenant_id", "created_at"),)
+
+    as_of: Mapped[date] = mapped_column(Date, nullable=False)
+    trigger: Mapped[str] = mapped_column(String(16), nullable=False)
+    summary: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )

@@ -40,6 +40,19 @@ festgehalten. Unter Mandant und Briefbogen steht zusätzlich die Notbremse Ticke
 Freigabe für alle (Standard aus): Ist sie an, brauchen alle Ticketantworten des Mandanten die
 Freigabe einer zweiten Person, unabhängig vom Kennzeichen.
 
+## Objektzuordnung je Benutzer
+
+Unter Einstellungen, Benutzer legt die Mandantenadministration je Mitglied fest, welche
+Objekte es sehen darf (Schaltfläche Objekte). Ohne Auswahl sieht das Mitglied alle Objekte.
+Mit Auswahl ist es auf die gewählten Objekte beschränkt; Administratorrollen sind nie
+eingeschränkt. Stand 30.09.2026 wird die Zuordnung gespeichert und protokolliert, die
+Filterung der Objekt-, Vertrags- und Ticketlisten folgt (Regel M2-02).
+
+## Passkeys
+
+Passkeys (WebAuthn) als zusätzlicher zweiter Faktor sind vorbereitet, aber noch nicht
+freigeschaltet (Regel M2-03). Bis dahin dient TOTP als zweiter Faktor.
+
 ## Erledigungsarten beim Ticketabschluss
 
 Unter Mandant und Briefbogen, Abschnitt Erledigungsarten, legt der Mandant fest, welche Arten
@@ -58,8 +71,9 @@ Ereignisprotokoll (Mandanteneinstellungen geändert, Feld resolution_kinds).
 
 ## Meine Daten: Passwort, zweiter Faktor, Geräte
 
-Unter Meine Daten (Benutzermenü oben rechts) ändert jeder Benutzer sein Passwort (6 bis 128
-Zeichen, aktuelles Passwort erforderlich, Betreiberentscheidung M2-01 vom 26.09.2026) und
+Unter Meine Daten (Benutzermenü oben rechts) ändert jeder Benutzer sein Passwort (12 bis 128
+Zeichen, kein bekanntes kompromittiertes Passwort, aktuelles Passwort erforderlich,
+Betreiberentscheidung 9 a vom 30.09.2026, Regel M2-05) und
 verwaltet den zweiten Faktor: Zweiten Faktor einrichten zeigt einen QR-Code und den Schlüssel
 für die Authenticator-App; erst nach Bestätigen mit einem gültigen Code ist der zweite Faktor
 aktiv, danach fragt die Anmeldung nach dem Passwort zusätzlich den Code ab. Zweiten Faktor

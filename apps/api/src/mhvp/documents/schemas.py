@@ -142,6 +142,7 @@ class CategoryIn(_In):
     parent_id: uuid.UUID | None = None
     paperless_document_type: str | None = Field(default=None, max_length=128)
     drive_folder: str | None = Field(default=None, max_length=64)
+    paperless_tag: str | None = Field(default=None, max_length=128)
     sort_order: int = 0
 
 
@@ -154,6 +155,10 @@ class CategoryOut(CategoryIn):
 class CategoryPatch(_In):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     retention_profile_id: uuid.UUID | None = None
+    # M6-09: mapping to the mirrors; a new value is pushed to existing mirrors via update_meta.
+    paperless_document_type: str | None = Field(default=None, max_length=128)
+    paperless_tag: str | None = Field(default=None, max_length=128)
+    drive_folder: str | None = Field(default=None, max_length=64)
 
 
 class RetentionProfilePatch(_In):

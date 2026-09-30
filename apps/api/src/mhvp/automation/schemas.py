@@ -330,6 +330,7 @@ class AutomationRuleIn(_In):
     name: str = Field(min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
     active: bool = False
+    test_mode: bool = False
     trigger_kind: str = TRIGGER_EVENT
     trigger_event_type: str | None = Field(default=None, min_length=3, max_length=100)
     schedule: dict[str, Any] | None = None
@@ -371,6 +372,7 @@ class AutomationRulePatch(_In):
     name: str | None = Field(default=None, min_length=1, max_length=200)
     description: str | None = Field(default=None, max_length=2000)
     active: bool | None = None
+    test_mode: bool | None = None
     trigger_kind: str | None = None
     trigger_event_type: str | None = Field(default=None, min_length=3, max_length=100)
     schedule: dict[str, Any] | None = None

@@ -118,7 +118,19 @@ async def candidates(session: AsyncSession, tx: BankTransaction) -> list[Candida
         if item["remaining"] == tx.amount:
             score += SCORES["amount"]
             reasons.append("Betrag entspricht dem offenen Betrag")
-        if not hints.empty:
+        location: bool | None = None
+        if hints.has_location and contract is not None:
+            unit_number, property_number = await _location_numbers(session, contract)
+            location = allocation.location_matches(
+                hints, unit_number=unit_number, property_number=property_number
+            )
+            if location is False:
+                reasons.append(allocation.REASON_LOCATION_MISMATCH)
+        if location is True:
+            # M12-03: unit or property named in the purpose selects this item of the debtor.
+            reasons.append(allocation.REASON_LOCATION)
+            hit_items.setdefault(item["account_id"], set()).add(item["id"])
+        elif not hints.empty and location is not False:
             entry = await session.get(JournalEntry, item["journal_entry_id"])
             if allocation.matches_item(
                 hints,
@@ -146,6 +158,14 @@ async def candidates(session: AsyncSession, tx: BankTransaction) -> list[Candida
             c.reasons.append(allocation.REASON_DETERMINED)
     out.sort(key=lambda c: (c.open_item_id not in determined, -c.score, str(c.open_item_id)))
     return out
+
+
+async def _location_numbers(session: AsyncSession, contract: Any) -> tuple[str | None, str | None]:
+    from mhvp.properties.models import Property, Unit
+
+    unit = await session.get(Unit, contract.unit_id)
+    prop = await session.get(Property, contract.property_id)
+    return (unit.number if unit else None), (prop.number if prop else None)
 
 
 async def allocation_reasons(

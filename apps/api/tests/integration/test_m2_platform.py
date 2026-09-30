@@ -384,20 +384,28 @@ def test_totp_setup_requires_matching_code_and_can_be_disabled(
 
 
 def test_password_change_policy_boundaries(client: TestClient, world: World) -> None:
-    """Operator 26.09.2026 (M2-01): five characters are refused with the policy error, six are
-    accepted; the change takes effect at the next login."""
+    """Operator decision 9 a of 30.09.2026 (M2-05): eleven characters and a known compromised
+    password are refused with the policy error, twelve are accepted; the change takes effect at
+    the next login."""
     headers = bearer(login_password_only(client, world, "reader"))
     short = client.post(
         "/api/v1/auth/password",
-        json={"current_password": PASSWORD, "new_password": "abcde"},
+        json={"current_password": PASSWORD, "new_password": "abcdefghijk"},
         headers=headers,
     )
     assert short.status_code == 422, short.text
     assert short.json()["code"] == "MHVP-AUTH-0006"
-    assert "6 Zeichen" in short.json()["detail"]
+    assert "12 Zeichen" in short.json()["detail"]
+    breached_pw = client.post(
+        "/api/v1/auth/password",
+        json={"current_password": PASSWORD, "new_password": "Passwort1234"},
+        headers=headers,
+    )
+    assert breached_pw.status_code == 422, breached_pw.text
+    assert "Datenlecks" in breached_pw.json()["detail"]
     ok = client.post(
         "/api/v1/auth/password",
-        json={"current_password": PASSWORD, "new_password": "abcdef"},
+        json={"current_password": PASSWORD, "new_password": "abcdefghijkm"},
         headers=headers,
     )
     assert ok.status_code == 204, ok.text
@@ -407,7 +415,7 @@ def test_password_change_policy_boundaries(client: TestClient, world: World) -> 
         )
         assert old.status_code == 401
         new = client.post(
-            "/api/v1/auth/login", json={"email": world.email("reader"), "password": "abcdef"}
+            "/api/v1/auth/login", json={"email": world.email("reader"), "password": "abcdefghijkm"}
         )
         assert new.status_code == 200
         assert new.json()["status"] == "ok"
@@ -416,7 +424,7 @@ def test_password_change_policy_boundaries(client: TestClient, world: World) -> 
         # of ``headers`` stays valid after a password change).
         restored = client.post(
             "/api/v1/auth/password",
-            json={"current_password": "abcdef", "new_password": PASSWORD},
+            json={"current_password": "abcdefghijkm", "new_password": PASSWORD},
             headers=headers,
         )
         assert restored.status_code == 204, restored.text

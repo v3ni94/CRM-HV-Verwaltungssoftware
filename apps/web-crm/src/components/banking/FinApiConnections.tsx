@@ -9,6 +9,8 @@ import { StatusPill, type StatusPillVariant } from "@/components/ui/StatusPill";
 import { formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { DisconnectedToggle, isDisconnected, useShowDisconnected } from "./DisconnectedToggle";
+
 type FinApiAccount = {
   id: string;
   finapi_account_id: string;
@@ -52,6 +54,7 @@ export function FinApiConnections() {
   const t = useTranslations("BankConnections");
   const [configured, setConfigured] = useState<boolean | null>(null);
   const [connections, setConnections] = useState<FinApiConnection[]>([]);
+  const [showDisconnected, setShowDisconnected] = useShowDisconnected();
   const [bankName, setBankName] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -92,6 +95,9 @@ export function FinApiConnections() {
     setBankName("");
   }
 
+  const hiddenCount = connections.filter((c) => isDisconnected(c.status)).length;
+  const visible = showDisconnected ? connections : connections.filter((c) => !isDisconnected(c.status));
+
   if (configured === false) {
     return (
       <section className={ui.card}>
@@ -116,11 +122,12 @@ export function FinApiConnections() {
           {t("connect")}
         </button>
       </div>
-      {connections.length === 0 ? (
+      <DisconnectedToggle count={hiddenCount} show={showDisconnected} onChange={setShowDisconnected} />
+      {visible.length === 0 ? (
         <p className="mt-3 text-sm text-muted">{t("noConnections")}</p>
       ) : (
         <div className="mt-3 flex flex-col gap-3">
-          {connections.map((c) => (
+          {visible.map((c) => (
             <div key={c.id} className="rounded-lg border border-border p-3">
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <span className="font-medium">{c.bank_name}</span>

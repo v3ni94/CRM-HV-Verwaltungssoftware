@@ -1,7 +1,8 @@
 import { getTranslations } from "next-intl/server";
 
 import { SecuritySettings } from "@/components/portal/SecuritySettings";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { SupportConsent } from "@/components/portal/SupportConsent";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -16,11 +17,17 @@ export default async function SecurityPage() {
     api.GET("/api/v1/auth/trusted-devices"),
   ]);
   redirectIfUnauthenticated(me.response);
+  // SA-02: the consent card appears only while the tenant has the support view switched on.
+  const consentResponse = await serverFetch("/api/v1/portal/support-consent");
+  const consent = consentResponse.ok
+    ? ((await consentResponse.json()) as { active: boolean; expires_at: string | null; available: boolean })
+    : null;
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
       <p className={ui.notice}>{t("intro")}</p>
       <SecuritySettings totpEnabled={me.data?.totp_enabled ?? false} initialDevices={devices.data ?? []} />
+      {consent?.available ? <SupportConsent initial={consent} /> : null}
     </div>
   );
 }

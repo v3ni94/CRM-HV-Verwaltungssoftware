@@ -319,6 +319,7 @@ async def prepare(
         else einvoice.EInvoiceReadResult(None, [])
     )
     inv = structured.einvoice
+    evidence = einvoice.archive_evidence(document.mime_type, data)
     raw = document_text(document) if inv is None or has_text(document) else ""
     candidates = iban_candidates(raw)
     if inv is not None and inv.payment.iban:
@@ -341,6 +342,7 @@ async def prepare(
             masked_excerpt=None,
         )
         await apply_einvoice(session, draft, inv, structured.findings, raw)
+        _set_evidence(draft, evidence)
         draft.supplier_candidates, draft.warnings = await platform_hints(session, draft.fields)
         session.add(draft)
         await session.flush()
@@ -386,9 +388,16 @@ async def prepare(
         # is the cross check folded in by `materialize`.
         await apply_einvoice(session, draft, inv, structured.findings, raw)
         draft.status = ReceiptDraftStatus.EXTRACTING.value
+    _set_evidence(draft, evidence)
     session.add(draft)
     await session.flush()
     return draft
+
+
+def _set_evidence(draft: ReceiptDraft, evidence: dict[str, str | None]) -> None:
+    draft.original_sha256 = evidence["original_sha256"]
+    draft.structured_sha256 = evidence["structured_sha256"]
+    draft.structured_name = evidence["structured_name"]
 
 
 async def known_person_names(session: AsyncSession, *, issuer: str | None = None) -> list[str]:
@@ -502,6 +511,10 @@ async def apply_einvoice(
             "Hybridrechnung: XML und PDF widersprechen sich; Zahlungsprüfung erforderlich, "
             "keine automatische Auswahl (D42)."
         )
+    # S711-01, S711-04: variant, stored formal check result and the further hybrid deviations.
+    draft.e_invoice_profile = (inv.customization_id or "")[:300] or None
+    draft.validation = einvoice.formal_validation(inv, einvoice.formal_findings(inv))
+    draft.hybrid_deviations = einvoice.hybrid_deviations(inv, text)
     draft.questions = [
         *(draft.questions or []),
         "E-Rechnung formal gelesen; sachliche, rechnerische und steuerliche Prüfung (PÜ02, "

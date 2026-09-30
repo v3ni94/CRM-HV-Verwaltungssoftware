@@ -56,6 +56,40 @@ EVENT_TYPES: dict[str, str] = {
     "Objekt, Beträge, XRechnung-URL)",
     "admin_fee_invoice.xrechnung_stored": "XRechnung-XML zur Honorarrechnung abgelegt",
     "webhook_subscription.created": "Webhook-Abonnement angelegt",
+    # Produced by the domains today (S12-02).
+    "contact.merged": "Kontakte zusammengeführt (Ziel-Kontakt-ID, Quell-Kontakt-ID)",
+    "contract.created": "Vertrag angelegt (Vertrags-ID)",
+    "contract.updated": "Vertrag geändert (Vertrags-ID, Namen der geänderten Felder)",
+    "contract.terminated": "Vertrag beendet (Vertrags-ID, Beendigungsdatum)",
+    "contract.changed": "Vertrag fachlich geändert (Vertrags-ID, Art der Änderung)",
+    "contract_payment.changed": "Zahlungsvereinbarung eines Vertrags geändert (Vertrags-ID)",
+    "journal_entry.posted": "Buchung festgeschrieben (Buchungs-ID, Datum, Betrag)",
+    "journal_entry.reversed": "Buchung storniert (Buchungs-ID, Stornobuchungs-ID)",
+    "bank_transaction.imported": "Bankumsatz importiert (Umsatz-ID, Konto-ID, Betrag)",
+    "invoice.received": "Eingangsrechnung erfasst (Rechnungs-ID)",
+    "invoice.approved": "Eingangsrechnung freigegeben (Rechnungs-ID)",
+    "invoice.paid": "Eingangsrechnung bezahlt (Rechnungs-ID)",
+    "invoice.posted": "Eingangsrechnung gebucht (Rechnungs-ID)",
+    "dunning_case.created": "Mahnvorgang angelegt (Vorgangs-ID)",
+    "dunning_case.sent": "Mahnung versendet (Vorgangs-ID, Mahnstufe)",
+    "ticket.created": "Ticket angelegt (Ticket-ID)",
+    "ticket.status_changed": "Ticketstatus geändert (Ticket-ID, alter und neuer Status)",
+    "ticket.commented": "Ticket kommentiert (Ticket-ID, Kommentar-ID)",
+    "work_order.created": "Auftrag angelegt (Auftrags-ID)",
+    "work_order.quoted": "Angebot zum Auftrag erfasst (Auftrags-ID)",
+    "work_order.approved": "Auftrag freigegeben (Auftrags-ID)",
+    "work_order.completed": "Auftrag abgeschlossen (Auftrags-ID)",
+    "document.created": "Dokument angelegt (Dokument-ID)",
+    "document.shared": "Dokument im Portal freigegeben (Dokument-ID)",
+    "meeting.invited": "Versammlung einberufen (Versammlungs-ID)",
+    "meeting.closed": "Versammlung geschlossen (Versammlungs-ID)",
+    "statement.confirmed": "Abrechnung bestätigt (Abrechnungs-ID)",
+    "ai_proposal.decided": "KI-Vorschlag entschieden (Vorschlags-ID, Entscheidung)",
+    "portal_account.invited": "Portalzugang eingeladen (Zugangs-ID)",
+    "portal_account.activated": "Portalzugang aktiviert (Zugangs-ID)",
+    "property.created": "Objekt angelegt (Objekt-ID)",
+    "property.updated": "Objekt geändert (Objekt-ID)",
+    "unit.updated": "Einheit geändert (Einheiten-ID)",
 }
 SIGNATURE_HEADER = "X-MHVP-Signature"
 DELIVERY_TIMEOUT_SECONDS = 10.0
@@ -200,8 +234,19 @@ def pin_target(url: str, *, allow_private: bool) -> PinnedTarget:
     )
 
 
+def is_known_event_type(value: str) -> bool:
+    """``*``, a catalogue type or an entity wildcard ``<entity>.*`` over a catalogue entity."""
+    if value == "*" or value in EVENT_TYPES:
+        return True
+    entity, _, action = value.partition(".")
+    return action == "*" and any(t.startswith(f"{entity}.") for t in EVENT_TYPES)
+
+
 def matches(subscription: WebhookSubscription, event_type: str) -> bool:
-    return "*" in subscription.event_types or event_type in subscription.event_types
+    return any(
+        t == "*" or t == event_type or (t.endswith(".*") and event_type.startswith(t[:-1]))
+        for t in subscription.event_types
+    )
 
 
 def event_body(event: DomainEvent) -> bytes:
@@ -278,6 +323,9 @@ async def attempt_delivery(
         "Content-Type": "application/json",
         "X-MHVP-Event": event.type,
         "X-MHVP-Delivery": str(delivery.id),
+        "X-MHVP-Event-Id": str(event.id),
+        # Stable per delivery: identical on every retry, so receivers can deduplicate (S12-08).
+        "Idempotency-Key": str(delivery.id),
         SIGNATURE_HEADER: sign(subscription.secret, body, int(time.time())),
     }
     delivery.attempts += 1

@@ -127,3 +127,8 @@ Hinweise zur Verarbeitung:
   oder das Ereignis lag vor der Aktivierung.
 - **Lauf fehlgeschlagen bei KI-Aufgabe**: Kein freigegebener Anbieter oder Monatsbudget
   ausgeschöpft (Einstellungen, KI).
+
+## Testmodus und Jobzeiten
+
+- **Dauerhafter Testmodus**: Eine aktive Regel mit Testmodus führt keine Aktion aus und schreibt je Ereignis einen Lauf mit Status Testlauf in das Protokoll. So lässt sich eine Regel im Betrieb beobachten, bevor sie wirkt.
+- **Standardjobs je Mandant**: Über die Schnittstelle `/automation/job-schedules` lassen sich Standardjobs abschalten und mit einer Uhrzeit (Europa/Berlin) versehen. Die Anbindung der einzelnen Jobs an diese Einstellung erfolgt schrittweise.

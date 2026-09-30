@@ -102,6 +102,54 @@ class EconomicPlan(IdMixin, TimestampMixin, TenantMixin, Base):
     snapshot_hash: Mapped[str | None] = mapped_column(String(64))
     resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
     applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # M24-04 (7.8 W02, migration 0256): master data of the plan and comparison basis.
+    title: Mapped[str | None] = mapped_column(String(200))
+    as_of_date: Mapped[date | None] = mapped_column(Date)
+    basis_statement_id: Mapped[uuid.UUID | None] = _fk("hoa_statement.id")
+    basis_plan_id: Mapped[uuid.UUID | None] = _fk("economic_plan.id")
+    payment_rhythm: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="monthly", server_default="monthly"
+    )
+    due_day: Mapped[int] = mapped_column(Integer, nullable=False, default=1, server_default="1")
+    continues_until_new_plan: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+    # Obsolete marker: the shared statement_status enum has no value obsolete; a plan replaced
+    # by a newer version or plan gets this timestamp instead (M24-04).
+    obsolete_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class HoaReserve(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Earmarked reserve of a GdWE (7.8 W08, 6.5 reserve, M24-01, migration 0256)."""
+
+    __tablename__ = "hoa_reserve"
+    __table_args__ = (Index("ix_hoa_reserve_ledger", "tenant_id", "ledger_id"),)
+
+    ledger_id: Mapped[uuid.UUID] = _fk("ledger.id", nullable=False)
+    name: Mapped[str] = mapped_column(String(200), nullable=False)
+    purpose: Mapped[str | None] = mapped_column(Text)
+    account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id")
+    resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
+    active: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default=text("true")
+    )
+
+
+class HoaReserveMovement(IdMixin, TenantMixin, Base):
+    """Use of funds, taxes, fees and interest per reserve and statement year (W08, M24-01).
+    Information for the reserve statement; entered by the manager with receipt or entry."""
+
+    __tablename__ = "hoa_reserve_movement"
+    __table_args__ = (Index("ix_hoa_reserve_movement_statement", "tenant_id", "statement_id"),)
+
+    statement_id: Mapped[uuid.UUID] = _fk("hoa_statement.id", nullable=False, ondelete="CASCADE")
+    reserve_id: Mapped[uuid.UUID] = _fk("hoa_reserve.id", nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)  # withdrawal, tax, fee, interest
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    purpose: Mapped[str] = mapped_column(Text, nullable=False)
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id")
+    resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
 
 
 class PlanItem(IdMixin, TenantMixin, Base):
@@ -113,6 +161,10 @@ class PlanItem(IdMixin, TenantMixin, Base):
     amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)  # annual
     allocation_key_id: Mapped[uuid.UUID] = _fk("allocation_key.id", nullable=False)
     account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id")
+    # M24-04: basis of the planned amount (prior year cost or prior plan) for the deviation.
+    basis_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    # M24-01: target reserve of a reserve component.
+    reserve_id: Mapped[uuid.UUID | None] = _fk("hoa_reserve.id")
 
 
 class HoaStatement(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -158,6 +210,14 @@ class HoaCostItem(IdMixin, TenantMixin, Base):
     allocation_key_id: Mapped[uuid.UUID] = _fk("allocation_key.id", nullable=False)
     basis: Mapped[str] = mapped_column(Text, nullable=False)  # Gemeinschaftsordnung / Beschluss
     account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id")
+    # M24-02 (W12, PÜ07): posted entry and receipt behind the position (drilldown).
+    journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id")
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id")
+    # M24-05: documented labour share for the § 35a EStG statement (information only).
+    labour_cost_35a: Mapped[Decimal | None] = mapped_column(MONEY)
+    # M24-06 (W03): structured source of the scope (resolution or document).
+    basis_resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id")
+    basis_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
 
 
 class Meeting(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -262,6 +322,9 @@ class AuditEngagement(IdMixin, TimestampMixin, TenantMixin, Base):
     )  # sample, full
     population: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    # M25-08: proof of authority (board resolution or mandate) and the data cut-off date.
+    authorization_text: Mapped[str | None] = mapped_column(Text)
+    data_as_of: Mapped[date | None] = mapped_column(Date)
 
 
 class AuditItem(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -279,7 +342,23 @@ class AuditItem(IdMixin, TimestampMixin, TenantMixin, Base):
     note: Mapped[str | None] = mapped_column(Text)
     question: Mapped[str | None] = mapped_column(Text)
     answer: Mapped[str | None] = mapped_column(Text)
+    risk_note: Mapped[str | None] = mapped_column(Text)  # M25-02
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+
+
+class AuditItemEvent(IdMixin, TenantMixin, Base):
+    """Append-only history of an audit item (M25-05, PÜ08): one row per change with the
+    old and new value of each changed field. Notes and answers are never overwritten
+    without a trace."""
+
+    __tablename__ = "audit_item_event"
+    __table_args__ = (Index("ix_audit_item_event_item", "tenant_id", "item_id"),)
+
+    item_id: Mapped[uuid.UUID] = _fk("audit_item.id", nullable=False, ondelete="CASCADE")
+    item_version: Mapped[int] = mapped_column(Integer, nullable=False)
+    changes: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False)
+    actor_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
 class AuditReport(IdMixin, TenantMixin, Base):
@@ -294,6 +373,11 @@ class AuditReport(IdMixin, TenantMixin, Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+    # M25-03 (PÜ09): optional confirmation of exactly this report version, set once.
+    confirmed_by_name: Mapped[str | None] = mapped_column(String(200))
+    confirmed_by_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmation_note: Mapped[str | None] = mapped_column(Text)
 
 
 class SpecialLevy(IdMixin, TimestampMixin, TenantMixin, Base):

@@ -70,6 +70,10 @@ class AllocationHints:
     def empty(self) -> bool:
         return not (self.invoice_numbers or self.charge_numbers or self.periods)
 
+    @property
+    def has_location(self) -> bool:
+        return bool(self.units or self.properties)
+
 
 def _clean(purpose: str) -> str:
     text = " ".join(purpose.lower().split())
@@ -125,3 +129,37 @@ def matches_item(hints: AllocationHints, *, reference: str | None, period: date 
             if month == period.month and (year is None or year == period.year):
                 return True
     return False
+
+
+REASON_LOCATION = "Einheit oder Objekt aus Verwendungszweck"
+REASON_LOCATION_MISMATCH = "Einheit oder Objekt im Verwendungszweck weicht ab"
+
+
+def _num_equal(hint: str, value: str) -> bool:
+    """Unit and property numbers compare normalised; leading zeros are ignored for purely
+    numeric values (``Whg 3`` names unit ``03``)."""
+    a, b = _norm(hint), _norm(value)
+    if a.isdigit() and b.isdigit():
+        return int(a) == int(b)
+    return a == b
+
+
+def location_matches(
+    hints: AllocationHints, *, unit_number: str | None, property_number: str | None
+) -> bool | None:
+    """Unit and property hints against the open item's unit and property (M12-03, 7.4 no. 2
+    and 5). ``None`` when the purpose names neither or the item has no unit/property to
+    compare; ``True`` when every named kind matches; ``False`` when a named unit or property
+    contradicts the item. The result only orders and explains suggestions (D39)."""
+    if not hints.has_location:
+        return None
+    checked = False
+    if hints.units and unit_number:
+        checked = True
+        if not any(_num_equal(u, unit_number) for u in hints.units):
+            return False
+    if hints.properties and property_number:
+        checked = True
+        if not any(_num_equal(p, property_number) for p in hints.properties):
+            return False
+    return True if checked else None

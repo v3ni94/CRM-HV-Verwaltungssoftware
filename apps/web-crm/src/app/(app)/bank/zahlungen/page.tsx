@@ -36,6 +36,9 @@ export default async function PaymentOrdersPage() {
       <Link href="/bank/lastschriften" className="text-sm font-medium hover:underline">
         {t("directDebitsLink")}
       </Link>
+      <Link href="/bank/zahllauf" className="text-sm font-medium hover:underline">
+        {t("paymentRunLink")}
+      </Link>
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

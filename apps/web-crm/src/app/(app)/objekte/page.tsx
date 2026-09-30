@@ -4,6 +4,7 @@ import Link from "next/link";
 import { PropertyCreate } from "@/components/properties/PropertyCreate";
 import { PropertyList } from "@/components/properties/PropertyList";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -54,6 +55,11 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
             {t("search")}
           </button>
         </form>
+        <SavedFilters
+          resource="properties"
+          basePath="/objekte"
+          current={Object.fromEntries(Object.entries({ q: q ?? "", art: scope !== "all" ? scope : "", deaktivierte: showTerminated ? "1" : "" }).filter(([, v]) => v))}
+        />
       </div>
       <nav aria-label={t("scopeNav")} className="flex flex-wrap gap-1 border-b border-border">
         {SCOPES.map((sc) => (

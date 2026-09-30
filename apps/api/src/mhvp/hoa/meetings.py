@@ -11,9 +11,9 @@ from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict, Field
-from sqlalchemy import or_, select, update
+from sqlalchemy import and_, not_, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -27,6 +27,7 @@ from mhvp.hoa.models import (
     Attendance,
     AuditEngagement,
     AuditItem,
+    AuditItemEvent,
     AuditReport,
     HoaStatement,
     MajorityRule,
@@ -190,6 +191,8 @@ class EngagementIn(MeetingBaseIn):
     auditor_contact_ids: list[uuid.UUID] = Field(min_length=1)
     sampling: str = Field(default="sample", pattern="^(sample|full)$")
     accounts: list[str] = Field(default_factory=list)
+    authorization_text: str | None = Field(default=None, max_length=4000)  # M25-08
+    data_as_of: date | None = None  # M25-08
 
 
 class AuditItemIn(MeetingBaseIn):
@@ -203,6 +206,12 @@ class AuditItemPatch(MeetingBaseIn):
     note: str | None = Field(default=None, max_length=4000)
     question: str | None = Field(default=None, max_length=4000)
     answer: str | None = Field(default=None, max_length=4000)
+    risk_note: str | None = Field(default=None, max_length=4000)
+
+
+class AuditReportConfirmIn(MeetingBaseIn):
+    confirmed_by_name: str = Field(min_length=2, max_length=200)
+    note: str | None = Field(default=None, max_length=2000)
 
 
 class AuditReportIn(MeetingBaseIn):
@@ -1053,6 +1062,8 @@ async def create_audit(
             "accounts": body.accounts,
         }
         data = body.model_dump(exclude={"accounts", "auditor_contact_ids"})
+        if data.get("data_as_of") is None:
+            data["data_as_of"] = datetime.now(UTC).date()
         row = AuditEngagement(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -1076,6 +1087,7 @@ def _item_out(i: AuditItem) -> dict[str, Any]:
         "note": i.note,
         "question": i.question,
         "answer": i.answer,
+        "risk_note": i.risk_note,
         "version": i.version,
     }
 
@@ -1259,11 +1271,86 @@ async def patch_audit_item(
         await _audit_engagement(session, row.engagement_id)  # A37 scope of the community
         if row.status == "outdated":
             raise ProblemError(ErrorCodes.CONFLICT, detail="Position zu alter Version.")
+        changes: dict[str, Any] = {}
         for key, value in body.model_dump(exclude_none=True).items():
+            old = getattr(row, key)
+            if old != value:
+                changes[key] = {"old": old, "new": value}
             setattr(row, key, value)
-        row.version += 1
+        if changes:
+            row.version += 1
+            session.add(
+                AuditItemEvent(
+                    tenant_id=principal.tenant_id,
+                    item_id=row.id,
+                    item_version=row.version,
+                    changes=changes,
+                    actor_user_id=principal.user_id,
+                    occurred_at=datetime.now(UTC),
+                )
+            )
         await session.flush()
         return _item_out(row)
+
+
+@router.get("/audit-items/{item_id}/history", summary="Änderungshistorie der Prüfposition (PÜ08)")
+async def audit_item_history(
+    item_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, AuditItem, item_id)
+        await _audit_engagement(session, row.engagement_id)
+        events = (
+            await session.scalars(
+                select(AuditItemEvent)
+                .where(AuditItemEvent.item_id == row.id)
+                .order_by(AuditItemEvent.occurred_at, AuditItemEvent.item_version)
+            )
+        ).all()
+        return [
+            {
+                "item_version": e.item_version,
+                "changes": e.changes,
+                "actor_user_id": e.actor_user_id,
+                "occurred_at": e.occurred_at,
+            }
+            for e in events
+        ]
+
+
+@router.post(
+    "/audits/{audit_id}/reports/{version}/confirm", summary="Prüfbericht bestätigen (PÜ09)"
+)
+async def confirm_report(
+    audit_id: uuid.UUID,
+    version: int,
+    body: AuditReportConfirmIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    """Optional confirmation of one report version (M25-03). Never a resolution (PÜ09)."""
+    async with tenant_tx(request, principal) as session:
+        eng = await _audit_engagement(session, audit_id)
+        row = await session.scalar(
+            select(AuditReport).where(
+                AuditReport.engagement_id == eng.id, AuditReport.version == version
+            )
+        )
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if row.confirmed_at is not None:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Bericht bereits bestätigt.")
+        row.confirmed_by_name = body.confirmed_by_name
+        row.confirmed_by_user_id = principal.user_id
+        row.confirmed_at = datetime.now(UTC)
+        row.confirmation_note = body.note
+        await session.flush()
+        return {
+            "version": row.version,
+            "confirmed_by_name": row.confirmed_by_name,
+            "confirmed_at": row.confirmed_at,
+            "note": row.confirmation_note,
+        }
 
 
 @router.post("/audits/{audit_id}/reports", status_code=201, summary="Prüfbericht (PÜ09)")
@@ -1294,6 +1381,8 @@ async def create_report(
             "sampling": eng.sampling,
             "population_entries": eng.population.get("entries"),
             "snapshot_hash": eng.snapshot_hash,
+            "data_as_of": eng.data_as_of.isoformat() if eng.data_as_of else None,
+            "authorization_text": eng.authorization_text,
             "selected": len(items),
             "checked_count": len(checked),
             "checked_value": _money(sum((i.amount or ZERO for i in checked), ZERO)),
@@ -1387,20 +1476,44 @@ async def refresh_audit_items(session: AsyncSession, eng: AuditEngagement) -> di
 
 @router.get("/audits/{audit_id}", summary="Beiratsprüfung mit Positionen (PÜ07, D33)")
 async def get_audit(
-    audit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    audit_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+    min_amount: Decimal | None = Query(default=None),
+    max_amount: Decimal | None = Query(default=None),
+    missing_document: bool | None = Query(default=None),
+    has_risk: bool | None = Query(default=None),
+    item_status: str | None = Query(
+        default=None, pattern="^(open|checked|query|objection|outdated)$"
+    ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         eng = await _audit_engagement(session, audit_id)
         outdated_reasons = await refresh_audit_items(session, eng)
-        items = (
-            await session.scalars(
-                select(AuditItem)
-                .where(AuditItem.engagement_id == eng.id)
-                .order_by(AuditItem.created_at, AuditItem.id)
+        stmt = select(AuditItem).where(AuditItem.engagement_id == eng.id)
+        if min_amount is not None:
+            stmt = stmt.where(AuditItem.amount >= min_amount)
+        if max_amount is not None:
+            stmt = stmt.where(AuditItem.amount <= max_amount)
+        if missing_document is not None:
+            stmt = stmt.where(
+                AuditItem.document_id.is_(None)
+                if missing_document
+                else AuditItem.document_id.is_not(None)
             )
-        ).all()
+        if has_risk is not None:
+            risk = and_(AuditItem.risk_note.is_not(None), AuditItem.risk_note != "")
+            stmt = stmt.where(risk if has_risk else not_(risk))
+        if item_status is not None:
+            stmt = stmt.where(AuditItem.status == item_status)
+        items = (await session.scalars(stmt.order_by(AuditItem.created_at, AuditItem.id))).all()
+        all_items = (
+            await session.scalars(select(AuditItem).where(AuditItem.engagement_id == eng.id))
+        ).all()  # the overall status never depends on the filter
         return {
             "id": eng.id,
+            "authorization_text": eng.authorization_text,
+            "data_as_of": eng.data_as_of,
             "legal_entity_id": eng.legal_entity_id,
             "statement_id": eng.statement_id,
             "period_from": eng.period_from,
@@ -1409,7 +1522,7 @@ async def get_audit(
             "sampling": eng.sampling,
             "population": eng.population,
             "status": eng.status,
-            "overall_status": _overall_status(items),
+            "overall_status": _overall_status(all_items),
             "outdated_reasons": outdated_reasons,
             "items": [_item_out(i) for i in items],
         }

@@ -262,6 +262,19 @@ class LedgerAccount(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(StatementKind, "statement_kind"), nullable=False, default=StatementKind.NONE
     )
     section_35a_eligible: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # SA-07 (A.1 Kontoattribute): relevance for the EÜR and for the VAT return as plain flags.
+    # Set by a person (tax advisor release V8 open); no tax treatment is derived from them.
+    eur_relevant: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    ust_relevant: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    # S711-05 check point only: input services used for mixed purposes (allocation open) and
+    # need a manual review of Vorsteuerberichtigung. Not evaluated anywhere (P03 open).
+    mixed_use_review: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
     # M17-01: code of the system catalogue of operating cost types (mhvp.billing.betrkv,
     # § 2 BetrKV numbers 1 to 17, "V" administration, "I" maintenance); a person assigns it.
     operating_cost_type: Mapped[str | None] = mapped_column(String(4))
@@ -538,6 +551,18 @@ class ReceivableItem(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     message: Mapped[str | None] = mapped_column(Text)
     journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+    # Evidence of the legal basis (7.5, migration 0251): contract version, applied payment plan,
+    # start of validity of the applied amount and its reason with the source document
+    # (resolution, economic plan, rent change letter) as stored on ``ContractPayment``.
+    contract_version: Mapped[int | None] = mapped_column(Integer)
+    payment_schedule_id: Mapped[uuid.UUID | None] = _fk("payment_schedule.id", nullable=True)
+    basis_valid_from: Mapped[date | None] = mapped_column(Date)
+    basis_reason: Mapped[str | None] = mapped_column(String(32))
+    basis_document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # Difference item (7.5, migration 0251): the plan changed after the month was posted. The
+    # item stays manual; the correction is a reversal and a new receivable (rule 0.1.7).
+    difference_of_item_id: Mapped[uuid.UUID | None] = _fk("receivable_item.id", nullable=True)
+    difference_amount: Mapped[Decimal | None] = mapped_column(MONEY)
 
 
 class AdminFeeSetting(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -632,6 +657,27 @@ class Invoice(IdMixin, TimestampMixin, TenantMixin, Base):
     journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     findings: Mapped[list[str]] = mapped_column(JSONB, nullable=False, default=list)
+    # Migration 0252 (M14-01 to M14-09, docs/rules/M14-PU.md): order/contract link, PÜ01
+    # mandatory data, PÜ03 amounts and tax markers, PÜ05 reference of credit notes.
+    service_contract_id: Mapped[uuid.UUID | None] = _fk("service_contract.id", nullable=True)
+    recurring_plan_id: Mapped[uuid.UUID | None] = _fk("recurring_invoice_plan.id", nullable=True)
+    reference_invoice_id: Mapped[uuid.UUID | None] = _fk("invoice.id", nullable=True)
+    service_place: Mapped[str | None] = mapped_column(String(200))
+    issuer_vat_id: Mapped[str | None] = mapped_column(String(20))
+    issuer_tax_number: Mapped[str | None] = mapped_column(String(30))
+    attachment_document_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    discount_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    prepaid_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    retention_amount: Mapped[Decimal | None] = mapped_column(MONEY)
+    reverse_charge: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    construction_withholding: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    input_tax_deductible: Mapped[bool | None] = mapped_column(Boolean)
 
 
 class InvoiceLine(IdMixin, TenantMixin, Base):
@@ -669,6 +715,12 @@ class InvoiceReview(IdMixin, TenantMixin, Base):
     decided_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+    # M14-07 (migration 0252): delegation proof and structured scope of the review step.
+    delegated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    delegation_reason: Mapped[str | None] = mapped_column(Text)
+    reviewed_items: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class RecurringInvoicePlan(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -683,6 +735,14 @@ class RecurringInvoicePlan(IdMixin, TimestampMixin, TenantMixin, Base):
     end_date: Mapped[date | None] = mapped_column(Date)
     next_due: Mapped[date] = mapped_column(Date, nullable=False)
     text: Mapped[str] = mapped_column(String(300), nullable=False)
+    # M14-01 (migration 0252): contract link, VAT, anchor day (month end), end of the plan.
+    service_contract_id: Mapped[uuid.UUID | None] = _fk("service_contract.id", nullable=True)
+    order_reference: Mapped[str | None] = mapped_column(String(100))
+    vat_percent: Mapped[Decimal] = mapped_column(
+        RATE, nullable=False, default=Decimal(0), server_default="0"
+    )
+    anchor_day: Mapped[int | None] = mapped_column(Integer)
+    ended_at: Mapped[date | None] = mapped_column(Date)
 
 
 class DunningSettings(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -770,6 +830,72 @@ class DunningCase(IdMixin, TimestampMixin, TenantMixin, Base):
         "property_bank_account.id", nullable=True, ondelete="SET NULL"
     )
     bank_warning: Mapped[str | None] = mapped_column(Text)
+    # Draft receivable for the Verzugszinsen (M16-05), created only on an explicit request of
+    # a person after approval, never automatically; released on the normal four eyes path.
+    interest_entry_id: Mapped[uuid.UUID | None] = _fk(
+        "journal_entry.id", nullable=True, ondelete="SET NULL"
+    )
+    # Calculation periods of the interest (M16-02): one entry per Basiszinssatz period with
+    # from, to, days, rate and amount; NULL for cases without interest.
+    interest_detail: Mapped[list[dict[str, Any]] | None] = mapped_column(JSONB)
+
+
+class DunningDeliveryProof(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Evidence of the dispatch or receipt of a dunning letter (M16-01): Einschreiben,
+    Post, E-Mail or Portal receipt with reference and optional document. A person records it;
+    the platform itself sends nothing (dispatch stays locked)."""
+
+    __tablename__ = "dunning_delivery_proof"
+    __table_args__ = (
+        CheckConstraint(
+            "kind IN ('registered_mail', 'postal_receipt', 'email_receipt', 'portal_receipt',"
+            " 'other')",
+            name="kind",
+        ),
+        Index("ix_dunning_delivery_proof_case_id", "tenant_id", "case_id"),
+    )
+
+    case_id: Mapped[uuid.UUID] = _fk("dunning_case.id", ondelete="CASCADE")
+    kind: Mapped[str] = mapped_column(String(24), nullable=False)
+    proof_date: Mapped[date] = mapped_column(Date, nullable=False)
+    reference: Mapped[str | None] = mapped_column(String(200))
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True, ondelete="SET NULL")
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class DunningItemBlock(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Structured dunning block per open item (M16-03, decision 3 a): Ratenplan, bestrittener
+    Posten, Aufrechnung, Prozess or Insolvenz. An active block (``released_at`` NULL) keeps
+    the item out of every dunning run; release is recorded, the row is never deleted."""
+
+    __tablename__ = "dunning_item_block"
+    __table_args__ = (
+        CheckConstraint(
+            "reason_code IN ('installment_plan', 'disputed', 'set_off', 'litigation',"
+            " 'insolvency')",
+            name="reason_code",
+        ),
+        Index("ix_dunning_item_block_open_item_id", "tenant_id", "open_item_id"),
+    )
+
+    open_item_id: Mapped[uuid.UUID] = _fk("open_item.id", ondelete="CASCADE")
+    reason_code: Mapped[str] = mapped_column(String(24), nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class DunningInterestRate(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Basiszinssatz with period of validity and source (M16-02, 7.5, R10): a row is valid from
+    ``valid_from`` until the day before the next row. Values are maintained by the operator
+    from an official source; nothing is hardcoded."""
+
+    __tablename__ = "dunning_interest_rate"
+    __table_args__ = (UniqueConstraint("tenant_id", "valid_from"),)
+
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    base_rate: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    source: Mapped[str] = mapped_column(String(400), nullable=False)
 
 
 class DunningFeeInvoiceDraft(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -865,6 +991,16 @@ class AdminFeeInvoice(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "number", name="uq_admin_fee_invoice_number"),
         Index("ix_admin_fee_invoice_tenant_id", "tenant_id"),
+        Index(
+            "uq_admin_fee_invoice_period",
+            "tenant_id",
+            "fee_setting_id",
+            "period_start",
+            unique=True,
+            postgresql_where=text(
+                "kind = 'invoice' AND cancelled_at IS NULL AND period_start IS NOT NULL"
+            ),
+        ),
     )
 
     fee_setting_id: Mapped[uuid.UUID] = _fk("admin_fee_setting.id")
@@ -896,6 +1032,20 @@ class AdminFeeInvoice(IdMixin, TimestampMixin, TenantMixin, Base):
     # Leitweg-ID as entered in TenantBillingSettings at issue time (BT-10 BuyerReference).
     buyer_reference: Mapped[str | None] = mapped_column(String(64))
     xml_document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    # M13-05/M13-06 (migration 0251): service period, kind (invoice or credit note), the
+    # corrected invoice of a credit note, release and cancellation trail. One invoice per
+    # setting and period while it is not cancelled (uq_admin_fee_invoice_period).
+    period_start: Mapped[date | None] = mapped_column(Date)
+    period_end: Mapped[date | None] = mapped_column(Date)
+    kind: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="invoice", server_default="invoice"
+    )
+    corrects_invoice_id: Mapped[uuid.UUID | None] = _fk("admin_fee_invoice.id", nullable=True)
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    cancelled_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    cancel_reason: Mapped[str | None] = mapped_column(Text)
 
 
 class DatevAccountMapping(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -958,3 +1108,33 @@ class G1AcceptanceItem(IdMixin, TimestampMixin, TenantMixin, Base):
     confirmed_on: Mapped[date | None] = mapped_column(Date)
     confirmed_by_name: Mapped[str | None] = mapped_column(String(200))
     note: Mapped[str | None] = mapped_column(Text)
+
+
+class RuleVersion(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Register of versions of a domain rule with effective date and affected case groups
+    (S711-11, 7.12). A register only: no calculation reads it, and an entry is no legal
+    release. ``expert_confirmed_*`` records a person's confirmation, never an automatic one."""
+
+    __tablename__ = "rule_version"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "rule_id", "version"),
+        CheckConstraint("effective_to IS NULL OR effective_to >= effective_from", name="period"),
+        CheckConstraint("status IN ('draft', 'confirmed', 'withdrawn')", name="status_valid"),
+        Index("ix_rule_version_rule_effective", "tenant_id", "rule_id", "effective_from"),
+    )
+
+    rule_id: Mapped[str] = mapped_column(String(60), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False)
+    title: Mapped[str] = mapped_column(String(200), nullable=False)
+    effective_from: Mapped[date] = mapped_column(Date, nullable=False)
+    effective_to: Mapped[date | None] = mapped_column(Date)
+    case_groups: Mapped[list[str]] = mapped_column(
+        ARRAY(String(100)), nullable=False, default=list, server_default=text("'{}'")
+    )
+    source_status: Mapped[str] = mapped_column(String(200), nullable=False, default="")
+    change_reason: Mapped[str] = mapped_column(String(500), nullable=False, default="")
+    status: Mapped[str] = mapped_column(
+        String(12), nullable=False, default="draft", server_default=text("'draft'")
+    )
+    expert_confirmed_by: Mapped[str | None] = mapped_column(String(200))
+    expert_confirmed_on: Mapped[date | None] = mapped_column(Date)

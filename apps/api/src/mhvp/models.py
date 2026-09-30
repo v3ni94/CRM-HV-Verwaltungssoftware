@@ -11,6 +11,7 @@ from mhvp.billing import advance_rule as billing_advance_rule
 from mhvp.billing import models as billing_models
 from mhvp.billing import owner_statement as billing_owner_statement
 from mhvp.communication import assignment_review as communication_assignment_review
+from mhvp.communication import calendar_feed as communication_calendar_feed
 from mhvp.communication import models as communication_models
 from mhvp.communication import sync_retry as communication_sync_retry
 from mhvp.communication import telephony as communication_telephony
@@ -40,6 +41,7 @@ from mhvp.portal import board as portal_board_models
 from mhvp.portal import forms as portal_form_models
 from mhvp.portal import models as portal_models
 from mhvp.portal import notices as portal_notice_models
+from mhvp.privacy import models as privacy_models
 from mhvp.properties import models as property_models
 from mhvp.receipts import models as receipt_models
 from mhvp.sla import models as sla_models
@@ -58,6 +60,7 @@ __all__ = [
     "billing_models",
     "billing_owner_statement",
     "communication_assignment_review",
+    "communication_calendar_feed",
     "communication_models",
     "communication_sync_retry",
     "communication_telephony",
@@ -86,6 +89,7 @@ __all__ = [
     "portal_form_models",
     "portal_models",
     "portal_notice_models",
+    "privacy_models",
     "property_models",
     "receipt_models",
     "rentlaw_models",

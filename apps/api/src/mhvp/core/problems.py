@@ -106,6 +106,12 @@ class ErrorCodes:
         "Anmeldelink ungültig oder abgelaufen",
         "Magic link token unknown, expired or already used (M21-01).",
     )
+    WEBAUTHN_UNAVAILABLE = ErrorCode(
+        "MHVP-AUTH-0012",
+        503,
+        "Passkeys noch nicht verfügbar",
+        "WebAuthn verification library not released yet (M2-03, OPEN_QUESTIONS).",
+    )
     RESOURCE_NOT_FOUND = ErrorCode(
         "MHVP-PLAT-0001", 404, "Datensatz nicht gefunden", "Entity not found in this tenant."
     )
@@ -547,6 +553,36 @@ class ErrorCodes:
             "limits, overdue review or missing evidence chain). The transaction stays open."
         ),
     )
+    BANK_DIGEST_NOT_CONFIRMABLE = ErrorCode(
+        "MHVP-BANK-0028",
+        409,
+        "Wochendigest nicht bestätigbar",
+        (
+            "The weekly L3 digest can only be confirmed when the monthly bank reconciliation "
+            "(B09) of the accounts involved shows no difference and no sampled review is "
+            "open (plan M12 S10). The digest stays unconfirmed; L3 remains blocked."
+        ),
+    )
+    BANK_CONNECTOR_UNSUPPORTED = ErrorCode(
+        "MHVP-BANK-0029",
+        409,
+        "Konnektorfunktion nicht verfügbar",
+        (
+            "The connector does not offer this operation (file upload without online access, "
+            "payment submission outside the released payment path G2, or no contract yet)."
+        ),
+    )
+    BANK_PAYER_IBAN_NOT_PROPOSABLE = ErrorCode(
+        "MHVP-BANK-0030",
+        409,
+        "Zahler-IBAN nicht vorschlagbar",
+        (
+            "The payer IBAN of a bank transaction can only be proposed after a confirmed "
+            "booking of an incoming payment, for a contact of the debtor party, when the IBAN "
+            "is not yet known there (7.4 no. 6). The proposal itself stays pending for four "
+            "eyes release."
+        ),
+    )
     BILLING_PREFIX_MISSING = ErrorCode(
         "MHVP-BILL-0001",
         409,
@@ -932,6 +968,25 @@ class ErrorCodes:
         409,
         "Mehrere Objekte mit dieser Kennung beim Anbieter",
         "BrokerProvider raised BrokerAmbiguousMatchError; manual review required.",
+    )
+    # Datenschutz (P17, mhvp.privacy).
+    PRIVACY_ERASURE_BLOCKED = ErrorCode(
+        "MHVP-PRIV-0001",
+        409,
+        "Löschung oder Anonymisierung ist gesperrt",
+        "Lock check found retention, open references or an unreleased deletion profile.",
+    )
+    PRIVACY_FOUR_EYES = ErrorCode(
+        "MHVP-PRIV-0002",
+        403,
+        "Freigabe durch eine zweite Person erforderlich",
+        "The requester must not release the erasure request (four eyes).",
+    )
+    PRIVACY_STATE = ErrorCode(
+        "MHVP-PRIV-0003",
+        409,
+        "Der Antrag hat einen anderen Status",
+        "The erasure request is not in a status that allows this step.",
     )
     # Deadline types and entries (rule WS-01, mhvp.workspace.deadlines).
     DEADLINE_DURATION_MISSING = ErrorCode(

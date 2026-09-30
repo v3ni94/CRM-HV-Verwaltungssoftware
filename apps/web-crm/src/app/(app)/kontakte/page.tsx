@@ -18,9 +18,10 @@ const PAGE_SIZE = 25;
 type Search = { q?: string; kind?: string; tag?: string; role?: string; blocked?: string; page?: string };
 
 export default async function ContactsPage({ searchParams }: { searchParams: Promise<Search> }) {
-  const [t, tl, params] = await Promise.all([
+  const [t, tl, ts, params] = await Promise.all([
     getTranslations("Contacts"),
     getTranslations("Labels"),
+    getTranslations("SerialDispatchPage"),
     searchParams,
   ]);
   const q = params.q?.trim() ?? "";
@@ -71,9 +72,14 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
       <PageHeader
         title={t("title")}
         action={
-          <Link href="/kontakte/neu" className={ui.primary}>
-            {t("new")}
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/kontakte/serienversand" className={ui.button}>
+              {ts("link")}
+            </Link>
+            <Link href="/kontakte/neu" className={ui.primary}>
+              {t("new")}
+            </Link>
+          </div>
         }
       />
       <form method="get" action="/kontakte" role="search" className="flex flex-wrap items-end gap-2">

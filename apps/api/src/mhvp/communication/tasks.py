@@ -1004,3 +1004,81 @@ async def gmail_settle_all_once(settings: Settings) -> dict[str, int]:
 @shared_task(name="mhvp.communication.gmail_settle_all")
 def gmail_settle_all() -> dict[str, int]:
     return asyncio.run(gmail_settle_all_once(get_settings()))
+
+
+# IMAP-Abruf (M20-01, Entscheidung 5 a) -------------------------------------------------------
+
+IMAP_SYNC_LOCK_KEY = "mhvp:imap:sync_all:lock"
+
+
+async def imap_sync_mailbox_run(
+    settings: Settings,
+    factory: Any,
+    tenant_id: uuid.UUID,
+    mailbox_id: uuid.UUID,
+    totals: dict[str, int],
+) -> None:
+    """One IMAP fetch in its own transaction, then invoice intake and forwarding exactly as
+    after a Gmail sync (``sync_mailbox_run``). A failing mailbox never touches another."""
+    from mhvp.communication.imap import ImapError, sync_imap_mailbox
+    from mhvp.communication.models import Mailbox
+
+    totals["mailboxes"] += 1
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            created_ids: list[uuid.UUID] = []
+            counts = await sync_imap_mailbox(session, settings, mailbox_id, created_ids)
+            run_ids, actor = await _auto_intake(session, tenant_id, mailbox_id, created_ids)
+    except ImapError as exc:
+        totals["failed"] += 1
+        log.warning("imap sync failed", extra={"mailbox_id": str(mailbox_id), "reason": str(exc)})
+        async with tenant_transaction(factory, tenant_id) as session:
+            box = await session.get(Mailbox, mailbox_id)
+            if box is not None:
+                box.last_error = str(exc)[:1000]
+        return
+    totals["created"] += counts["created"]
+    _dispatch_runs(settings, tenant_id, run_ids, actor)
+    if counts["created"]:
+        await _forward_after_commit(settings, factory, tenant_id, totals)
+
+
+async def imap_sync_all_once(settings: Settings) -> dict[str, int]:
+    from mhvp.communication.imap import enabled_imap_mailboxes
+
+    _ensure_crypto(settings)
+    engine = _engine(settings)
+    factory = create_session_factory(engine)
+    totals = {"mailboxes": 0, "created": 0, "failed": 0}
+    try:
+        for tenant_id in await _active_tenant_ids(factory):
+            async with tenant_transaction(factory, tenant_id) as session:
+                boxes = [m.id for m in await enabled_imap_mailboxes(session)]
+            for mailbox_id in boxes:
+                await imap_sync_mailbox_run(settings, factory, tenant_id, mailbox_id, totals)
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.communication.imap_sync_all")
+def imap_sync_all() -> dict[str, int]:
+    """Beat job (every 120 s): IMAP mailboxes; a Redis lock keeps runs from overlapping."""
+    settings = get_settings()
+    client = _lock_client(settings)
+    acquired = True
+    if client is not None:
+        try:
+            acquired = bool(
+                client.set(IMAP_SYNC_LOCK_KEY, "1", nx=True, ex=GMAIL_SYNC_LOCK_TTL_SECONDS)
+            )
+        except Exception:
+            acquired = True
+    if not acquired:
+        return {"mailboxes": 0, "created": 0, "failed": 0, "skipped": 1}
+    try:
+        return asyncio.run(imap_sync_all_once(settings))
+    finally:
+        if client is not None:
+            with contextlib.suppress(Exception):
+                client.delete(IMAP_SYNC_LOCK_KEY)

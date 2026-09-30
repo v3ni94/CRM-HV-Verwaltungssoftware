@@ -384,6 +384,13 @@ def test_portal_access_matrix(client: TestClient, world: World) -> None:
     )
     pv = _portal_user(client, h, world, "m21provider", provider_contact)
     assert _ok(client.get(f"{P}/me", headers=pv))["roles"] == ["provider"]
+    # P11 M22-03: explicit acceptance without an approval; the status stays "requested".
+    accepted = _ok(client.post(f"{P}/work-orders/{order['id']}/accept", headers=pv))
+    assert accepted["status"] == "requested"
+    assert accepted["accepted_by_provider_at"] is not None
+    again = _ok(client.post(f"{P}/work-orders/{order['id']}/accept", headers=pv))
+    assert again["accepted_by_provider_at"] == accepted["accepted_by_provider_at"]
+    assert client.post(f"{P}/work-orders/{foreign['id']}/accept", headers=pv).status_code == 404
     assert [o["id"] for o in _ok(client.get(f"{P}/work-orders", headers=pv))] == [order["id"]]
     assert (
         client.post(
@@ -471,6 +478,27 @@ def test_portal_access_matrix(client: TestClient, world: World) -> None:
     )
     assert sub["kind"] == "invoice_submission"
     assert client.get("/api/v1/tickets", headers=pv).status_code == 403
+    # P11 M22-05: the provider sees the state of the submission; M22-02: same number refused.
+    listed = _ok(client.get(f"{P}/work-orders", headers=pv))[0]
+    assert [(x["number"], x["status"]) for x in listed["invoice_submissions"]] == [
+        ("G-1", "proposed")
+    ]
+    assert listed["quote_document_id"] == offer["id"]
+    assert listed["quote_document_missing"] is False
+    duplicate = client.post(
+        f"{P}/work-orders/{order['id']}/invoice",
+        json={
+            "number": " g-1 ",
+            "invoice_date": "2026-10-03",
+            "gross": "350.00",
+            "document_id": offer["id"],
+        },
+        headers=pv,
+    )
+    assert duplicate.status_code == 409
+    # P11 M22-04: the provider steps reached the ticket history.
+    history = _ok(client.get(f"/api/v1/tickets/{ticket['id']}", headers=h))["events"]
+    assert any(e["kind"] == "work_order_status" for e in history)
 
 
 def test_staff_portal_sees_tenant_wide_data_per_matrix(client: TestClient, world: World) -> None:

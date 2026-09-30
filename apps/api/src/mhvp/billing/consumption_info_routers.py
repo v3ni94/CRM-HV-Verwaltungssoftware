@@ -5,7 +5,7 @@ manual run for one month. Reading needs ``accounting:read``, the switch and the 
 
 import uuid
 from datetime import date
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, ConfigDict, Field
@@ -34,6 +34,15 @@ class ConsumptionInfoSettingsIn(BaseModel):
 class ConsumptionInfoRunIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     month: date = Field(description="Any day of the month to generate (first day is stored).")
+
+
+class ConsumptionInfoDeliveryIn(BaseModel):
+    """Substitute process without portal (D26): delivery by post, e-mail or by hand."""
+
+    model_config = ConfigDict(extra="forbid")
+    channel: Literal["post", "email", "hand_delivery"]
+    delivered_on: date
+    evidence: str = Field(min_length=3, max_length=2000)
 
 
 async def _property(session: AsyncSession, property_id: uuid.UUID) -> Property:
@@ -74,9 +83,18 @@ async def list_consumption_info(
         for row in rows:
             key = row.month.isoformat()
             bucket = months.setdefault(
-                key, {"month": row.month, "units": 0, "incomplete": 0, "not_stored": 0}
+                key,
+                {
+                    "month": row.month,
+                    "units": 0,
+                    "incomplete": 0,
+                    "not_stored": 0,
+                    "undelivered": 0,
+                },
             )
             bucket["units"] += 1
+            if row.contract_id is not None and row.delivered_on is None and not row.notified_at:
+                bucket["undelivered"] += 1
             if any(m in row.missing for m in ("heating_missing", "hot_water_missing")):
                 bucket["incomplete"] += 1
             if "document_not_stored" in row.missing:
@@ -169,3 +187,59 @@ async def run_month(
             payload={"month": consumption_info.month_start(body.month).isoformat(), **counts},
         )
         return {"month": consumption_info.month_start(body.month), **counts}
+
+
+async def _info(session: AsyncSession, property_id: uuid.UUID, info_id: uuid.UUID) -> Any:
+    row = await session.get(ConsumptionInfo, info_id, with_for_update=True)
+    if row is None or row.property_id != property_id:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    return row
+
+
+@router.get(f"{P}/{{info_id}}", summary="Verbrauchsinformation mit Fassung zum Versand")
+async def get_consumption_info(
+    property_id: uuid.UUID,
+    info_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> dict[str, Any]:
+    """Frozen snapshot for the substitute process without portal (D26): print or e-mail."""
+    async with tenant_tx(request, principal) as session:
+        row = await _info(session, property_id, info_id)
+        return consumption_info.staff_view(row) | {"snapshot_html": row.snapshot_html}
+
+
+@router.put(
+    f"{P}/{{info_id}}/delivery",
+    summary="Ersatzprozess ohne Portal: Zustellung erfassen (Weg, Datum, Nachweis)",
+)
+async def put_consumption_info_delivery(
+    property_id: uuid.UUID,
+    info_id: uuid.UUID,
+    body: ConsumptionInfoDeliveryIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        row = await _info(session, property_id, info_id)
+        if row.contract_id is None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Kein Nutzer im Monat: keine Zustellung erforderlich."
+            )
+        if body.delivered_on < row.month:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Zustellung vor dem Abrechnungsmonat.")
+        row.delivery_channel = body.channel
+        row.delivered_on = body.delivered_on
+        row.delivery_evidence = body.evidence
+        row.delivery_recorded_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="billing.consumption_info_delivered",
+            entity_type="property",
+            entity_id=property_id,
+            actor_user_id=principal.user_id,
+            payload={"info_id": str(row.id), "channel": body.channel},
+        )
+        return consumption_info.staff_view(row)

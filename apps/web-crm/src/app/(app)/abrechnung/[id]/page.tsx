@@ -4,6 +4,7 @@ import { AdvanceProposalsPanel } from "@/components/billing/AdvanceProposalsPane
 import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
 import { AllocabilityHints, type AllocabilityHint } from "@/components/billing/AllocabilityHints";
 import { HeatingPanel } from "@/components/billing/HeatingPanel";
+import { StatementLettersPanel } from "@/components/billing/StatementLettersPanel";
 import { ResultTable, StatementWorkbench } from "@/components/billing/StatementWorkbench";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
@@ -80,6 +81,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
           ) : null}
         </>
       ) : null}
+      <StatementLettersPanel id={id} status={String(data.status)} hasSnapshot={Boolean(snap)} />
       <AllocabilityHints id={id} initial={snap?.allocability_hints ?? null} />
       <AdvanceProposalsPanel id={id} hasSnapshot={Boolean(snap)} snapshotHash={snap?.hash ?? null} />
       <AiPlausibilityCard kind="statements" id={id} snapshotHash={snap?.hash ?? null} />

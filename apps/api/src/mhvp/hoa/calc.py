@@ -873,3 +873,153 @@ async def loan_statement_block(
         "per_unit": {u: {c: str(v) for c, v in b.items()} for u, b in per_unit.items()},
         "note_text": LOAN_STATEMENT_NOTE,
     }
+
+
+def statement_key_figures(result: dict[str, Any]) -> dict[str, Any]:
+    """M24-07 (7.8 W05): named key figures and debtor list of the statement, derived only from
+    the computed unit results (no new claim; arrears stay their own receivables)."""
+    units = result.get("units", [])
+
+    def total(field: str) -> Decimal:
+        return sum((Decimal(u[field]) for u in units), ZERO)
+
+    distributed = total("cost_share")
+    relevant = Decimal(result.get("total_costs", "0.00"))
+    results = [Decimal(u["result"]) for u in units]
+    debtors = [
+        {
+            "unit_id": u["unit_id"],
+            "unit_number": u["unit_number"],
+            "arrears": u["arrears"],
+            "reserve_open": str(Decimal(u["reserve_due"]) - Decimal(u["reserve_paid"])),
+        }
+        for u in units
+        if Decimal(u["arrears"]) > 0 or Decimal(u["reserve_due"]) > Decimal(u["reserve_paid"])
+    ]
+    return {
+        "costs_distribution_relevant": str(relevant),
+        "costs_distributed": str(distributed),
+        "costs_not_distributed": str(relevant - distributed),
+        "advances_resolved": str(total("advances_resolved")),
+        "advances_paid": str(total("advances_paid")),
+        "arrears": str(total("arrears")),
+        "additional_payments": str(sum((r for r in results if r > 0), ZERO)),
+        "adjustments": str(sum((r for r in results if r < 0), ZERO)),
+        "reserve_due": str(total("reserve_due")),
+        "reserve_paid": str(total("reserve_paid")),
+        "debtors": debtors,
+    }
+
+
+async def section_35a_block(
+    session: AsyncSession, statement: Any, ledger: Any, items: list[Any]
+) -> dict[str, Any]:
+    """M24-05: documented labour shares of cost items distributed with the key of the item.
+    Information for the owners' own tax return; the software makes no tax assessment. A receipt
+    used by two positions is reported once in ``duplicates`` (no double statement)."""
+    start, end = date(statement.year, 1, 1), date(statement.year, 12, 31)
+    per_unit: dict[str, Decimal] = {}
+    positions = []
+    seen: dict[str, str] = {}
+    duplicates = []
+    for item in items:
+        labour = getattr(item, "labour_cost_35a", None)
+        if not labour:
+            continue
+        if item.document_id is not None:
+            ref = str(item.document_id)
+            if ref in seen:
+                duplicates.append({"label": item.label, "same_receipt_as": seen[ref]})
+                continue
+            seen[ref] = item.label
+        dist = distribute(
+            labour,
+            await unit_weights(session, ledger.property_id, item.allocation_key_id, start, end),
+        )
+        for (_, unit_id), value in dist.items():
+            per_unit[unit_id] = per_unit.get(unit_id, ZERO) + value
+        positions.append(
+            {
+                "label": item.label,
+                "labour_cost": str(labour),
+                "document_id": str(item.document_id) if item.document_id else None,
+                "journal_entry_id": str(item.journal_entry_id) if item.journal_entry_id else None,
+                "receipt_linked": item.document_id is not None,
+                "split": {k[1]: str(v) for k, v in dist.items()},
+            }
+        )
+    return {
+        "positions": positions,
+        "per_unit": {k: str(v) for k, v in per_unit.items()},
+        "total": str(sum(per_unit.values(), ZERO)),
+        "duplicates": duplicates,
+        "note": "Ausweis der belegten Lohnanteile zur Information; die steuerliche "
+        "Beurteilung obliegt dem Eigentümer und seinem Steuerberater.",
+    }
+
+
+def reserve_positions(
+    reserves: list[Any], plan_items: list[Any], movements: list[Any]
+) -> list[dict[str, Any]]:
+    """M24-01 (W08): development per earmarked reserve. Planned contribution (Soll) from the
+    reserve items of the resolved plan, movements from the entered uses of funds, taxes, fees
+    and interest. Payments are not split per reserve (open point), so the closing value is
+    the planned development, shown apart from the paid total of the reserve block."""
+    out = []
+    for r in reserves:
+        planned = sum(
+            (i.amount for i in plan_items if getattr(i, "reserve_id", None) == r.id), ZERO
+        )
+        mine = [m for m in movements if m.reserve_id == r.id]
+
+        def of(kind: str, mine: list[Any] = mine) -> Decimal:
+            return sum((m.amount for m in mine if m.kind == kind), ZERO)
+
+        out.append(
+            {
+                "reserve_id": str(r.id),
+                "name": r.name,
+                "purpose": r.purpose,
+                "account_id": str(r.account_id) if r.account_id else None,
+                "contributions_planned": str(planned),
+                "withdrawals": str(of("withdrawal")),
+                "taxes": str(of("tax")),
+                "fees": str(of("fee")),
+                "interest": str(of("interest")),
+                "planned_change": str(
+                    planned - of("withdrawal") - of("tax") - of("fee") + of("interest")
+                ),
+                "movements": [
+                    {
+                        "kind": m.kind,
+                        "amount": str(m.amount),
+                        "purpose": m.purpose,
+                        "document_id": str(m.document_id) if m.document_id else None,
+                        "journal_entry_id": str(m.journal_entry_id) if m.journal_entry_id else None,
+                        "receipt_linked": m.document_id is not None
+                        or m.journal_entry_id is not None,
+                    }
+                    for m in mine
+                ],
+            }
+        )
+    return out
+
+
+def plan_comparison(items: list[Any], basis_items: list[Any] | None) -> list[dict[str, Any]]:
+    """M24-04: deviation of each plan item against its entered basis amount or the item of the
+    same label in the basis plan."""
+    by_label = {i.label: i.amount for i in (basis_items or [])}
+    rows = []
+    for i in items:
+        basis = i.basis_amount if i.basis_amount is not None else by_label.get(i.label)
+        rows.append(
+            {
+                "label": i.label,
+                "component": i.component,
+                "amount": str(i.amount),
+                "basis_amount": str(basis) if basis is not None else None,
+                "deviation": str(i.amount - basis) if basis is not None else None,
+            }
+        )
+    return rows

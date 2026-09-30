@@ -272,7 +272,21 @@ async def sync_tenant(session: AsyncSession, tenant_id: uuid.UUID) -> dict[str, 
     return counts
 
 
-async def sync_all_once(settings: Settings) -> dict[str, int]:
+DEFAULT_SYNC_HOUR = 6
+
+
+async def tenant_sync_hour(session: AsyncSession) -> int:
+    """Configured local hour of the daily sync of the tenant in scope (M11-05), default 6."""
+    from mhvp.banking.models import BankSyncSetting
+
+    hour = await session.scalar(select(BankSyncSetting.sync_hour))
+    return DEFAULT_SYNC_HOUR if hour is None else int(hour)
+
+
+async def sync_all_once(settings: Settings, *, hour: int | None = None) -> dict[str, int]:
+    """Daily sync for every active tenant whose configured hour equals ``hour`` (default
+    06:00, the fixed beat entry). ``hour=None`` keeps the old behaviour for callers that want
+    every tenant (tests, manual operator runs)."""
     engine = create_async_engine(
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )
@@ -285,6 +299,8 @@ async def sync_all_once(settings: Settings) -> dict[str, int]:
             )
         for tenant_id in ids:
             async with tenant_transaction(factory, tenant_id) as session:
+                if hour is not None and await tenant_sync_hour(session) != hour:
+                    continue
                 for key, value in (await sync_tenant(session, tenant_id)).items():
                     totals[key] += value
     finally:
@@ -294,7 +310,52 @@ async def sync_all_once(settings: Settings) -> dict[str, int]:
 
 @shared_task(name="mhvp.banking.sync_all")
 def sync_all() -> dict[str, int]:
-    return asyncio.run(sync_all_once(get_settings()))
+    """Beat entry 06:00: tenants without a configured sync hour (or with 6)."""
+    return asyncio.run(sync_all_once(get_settings(), hour=DEFAULT_SYNC_HOUR))
+
+
+def local_hour(now: datetime | None = None) -> int:
+    from mhvp.workspace.services import _LOCAL
+
+    return (now or datetime.now(UTC)).astimezone(_LOCAL).hour
+
+
+async def sync_due_once(settings: Settings, *, now: datetime | None = None) -> dict[str, int]:
+    """Hourly beat (M11-05): tenants whose configured hour is the current local hour and not
+    the default hour (the default is served by ``sync_all`` and ``finapi_scheduled_fetch``).
+    Runs the generic sync and the opt-in finAPI fetch (still only with
+    ``FinApiTenantConfig.auto_fetch_enabled``)."""
+    hour = local_hour(now)
+    totals = {"tenants": 0, "connections": 0, "queued": 0}
+    if hour == DEFAULT_SYNC_HOUR:
+        return totals
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    try:
+        async with platform_transaction(factory) as session:
+            ids = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                if await tenant_sync_hour(session) != hour:
+                    continue
+                totals["tenants"] += 1
+                totals["connections"] += (await sync_tenant(session, tenant_id))["connections"]
+                counts, queued = await _finapi_scheduled_fetch_once(session, tenant_id)
+            totals["queued"] += counts["queued"]
+            for run_id, link_id in queued:
+                finapi_fetch.delay(str(tenant_id), str(run_id), str(link_id), None, None)
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.banking.sync_due")
+def sync_due() -> dict[str, int]:
+    return asyncio.run(sync_due_once(get_settings()))
 
 
 async def _finapi_fetch_once(
@@ -430,6 +491,9 @@ async def _finapi_fetch_once(
                 run.status, run.errors = "failed", [message]
                 fa.last_error = message
                 counts = {"new": 0}
+                if is_transient_sync_error(exc):
+                    # 8.2: temporary provider errors are retried by the task (M11-04).
+                    counts["transient"] = 1
             except Exception as exc:
                 run.status, run.errors = "failed", [str(exc)]
                 counts = {"new": 0}
@@ -441,15 +505,46 @@ async def _finapi_fetch_once(
         await engine.dispose()
 
 
-@shared_task(name="mhvp.banking.finapi_fetch")
+SYNC_MAX_RETRIES = 3
+SYNC_RETRY_BASE_SECONDS = 60
+
+
+def is_transient_sync_error(exc: ProblemError) -> bool:
+    """Temporary provider errors (unavailable, rate limit) that the per account sync task
+    retries (8.2, M11-04). Credential, consent and validation errors are not retried: a
+    repetition would not change the result and could lock the bank access."""
+    from mhvp.core.problems import ErrorCodes
+
+    return exc.error.code in (
+        ErrorCodes.FINAPI_UNAVAILABLE.code,
+        ErrorCodes.FINAPI_RATE_LIMITED.code,
+    )
+
+
+def retry_countdown(retries: int) -> int:
+    """Exponential backoff of the sync retries: 60, 120, 240 seconds (M11-04)."""
+    return int(SYNC_RETRY_BASE_SECONDS * (2 ** max(retries, 0)))
+
+
+def should_retry(counts: dict[str, int], *, called_directly: bool, retries: int) -> bool:
+    """Only a worker run is retried (Celery backoff, never an immediate loop against the
+    provider); a direct call (tests, inline) returns the failed run as it is."""
+    return bool(counts.get("transient")) and not called_directly and retries < SYNC_MAX_RETRIES
+
+
+@shared_task(name="mhvp.banking.finapi_fetch", bind=True, max_retries=SYNC_MAX_RETRIES)
 def finapi_fetch(
+    self: Any,
     tenant_id: str,
     run_id: str,
     link_id: str,
     since: str | None = None,
     until: str | None = None,
 ) -> dict[str, int]:
-    return asyncio.run(
+    """One task per account link (8.2). A temporary provider error is retried up to three
+    times with exponential backoff; the import stays idempotent (dedup D05), the run row is
+    reused and ends with the result of the last attempt."""
+    counts = asyncio.run(
         _finapi_fetch_once(
             get_settings(),
             uuid.UUID(tenant_id),
@@ -459,10 +554,15 @@ def finapi_fetch(
             until,
         )
     )
+    if should_retry(
+        counts, called_directly=self.request.called_directly, retries=self.request.retries
+    ):
+        raise self.retry(countdown=retry_countdown(self.request.retries))
+    return counts
 
 
 async def _finapi_scheduled_fetch_once(
-    session: AsyncSession, tenant_id: uuid.UUID
+    session: AsyncSession, tenant_id: uuid.UUID, *, require_opt_in: bool = True
 ) -> tuple[dict[str, int], list[tuple[uuid.UUID, uuid.UUID]]]:
     """Stage 2: queues a fetch for every assigned finAPI account of this tenant, but only when
     the tenant has explicitly opted in (`FinApiTenantConfig.auto_fetch_enabled`, default
@@ -483,7 +583,9 @@ async def _finapi_scheduled_fetch_once(
     counts = {"tenants_enabled": 0, "queued": 0}
     queued: list[tuple[uuid.UUID, uuid.UUID]] = []
     cfg = await session.scalar(select(FinApiTenantConfig))
-    if cfg is None or not cfg.auto_fetch_enabled:
+    # ``require_opt_in=False`` is the manual full sync of a person (POST /banking/sync/run,
+    # M11-05): same as clicking fetch on every account, never a scheduled run.
+    if cfg is None or (require_opt_in and not cfg.auto_fetch_enabled):
         return counts, queued
     counts["tenants_enabled"] = 1
     links = (
@@ -531,6 +633,9 @@ async def _finapi_scheduled_fetch_all(settings: Settings) -> dict[str, int]:
             )
         for tenant_id in ids:
             async with tenant_transaction(factory, tenant_id) as session:
+                if await tenant_sync_hour(session) != DEFAULT_SYNC_HOUR:
+                    # Served by the hourly ``sync_due`` at the configured hour (M11-05).
+                    continue
                 tenant_counts, queued = await _finapi_scheduled_fetch_once(session, tenant_id)
             for key, value in tenant_counts.items():
                 totals[key] += value
@@ -910,9 +1015,37 @@ async def compute_proposals_once(
                 counts["auto_posted"] = int(result.get("posted", 0))
         except Exception:
             log.exception("auto post runner failed", extra={"tenant_id": str(tenant_id)})
+        # Sync protocol (8.2): proposals and automatic postings of this run are kept on the
+        # run itself, next to new/duplicates/transfers, so the run list shows them.
+        try:
+            async with tenant_transaction(factory, tenant_id) as session:
+                await record_run_metrics(
+                    session,
+                    run_id,
+                    proposals=int(counts.get("computed", 0)),
+                    auto_posted=int(counts.get("auto_posted", 0)),
+                )
+        except Exception:
+            log.exception("sync run metrics failed", extra={"run_id": str(run_id)})
         return counts
     finally:
         await engine.dispose()
+
+
+async def record_run_metrics(
+    session: AsyncSession, run_id: uuid.UUID, *, proposals: int, auto_posted: int
+) -> None:
+    """Writes the counters ``proposals`` and ``auto_posted`` into ``BankSyncRun.counts``
+    (M11-06, 8.2). Idempotent: a recomputation overwrites both keys with the new values,
+    the import counters stay untouched."""
+    run = await session.get(BankSyncRun, run_id, with_for_update=True)
+    if run is None:
+        return
+    merged = dict(run.counts or {})
+    merged["proposals"] = proposals
+    merged["auto_posted"] = auto_posted
+    run.counts = merged
+    await session.flush()
 
 
 async def _g1_open(tenant_id: uuid.UUID) -> bool:
@@ -1056,3 +1189,38 @@ async def process_events_once(settings: Settings, *, now: datetime | None = None
 @shared_task(name="mhvp.banking.process_events")
 def process_events() -> dict[str, int]:
     return asyncio.run(process_events_once(get_settings()))
+
+
+# --- Weekly L3 digest (plan M12 S10, M12-02) -------------------------------------------------
+
+
+async def weekly_digest_once(settings: Settings, *, today: date | None = None) -> dict[str, int]:
+    """Beat job (Monday): digest of the previous ISO week per tenant and legal entity
+    (``mhvp.banking.digest.build_week``); only weeks with automatic postings get a row."""
+    from mhvp.banking import digest
+
+    day = today or local_today()
+    week_start = digest.week_start_of(day) - timedelta(days=7)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals = {"tenants": 0, "digests": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            ids = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                rows = await digest.build_week(session, tenant_id=tenant_id, week_start=week_start)
+            totals["tenants"] += 1
+            totals["digests"] += len(rows)
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.banking.weekly_digest")
+def weekly_digest() -> dict[str, int]:
+    return asyncio.run(weekly_digest_once(get_settings()))

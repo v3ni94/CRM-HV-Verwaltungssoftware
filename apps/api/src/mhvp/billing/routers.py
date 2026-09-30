@@ -1,7 +1,7 @@
 """Operating cost statements (/api/v1/statements, M17). Issuing a statement requires G3."""
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from mhvp.billing import calc, services
+from mhvp.billing import calc, results, services
 from mhvp.billing.models import (
     Statement,
     StatementCostItem,
@@ -25,6 +25,15 @@ from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/statements", tags=["Abrechnung"])
+# Issuing, due, result posting and period lock of a rental statement stay behind G3 (M17-01).
+RESULT_GATED = frozenset(
+    {
+        StatementStatus.ISSUED,
+        StatementStatus.DUE,
+        StatementStatus.POSTED,
+        StatementStatus.LOCKED,
+    }
+)
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")
@@ -34,10 +43,45 @@ class _In(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
 
+class StatementSettingsIn(_In):
+    """Letter settings (6.5 settings JSONB, A07): texts, format, bundled output."""
+
+    text_credit: str | None = Field(default=None, max_length=4000)
+    text_additional_payment: str | None = Field(default=None, max_length=4000)
+    format: str | None = Field(default=None, pattern="^(pdf_single|pdf_bundle)$")
+    bundled: bool | None = None
+
+
 class StatementIn(_In):
     ledger_id: uuid.UUID
     period_from: date
     period_to: date
+    # M17-04 (A05): unterjährige Abrechnung only with a stated purpose.
+    interim: bool = False
+    purpose: str | None = Field(default=None, min_length=3, max_length=2000)
+    include_heating: bool = True
+    settings: StatementSettingsIn | None = None
+
+
+def check_period(period_from: date, period_to: date, interim: bool, purpose: str | None) -> None:
+    """A period other than twelve months needs ``interim`` and a purpose (A05, M17-04)."""
+    if period_to < period_from:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Zeitraum ungültig.")
+    twelve = (period_to - period_from).days + 1 in (365, 366) and (
+        period_from.day == 1 and (period_to.month - period_from.month) % 12 == 11
+    )
+    if (interim or not twelve) and not purpose:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=(
+                "Unterjährige Abrechnung oder Sonderzeitraum nur mit ausgewiesenem Zweck (A05)."
+            ),
+        )
+    if not twelve and not interim:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Der Zeitraum umfasst keine zwölf Monate: als unterjährig kennzeichnen (A05).",
+        )
 
 
 class CostItemIn(_In):
@@ -81,6 +125,13 @@ async def _out(session: AsyncSession, st: Statement) -> dict[str, Any]:
         "version": st.version,
         "supersedes_id": st.supersedes_id,
         "delivered_at": st.delivered_at,
+        "interim": st.interim,
+        "purpose": st.purpose,
+        "include_heating": st.include_heating,
+        "settings": st.settings,
+        "deadline_exception": st.deadline_exception,
+        "result_entry_ids": st.result_entry_ids,
+        "locked_at": st.locked_at,
         "deadline_orientation": calc.deadline(st.period_to),
         "snapshot": {
             "id": snap.id,
@@ -100,8 +151,7 @@ async def create(
     from mhvp.accounting.models import Ledger
     from mhvp.properties.models import LegalEntity, LegalEntityKind
 
-    if body.period_to < body.period_from:
-        raise ProblemError(ErrorCodes.VALIDATION, detail="Zeitraum ungültig.")
+    check_period(body.period_from, body.period_to, body.interim, body.purpose)
     async with tenant_tx(request, principal) as session:
         ledger = await session.get(Ledger, body.ledger_id)
         entity = await session.get(LegalEntity, ledger.legal_entity_id) if ledger else None
@@ -120,6 +170,10 @@ async def create(
             property_id=ledger.property_id,
             period_from=body.period_from,
             period_to=body.period_to,
+            interim=body.interim,
+            purpose=body.purpose,
+            include_heating=body.include_heating,
+            settings=body.settings.model_dump(exclude_none=True) if body.settings else {},
         )
         session.add(st)
         await session.flush()
@@ -210,7 +264,7 @@ async def transition(
     request: Request,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> dict[str, Any]:
-    if body.target is StatementStatus.ISSUED:
+    if body.target in RESULT_GATED:
         await ensure_release_gate_open(
             ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver
         )
@@ -234,6 +288,10 @@ async def transition(
                 raise ProblemError(ErrorCodes.CONFLICT, detail="Kein Ergebnis-Snapshot.")
             services.check_issue(st, snap, body.delivered_at)
             st.delivered_at = body.delivered_at
+        if body.target is StatementStatus.POSTED:
+            await results.check_result_entries_posted(session, st)
+        if body.target is StatementStatus.LOCKED:
+            st.locked_at = datetime.now(UTC)
         await _transition(session, st, body.target, principal, body.note)
         await session.flush()
         return await _out(session, st)
@@ -257,6 +315,11 @@ async def new_version(
             period_to=old.period_to,
             version=old.version + 1,
             supersedes_id=old.id,
+            interim=old.interim,
+            purpose=old.purpose,
+            include_heating=old.include_heating,
+            settings=old.settings,
+            deadline_exception=old.deadline_exception,
         )
         session.add(new)
         await session.flush()
@@ -304,6 +367,8 @@ async def get(
                     "basis": i.basis,
                     "heating": i.heating,
                     "allocation_key_id": i.allocation_key_id,
+                    "account_id": i.account_id,
+                    "external_amounts": i.external_amounts,
                 }
                 for i in items
             ]

@@ -161,3 +161,12 @@ no posting, open receivables stay with the seller (6.9.2, D15). Rule
 `docs/rules/M5-03-eigentuemerwechsel-sollbetraege.md`, tests
 `tests/integration/test_ownership_transfer.py`, web `OwnershipTransfer.tsx` on the contract
 and the unit page.
+
+## P16 follow-up maintenance (wave 2)
+
+`routers_p16.py`: `PATCH /contracts/{id}/custom-fields`, `PATCH /contracts/{id}/payments/{id}` and
+`PATCH /contracts/{id}/schedules/{id}` (locked for amounts, period and type once a posted receivable
+item refers to the row, 409), `PATCH /deposits/{id}` (status model open, active, settled; documents).
+`mandates.py` and job `mhvp.contracts.expire_mandates`: expiry by `valid_until`, usage bookkeeping
+for the collection after G2. New columns in migration 0265: `contract.custom_fields`,
+`contract_payment.revenue_account_id`, `deposit.documents`. Rule: `docs/rules/P16-stammdaten-pflege.md`.

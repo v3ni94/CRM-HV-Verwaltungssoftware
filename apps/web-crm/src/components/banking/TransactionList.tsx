@@ -12,6 +12,7 @@ import { ui } from "@/lib/ui";
 
 import { bankAccountLabel, type BankAccountOption, type Transaction, type TransactionStatus } from "./bankTypes";
 import { BookingDialog } from "./BookingDialog";
+import { PayerIbanButton } from "./PayerIbanButton";
 import { BulkConfirm } from "./BulkConfirm";
 
 /** HOOK (plan M12 step S1): reopening an ignored transaction with a reason needs a new API
@@ -317,6 +318,7 @@ export function TransactionList({ canBook, canUpdate }: TransactionListProps) {
                           {tl("learn")}
                         </button>
                       ) : null}
+                      {tx.status === "booked" && canUpdate && Number(tx.amount) > 0 ? <PayerIbanButton txId={tx.id} /> : null}
                       {tx.status === "ignored" && canUpdate && REOPEN_PATH ? (
                         <button type="button" className={ui.buttonSm} disabled>
                           {tl("reopen")}

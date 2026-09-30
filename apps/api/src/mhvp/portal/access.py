@@ -20,6 +20,9 @@ if TYPE_CHECKING:
 # The board audit access (A52, docs/rules/M21-07.md) is granted per engagement in
 # mhvp.hoa.board and is not derived from contracts either.
 MANUAL_BASES = frozenset({"handover_participant", "staff_access", "board_audit"})
+# M21-05: grants of a representative (power of attorney) are derived again on every resync from
+# the active ``PortalRepresentation`` rows; they are read only and end with the power of attorney.
+REPRESENTATION_BASIS = "representation"
 STAFF_ACCESS_LEGAL_BASIS = "staff_access"
 
 
@@ -73,9 +76,78 @@ async def sync_grants(session: AsyncSession, account: PortalAccount) -> int:
             )
             if hoa is not None:
                 grant(("legal_entity", hoa), "download", "hoa_member_right", "owner", c)
+    rows.extend(await _representation_grants(session, account))
     session.add_all(rows)
     await session.flush()
     return len(rows)
+
+
+async def _representation_grants(
+    session: AsyncSession, account: PortalAccount
+) -> list[AccessGrant]:
+    """Read only grants for the ownership contracts of the represented contacts (M21-05), limited
+    to the period of the power of attorney; a revoked power of attorney yields nothing."""
+    from mhvp.contacts.models import PartyMember
+    from mhvp.contracts.models import Contract, ContractKind
+    from mhvp.portal.models import PortalRepresentation
+    from mhvp.properties.models import LegalEntity, LegalEntityKind
+
+    reps = (
+        await session.scalars(
+            select(PortalRepresentation).where(
+                PortalRepresentation.account_id == account.id,
+                PortalRepresentation.status == "active",
+            )
+        )
+    ).all()
+    out: list[AccessGrant] = []
+    for rep in reps:
+        parties = list(
+            await session.scalars(
+                select(PartyMember.party_id).where(
+                    PartyMember.contact_id == rep.principal_contact_id
+                )
+            )
+        )
+        if not parties:
+            continue
+        contracts = (
+            await session.scalars(
+                select(Contract).where(
+                    Contract.party_id.in_(parties), Contract.kind == ContractKind.OWNERSHIP
+                )
+            )
+        ).all()
+        for c in contracts:
+            start = max(c.start_date, rep.valid_from)
+            ends = [d for d in (c.end_date, rep.valid_to) if d is not None]
+            stop = min(ends) if ends else None
+            if stop is not None and stop < start:
+                continue
+            hoa = await session.scalar(
+                select(LegalEntity.id).where(
+                    LegalEntity.property_id == c.property_id,
+                    LegalEntity.kind == LegalEntityKind.HOA,
+                )
+            )
+            scopes = [("contract", c.id, "read"), ("unit", c.unit_id, "read")]
+            if hoa is not None:
+                scopes.append(("legal_entity", hoa, "download"))
+            for scope_type, scope_id, right in scopes:
+                out.append(
+                    AccessGrant(
+                        tenant_id=account.tenant_id,
+                        account_id=account.id,
+                        scope_type=scope_type,
+                        scope_id=scope_id,
+                        right=right,
+                        legal_basis=REPRESENTATION_BASIS,
+                        role="owner",
+                        valid_from=start,
+                        valid_to=stop,
+                    )
+                )
+    return out
 
 
 async def has_staff_grant(session: AsyncSession, account_id: uuid.UUID) -> bool:

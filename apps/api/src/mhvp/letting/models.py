@@ -60,6 +60,11 @@ class RentIncreaseCase(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
     received_on: Mapped[date | None] = mapped_column(Date)  # Zugang beim Mieter
+    # Recorded inputs of the basis modernization, index and graduated (M26-02, rule M26-02a):
+    # values entered with their source, never derived by the platform.
+    basis_data: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
 
 
 class Prospect(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -79,6 +84,11 @@ class Prospect(IdMixin, TimestampMixin, TenantMixin, Base):
         String(16), nullable=False, default="manual", server_default=text("'manual'")
     )
     rejection_template_id: Mapped[str | None] = mapped_column(String(32))
+    # M26-06: the listing the inquiry refers to and the search profile (wishes) for matching.
+    listing_id: Mapped[uuid.UUID | None] = _fk("listing.id", ondelete="SET NULL")
+    search_profile: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
 
 
 class Listing(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -286,3 +296,48 @@ class SelfDisclosureLink(IdMixin, TimestampMixin, TenantMixin, Base):
     payload: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
+
+
+class RentIndexEntry(IdMixin, TimestampMixin, TenantMixin, Base):
+    """One row of a rent index (Mietspiegel) per municipality (M26-03, decision 8 a): manual
+    maintenance or CSV import, never an automatic source. Values per m² and month in EUR with
+    a mandatory source note; the platform looks up a range, it does not decide the local
+    comparative rent."""
+
+    __tablename__ = "rent_index_entry"
+    __table_args__ = (
+        Index("ix_rent_index_entry_lookup", "tenant_id", "municipality", "valid_from"),
+        sa.CheckConstraint("rent_min <= rent_max", name="rent_index_entry_range"),
+    )
+
+    municipality: Mapped[str] = mapped_column(String(120), nullable=False)
+    index_name: Mapped[str] = mapped_column(String(300), nullable=False)
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)  # Stand des Mietspiegels
+    valid_to: Mapped[date | None] = mapped_column(Date)
+    year_built_from: Mapped[int | None] = mapped_column(sa.Integer)
+    year_built_to: Mapped[int | None] = mapped_column(sa.Integer)
+    area_from_sqm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    area_to_sqm: Mapped[Decimal | None] = mapped_column(Numeric(10, 2))
+    equipment: Mapped[str | None] = mapped_column(String(120))
+    rent_min: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    rent_mid: Mapped[Decimal | None] = mapped_column(RATE)
+    rent_max: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    source_note: Mapped[str] = mapped_column(Text, nullable=False)
+
+
+class VacancyCase(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Vacancy measure per unit (M26-04): status, responsible user, follow up date, target rent
+    and running costs. The vacancy itself stays derived from the contracts."""
+
+    __tablename__ = "vacancy_case"
+    __table_args__ = (Index("ux_vacancy_case_unit", "tenant_id", "unit_id", unique=True),)
+
+    unit_id: Mapped[uuid.UUID] = _fk("unit.id", nullable=False, ondelete="CASCADE")
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="open", server_default=text("'open'")
+    )  # open, advertised, viewing, rented, renovation, blocked
+    responsible_user_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    follow_up_on: Mapped[date | None] = mapped_column(Date)
+    target_rent: Mapped[Decimal | None] = mapped_column(MONEY)  # Sollmiete je Monat
+    monthly_costs: Mapped[Decimal | None] = mapped_column(MONEY)  # Leerstandskosten je Monat
+    note: Mapped[str | None] = mapped_column(Text)

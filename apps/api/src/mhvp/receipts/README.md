@@ -44,3 +44,12 @@ Plan: `docs/plans/M14-belegeingang.md`. Specification: docs/MASTER-PROMPT.md 6.4
 * Tests: `tests/unit/test_m14_receipt_drafts.py`, `tests/unit/test_m14_einvoice.py`,
   `tests/integration/test_m14_receipt_drafts.py` (D41, D42, D44),
   offline evaluation `tests/ai_eval/extract_invoice/cases.jsonl` (`make ai-eval`).
+
+## E-invoice evidence (gap list 30.09.2026, package P03)
+
+`receipt_draft` stores the profile (`e_invoice_profile`), the own formal check as
+`validation` (`official=false`), SHA-256 of the received file and of the structured part and
+the further hybrid deviations (`einvoice.archive_evidence`, `formal_validation`,
+`hybrid_deviations`). `POST /receipts/drafts/{id}/validation` records an external validator run
+(name, version, configuration, result); the formal check is kept under `validation.formal`.
+Migration 0252.

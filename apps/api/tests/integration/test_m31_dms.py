@@ -332,11 +332,11 @@ def test_ticket_documents_combine_object_and_fulltext_search(
     )
 
     page = _ok(client.get(f"/api/v1/tickets/{ticket['id']}/dms-documents", headers=h))
-    # 101 and 102 via the property's object number 761, 103 additionally via the full text
-    # search on the ticket number -> three distinct documents, deduplicated by Paperless id.
+    # 101 and 102 via the property's object number; 103 mentions no ticket reference and
+    # belongs to another object, so it is not listed (regression Ticket #34).
     ids = sorted(d["id"] for d in page["data"])
-    assert ids == [101, 102, 103]
-    assert page["meta"]["total"] == 3
+    assert ids == [101, 102]
+    assert page["meta"]["total"] == 2
 
 
 def test_object_field_not_configured_returns_empty_instead_of_guessing(

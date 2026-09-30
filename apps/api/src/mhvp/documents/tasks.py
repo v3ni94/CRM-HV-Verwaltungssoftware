@@ -76,9 +76,13 @@ async def _meta(session: AsyncSession, tenant_slug: str, document: Document) -> 
         if category is not None:
             meta.document_type = category.paperless_document_type
             meta.drive_folder = category.drive_folder
+            if category.paperless_tag:  # M6-09
+                meta.tags.append(category.paperless_tag)
     links = (
         await session.scalars(select(DocumentLink).where(DocumentLink.document_id == document.id))
     ).all()
+    if links:  # M6-07: first link as Paperless custom fields entity_type / entity_id
+        meta.entity_type, meta.entity_id = links[0].entity_type, str(links[0].entity_id)
     for link in links:
         if link.entity_type == "property" and meta.property_number is None:
             prop = await session.get(Property, link.entity_id)
@@ -137,6 +141,8 @@ async def mirror_tenant(
                 resolved = await store.resolve(mirror.external_ref)
                 if resolved is not None:
                     mirror.external_ref, mirror.status = resolved, MirrorStatus.DONE
+                    # Paperless takes custom fields only on a PATCH after the consume task.
+                    mirror.meta_dirty = mirror.kind is StorageKind.PAPERLESS
             mirror.last_error = None
             mirror.next_attempt_at = now + timedelta(seconds=60)
         except (DmsError, httpx.HTTPError, ClientError, ProblemError, ValueError, KeyError) as exc:
@@ -151,8 +157,47 @@ async def mirror_tenant(
             log.warning(
                 "document_mirror_failed", extra={"kind": mirror.kind.value, "error": message}
             )
+    await _push_dirty_meta(session, tenant, connections, client, now)
     await session.flush()
     return len(due)
+
+
+async def _push_dirty_meta(
+    session: AsyncSession,
+    tenant: Tenant,
+    connections: dict[StorageKind, DmsConnection],
+    client: httpx.AsyncClient,
+    now: datetime,
+) -> int:
+    """M6-06: pushes metadata changes of the index into finished mirrors (update_meta)."""
+    dirty = (
+        await session.scalars(
+            select(DocumentMirror)
+            .where(
+                DocumentMirror.status == MirrorStatus.DONE,
+                DocumentMirror.meta_dirty.is_(True),
+                DocumentMirror.external_ref.is_not(None),
+            )
+            .limit(BATCH)
+            .with_for_update(skip_locked=True)
+        )
+    ).all()
+    for mirror in dirty:
+        connection = connections.get(mirror.kind)
+        if connection is None or not connection.enabled or mirror.external_ref is None:
+            continue
+        try:
+            document = await session.get(Document, mirror.document_id)
+            if document is not None:
+                meta = await _meta(session, tenant.slug, document)
+                await store_for(connection, client).update_meta(mirror.external_ref, meta)
+            mirror.meta_dirty = False
+            mirror.last_error = None
+        except (DmsError, httpx.HTTPError) as exc:
+            message = str(exc) if isinstance(exc, DmsError) else type(exc).__name__
+            mirror.last_error = message[:500]
+            mirror.next_attempt_at = now + timedelta(seconds=BACKOFF_SECONDS[0])
+    return len(dirty)
 
 
 async def mirror_once(

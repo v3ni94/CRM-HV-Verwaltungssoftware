@@ -1,0 +1,10 @@
+[Unit]
+Description=MHVP hourly WAL off-site copy
+
+[Timer]
+OnCalendar=*-*-* *:20:00
+RandomizedDelaySec=3m
+Persistent=true
+
+[Install]
+WantedBy=timers.target

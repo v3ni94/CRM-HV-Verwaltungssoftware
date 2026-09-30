@@ -40,6 +40,15 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/resolutions$/ },
   { method: "GET", pattern: /^portal\/property-contacts$/ },
   { method: "GET", pattern: /^portal\/hoa-account$/ },
+  // P13: Chat zur Meldung (M21-01), Eigentümerübersicht (M21-06, M21-07, SA-05), Einwilligung in
+  // die lesende Support-Sicht (SA-02).
+  { method: "GET", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
+  { method: "POST", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
+  { method: "GET", pattern: /^portal\/owner\/(tickets|payment-resolutions|consumption-info)$/ },
+  { method: "GET", pattern: new RegExp(`^portal/owner/consumption-info/${ID}$`) },
+  { method: "GET", pattern: /^portal\/support-consent$/ },
+  { method: "POST", pattern: /^portal\/support-consent$/ },
+  { method: "DELETE", pattern: /^portal\/support-consent$/ },
   // Regel H03: monatliche Verbrauchsinformation der eigenen Einheit (lesend).
   { method: "GET", pattern: /^portal\/consumption-info$/ },
   { method: "GET", pattern: new RegExp(`^portal/consumption-info/${ID}$`) },

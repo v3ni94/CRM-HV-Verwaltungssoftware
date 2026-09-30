@@ -4,6 +4,7 @@ import Link from "next/link";
 import { DocumentListFilter, draftFilterOf } from "@/components/documents/DocumentListFilter";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { ResponsiveList } from "@/components/ui/ResponsiveList";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate } from "@/lib/format";
@@ -54,6 +55,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
         <Link href="/dokumente/loeschvorschlaege">{t("deletionProposalsLink")}</Link>
       </p>
       <DocumentListFilter q={q} draft={draft} />
+      <SavedFilters resource="documents" basePath="/dokumente" current={Object.fromEntries(Object.entries({ q, entwurf: params.entwurf ?? "" }).filter(([, v]) => v))} />
       {!data ? (
         <p role="alert" className={ui.alert}>
           {problemMessage(error as Problem | undefined, response.status)}

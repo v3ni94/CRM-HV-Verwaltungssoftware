@@ -58,4 +58,30 @@ describe("PortalForms", () => {
       }),
     );
   });
+
+  it("renders the additional element types and sends checkbox and multiselect values", async () => {
+    const user = userEvent.setup();
+    vi.mocked(fetch).mockResolvedValue(jsonResponse({ id: "s2", ticket_number: 13 }, 201));
+    const rich: PortalForm = {
+      ...FORM,
+      fields: [
+        { key: "kopf", label: "Angaben zum Termin", type: "heading", required: false },
+        { key: "uhr", label: "Uhrzeit", type: "time", required: true },
+        { key: "mehr", label: "Räume", type: "multiselect", required: false, options: ["Bad", "Küche"] },
+        { key: "ok", label: "Ich bin einverstanden", type: "checkbox", required: true },
+      ],
+    };
+    renderIntl(<PortalForms forms={[rich]} />);
+    await user.click(screen.getByRole("button", { name: /Antrag Untervermietung/ }));
+    expect(screen.getByRole("heading", { name: "Angaben zum Termin" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Absenden" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Bitte das Feld Uhrzeit ausfüllen.");
+    await user.type(screen.getByLabelText("Uhrzeit *"), "08:30");
+    await user.click(screen.getByLabelText("Bad"));
+    await user.click(screen.getByLabelText("Ich bin einverstanden *"));
+    await user.click(screen.getByRole("button", { name: "Absenden" }));
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+    const body = JSON.parse(String(vi.mocked(fetch).mock.calls.at(0)?.[1]?.body));
+    expect(body.values).toEqual({ uhr: "08:30", mehr: ["Bad"], ok: "true" });
+  });
 });

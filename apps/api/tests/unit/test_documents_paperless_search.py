@@ -81,7 +81,7 @@ async def test_list_by_object_number_without_field_id_is_empty() -> None:
 @pytest.mark.asyncio
 async def test_list_by_ticket_uses_fulltext_query() -> None:
     def handler(request: httpx.Request) -> httpx.Response:
-        assert request.url.params["query"] == "1234"
+        assert request.url.params["query"] == '"Ticket 1234"'
         return httpx.Response(200, json={"count": 0, "results": []})
 
     search = PaperlessSearch("https://paperless.example", "t", client=_client(handler))
@@ -343,3 +343,51 @@ def test_parse_field_id() -> None:
     for bad in ("0", "-1", "sieben", "7.0"):
         with pytest.raises(ValueError, match="positive ganze Zahl"):
             parse_field_id(bad, "Feld")
+
+
+def _tdoc(i: int, title: str, fname: str = "x.pdf", tags: list[str] | None = None) -> dict:
+    return {
+        "id": i,
+        "title": title,
+        "tags": [{"name": t} for t in tags or []],
+        "original_file_name": fname,
+    }
+
+
+@pytest.mark.asyncio
+async def test_list_by_ticket_drops_documents_without_ticket_reference() -> None:
+    """Regression Ticket #34: Objektlisten und SEPA-Mandat enthielten nur die Ziffern."""
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(
+            200,
+            json={
+                "count": 5,
+                "results": [
+                    _tdoc(1, "Objektliste 2034"),
+                    _tdoc(2, "SEPA-Mandat Mueller", "mandat_34.pdf"),
+                    _tdoc(3, "Ticket 34 Angebot Dachdecker"),
+                    _tdoc(4, "Foto", "Ticket_#34.jpg"),
+                    _tdoc(5, "Ticket 345 Sonstiges"),
+                ],
+            },
+        )
+
+    search = PaperlessSearch("https://paperless.example", "t", client=_client(handler))
+    page = await search.list_by_ticket(34)
+    await search.aclose()
+
+    assert [d.id for d in page.items] == [3, 4]
+    assert page.total == 2
+
+
+@pytest.mark.asyncio
+async def test_list_by_correspondent_requires_exact_name() -> None:
+    def handler(request: httpx.Request) -> httpx.Response:
+        assert request.url.params["correspondent__name__iexact"] == "Erika Muster"
+        return httpx.Response(200, json={"count": 0, "results": []})
+
+    search = PaperlessSearch("https://paperless.example", "t", client=_client(handler))
+    assert (await search.list_by_correspondent("  ")).items == []
+    await search.list_by_correspondent("Erika Muster")
+    await search.aclose()

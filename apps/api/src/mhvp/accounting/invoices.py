@@ -56,6 +56,12 @@ def payment_hash(invoice: Invoice) -> str:
         "ledger": str(invoice.ledger_id),
         "deductions": invoice.deductions,
     }
+    # M14-04: prepayments and the retention change the amount to pay; only hashed when set so
+    # that releases of invoices without them stay valid.
+    for key in ("prepaid_amount", "retention_amount"):
+        value = getattr(invoice, key, None)
+        if value:
+            fields[key] = str(value)
     return hashlib.sha256(json.dumps(fields, sort_keys=True, default=str).encode()).hexdigest()
 
 
@@ -190,6 +196,10 @@ async def evaluate(session: AsyncSession, invoice: Invoice) -> None:
         )
         if same_doc:
             findings.append("Originalbeleg ist bereits einer anderen Rechnung zugeordnet")
+    # M14-01 to M14-09: PÜ01 to PÜ04 checks of mhvp.accounting.invoice_checks (hints only).
+    from mhvp.accounting import invoice_checks
+
+    findings.extend(await invoice_checks.all_findings(session, invoice))
     invoice.findings = findings
 
 
@@ -288,6 +298,13 @@ async def post(session: AsyncSession, invoice: Invoice, user_id: uuid.UUID | Non
         )
     if invoice.duplicate_of_id is not None:
         raise ProblemError(ErrorCodes.CONFLICT, detail="Mögliche Doppelrechnung ist ungeklärt.")
+    if invoice.kind is InvoiceKind.CREDIT_NOTE and invoice.reference_invoice_id is not None:
+        # M14-09: a credit note posts only against its posted original and within its amount.
+        from mhvp.accounting import invoice_checks
+
+        blocking = await invoice_checks.reference_findings(session, invoice)
+        if blocking:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="; ".join(blocking) + ".")
     ledger = await session.get(Ledger, invoice.ledger_id)
     if ledger is None:  # pragma: no cover
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)

@@ -1,0 +1,928 @@
+{
+ "description": "Synthetischer Testbestand M12-02 (20 Umsätze, davon 12 Ausgänge), keine echten Daten. Erwartete Fallklassen vorab festgelegt (Regel 0.1.8); ersetzt nicht den anonymisierten HVM-Testbestand.",
+ "cases": [
+  {
+   "id": "ein-01-miete-eindeutig",
+   "note": "Vertragsnummer, IBAN und Betrag",
+   "tx": {
+    "amount": "850.00",
+    "purpose": "MV-1041 Miete September 2026",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-a",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [
+    {
+     "id": "oi-1",
+     "kind": "receivable",
+     "remaining": "850.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": "MV-1041",
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-a"
+     ],
+     "account_number": "10001",
+     "debtor_key": "d-1",
+     "is_deposit": false,
+     "unit_number": null,
+     "property_number": "104"
+    },
+    {
+     "id": "oi-2",
+     "kind": "receivable",
+     "remaining": "620.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": "MV-1042",
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-b"
+     ],
+     "account_number": "10002",
+     "debtor_key": "d-2",
+     "is_deposit": false,
+     "unit_number": null,
+     "property_number": "104"
+    }
+   ],
+   "payables": [],
+   "expected": {
+    "case_class": "debtor_full",
+    "best_open_item_ids": [
+     "oi-1"
+    ]
+   }
+  },
+  {
+   "id": "ein-02-mandat",
+   "note": "Mandatsreferenz und Betrag",
+   "tx": {
+    "amount": "410.00",
+    "purpose": "SEPA Lastschrift",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-c",
+    "mandate_reference": "MREF-77",
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [
+    {
+     "id": "oi-1",
+     "kind": "receivable",
+     "remaining": "410.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": "MV-2001",
+     "mandate_reference": "MREF-77",
+     "party_iban_fingerprints": [
+      "fp-c"
+     ],
+     "account_number": "10001",
+     "debtor_key": "d-1",
+     "is_deposit": false,
+     "unit_number": null,
+     "property_number": "104"
+    }
+   ],
+   "payables": [],
+   "expected": {
+    "case_class": "debtor_full",
+    "best_open_item_ids": [
+     "oi-1"
+    ]
+   }
+  },
+  {
+   "id": "ein-03-einheit-bestimmt",
+   "note": "Zwei Einheiten desselben Debitors, Einheit im Zweck (M12-03)",
+   "tx": {
+    "amount": "250.00",
+    "purpose": "Hausgeld Wohnung 12",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-d",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [
+    {
+     "id": "oi-1",
+     "kind": "receivable",
+     "remaining": "250.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": null,
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-d"
+     ],
+     "account_number": "10001",
+     "debtor_key": "d-x",
+     "is_deposit": false,
+     "unit_number": "11",
+     "property_number": "104"
+    },
+    {
+     "id": "oi-2",
+     "kind": "receivable",
+     "remaining": "250.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": null,
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-d"
+     ],
+     "account_number": "10002",
+     "debtor_key": "d-x",
+     "is_deposit": false,
+     "unit_number": "12",
+     "property_number": "104"
+    }
+   ],
+   "payables": [],
+   "expected": {
+    "case_class": "debtor_full",
+    "best_open_item_ids": [
+     "oi-2"
+    ]
+   }
+  },
+  {
+   "id": "ein-04-teilzahlung",
+   "note": "Teilzahlung ist keine Automatikklasse",
+   "tx": {
+    "amount": "300.00",
+    "purpose": "Teilzahlung MV-3001",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-e",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [
+    {
+     "id": "oi-1",
+     "kind": "receivable",
+     "remaining": "900.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": "MV-3001",
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-e"
+     ],
+     "account_number": "10001",
+     "debtor_key": "d-1",
+     "is_deposit": false,
+     "unit_number": null,
+     "property_number": "104"
+    }
+   ],
+   "payables": [],
+   "expected": {
+    "case_class": "excluded"
+   }
+  },
+  {
+   "id": "ein-05-sammel",
+   "note": "Sammelzahlung zweier Monate",
+   "tx": {
+    "amount": "700.00",
+    "purpose": "MV-4001 Juli und August",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-f",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [
+    {
+     "id": "oi-1",
+     "kind": "receivable",
+     "remaining": "350.00",
+     "due_date": "2026-07-01",
+     "reference": null,
+     "contract_number": "MV-4001",
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-f"
+     ],
+     "account_number": "10001",
+     "debtor_key": "d-y",
+     "is_deposit": false,
+     "unit_number": null,
+     "property_number": "104"
+    },
+    {
+     "id": "oi-2",
+     "kind": "receivable",
+     "remaining": "350.00",
+     "due_date": "2026-08-01",
+     "reference": null,
+     "contract_number": "MV-4001",
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-f"
+     ],
+     "account_number": "10002",
+     "debtor_key": "d-y",
+     "is_deposit": false,
+     "unit_number": null,
+     "property_number": "104"
+    }
+   ],
+   "payables": [],
+   "expected": {
+    "case_class": "debtor_collective"
+   }
+  },
+  {
+   "id": "ein-06-kaution",
+   "note": "Kaution nie automatisch",
+   "tx": {
+    "amount": "1800.00",
+    "purpose": "Mietkaution MV-5001",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-g",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [
+    {
+     "id": "oi-1",
+     "kind": "receivable",
+     "remaining": "1800.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": "MV-5001",
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-g"
+     ],
+     "account_number": "1700",
+     "debtor_key": "d-1",
+     "is_deposit": true,
+     "unit_number": null,
+     "property_number": "104"
+    }
+   ],
+   "payables": [],
+   "expected": {
+    "case_class": "excluded"
+   }
+  },
+  {
+   "id": "ein-07-unklar",
+   "note": "Kein tragendes Merkmal",
+   "tx": {
+    "amount": "123.45",
+    "purpose": "Ueberweisung",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-fremd",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [
+    {
+     "id": "oi-1",
+     "kind": "receivable",
+     "remaining": "500.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": "MV-6001",
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-h"
+     ],
+     "account_number": "10001",
+     "debtor_key": "d-1",
+     "is_deposit": false,
+     "unit_number": null,
+     "property_number": "104"
+    }
+   ],
+   "payables": [],
+   "expected": {
+    "case_class": "excluded"
+   }
+  },
+  {
+   "id": "ein-08-ruecklastschrift",
+   "note": "Rückgabe wird ausgeschlossen",
+   "tx": {
+    "amount": "-410.00",
+    "purpose": "Rueckgabe Lastschrift",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-c",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": "RTRN",
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [
+    {
+     "id": "oi-1",
+     "kind": "receivable",
+     "remaining": "410.00",
+     "due_date": "2026-09-01",
+     "reference": null,
+     "contract_number": "MV-2001",
+     "mandate_reference": null,
+     "party_iban_fingerprints": [
+      "fp-c"
+     ],
+     "account_number": "10001",
+     "debtor_key": "d-1",
+     "is_deposit": false,
+     "unit_number": null,
+     "property_number": "104"
+    }
+   ],
+   "payables": [],
+   "expected": {
+    "case_class": "excluded"
+   }
+  },
+  {
+   "id": "aus-01-dauerausgang",
+   "note": "Wiederkehrender Ausgang mit drei bestätigten Buchungen",
+   "tx": {
+    "amount": "-221.51",
+    "purpose": "Abschlag Versorger",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-h1",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null,
+    "history": [
+     {
+      "decision_id": "dec-0",
+      "journal_entry_id": "je-0",
+      "label": "2026-0",
+      "booking_date": "2026-03-05",
+      "decided_at": "2026-03-05T10:00:00+00:00",
+      "amount": "-221.51",
+      "accounts": [
+       "4210"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     },
+     {
+      "decision_id": "dec-1",
+      "journal_entry_id": "je-1",
+      "label": "2026-1",
+      "booking_date": "2026-04-05",
+      "decided_at": "2026-04-05T10:00:00+00:00",
+      "amount": "-221.51",
+      "accounts": [
+       "4210"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     },
+     {
+      "decision_id": "dec-2",
+      "journal_entry_id": "je-2",
+      "label": "2026-2",
+      "booking_date": "2026-05-05",
+      "decided_at": "2026-05-05T10:00:00+00:00",
+      "amount": "-221.51",
+      "accounts": [
+       "4210"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     }
+    ]
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [],
+   "expected": {
+    "case_class": "recurring_expense"
+   }
+  },
+  {
+   "id": "aus-02-dauerausgang",
+   "note": "Wiederkehrender Ausgang mit drei bestätigten Buchungen",
+   "tx": {
+    "amount": "-89.90",
+    "purpose": "Abschlag Versorger",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-h2",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null,
+    "history": [
+     {
+      "decision_id": "dec-0",
+      "journal_entry_id": "je-0",
+      "label": "2026-0",
+      "booking_date": "2026-03-05",
+      "decided_at": "2026-03-05T10:00:00+00:00",
+      "amount": "-89.90",
+      "accounts": [
+       "4250"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     },
+     {
+      "decision_id": "dec-1",
+      "journal_entry_id": "je-1",
+      "label": "2026-1",
+      "booking_date": "2026-04-05",
+      "decided_at": "2026-04-05T10:00:00+00:00",
+      "amount": "-89.90",
+      "accounts": [
+       "4250"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     },
+     {
+      "decision_id": "dec-2",
+      "journal_entry_id": "je-2",
+      "label": "2026-2",
+      "booking_date": "2026-05-05",
+      "decided_at": "2026-05-05T10:00:00+00:00",
+      "amount": "-89.90",
+      "accounts": [
+       "4250"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     }
+    ]
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [],
+   "expected": {
+    "case_class": "recurring_expense"
+   }
+  },
+  {
+   "id": "aus-03-dauerausgang",
+   "note": "Wiederkehrender Ausgang mit drei bestätigten Buchungen",
+   "tx": {
+    "amount": "-1450.00",
+    "purpose": "Abschlag Versorger",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-h3",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null,
+    "history": [
+     {
+      "decision_id": "dec-0",
+      "journal_entry_id": "je-0",
+      "label": "2026-0",
+      "booking_date": "2026-03-05",
+      "decided_at": "2026-03-05T10:00:00+00:00",
+      "amount": "-1450.00",
+      "accounts": [
+       "4300"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     },
+     {
+      "decision_id": "dec-1",
+      "journal_entry_id": "je-1",
+      "label": "2026-1",
+      "booking_date": "2026-04-05",
+      "decided_at": "2026-04-05T10:00:00+00:00",
+      "amount": "-1450.00",
+      "accounts": [
+       "4300"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     },
+     {
+      "decision_id": "dec-2",
+      "journal_entry_id": "je-2",
+      "label": "2026-2",
+      "booking_date": "2026-05-05",
+      "decided_at": "2026-05-05T10:00:00+00:00",
+      "amount": "-1450.00",
+      "accounts": [
+       "4300"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     }
+    ]
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [],
+   "expected": {
+    "case_class": "recurring_expense"
+   }
+  },
+  {
+   "id": "aus-04-dauerausgang",
+   "note": "Wiederkehrender Ausgang mit drei bestätigten Buchungen",
+   "tx": {
+    "amount": "-35.00",
+    "purpose": "Abschlag Versorger",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-h4",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null,
+    "history": [
+     {
+      "decision_id": "dec-0",
+      "journal_entry_id": "je-0",
+      "label": "2026-0",
+      "booking_date": "2026-03-05",
+      "decided_at": "2026-03-05T10:00:00+00:00",
+      "amount": "-35.00",
+      "accounts": [
+       "4800"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     },
+     {
+      "decision_id": "dec-1",
+      "journal_entry_id": "je-1",
+      "label": "2026-1",
+      "booking_date": "2026-04-05",
+      "decided_at": "2026-04-05T10:00:00+00:00",
+      "amount": "-35.00",
+      "accounts": [
+       "4800"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     },
+     {
+      "decision_id": "dec-2",
+      "journal_entry_id": "je-2",
+      "label": "2026-2",
+      "booking_date": "2026-05-05",
+      "decided_at": "2026-05-05T10:00:00+00:00",
+      "amount": "-35.00",
+      "accounts": [
+       "4800"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     }
+    ]
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [],
+   "expected": {
+    "case_class": "recurring_expense"
+   }
+  },
+  {
+   "id": "aus-05-rechnung",
+   "note": "Offene Eingangsrechnung mit Nummer und Betrag",
+   "tx": {
+    "amount": "-1736.36",
+    "purpose": "RE-2026-100 Zahlung",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-5",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [
+    {
+     "id": "inv-5",
+     "remaining": "1736.36",
+     "number": "RE-2026-100",
+     "payee_iban_fingerprint": "cred-5",
+     "account_number": "60001"
+    },
+    {
+     "id": "inv-55",
+     "remaining": "999.99",
+     "number": "RE-2026-999",
+     "payee_iban_fingerprint": "cred-x",
+     "account_number": "60001"
+    }
+   ],
+   "expected": {
+    "case_class": "creditor_invoice"
+   }
+  },
+  {
+   "id": "aus-06-rechnung",
+   "note": "Offene Eingangsrechnung mit Nummer und Betrag",
+   "tx": {
+    "amount": "-480.00",
+    "purpose": "RE-2026-210 Zahlung",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-6",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [
+    {
+     "id": "inv-6",
+     "remaining": "480.00",
+     "number": "RE-2026-210",
+     "payee_iban_fingerprint": "cred-6",
+     "account_number": "60001"
+    },
+    {
+     "id": "inv-56",
+     "remaining": "999.99",
+     "number": "RE-2026-999",
+     "payee_iban_fingerprint": "cred-x",
+     "account_number": "60001"
+    }
+   ],
+   "expected": {
+    "case_class": "creditor_invoice"
+   }
+  },
+  {
+   "id": "aus-07-rechnung",
+   "note": "Offene Eingangsrechnung mit Nummer und Betrag",
+   "tx": {
+    "amount": "-95.20",
+    "purpose": "RE-2026-333 Zahlung",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-7",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [
+    {
+     "id": "inv-7",
+     "remaining": "95.20",
+     "number": "RE-2026-333",
+     "payee_iban_fingerprint": "cred-7",
+     "account_number": "60001"
+    },
+    {
+     "id": "inv-57",
+     "remaining": "999.99",
+     "number": "RE-2026-999",
+     "payee_iban_fingerprint": "cred-x",
+     "account_number": "60001"
+    }
+   ],
+   "expected": {
+    "case_class": "creditor_invoice"
+   }
+  },
+  {
+   "id": "aus-08-rechnungsbezug",
+   "note": "Verknüpfte gebuchte Rechnung",
+   "tx": {
+    "amount": "-868.76",
+    "purpose": "RE-2026-500 Zahlung",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-l0",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null,
+    "linked_invoices": [
+     {
+      "invoice_id": "inv-l0",
+      "number": "RE-2026-500",
+      "gross": "868.76",
+      "posted": true,
+      "match_basis": "amount_and_number",
+      "creditor_account_number": "70001",
+      "open_item_id": "inv-1",
+      "remaining": "868.76",
+      "lines": [
+       {
+        "account_number": "4210",
+        "name": "Reinigung",
+        "net": "730.05",
+        "text": "Reinigung"
+       }
+      ]
+     }
+    ]
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [
+    {
+     "id": "inv-1",
+     "remaining": "868.76",
+     "number": "RE-2026-500",
+     "payee_iban_fingerprint": "cred-l0",
+     "account_number": "60001"
+    }
+   ],
+   "expected": {
+    "case_class": "creditor_invoice"
+   }
+  },
+  {
+   "id": "aus-09-umbuchung",
+   "note": "Transfer zwischen eigenen Konten",
+   "tx": {
+    "amount": "-3582.93",
+    "purpose": "Umbuchung Ruecklage",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-own",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null,
+    "transfer_pair": {
+     "partner_transaction_id": "tx-p0",
+     "partner_account_number": "1210"
+    }
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [],
+   "expected": {
+    "case_class": "transfer_pair"
+   }
+  },
+  {
+   "id": "aus-10-umbuchung-zurueck",
+   "note": "Transfer zwischen eigenen Konten",
+   "tx": {
+    "amount": "-500.00",
+    "purpose": "Umbuchung Betriebskonto",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "fp-own",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null,
+    "transfer_pair": {
+     "partner_transaction_id": "tx-p1",
+     "partner_account_number": "1200"
+    }
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [],
+   "expected": {
+    "case_class": "transfer_pair"
+   }
+  },
+  {
+   "id": "aus-11-neuer-empfaenger",
+   "note": "Unbekannter Empfänger ohne Rechnung und Historie",
+   "tx": {
+    "amount": "-640.00",
+    "purpose": "Rechnung 4711",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-neu",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [],
+   "expected": {
+    "case_class": "excluded"
+   }
+  },
+  {
+   "id": "aus-12-einzelfall",
+   "note": "Nur ein Nachweis, Mindestnachweis zwei nicht erreicht",
+   "tx": {
+    "amount": "-59.00",
+    "purpose": "Gebuehr",
+    "counterpart_name": "Synthetik",
+    "counterpart_iban_fingerprint": "cred-einmal",
+    "mandate_reference": null,
+    "end_to_end_id": null,
+    "transaction_code": null,
+    "booking_date": "2026-09-05",
+    "creditor_id": null,
+    "history": [
+     {
+      "decision_id": "dec-0",
+      "journal_entry_id": "je-0",
+      "label": "2026-0",
+      "booking_date": "2026-03-05",
+      "decided_at": "2026-03-05T10:00:00+00:00",
+      "amount": "-59.00",
+      "accounts": [
+       "4800"
+      ],
+      "text": "Buchung",
+      "reversed": false,
+      "bulk": false,
+      "key": "iban",
+      "contract_end": null
+     }
+    ]
+   },
+   "rules": [],
+   "open_items": [],
+   "payables": [],
+   "expected": {
+    "case_class": "excluded"
+   }
+  }
+ ]
+}

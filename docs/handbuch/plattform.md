@@ -75,6 +75,41 @@ oder Portabilität, eine zweite Person gibt frei oder lehnt ab, danach steht der
 bereit; jede Ausgabe wird gezählt und protokolliert. Der Export enthält ausschließlich Daten
 des gewählten Mandanten.
 
-Grenzen: Der Export ist ein Entwurf ohne Rechtsprüfung. Verträge, Buchungen und Dokumente sind
-nicht enthalten; Umfang, Fristen und Rechtsgrundlage der Auskunft legt der Betreiber mit
-Rechtsanwalt fest (offene Entscheidung M27-03-01).
+Grenzen: Der Export ist ein Entwurf ohne Rechtsprüfung. Umfang, Fristen und Rechtsgrundlage
+der Auskunft legt der Betreiber mit Rechtsanwalt fest (offene Entscheidung M27-03-01).
+
+Vollexport als Job (seit 30.09.2026): Nach der Freigabe durch die zweite Person erscheint in der
+Zeile der Schaltfläche Vollexport als Job starten. Der Job läuft im Hintergrund und packt
+zusätzlich Verträge, Buchungssätze und Buchungszeilen, Rechnungen, Tickets und die
+Dokumentoriginale in die ZIP-Datei (Daten als JSON Lines im Ordner data, Dokumente im Ordner
+documents). Der Status wechselt von Job eingereiht über Job läuft zu Export bereit; erst dann
+ist der Download möglich. Fehler je Dokument stehen in der Datei manifest.json. Bei
+Fehlschlag kann der Job erneut gestartet werden. Dokumente in externen Speichern
+(Paperless, Google Drive) sind nicht enthalten, das Manifest zählt sie.
+
+## Lizenzen, Preisliste, Abrechnungsvorschau und Nutzungsverlauf
+
+Die Seite Lizenzen und Preisliste (Plattform, Verweis Lizenzen und Preisliste) ist nur für
+Plattformadministratoren sichtbar. Sie ändert keine Freigabestufe.
+
+* Lizenzen: Mandant wählen, Lizenz mit Modul, Kontingent, Laufzeit und optional vereinbartem
+  Preis anlegen. Ohne Preis folgt die Lizenz der Preisstruktur (Stufen für das Kernmodul,
+  Zusatzmodule je Zeile). Eine Lizenz wird nicht gelöscht: Enddatum eintragen und Beenden
+  wählen. Die Schaltfläche Preis aus Struktur nimmt einen vereinbarten Preis zurück.
+* Abrechnungsvorschau: Monat wählen und Berechnen. Die Vorschau ist netto, nennt Stufe,
+  Testphase und Überschreitung des Kontingents. Fehlt für eine Lizenz der Betrag in der
+  Preisstruktur, ist die Summe unvollständig und die Seite weist darauf hin. Die
+  Rechnungsstellung der Lizenzentgelte ist offen (M27-01).
+* Nutzungsverlauf: Einheiten, Benutzer, KI-Kosten und Speicher je Monat und je Tag. Die Zählung
+  läuft täglich um 02:10 Uhr (UTC) und lässt sich mit Nutzung jetzt zählen anstoßen.
+* Preisverlauf je Modul: Einträge ändern (Preis) oder löschen. Der heute gültige Eintrag
+  eines Zusatzmoduls schreibt den Betrag der Preisstruktur; bestehende Lizenzen behalten ihren
+  vereinbarten Preis.
+
+## Lizenzen und Preisliste (Seite Plattform, Lizenzen)
+
+Nur für Plattformadministratoren. Die Seite verwaltet je Mandant die Lizenzen je Modul mit Kontingent (Einheiten), Gültigkeit, vereinbartem Preis (leer: Preis aus der Preisstruktur) und Mindestbetrag. Lizenzen lassen sich anlegen und beenden.
+
+- Die Abrechnungsvorschau berechnet für einen Monat Einheiten, Betrag und Summe netto, mit Kennzeichen für Testphase und Überschreitung des Kontingents. Fehlt für eine Lizenz der Preis, wird die Summe als unvollständig markiert.
+- Der Nutzungsverlauf zeigt je Monat und je Tag Benutzer, KI-Kosten und Speicher; "Nutzung jetzt zählen" löst eine Zählung aus.
+- Der Preisverlauf je Modul zeigt die Preislisteneinträge. Es sind keine Preise vorbelegt, die Rechnungsstellung ist offen.

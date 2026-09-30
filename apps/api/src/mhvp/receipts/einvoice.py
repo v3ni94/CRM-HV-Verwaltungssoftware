@@ -24,6 +24,7 @@ here; the file is read, not certified.
 
 from __future__ import annotations
 
+import hashlib
 import io
 import logging
 import re
@@ -628,3 +629,88 @@ def property_hint(inv: EInvoice) -> str | None:
     parts.extend(line.description for line in inv.lines)
     text = " | ".join(p for p in parts if p)
     return text or None
+
+
+# Archive evidence and stored validation (S711-01, S711-04) ------------------------------
+
+# Version of the own formal check; the official KoSIT validator is recorded separately via
+# ``POST /receipts/drafts/{id}/validation`` with its own name and version (7.11 S02).
+FORMAL_CHECK_NAME = "mhvp-formal-check"
+FORMAL_CHECK_VERSION = "1.0"
+
+
+def archive_evidence(mime_type: str, data: bytes | None) -> dict[str, str | None]:
+    """SHA-256 of the received file and of its structured part exactly as received (S03).
+    The hashes prove that the filed original is unchanged; the extracted fields never
+    replace it. For a plain XML the structured part is the file itself."""
+    if data is None:
+        return {"original_sha256": None, "structured_sha256": None, "structured_name": None}
+    original = hashlib.sha256(data).hexdigest()
+    if mime_type in XML_MIME_TYPES:
+        return {"original_sha256": original, "structured_sha256": original, "structured_name": None}
+    if mime_type == "application/pdf":
+        found = embedded_xml(data)
+        if found is not None:
+            name, xml = found
+            return {
+                "original_sha256": original,
+                "structured_sha256": hashlib.sha256(xml).hexdigest(),
+                "structured_name": name[:200],
+            }
+    return {"original_sha256": original, "structured_sha256": None, "structured_name": None}
+
+
+def formal_validation(inv: EInvoice, findings: list[str]) -> dict[str, Any]:
+    """The own formal check as a stored result; ``official`` stays false (not KoSIT)."""
+    return {
+        "validator": FORMAL_CHECK_NAME,
+        "validator_version": FORMAL_CHECK_VERSION,
+        "official": False,
+        "variant": inv.customization_id,
+        "syntax": inv.syntax,
+        "result": "findings" if findings else "ok",
+        "messages": list(findings),
+    }
+
+
+def _date_variants(value: date) -> list[str]:
+    return [value.strftime("%d.%m.%Y"), value.isoformat(), value.strftime("%d.%m.%y")]
+
+
+def hybrid_deviations(inv: EInvoice, text: str | None) -> list[dict[str, Any]]:
+    """Further XML values of a hybrid invoice that do not appear in the PDF text (S03): net,
+    tax, invoice and due date and the payee IBAN. Independent of the AI reading and kept even
+    after the D42 conflicts were acknowledged; a hint for the reviewer, never a choice."""
+    if inv.format != "zugferd" or not text or not text.strip():
+        return []
+    normal = _norm(text)
+    compact = normal.replace(" ", "")
+    out: list[dict[str, Any]] = []
+
+    def amount(name: str, label: str, value: Decimal | None) -> None:
+        if value is not None and not any(
+            re.search(rf"(?<![\d.,]){re.escape(v)}(?!\d)", normal) for v in _amount_variants(value)
+        ):
+            out.append({"field": name, "xml": str(value), "note": f"{label} fehlt im PDF-Text."})
+
+    def day(name: str, label: str, value: date | None) -> None:
+        if value is not None and not any(v in normal for v in _date_variants(value)):
+            out.append(
+                {"field": name, "xml": value.isoformat(), "note": f"{label} fehlt im PDF-Text."}
+            )
+
+    amount("net", "Nettobetrag aus dem XML", inv.net)
+    amount("vat", "Steuerbetrag aus dem XML", inv.vat)
+    day("invoice_date", "Rechnungsdatum aus dem XML", inv.invoice_date)
+    day("due_date", "Fälligkeit aus dem XML", inv.due_date)
+    if inv.payment.iban:
+        iban = normalize_iban(inv.payment.iban).casefold()
+        if iban not in compact:
+            out.append(
+                {
+                    "field": "iban",
+                    "xml": f"... {iban[-4:].upper()}",
+                    "note": "IBAN aus dem XML fehlt im PDF-Text; Zahlungsdaten am Original prüfen.",
+                }
+            )
+    return out

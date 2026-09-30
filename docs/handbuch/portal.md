@@ -284,3 +284,14 @@ Anmeldung unter `/barrierefreiheit`; sie ist als Entwurf gekennzeichnet, offene 
 Kernkomponenten (Navigation, Übersicht, Aushänge, Meldung, Kontoauszug/Hausgeldkonto) laufen mit
 `axe-core` über `vitest-axe` (`apps/web-portal/src/components/portal/Accessibility.axe.test.tsx`)
 als technisches Hilfsmittel; sie ersetzen keine externe Prüfung (`docs/ASSUMPTIONS.md` A-060).
+
+## Portal Welle 2 (30.09.2026)
+
+* **Chat zur Meldung.** Ist der Chat unter Einstellungen, Portalformulare, Portalfunktionen eingeschaltet, schreiben Mieter und Eigentümer in ihrer Meldung Nachrichten. Antworten der Verwaltung entstehen im Ticket als externer Kommentar (oder über `POST /portal-admin/tickets/{id}/messages`) und lösen eine Benachrichtigung im Portal aus. Interne Notizen sind nie sichtbar. Der Chat ist kein Notdienst.
+* **Dokumentstatus.** In der Dokumentliste zeigt jedes Dokument Neu oder Gelesen. Der Status ist ein Indiz für den Abruf und keine Zustellung.
+* **Standort der Schadensmeldung.** Das Feld Standort (Raum, Gebäudeteil, Etage) steht in der Beschreibung der Meldung.
+* **Vollmacht.** Ein Vertreter mit Vollmacht wird über die API angelegt (`POST /portal-admin/representations`) mit Vollmachtsdokument und Zeitraum und sieht die Eigentümeransicht nur lesend bis zum Ende oder Widerruf. Anlegen und Widerruf entscheidet die Geschäftsführung.
+* **Support-Sicht.** Der Nutzer erteilt unter Sicherheit eine befristete Einwilligung. Nur dann kann die Verwaltung seine Ansicht lesend einsehen, mit Grund, protokolliert.
+* **Eigentum.** Die Seite Eigentum zeigt beschlossene Zahlungen mit Geltungsdauer und Zahlungsempfänger sowie freigegebene Meldungen zum Objekt. Es wird keine Zahlung ausgelöst.
+* **Formularbaukasten.** Im CRM stehen 14 Elementtypen bereit. Die Zustellung ist Ticket oder Ticket mit E-Mail an eine feste Adresse der Verwaltung.
+* **Funktionen und Statistik.** Unter Einstellungen, Portalformulare schaltet der Administrator Chat, KI-Vorqualifizierung und Support-Sicht ein und sieht die Nutzungszahlen der letzten 30 Tage.

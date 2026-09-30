@@ -94,6 +94,13 @@ Beispiel 12 Sollstellungen buchen (6.480,00 EUR)) und verlangt eine Bestätigung
 Monat; gebuchte Sollstellungen werden nur per Storno des Laufs korrigiert. Der Lauf lässt
 sich auf ein Objekt oder einen Vertrag eingrenzen (Schnittstelle).
 
+Frühere Läufe laden zeigt alle Läufe des gewählten Monats; Öffnen lädt die Posten. Jeder
+Posten nennt seine Grundlage (gültig ab, Vertragsversion). Wurde ein Betrag nach der Buchung
+geändert, erscheint ein manueller Posten mit der Differenz zur gebuchten Sollstellung; er wird
+nicht gebucht, die Korrektur erfolgt per Storno des Laufs und neuer Sollstellung. Auf Wunsch
+erstellt das System am 1. des Monats um 05:00 eine Vorschau (Mandanteneinstellung, Standard
+aus); gebucht wird immer von Hand.
+
 ## Offene Posten und Bankabgleich
 
 Offene Posten entstehen aus Sollstellungen und gebuchten Eingangsrechnungen und werden
@@ -159,6 +166,20 @@ Unternehmer 9 Prozentpunkte). Die Einstellung gilt als Mandantenvorgabe und kann
 Zinssatz sind eine kaufmännische Einstellung, keine rechtliche Freigabe; ohne Wert bleibt
 die Position 0,00 EUR.
 
+### Zustellnachweis, Sperren je Posten und Zinsen
+
+Zu einem als versendet markierten Fall lassen sich Zustellnachweise erfassen (Einschreiben,
+Postnachweis, E-Mail-Nachweis, Portalzustellung, Sonstiges) mit Datum, Referenz und
+optional einem abgelegten Dokument. Einzelne offene Posten lassen sich mit Grund sperren
+(Ratenplan, bestrittener Posten, Aufrechnung, Prozess, Insolvenz); gesperrte Posten gehen in
+keinen Mahnlauf ein, die Sperre wird aufgehoben, nicht gelöscht. Basiszinssätze pflegt die
+Buchhaltung mit Gültigkeitsbeginn und Quelle; ändert sich der Satz während des Verzugs,
+zeigt der Fall die Zinsen je Zeitraum. Nach Freigabe des Laufs kann eine berechtigte Person
+die Zinsen als Buchungsentwurf anlegen; gebucht wird nur über die Vier-Augen-Freigabe bei
+geöffnetem G1. Jeder Fall zeigt Prüfhinweise zu Verjährung und Fristen sowie einen
+Vorschlag für den Zinsaufschlag aus dem Verbraucherkennzeichen des Schuldners; beides ist
+durch den Rechtsanwalt zu prüfen und wird nicht automatisch angewendet.
+
 ## Rechnungseingang
 
 Menü Rechnungen: Eingangsrechnungen mit Buchungskreis, Aussteller, Rechnungsnummer, Datum,
@@ -205,6 +226,39 @@ Entwurf berechnen und als XRechnung ausstellen (Rechnungsnummer im Format
 KÜRZEL-JJJJ-000001, Umsatzsteuerstatus aus den Mandanteneinstellungen). Rechnungssteller
 ist immer der angemeldete Mandant.
 
+Buchhaltung, Verwalterhonorar: Honorar je Objekt mit Beginn, Intervall, Steuersatz und
+Beträgen je Einheitsart einrichten. Beenden setzt das letzte Honorardatum; ein Honorar mit
+Rechnungen wird nicht gelöscht. Unter Stichtag für fällige Zeiträume stehen je Honorar der
+Leistungszeitraum (Monat, Quartal, Halbjahr oder Jahr), der Betrag und ob er schon abgerechnet
+ist. Ausstellen vergibt die Rechnungsnummer; je Zeitraum gibt es eine Rechnung. In der Liste
+der Honorarrechnungen: Freigeben, XRechnung laden, Prüfen (Strukturprüfung), Ablegen
+(Dokumentenablage) und Stornieren. Stornieren verlangt einen Grund und erzeugt eine
+Gutschrift mit eigener Nummer; danach kann der Zeitraum neu abgerechnet werden. Nichts wird
+versendet und nichts gebucht.
+
+## Buchen im CRM (Lückenliste 30.09.2026)
+
+* Buchungssatz erfassen: Im Buchungskreis unter Journal den Vorgang wählen (Buchungssatz, Kostenkorrektur oder Zinsbuchung), Buchungstag, Text und Beträge eintragen und als Entwurf speichern. Soll und Haben müssen gleich sein.
+* Buchen: In der Journalzeile auf Buchen klicken. Gebuchte Sätze bleiben unverändert, Korrekturen erfolgen nur über Stornieren mit Angabe eines Grundes.
+* Anfangsbestand: Eine zweite Person bestätigt über Anfangsbestand prüfen, erst danach ist Buchen möglich.
+* Festschreiben: Unten auf der Seite ein Datum wählen und bestätigen. Das Festschreiben kann nicht zurückgenommen werden.
+* Kontenplan: Über die Schaltfläche Kontenplan Konten ergänzen, umbenennen, Buchungstexte, Umsatzsteueroption und Sichtbarkeit ändern oder deaktivieren. Kreditorenkonten aus Dienstleisterverhältnissen legt die Schaltfläche Kreditorenkonten aus Dienstleistern anlegen an.
+* Kontenblatt: Die Kontonummer im Kontenplan öffnet das Kontenblatt mit Laufsaldo für den gewählten Zeitraum. Bei Kostenkonten steht dort die Verteilung auf Umlageschlüssel, die Summe muss genau 100 % ergeben.
+* Zinsbuchung: Gebucht wird der eingegebene Betrag. Einbehaltene Steuer wird nicht automatisch berücksichtigt.
+* Solange Immoware24 führend ist (Freigabestufe G1 geschlossen), sind Buchungen in der Plattform Parallelbetrieb und nicht die führende Buchhaltung.
+
+## Weitere Auswertungen und Excel
+
+Unter Buchhaltung, Auswertungen, Abschnitt "Weitere Auswertungen und Excel" wählen Sie die
+Ansicht (Kontenblatt, Saldenliste, Offene Posten, Monatsmatrix, Soll/Ist der Forderungen,
+Bankkontoabrechnung, Umsatzsteuer und Vorsteuer als Entwurf, Einnahmen und Ausgaben) und
+Stichtag oder Zeitraum. Jede Ansicht zeigt oben Rechtsträger, Zeitraum, Stichtag, Datenstand,
+Filter und den Status Entwurf. "Als Excel laden" erzeugt die Arbeitsmappe und protokolliert
+den Abruf. "Verfahrensdokumentation (Entwurf)" lädt einen aus dem Betrieb erzeugten Text mit
+Lücken, die mit dem Steuerberater zu klären sind. Die steuerlichen Ansichten sind keine
+Voranmeldung und keine EÜR. Das Kennzeichen "USt" oder "EÜR" je Konto setzt nur eine Person
+mit Freigaberecht.
+
 ## Häufige Fehler
 
 - Sollstellung blockiert: Erlöskonto je Zahlungsart oder Buchungskreis des Rechtsträgers
@@ -214,3 +268,21 @@ ist immer der angemeldete Mandant.
 - Alle Mahnfälle ausgeschlossen mit Begründung nicht führend: erwartetes Verhalten bis G1.
 - Die Freigabe muss eine andere Person erteilen: Ersteller und Freigebender müssen
   verschieden sein (Mahnlauf, Rechnung, Zahlungsauftrag, Anfangsbestand).
+
+## Verwalterhonorar (Seite Buchhaltung, Verwalterhonorar)
+
+Die Seite führt durch die Honorarabrechnung je Objekt.
+
+- "Honorar einrichten": Objekt, Beginn, optional Ende, Intervall (monatlich, vierteljährlich, halbjährlich, jährlich), USt-Satz und Beträge je Einheitentyp erfassen. Eingerichtete Honorare lassen sich mit einem letzten Tag beenden.
+- Mit einem Stichtag werden die fälligen Leistungszeiträume samt Bruttobetrag angezeigt. Je Zeitraum wird die Rechnung einmal ausgestellt; die Rechnungsnummer wird nach Bestätigung fest vergeben.
+- Unter "Honorarrechnungen" lassen sich Rechnungen freigeben, als XRechnung prüfen (nur Strukturprüfung, die amtliche Prüfung läuft außerhalb der Plattform), ablegen und stornieren. Das Stornieren erzeugt eine Gutschrift mit eigener Nummer und verlangt einen Grund.
+- Eine ausgestellte Rechnung wird nie geändert. Nichts wird versendet; die Buchung des Honorars bleibt bis zur Freigabestufe G1 offen.
+
+## Konten und Kontenblatt (Seite Buchhaltung, Buchungskreis, Konten)
+
+Der Kontenplan eines Buchungskreises wird unter Buchhaltung, Buchungskreis, Konten gepflegt.
+
+- "Konto ergänzen": Kontonummer, Bezeichnung, Kontoart, Kontotyp, Umsatzsteuer (keine, Regelsatz, ermäßigt), Relevanz für den Kassenbericht und bis zu drei Buchungstexte.
+- Bestehende Konten lassen sich ändern sowie deaktivieren und wieder aktivieren. Konten mit Buchungen werden nur deaktiviert, nie gelöscht. Deaktivierte Konten stehen für neue Buchungen nicht zur Auswahl.
+- "Kreditorenkonten aus Dienstleistern anlegen" erzeugt fehlende Kreditorenkonten je Dienstleisterverhältnis und meldet, wie viele angelegt und zugeordnet wurden.
+- Je Konto öffnet das Kontenblatt. Es zeigt für einen wählbaren Zeitraum (Von, Bis) den Anfangssaldo, die Buchungen mit Laufsaldo sowie Summen und Endsaldo. Ein Link führt zurück zum Kontenplan.

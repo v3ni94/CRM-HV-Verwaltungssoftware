@@ -35,7 +35,10 @@ from mhvp.accounting.models import (
     AccountCategory,
     AccountType,
     DunningCase,
+    DunningDeliveryProof,
     DunningFeeInvoiceDraft,
+    DunningInterestRate,
+    DunningItemBlock,
     DunningMahnbescheidPrep,
     DunningRun,
     DunningSettings,
@@ -252,6 +255,168 @@ def interest_amount_for(settings: EffectiveSettings, total: Decimal, days: int) 
 
 
 @dataclass
+class InterestResult:
+    """Interest over the default period split by Basiszinssatz periods (M16-02)."""
+
+    amount: Decimal
+    periods: list[dict[str, Any]]
+    note: str | None = None
+
+
+def interest_over_periods(
+    rates: list[tuple[date, Decimal]],
+    spread: Decimal | None,
+    total: Decimal,
+    start: date,
+    end: date,
+) -> InterestResult:
+    """Pro rata interest from ``start`` (inclusive) to ``end`` (exclusive), one period per
+    Basiszinssatz validity (``rates`` sorted or not, each valid until the day before the next
+    ``valid_from``). A change of the Basiszinssatz during default splits the period (7.5). If
+    part of the period lies before the first maintained rate, nothing is computed (no rate is
+    assumed, 0.1.3). Same day count as before (days/365), rounded per period; not a legal
+    certification (0.2)."""
+    if end <= start or total <= 0:
+        return InterestResult(Decimal("0.00"), [])
+    ordered = sorted(rates)
+    if not ordered or ordered[0][0] > start:
+        return InterestResult(
+            Decimal("0.00"),
+            [],
+            f"Kein Basiszinssatz für den Zeitraum ab {start.strftime('%d.%m.%Y')} gepflegt: "
+            "Zinsen nicht berechnet",
+        )
+    extra = spread or Decimal("0")
+    periods: list[dict[str, Any]] = []
+    amount = Decimal("0.00")
+    for idx, (valid_from, base) in enumerate(ordered):
+        valid_to = ordered[idx + 1][0] if idx + 1 < len(ordered) else end
+        seg_from, seg_to = max(start, valid_from), min(end, valid_to)
+        if seg_to <= seg_from:
+            continue
+        days = (seg_to - seg_from).days
+        rate = base + extra
+        part = (total * rate / Decimal("100") * Decimal(days) / Decimal("365")).quantize(
+            CENT, rounding=ROUND_HALF_UP
+        )
+        amount += part
+        periods.append(
+            {
+                "from": seg_from.isoformat(),
+                "to": (seg_to - timedelta(days=1)).isoformat(),
+                "days": days,
+                "base_rate": str(base),
+                "spread": str(extra),
+                "rate": str(rate),
+                "amount": str(part),
+            }
+        )
+    return InterestResult(amount, periods)
+
+
+async def interest_rates(session: AsyncSession) -> list[tuple[date, Decimal]]:
+    rows = (
+        await session.scalars(select(DunningInterestRate).order_by(DunningInterestRate.valid_from))
+    ).all()
+    return [(r.valid_from, r.base_rate) for r in rows]
+
+
+def interest_for(
+    settings: EffectiveSettings,
+    rates: list[tuple[date, Decimal]],
+    total: Decimal,
+    start: date | None,
+    end: date,
+) -> InterestResult:
+    """Interest of a case: the rate history (M16-02) wins; without any history the single
+    ``interest_base_rate`` of the settings applies as before. Zero while interest is off."""
+    if not settings.interest_enabled or start is None or end <= start:
+        return InterestResult(Decimal("0.00"), [])
+    if rates:
+        return interest_over_periods(rates, settings.interest_spread, total, start, end)
+    if settings.interest_base_rate is None:
+        return InterestResult(Decimal("0.00"), [])
+    return interest_over_periods(
+        [(start, settings.interest_base_rate)], settings.interest_spread, total, start, end
+    )
+
+
+BLOCK_REASON_LABELS: dict[str, str] = {
+    "installment_plan": "Ratenplan",
+    "disputed": "bestrittener Posten",
+    "set_off": "Aufrechnung",
+    "litigation": "Prozess",
+    "insolvency": "Insolvenz",
+}
+
+
+async def active_item_blocks(
+    session: AsyncSession, open_item_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, str]:
+    """Active structured blocks per open item (M16-03): item id to reason code."""
+    if not open_item_ids:
+        return {}
+    rows = (
+        await session.scalars(
+            select(DunningItemBlock).where(
+                DunningItemBlock.open_item_id.in_(open_item_ids),
+                DunningItemBlock.released_at.is_(None),
+            )
+        )
+    ).all()
+    return {r.open_item_id: r.reason_code for r in rows}
+
+
+def spread_suggestion(is_consumer: bool | None) -> dict[str, Any]:
+    """Proposal of the Zinsaufschlag from the consumer flag of the debtor (M16-06, decision
+    3 a). A proposal with a note only; it never changes ``interest_spread``. Whether § 288
+    Abs. 2 applies depends on the kind of claim (Entgeltforderung) and all parties (R10)."""
+    hint = (
+        "Vorschlag aus dem Verbraucherkennzeichen des Schuldners, keine rechtliche Feststellung. "
+        "§ 288 BGB unterscheidet Anspruchsarten und Beteiligte; Aufschlag durch Rechtsanwalt "
+        "prüfen, die Einstellung wird nicht automatisch geändert."
+    )
+    presets = interest_spread_presets()
+    if is_consumer is None:
+        return {
+            "profile": None,
+            "spread": None,
+            "hinweis": "Verbrauchereigenschaft des Schuldners nicht erfasst: kein Vorschlag. "
+            + hint,
+        }
+    profile = "verbraucher" if is_consumer else "unternehmer"
+    return {"profile": profile, "spread": presets[profile], "hinweis": hint}
+
+
+def case_check_hints(case: DunningCase, today: date) -> list[str]:
+    """Prüfhinweise zu Fristen und Verjährung (M16-04, 7.5): hints for a person, no computed
+    limitation date (no limitation rule in the source register, annex C) and no automatic
+    legal action."""
+    hints: list[str] = []
+    if case.due_date is not None:
+        age = (today - case.due_date).days
+        hints.append(
+            f"Verjährung prüfen: älteste Fälligkeit {case.due_date.strftime('%d.%m.%Y')} "
+            f"(Fälligkeitsjahr {case.due_date.year}, {age} Tage). Beginn, Dauer, Hemmung "
+            "und Neubeginn durch Rechtsanwalt prüfen; die Plattform berechnet kein "
+            "Verjährungsdatum."
+        )
+    if case.default_start is None:
+        hints.append(
+            "Verzugsbeginn nicht ableitbar: Zinsen und verzugsbezogene Schritte erst nach Prüfung."
+        )
+    if case.level >= 3:
+        hints.append(
+            "Fortgeschrittene Mahnstufe: gerichtliche Schritte (Mahnbescheid, Klage) nur nach "
+            "gesondertem Auftrag und fallbezogener Prüfung; Fristen sind zu verifizieren und "
+            "mit Vorfrist einzutragen."
+        )
+    if case.status == "sent" and case.received_on is None:
+        hints.append("Zugang der Mahnung nicht erfasst: Zustellnachweis und Zugang prüfen.")
+    return hints
+
+
+@dataclass
 class DefaultStart:
     """Result of the default start derivation for one case: ``start`` is ``None`` whenever a
     fact the mode needs is not recorded (nothing is assumed, 0.1.3); ``note`` says why."""
@@ -384,8 +549,22 @@ async def preview(
             if i["due_date"] and i["due_date"] < run_date:
                 by_account.setdefault(i["account_id"], []).append(i)
         unreviewed = await acc.unreviewed_auto_accounts(session, ledger)
-        for account_id, overdue in sorted(by_account.items(), key=lambda kv: str(kv[0])):
+        rates = await interest_rates(session)
+        for account_id, all_overdue in sorted(by_account.items(), key=lambda kv: str(kv[0])):
             account = await session.get(LedgerAccount, account_id)
+            # Structured blocks per item (M16-03): blocked items never enter the case.
+            blocks = await active_item_blocks(session, [i["id"] for i in all_overdue])
+            overdue = [i for i in all_overdue if i["id"] not in blocks]
+            block_note = (
+                "Gesperrte Posten ausgenommen: "
+                + ", ".join(sorted({BLOCK_REASON_LABELS[c] for c in blocks.values()}))
+                if blocks
+                else None
+            )
+            if blocks:
+                counts["item_blocked"] = counts.get("item_blocked", 0) + len(blocks)
+            if not overdue:
+                overdue = all_overdue
             contract_id = next((i["contract_id"] for i in overdue if i["contract_id"]), None)
             contract = await session.get(Contract, contract_id) if contract_id else None
             total = sum((i["remaining"] for i in overdue), Decimal("0.00"))
@@ -393,7 +572,9 @@ async def preview(
             days = (run_date - oldest).days
             level = await last_level(session, account_id) + 1
             reason = None
-            if settings is None or not settings.levels:
+            if len(blocks) == len(all_overdue):
+                reason = f"Mahnsperre je Posten: {block_note}"
+            elif settings is None or not settings.levels:
                 reason = "Keine Mahnstufen eingerichtet"
             elif contract is not None and contract.dunning_block:
                 reason = f"Mahnsperre: {contract.dunning_block_reason or 'ohne Angabe'}"
@@ -423,13 +604,17 @@ async def preview(
                 items=overdue,
                 reminder_received_on=await reminder_received_on(session, account_id),
             )
-            default_days = (run_date - verzug.start).days if verzug.start else 0
+            interest_detail: list[dict[str, Any]] | None = None
+            interest_note: str | None = None
             if reason is None and settings is not None:
                 fee_amount = fee_amount_for(settings, level) or Decimal("0.00")
                 # Interest is configured per ladder, not per level; the Zahlungserinnerung
                 # never carries it (M16-14), so it starts at level 2.
                 if level > REMINDER_LEVEL:
-                    interest_amount = interest_amount_for(settings, total, default_days)
+                    interest = interest_for(settings, rates, total, verzug.start, run_date)
+                    interest_amount = interest.amount
+                    interest_detail = interest.periods or None
+                    interest_note = interest.note
             bank = await payment_account(session, ledger, run_date) if reason is None else None
             bank_warning = NO_BANK_ACCOUNT_WARNING if reason is None and bank is None else None
             fee_amount, interest_amount, guard_note = reminder_guard(
@@ -444,8 +629,13 @@ async def preview(
             )
             if guard_note:
                 case_reason = f"{case_reason}. {guard_note}"
+                interest_detail = None
             if reason is None:
                 case_reason = f"{case_reason}. {verzug.note}"
+                if block_note:
+                    case_reason = f"{case_reason}. {block_note}"
+                if interest_note:
+                    case_reason = f"{case_reason}. {interest_note}"
                 if bank_warning:
                     case_reason = f"{case_reason}. {bank_warning}"
                     counts["bank_account_missing"] = counts.get("bank_account_missing", 0) + 1
@@ -485,6 +675,7 @@ async def preview(
                     default_mode=verzug.mode,
                     bank_account_id=bank.id if bank is not None else None,
                     bank_warning=bank_warning,
+                    interest_detail=interest_detail,
                 )
             )
             counts["excluded" if reason else "proposed"] += 1
@@ -704,3 +895,127 @@ def case_warnings(case: DunningCase) -> list[str]:
     if case.bank_warning:
         out.append(case.bank_warning)
     return out
+
+
+INTEREST_ACCOUNT_NUMBER = "489100"
+INTEREST_ACCOUNT_NAME = "Verzugszinsen"
+
+
+async def _interest_revenue_account(session: AsyncSession, ledger: Ledger) -> LedgerAccount:
+    existing = await session.scalar(
+        select(LedgerAccount).where(
+            LedgerAccount.ledger_id == ledger.id, LedgerAccount.number == INTEREST_ACCOUNT_NUMBER
+        )
+    )
+    if existing is not None:
+        return existing
+    account = LedgerAccount(
+        tenant_id=ledger.tenant_id,
+        ledger_id=ledger.id,
+        number=INTEREST_ACCOUNT_NUMBER,
+        name=INTEREST_ACCOUNT_NAME,
+        category=AccountCategory.REVENUE,
+        type=AccountType.INCOME,
+        is_system=True,
+    )
+    session.add(account)
+    await session.flush()
+    return account
+
+
+async def create_interest_draft(
+    session: AsyncSession, case: DunningCase, user_id: uuid.UUID | None
+) -> JournalEntry:
+    """Verzugszinsen as draft receivable (Sollstellungsentwurf) on the debtor's account in the
+    claim holder's ledger (M16-05, decision 3 a). Only on the explicit request of a person
+    after the run was approved, never automatically; the draft is released on the regular
+    four eyes posting path behind G1. Idempotent per case."""
+    if case.interest_entry_id is not None:
+        existing = await session.get(JournalEntry, case.interest_entry_id)
+        if existing is not None:
+            return existing
+    if case.status not in ("proposed", "sent"):
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Für ausgeschlossene Fälle gibt es keinen Zinsentwurf."
+        )
+    run = await session.get(DunningRun, case.run_id)
+    if run is None or run.status != "approved":
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Der Mahnlauf muss zuerst freigegeben werden."
+        )
+    if case.interest_amount <= 0:
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Der Fall weist keine Verzugszinsen aus.")
+    ledger = await session.get(Ledger, case.ledger_id)
+    if ledger is None or ledger.leading_system is not LeadingSystem.MHVP:
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Nur das führende System darf mahnen.")
+    revenue = await _interest_revenue_account(session, ledger)
+    entry = JournalEntry(
+        tenant_id=case.tenant_id,
+        created_by=user_id,
+        ledger_id=ledger.id,
+        booking_date=datetime.now(UTC).date(),
+        text=f"Verzugszinsen, Stufe {case.level}, Fall {case.id}, Entwurf zur Prüfung",
+        kind=EntryKind.INTEREST,
+        contract_id=case.contract_id,
+        source=EntrySource.MANUAL,
+        idempotency_key=f"dunning_interest:{case.id}",
+    )
+    lines = [
+        acc.LineIn(case.debtor_account_id, case.interest_amount, Decimal("0")),
+        acc.LineIn(revenue.id, Decimal("0"), case.interest_amount),
+    ]
+    await acc.write_draft(session, ledger, entry, lines, [])
+    case.interest_entry_id = entry.id
+    case.updated_by = user_id
+    await session.flush()
+    return entry
+
+
+async def add_delivery_proof(
+    session: AsyncSession,
+    case: DunningCase,
+    *,
+    kind: str,
+    proof_date: date,
+    reference: str | None,
+    document_id: uuid.UUID | None,
+    note: str | None,
+    user_id: uuid.UUID | None,
+) -> DunningDeliveryProof:
+    """Record evidence of dispatch or receipt (M16-01). Only for cases marked as sent; the
+    evidence never sets the receipt date (Zugang) on its own."""
+    if case.status != "sent":
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Zustellnachweise sind erst nach 'Als versendet markieren' möglich.",
+        )
+    if document_id is not None:
+        from mhvp.documents.models import Document
+
+        if await session.get(Document, document_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Dokument nicht gefunden.")
+    proof = DunningDeliveryProof(
+        tenant_id=case.tenant_id,
+        case_id=case.id,
+        kind=kind,
+        proof_date=proof_date,
+        reference=reference,
+        document_id=document_id,
+        note=note,
+        created_by=user_id,
+    )
+    session.add(proof)
+    await session.flush()
+    return proof
+
+
+async def delivery_proofs(session: AsyncSession, case_id: uuid.UUID) -> list[DunningDeliveryProof]:
+    return list(
+        (
+            await session.scalars(
+                select(DunningDeliveryProof)
+                .where(DunningDeliveryProof.case_id == case_id)
+                .order_by(DunningDeliveryProof.proof_date, DunningDeliveryProof.created_at)
+            )
+        ).all()
+    )

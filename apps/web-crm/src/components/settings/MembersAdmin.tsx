@@ -14,6 +14,7 @@ import { MemberPositionEditor } from "./SignatureProfile";
 
 type Member = components["schemas"]["MemberOut"] & {
   legal_entity_ids?: string[];
+  property_ids?: string[];
   position?: string | null;
   phone?: string | null;
 };
@@ -23,6 +24,11 @@ export type LegalEntityOption = { id: string; name: string; kind: string; proper
 /** Rollen, deren Zugriff durch den Zugriffsbereich je Rechtsträger begrenzt wird
  * (Backend `mhvp.core.auth.scope.SCOPED_ROLES`). */
 const SCOPED_ROLES = ["tax_advisor"];
+/** Objekt zur Auswahl der Objektzuordnung (M2-02, GET /properties). */
+export type PropertyOption = { id: string; number: string; name: string };
+/** Rollen, die die Objektzuordnung nie einschränkt (Backend
+ * `mhvp.core.auth.scope.PROPERTY_UNSCOPED_ROLES`). */
+const PROPERTY_UNSCOPED_ROLES = ["tenant_admin", "administrator"];
 
 function StatusBadge({ status }: { status: string }) {
   const t = useTranslations("Members");
@@ -369,6 +375,78 @@ function LegalEntitiesEditor({
   );
 }
 
+/** Objektzuordnung (3.4, M2-02): leere Auswahl bedeutet alle Objekte; eine Auswahl beschränkt
+ * das Mitglied auf diese Objekte. Administratorrollen sind nie eingeschränkt. */
+export function PropertiesEditor({
+  member,
+  options,
+  onSaved,
+}: {
+  member: Member;
+  options: PropertyOption[];
+  onSaved: (ids: string[]) => void;
+}) {
+  const t = useTranslations("Members");
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<string[]>(member.property_ids ?? []);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (member.roles.some((r) => PROPERTY_UNSCOPED_ROLES.includes(r))) return null;
+
+  async function save() {
+    setBusy(true);
+    setError(null);
+    const res = await bff<null>(`/api/bff/tenant/members/${member.membership_id}/properties`, {
+      method: "PUT",
+      body: JSON.stringify({ property_ids: selected }),
+    });
+    setBusy(false);
+    if (res.ok) {
+      onSaved(selected);
+      setOpen(false);
+    } else {
+      setError(res.message);
+    }
+  }
+
+  const count = member.property_ids?.length ?? 0;
+  if (!open) {
+    return (
+      <button type="button" className={ui.buttonSm} onClick={() => setOpen(true)}>
+        {count === 0 ? t("propertiesAll") : t("editProperties", { count })}
+      </button>
+    );
+  }
+  return (
+    <fieldset className="flex flex-col gap-1.5 rounded-md border border-border bg-surface-2 p-2">
+      <legend className="text-xs font-semibold">{t("propertiesTitle")}</legend>
+      <p className="text-xs text-muted">{t("propertiesHint")}</p>
+      {options.length === 0 ? <p className="text-xs text-muted">{t("propertiesEmpty")}</p> : null}
+      {options.map((o) => (
+        <label key={o.id} className="flex items-center gap-2 text-xs">
+          <input
+            type="checkbox"
+            checked={selected.includes(o.id)}
+            onChange={(e) =>
+              setSelected((prev) => (e.target.checked ? [...prev, o.id] : prev.filter((x) => x !== o.id)))
+            }
+          />
+          {o.number} {o.name}
+        </label>
+      ))}
+      {error ? <p className={ui.error}>{error}</p> : null}
+      <div className="flex gap-2">
+        <button type="button" className={ui.button} disabled={busy} onClick={() => void save()}>
+          {t("save")}
+        </button>
+        <button type="button" className={ui.button} disabled={busy} onClick={() => setOpen(false)}>
+          {t("cancel")}
+        </button>
+      </div>
+    </fieldset>
+  );
+}
+
 function ResetPassword({ membershipId }: { membershipId: string }) {
   const t = useTranslations("Members");
   const [open, setOpen] = useState(false);
@@ -408,7 +486,7 @@ function ResetPassword({ membershipId }: { membershipId: string }) {
         type="password"
         className={ui.input}
         value={password}
-        minLength={6}
+        minLength={12}
         onChange={(e) => setPassword(e.target.value)}
         placeholder={t("startPassword")}
       />
@@ -484,7 +562,7 @@ function AddMemberForm({
         <input
           type="password"
           required
-          minLength={6}
+          minLength={12}
           className={ui.input}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
@@ -520,6 +598,7 @@ export function MembersAdmin({
   competenceCatalogue,
   positionCatalogue = [],
   legalEntityOptions,
+  propertyOptions,
   canCreate,
   canUpdate,
   canUpdateScope,
@@ -530,6 +609,7 @@ export function MembersAdmin({
   competenceCatalogue: { code: string; label: string }[];
   positionCatalogue?: string[];
   legalEntityOptions?: LegalEntityOption[];
+  propertyOptions?: PropertyOption[];
   canCreate: boolean;
   canUpdate: boolean;
   canUpdateScope?: boolean;
@@ -583,6 +663,9 @@ export function MembersAdmin({
                   {canUpdateScope ? <ReplyApprovalEditor member={m} onSaved={(patch) => updateMember(m.membership_id, patch)} /> : null}
                   {canUpdateScope ? (
                     <LegalEntitiesEditor member={m} options={legalEntityOptions ?? []} onSaved={(legal_entity_ids) => updateMember(m.membership_id, { legal_entity_ids })} />
+                  ) : null}
+                  {canUpdateScope ? (
+                    <PropertiesEditor member={m} options={propertyOptions ?? []} onSaved={(property_ids) => updateMember(m.membership_id, { property_ids })} />
                   ) : null}
                   <ResetPassword membershipId={m.membership_id} />
                   <button
@@ -639,6 +722,9 @@ export function MembersAdmin({
                   {canUpdateScope ? <ReplyApprovalEditor member={m} onSaved={(patch) => updateMember(m.membership_id, patch)} /> : null}
                       {canUpdateScope ? (
                         <LegalEntitiesEditor member={m} options={legalEntityOptions ?? []} onSaved={(legal_entity_ids) => updateMember(m.membership_id, { legal_entity_ids })} />
+                      ) : null}
+                      {canUpdateScope ? (
+                        <PropertiesEditor member={m} options={propertyOptions ?? []} onSaved={(property_ids) => updateMember(m.membership_id, { property_ids })} />
                       ) : null}
                       <ResetPassword membershipId={m.membership_id} />
                       <button

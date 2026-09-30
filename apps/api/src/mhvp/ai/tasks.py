@@ -260,6 +260,14 @@ ProcessCode = Literal[
 ]
 
 
+class MailAppointmentHint(_Out):
+    date: str = Field(description="Datum JJJJ-MM-TT, wörtlich aus dem Text")
+    time: str | None = Field(default=None, description="Uhrzeit HH:MM, sonst null")
+    kind: str | None = Field(
+        default=None, description="uebergabe, besichtigung, telefonat, vor_ort oder sonstiges"
+    )
+
+
 class MailSuggestion(_Out):
     """Vorschlag je eingehender Mail (M20 Übernahme aus dem Immoware Hub); nur Vorschlag,
     nichts wird automatisch geschrieben oder versendet."""
@@ -279,6 +287,33 @@ class MailSuggestion(_Out):
     )
     process_reason: str | None = Field(
         default=None, max_length=300, description="ein kurzer Grund auf Deutsch, sonst null"
+    )
+    # Additive seit Prompt v3 (M20-02, M20-03, S13-08; Paket P12 30.09.2026). IDs nur aus der
+    # mitgegebenen Kandidatenliste; die Plattform verwirft jede andere ID.
+    contact_id: str | None = Field(
+        default=None, description="ID des Kontakts aus der Kandidatenliste, sonst null"
+    )
+    property_id: str | None = Field(
+        default=None, description="ID des Objekts aus der Kandidatenliste, sonst null"
+    )
+    appointment: MailAppointmentHint | None = Field(
+        default=None, description="Terminbezug, nur wenn ein Datum im Text steht, sonst null"
+    )
+    intent: Literal["invoice_copy_requested"] | None = Field(
+        default=None, description="invoice_copy_requested, wenn eine Rechnungskopie erbeten wird"
+    )
+    invoice_number: str | None = Field(
+        default=None, max_length=64, description="Rechnungsnummer wörtlich aus dem Text, sonst null"
+    )
+    attachment_hint: str | None = Field(
+        default=None, max_length=300, description="ein Satz, was die Anhänge belegen, sonst null"
+    )
+    reply_tone: Literal["formell", "sachlich", "freundlich"] | None = Field(
+        default=None, description="Tonfall des Antwortentwurfs"
+    )
+    reply_placeholders: list[str] = Field(
+        default_factory=list,
+        description="im Antwortentwurf verwendete Platzhalter wie {anrede}, {ticket}, {objekt}",
     )
 
 

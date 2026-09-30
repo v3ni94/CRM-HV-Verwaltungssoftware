@@ -173,3 +173,8 @@ created_at)` (migration 0127). Measurements in `docs/reviews/2026-09-26-performa
   mit Rolle `original`; der Endpunkt `POST /documents` konnte das bereits.
 * Tests: `tests/integration/test_package_f_handover_folders.py`,
   `DmsUpload.test.tsx`, `DmsFolderStructure.test.tsx`.
+
+## P17 (30.09.2026): Metadatenabgleich und Datenschutz
+
+* `DocumentStore.update_meta` (M6-06): Änderungen an Titel, Kategorie und Verknüpfung markieren fertige Spiegel (`document_mirror.meta_dirty`), der Spiegeljob überträgt sie. Paperless setzt zusätzlich die Custom Fields `entity_type` und `entity_id` (M6-07) und das Kategorie-Tag `document_category.paperless_tag` (M6-09); Drive schreibt Beschreibung und `appProperties`.
+* Datenschutz liegt im Modul `mhvp.privacy` (Löschprofile je Datenart, Löschantrag Art. 17, Register, Verarbeitungsverzeichnis als Entwurf), Regel `docs/rules/S16-P17-privacy.md`.

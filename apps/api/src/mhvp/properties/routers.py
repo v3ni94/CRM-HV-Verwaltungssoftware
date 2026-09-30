@@ -204,6 +204,7 @@ async def create_property(
     async with tenant_tx(request, principal) as session:
         svc.check_postcode(body.country, body.postal_code)
         await svc.check_catalog(session, "property_type", body.property_type_code)
+        await svc.check_documents_exist(session, body.images, "Bilder")
         data = body.model_dump()
         data["custom_fields"] = await svc.check_custom_fields(
             session,
@@ -266,6 +267,7 @@ async def update_property(
             management_type=prop.management_type,
             entity_id=prop.id,
         )
+        await svc.check_documents_exist(session, body.images, "Bilder")
         before = s.PropertyIn.model_validate(prop, from_attributes=True).model_dump(mode="json")
         for key, value in body.model_dump().items():
             setattr(prop, key, value)
@@ -1187,6 +1189,7 @@ def _account_out(a: PropertyBankAccount) -> s.BankAccountOut:
         valid_to=a.valid_to,
         notes=a.notes,
         ledger_account_id=a.ledger_account_id,
+        bank_connection_id=a.bank_connection_id,
         is_default=a.is_default,
     )
 
@@ -1249,6 +1252,7 @@ async def add_account(
         await svc.check_ledger_account(
             session, body.ledger_account_id, property_id, "Das Sachkonto"
         )
+        await svc.check_bank_connection(session, body.bank_connection_id)
         account = PropertyBankAccount(
             tenant_id=principal.tenant_id,
             property_id=property_id,
@@ -1435,6 +1439,8 @@ async def add_reading(
 ) -> s.ReadingOut:
     async with tenant_tx(request, principal) as session:
         await _get(session, Meter, meter_id)
+        if body.photo_document_id is not None:
+            await svc.check_documents_exist(session, [body.photo_document_id], "Zählerfoto")
         implausible = await svc.reading_is_implausible(session, meter_id, body.read_at, body.value)
         reading = MeterReading(
             tenant_id=principal.tenant_id, meter_id=meter_id, **body.model_dump()

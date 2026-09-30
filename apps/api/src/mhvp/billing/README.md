@@ -58,3 +58,28 @@ working day for the previous month, per tenant with `consumption_info_enabled`.
 run); the gated portal endpoints live in `mhvp.portal.consumption_info`. Elements of § 6a
 Abs. 3 the spec does not define are listed as `to_verify` for the operator only (never shown to
 tenants, `docs/OPEN_QUESTIONS.md` H03). Rule `docs/rules/H03-verbrauchsinformation.md`.
+
+## Results per contract, access, diff, Belegeinsicht, result entries (M17-01 to M17-08)
+
+`mhvp.billing.results`, `mhvp.billing.result_routers` (included by `letter_routers`, prefix
+`/statements`), migration `0255_rent_statement_results.py`, rule
+`docs/rules/M17-10-ergebnis-zugang-einsicht.md`.
+
+* `PATCH /statements/{id}` and `PUT|DELETE /statements/{id}/cost-items/{item_id}`: draft only
+  (409 after `calculated`, then a new version). A period other than twelve months needs
+  `interim` and `purpose` (A05); `include_heating`, `settings` (letter texts, format, bundled).
+* `GET /statements/{id}/results`: snapshot row per contract plus `lines` (cost breakdown,
+  6.5 `statement_line`) and the recorded access. `PUT .../results/{contract_id}/delivery`:
+  method, day of access (not before the calculation, D23) and evidence (`statement_result`).
+  The objection deadline is an orientation (twelve months after access, to be verified).
+* `GET /statements/{id}/diff`: difference per contract and position against the superseded
+  version (A01).
+* `POST /statements/{id}/result-entries`: G3 and status `due`; writes one **draft** entry per
+  contract with a balance (kind `statement_result`, payment type `statement_result` as
+  counter account, idempotent). `due`, `posted` and `locked` transitions need G3; `posted`
+  needs every result entry posted through accounting (G1 unchanged). Nothing is posted here.
+* `GET|POST /statements/{id}/inspections`, `PATCH .../inspections/{id}`: Belegeinsicht request,
+  provision (electronic, copies, appointment), redaction note, objection, close.
+* Consumption information substitute process (D26): `GET /properties/{id}/consumption-info/
+  {info_id}` (printable snapshot) and `PUT .../{info_id}/delivery` (post, e-mail, by hand with
+  evidence); the month list counts `undelivered`.

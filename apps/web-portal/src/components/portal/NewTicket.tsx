@@ -17,6 +17,7 @@ export function NewTicket() {
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [location, setLocation] = useState("");
   const [photos, setPhotos] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +49,12 @@ export function NewTicket() {
     }
     const result = await bff<{ id: string }>("/api/bff/portal/tickets", {
       method: "POST",
-      body: JSON.stringify({ title: title.trim(), description: description.trim(), document_ids: documentIds }),
+      body: JSON.stringify({
+        title: title.trim(),
+        description: description.trim(),
+        document_ids: documentIds,
+        ...(location.trim() ? { location: location.trim() } : {}),
+      }),
     });
     setBusy(false);
     if (!result.ok) {
@@ -58,6 +64,7 @@ export function NewTicket() {
     setDone(true);
     setTitle("");
     setDescription("");
+    setLocation("");
     setPhotos([]);
     router.refresh();
   }
@@ -95,6 +102,22 @@ export function NewTicket() {
           value={description}
           onChange={(e) => setDescription(e.target.value)}
         />
+      </div>
+      <div>
+        <label htmlFor="ticket-location" className={ui.label}>
+          {t("locationField")}
+        </label>
+        <input
+          id="ticket-location"
+          className={ui.input}
+          maxLength={200}
+          aria-describedby="ticket-location-hint"
+          value={location}
+          onChange={(e) => setLocation(e.target.value)}
+        />
+        <p id="ticket-location-hint" className={ui.help}>
+          {t("locationHint")}
+        </p>
       </div>
       <div>
         <label htmlFor="ticket-photo" className={ui.label}>

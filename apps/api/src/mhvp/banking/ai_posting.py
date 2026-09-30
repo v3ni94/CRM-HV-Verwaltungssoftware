@@ -63,6 +63,58 @@ def short_purpose(purpose: str | None, redact: list[str] | None = None) -> str:
 # Input assembly (deterministic, no AI) --------------------------------------------------------
 
 
+# Stage 2 tie-breaker examples (plan M12 S8, Lückenliste M12-05) ------------------------------
+
+MAX_EXAMPLES = 8
+EXAMPLE_KEYS = frozenset({"direction", "amount_class", "purpose_tokens", "accounts", "outcome"})
+_TOKEN_OK = re.compile(r"^[a-zäöüß]{4,}$")
+PROMPT_VERSION_PLAIN = "v1"
+PROMPT_VERSION_EXAMPLES = "v2"
+
+
+def amount_class(amount: Decimal) -> str:
+    """Coarse amount class of an example (no exact amounts leave the platform)."""
+    value = abs(amount)
+    for limit, label in ((Decimal(100), "bis_100"), (Decimal(500), "bis_500"),
+                         (Decimal(2000), "bis_2000"), (Decimal(10000), "bis_10000")):  # fmt: skip
+        if value <= limit:
+            return label
+    return "ueber_10000"
+
+
+def minimised_examples(
+    decisions: list[Any],
+    info: dict[str, tuple[Decimal, str | None, str | None]],
+    *,
+    exclude_names: list[str | None],
+) -> list[dict[str, Any]]:
+    """Up to ``MAX_EXAMPLES`` minimised examples of the same counterparty, newest first:
+    direction, amount class, purpose tokens (letters only, no name tokens), the booked account
+    numbers and the outcome (``confirmed``, or ``rejected`` as counter example). Never a name,
+    an IBAN, an amount, a date or an id (plan 3.3, 7.4 no. 3)."""
+    from mhvp.banking.learning import purpose_tokens
+
+    out: list[dict[str, Any]] = []
+    for decision in reversed(decisions):
+        pattern = decision.value or decision.rejected
+        if not pattern:
+            continue
+        amount, purpose, name = info.get(decision.id, (None, None, None))
+        tokens = purpose_tokens([purpose], [name, *exclude_names]) if purpose else []
+        out.append(
+            {
+                "direction": "in" if amount is None or amount > 0 else "out",
+                "amount_class": amount_class(amount) if amount is not None else None,
+                "purpose_tokens": tokens,
+                "accounts": str(pattern).split("+"),
+                "outcome": "confirmed" if decision.value else "rejected",
+            }
+        )
+        if len(out) >= MAX_EXAMPLES:
+            break
+    return out
+
+
 def build_input(
     transaction: dict[str, Any],
     ledger_name: str,
@@ -71,6 +123,7 @@ def build_input(
     property_number: str | None,
     unit_numbers: list[str],
     redact: list[str] | None = None,
+    examples: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Prompt input for one transaction. ``transaction`` carries ``booking_date``, ``amount``,
     ``currency``, ``purpose`` and ``transaction_code``; any other key (counterpart name, IBAN)
@@ -109,6 +162,7 @@ def build_input(
             for index, item in enumerate(open_items, start=1)
         ],
         "cost_objects": {"property": property_number, "units": list(unit_numbers)},
+        **({"examples": list(examples)} if examples else {}),
     }
 
 
@@ -124,11 +178,23 @@ def assert_minimised(payload: dict[str, Any], forbidden: list[str] | None = None
     leaked = any(
         value and (value in text or value.replace(" ", "") in compact) for value in forbidden or []
     )
-    if leaked or _UUID.search(text) or _IBAN_LIKE.search(text):
+    if leaked or _UUID.search(text) or _IBAN_LIKE.search(text) or not _examples_ok(payload):
         raise ProblemError(
             ErrorCodes.VALIDATION,
             detail="Eingabe für die KI-Kontierung enthält Personenbezug; Lauf nicht gestartet.",
         )
+
+
+def _examples_ok(payload: dict[str, Any]) -> bool:
+    """Examples carry only the allowed keys, letter tokens and account numbers (S8)."""
+    for example in payload.get("examples", []):
+        if not isinstance(example, dict) or set(example) - EXAMPLE_KEYS:
+            return False
+        if any(not _TOKEN_OK.match(str(t)) for t in example.get("purpose_tokens", [])):
+            return False
+        if any(not str(a).isdigit() for a in example.get("accounts", [])):
+            return False
+    return True
 
 
 # Result normalisation (deterministic, measured by the offline evaluation) --------------------
@@ -290,6 +356,7 @@ async def payload_for(session: AsyncSession, tx: Any) -> tuple[dict[str, Any], d
                 )
             ).all()
         )
+    examples = await examples_for(session, tx)
     payload = build_input(
         {
             "booking_date": tx.booking_date,
@@ -304,8 +371,9 @@ async def payload_for(session: AsyncSession, tx: Any) -> tuple[dict[str, Any], d
         property_number,
         units,
         redact=[tx.counterpart_name or ""],
+        examples=examples,
     )
-    assert_minimised(payload, [tx.counterpart_iban or ""])
+    assert_minimised(payload, [tx.counterpart_iban or "", tx.counterpart_name or ""])
     context = {
         "context_type": CONTEXT_TYPE,
         "context_id": str(tx.id),
@@ -316,8 +384,24 @@ async def payload_for(session: AsyncSession, tx: Any) -> tuple[dict[str, Any], d
             f"O{index}": str(item["id"]) for index, item in enumerate(items, start=1)
         },
         "cost_objects": [o for o in [property_number, *units] if o],
+        "examples_count": len(examples),
     }
     return payload, context
+
+
+async def examples_for(session: AsyncSession, tx: Any) -> list[dict[str, Any]]:
+    """Minimised examples of the same counterparty (plan M12 S8), only with the tenant switch
+    ``ai_learning_examples_enabled`` (default off, data protection review M7-04) on top of the
+    posting switch and the released provider with DPA evidence that the caller checked."""
+    from mhvp.ai.examples import learning_examples_enabled
+    from mhvp.banking import learning
+    from mhvp.banking.matching import ledger_for
+
+    if not await learning_examples_enabled(session, tx.tenant_id):
+        return []
+    _ledger, bank_account = await ledger_for(session, tx)
+    decisions, _bulk, info = await learning._decisions_for_key(session, tx, bank_account.id)
+    return minimised_examples(decisions, info, exclude_names=[tx.counterpart_name])
 
 
 def queue_run(
@@ -330,7 +414,11 @@ def queue_run(
 ) -> AiTaskRun:
     """Queues the gateway run; the caller checked ``posting_block_reason`` and dispatches it
     after commit. The gateway repeats the switch and release checks before any call."""
-    prompt = tasks.prompt(AiTask.PROPOSE_POSTING)
+    # v1 without examples (unchanged behaviour), v2 only when minimised examples are present.
+    prompt = tasks.prompt(
+        AiTask.PROPOSE_POSTING,
+        PROMPT_VERSION_EXAMPLES if payload.get("examples") else PROMPT_VERSION_PLAIN,
+    )
     text = prompt_text(payload)
     run = AiTaskRun(
         tenant_id=tenant_id,

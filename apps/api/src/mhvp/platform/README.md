@@ -68,3 +68,15 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * `POST /platform/onboarding`: `provision_tenant` plus Rechtsträger (`manager`, `rental_owner`,
   `sev_owner`), erster Administrator (`tenant_admin`), Feature-Flags aus, Gates geschlossen,
   Willkommens-E-Mail nur als Entwurf in der Antwort. Regeln `docs/rules/M27-01.md` bis `M27-03.md`.
+
+## Lizenzen, eine Preisstruktur, Nutzungsverlauf, Exportjob (P15, 30.09.2026, Migration 0264)
+
+* Lizenz: `PATCH /platform/licenses/{id}` (Kontingent, Laufzeit, Preis, Mindestbetrag),
+  `POST /platform/licenses/{id}/end`. `license.price_per_unit` ist optional; NULL heißt Preis
+  aus der Preisstruktur (`pricing_plan_item`), siehe Regel `M27-04`.
+* Preisliste: `PATCH/DELETE /platform/price-list/{id}`; der heute gültige Eintrag eines
+  Nicht-Kern-Moduls schreibt den Betrag der Modulzeile.
+* Nutzungsverlauf: `usage_counter_daily` (Plattformtabelle ohne RLS), `GET
+  /platform/tenants/{id}/usage/history`, täglicher Job `platform-usage-daily`.
+* Exportjob: `mhvp.platform.export_job`, `POST .../export-requests/{id}/run`, Regel
+  `M27-01-EXPORT`.

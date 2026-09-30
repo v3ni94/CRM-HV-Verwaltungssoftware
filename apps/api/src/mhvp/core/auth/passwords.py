@@ -1,16 +1,18 @@
-"""Password hashing (Argon2id) and policy (ASSUMPTIONS A-012, operator decision M2-01).
+"""Password hashing (Argon2id) and policy (ASSUMPTIONS A-012, docs/rules/M2-05-passwortregeln.md).
 
-Operator decision of 26.09.2026 (M2-01): minimum length 6 characters. This is below common
-recommendations (the BSI recommends longer passwords); the decision is documented in
-``docs/OPEN_QUESTIONS.md`` (M2-01) and ``docs/ASSUMPTIONS.md`` (A-012) and is not reflected in
-the user interface. Maximum length, whitespace rule and the lockout after 10 failed attempts
-for 15 minutes are unchanged.
+Operator decision 9 a of 30.09.2026 (M2-05) replaces the decision of 26.09.2026 (minimum 6):
+minimum length 12 characters and an offline check against compromised passwords
+(``mhvp.core.auth.breached``, no network). The policy applies when a password is set or
+changed; existing passwords keep working until they are changed. Maximum length, whitespace
+rule and the lockout after 10 failed attempts for 15 minutes are unchanged.
 """
 
 from argon2 import PasswordHasher
 from argon2.exceptions import InvalidHashError, VerificationError, VerifyMismatchError
 
-MIN_LENGTH = 6
+from mhvp.core.auth import breached
+
+MIN_LENGTH = 12
 MAX_LENGTH = 128
 MAX_FAILED_LOGINS = 10
 LOCKOUT_MINUTES = 15
@@ -27,6 +29,11 @@ def policy_violation(password: str) -> str | None:
         return f"Das Passwort darf höchstens {MAX_LENGTH} Zeichen lang sein."
     if password.strip() != password or not password.strip():
         return "Das Passwort darf nicht mit Leerzeichen beginnen oder enden."
+    if breached.is_breached(password):
+        return (
+            "Dieses Passwort ist aus bekannten Datenlecks oder als häufig verwendet bekannt. "
+            "Bitte wählen Sie ein anderes Passwort."
+        )
     return None
 
 

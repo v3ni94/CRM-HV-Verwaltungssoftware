@@ -3,6 +3,7 @@
 import calendar
 import re
 import uuid
+from collections.abc import Sequence
 from datetime import UTC, date, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
@@ -452,6 +453,30 @@ async def add_vacancy_allocation_value(
     session.add(row)
     await session.flush()
     return row
+
+
+async def check_documents_exist(
+    session: AsyncSession, document_ids: Sequence[str | uuid.UUID], label: str
+) -> None:
+    """Document references (images, photos) must exist in the tenant (RLS scopes the query)."""
+    from mhvp.documents.models import Document
+
+    wanted = {uuid.UUID(str(d)) for d in document_ids}
+    if not wanted:
+        return
+    found = set(await session.scalars(select(Document.id).where(Document.id.in_(wanted))))
+    if found != wanted:
+        raise invalid(f"{label}: mindestens ein Dokument wurde nicht gefunden.")
+
+
+async def check_bank_connection(session: AsyncSession, connection_id: uuid.UUID | None) -> None:
+    """A linked bank access must exist in the tenant (M4-05); reference only."""
+    if connection_id is None:
+        return
+    from mhvp.banking.models import BankConnection
+
+    if await session.get(BankConnection, connection_id) is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Bankzugang nicht gefunden.")
 
 
 async def check_ledger_account(

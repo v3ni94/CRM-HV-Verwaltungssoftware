@@ -159,3 +159,8 @@ or a `$field` reference). The action loads the tenant's active template of that 
 calls `mhvp.tickets.flows.apply_flow` (category, checklist once, role, link status, deadline
 proposals as type only). Without an active template the action fails with a rule error; a
 rule never removes a process code and never changes the status.
+
+## Welle 2 (P21)
+
+- Testmodus: `automation_rule.test_mode`; im Beat-Lauf nur Run mit Status `dry_run`, keine Aktion.
+- Jobzeitpläne je Mandant: `tenant_job_schedule`, `GET/PUT /automation/job-schedules`, Prüfung über `job_schedule.job_allowed`; die Domänenjobs rufen sie noch nicht auf (docs/OPEN_QUESTIONS.md P21-01).

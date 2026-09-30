@@ -1029,3 +1029,97 @@ Die folgenden Punkte sind in M1 bewusst nicht entschieden und dürfen nicht als 
 | Betroffene Bereiche | Migrationsjournal, Eröffnungssalden aus Saldenliste, Abgleichbericht Migration |
 | Überprüfung spätestens bei Meilenstein | Übernahme des echten HVM-Journals (M8-01) |
 | Datum | 29.09.2026 |
+
+## A-P05-01
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Verzugszinsentwürfe verwenden das Systemkonto 489100 "Verzugszinsen" im Buchungskreis des Forderungsinhabers (analog Mahngebühren 489000) und die Tagesberechnung Tage durch 365 je Basiszinssatzzeitraum, je Zeitraum auf Cent gerundet |
+| Begründung | Kontonummer und Zinstagezählung sind im Masterprompt nicht festgelegt (7.5); der Entwurf wird nie automatisch gebucht |
+| Kennzeichnung | unkritisch: nur Buchungsentwurf, Buchung erst über Vier-Augen-Freigabe hinter G1, Konto im Kontenrahmen änderbar |
+| Betroffene Bereiche | Mahnwesen, Zinsentwurf, Mahnbescheid-Vorbereitung |
+| Überprüfung spätestens bei Meilenstein | Öffnung G1 (Abnahme M16) |
+| Datum | 30.09.2026 |
+
+## A-P10-01
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Das Soll der Forderungs-Auswertung ist die Summe der offenen Posten der Art Forderung mit Fälligkeit (ersatzweise Buchungstag) im Zeitraum; das Ist ist deren Ausgleich bis Zeitraumende. |
+| Begründung | Die Sollstellungen werden als offene Posten geführt, der Ausgleich ist je Posten nachvollziehbar (B07). Es wird keine Rechtsfolge abgeleitet, die Auswertung ist ein Entwurf. |
+| Betroffene Bereiche | Auswertungen, Soll/Ist |
+| Überprüfung spätestens bei Meilenstein | Öffnung G1 |
+| Datum | 30.09.2026 |
+
+## A-P02-01
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der Leistungszeitraum einer Verwalterhonorar-Rechnung ist kalenderbezogen je Intervall: Monat, Kalenderquartal, Kalenderhalbjahr oder Kalenderjahr, in dem der angegebene Tag liegt. Die Einheitenzahl wird zum Ende des Zeitraums (höchstens Stichtag) ermittelt. |
+| Begründung | 18 M13 verlangt einen periodischen Honorarlauf ohne Festlegung der Zeiträume; kalenderbezogene Zeiträume sind eindeutig und verhindern Doppelausstellung. Ein abweichender Verwaltervertrag (zum Beispiel Wirtschaftsjahr) ist nicht abgebildet. |
+| Betroffene Bereiche | Verwalterhonorar, Honorarrechnungen |
+| Überprüfung spätestens bei Meilenstein | Abnahme M13 |
+| Datum | 30.09.2026 |
+
+## A-P02-02
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Verbrauchsinformation (15.1 `heating.consumption_info`): der Job läuft wie spezifiziert am 3. des Monats um 05:40. Die bisherige Umsetzung (Beat an den Tagen 1 bis 3, Lauf am ersten Werktag) war eine undokumentierte Abweichung und ist auf die Spezifikation angeglichen. Die Lieferung für den Vormonat erfolgt damit am 3., auch wenn dieser auf ein Wochenende fällt. |
+| Begründung | Befund S15-05 der Lückenliste 30.09.2026; die Spezifikation nennt den 3. Eine Werktagsregel ist fachlich nicht festgelegt. |
+| Betroffene Bereiche | Heizkosten, Portal Verbrauchsinformation (Regel H03) |
+| Überprüfung spätestens bei Meilenstein | Abnahme H03 |
+| Datum | 30.09.2026 |
+
+## A-012-2
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Nachtrag zu A-012: Passwortregel 12 bis 128 Zeichen und Offline-Prüfung gegen kompromittierte Passwörter (Regel M2-05). Bestehende kürzere Passwörter bleiben bis zur nächsten Änderung gültig, eine Zwangsänderung erfolgt nicht. |
+| Begründung | Betreiberentscheidung 9 a vom 30.09.2026 (Lückenliste 30.09.2026, M2-05) ersetzt die Mindestlänge 6 aus M2-01. Eine Zwangsänderung ist nicht entschieden. |
+| Kennzeichnung | Betreiberentscheidung; Verzicht auf Zwangsänderung ist Annahme |
+| Betroffene Bereiche | Anmeldung, Mitgliederverwaltung, Portal Einladung |
+| Überprüfung spätestens bei Meilenstein | M9 (vor Produktivbetrieb) |
+| Datum | 30.09.2026 |
+
+## A-P13-1
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Portal Chat, KI-Vorqualifizierung und Support-Sicht sind je Mandant standardmäßig aus. Die Einwilligung in die Support-Sicht gilt höchstens 72 Stunden und ist jederzeit widerrufbar. |
+| Begründung | Produktschutz nach Betreiberentscheidungen 6 a und 7 a vom 30.09.2026; die Grenzen sind Annahmen des Betreibers, keine Rechtsregel. |
+| Kennzeichnung | Produktschutz |
+| Betroffene Bereiche | Portal (Chat, Support-Sicht), Regel P13 |
+| Überprüfung spätestens bei Meilenstein | M9 (vor Produktivbetrieb) |
+| Datum | 30.09.2026 |
+
+## A-P12-01
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Der erste IMAP-Abruf eines Postfachs übernimmt nur Mails der letzten 30 Tage (Suche SINCE); ältere Mails bleiben auf dem Server und können als .eml hochgeladen werden. Abruf alle 120 Sekunden, höchstens 50 Mails je Lauf. |
+| Begründung | Unkritische technische Annahme zur Begrenzung der Erstübernahme; keine Rechtsregel. |
+| Kennzeichnung | Annahme (technisch) |
+| Betroffene Bereiche | Postfach IMAP, Regel M20-09 |
+| Überprüfung spätestens bei Meilenstein | M20-Abnahme durch den Betreiber |
+| Datum | 30.09.2026 |
+
+## A-P15-01
+
+| Feld | Inhalt |
+| --- | --- |
+| Annahme | Die Testphase der Abrechnungsvorschau (Zeile trial, Tage) zählt ab Lizenzbeginn; ein Monat ist frei, wenn sein letzter Tag vor Lizenzbeginn plus Tage liegt, ein angebrochener Monat wird voll berechnet. |
+| Begründung | Die Struktur nennt nur die Dauer in Tagen. Es ist eine Vorschau ohne Rechnung, die Entscheidung über Teilmonate trifft der Betreiber (M27-01). |
+| Betroffene Bereiche | Plattform, Abrechnungsvorschau |
+| Überprüfung spätestens bei Meilenstein | Öffnung G5 |
+| Datum | 30.09.2026 |
+
+## P09 Annahmen (30.09.2026)
+
+- A-P09-1 (Produktschutz): Wiederholung des Kontoabrufs nur bei "Anbieter nicht erreichbar" und "Ratenlimit", drei Versuche mit 60, 120 und 240 Sekunden Abstand; Zugangs-, Zustimmungs- und Validierungsfehler werden nicht wiederholt, um Bankzugänge nicht zu sperren.
+- A-P09-2 (Produktschutz): Ohne Eintrag gilt 06:00 Uhr (Europe/Berlin) als Abrufzeit; eine andere Stunde wird vom stündlichen Job bedient.
+- A-P09-3 (Produktschutz): Die B09-Kopplung des Wochendigests verlangt je beteiligtem Konto mindestens einen Auszug mit Abschluss im Vormonat ohne Differenz; fehlt ein Auszug, gilt die Abstimmung als nicht erfolgt.
+- A-P09-4 (Produktschutz): Betragsklassen der KI-Beispiele: bis 100, bis 500, bis 2.000, bis 10.000, über 10.000 EUR; höchstens acht Beispiele, neueste zuerst, Gegenbeispiele (abgelehnt, storniert) eingeschlossen.
+- A-P16-1 (Produktschutz): Statusmodell der Kaution: `open` bis zur Erfassung, `active` während der Verwahrung, `settled` nach der Abrechnung (endgültig, nur noch Dokumente ergänzbar). Betrag und Raten sind nur vor der ersten Kautionsbewegung änderbar.
+- A-P16-2 (Produktschutz): Eine Zahlungsposition oder ein Zahlungsplan, auf die eine gebuchte Sollstellung verweist, ändert Betrag, Zeitraum und Art nicht mehr; Korrektur durch neue Position und Storno im Buchungskreis.
+- A-P16-3 (Produktschutz): Ein beendetes Bankkonto eines Objekts verliert das Standardkennzeichen; IBAN, Art und Rechtsträger bleiben unveränderlich.

@@ -167,3 +167,13 @@ other). `all_mailboxes` lists the tenant's mailboxes for the filter without the 
 mailbox endpoint. Six statements per request (tickets of the window with correlated
 subqueries, status transitions, grouped mails, backlog before the window, open per assignee,
 mailboxes); no N+1. Tests: `tests/integration/test_workspace_ticket_analytics.py`.
+
+## Alarme, Filter, Sammelaktionen (P15, 30.09.2026)
+
+* `ALERTING` enthält zusätzlich `bank_sync_runs_failed_24h`, `bank_connections_error`,
+  `payment_orders_rejected_24h` und `dunning_cases_blocked` (Regel `M9-01`).
+* Gespeicherte Filter: Ressource `tickets` zusätzlich zulässig; die Komponente `SavedFilters`
+  steht in Kontakten, Objekten, Verträgen, Tickets und Dokumenten.
+* `POST /workspace/bulk`: Aktion `tickets.assign` (Bearbeiter für mehrere Tickets über
+  `tickets.status.assign_ticket`, Recht `tickets:update`, alles oder nichts, Bearbeiter muss
+  aktives Mitglied sein).

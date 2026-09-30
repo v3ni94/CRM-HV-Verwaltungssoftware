@@ -271,12 +271,30 @@ def _score_receivables(tx: dict[str, Any], items: list[dict[str, Any]]) -> list[
             score += SCORES["amount"]
             reasons.append("Betrag entspricht dem offenen Betrag")
         determined = False
-        if not hints.empty and allocation.matches_item(
-            hints, reference=item.get("reference"), period=_date(item.get("due_date"))
+        location = allocation.location_matches(
+            hints,
+            unit_number=item.get("unit_number"),
+            property_number=item.get("property_number"),
+        )
+        if (
+            not hints.empty
+            and location is not False
+            and allocation.matches_item(
+                hints, reference=item.get("reference"), period=_date(item.get("due_date"))
+            )
         ):
             score += SCORES["hint"]
             reasons.append(allocation.REASON_DETERMINED)
             determined = True
+        if location is True:
+            # M12-03: the purpose names the unit or property of this item (several units of
+            # one debtor); ranks the item first, never books by itself (D39).
+            reasons.append(allocation.REASON_LOCATION)
+            if not determined:
+                score += SCORES["hint"]
+                determined = True
+        elif location is False:
+            reasons.append(allocation.REASON_LOCATION_MISMATCH)
         if score > 0:
             scored.append(_Scored(item, score, reasons, determined))
     scored.sort(key=lambda s: (not s.determined, -s.score, str(s.item["id"])))

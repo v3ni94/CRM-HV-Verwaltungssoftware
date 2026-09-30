@@ -470,6 +470,23 @@ async def _locked(session: AsyncSession, proposal_id: uuid.UUID) -> BankRuleProp
     return row
 
 
+async def _evidence_from_ai(session: AsyncSession, row: BankRuleProposal) -> bool:
+    ids = []
+    for value in (row.evidence or {}).get("decision_ids", []):
+        try:
+            ids.append(uuid.UUID(str(value)))
+        except ValueError:
+            continue
+    if not ids:
+        return False
+    hit = await session.scalar(
+        select(PostingDecision.id).where(
+            PostingDecision.id.in_(ids), PostingDecision.ai_proposal_id.is_not(None)
+        )
+    )
+    return hit is not None
+
+
 async def accept(
     session: AsyncSession,
     *,
@@ -508,6 +525,9 @@ async def accept(
             "account_id": str(row.account_id) if row.account_id else None,
         },
         learned_from_proposal_id=row.id,
+        # Plan M12 S8: a rule whose evidence contains a decision on an AI proposal carries
+        # the mark learned_from_ai (the AI never approves; the four eyes path is unchanged).
+        learned_from_ai=await _evidence_from_ai(session, row),
     )
     session.add(rule)
     await session.flush()

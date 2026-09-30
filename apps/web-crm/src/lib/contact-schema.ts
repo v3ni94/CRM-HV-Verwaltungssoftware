@@ -156,6 +156,9 @@ export function buildContactSchema(t: Messages) {
       types: z.array(z.enum(CONTACT_TYPES)),
       roles: z.array(z.enum(CONTACT_ROLES)),
       tags: z.string(),
+      // Fremdsystem-Kennungen (M3-06): Immoware24 und Lexware Office Kundennummer.
+      ext_immoware24: z.string().max(100),
+      ext_lexoffice: z.string().max(100),
       addresses: z.array(address).max(20),
       phones: z.array(phone).max(20),
       emails: z.array(email).max(20),
@@ -201,6 +204,8 @@ export function emptyContact(): ContactFormValues {
     types: [],
     roles: [],
     tags: "",
+    ext_immoware24: "",
+    ext_lexoffice: "",
     addresses: [],
     phones: [],
     dates: [],
@@ -233,6 +238,8 @@ export function fromContact(c: ContactOut): ContactFormValues {
     types: c.types,
     roles: c.roles,
     tags: c.tags.join(", "),
+    ext_immoware24: c.external_ids?.immoware24 ?? "",
+    ext_lexoffice: c.external_ids?.lexoffice_customer_number ?? "",
     addresses: c.addresses.map((a) => ({
       label: a.label ?? "postal",
       street: s(a.street),
@@ -264,6 +271,19 @@ export function fromContact(c: ContactOut): ContactFormValues {
   };
 }
 
+/** Keeps unknown keys of the existing record and sets or removes the two editable ones. */
+function externalIds(v: ContactFormValues, existing?: ContactOut): Record<string, string> {
+  const ids: Record<string, string> = { ...(existing?.external_ids ?? {}) };
+  const set = (key: string, value: string) => {
+    const trimmed = value.trim();
+    if (trimmed) ids[key] = trimmed;
+    else delete ids[key];
+  };
+  set("immoware24", v.ext_immoware24);
+  set("lexoffice_customer_number", v.ext_lexoffice);
+  return ids;
+}
+
 /** Converts form values to the API body. Fields the form does not edit are carried over. */
 export function toContactIn(v: ContactFormValues, existing?: ContactOut): ContactIn {
   const person = v.kind === "person";
@@ -284,7 +304,7 @@ export function toContactIn(v: ContactFormValues, existing?: ContactOut): Contac
     blocked: v.blocked,
     is_consumer: v.is_consumer === "" ? null : v.is_consumer === "true",
     retention_profile_id: v.retention_profile_id || null,
-    external_ids: existing?.external_ids ?? {},
+    external_ids: externalIds(v, existing),
     completeness: existing?.completeness ?? "complete",
     identifiers: existing?.identifiers.map(({ kind, value }) => ({ kind, value })) ?? [],
     types: v.types,

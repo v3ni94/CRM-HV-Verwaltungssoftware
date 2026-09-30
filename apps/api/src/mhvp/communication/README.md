@@ -455,3 +455,24 @@ Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen
   vorhandene Mail). Ohne Gmail-Postfach wird eine Weiterleitung `not_sent` mit Grund (manuell
   409) und sperrt keine spätere Weiterleitung; gezählt werden nur `queued` und `sent`.
 - Annahmen: docs/ASSUMPTIONS.md A-069.
+
+## Paket P12 (30.09.2026): IMAP, HTML-Text, Kompaktansicht, classify_email v3
+
+- `imap.py`: IMAP-Abruf (`imaplib`, TLS 993 oder STARTTLS 143, `BODY.PEEK[]`, INBOX readonly),
+  Cursor `last_uid` mit `imap_uidvalidity`, gleiche Pipeline wie Gmail (`ingest_raw`).
+  Beat `communication-imap-sync` (`tasks.imap_sync_all`), sofort über
+  `POST /mail/mailboxes/{id}/sync`. Testhook `imap.set_fetcher`.
+- `html.py`: `html_to_text` (ohne head, style, script, Kommentare), `display_body` repariert
+  beim Lesen gespeicherte Texte mit CSS-Resten; `_out` bereinigt `body_html` erneut.
+- `compact.py`: `GET /mail/messages/{id}/compact` (Zusammenfassung, CRM-Hinweis,
+  Antwortvorschlag) und `POST /mail/messages/{id}/compact/summary` (Aufgabe `summarize`,
+  Ergebnis unter `suggestion.summary`). Versand nur über Entwurf und `submit`.
+- `suggest.py`: Prompt `classify_email` v3 mit Kandidaten-IDs, Anhangsliste und Stilvorgabe
+  (`Mailbox.reply_style`); `merge_v3_fields` prüft jedes neue Feld deterministisch.
+- Regel `docs/rules/M20-09-imap-kompakt-html.md`, Migration `0261_mailbox_imap_cursor`.
+
+## Welle 2 (P20, 30.09.2026): Zustellung, Serienbrief, Kalender-Abo
+
+* `dispatch.py`: Zustellwege `post`, `email`, `portal`, `sms`, `registered`, `courier`; `submit_postal` legt beim Kanal `post` den Postauftrag an; Nachweisarten je Weg (`CHANNEL_EVIDENCE`); `POST /dispatches/serial-merge` erzeugt je Empfänger ein Dokument aus einer Vorlage und die Zustellung. Regel `docs/rules/M23-DISP-02-zustellwege-serienbrief.md`.
+* `calendar_feed.py`: Kalender-Abo mit persönlichem Token (`/workspace/calendar-feed/token`, Abruf `/workspace/calendar-feed/{token}.ics` ohne Anmeldung), Tabelle `calendar_feed_token`, Regel `M23-CAL-01`. `dispatch.build_ics` liefert den ICS Text für beide Feeds.
+* Migration `0269_letting_w2`. Offen: Benachrichtigungseinstellungen je Benutzer (`docs/OPEN_QUESTIONS.md` P20-03).

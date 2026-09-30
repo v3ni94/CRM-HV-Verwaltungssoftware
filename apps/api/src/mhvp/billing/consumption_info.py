@@ -707,6 +707,10 @@ def staff_view(row: ConsumptionInfo) -> dict[str, Any]:
         "document_id": row.document_id,
         "snapshot_hash": row.snapshot_hash,
         "notified_at": row.notified_at,
+        # D26 substitute process: delivery without portal recorded by a person.
+        "delivery_channel": row.delivery_channel,
+        "delivered_on": row.delivered_on,
+        "delivery_evidence": row.delivery_evidence,
         "created_at": row.created_at,
     }
 

@@ -214,3 +214,10 @@ erscheint als Typ Wiedervorlage in der Fristenliste.
   Schnittstelle.
 - Zusatzfelder vom Typ Verknüpfung (Kontakt, Dokument, Objekt) nur über die Schnittstelle.
 - Kein Rückschreiben nach Immoware24; Doppelpflege im Parallelbetrieb.
+
+## Pflege in Welle 2 (Stand 30.09.2026)
+
+* Notizen am Kontakt: je Notiz die Schaltflächen Ändern, Anheften und Löschen. Löschen fragt nach und wird im Änderungsprotokoll festgehalten.
+* Fremdsystem-Kennungen: im Kontaktformular stehen Immoware24 Kennung und Lexware Office Kundennummer. Ein leeres Feld entfernt den Eintrag.
+* SEPA Mandate: unter Verträge die Schaltfläche SEPA Mandate. Filter nach Status, nie verwendet und Ablauf innerhalb von 90 Tagen. Abgelaufene Mandate setzt ein nächtlicher Lauf auf abgelaufen, der Lastschrifteinzug für die betroffenen Verträge endet dann wie beim Widerruf. Der Einzug selbst bleibt bis zur Freigabe Zahlungsanstoß gesperrt.
+* Zahlungszeilen und Zahlungspläne eines Vertrags lassen sich über die Schnittstelle korrigieren. Liegt bereits eine gebuchte Sollstellung vor, bleiben Betrag, Zeitraum und Art gesperrt, die Korrektur erfolgt dann über eine neue Position und den Storno im Buchungskreis.

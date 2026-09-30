@@ -98,5 +98,17 @@ class ReceiptDraft(IdMixin, TimestampMixin, TenantMixin, Base):
     # an invoice (allocation, operating cost type and VAT are not derived from it).
     account_proposal_decision: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
     invoice_id: Mapped[uuid.UUID | None] = _fk("invoice.id", nullable=True)
+    # S711-01, S711-04 (migration 0252): profile (BT-24) of the structured part, the stored
+    # validation result (validator, version, result, messages; ``validation`` null until a
+    # run is recorded), SHA-256 of the received file and of the embedded XML as filed
+    # unchanged, the attachment name and the hybrid deviations found independently of the AI.
+    e_invoice_profile: Mapped[str | None] = mapped_column(String(300))
+    validation: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    original_sha256: Mapped[str | None] = mapped_column(String(64))
+    structured_sha256: Mapped[str | None] = mapped_column(String(64))
+    structured_name: Mapped[str | None] = mapped_column(String(200))
+    hybrid_deviations: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
     decided_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

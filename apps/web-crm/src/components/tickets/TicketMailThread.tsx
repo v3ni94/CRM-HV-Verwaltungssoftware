@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 
+import { CollapsibleBody } from "@/components/mail/CompactView";
 import { AttachmentReceiptAction } from "@/components/receipts/AttachmentReceiptAction";
 import { RECEIPT_MIME_TYPES } from "@/components/tickets/TicketMailAttachments";
 import { SafeHtml, SafeLine, SafeText } from "@/components/ui/SafeText";
@@ -126,10 +127,14 @@ function MessageBody({ message }: { message: ThreadMessage }) {
       {asHtml && message.body_html ? (
         <SafeHtml html={message.body_html} className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="ticket-mail-html" />
       ) : (
-        <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="ticket-mail-text">
-          {visible}
-          {quoted && showQuote ? <span className="mt-2 block border-l-2 border-border pl-2 text-muted">{quoted}</span> : null}
-        </SafeText>
+        <CollapsibleBody text={visible} limit={1200}>
+          {(shown) => (
+            <SafeText className="rounded-md border border-border bg-surface-2 p-3 text-sm" testId="ticket-mail-text">
+              {shown}
+              {quoted && showQuote ? <span className="mt-2 block border-l-2 border-border pl-2 text-muted">{quoted}</span> : null}
+            </SafeText>
+          )}
+        </CollapsibleBody>
       )}
       <div className="flex flex-wrap gap-2">
         {!asHtml && quoted ? (

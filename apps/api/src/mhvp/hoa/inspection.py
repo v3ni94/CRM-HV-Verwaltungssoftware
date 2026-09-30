@@ -19,7 +19,7 @@ import io
 import json
 import uuid
 import zipfile
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import Any
 from urllib.parse import quote
 
@@ -117,6 +117,7 @@ class InspectionRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     package_document_id: Mapped[uuid.UUID | None] = _fk("document.id", ondelete="SET NULL")
     package_sha256: Mapped[str | None] = mapped_column(String(64))
     package_created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    package_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # M25-07
 
 
 class InspectionEvent(IdMixin, TenantMixin, Base):
@@ -124,7 +125,9 @@ class InspectionEvent(IdMixin, TenantMixin, Base):
 
     __tablename__ = "hoa_inspection_event"
     __table_args__ = (
-        CheckConstraint("kind IN ('status', 'note', 'package', 'retrieval')", name="kind"),
+        CheckConstraint(
+            "kind IN ('status', 'note', 'package', 'retrieval', 'revoked')", name="kind"
+        ),
         Index("ix_hoa_inspection_event_request", "tenant_id", "request_id"),
     )
 
@@ -165,6 +168,7 @@ class InspectionNoteIn(_In):
 
 class PackageIn(_In):
     document_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
+    valid_days: int | None = Field(default=None, ge=1, le=365)  # M25-07, None: no expiry
 
 
 class InspectionEventOut(BaseModel):
@@ -192,6 +196,7 @@ class RequestOut(BaseModel):
     package_document_id: uuid.UUID | None
     package_sha256: str | None
     package_created_at: datetime | None
+    package_expires_at: datetime | None = None
     created_at: datetime
     events: list[InspectionEventOut] = Field(default_factory=list)
 
@@ -608,6 +613,9 @@ async def create_package(
         row.package_document_id = document.id
         row.package_sha256 = document.sha256
         row.package_created_at = _now()
+        row.package_expires_at = (
+            row.package_created_at + timedelta(days=body.valid_days) if body.valid_days else None
+        )
         row.updated_by = principal.user_id
         await session.flush()
         await _trail(
@@ -627,6 +635,24 @@ async def create_package(
         )
 
 
+@router.post("/inspection-requests/{request_id}/revoke", summary="Bereitstellung widerrufen (PÜ13)")
+async def revoke_package(
+    request_id: uuid.UUID,
+    body: InspectionNoteIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(WRITE),
+) -> RequestOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _load(session, request_id)
+        if row.package_document_id is None:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Kein Paket bereitgestellt.")
+        row.package_expires_at = _now()
+        row.updated_by = principal.user_id
+        await session.flush()
+        await _trail(session, principal, row, kind="revoked", note=body.text)
+        return await _out(session, row)
+
+
 @router.get("/inspection-requests/{request_id}/package", summary="Bereitstellungspaket abrufen")
 async def download_package(
     request_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
@@ -635,6 +661,11 @@ async def download_package(
         row = await _load(session, request_id)
         if row.package_document_id is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Kein Paket vorhanden.")
+        if row.package_expires_at is not None and row.package_expires_at <= _now():
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Bereitstellung abgelaufen oder widerrufen; bitte neu bereitstellen.",
+            )
         document = await session.get(Document, row.package_document_id)
         if document is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Paketdokument fehlt.")

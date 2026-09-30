@@ -107,3 +107,11 @@ role `dienstleister` through `services.apply_fields` and `services.write_childre
 counterparty IBAN of the transaction starts as a `pending` bank account and follows the
 existing four eyes release (M5-01); nothing here approves an IBAN. `GET
 /contacts/{id}/creditor-properties` lists the properties a contact is linked to as creditor.
+
+## P16 follow-up maintenance (wave 2)
+
+`routers_p16.py`: `PATCH/DELETE /parties/{id}` (name, complete member list with roles and shares;
+delete only without references, else 409), `PATCH/DELETE /contacts/{id}/notes/{note_id}`, tag
+administration `GET /contact-tags`, `PATCH/DELETE /contact-tags/{id}`, `POST /contact-tags/{id}/merge`.
+Every change writes an audit event. Not done: contact merge (P16-01), portal status (P16-02).
+Rule: `docs/rules/P16-stammdaten-pflege.md`.

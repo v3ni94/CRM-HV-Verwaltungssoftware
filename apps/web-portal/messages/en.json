@@ -69,6 +69,7 @@
       "meetings": "Meetings",
       "contacts": "Contacts",
       "hoaAccount": "HOA fee account",
+      "ownerOverview": "Ownership",
       "consumption": "Consumption",
       "notices": "Notices",
       "forms": "Forms",
@@ -118,6 +119,9 @@
     "empty": "No released documents.",
     "download": "Download",
     "created": "Provided on",
+    "isNew": "New",
+    "read": "Read",
+    "readNote": "The status New or Read shows whether you opened the document. It is an indication, not a delivery.",
     "handoversTitle": "Handover protocols",
     "handoversEmpty": "No handover protocols available.",
     "handoverDate": "Handover on"
@@ -139,6 +143,15 @@
     "number": "Number",
     "titleRequired": "Please enter a title.",
     "descriptionRequired": "Please enter a description.",
+    "locationField": "Location of the damage (optional)",
+    "locationHint": "For example room, building part or floor. Please add no further personal details.",
+    "chatTitle": "Chat with the management",
+    "chatNote": "The chat is not an emergency service. In case of danger to life call the emergency number 112 immediately.",
+    "chatEmpty": "No messages yet.",
+    "chatField": "Your message",
+    "chatSend": "Send message",
+    "chatOwn": "You",
+    "chatManagement": "Management",
     "status": {
       "new": "New",
       "in_progress": "In progress",
@@ -838,14 +851,14 @@
   },
   "Invitation": {
     "title": "Accept invitation",
-    "hint": "Please enter the invitation code from the letter or the link and choose a password of at least 6 characters.",
+    "hint": "Please enter the invitation code from the letter or the link and choose a password of at least 12 characters.",
     "code": "Invitation code",
     "password": "New password",
     "passwordRepeat": "Repeat password",
     "submit": "Activate access",
     "submitting": "Please wait",
     "codeRequired": "Please enter the invitation code.",
-    "passwordTooShort": "The password needs at least 6 characters.",
+    "passwordTooShort": "The password needs at least 12 characters.",
     "passwordMismatch": "The passwords do not match.",
     "done": "Your access is active. Please sign in with e-mail and password now.",
     "toLogin": "To sign in"
@@ -897,5 +910,37 @@
     "enforcementTitle": "Enforcement procedure",
     "enforcement": "If the response is unsatisfactory, the responsible monitoring body can be contacted. [to be added: responsible enforcement and monitoring body]",
     "backToStart": "Back to overview"
+  },
+  "OwnerOverview": {
+    "title": "Ownership",
+    "ownersOnly": "This page is available to owners and authorised representatives only.",
+    "paymentsTitle": "Resolved payments",
+    "paymentsEmpty": "No resolved payments.",
+    "resolution": "Resolution {number}",
+    "kind": {
+      "economic_plan": "Economic plan",
+      "special_levy": "Special levy"
+    },
+    "decidedOn": "resolved on",
+    "validity": "Valid from",
+    "until": "until",
+    "open": "open",
+    "rhythm": "Payment rhythm",
+    "dueDay": "due on day {day} of the month",
+    "total": "Total amount",
+    "instalments": "{count} instalments",
+    "payee": "Payee and account of the community",
+    "ticketsTitle": "Reports on the property",
+    "ticketsEmpty": "No reports released for owners.",
+    "toAccount": "To the fee account"
+  },
+  "SupportConsent": {
+    "title": "Access by the management",
+    "intro": "If you need help, the management may see for a limited time what you see in the portal, read only. Every access is logged with a reason. You can withdraw your consent at any time.",
+    "hours": "Consent valid for",
+    "hoursOption": "{hours} hours",
+    "grant": "Grant consent",
+    "revoke": "Withdraw consent",
+    "active": "The management may view your account read only until {until}."
   }
 }

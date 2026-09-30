@@ -14,6 +14,9 @@ export function StatementCreate({ ledgers }: { ledgers: { id: string; name: stri
   const [ledger, setLedger] = useState(ledgers[0]?.id ?? "");
   const [from, setFrom] = useState(`${year}-01-01`);
   const [to, setTo] = useState(`${year}-12-31`);
+  // M17-04 (A05): unterjährige Abrechnung only with a stated purpose.
+  const [interim, setInterim] = useState(false);
+  const [purpose, setPurpose] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const create = async () => {
@@ -21,7 +24,12 @@ export function StatementCreate({ ledgers }: { ledgers: { id: string; name: stri
     setError(null);
     const res = await bff<{ id: string }>("/api/bff/statements", {
       method: "POST",
-      body: JSON.stringify({ ledger_id: ledger, period_from: from, period_to: to }),
+      body: JSON.stringify({
+        ledger_id: ledger,
+        period_from: from,
+        period_to: to,
+        ...(interim ? { interim: true, purpose: purpose.trim() } : {}),
+      }),
     });
     setBusy(false);
     if (res.ok) router.push(`/abrechnung/${res.data.id}`);
@@ -48,7 +56,17 @@ export function StatementCreate({ ledgers }: { ledgers: { id: string; name: stri
           <span className={ui.label}>{t("to")}</span>
           <input type="date" className={ui.input} value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
-        <button type="button" className={ui.primary} onClick={create} disabled={busy || !ledger}>
+        <label className="flex items-center gap-1">
+          <input type="checkbox" checked={interim} onChange={(e) => setInterim(e.target.checked)} />
+          <span className={ui.label}>{t("letters.interim")}</span>
+        </label>
+        {interim ? (
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("letters.purpose")}</span>
+            <input className={ui.input} value={purpose} onChange={(e) => setPurpose(e.target.value)} />
+          </label>
+        ) : null}
+        <button type="button" className={ui.primary} onClick={create} disabled={busy || !ledger || (interim && purpose.trim().length < 3)}>
           {t("create")}
         </button>
       </div>

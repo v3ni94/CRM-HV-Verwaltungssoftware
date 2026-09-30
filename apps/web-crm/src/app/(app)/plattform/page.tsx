@@ -21,6 +21,7 @@ type Readiness = {
  *  administrators; the page never opens a gate. */
 export default async function PlatformPage() {
   const t = await getTranslations("Platform");
+  const tl = await getTranslations("PlatformLicensing");
   const api = serverApi();
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
@@ -44,6 +45,9 @@ export default async function PlatformPage() {
         </Link>
         <Link className="underline" href="/plattform/preisliste">
           {t("pricingLink")}
+        </Link>
+        <Link className="underline" href="/plattform/lizenzen">
+          {tl("link")}
         </Link>
         <Link className="underline" href="/plattform/freigabe-g5">
           {t("g5Link")}

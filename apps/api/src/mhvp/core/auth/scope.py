@@ -96,16 +96,69 @@ def legal_entity_scope(
     return dependency
 
 
+# Property assignment (3.4 "optionale Objektzuordnung", M2-02/S16-02,
+# docs/rules/M2-02-objektzuordnung.md). Produktschutz, not a legal duty:
+#
+# * ``Membership.property_ids`` empty: no restriction (default, existing behaviour).
+# * non empty: the member sees only these properties, whatever the other roles, unless one of
+#   the roles is an administrator role (``PROPERTY_UNSCOPED_ROLES``).
+# * API keys and platform administrators after a recorded switch are not restricted.
+#
+# Foreign properties answer 404 like foreign legal entities. Domains filter their lists and
+# detail reads with ``property_allowed``/``session_allowed_property_ids``; the axis sits next to
+# tenant RLS and the legal entity scope, never replaces them.
+PROPERTY_UNSCOPED_ROLES: frozenset[str] = frozenset({"tenant_admin", "administrator"})
+
+
+def allowed_property_ids(principal: Principal | None) -> frozenset[uuid.UUID] | None:
+    """Properties the principal may access, or ``None`` when unrestricted."""
+    if principal is None or principal.api_key_id is not None:
+        return None
+    if principal.is_platform_admin and principal.platform_access_reason:
+        return None
+    if not principal.property_ids:
+        return None
+    if any(role in PROPERTY_UNSCOPED_ROLES for role in principal.roles):
+        return None
+    return frozenset(principal.property_ids)
+
+
+def property_allowed(principal: Principal | None, property_id: uuid.UUID | None) -> bool:
+    """``property_id`` ``None`` (record without property) is visible only when unrestricted."""
+    allowed = allowed_property_ids(principal)
+    return allowed is None or (property_id is not None and property_id in allowed)
+
+
+def ensure_property_allowed(principal: Principal | None, property_id: uuid.UUID | None) -> None:
+    """Raises 404 (never 403: the existence of a foreign property is not disclosed)."""
+    if not property_allowed(principal, property_id):
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+
+
+def session_allowed_property_ids(session: AsyncSession) -> frozenset[uuid.UUID] | None:
+    return allowed_property_ids(session_principal(session))
+
+
+def ensure_session_property_allowed(session: AsyncSession, property_id: uuid.UUID | None) -> None:
+    ensure_property_allowed(session_principal(session), property_id)
+
+
 __all__ = [
+    "PROPERTY_UNSCOPED_ROLES",
     "SCOPED_ROLES",
     "SESSION_PRINCIPAL_KEY",
     "TenantPrincipal",
     "allowed_legal_entity_ids",
+    "allowed_property_ids",
     "ensure_legal_entity_allowed",
+    "ensure_property_allowed",
     "ensure_session_legal_entity_allowed",
+    "ensure_session_property_allowed",
     "is_restricted",
     "legal_entity_allowed",
     "legal_entity_scope",
+    "property_allowed",
     "session_allowed_legal_entity_ids",
+    "session_allowed_property_ids",
     "session_principal",
 ]

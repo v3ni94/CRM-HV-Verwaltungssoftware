@@ -11,7 +11,12 @@ export type Run = S["RunOut"];
 export type Proposal = S["ProposalOut"];
 export type ImportRun = S["ImportOut"];
 export type ImportItem = S["ImportItemOut"];
-export type Usage = S["UsageOut"];
+/** Widened locally with the M7-09 fields until `make openapi` regenerates the client. */
+export type Usage = S["UsageOut"] & {
+  runs_by_task?: Record<string, number>;
+  tokens_in_by_task?: Record<string, number>;
+  tokens_out_by_task?: Record<string, number>;
+};
 export type Provider = S["mhvp__ai__schemas__ProviderOut"];
 export type ProviderIn = S["mhvp__ai__schemas__ProviderIn"];
 export type ContactChoice = S["ContactChoice"];

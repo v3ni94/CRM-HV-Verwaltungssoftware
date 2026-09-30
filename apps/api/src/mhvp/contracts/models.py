@@ -4,6 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
+from typing import Any
 
 from sqlalchemy import (
     Boolean,
@@ -111,6 +112,15 @@ class DepositKind(StrEnum):
     OTHER = "other"
 
 
+class DepositStatus(StrEnum):
+    """Status model of a deposit (M5-06): ``open`` until the due amount is handled, ``active``
+    while held, ``settled`` after the final settlement (no further changes)."""
+
+    OPEN = "open"
+    ACTIVE = "active"
+    SETTLED = "settled"
+
+
 class DepositMovementKind(StrEnum):
     PAYMENT = "payment"
     INTEREST = "interest"
@@ -204,6 +214,10 @@ class Contract(IdMixin, TimestampMixin, TenantMixin, Base):
     # Calendar dates of the physical move (4.5, migration 0150); independent of start and end.
     move_in_on: Mapped[date | None] = mapped_column(Date)
     move_out_on: Mapped[date | None] = mapped_column(Date)
+    # M5-02 (migration 0265): user defined fields (definitions per tenant, entity ``contract``).
+    custom_fields: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
     supersedes_contract_id: Mapped[uuid.UUID | None] = _fk("contract.id", nullable=True)
     # Origin and management approval (migration 0133): imported contracts start ``pending`` and
@@ -260,6 +274,11 @@ class ContractPayment(IdMixin, TimestampMixin, TenantMixin, Base):
         _enum(PaymentReason, "payment_reason"), nullable=False
     )
     document_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # M5-01 (migration 0265): revenue account of this component (reference to the ledger chart);
+    # empty: the tenant mapping of the payment type applies.
+    revenue_account_id: Mapped[uuid.UUID | None] = _fk(
+        "ledger_account.id", nullable=True, ondelete="SET NULL"
+    )
 
 
 class PaymentSchedule(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -392,6 +411,11 @@ class Deposit(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     interest_rule: Mapped[str | None] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
+    # M5-06 (migration 0265): document references (DMS ids) such as deposit agreement, proof of
+    # payment, bank confirmation.
+    documents: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class DepositMovement(IdMixin, TimestampMixin, TenantMixin, Base):

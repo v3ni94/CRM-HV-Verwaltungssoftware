@@ -8,7 +8,7 @@ from typing import Any
 
 import httpx
 from fastapi import Request
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.contacts.models import Contact, ContactAddress
@@ -422,3 +422,16 @@ async def download_from_drive(session: AsyncSession, request: Request, document:
             raise ProblemError(
                 ErrorCodes.RESOURCE_NOT_FOUND, detail="Original in Google Drive nicht abrufbar."
             ) from exc
+
+
+async def mark_mirrors_dirty(session: AsyncSession, document_id: uuid.UUID) -> None:
+    """M6-06: flags the finished mirrors of a document so the mirror job pushes the changed
+    metadata (title, category, links) via ``DocumentStore.update_meta``."""
+    await session.execute(
+        update(DocumentMirror)
+        .where(
+            DocumentMirror.document_id == document_id,
+            DocumentMirror.status == MirrorStatus.DONE,
+        )
+        .values(meta_dirty=True)
+    )

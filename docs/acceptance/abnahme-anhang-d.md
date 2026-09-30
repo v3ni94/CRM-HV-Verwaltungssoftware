@@ -37,7 +37,7 @@
 | D23 | Abrechnung kurz vor Fristende erzeugt, Zugang nicht rechtzeitig | Mietabrechnung und Heizkosten | G3 | Test vorhanden | | | |
 | D24 | Mietvorauszahlungen offen, Abrechnung erteilt | Mietabrechnung und Heizkosten | G3 | Test mit xfail | | | |
 | D25 | Nutzerwechsel im Winter mit Zwischenablesung | Mietabrechnung und Heizkosten | G3 | Test vorhanden | | | |
-| D26 | Pflichtige Verbrauchsinformation, Portal noch nicht entwickelt | Mietabrechnung und Heizkosten | G3 | kein Test | | | |
+| D26 | Pflichtige Verbrauchsinformation, Portal noch nicht entwickelt | Mietabrechnung und Heizkosten | G3 | Test vorhanden (test_d26_consumption_info_substitute.py, 30.09.2026) | | | |
 | D27 | Gemischte CO₂-Sachverhalte, Selbstversorgung, fehlende Lieferangaben | Mietabrechnung und Heizkosten | G3 | Test vorhanden | | | |
 | D28 | Neue Rechtsregel gilt erst in späterem Zeitraum | Mietabrechnung und Heizkosten | G3 | Test vorhanden | | | |
 | D29 | Eigentümer beantragt GdWE-Unterlagen außerhalb eigener Einzelabrechnung | Portal und Datenschutz | G3/G4 | Test vorhanden | | | |

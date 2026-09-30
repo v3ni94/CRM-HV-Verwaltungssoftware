@@ -109,7 +109,13 @@ def _fallback(message: Message, categories: list[str]) -> dict[str, Any]:
     return fallback_suggestion(message.subject, message.body, categories)
 
 
-def merge_suggestion(output: dict[str, Any], fallback: dict[str, Any]) -> dict[str, Any]:
+def merge_suggestion(
+    output: dict[str, Any],
+    fallback: dict[str, Any],
+    *,
+    candidates: dict[str, set[str]] | None = None,
+    text: str | None = None,
+) -> dict[str, Any]:
     """Model answer (``MailSuggestion``) over the deterministic fallback: every null or empty
     classification field falls back; ``contact_name`` and ``reply_draft`` stay as answered
     (null stays null, nothing is invented). Pure, so the offline evaluation (9.1,
@@ -138,7 +144,82 @@ def merge_suggestion(output: dict[str, Any], fallback: dict[str, Any]) -> dict[s
         merged["process_code"] = fallback.get("process_code")
         merged["process_confidence"] = fallback.get("process_confidence")
         merged["process_reason"] = fallback.get("process_reason")
+    merged.update(merge_v3_fields(output, fallback, candidates=candidates, text=text))
     return merged
+
+
+REPLY_TONES = ("formell", "sachlich", "freundlich")
+REPLY_PLACEHOLDERS = ("{anrede}", "{ticket}", "{objekt}")
+_ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_HHMM_RE = re.compile(r"^\d{2}:\d{2}$")
+APPOINTMENT_KINDS = ("uebergabe", "besichtigung", "telefonat", "vor_ort", "sonstiges")
+
+
+def merge_v3_fields(
+    output: dict[str, Any],
+    fallback: dict[str, Any],
+    *,
+    candidates: dict[str, set[str]] | None = None,
+    text: str | None = None,
+) -> dict[str, Any]:
+    """Fields of prompt v3 (M20-02, M20-03, S13-08), each checked deterministically; a value
+    that fails its check is dropped, never repaired:
+
+    * ``contact_id``/``property_id`` only when listed in ``candidates`` (the IDs given to the
+      model); the suggestion never assigns, a person confirms.
+    * ``appointment`` only with an ISO date whose German form (TT.MM.JJJJ) occurs in the text.
+    * ``intent``/``invoice_number``: keyword rule first; the model's number only when it
+      occurs verbatim in the text.
+    * ``reply_tone`` from the fixed list, ``reply_placeholders`` only known placeholders."""
+    cands = candidates or {}
+    haystack = text or ""
+    out: dict[str, Any] = {}
+    for key, pool in (("contact_id", "contacts"), ("property_id", "properties")):
+        value = output.get(key)
+        out[key] = value if isinstance(value, str) and value in cands.get(pool, set()) else None
+    appointment = output.get("appointment")
+    out["appointment"] = None
+    if isinstance(appointment, dict):
+        day = str(appointment.get("date") or "")
+        if _ISO_DATE_RE.match(day):
+            y, m, d = day.split("-")
+            german = {f"{d}.{m}.{y}", f"{int(d)}.{int(m)}.{y}"}
+            if any(g in haystack for g in german):
+                at = appointment.get("time")
+                kind = appointment.get("kind")
+                out["appointment"] = {
+                    "date": day,
+                    "time": at if isinstance(at, str) and _HHMM_RE.match(at) else None,
+                    "kind": kind if kind in APPOINTMENT_KINDS else "sonstiges",
+                    "source": "ki",
+                }
+    rule = mail.invoice_copy_request(None, haystack) or {}
+    intent = rule.get("intent") or (
+        output.get("intent") if output.get("intent") == "invoice_copy_requested" else None
+    )
+    number = rule.get("invoice_number")
+    if number is None and intent:
+        candidate = output.get("invoice_number")
+        if isinstance(candidate, str) and candidate.strip() and candidate.strip() in haystack:
+            number = candidate.strip()
+    out["intent"], out["invoice_number"] = intent, number
+    hint = output.get("attachment_hint")
+    out["attachment_hint"] = str(hint)[:300] if isinstance(hint, str) and hint.strip() else None
+    tone = output.get("reply_tone")
+    out["reply_tone"] = tone if tone in REPLY_TONES else None
+    placeholders = output.get("reply_placeholders") or []
+    out["reply_placeholders"] = [
+        p for p in placeholders if isinstance(p, str) and p in REPLY_PLACEHOLDERS
+    ]
+    return out
+
+
+def reply_style_text(style: dict[str, Any] | None) -> str:
+    """Prompt line from the mailbox style (M20-02); empty style gives the neutral default."""
+    style = style or {}
+    tone = style.get("tone") if style.get("tone") in REPLY_TONES else "sachlich"
+    rules = " ".join(str(style.get("rules") or "").split())[:2000]
+    return f"Stilvorgaben des Postfachs: Tonfall {tone}." + (f" Regeln: {rules}" if rules else "")
 
 
 def playbook_fields(output: dict[str, Any], ticket_title: str) -> dict[str, Any]:
@@ -302,6 +383,65 @@ async def _run_gateway_task(
         await engine.dispose()
 
 
+async def _candidates(session: AsyncSession, message: Message) -> tuple[dict[str, set[str]], str]:
+    """IDs the model may choose from (M20-03): the deterministic assignment of the mail and the
+    property named by number in the text. No personal data of the contact."""
+    from mhvp.contacts.models import Contact
+    from mhvp.properties.models import Property
+
+    contacts: dict[str, str] = {}
+    properties: dict[str, str] = {}
+    if message.contact_id:
+        contact = await session.get(Contact, message.contact_id)
+        if contact is not None:
+            # Data minimisation: the model sees the ID and the role, never the name.
+            contacts[str(contact.id)] = "zugeordneter Absender"
+    if message.property_id:
+        prop = await session.get(Property, message.property_id)
+        if prop is not None:
+            properties[str(prop.id)] = f"{prop.number} {prop.name}"
+    number = mail.property_number(message.subject, message.body)
+    if number:
+        prop = await session.scalar(select(Property).where(Property.number == number))
+        if prop is not None:
+            properties[str(prop.id)] = f"{prop.number} {prop.name}"
+    lines = "Kandidaten Kontakt (ID: Rolle): " + (
+        "; ".join(f"{k}: {v}" for k, v in contacts.items()) or "-"
+    )
+    lines += "\nKandidaten Objekt (ID: Nummer Name): " + (
+        "; ".join(f"{k}: {v}" for k, v in properties.items()) or "-"
+    )
+    return {"contacts": set(contacts), "properties": set(properties)}, lines
+
+
+async def _attachment_line(session: AsyncSession, message: Message) -> str:
+    """File name and type of the attachments (M20-03); the content is not sent."""
+    from mhvp.documents.models import Document
+
+    ids = list(message.attachment_document_ids or [])[:10]
+    if not ids:
+        return "Anhänge: -"
+    rows = (await session.scalars(select(Document).where(Document.id.in_(ids)))).all()
+    from mhvp.objektakte.masking import mask_ibans
+
+    return "Anhänge: " + (
+        "; ".join(f"{mask_ibans(d.filename or d.title)} ({d.mime_type})" for d in rows) or "-"
+    )
+
+
+async def _reply_style(session: AsyncSession, message: Message) -> dict[str, Any]:
+    """Style of the message's mailbox, otherwise of the tenant's default mailbox (M20-02)."""
+    from mhvp.communication.models import Mailbox
+
+    box = await session.get(Mailbox, message.mailbox_id) if message.mailbox_id else None
+    if box is not None and box.reply_style:
+        return dict(box.reply_style)
+    default = await session.scalar(
+        select(Mailbox).where(Mailbox.is_default.is_(True), Mailbox.deleted_at.is_(None)).limit(1)
+    )
+    return dict(default.reply_style) if default is not None and default.reply_style else {}
+
+
 async def suggest_for_message(
     session: AsyncSession, settings: Settings, message: Message
 ) -> dict[str, Any]:
@@ -327,6 +467,10 @@ async def suggest_for_message(
     # An IBAN never reaches the provider (rule 0.1.13); the classification does not need it.
     from mhvp.objektakte.masking import mask_ibans
 
+    candidates, candidate_lines = await _candidates(session, message)
+    attachment_line = await _attachment_line(session, message)
+    style = await _reply_style(session, message)
+
     prompt_text = (
         f"Betreff: {mask_ibans(message.subject)}\n"
         f"Absender: {message.from_address or ''}\n"
@@ -339,6 +483,12 @@ async def suggest_for_message(
         + ("; ".join(f"{p.title} ({', '.join(p.keywords)})" for p in playbooks) or "-")
         + "\nObjektnummern stehen meist als dreistellige Zahl nach 'Objekt' oder 'Objekt Nr.'."
         + (f"\n{hint}" if hint else "")
+        + "\n"
+        + candidate_lines
+        + "\n"
+        + attachment_line
+        + "\n"
+        + reply_style_text(style)
     )
     context = {"context_type": "message", "context_id": str(message.id)}
 
@@ -351,7 +501,12 @@ async def suggest_for_message(
 
     result: dict[str, Any]
     if run.status is RunStatus.SUCCEEDED and run.output:
-        result = merge_suggestion(run.output, _fallback(message, categories))
+        result = merge_suggestion(
+            run.output,
+            _fallback(message, categories),
+            candidates=candidates,
+            text=f"{message.subject or ''}\n{message.body or ''}",
+        )
         result["model"] = run.model
         status = "ready"
     elif run.status is RunStatus.BLOCKED:

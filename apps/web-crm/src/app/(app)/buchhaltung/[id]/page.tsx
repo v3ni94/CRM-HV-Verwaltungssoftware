@@ -1,6 +1,9 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { EntryActions } from "@/components/accounting/EntryActions";
+import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
+import { LedgerLockForm } from "@/components/accounting/LedgerLockForm";
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
 import { SettlementProposalPanel } from "@/components/accounting/SettlementProposalPanel";
 import { TicketsPagination } from "@/components/tickets/TicketsPagination";
@@ -26,9 +29,10 @@ export default async function LedgerPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ page?: string }>;
 }) {
-  const [t, tr, { id }, sp] = await Promise.all([
+  const [t, tr, tb, { id }, sp] = await Promise.all([
     getTranslations("Accounting"),
     getTranslations("Receivables"),
+    getTranslations("Bookkeeping"),
     params,
     searchParams,
   ]);
@@ -37,6 +41,8 @@ export default async function LedgerPage({
   const api = serverApi();
   const me = await getMe();
   const canEditOpenItems = me.data?.permissions.includes("accounting:update") ?? false;
+  const canCreate = me.data?.permissions.includes("accounting:create") ?? false;
+  const canApprove = me.data?.permissions.includes("accounting:approve") ?? false;
   const [ledger, journal, trial, open, accounts] = await Promise.all([
     api.GET("/api/v1/accounting/ledgers/{ledger_id}", { params: { path: { ledger_id: id } } }),
     api.GET("/api/v1/accounting/ledgers/{ledger_id}/entries", { params: { path: { ledger_id: id }, query: { limit: 100 } } }),
@@ -75,9 +81,14 @@ export default async function LedgerPage({
         }`}
       />
       {ledger.data.leading_system !== "mhvp" ? <p className={ui.notice}>{t("parallelNotice")}</p> : null}
-      <Link href={`/buchhaltung/${id}/auswertungen`} className={ui.button}>
-        {t("reports.link")}
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        <Link href={`/buchhaltung/${id}/auswertungen`} className={ui.button}>
+          {t("reports.link")}
+        </Link>
+        <Link href={`/buchhaltung/${id}/konten`} className={ui.button}>
+          {tb("accounts.link")}
+        </Link>
+      </div>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("trialBalance", { date: formatDate(today) })}</h2>
         <div className="overflow-x-auto">
@@ -112,6 +123,13 @@ export default async function LedgerPage({
       </section>
       <section className="flex flex-col gap-2">
         <h2 className={ui.h2}>{t("journal")}</h2>
+        {canCreate ? (
+          <JournalEntryForm
+            ledgerId={id}
+            today={today}
+            accounts={accountRows.map((a) => ({ id: a.id, number: a.number, name: a.name, category: a.category, active: a.active }))}
+          />
+        ) : null}
         <div className="overflow-x-auto">
 <table className="mhvp-table">
           <thead>
@@ -120,6 +138,7 @@ export default async function LedgerPage({
               <th>{t("date")}</th>
               <th>{t("text")}</th>
               <th>{t("status")}</th>
+              <th>{tb("actions.title")}</th>
             </tr>
           </thead>
           <tbody>
@@ -132,6 +151,9 @@ export default async function LedgerPage({
                   {e.reversed_by_id ? <span className="ml-2 text-xs text-muted">{t("reversed")}</span> : null}
                 </td>
                 <td>{t(`entryStatus.${e.status}`)}</td>
+                <td>
+                  <EntryActions ledgerId={id} entry={e} canCreate={canCreate} canApprove={canApprove} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -139,6 +161,7 @@ export default async function LedgerPage({
 </div>
         <TicketsPagination page={page} pageSize={PAGE_SIZE} total={journalCount} shown={journalRows.length} buildHref={pageHref} />
       </section>
+      {canApprove ? <LedgerLockForm ledgerId={id} lockedUntil={ledger.data.locked_until ?? null} /> : null}
     </div>
   );
 }

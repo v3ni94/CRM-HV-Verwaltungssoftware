@@ -14,6 +14,7 @@ mapping option id to company comes from ``DmsConnection.options["company_options
 """
 
 import json
+import re
 from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any, Literal
@@ -50,6 +51,17 @@ def object_number_matches(value: object, number: str) -> bool:
     if not isinstance(value, str) or not number:
         return False
     return value == number or value.startswith(f"{number}, ")
+
+
+def ticket_reference_matches(doc: "PaperlessDocument", number: str) -> bool:
+    """True only for an explicit ticket reference ("Ticket 34", "Ticket #34", "Vorgang-34") in
+    title, file name or a tag; "34" inside another number or word never counts."""
+    sep = r"[\s_#.:\-]*"
+    pattern = re.compile(
+        rf"(?i)\b(?:ticket|vorgang){sep}(?:nr\.?|nummer)?{sep}{re.escape(number)}(?!\d)"
+    )
+    haystacks = [doc.title, doc.original_file_name or "", *doc.tags]
+    return any(pattern.search(h) for h in haystacks if h)
 
 
 def parse_field_id(raw: object, label: str) -> int | None:
@@ -274,6 +286,7 @@ class PaperlessSearch:
         object_number: str | None = None,
         company_option_id: str | None = None,
         query: str | None = None,
+        correspondent_name: str | None = None,
         page: int = 1,
         page_size: int = 25,
     ) -> PaperlessPage:
@@ -297,6 +310,8 @@ class PaperlessSearch:
             params["custom_field_query"] = json.dumps(condition)
         if query:
             params["query"] = query
+        if correspondent_name:
+            params["correspondent__name__iexact"] = correspondent_name
         payload = await self._get("/api/documents/", params)
         return self._page(payload, object_number=object_number, company_option_id=company_option_id)
 
@@ -323,13 +338,42 @@ class PaperlessSearch:
         page_size: int = 25,
         company_option_id: str | None = None,
     ) -> PaperlessPage:
-        """Volltextsuche nach der Ticketnummer, da kein eigenes Custom Field dafür existiert."""
-        return await self.search(
-            query=str(ticket_number),
+        """Dokumente mit ausdrücklichem Ticketbezug.
+
+        Kein eigenes Custom Field vorhanden. Die Volltextsuche nach der nackten Nummer liefert
+        jedoch jedes Dokument, das diese Ziffern irgendwo enthält (Objektlisten, SEPA-Mandate).
+        Deshalb wird nach der Wendung "Ticket <Nr>" gesucht und das Ergebnis lokal auf eine
+        echte Referenz in Titel, Dateiname oder Schlagwort geprüft (lieber leer als falsch).
+        """
+        number = str(ticket_number)
+        found = await self.search(
+            query=f'"Ticket {number}"',
             company_option_id=company_option_id,
             page=page,
             page_size=page_size,
         )
+        items = [d for d in found.items if ticket_reference_matches(d, number)]
+        return PaperlessPage(items=items, total=len(items))
+
+    async def list_by_correspondent(
+        self,
+        name: str,
+        page: int = 1,
+        page_size: int = 25,
+        company_option_id: str | None = None,
+    ) -> PaperlessPage:
+        """Dokumente, deren Korrespondent exakt dem Kontaktnamen entspricht (Kontaktbezug)."""
+        if not name.strip():
+            return PaperlessPage(items=[], total=0)
+        found = await self.search(
+            correspondent_name=name,
+            company_option_id=company_option_id,
+            page=page,
+            page_size=page_size,
+        )
+        wanted = name.strip().casefold()
+        items = [d for d in found.items if (d.correspondent or "").strip().casefold() == wanted]
+        return PaperlessPage(items=items, total=len(items))
 
     async def list_added_since(
         self, added_after: str | None, page: int = 1, page_size: int = 50

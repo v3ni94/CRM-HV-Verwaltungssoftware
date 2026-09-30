@@ -14,7 +14,39 @@ export type Me = {
   }[];
   /** Portal permissions of a staff account (M2-08); absent or empty for external users. */
   permissions?: string[];
+  /** M21-08: Funktionsschalter des Mandanten (Chat, KI-Vorqualifizierung, Support-Sicht). */
+  features?: { chat_enabled: boolean; chat_ai_prequalification_enabled: boolean; support_login_enabled: boolean };
+  /** M21-05: Vollmachten dieses Zugangs (Vertreterrolle). */
+  representations?: { id: string; principal_contact_id: string; valid_from: string; valid_to: string | null }[];
 };
+
+/** M21-01: Nachricht im Chat zur Meldung. */
+export type ChatMessage = {
+  id: string;
+  direction: "own" | "management";
+  body: string;
+  created_at: string;
+};
+
+/** M21-06, SA-05: beschlossene Zahlung der Gemeinschaft (Information, keine Zahlung). */
+export type PaymentResolution = {
+  resolution_id: string;
+  number: number;
+  decided_on: string;
+  subject: string;
+  kind: "economic_plan" | "special_levy";
+  legal_entity_name: string | null;
+  valid_from: string | null;
+  valid_to: string | null;
+  rhythm: string | null;
+  due_day: number | null;
+  instalments: number | null;
+  total: string | null;
+  purpose: string | null;
+  sepa: { holder: string; iban: string; bic: string | null; bank_name: string | null } | null;
+};
+
+export type OwnerTicket = { id: string; number: number; title: string; status: string; created_at: string };
 
 export function isProvider(me: Me): boolean {
   return me.roles.includes("provider");
@@ -37,6 +69,10 @@ export type PortalDocument = {
   title: string;
   filename: string;
   created_at: string;
+  /** M21-02, SA-06: neu, solange der Nutzer das Dokument nicht geöffnet hat (Indiz, keine Zustellung). */
+  is_new?: boolean;
+  last_opened_at?: string | null;
+  context?: string | null;
 };
 
 export type Attachment = {
@@ -310,9 +346,24 @@ export type BoardEngagementDetail = BoardEngagement & {
 export type PortalFormField = {
   key: string;
   label: string;
-  type: "text" | "number" | "date" | "select" | "file";
+  type:
+    | "text"
+    | "textarea"
+    | "number"
+    | "date"
+    | "time"
+    | "select"
+    | "radio"
+    | "multiselect"
+    | "checkbox"
+    | "email"
+    | "phone"
+    | "file"
+    | "heading"
+    | "info";
   required: boolean;
   options?: string[] | null;
+  help?: string | null;
 };
 
 export type PortalForm = {

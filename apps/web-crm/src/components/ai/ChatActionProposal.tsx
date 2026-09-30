@@ -43,13 +43,18 @@ export function ChatActionProposal({ proposal }: { proposal: Proposal }) {
   const [result, setResult] = useState<ImportRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [rejectReason, setRejectReason] = useState("");
 
   const act = async (action: "apply" | "reject") => {
     setBusy(true);
     setError(null);
     const res = await bff<ImportRun>(`/api/bff/ai/proposals/${proposal.id}/${action}`, {
       method: "POST",
-      ...(action === "apply" ? { body: JSON.stringify({ chat_action: {} }) } : {}),
+      ...(action === "apply"
+        ? { body: JSON.stringify({ chat_action: {} }) }
+        : rejectReason.trim()
+          ? { body: JSON.stringify({ reason: rejectReason.trim() }) }
+          : {}),
     });
     setBusy(false);
     if (!res.ok) return setError(res.message);
@@ -102,6 +107,10 @@ export function ChatActionProposal({ proposal }: { proposal: Proposal }) {
       ) : null}
       {state === "pending" ? (
         <div className="flex flex-wrap gap-2">
+          <label className="flex w-full flex-col gap-1 text-xs text-muted">
+            {t("chatAction.rejectReasonLabel")}
+            <textarea className={ui.input} rows={2} maxLength={2000} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
+          </label>
           <button type="button" className={ui.primary} disabled={busy} onClick={() => void act("apply")}>
             {t("chatAction.confirm")}
           </button>

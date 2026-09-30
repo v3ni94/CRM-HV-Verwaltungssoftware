@@ -357,6 +357,15 @@ class MemberOut(BaseModel):
     reply_approval_until: date | None = None
     # A37: legal entity scope (only effective for scoped roles, see mhvp.core.auth.scope).
     legal_entity_ids: list[uuid.UUID] = Field(default_factory=list)
+    # M2-02: Objektzuordnung (leer = alle Objekte, siehe mhvp.core.auth.scope).
+    property_ids: list[uuid.UUID] = Field(default_factory=list)
+
+
+class MemberProperties(BaseModel):
+    """Objektzuordnung eines Mitglieds (3.4, M2-02, docs/rules/M2-02-objektzuordnung.md). Leere
+    Liste bedeutet keine Einschränkung; Administratorrollen sind nie eingeschränkt."""
+
+    property_ids: list[uuid.UUID] = Field(default_factory=list, max_length=2000)
 
 
 class MemberLegalEntities(BaseModel):
@@ -496,15 +505,34 @@ class ApiKeyCreated(ApiKeyOut):
     key: str = Field(description="Wird nur einmal angezeigt")
 
 
+def _check_event_types(value: list[str]) -> list[str]:
+    from mhvp.core.webhooks import is_known_event_type
+
+    unknown = [t for t in value if not is_known_event_type(t)]
+    if unknown:
+        raise ValueError(f"unknown event types: {', '.join(unknown)}")
+    return value
+
+
 class WebhookCreate(BaseModel):
     url: str = Field(max_length=2000)
     event_types: list[str] = Field(min_length=1)
     description: str | None = Field(default=None, max_length=200)
 
+    @field_validator("event_types")
+    @classmethod
+    def _known_types(cls, value: list[str]) -> list[str]:
+        return _check_event_types(value)
+
 
 class WebhookPatch(BaseModel):
     active: bool | None = None
     event_types: list[str] | None = None
+
+    @field_validator("event_types")
+    @classmethod
+    def _known_patch_types(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _check_event_types(value)
 
 
 class WebhookOut(BaseModel):

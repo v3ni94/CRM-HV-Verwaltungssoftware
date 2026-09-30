@@ -462,6 +462,7 @@ async def patch_document(
             if profile is not None:
                 await retention.assign_profile(session, document, profile)
         await _event(session, principal, "document.updated", document.id, fields=sorted(changes))
+        await svc.mark_mirrors_dirty(session, document.id)
         return await _out(session, document)
 
 
@@ -489,6 +490,7 @@ async def add_link(
             target_type=body.entity_type,
             target_id=body.entity_id,
         )
+        await svc.mark_mirrors_dirty(session, document.id)
         return await _out(session, document)
 
 
@@ -1444,6 +1446,20 @@ async def ticket_dms_documents(
                 )
             ).items:
                 by_number.setdefault(d.id, d)
+            if ticket.contact_id is not None:
+                from mhvp.contacts.models import Contact
+
+                contact = await session.get(Contact, ticket.contact_id)
+                if contact is not None:
+                    for d in (
+                        await client.list_by_correspondent(
+                            contact.display_name,
+                            page=1,
+                            page_size=page_size,
+                            company_option_id=company,
+                        )
+                    ).items:
+                        by_number.setdefault(d.id, d)
         except PaperlessSearchError as exc:
             raise ProblemError(ErrorCodes.DMS_UNAVAILABLE, detail=str(exc)) from None
         finally:

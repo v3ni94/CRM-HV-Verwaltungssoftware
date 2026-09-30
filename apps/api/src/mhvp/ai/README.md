@@ -337,3 +337,9 @@ Aufgaben, erste Schritte je Modul, `ui_preferences`) existiert nicht — `Onboar
 - `scripts/build_help_index.py` regenerates `help_index.json` from
   `apps/web-crm/src/lib/settings-index.ts`, the main navigation and `docs/handbuch`;
   `make lint` checks it is current.
+
+## P18 (30.09.2026)
+
+- `masking.py`: `mask_personal_data` adds street and postal code masking to the identifier masking (rule AI-MASK-02); names stay (M34-05 open).
+- `journal_history.py`: migrated journal entries as read only few shot examples for `propose_posting` (rule AI-HIST-01).
+- `GET /ai/usage` additionally returns `runs_by_task`, `tokens_in_by_task`, `tokens_out_by_task`.

@@ -4,7 +4,7 @@ import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Literal, Self
+from typing import Any, Literal, Self
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
@@ -90,6 +90,7 @@ class ContractIn(_In):
     notes: str | None = None
     move_in_on: date | None = Field(default=None, description="Kalendertermin Einzug")
     move_out_on: date | None = Field(default=None, description="Kalendertermin Auszug")
+    custom_fields: dict[str, Any] = Field(default_factory=dict, description="Zusatzfelder (4.11)")
 
     @model_validator(mode="after")
     def _rules(self) -> Self:
@@ -246,6 +247,7 @@ class PaymentIn(_In):
     valid_to: date | None = None
     reason: PaymentReason = PaymentReason.INITIAL
     document_id: uuid.UUID | None = None
+    revenue_account_id: uuid.UUID | None = Field(default=None, description="Ertragskonto (M5-01)")
 
 
 class PaymentOut(_Out):
@@ -259,6 +261,7 @@ class PaymentOut(_Out):
     valid_from: date
     valid_to: date | None
     reason: PaymentReason
+    revenue_account_id: uuid.UUID | None = None
 
 
 class ScheduleIn(_In):
@@ -341,6 +344,7 @@ class ContractOut(_Out):
     notes: str | None
     move_in_on: date | None = None
     move_out_on: date | None = None
+    custom_fields: dict[str, Any] = Field(default_factory=dict)
     supersedes_contract_id: uuid.UUID | None
     source: str | None = None
     approval_status: str = "approved"
@@ -420,6 +424,8 @@ class MandateOut(_Out):
     document_id: uuid.UUID
     payment_type_codes: list[str] = Field(default_factory=list)
     exclude_special_levy: bool = False
+    last_used_at: datetime | None = None
+    revoked_at: datetime | None = None
 
 
 class DepositIn(_In):
@@ -465,6 +471,7 @@ class DepositOut(_Out):
     property_bank_account_id: uuid.UUID | None
     interest_rule: str | None
     status: str
+    documents: list[str] = Field(default_factory=list)
     received: Money = Money("0.00")
     balance: Money = Money("0.00")
     outstanding: Money = Money("0.00")
@@ -567,3 +574,51 @@ class RejectImportOut(BaseModel):
     id: uuid.UUID
     approval_status: Literal["rejected"]
     end_date: date
+
+
+# Follow-up maintenance (package P16) ---------------------------------------------------
+
+
+class ContractCustomFieldsPatch(_In):
+    """In place update of the custom fields of a contract (M5-02); keys are merged, a key
+    with ``null`` removes the value."""
+
+    custom_fields: dict[str, Any]
+
+
+class ContractPaymentPatch(_In):
+    """Correction of a payment row (M5-07). Amounts, period and type only while no posted
+    receivable uses the row; ``revenue_account_id`` and ``document_id`` always."""
+
+    net: Money | None = Field(default=None, max_digits=14, decimal_places=2)
+    vat_percent: Decimal | None = Field(default=None, ge=0, le=100, max_digits=20, decimal_places=8)
+    gross: Money | None = Field(default=None, max_digits=14, decimal_places=2)
+    valid_from: date | None = None
+    valid_to: date | None = None
+    reason: PaymentReason | None = None
+    document_id: uuid.UUID | None = None
+    revenue_account_id: uuid.UUID | None = None
+
+
+class ContractSchedulePatch(_In):
+    """Correction of a payment plan (M5-07), only while no posted receivable uses it."""
+
+    interval: PaymentInterval | None = None
+    due_day_rule: DueDayRule | None = None
+    due_day: int | None = Field(default=None, ge=1, le=31)
+    valid_from: date | None = None
+    valid_to: date | None = None
+    payment_mode: PaymentMode | None = None
+    amount_basis: AmountBasis | None = None
+
+
+class DepositPatch(_In):
+    """Change of a deposit (M5-06). Amount and instalments only while it has no movements."""
+
+    amount_due: Money | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
+    installments: int | None = Field(default=None, ge=1, le=12)
+    valid_to: date | None = None
+    property_bank_account_id: uuid.UUID | None = None
+    interest_rule: str | None = None
+    documents: list[uuid.UUID] | None = Field(default=None, max_length=50)
+    status: Literal["open", "active", "settled"] | None = None

@@ -57,6 +57,8 @@ def snapshot(order: PaymentOrder) -> str:
         "bank": str(order.property_bank_account_id),
         "purpose": order.purpose,
     }
+    if order.contact_bank_account_id is not None:  # payout without invoice (M15-07)
+        fields["payee_account"] = str(order.contact_bank_account_id)
     return hashlib.sha256(json.dumps(fields, sort_keys=True).encode()).hexdigest()
 
 

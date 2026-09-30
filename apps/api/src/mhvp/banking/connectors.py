@@ -77,6 +77,27 @@ class ConnectionResult:
     error_message: str | None = None
 
 
+@dataclass(frozen=True)
+class BalanceInfo:
+    """Account balance as the connector reported it (8.1 ``fetch_balance``). Amounts stay
+    strings exactly as delivered (no float); ``None`` where the provider sent nothing."""
+
+    booked: str | None
+    available: str | None
+    currency: str | None
+    as_of: str | None
+
+
+@dataclass(frozen=True)
+class ConsentInfo:
+    """Consent state of a connection (8.1 ``consent_status``). ``valid_until`` is only set
+    when the provider documents and delivers it; nothing is estimated (rule 0.1.3)."""
+
+    status: str
+    valid_until: date | None
+    error_message: str | None = None
+
+
 class ConnectorNotConfiguredError(Exception):
     """The connector has no contract, credentials or provider decision yet."""
 
@@ -106,6 +127,22 @@ class BankConnector(Protocol):
     ) -> list[RawTransaction]: ...
 
     def refresh_consent(self, connection_ref: str) -> WebFormHandle: ...
+
+    def fetch_balance(self, account: BankAccountInfo) -> BalanceInfo: ...
+
+    def consent_status(self, connection_ref: str) -> ConsentInfo: ...
+
+    def submit_payment_batch(self, batch_ref: str) -> str: ...
+
+
+def refuse_payment_submission() -> None:
+    """Common answer of every read connector to ``submit_payment_batch`` (8.1, M11-03).
+    Payment initiation runs only through the released payment path
+    (``mhvp.banking.payment_submitters``, four eyes, gate G2); a read connector never submits
+    a payment, so the protocol method exists for the uniform seam and always refuses."""
+    raise ConnectorNotSupportedError(
+        "Zahlungsaufträge werden nur über den freigegebenen Zahlungsweg (G2) übermittelt."
+    )
 
 
 class UnconfiguredConnector:
@@ -142,6 +179,18 @@ class UnconfiguredConnector:
         return []
 
     def refresh_consent(self, connection_ref: str) -> WebFormHandle:
+        self._refuse()
+        raise AssertionError  # pragma: no cover
+
+    def fetch_balance(self, account: BankAccountInfo) -> BalanceInfo:
+        self._refuse()
+        raise AssertionError  # pragma: no cover
+
+    def consent_status(self, connection_ref: str) -> ConsentInfo:
+        self._refuse()
+        raise AssertionError  # pragma: no cover
+
+    def submit_payment_batch(self, batch_ref: str) -> str:
         self._refuse()
         raise AssertionError  # pragma: no cover
 
@@ -201,4 +250,17 @@ class FileConnector:
 
     def refresh_consent(self, connection_ref: str) -> WebFormHandle:
         self._unsupported("Zustimmungserneuerung")
+        raise AssertionError  # pragma: no cover
+
+    def fetch_balance(self, account: BankAccountInfo) -> BalanceInfo:
+        """Balances of the file path come from the statement file itself (``bank_statement``
+        opening and closing balance, B09), never from an online call."""
+        self._unsupported("Online-Saldenabruf")
+        raise AssertionError  # pragma: no cover
+
+    def consent_status(self, connection_ref: str) -> ConsentInfo:
+        return ConsentInfo(status="not_required", valid_until=None)
+
+    def submit_payment_batch(self, batch_ref: str) -> str:
+        refuse_payment_submission()
         raise AssertionError  # pragma: no cover

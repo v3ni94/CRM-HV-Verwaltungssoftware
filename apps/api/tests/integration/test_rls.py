@@ -61,6 +61,7 @@ PLATFORM_TABLES = frozenset(
         "oidc_authorization_code",
         "license",
         "usage_counter",
+        "usage_counter_daily",
     }
 )
 

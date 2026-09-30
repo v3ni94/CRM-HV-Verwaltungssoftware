@@ -130,3 +130,9 @@ erhalten müssen, sind die Abonnements dieses Kapitels vorgesehen.
   Netzwerkadressen.
 - **Zustellung steht auf fehlgeschlagen**: Empfänger hat sechs Versuche nicht mit 2xx
   beantwortet; Erneut zustellen nach Behebung beim Empfänger.
+
+## Zustellung je Zustellweg, Serienbrief und Kommunikationshistorie
+
+- Am Kontakt, Reiter Kommunikation, lässt sich ein abgelegtes Dokument je Zustellweg vorbereiten: Post (auf Wunsch mit Postauftrag), E-Mail (Entwurf), Portal, SMS, Einschreiben oder Bote. SMS, Einschreiben und Bote werden nicht von der Plattform versendet, sondern mit Nachweis erfasst. Der Zugang wird nur mit Nachweisart und Referenz gebucht.
+- Serienversand: Unter Kontakte, Serienversand wird eine Vorlage je Empfänger zu einem eigenen Dokument zusammengeführt. Danach liegt je Empfänger eine Zustellung vor, gruppiert je Zustellweg. Ein Fehler bricht den ganzen Lauf ab.
+- Kommunikationshistorie: Der Reiter Kommunikation zeigt E-Mails, Zustellungen und Tickets des Kontakts, neueste zuerst. Welche Arten sichtbar sind, hängt von den Rechten ab.

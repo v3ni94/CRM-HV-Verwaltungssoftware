@@ -50,6 +50,11 @@ ALERTING = {
     "webhook_deliveries_failed",
     "document_mirrors_failed",
     "ai_runs_failed_24h",
+    # M9-01: bank retrieval, payment and dunning runs (failures and blocked letters)
+    "bank_sync_runs_failed_24h",
+    "bank_connections_error",
+    "payment_orders_rejected_24h",
+    "dunning_cases_blocked",
     "backup_verify_failed",
     "backup_verify_stale",
     "backup_offsite_failed",
@@ -216,7 +221,15 @@ def job_gauges(jobs: dict[str, dict[str, Any]]) -> dict[str, int]:
 
 
 async def collect(request: Request) -> dict[str, int]:
+    from mhvp.accounting.models import DunningCase
     from mhvp.ai.models import AiTaskRun, RunStatus
+    from mhvp.banking.models import (
+        BankConnection,
+        BankSyncRun,
+        ConnectionStatus,
+        OrderStatus,
+        PaymentOrder,
+    )
     from mhvp.core.webhooks import DeliveryStatus, WebhookDelivery
     from mhvp.documents.models import DocumentMirror, MirrorStatus
     from mhvp.workspace.models import Notification
@@ -236,6 +249,10 @@ async def collect(request: Request) -> dict[str, int]:
         "ai_runs_24h": 0,
         "ai_runs_failed_24h": 0,
         "notifications_unread": 0,
+        "bank_sync_runs_failed_24h": 0,
+        "bank_connections_error": 0,
+        "payment_orders_rejected_24h": 0,
+        "dunning_cases_blocked": 0,
     }
     queries: dict[str, Any] = {
         "webhook_deliveries_pending": select(func.count()).where(
@@ -255,6 +272,21 @@ async def collect(request: Request) -> dict[str, int]:
             AiTaskRun.created_at >= since, AiTaskRun.status == RunStatus.FAILED
         ),
         "notifications_unread": select(func.count()).where(Notification.read_at.is_(None)),
+        "bank_sync_runs_failed_24h": select(func.count()).where(
+            BankSyncRun.created_at >= since, BankSyncRun.status == "failed"
+        ),
+        "bank_connections_error": select(func.count()).where(
+            BankConnection.status.in_((ConnectionStatus.ERROR, ConnectionStatus.CONSENT_EXPIRED))
+        ),
+        "payment_orders_rejected_24h": select(func.count()).where(
+            PaymentOrder.updated_at >= since,
+            PaymentOrder.status.in_((OrderStatus.REJECTED, OrderStatus.RETURNED)),
+        ),
+        # Dunning letters held back by a missing payment account (M16-13); the dunning job
+        # itself only creates previews and records no failure state.
+        "dunning_cases_blocked": select(func.count()).where(
+            DunningCase.status == "proposed", DunningCase.bank_warning.is_not(None)
+        ),
     }
     for tenant_id in tenant_ids:
         async with tenant_transaction(factory, tenant_id) as session:

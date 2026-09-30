@@ -34,9 +34,10 @@ class _In(BaseModel):
 class FormFieldIn(_In):
     key: str = Field(min_length=1, max_length=60)
     label: str = Field(min_length=1, max_length=200)
-    type: str = Field(pattern="^(text|number|date|select|file)$")
+    type: str = Field(pattern="^[a-z]{3,16}$")
     required: bool = False
     options: list[str] | None = None
+    help: str | None = Field(default=None, max_length=forms.MAX_HELP)
 
 
 class FormTemplateIn(_In):
@@ -47,6 +48,8 @@ class FormTemplateIn(_In):
     active: bool = True
     sort_order: int = Field(default=0, ge=0, le=10000)
     fields: list[FormFieldIn] = Field(default_factory=list, max_length=forms.MAX_FIELDS)
+    delivery: str = Field(default="ticket", pattern="^(ticket|email)$")
+    delivery_email: str | None = Field(default=None, max_length=320)
 
 
 class FormTemplatePatch(_In):
@@ -57,6 +60,8 @@ class FormTemplatePatch(_In):
     active: bool | None = None
     sort_order: int | None = Field(default=None, ge=0, le=10000)
     fields: list[FormFieldIn] | None = Field(default=None, max_length=forms.MAX_FIELDS)
+    delivery: str | None = Field(default=None, pattern="^(ticket|email)$")
+    delivery_email: str | None = Field(default=None, max_length=320)
 
 
 class FormSubmissionIn(_In):
@@ -76,6 +81,8 @@ def _out(t: PortalFormTemplate, *, admin_view: bool) -> dict[str, Any]:
         row.update(
             {
                 "category": t.category,
+                "delivery": t.delivery,
+                "delivery_email": t.delivery_email,
                 "active": t.active,
                 "sort_order": t.sort_order,
                 "created_at": t.created_at,
@@ -106,6 +113,7 @@ async def create_template(
     body: FormTemplateIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> dict[str, Any]:
     fields = forms.normalise_fields([f.model_dump() for f in body.fields])
+    delivery, delivery_email = forms.normalise_delivery(body.delivery, body.delivery_email)
     async with tenant_tx(request, principal) as session:
         t = PortalFormTemplate(
             tenant_id=principal.tenant_id,
@@ -117,6 +125,8 @@ async def create_template(
             active=body.active,
             sort_order=body.sort_order,
             fields=fields,
+            delivery=delivery,
+            delivery_email=delivery_email,
         )
         session.add(t)
         await session.flush()
@@ -138,8 +148,13 @@ async def update_template(
         data = body.model_dump(exclude_unset=True)
         if "fields" in data and data["fields"] is not None:
             t.fields = forms.normalise_fields(data.pop("fields"))
+        if "delivery" in data or "delivery_email" in data:
+            t.delivery, t.delivery_email = forms.normalise_delivery(
+                data.pop("delivery", None) or t.delivery,
+                data.pop("delivery_email") if "delivery_email" in data else t.delivery_email,
+            )
         for key, value in data.items():
-            if key == "fields":
+            if key in ("fields", "delivery", "delivery_email"):
                 continue
             if isinstance(value, str):
                 value = value.strip() or None
@@ -350,6 +365,18 @@ async def submit_form(
         )
         session.add(submission)
         await session.flush()
+        mail_error: str | None = None
+        if t.delivery == "email" and t.delivery_email:
+            from mhvp.sla import channels
+
+            mail_error = await channels.send_email(
+                session,
+                request.app.state.settings,
+                principal.tenant_id,
+                t.delivery_email,
+                f"Portalformular {t.name} (Vorgang {ticket.number})",
+                ticket.public_description or "",
+            )
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -364,4 +391,8 @@ async def submit_form(
             "ticket_id": ticket.id,
             "ticket_number": ticket.number,
             "status": ticket.status.value,
+            # SA-03: the ticket always exists as record; with e-mail delivery a failed send
+            # is reported so the office sees it, the submission itself is kept.
+            "delivery": t.delivery,
+            "delivery_failed": mail_error is not None,
         }

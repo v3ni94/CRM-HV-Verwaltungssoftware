@@ -27,8 +27,8 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents.letter_records import LetterRecordIn
 from mhvp.documents.models import Document, DocumentLink
+from mhvp.letting import basis_checks, openimmo, openimmo_import, openimmo_schema
 from mhvp.letting import flow_import as flow
-from mhvp.letting import openimmo, openimmo_import, openimmo_schema
 from mhvp.letting.broker_provider import (
     BrokerAmbiguousMatchError,
     BrokerListingPayload,
@@ -45,6 +45,7 @@ from mhvp.letting.models import (
     ProspectViewing,
     RentIncreaseCase,
     SelfDisclosureLink,
+    VacancyCase,
 )
 from mhvp.letting.prospect_texts import list_templates, template_by_id
 from mhvp.platform.models import Tenant, User
@@ -93,6 +94,8 @@ class RentIncreaseIn(LettingBaseIn):
     rent_index_date: date | None = None
     expert_document_id: uuid.UUID | None = None
     comparison_flats: list[ComparisonFlatIn] = Field(default_factory=list, max_length=20)
+    # Inputs of the bases index, modernization, graduated (M26-02, see basis_checks).
+    basis_data: dict[str, Any] = Field(default_factory=dict)
 
 
 class RentIncreaseAction(LettingBaseIn):
@@ -104,9 +107,23 @@ class RentIncreaseAction(LettingBaseIn):
     received_on: date | None = None
 
 
+class ProspectProfileIn(LettingBaseIn):
+    """Search profile (wishes) of a prospect for the match with listings (M26-06)."""
+
+    max_rent: Decimal | None = Field(default=None, gt=0, decimal_places=2)  # Kaltmiete
+    max_warm_rent: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    min_rooms: Decimal | None = Field(default=None, gt=0)
+    min_area_sqm: Decimal | None = Field(default=None, gt=0)
+    move_in_by: date | None = None
+    kinds: list[str] = Field(default_factory=list, max_length=2)
+    required_features: list[str] = Field(default_factory=list, max_length=20)
+
+
 class ProspectIn(LettingBaseIn):
     unit_id: uuid.UUID
     contact_id: uuid.UUID
+    listing_id: uuid.UUID | None = None
+    search_profile: ProspectProfileIn | None = None
     viewing_at: datetime | None = None
     notes: str | None = Field(default=None, max_length=4000)
     delete_after: date
@@ -114,6 +131,8 @@ class ProspectIn(LettingBaseIn):
 
 
 class ProspectPatch(LettingBaseIn):
+    listing_id: uuid.UUID | None = None
+    search_profile: ProspectProfileIn | None = None
     status: str | None = Field(
         default=None, pattern="^(new|viewing|applied|accepted|rejected|withdrawn)$"
     )
@@ -172,6 +191,7 @@ def _case_out(c: RentIncreaseCase) -> dict[str, Any]:
         "rent_index_name": c.rent_index_name,
         "comparison_flats": c.comparison_flats,
         "new_payment_id": c.new_payment_id,
+        "basis_data": c.basis_data,
     }
 
 
@@ -218,6 +238,17 @@ def _check(case: RentIncreaseCase, block_until: date | None) -> dict[str, Any]:
             out["comparison_rent"] = str(comparison)
             if case.target_rent > comparison:
                 flags.append(f"Zielmiete über erfasster Vergleichsmiete ({comparison} EUR).")
+    if case.basis in basis_checks.MODELS:
+        computed, basis_flags = basis_checks.check(
+            case.basis,
+            case.basis_data or {},
+            current_rent=case.current_rent,
+            target_rent=case.target_rent,
+            effective_date=case.effective_date,
+            has_agreement_document=case.source_document_id is not None,
+        )
+        out["basis"] = computed
+        flags.extend(basis_flags)
     if not case.source_note and not case.source_document_id:
         flags.append("Quelle der erfassten Werte fehlt.")
     if block_until and case.effective_date <= block_until:
@@ -236,6 +267,10 @@ async def create_rent_increase(
     from mhvp.contracts.models import Contract, ContractKind
     from mhvp.properties.models import Unit
 
+    try:
+        basis_data = basis_checks.validate(body.basis, body.basis_data)
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from None
     async with tenant_tx(request, principal) as session:
         contract = await session.get(Contract, body.contract_id)
         if contract is None:
@@ -267,6 +302,7 @@ async def create_rent_increase(
                     "contract_id": body.contract_id,
                     "source_document_id": body.source_document_id,
                     "expert_document_id": body.expert_document_id,
+                    "basis_data": basis_data,
                 }
             ),
         )
@@ -632,10 +668,69 @@ async def rent_increase_action(
         return _case_out(case)
 
 
+VACANCY_STATUS = "^(open|advertised|viewing|rented|renovation|blocked)$"
+
+
+class VacancyCaseIn(LettingBaseIn):
+    status: str | None = Field(default=None, pattern=VACANCY_STATUS)
+    responsible_user_id: uuid.UUID | None = None
+    follow_up_on: date | None = None
+    target_rent: Decimal | None = Field(default=None, gt=0, decimal_places=2)
+    monthly_costs: Decimal | None = Field(default=None, ge=0, decimal_places=2)
+    note: str | None = Field(default=None, max_length=2000)
+
+
+def _per_day(monthly: Decimal, days: int) -> Decimal:
+    """Monthly amount as pro rata for ``days`` with 12 months over 365 days."""
+    return (monthly * 12 / 365 * days).quantize(CENT, rounding=ROUND_HALF_UP)
+
+
+def _vacancy_row(
+    unit: Any,
+    prop: Any,
+    case: Any,
+    listing: Any,
+    since: date | None,
+    day: date,
+) -> dict[str, Any]:
+    days = (day - since).days + 1 if since else None
+    target = (case.target_rent if case else None) or (listing.price if listing else None)
+    costs = case.monthly_costs if case else None
+    return {
+        "unit_id": unit.id,
+        "property_number": prop.number,
+        "unit_number": unit.number,
+        "unit_type": unit.unit_type,
+        "living_area_sqm": unit.living_area_sqm,
+        "vacant_since": since,
+        "vacant_days": days,
+        "status": case.status if case else "open",
+        "responsible_user_id": case.responsible_user_id if case else None,
+        "follow_up_on": case.follow_up_on if case else None,
+        "follow_up_due": bool(case and case.follow_up_on and case.follow_up_on <= day),
+        "target_rent": target,
+        "target_rent_source": (
+            "vacancy_case" if case and case.target_rent else "listing" if listing else None
+        ),
+        "monthly_costs": costs,
+        # Entgangene Miete und Leerstandskosten: Monatswert x 12 / 365 x Leerstandstage.
+        "lost_rent": _per_day(target, days) if target and days else None,
+        "vacancy_costs": _per_day(costs, days) if costs and days else None,
+        "note": case.note if case else None,
+        "listing_id": listing.id if listing else None,
+    }
+
+
 @router.get("/vacancies", summary="Leerstandsliste (Mietobjekte)")
 async def vacancies(
-    request: Request, as_of: date | None = None, principal: TenantPrincipal = Depends(READ)
+    request: Request,
+    as_of: date | None = None,
+    follow_up_due: bool = False,
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
+    """Only management type RENTAL (no SEV units of a WEG). Lost rent and vacancy costs are
+    pro rata of the recorded monthly values (12 / 365 per day); without a target rent (measure
+    or rental listing) they stay empty, nothing is estimated (M26-04)."""
     from sqlalchemy import func
 
     from mhvp.contracts.models import Contract, ContractKind
@@ -660,6 +755,16 @@ async def vacancies(
                 .order_by(Property.number, Unit.number)
             )
         ).all()
+        cases = {c.unit_id: c for c in (await session.scalars(select(VacancyCase))).all()}
+        listings: dict[uuid.UUID, Listing] = {}
+        for lst in (
+            await session.scalars(
+                select(Listing)
+                .where(Listing.kind == "rental", Listing.status != "inactive")
+                .order_by(Listing.created_at)
+            )
+        ).all():
+            listings[lst.unit_id] = lst  # newest wins
         out = []
         for unit, prop in rows:
             last_end = await session.scalar(
@@ -670,18 +775,93 @@ async def vacancies(
                 )
             )
             since = last_end + timedelta(days=1) if last_end else None
-            out.append(
-                {
-                    "unit_id": unit.id,
-                    "property_number": prop.number,
-                    "unit_number": unit.number,
-                    "unit_type": unit.unit_type,
-                    "living_area_sqm": unit.living_area_sqm,
-                    "vacant_since": since,
-                    "vacant_days": (day - since).days + 1 if since else None,
-                }
-            )
+            row = _vacancy_row(unit, prop, cases.get(unit.id), listings.get(unit.id), since, day)
+            if follow_up_due and not row["follow_up_due"]:
+                continue
+            out.append(row)
         return out
+
+
+@router.put("/vacancies/{unit_id}", summary="Leerstandsmaßnahme erfassen oder ändern")
+async def put_vacancy(
+    unit_id: uuid.UUID,
+    body: VacancyCaseIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.properties.models import ManagementType, Property, Unit
+
+    async with tenant_tx(request, principal) as session:
+        unit = await session.get(Unit, unit_id)
+        prop = await session.get(Property, unit.property_id) if unit else None
+        if unit is None or prop is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if prop.management_type is not ManagementType.RENTAL:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Leerstandsmaßnahmen nur für Mietobjekte."
+            )
+        if (
+            body.responsible_user_id is not None
+            and await session.get(User, body.responsible_user_id) is None
+        ):
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Verantwortlicher unbekannt.")
+        case = await session.scalar(select(VacancyCase).where(VacancyCase.unit_id == unit_id))
+        if case is None:
+            case = VacancyCase(
+                tenant_id=principal.tenant_id, created_by=principal.user_id, unit_id=unit_id
+            )
+            session.add(case)
+        for key, value in body.model_dump(exclude_unset=True).items():
+            setattr(case, key, value)
+        await session.flush()
+        return {
+            "unit_id": case.unit_id,
+            "status": case.status,
+            "responsible_user_id": case.responsible_user_id,
+            "follow_up_on": case.follow_up_on,
+            "target_rent": case.target_rent,
+            "monthly_costs": case.monthly_costs,
+            "note": case.note,
+        }
+
+
+@router.post(
+    "/vacancies/{unit_id}/listing", status_code=201, summary="Anzeige aus dem Leerstand anlegen"
+)
+async def vacancy_listing(
+    unit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """Draft rental listing from the unit master data; the target rent of the measure becomes
+    the asking rent when recorded. The measure moves to ``advertised`` only if it is still
+    ``open``. Publishing stays a separate step."""
+    from mhvp.properties.models import ManagementType, Property, Unit
+
+    async with tenant_tx(request, principal) as session:
+        unit = await session.get(Unit, unit_id)
+        prop = await session.get(Property, unit.property_id) if unit else None
+        if unit is None or prop is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if prop.management_type is not ManagementType.RENTAL:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Nur für Mietobjekte.")
+        case = await session.scalar(select(VacancyCase).where(VacancyCase.unit_id == unit_id))
+        price = case.target_rent if case else None
+    listing = await create_listing(
+        ListingIn(unit_id=unit_id, kind="rental", price=price), request, principal
+    )
+    async with tenant_tx(request, principal) as session:
+        case = await session.scalar(select(VacancyCase).where(VacancyCase.unit_id == unit_id))
+        if case is None:
+            session.add(
+                VacancyCase(
+                    tenant_id=principal.tenant_id,
+                    created_by=principal.user_id,
+                    unit_id=unit_id,
+                    status="advertised",
+                )
+            )
+        elif case.status == "open":
+            case.status = "advertised"
+    return listing
 
 
 @router.get("/units/{unit_id}/expose", summary="Exposé-Entwurf aus Stammdaten")
@@ -737,6 +917,124 @@ async def expose(
         }
 
 
+def _eur_text(value: Any) -> str:
+    if value is None:
+        return "auf Anfrage"
+    return f"{Decimal(value):,.2f}".replace(",", "X").replace(".", ",").replace("X", ".") + " EUR"
+
+
+@router.post(
+    "/units/{unit_id}/expose/pdf",
+    status_code=201,
+    summary="Exposé als PDF auf dem Briefbogen im DMS ablegen",
+)
+async def expose_pdf(
+    unit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> dict[str, Any]:
+    """Exposé from master data and the newest rental listing (title and description of the
+    advertisement), filed as generated document of unit, property and listing. Fields missing
+    in the master data are listed in the document as open; nothing is invented. Images of the
+    advertisement are not embedded in this version."""
+    from mhvp.documents import letter_records
+    from mhvp.documents import services as doc_services
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.letters import Letter, LetterTable
+
+    data = await expose(unit_id, request, principal)
+    blobs = BlobStore(request.app.state.settings)
+    f, energy, rent = data["fields"], data["energy_certificate"], data["asking_rent"]
+    async with tenant_tx(request, principal) as session:
+        head = await doc_services.letterhead(session, blobs)
+        listing = await session.get(Listing, data["listing_id"]) if data["listing_id"] else None
+        from mhvp.properties.models import Unit
+
+        unit = await session.get(Unit, unit_id)
+        if unit is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+
+        def cell(value: Any) -> str:
+            return "offen" if value in (None, "") else str(value)
+
+        address = (
+            " ".join(p for p in (f["street"], f["house_number"]) if p)
+            + f", {cell(f['postal_code'])} {cell(f['city'])}"
+        )
+        tables = {
+            "objekt": LetterTable(
+                header=["Merkmal", "Angabe"],
+                rows=[
+                    ["Lage", address],
+                    ["Art", cell(f["unit_type"])],
+                    ["Zimmer", cell(f["rooms"])],
+                    ["Wohnfläche in m²", cell(f["living_area_sqm"])],
+                    ["Etage", cell(f["floor"])],
+                    ["Letzte Modernisierung", cell(f["last_modernization_year"])],
+                ],
+                widths=(0.4, 0.6),
+            ),
+            "miete": LetterTable(
+                header=["Kosten", "Betrag"],
+                rows=[
+                    ["Kaltmiete", _eur_text(rent["net_rent"])],
+                    ["Nebenkosten", _eur_text(rent["additional_costs"])],
+                    ["Heizkosten", _eur_text(rent["heating_costs"])],
+                    ["Kaution", _eur_text(rent["deposit"])],
+                ],
+                right_aligned=(1,),
+                widths=(0.6, 0.4),
+            ),
+            "energie": LetterTable(
+                header=["Energieausweis", "Angabe"],
+                rows=[[k, cell(v)] for k, v in energy.items()],
+                widths=(0.5, 0.5),
+            ),
+        }
+        body = []
+        if listing is not None and listing.description:
+            body.append(html.escape(listing.description))
+        body += ["[[table:objekt]]", "[[table:miete]]", "[[table:energie]]"]
+        if data["missing"]:
+            body.append(
+                "Offene Angaben vor Veröffentlichung: "
+                + html.escape(", ".join(data["missing"]))
+                + "."
+            )
+        today = local_today()
+        title = (listing.title if listing and listing.title else None) or str(f["title"])
+        letter = Letter(
+            recipient_lines=[],
+            subject=html.escape(f"Exposé: {title}"),
+            body="\n\n".join(body),
+            letter_date=today,
+            tables=tables,
+            closing="",
+            draft_notice="ENTWURF, Pflichtangaben vor Veröffentlichung prüfen"
+            if data["missing"]
+            else None,
+        )
+        links: list[tuple[str, uuid.UUID]] = [("unit", unit.id), ("property", unit.property_id)]
+        if listing is not None:
+            links.append(("listing", listing.id))
+        document = await letter_records.store_letter(
+            session,
+            blobs,
+            principal=principal,
+            head=head,
+            letter=letter,
+            title=f"Exposé {title}",
+            filename=f"{today.isoformat()}_expose_{unit.number}.pdf",
+            links=links,
+        )
+        return {
+            "document_id": document.id,
+            "title": document.title,
+            "filename": document.filename,
+            "listing_id": data["listing_id"],
+            "missing": data["missing"],
+            "draft": bool(data["missing"]),
+        }
+
+
 def _prospect_out(p: Prospect) -> dict[str, Any]:
     return {
         "id": p.id,
@@ -748,6 +1046,8 @@ def _prospect_out(p: Prospect) -> dict[str, Any]:
         "delete_after": p.delete_after,
         "source": p.source,
         "rejection_template_id": p.rejection_template_id,
+        "listing_id": p.listing_id,
+        "search_profile": p.search_profile,
     }
 
 
@@ -758,8 +1058,23 @@ async def create_prospect(
     if body.delete_after <= datetime.now(UTC).date():
         raise ProblemError(ErrorCodes.VALIDATION, detail="Löschdatum muss in der Zukunft liegen.")
     async with tenant_tx(request, principal) as session:
+        data = body.model_dump(exclude={"search_profile"})
+        profile = (
+            body.search_profile.model_dump(mode="json", exclude_defaults=True)
+            if body.search_profile
+            else {}
+        )
+        if body.listing_id is not None:
+            listing = await session.get(Listing, body.listing_id)
+            if listing is None or listing.unit_id != body.unit_id:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Die Anzeige gehört nicht zur Einheit."
+                )
         row = Prospect(
-            tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            search_profile=profile,
+            **data,
         )
         session.add(row)
         await session.flush()
@@ -788,10 +1103,113 @@ async def patch_prospect(
         row = await session.get(Prospect, prospect_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        for key, value in body.model_dump(exclude_none=True).items():
+        changes = body.model_dump(exclude_none=True, exclude={"search_profile"})
+        if body.listing_id is not None:
+            listing = await session.get(Listing, body.listing_id)
+            if listing is None or listing.unit_id != row.unit_id:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Die Anzeige gehört nicht zur Einheit."
+                )
+        for key, value in changes.items():
             setattr(row, key, value)
+        if body.search_profile is not None:
+            row.search_profile = body.search_profile.model_dump(mode="json", exclude_defaults=True)
         await session.flush()
         return _prospect_out(row)
+
+
+def _match(profile: dict[str, Any], listing: Listing) -> dict[str, list[str]]:
+    """Compare a search profile with a listing: criteria met, not met, and not checkable
+    because the listing or the profile lacks the value."""
+    met: list[str] = []
+    unmet: list[str] = []
+    unknown: list[str] = []
+
+    def compare(key: str, label: str, wish: Any, have: Any, ok: Any) -> None:
+        if wish is None:
+            return
+        if have is None:
+            unknown.append(label)
+        elif ok(Decimal(str(wish)) if not isinstance(wish, date) else wish, have):
+            met.append(label)
+        else:
+            unmet.append(label)
+
+    compare("max_rent", "Kaltmiete", profile.get("max_rent"), listing.price, lambda w, h: h <= w)
+    compare(
+        "max_warm_rent",
+        "Warmmiete",
+        profile.get("max_warm_rent"),
+        listing.warm_rent,
+        lambda w, h: h <= w,
+    )
+    compare("min_rooms", "Zimmer", profile.get("min_rooms"), listing.rooms, lambda w, h: h >= w)
+    compare(
+        "min_area_sqm",
+        "Wohnfläche",
+        profile.get("min_area_sqm"),
+        listing.living_area_sqm,
+        lambda w, h: h >= w,
+    )
+    by = profile.get("move_in_by")
+    if by:
+        if listing.available_from is None:
+            unknown.append("Bezug")
+        elif listing.available_from <= date.fromisoformat(by):
+            met.append("Bezug")
+        else:
+            unmet.append("Bezug")
+    kinds = profile.get("kinds") or []
+    if kinds:
+        (met if listing.kind in kinds else unmet).append("Art")
+    for feature in profile.get("required_features") or []:
+        (met if (listing.features or {}).get(feature) else unmet).append(f"Ausstattung {feature}")
+    return {"met": met, "unmet": unmet, "unknown": unknown}
+
+
+@router.get(
+    "/listings/{listing_id}/prospect-matches",
+    summary="Interessenten zur Anzeige abgleichen und reihen",
+)
+async def prospect_matches(
+    listing_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    """Candidates: prospects of the same unit, prospects linked to the listing and prospects
+    of other units with a search profile (several units per prospect). Ranking: most criteria
+    met, then fewest unmet, then earliest inquiry. A proposal for the clerk, no decision."""
+    async with tenant_tx(request, principal) as session:
+        listing = await session.get(Listing, listing_id)
+        if listing is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        rows = (
+            await session.scalars(
+                select(Prospect).where(
+                    Prospect.status.in_(("new", "viewing", "applied")),
+                    or_(
+                        Prospect.unit_id == listing.unit_id,
+                        Prospect.listing_id == listing.id,
+                        Prospect.search_profile != {},
+                    ),
+                )
+            )
+        ).all()
+        out: list[dict[str, Any]] = []
+        for p in rows:
+            result = _match(p.search_profile or {}, listing)
+            out.append(
+                {
+                    "prospect_id": p.id,
+                    "contact_id": p.contact_id,
+                    "unit_id": p.unit_id,
+                    "status": p.status,
+                    "linked": p.listing_id == listing.id or p.unit_id == listing.unit_id,
+                    "score": len(result["met"]),
+                    "created_at": p.created_at,
+                    **result,
+                }
+            )
+        out.sort(key=lambda r: (-r["score"], len(r["unmet"]), r["created_at"]))
+        return out
 
 
 @router.delete("/prospects/{prospect_id}", status_code=204, summary="Interessent löschen")

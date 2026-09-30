@@ -4,6 +4,7 @@ import { getTranslations } from "next-intl/server";
 import type { ContractOut } from "@/components/contracts/ContractForm";
 import { ContractList, ContractSearch } from "@/components/contracts/ContractList";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
@@ -15,6 +16,7 @@ export const dynamic = "force-dynamic";
 export default async function ContractsPage({ searchParams }: { searchParams?: Promise<Record<string, string | string[] | undefined>> }) {
   const t = await getTranslations("ContractForm");
   const ta = await getTranslations("ContractApproval");
+  const ts = await getTranslations("SepaOverview");
   // Filters from the URL (the object page links to /vertraege?property_id=..., the unit page
   // to unit_id=...); only well formed ids are passed on to GET /contracts.
   const params = (await searchParams) ?? {};
@@ -47,6 +49,9 @@ export default async function ContractsPage({ searchParams }: { searchParams?: P
         description={t("page.listDescription")}
         action={
           <div className="flex flex-wrap gap-2">
+            <Link href="/vertraege/sepa" className={ui.button}>
+              {ts("link")}
+            </Link>
             <Link href="/vertraege/freigabe" className={ui.button}>
               {ta("link")}
               {pending > 0 ? ` (${pending})` : ""}
@@ -68,6 +73,7 @@ export default async function ContractsPage({ searchParams }: { searchParams?: P
         </p>
       ) : null}
       <ContractSearch q={q} hidden={hidden} />
+      <SavedFilters resource="contracts" basePath="/vertraege" current={{ ...hidden, ...(q ? { q } : {}) }} />
       {rows === null ? (
         <p role="alert" className={ui.alert}>
           {t("page.listError")}

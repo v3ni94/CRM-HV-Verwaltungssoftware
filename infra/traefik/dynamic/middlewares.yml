@@ -15,3 +15,9 @@ http:
         average: 100
         burst: 200
         period: 1s
+    # Login paths (M9-05): stricter than api-ratelimit; attach to a router for /api/v1/auth.
+    auth-ratelimit:
+      rateLimit:
+        average: 30
+        burst: 10
+        period: 1m

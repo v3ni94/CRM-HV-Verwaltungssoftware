@@ -48,4 +48,35 @@ describe("ReceivableRunPanel", () => {
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(confirm).toHaveBeenCalledTimes(2);
   });
+  it("lists earlier runs of the month and shows the difference to a posted item", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(
+        jsonResponse([{ id: "r1", period_month: "2026-03-01", status: "preview", created_at: "2026-03-02T08:00:00Z" }]),
+      )
+      .mockResolvedValueOnce(
+        jsonResponse({
+          ...run("preview", "manual"),
+          items: [
+            {
+              contract_id: "c1",
+              payment_type_code: "hoa_fee",
+              amount: "320.00",
+              due_date: "2026-03-03",
+              status: "manual",
+              message: "Planänderung nach Buchung",
+              contract_version: 1,
+              basis_valid_from: "2026-03-01",
+              difference_amount: "20.00",
+            },
+          ],
+        }),
+      );
+    renderIntl(<ReceivableRunPanel initialMonth="2026-03" />);
+    await userEvent.click(screen.getByText("Frühere Läufe laden"));
+    expect(String(fetchMock.mock.calls[0]?.[0])).toContain("receivable-runs?period_month=2026-03-01");
+    await userEvent.click(await screen.findByRole("button", { name: "Öffnen" }));
+    expect(await screen.findByText(/Differenz 20,00/)).toBeInTheDocument();
+    expect(screen.getByText("Grundlage ab 01.03.2026, Vertragsversion 1")).toBeInTheDocument();
+  });
 });

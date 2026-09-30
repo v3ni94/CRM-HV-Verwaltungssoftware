@@ -253,7 +253,7 @@ describe("BFF proxy", () => {
     ["POST", `banking/transactions/${ID}/reject`],
     ["POST", `banking/transactions/${ID}/reopen`],
     ["POST", "banking/csv-mappings/import"],
-    ["POST", "platform/licenses"],
+    ["DELETE", `platform/licenses/${ID}`], // M27-03: licences are ended, never deleted
     ["POST", `accounting/receivable-runs/${ID}/reverse`],
     ["PATCH", `hoa/resolutions/${ID}`],
     ["DELETE", `platform/rent-law/cap-areas/${ID}`],

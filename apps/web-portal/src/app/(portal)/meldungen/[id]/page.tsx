@@ -3,8 +3,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 
 import { AppointmentProposals } from "@/components/portal/AppointmentProposals";
+import { PortalChat } from "@/components/portal/PortalChat";
 import { TicketComments } from "@/components/portal/TicketComments";
-import type { Ticket } from "@/components/portal/types";
+import type { Me, Ticket } from "@/components/portal/types";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -18,6 +19,8 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
   redirectIfUnauthenticated(response);
   if (!data) throw new Error(String(error));
   const rows = data as unknown as Ticket[];
+  const { data: meData } = await serverApi().GET("/api/v1/portal/me");
+  const me = (meData ?? null) as unknown as Me | null;
   const row = rows.find((r) => r.id === id);
   if (!row) notFound();
   return (
@@ -42,7 +45,11 @@ export default async function TicketPage({ params }: { params: Promise<{ id: str
         </div>
       ) : null}
       <AppointmentProposals proposals={row.appointment_proposals ?? []} />
-      <TicketComments ticketId={row.id} comments={row.comments} />
+      {me?.features?.chat_enabled ? (
+        <PortalChat ticketId={row.id} />
+      ) : (
+        <TicketComments ticketId={row.id} comments={row.comments} />
+      )}
     </div>
   );
 }

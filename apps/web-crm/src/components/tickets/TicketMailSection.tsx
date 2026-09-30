@@ -3,6 +3,7 @@
 import { useTranslations } from "next-intl";
 import { useCallback, useEffect, useState } from "react";
 
+import { CompactView } from "@/components/mail/CompactView";
 import { TicketMailThread, type ThreadMessage } from "@/components/tickets/TicketMailThread";
 import { TicketReplyPanel, type ReplyTarget } from "@/components/tickets/TicketReplyPanel";
 import { bff } from "@/lib/bff";
@@ -44,6 +45,9 @@ export function TicketMailSection({
     void load();
   }, [load]);
 
+  // Kompaktansicht (operator 30.09.2026) oben: bezogen auf die jüngste Eingangsmail des Verlaufs.
+  const latestInbound = messages ? [...messages].reverse().find((m) => m.direction === "in") : undefined;
+
   return (
     <div className="flex min-w-0 flex-col gap-4" data-testid="ticket-mail-section">
       <section className="flex min-w-0 flex-col gap-2">
@@ -53,6 +57,7 @@ export function TicketMailSection({
             {error}
           </p>
         ) : null}
+        {latestInbound ? <CompactView key={latestInbound.id} messageId={latestInbound.id} canUpdate={canReply} onDraftCreated={() => void load()} /> : null}
         {messages === null ? null : (
           <TicketMailThread
             ticketId={ticketId}

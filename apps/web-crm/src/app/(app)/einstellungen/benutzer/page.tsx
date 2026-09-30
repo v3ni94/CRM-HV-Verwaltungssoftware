@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { MembersAdmin, type LegalEntityOption } from "@/components/settings/MembersAdmin";
+import { MembersAdmin, type LegalEntityOption, type PropertyOption } from "@/components/settings/MembersAdmin";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { ui } from "@/lib/ui";
@@ -19,7 +19,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("members:read")) notFound();
-  const [members, roles, competenceCatalogue, legalEntities, positionCatalogue] = await Promise.all([
+  const [members, roles, competenceCatalogue, legalEntities, positionCatalogue, properties] = await Promise.all([
     api.GET("/api/v1/tenant/members"),
     api.GET("/api/v1/tenant/roles"),
     api.GET("/api/v1/tenant/competence-catalogue"),
@@ -27,6 +27,12 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
     serverFetch("/api/v1/tenant/legal-entities").then(async (r) => (r.ok ? ((await r.json()) as LegalEntityOption[]) : [])),
     // Positionen für die E-Mail-Signatur (operator 27.09.2026), Katalog plus Mandantenliste.
     serverFetch("/api/v1/tenant/position-catalogue").then(async (r) => (r.ok ? ((await r.json()) as string[]) : [])),
+    // Objektzuordnung je Mitglied (M2-02); nur für Mandantenadministration geladen.
+    can("tenant_settings:update")
+      ? serverFetch("/api/v1/properties?page_size=500").then(async (r) =>
+          r.ok ? (((await r.json()) as { items?: PropertyOption[] }).items ?? []) : [],
+        )
+      : Promise.resolve([] as PropertyOption[]),
   ]);
   return (
     <div className="flex flex-col gap-4">
@@ -37,6 +43,7 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
         roles={roles.data ?? []}
         competenceCatalogue={(competenceCatalogue.data ?? []) as { code: string; label: string }[]}
         legalEntityOptions={legalEntities}
+        propertyOptions={properties}
         positionCatalogue={positionCatalogue}
         canCreate={can("members:create")}
         canUpdate={can("members:update")}

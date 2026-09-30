@@ -1753,6 +1753,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Anschreiben, Zugang und Belegeinsicht",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Unterjährige Abrechnung: beim Anlegen \"Unterjährige Abrechnung\" ankreuzen und den Zweck angeben. Ohne Zweck wird ein Zeitraum unter zwölf Monaten abgewiesen. - Im Entwurf lassen sich Kostenpositionen und Kopfdaten ändern oder entfernen. Nach der Berechnung geht das nur über ein",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Handlungsanweisung: Bankverbindung neu anlegen oder ändern",
   "href": "/kontakte",
@@ -2413,6 +2423,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Pflege in Welle 2 (Stand 30.09.2026)",
+  "source": "Handbuch: Handlungsanweisung: Stammdaten anlegen und pflegen",
+  "href": "/objekte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Notizen am Kontakt: je Notiz die Schaltflächen Ändern, Anheften und Löschen. Löschen fragt nach und wird im Änderungsprotokoll festgehalten. Fremdsystem-Kennungen: im Kontaktformular stehen Immoware24 Kennung und Lexware Office Kundennummer. Ein leeres Feld entfernt den Eintrag. ",
+  "file": "docs/handbuch/anleitung-stammdaten.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Handlungsanweisung: Verwalterwechsel und Objektübernahme",
   "href": "/objekte",
@@ -2599,6 +2619,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Für Übergabeprotokolle (Mängel, Zählerstände, Unterschriften), Rechnungen, Abrechnungen und Mahnläufe gibt es Vorschläge, aber noch keine eigene Datenabfrage; der Assistent kennt dort nur Seite und Datensatz. - Eine Zuständigkeit je Frist ist nicht hinterlegt; \"Fristen nach Zus",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Ablehnungsgrund und Kostenübersicht (Nachtrag 30.09.2026)",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Beim Ablehnen eines Kontakt- oder Chat-Vorschlags kann ein Grund eingetragen werden (freiwillig, höchstens 2.000 Zeichen). Er wird im Protokoll gespeichert und als Lernbeispiel verwendet. Die Kostenübersicht in den KI-Einstellungen zeigt je Aufgabe zusätzlich die Zahl der Läufe u",
   "file": "docs/handbuch/assistent-chat.md"
  },
  {
@@ -2823,6 +2853,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Testmodus und Jobzeiten",
+  "source": "Handbuch: Automatisierung (Regel-Engine)",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Dauerhafter Testmodus: Eine aktive Regel mit Testmodus führt keine Aktion aus und schreibt je Ereignis einen Lauf mit Status Testlauf in das Protokoll. So lässt sich eine Regel im Betrieb beobachten, bevor sie wirkt. - Standardjobs je Mandant: Über die Schnittstelle /automation",
+  "file": "docs/handbuch/automatisierung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Banking",
   "href": "/bank",
@@ -3043,6 +3083,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Zahllauf und Bankstatus",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Bank, Zahlungsaufträge, Zahllauf (/bank/zahllauf) zeigt die Vorschau alle gebuchten, freigegebenen Rechnungen mit offenem Betrag je Rechtsträger, fällig in den nächsten sieben Tagen, dazu die fälligen Lastschriftläufe und fehlende Vorabinformationen. Gesperrte Rechnungen (f",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bankabruf, Wochendigest und Zahler-IBAN (Stand 30.09.2026)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Uhrzeit des täglichen Abrufs: Einstellungen, Bank, Karte \"Täglicher Bankabruf\". Standard 06:00 Uhr; jede volle Stunde ist wählbar. Der Online-Abruf je Konto braucht weiterhin die Zustimmung des Konnektors (finAPI: automatischer Abruf eingeschaltet). Vorübergehende Störungen des",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Was ist Vorschlag, was verbindlich",
   "source": "Handbuch: Banking",
   "href": "/bank",
@@ -3060,6 +3120,156 @@
   "permission": null,
   "excerpt": "- Bankanbindung noch nicht eingerichtet: finAPI-Zugangsdaten fehlen unter Einstellungen, Bank, oder der finAPI-Vertrag ist noch nicht abgeschlossen. - Status Erneute Freigabe nötig / Zustimmung abgelaufen: Über Erneut freigeben ein neues WebForm öffnen und die Bankfreigabe wieder",
   "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zahllauf (Seite Bank, Zahllauf)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Zahllauf zeigt die zahlbaren, freigegebenen und gebuchten Rechnungen je Rechtsträger als Vorschau. Je Rechtsträger werden das Auftraggeberkonto und das Tageslimit angezeigt; fehlt ein Auftraggeberkonto, weist die Seite darauf hin. - Jede Rechnung zeigt Empfänger, Fälligkeit, ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zweck",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die MH Verwaltungsplattform soll für alle Benutzer, einschließlich Menschen mit Behinderungen, bedienbar sein. Dieses Kapitel beschreibt die Barrierefreiheitsfeatures und -richtlinien der Plattform sowie Hinweise zur Bedienung mit Hilfsmitteln. Die Plattform wird entwickelt, um d",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Tastaturnavigation",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Plattform ist vollständig mit der Tastatur bedienbar: - Tab / Shift+Tab: Navigieren zwischen Elementen (Eingabefelder, Schaltflächen, Links). - Enter: Aktivieren eines Buttons oder eines Links. - Space: Umschalten einer Checkbox oder Radio-Button. - Pfeiltasten: Navigieren in",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bildschirmleser und semantisches HTML",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Plattform ist für Bildschirmleser optimiert: - Alle Eingabefelder haben Labels (Beschriftungen); Labels sind programmatisch mit den Eingabeelementen verknüpft. - Überschriften sind korrekt strukturiert (H1, H2, H3, ...), nicht nur visuell formatiert. - Tabellen haben Header-Z",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Farbkontrast und Lesbarkeit",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Kontrastverhältnisse: Minimum 4,5:1 für Fließtext, 3:1 für große Texte und UI-Komponenten (WCAG AA). - Schriftgröße: Basisgröße 16px; Skalierung bis 200 % ist möglich, ohne dass die Bedienung verlorengeht (keine horizontale Verschiebung bei mobilen Geräten). - Zeilenabstand: Mi",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Darstellungsmodus",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Plattform unterstützt Hell- und Dunkeldarstellung: - Systemvorgabe: Die Plattform passt sich der Systemeinstellung an (Betriebssystem oder Browser). - Manuell: Wählen unter dem Menü Konto (Kürzel oben rechts) oder Einstellungen, Darstellung. - Dunkelmodus: Farben sind auf Kon",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Tastaturkürzel und Befehlspalette",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Strg+K (oder Cmd+K auf macOS): Befehlspalette öffnen. Dies ist eine universelle Schnellsuche für Kontakte, Objekte, Verträge, Tickets und Aktionen, ohne dass man mehrere Menüs öffnen muss. - Strg+/ (oder Cmd+/ auf macOS): Hilfe und Tastaturkürzel anzeigen (in Planung).",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Mobilgeräte und Responsive Design",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Plattform passt sich an verschiedene Bildschirmgrößen an: - Telefon: Einpaltige Ansicht, Menü über Icon links oben, Tabellen als Kartenlayout. - Tablet Hochkant: Einpaltige Ansicht mit voller Breite. - Tablet Quer / Desktop: Mehrspaltiges Layout mit Menü und Inhalt nebeneinan",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Sprache und Internationalisierung",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Plattform ist mehrsprachig: - Deutsch: Hauptsprache für Benutzer der Hausverwaltung Müller GmbH und des Portals. - Englisch: Für Code, API und Entwicklerdokumentation. Die Inhaltssprache ist in der Kopfzeile gekennzeichnet (<html lang=\"de\" oder lang=\"en\").",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Formulare und Validierung",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Erforderliche Felder: werden mit Icon und Label gekennzeichnet, nicht nur durch rote Farbe. - Inline-Validierung: Fehler werden beim Verlassen eines Feldes (on blur) erkannt und unterhalb des Felds angezeigt, nicht in einem separaten Popup. - Typenspezifische Eingaben: E-Mail-F",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Textformatierung und Überschriften",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Überschriften und Hervorhebungen sind semantisch gekennzeichnet (<strong für wichtig, <em für Hervorhebung, nicht nur Fettdruck). - Listen sind als Listen gekennzeichnet (geordnet oder ungeordnet), nicht als Fließtext mit Sonderzeichen. - Zitate und Blöcke sind richtig genested",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Probleme melden",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Benutzer können auf der Portalseite Barrierefreiheit (Portal, Menü Hilfe) oder unter Einstellungen, Hilfe, eine Meldung über Zugangsbarrieren hinterlassen: - Beschreibung: Was ist nicht bedienbar oder nicht verständlich? - Browser und Hilfsmittel: Welches Gerät, Betriebssystem, B",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bekannte Einschränkungen",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Mathematische Formeln: Komplexe Kalkulationen (z. B. Steuerberechnung) werden in Tabellen nicht vollständig durch Bildschirmleser erfasst; ein Textformular ist eine Alternative. - Diagramme: Diagramme und Charts (z. B. Ticketauswertung, Kostenentwicklung) haben Alt-Texte, aber ",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Weitere Ressourcen",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Web Content Accessibility Guidelines (WCAG) 2.1 (englisch) - Barrierefreie Websites und WCAG 2.1 Schnelleinstieg (deutschsprachig) - Tastaturkürzel in der MH Verwaltungsplattform (Video, in Planung)",
+  "file": "docs/handbuch/barrierefreiheit.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kontakt",
+  "source": "Handbuch: Barrierefreiheit (Accessibility)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Fragen zur Barrierefreiheit oder Verbesserungsvorschläge können an support@muellerhv.de gerichtet werden, mit dem Betreff „Barrierefreiheit\" oder dem Stichwort „Accessibility\".",
+  "file": "docs/handbuch/barrierefreiheit.md"
  },
  {
   "kind": "handbook",
@@ -3223,6 +3433,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Nachweis der E-Rechnung (30.09.2026)",
+  "source": "Handbuch: Belegeingang",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Am Belegentwurf einer E-Rechnung stehen das Profil, das Ergebnis der eigenen Formalprüfung und die Prüfsummen der empfangenen Datei und des eingebetteten XML. Das Ergebnis einer externen Prüfung (zum Beispiel KoSIT) wird mit Prüfprogramm, Version und Ergebnis nachgetragen; es bel",
+  "file": "docs/handbuch/belegeingang.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck und Freigabestufen",
   "source": "Handbuch: Buchhaltung",
   "href": "/buchhaltung",
@@ -3313,12 +3533,52 @@
  },
  {
   "kind": "handbook",
+  "title": "Buchen im CRM (Lückenliste 30.09.2026)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Buchungssatz erfassen: Im Buchungskreis unter Journal den Vorgang wählen (Buchungssatz, Kostenkorrektur oder Zinsbuchung), Buchungstag, Text und Beträge eintragen und als Entwurf speichern. Soll und Haben müssen gleich sein. Buchen: In der Journalzeile auf Buchen klicken. Gebucht",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Weitere Auswertungen und Excel",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Buchhaltung, Auswertungen, Abschnitt \"Weitere Auswertungen und Excel\" wählen Sie die Ansicht (Kontenblatt, Saldenliste, Offene Posten, Monatsmatrix, Soll/Ist der Forderungen, Bankkontoabrechnung, Umsatzsteuer und Vorsteuer als Entwurf, Einnahmen und Ausgaben) und Stichtag o",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Häufige Fehler",
   "source": "Handbuch: Buchhaltung",
   "href": "/buchhaltung",
   "keywords": [],
   "permission": null,
   "excerpt": "- Sollstellung blockiert: Erlöskonto je Zahlungsart oder Buchungskreis des Rechtsträgers fehlt. - Sollstellung für diesen Zeitraum wurde bereits gebucht: je Monat und Vertrag nur ein gebuchter Lauf; Korrektur per Storno. - Alle Mahnfälle ausgeschlossen mit Begründung nicht führen",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Verwalterhonorar (Seite Buchhaltung, Verwalterhonorar)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Seite führt durch die Honorarabrechnung je Objekt. - \"Honorar einrichten\": Objekt, Beginn, optional Ende, Intervall (monatlich, vierteljährlich, halbjährlich, jährlich), USt-Satz und Beträge je Einheitentyp erfassen. Eingerichtete Honorare lassen sich mit einem letzten Tag be",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Konten und Kontenblatt (Seite Buchhaltung, Buchungskreis, Konten)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Kontenplan eines Buchungskreises wird unter Buchhaltung, Buchungskreis, Konten gepflegt. - \"Konto ergänzen\": Kontonummer, Bezeichnung, Kontoart, Kontotyp, Umsatzsteuer (keine, Regelsatz, ermäßigt), Relevanz für den Kassenbericht und bis zu drei Buchungstexte. - Bestehende Kon",
   "file": "docs/handbuch/buchhaltung.md"
  },
  {
@@ -3424,6 +3684,46 @@
  {
   "kind": "handbook",
   "title": "Zweck",
+  "source": "Handbuch: Dienstleisterverträge (Service Contracts)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü Dienstleisterverträge verwaltet Verträge mit externen Dienstleistern (Handwerker, Reinigung, Hausmeister, Energieauditor, Abrechnungsstelle, Versicherungsmakler, etc.). Kündigungsfristen werden automatisch in die Fristenliste (Kapitel Fristen) übernommen.",
+  "file": "docs/handbuch/dienstleistervertraege.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vorbedingungen",
+  "source": "Handbuch: Dienstleisterverträge (Service Contracts)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Berechtigung contracts:read und contracts:create für die Verwaltung",
+  "file": "docs/handbuch/dienstleistervertraege.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bedienung",
+  "source": "Handbuch: Dienstleisterverträge (Service Contracts)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü zeigt eine Tabelle mit Spalten: - Dienstleister: Name und optional Ansprechpartner (Kontakt mit Rolle Dienstleister). - Leistung: Kurzbeschreibung der Leistung (z. B. „Hausmeister\", „Schornsteinfeger\"). - Objekt / Gebäude: Zuordnung zu einem Objekt oder mehreren Objekten",
+  "file": "docs/handbuch/dienstleistervertraege.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Grenzen",
+  "source": "Handbuch: Dienstleisterverträge (Service Contracts)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Dienstleisterverträge werden nur für Verwaltungszwecke geführt. Eine Verknüpfung zu Rechnungen, Aufträgen oder Kosten erfolgt nicht automatisch (siehe Kapitel Buchhaltung und Belegeingang). - Ein Dienstleistervertrag ist nicht erforderlich, um eine Rechnung eines Dienstleisters",
+  "file": "docs/handbuch/dienstleistervertraege.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zweck",
   "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
   "href": "/dms",
   "keywords": [],
@@ -3493,6 +3793,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Datenschutz: Löschantrag und Register (Entwurf)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Löschantrag erfassen (API POST /privacy/erasure-requests): Das System prüft sofort alle Sperren und zeigt sie am Antrag. Freigeben kann nur eine zweite Person, und nur ohne Sperre. Die Ausführung anonymisiert den Kontakt, Buchungen bleiben unberührt. Vorher muss das Löschprofil",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Einstellungen",
   "href": "/einstellungen",
@@ -3523,6 +3833,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Objektzuordnung je Benutzer",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Benutzer legt die Mandantenadministration je Mitglied fest, welche Objekte es sehen darf (Schaltfläche Objekte). Ohne Auswahl sieht das Mitglied alle Objekte. Mit Auswahl ist es auf die gewählten Objekte beschränkt; Administratorrollen sind nie eingeschränkt.",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Passkeys",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Passkeys (WebAuthn) als zusätzlicher zweiter Faktor sind vorbereitet, aber noch nicht freigeschaltet (Regel M2-03). Bis dahin dient TOTP als zweiter Faktor.",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Erledigungsarten beim Ticketabschluss",
   "source": "Handbuch: Einstellungen",
   "href": "/einstellungen",
@@ -3538,7 +3868,7 @@
   "href": "/einstellungen",
   "keywords": [],
   "permission": null,
-  "excerpt": "Unter Meine Daten (Benutzermenü oben rechts) ändert jeder Benutzer sein Passwort (6 bis 128 Zeichen, aktuelles Passwort erforderlich, Betreiberentscheidung M2-01 vom 26.09.2026) und verwaltet den zweiten Faktor: Zweiten Faktor einrichten zeigt einen QR-Code und den Schlüssel für ",
+  "excerpt": "Unter Meine Daten (Benutzermenü oben rechts) ändert jeder Benutzer sein Passwort (12 bis 128 Zeichen, kein bekanntes kompromittiertes Passwort, aktuelles Passwort erforderlich, Betreiberentscheidung 9 a vom 30.09.2026, Regel M2-05) und verwaltet den zweiten Faktor: Zweiten Faktor",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -3813,6 +4143,56 @@
  },
  {
   "kind": "handbook",
+  "title": "Zweck",
+  "source": "Handbuch: Fristen (Deadlines)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü Fristen listet wichtige Termine aus den Stammdaten und bietet eine zentrale Übersicht über Fälligkeiten und Stichtage. Die Liste ist eine Orientierungshilfe und ersetzt keine rechtliche Fristberechnung (Regel WS-01). Fristen kommen aus mehreren Quellen: - Verträge (Vertr",
+  "file": "docs/handbuch/fristen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vorbedingungen",
+  "source": "Handbuch: Fristen (Deadlines)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Berechtigung workspace:read",
+  "file": "docs/handbuch/fristen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bedienung",
+  "source": "Handbuch: Fristen (Deadlines)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü zeigt oben Links zu Fristen-Seiten; darunter die Tabelle mit Spalten: - Termin: Fälligkeit der Frist oder des Termins. - Typ: Art der Frist (z. B. Vertragsende, Kündigung, Eichfrist); eigene Fristen als „Eigene Frist\". - Bezug: Kontext (Vertrag, Einheit, Objekt, Meter, W",
+  "file": "docs/handbuch/fristen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Eigene Fristen",
+  "source": "Handbuch: Fristen (Deadlines)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Regel WS-01: Auf Tickets, Verträgen, Einheiten, Objekten und Mieterhöhungsfällen kann im Abschnitt „Fristen\" eine benutzerdefinierte Frist angelegt werden: - Fristtyp aus dem Katalog des Mandanten (Einstellungen, Fristtypen). - Auslösedatum: Starttag der Berechnung. - Fälligkeit:",
+  "file": "docs/handbuch/fristen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Grenzen",
+  "source": "Handbuch: Fristen (Deadlines)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die berechneten Termine sind Orientierung; für Notfristen und rechtlich maßgebliche Fristen ist eine manuelle Prüfung erforderlich. Berechnete Vorfristenanlässe folgen der Konfiguration, nicht einer Gesetzesregel. Im Parallelbetrieb mit Immoware24 werden Fristen nur in der Plattf",
+  "file": "docs/handbuch/fristen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Voraussetzungen",
   "source": "Handbuch: Abgleichbericht im Parallelbetrieb (Immoware24 gegen Plattform)",
   "href": null,
@@ -4064,6 +4444,56 @@
  {
   "kind": "handbook",
   "title": "Zweck",
+  "source": "Handbuch: Importe (Imports)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü Importe zeigt den Verlauf aller Importe (Datenübernahmen aus Listen, dem Assistenten, Schnittstellen oder Immoware24-Exporten) und bietet die Möglichkeit, Importe rückgängig zu machen. Ein Import ist eine automatisierte oder assistierte Übernahme von Daten: - Kontakte, O",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vorbedingungen",
+  "source": "Handbuch: Importe (Imports)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Berechtigung ai:read zum Anzeigen von Importer-Verlauf - Berechtigung ai:delete zum Rückgängigmachen von Importen",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bedienung",
+  "source": "Handbuch: Importe (Imports)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü zeigt eine Tabelle mit Spalten: - Lauf-ID / Timestamp: eindeutige Nummer und Uhrzeit des Imports. - Kategorie: z. B. „Kontakte\", „Objekte\", „Verträge\", „Zuordnung\", „Chat\" (für AI-assistierte Importe). - Quelle: Dateiname, Liste (z. B. „Immoware24-Kontaktliste\") oder Ass",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Fehlerbehang und Protokoll",
+  "source": "Handbuch: Importe (Imports)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Falls ein Import nicht vollständig erfolgreich war, zeigt die Detailseite: - Erfolgreiche Einträge: z. B. „32 von 42 Kontakte übernommen\". - Fehler: Pro Eintrag eine Fehlermeldung (z. B. „Pflichtfeld ‚Name' fehlt\", „Kontakt bereits vorhanden\", „Ungültige Telefonnummer\"). - Manuel",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Grenzen",
+  "source": "Handbuch: Importe (Imports)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Ein Import wird nicht geplant oder zeitgesteuert; alle Importe sind manuelle Aufträge. - Eine selektive Rückgängigmachung einzelner Datensätze aus einem Import ist nicht möglich; es ist alles oder nichts. - Rechnungen und Buchungen können nicht durch Importe rückgängig gemacht ",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zweck",
   "source": "Handbuch: Kalender",
   "href": "/kalender",
   "keywords": [],
@@ -4153,6 +4583,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Kalender-Abo für externe Kalender",
+  "source": "Handbuch: Kalender",
+  "href": "/kalender",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Kalender kann eine persönliche Abo-Adresse erzeugt werden. Sie wird nur einmal angezeigt und wie ein Passwort behandelt. Eine neue Adresse macht die bisherige ungültig, der Widerruf beendet das Abo. Der Feed enthält eigene und geteilte Termine sowie Fristen, soweit die Pers",
+  "file": "docs/handbuch/kalender.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Kataloge",
   "source": "Handbuch: Kataloge und benutzerdefinierte Felder",
   "href": null,
@@ -4209,6 +4649,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Telefonanlage erhält 401: Signatur, Zeitstempel (höchstens fünf Minuten Abweichung), Mandant oder Aktivierung stimmen nicht; Einstellungen, Telefonie prüfen. - Rufnummern in der Anrufliste maskiert: Recht Kontakte lesen fehlt. - Webhook-Abonnement abgewiesen (Ziel unzulässig): ",
+  "file": "docs/handbuch/kommunikation.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zustellung je Zustellweg, Serienbrief und Kommunikationshistorie",
+  "source": "Handbuch: Kommunikation (Telefonie, Zustellungen, ausgehende Webhooks)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Am Kontakt, Reiter Kommunikation, lässt sich ein abgelegtes Dokument je Zustellweg vorbereiten: Post (auf Wunsch mit Postauftrag), E-Mail (Entwurf), Portal, SMS, Einschreiben oder Bote. SMS, Einschreiben und Bote werden nicht von der Plattform versendet, sondern mit Nachweis er",
   "file": "docs/handbuch/kommunikation.md"
  },
  {
@@ -4339,6 +4789,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- IBAN oder BIC ungültig: Formatprüfung schlägt fehl; Eingabe ohne Leerzeichen und mit korrektem Länderpräfix wiederholen. - SEPA-Freigabe lässt sich nicht speichern: Datum der Erteilung, Erteilungsart oder Mandatsnachweis (Bitte das Mandat als PDF hinterlegen oder einen Vermerk ",
+  "file": "docs/handbuch/kontakte.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Serienversand (Seite Kontakte, Serienversand)",
+  "source": "Handbuch: Kontakte",
+  "href": "/kontakte",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Je Empfänger wird aus einer aktiven Dokumentvorlage ein eigenes Dokument erzeugt und abgelegt. Danach wird je Zustellweg eine Zustellung vorbereitet. Versendet wird nichts automatisch.",
   "file": "docs/handbuch/kontakte.md"
  },
  {
@@ -4583,6 +5043,46 @@
  },
  {
   "kind": "handbook",
+  "title": "Kompaktansicht",
+  "source": "Handbuch: Mail",
+  "href": "/mail",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Über jeder Eingangsmail und oben im Mailverlauf eines Tickets steht ein kompakter Block: - Zusammenfassung: ein Auszug der ersten Sätze. Mit \"Mit KI zusammenfassen\" entsteht eine KI-Zusammenfassung, aber nur, wenn ein KI-Anbieter freigegeben ist; sonst bleibt der Auszug. - Hinwei",
+  "file": "docs/handbuch/mail.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "HTML-Mails und Newsletter",
+  "source": "Handbuch: Mail",
+  "href": "/mail",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Der Text einer HTML-Mail wird ohne Formatangaben (CSS), Skripte und Kommentare dargestellt. Bereits früher gespeicherte Mails, deren Text mit Angaben wie \"body { margin: 0 }\" begann, werden beim Öffnen automatisch neu aus dem HTML-Teil gelesen.",
+  "file": "docs/handbuch/mail.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "IMAP-Postfächer",
+  "source": "Handbuch: Mail",
+  "href": "/mail",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Postfächer der Art IMAP werden alle zwei Minuten abgerufen; \"Jetzt abrufen\" startet den Abruf sofort. Der Abruf liest nur, auf dem Server bleibt alles unverändert. Beim ersten Abruf werden die Mails der letzten 30 Tage übernommen. Kann eine Mail nicht übernommen werden, steht ihr",
+  "file": "docs/handbuch/mail.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kompaktansicht",
+  "source": "Handbuch: Mail",
+  "href": "/mail",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Zu einer Mail zeigt die Kompaktansicht eine Zusammenfassung (KI-Zusammenfassung, sonst ein Auszug der ersten Sätze), offene Punkte und einen Hinweis aus dem CRM zu Kontakt und Objekt (offene Tickets, offene Posten mit überfälligem Anteil und Summe, letzte Vorgänge). Ohne freigege",
+  "file": "docs/handbuch/mail.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Makler",
   "href": "/makler",
@@ -4793,6 +5293,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Ausgaben des Übernahmejahres und Abnahmeprotokoll (30.09.2026)",
+  "source": "Handbuch: Migration von Immoware24 ohne Parallelbetrieb",
+  "href": "/importe/migration",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Jahresansicht: Über GET /api/v1/imports/migration/ledgers/{id}/year-expenses?year=JJJJ werden die Ausgaben je Aufwandskonto getrennt nach Vorperiode (Migrationsjournal, vor dem Stichtag) und Nachperiode (aktives Journal, ab dem Stichtag) ausgewiesen. Die Eröffnungsbuchung zählt n",
+  "file": "docs/handbuch/migration-immoware.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Objekte und Einheiten",
   "href": "/objekte",
@@ -4969,6 +5479,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Der Export erzeugt ein ZIP mit einer JSON-Datei je Entität (Mandant, Einstellungen ohne Geheimnisse, Mitgliedschaften, Rechtsträger, Objekte, Einheiten, Kontakte) und einem Manifest. Ablauf im Vier-Augen-Prinzip: Eine Person beantragt den Export mit Zweck Auskunft oder Portabilit",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Lizenzen, Preisliste, Abrechnungsvorschau und Nutzungsverlauf",
+  "source": "Handbuch: Plattform",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Seite Lizenzen und Preisliste (Plattform, Verweis Lizenzen und Preisliste) ist nur für Plattformadministratoren sichtbar. Sie ändert keine Freigabestufe. Lizenzen: Mandant wählen, Lizenz mit Modul, Kontingent, Laufzeit und optional vereinbartem Preis anlegen. Ohne Preis folgt",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Lizenzen und Preisliste (Seite Plattform, Lizenzen)",
+  "source": "Handbuch: Plattform",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Nur für Plattformadministratoren. Die Seite verwaltet je Mandant die Lizenzen je Modul mit Kontingent (Einheiten), Gültigkeit, vereinbartem Preis (leer: Preis aus der Preisstruktur) und Mindestbetrag. Lizenzen lassen sich anlegen und beenden. - Die Abrechnungsvorschau berechnet f",
   "file": "docs/handbuch/plattform.md"
  },
  {
@@ -5150,6 +5680,106 @@
   "permission": null,
   "excerpt": "Das Portal ist auf semantische Struktur (eine Überschrift erster Ordnung je Seite, Landmarken header, nav, main, footer), vollständige Tastaturbedienung (Sprungmarke „Zum Inhalt springen“ vor Kopf und Navigation, sichtbarer Fokusring mhvp-focus auf jedem bedienbaren Element, Foku",
   "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Portal Welle 2 (30.09.2026)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Chat zur Meldung. Ist der Chat unter Einstellungen, Portalformulare, Portalfunktionen eingeschaltet, schreiben Mieter und Eigentümer in ihrer Meldung Nachrichten. Antworten der Verwaltung entstehen im Ticket als externer Kommentar (oder über POST /portal-admin/tickets/{id}/messag",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zweck",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü Rechnungen verwaltet Eingangsrechnungen (Rechnungen von Kreditoren an die verwalteten Objekte oder den Verwalteter), Honorarrechnungen und Dauerrechnungen. Aus diesen entstehen offene Posten und Zahlläufe (Kapitel Buchhaltung). Rechnungen durchlaufen einen Prüfprozess: 1",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vorbedingungen",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Berechtigung accounting:read und accounting:create für die Verwaltung",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bedienung",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü zeigt eine Tabelle mit Spalten: - Rechnungsnummer / Dokumentreferenz: Nummer und optional Zuordnung (Objekt, Ticket). - Kreditor / Empfänger: Name und IBAN des Ausstellers. - Leistungsempfänger: Objekt oder Einheit oder „Verwaltung\". - Nettobetrag / Steuerbetrag / Brutto",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rechnungstypen",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Typ Verwendung --- --- Eingangsrechnung Kreditoren-Rechnung zur Miete, Betriebskosten, Dienstleistung oder Liegenschaft. Honorarrechnung Rechnung des Verwalters an eine WEG oder einen Einzeleigentümer (Verwaltungshonorar, Sonderumlage). Dauerrechnung Wiederkehrende Rechnung (z. B",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Freigabestufen",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Entwurf / Prüfung: Erfassung und Prüfung ohne Freigabe (Stufe offen). - Gebucht: Nach Freigabe durch die sachlich und rechnerisch zuständige Person wird die Forderung / Verbindlichkeit gebucht (hinter Gate G1, Regel E01). - Zahlläufe: Gebuchte Rechnungen mit offenen Posten könn",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Grenzen",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Rechnungen werden nicht versendet oder gezahlt; sie dokumentieren Ansprüche und Verbindlichkeiten. - Eine Verknüpfung zu Aufträgen und Tickets erfolgt manuell (Freitextfeld oder Ticketreferenz). - Im Parallelbetrieb mit Immoware24 werden Rechnungen nur in der Plattform erfasst ",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Prüfhinweise, Kreditoren und Rechnungspläne (30.09.2026)",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Pflichtangaben: An der Rechnung werden Leistungsort, USt-IdNr. oder Steuernummer des Ausstellers, weitere Anlagen und der Dienstleistervertrag erfasst. Die Checkliste zeigt je Angabe aus PÜ01, ob sie vorhanden ist. Ein Leistungszeitraum, dessen Ende vor dem Beginn liegt, wird n",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kreditoren (Seite Rechnungen, Kreditoren)",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Nach Auswahl des Buchungskreises listet die Seite die Kreditorenkonten mit Saldo. Je Kreditor sind offene Posten und Rechnungen einsehbar, ebenso ein Kontoauszug für einen Zeitraum mit Anfangssaldo, Buchungen (Datum, Beleg, Text, Soll, Haben, Saldo) und Endsaldo. Kreditorenkonten",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rechnungspläne (Seite Rechnungen, Pläne)",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Rechnungspläne erzeugen wiederkehrende Rechnungsentwürfe. Die Liste je Buchungskreis zeigt Leistung, Bruttobetrag, Rhythmus (alle n Monate), nächste Fälligkeit und Status. - \"Entwurf erzeugen\" legt einen ungeprüften Rechnungsentwurf an. Prüfung, Freigabe und Buchung bleiben getre",
+  "file": "docs/handbuch/rechnungen.md"
  },
  {
   "kind": "handbook",
@@ -5433,6 +6063,46 @@
  },
  {
   "kind": "handbook",
+  "title": "Aufträge, Teams, Kommentare und Dokumente (Paket P11)",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Aufträge (/auftraege) stehen alle Arbeitsaufträge mit Filter nach Status, Verweis auf das Ticket und den Auftrag mit Terminvorschlägen. Teams lassen sich über die Schnittstelle ändern und löschen, solange dem Team keine Tickets oder Vorlagen zugeordnet sind. Kommentare am T",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Gespeicherte Filter und Sammelzuweisung (30.09.2026)",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Über der Ticketliste speichert die Leiste Gespeicherte Filter die aktuelle Suche und Filter unter einem Namen; ein Klick auf den Namen stellt sie wieder her. Dieselbe Leiste steht in der Objektliste, der Vertragsliste und der Dokumentenliste. Gespeicherte Filter gehören der angem",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kompaktansicht im Ticket",
+  "source": "Handbuch: Tickets",
+  "href": "/tickets",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Ticket erscheint zur letzten eingegangenen Mail dieselbe Kompaktansicht wie im Postfach (Zusammenfassung, offene Punkte, CRM Hinweis, Antwortvorschlag, Kurz senden mit Freigabe). Details siehe Kapitel Mail.",
+  "file": "docs/handbuch/tickets.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Mängel als Tickets, Ein- und Auszugsdatum",
+  "source": "Handbuch: uebergabeprotokoll",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Im Schritt Mängel legt die Funktion Tickets anlegen je neuem oder ungeklärtem Mangel ein Ticket mit Verweis auf das Protokoll an. Ein zweiter Aufruf legt keine Doppelten an. - Ist bei einer Vermietungsübergabe Richtung Einzug oder Auszug gesetzt, übernimmt der verbindliche Absc",
+  "file": "docs/handbuch/uebergabeprotokoll.md"
+ },
+ {
+  "kind": "handbook",
   "title": "1. Systembeschreibung",
   "source": "Handbuch: Verfahrensdokumentation (Entwurf für den Steuerberater)",
   "href": null,
@@ -5510,6 +6180,66 @@
   "permission": null,
   "excerpt": "Dieses Dokument beschreibt den technischen und organisatorischen Stand des Repositorys am 27.09.2026 (Kapitel 7: 29.09.2026). Es ist keine abschließende Verfahrensdokumentation im Sinne der GoBD und keine Ersatzprüfung durch einen Steuerberater oder Wirtschaftsprüfer (Master-Prom",
   "file": "docs/handbuch/verfahrensdokumentation.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zweck",
+  "source": "Handbuch: Vermietung (Rental Management)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü Vermietung bietet eine Übersicht der Mietverwaltung mit Leerstandsliste und Mieterhöhungen. Aus diesem Menü lassen sich schnell Mietverträge erfassen und Mieterhöhungsfälle starten.",
+  "file": "docs/handbuch/vermietung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vorbedingungen",
+  "source": "Handbuch: Vermietung (Rental Management)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Berechtigung contracts:read und contracts:create für die Erfassung",
+  "file": "docs/handbuch/vermietung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bedienung",
+  "source": "Handbuch: Vermietung (Rental Management)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Das Menü zeigt zwei Bereiche: Leerstandsliste Eine Tabelle mit Spalten: - Einheit: Objekt und Einheitsnummer mit Stichtagszahl der laufenden Mietverträge. - Fläche: in Quadratmetern. - Ausfall ab: Enddatum des letzten Mietvertrags oder heute, wenn keine Verträge aktiv sind. Berec",
+  "file": "docs/handbuch/vermietung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Struktur und Datenquellen",
+  "source": "Handbuch: Vermietung (Rental Management)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Mietverträge werden im CRM unter Verträge gepflegt und werden von hier aus zur Vermietungssicht angezeigt. Im Parallelbetrieb mit Immoware24 stammen Mietverträge aus den Datenübernahmen (Kapitel Datenübernahmen); im Regelbetrieb werden sie im CRM erfasst.",
+  "file": "docs/handbuch/vermietung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Grenzen",
+  "source": "Handbuch: Vermietung (Rental Management)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Leerstandsliste und Mieterhöhungsformular sind nur Orientierung. Tatsächliche Ausfalltage und Mieterhöhungsfristen sind rechtlich zu prüfen. - Weitere Mietvertragsverwaltung (Kautionen, Betriebskosten, Sonderabsprachen) erfolgt im Kapitel Verträge und Abrechnung Miete.",
+  "file": "docs/handbuch/vermietung.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Leerstandsmaßnahmen, Mietspiegel und Interessentenabgleich",
+  "source": "Handbuch: Vermietung (Rental Management)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Leerstandsliste: Je Einheit lassen sich Status, Sollmiete, Kosten je Monat, Wiedervorlage und Notiz erfassen (Schaltfläche Maßnahme). Die entgangene Miete und die Leerstandskosten werden anteilig aus den Monatswerten berechnet (Monatswert x 12 / 365 x Leerstandstage). Fehlt die",
+  "file": "docs/handbuch/vermietung.md"
  },
  {
   "kind": "handbook",
@@ -5619,6 +6349,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Kapitel Buchhaltung: Sollstellungslauf, offene Posten, Mahnwesen. - Kapitel WEG: Wirtschaftsplan und Übernahme der Vorschüsse in die Verträge. - Kapitel Abrechnung Miete: Nutzerzeiträume und Vorauszahlungen.",
+  "file": "docs/handbuch/vertraege.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "SEPA Mandate (Seite Verträge, SEPA Mandate)",
+  "source": "Handbuch: Verträge (Miete, WEG, SEV)",
+  "href": "/vertraege",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Übersicht zeigt alle SEPA Mandate der Verträge mit Referenz, IBAN, Art und Folge, Unterschriftsdatum, Gültigkeit und letzter Verwendung. Filter: Status (aktiv, widerrufen, abgelaufen), Suche nach Referenz oder IBAN, \"Noch nie verwendet\" und \"Läuft innerhalb von 90 Tagen ab\". ",
   "file": "docs/handbuch/vertraege.md"
  },
  {
@@ -5739,6 +6479,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- Für die Gemeinschaft ist noch kein Buchungskreis angelegt: Buchungskreis der GdWE anlegen (Kapitel Buchhaltung). - Keine Einzelbeträge nach Berechnen: Miteigentumsanteile (MEA) der Einheiten fehlen oder gelten nicht für den Zeitraum. - Intern freigeben abgewiesen: Ersteller und",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Beiratsprüfung und Einsicht: Ergänzungen (Stand 30.09.2026)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Hinweis: Diese Funktionen sind zunächst über die Schnittstelle verfügbar, eine Bedienoberfläche im CRM folgt. Prüfauftrag: Im Feld Berechtigungsnachweis wird der Beschluss oder Auftrag des Beirats vermerkt, im Feld Datenstand das Stichtagsdatum der Daten. Beides erscheint im Prüf",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklagen, Kosten aus der Buchhaltung, Einzelabrechnung (Stand 30.09.2026)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Zweckrücklagen legen Sie je Gemeinschaft an (Name, Zweck, Konto). Rücklagenpositionen im Wirtschaftsplan ordnen Sie einer Rücklage zu; Entnahmen, Steuern, Gebühren und Zinsen erfassen Sie je Abrechnung mit Beleg. Die Abrechnung zeigt die Entwicklung je Rücklage. Kostenpositionen ",
   "file": "docs/handbuch/weg.md"
  }
 ]

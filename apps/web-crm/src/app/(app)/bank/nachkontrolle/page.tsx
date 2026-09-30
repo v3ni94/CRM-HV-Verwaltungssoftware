@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
 
+import { AutoPostingDigests } from "@/components/banking/AutoPostingDigests";
 import { AutoPostingReview } from "@/components/banking/AutoPostingReview";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
@@ -24,6 +25,7 @@ export default async function AutoPostingReviewPage() {
         </Link>
       </p>
       <AutoPostingReview canReview={permissions.includes("accounting:review")} canBook={permissions.includes("accounting:create")} />
+      <AutoPostingDigests canReview={permissions.includes("accounting:review")} />
     </div>
   );
 }

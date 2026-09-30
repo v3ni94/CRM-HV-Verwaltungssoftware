@@ -208,3 +208,40 @@ sind vor der Freigabe der Geschäftsführung vorzulegen.
   Berechtigung (Betreiber, `docs/integrations/gmail.md`).
 - **Ältere Mails fehlen nach dem Verbinden**: Posteingang vollständig abrufen starten; der
   Fortschritt steht in der Postfachzeile.
+
+## Kompaktansicht
+
+Über jeder Eingangsmail und oben im Mailverlauf eines Tickets steht ein kompakter Block:
+
+- Zusammenfassung: ein Auszug der ersten Sätze. Mit "Mit KI zusammenfassen" entsteht eine
+  KI-Zusammenfassung, aber nur, wenn ein KI-Anbieter freigegeben ist; sonst bleibt der Auszug.
+- Hinweis aus dem CRM: Kontakt, Objekt, offene Tickets, offene Posten und letzte Vorgänge aus
+  der Zuordnung der Mail, jeweils nur mit dem passenden Leserecht.
+- Antwortvorschlag: der KI-Vorschlag, der Entwurf der Vorbereitung oder die Vorlage. Der Text
+  ist änderbar. "Kurz senden" legt den Entwurf an und reicht ihn zur Freigabe ein; die
+  Vier-Augen-Regel und die Bestätigung beim Freigeben gelten wie beim normalen Versand.
+
+Lange Mailtexte sind eingeklappt, "Vollständig anzeigen" zeigt den ganzen Text.
+
+## HTML-Mails und Newsletter
+
+Der Text einer HTML-Mail wird ohne Formatangaben (CSS), Skripte und Kommentare dargestellt.
+Bereits früher gespeicherte Mails, deren Text mit Angaben wie "body { margin: 0 }" begann,
+werden beim Öffnen automatisch neu aus dem HTML-Teil gelesen.
+
+## IMAP-Postfächer
+
+Postfächer der Art IMAP werden alle zwei Minuten abgerufen; "Jetzt abrufen" startet den Abruf
+sofort. Der Abruf liest nur, auf dem Server bleibt alles unverändert. Beim ersten Abruf werden
+die Mails der letzten 30 Tage übernommen. Kann eine Mail nicht übernommen werden, steht ihre
+Kennung (UID) beim Postfach unter dem letzten Fehler; sie kann als .eml hochgeladen werden.
+Unter "Tonfall KI-Antwort" wird die Stilvorgabe für KI-Antwortentwürfe gewählt, die Vorgabe des
+Standardpostfachs gilt für den ganzen Mandanten.
+
+## Kompaktansicht
+
+Zu einer Mail zeigt die Kompaktansicht eine Zusammenfassung (KI-Zusammenfassung, sonst ein Auszug der ersten Sätze), offene Punkte und einen Hinweis aus dem CRM zu Kontakt und Objekt (offene Tickets, offene Posten mit überfälligem Anteil und Summe, letzte Vorgänge). Ohne freigegebenen KI-Anbieter bleibt es beim Auszug.
+
+- "Mit KI zusammenfassen" erzeugt die Zusammenfassung, sofern ein Anbieter freigegeben ist.
+- Der Antwortvorschlag stammt aus KI-Vorschlag, Mail-Vorbereitung oder Vorlage. "Kurz senden" reicht den Entwurf zur Freigabe ein; Vier-Augen-Regel und Bestätigung gelten wie beim normalen Versand.
+- "Vollständig anzeigen" und "Weniger anzeigen" schalten den Mailtext um.

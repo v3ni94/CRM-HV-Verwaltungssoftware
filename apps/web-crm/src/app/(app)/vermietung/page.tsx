@@ -7,6 +7,7 @@ import { VacancyTable } from "@/components/letting/VacancyTable";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
+import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
 
@@ -31,6 +32,8 @@ export default async function LettingPage() {
     ),
   ]);
   redirectIfUnauthenticated(vac.response);
+  const me = await getMe();
+  const permissions = me.data?.permissions ?? [];
   return (
     <div className="flex flex-col gap-5">
       <PageHeader
@@ -71,7 +74,11 @@ export default async function LettingPage() {
             )}
           </p>
         ) : (
-          <VacancyTable rows={vac.data as never} />
+          <VacancyTable
+            rows={vac.data as never}
+            canEdit={permissions.includes("contracts:update")}
+            canCreateListing={permissions.includes("contracts:create")}
+          />
         )}
       </section>
     </div>

@@ -58,6 +58,17 @@ class DirectDebitSubmitIn(_In):
     reference: str = Field(min_length=1, max_length=140)
 
 
+class DirectDebitBankStatusIn(_In):
+    """Bank feedback per collection (M15-01), entered from the bank's report."""
+
+    status: str = Field(pattern="^(accepted|rejected|collected|returned)$")
+    order_ids: list[uuid.UUID] | None = Field(default=None, min_length=1, max_length=2000)
+    reason: str | None = Field(default=None, max_length=500)
+    reason_code: str | None = Field(default=None, min_length=1, max_length=8)
+    collected_amount: Decimal | None = Field(default=None, gt=0, max_digits=14, decimal_places=2)
+    bank_transaction_id: uuid.UUID | None = None
+
+
 class DirectDebitOrderOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
     id: uuid.UUID
@@ -77,6 +88,9 @@ class DirectDebitOrderOut(BaseModel):
     due_date: date
     pre_notification_document_id: uuid.UUID | None
     pre_notification_dispatch_id: uuid.UUID | None
+    bank_status: str = "open"
+    bank_status_reason_code: str | None = None
+    collected_amount: Decimal | None = None
 
 
 class DirectDebitRunOut(BaseModel):
@@ -402,6 +416,7 @@ async def pre_notifications(
             run,
             principal=principal,
             lead_days=lead_days,
+            today=local_today(),
         )
 
 
@@ -414,3 +429,55 @@ async def list_orders(
         if run is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         return (await _run_out(session, run)).orders
+
+
+@router.post("/{run_id}/bank-status", summary="Bankrückmeldung je Lastschrift erfassen")
+async def bank_status(
+    run_id: uuid.UUID,
+    body: DirectDebitBankStatusIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Records rejection, collection or return per order (M15-01); nothing is posted. A return
+    after settlement shows as a reconciliation finding, corrected by a reversal."""
+    from mhvp.accounting import direct_debit_feedback as feedback
+    from mhvp.accounting.direct_debit_models import DirectDebitOrderStatus
+
+    async with tenant_tx(request, principal) as session:
+        run = await _run(session, run_id)
+        orders = await dd.orders_of(session, run)
+        if body.order_ids is not None:
+            wanted = set(body.order_ids)
+            orders = [o for o in orders if o.id in wanted]
+            if len(orders) != len(wanted):
+                raise ProblemError(ErrorCodes.VALIDATION, detail="Lastschrift nicht im Lauf.")
+        if (body.collected_amount or body.bank_transaction_id) and len(orders) != 1:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Betrag und Bankumsatz nur für eine Lastschrift."
+            )
+        for order in orders:
+            await feedback.apply_status(
+                session,
+                run,
+                order,
+                DirectDebitOrderStatus(body.status),
+                reason=body.reason,
+                reason_code=body.reason_code,
+                collected_amount=body.collected_amount,
+                bank_transaction_id=body.bank_transaction_id,
+                user_id=principal.user_id,
+            )
+        return await feedback.reconciliation(session, run)
+
+
+@router.get("/{run_id}/reconciliation", summary="Abstimmung des Laufs mit den offenen Posten")
+async def reconciliation(
+    run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.accounting import direct_debit_feedback as feedback
+
+    async with tenant_tx(request, principal) as session:
+        run = await session.get(DirectDebitRun, run_id)
+        if run is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return await feedback.reconciliation(session, run)

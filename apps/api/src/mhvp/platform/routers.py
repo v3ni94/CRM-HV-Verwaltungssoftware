@@ -81,6 +81,7 @@ from mhvp.platform.schemas import (
     MemberMobilePhone,
     MemberOut,
     MemberPosition,
+    MemberProperties,
     MemberReplyApproval,
     MemberRoles,
     MemberStatusIn,
@@ -1018,6 +1019,7 @@ async def list_members(
                     Membership.competences,
                     Membership.mobile_phone,
                     Membership.legal_entity_ids,
+                    Membership.property_ids,
                     Membership.reply_approval_required,
                     Membership.reply_approval_reason,
                     Membership.reply_approval_until,
@@ -1056,6 +1058,7 @@ async def list_members(
             last_login_at=r.last_login_at,
             mobile_phone=r.mobile_phone,
             legal_entity_ids=_uuid_list(r.legal_entity_ids),
+            property_ids=_uuid_list(r.property_ids),
             reply_approval_required=r.reply_approval_required,
             reply_approval_reason=r.reply_approval_reason,
             reply_approval_until=r.reply_approval_until,
@@ -1623,6 +1626,57 @@ async def put_member_legal_entities(
             entity_id=membership_id,
             actor_user_id=principal.user_id,
             changes={"legal_entity_ids": {"old": before, "new": sorted(str(x) for x in wanted)}},
+        )
+    return Response(status_code=204)
+
+
+@tenant_router.put(
+    "/members/{membership_id}/properties",
+    status_code=204,
+    summary="Objektzuordnung eines Mitglieds setzen (3.4, M2-02)",
+)
+async def put_member_properties(
+    membership_id: uuid.UUID,
+    body: MemberProperties,
+    request: Request,
+    principal: TenantPrincipal = Depends(require_permission("tenant_settings:update")),
+) -> Response:
+    """docs/rules/M2-02-objektzuordnung.md: a non empty list limits the member (all roles except
+    the administrator roles) to these properties; an empty list removes the limit. Unknown or
+    foreign properties are rejected (RLS shows only the tenant's own)."""
+    from mhvp.properties.models import Property
+
+    wanted = list(dict.fromkeys(body.property_ids))
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+    async with tenant_tx(request, principal) as session:
+        if wanted:
+            known = set(
+                (await session.scalars(select(Property.id).where(Property.id.in_(wanted)))).all()
+            )
+            unknown = [str(x) for x in wanted if x not in known]
+            if unknown:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail=f"Unbekannte Objekte: {', '.join(unknown)}."
+                )
+    async with platform_transaction(sessions(request)) as session:
+        membership = await session.get(Membership, membership_id)
+        if membership is None or membership.tenant_id != principal.tenant_id:
+            raise _not_found()
+        before = sorted(str(x) for x in (membership.property_ids or []))
+        membership.property_ids = [str(x) for x in wanted]
+        membership.updated_by = principal.user_id
+    async with tenant_tx(request, principal) as session:
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="membership.properties_changed",
+            entity_type="membership",
+            entity_id=membership_id,
+            actor_user_id=principal.user_id,
+            changes={"property_ids": {"old": before, "new": sorted(str(x) for x in wanted)}},
         )
     return Response(status_code=204)
 

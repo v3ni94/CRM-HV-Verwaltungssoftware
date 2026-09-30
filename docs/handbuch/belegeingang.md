@@ -178,3 +178,7 @@ Person und der anschließenden Buchung.
   ein Pflichtfeld fehlt, oder eine IBAN wurde eingetragen, aber nicht bestätigt.
 - **Buchen ist nicht auswählbar**: Freigabe durch eine zweite Person fehlt noch, oder die
   Rechnung ist bereits gebucht beziehungsweise storniert.
+
+## Nachweis der E-Rechnung (30.09.2026)
+
+Am Belegentwurf einer E-Rechnung stehen das Profil, das Ergebnis der eigenen Formalprüfung und die Prüfsummen der empfangenen Datei und des eingebetteten XML. Das Ergebnis einer externen Prüfung (zum Beispiel KoSIT) wird mit Prüfprogramm, Version und Ergebnis nachgetragen; es belegt nur die formale Gültigkeit, nicht die Leistung. Weitere Abweichungen zwischen XML und PDF (Netto, Steuer, Datum, Fälligkeit, IBAN) werden als Hinweis an die Rechnung übernommen.

@@ -11,11 +11,14 @@ from datetime import UTC, datetime
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request, Response
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.automation.job_schedule import validate_job
 from mhvp.automation.models import (
     ACTION_TYPES,
+    JOB_CATALOG,
     SETTABLE_TICKET_FIELDS,
     TRIGGER_KINDS,
     TRIGGER_SCHEDULE,
@@ -24,6 +27,7 @@ from mhvp.automation.models import (
     AutomationRule,
     AutomationRun,
     AutomationWebhookDelivery,
+    TenantJobSchedule,
 )
 from mhvp.automation.rules import RELATED_FIELDS, normalise, related_groups
 from mhvp.automation.schedule import FREQUENCIES
@@ -101,6 +105,7 @@ def _rule_out(rule: AutomationRule) -> dict[str, Any]:
         "name": rule.name,
         "description": rule.description,
         "active": rule.active,
+        "test_mode": rule.test_mode,
         "trigger_kind": rule.trigger_kind,
         "trigger_event_type": rule.trigger_event_type,
         "schedule": rule.schedule,
@@ -148,6 +153,15 @@ async def _assert_unique_name(session: AsyncSession, name: str, exclude: uuid.UU
         query = query.where(AutomationRule.id != exclude)
     if await session.scalar(query) is not None:
         raise ProblemError(ErrorCodes.CONFLICT, detail="Eine Regel mit diesem Namen existiert.")
+
+
+@router.get("/rule-templates", summary="Regelvorlagen (Beispiele, nicht aktiv)")
+async def rule_templates(
+    principal: TenantPrincipal = Depends(_read_principal),
+) -> list[dict[str, Any]]:
+    from mhvp.automation.templates import RULE_TEMPLATES
+
+    return [dict(t) for t in RULE_TEMPLATES]
 
 
 @router.get("/meta", summary="Bekannte Ereignistypen, Auslöser und Aktionen")
@@ -425,3 +439,71 @@ async def redeliver_endpoint(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Zustellung nicht gefunden.")
         redeliver_webhook(delivery)
     return Response(status_code=202)
+
+
+# --- job schedules per tenant (S15-03) -----------------------------------------------------
+
+
+class JobScheduleIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: bool = True
+    run_at: str | None = Field(default=None, max_length=5, description="HH:MM, Europe/Berlin")
+
+
+@router.get("/job-schedules", summary="Standardjobs und Zeitpläne des Mandanten")
+async def list_job_schedules(
+    request: Request, principal: TenantPrincipal = Depends(_read_principal)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        rows = {r.job_key: r for r in (await session.scalars(select(TenantJobSchedule))).all()}
+        return [
+            {
+                "job_key": key,
+                "label": label,
+                "enabled": rows[key].enabled if key in rows else True,
+                "run_at": rows[key].run_at if key in rows else None,
+                "configured": key in rows,
+            }
+            for key, label in JOB_CATALOG.items()
+        ]
+
+
+@router.put("/job-schedules/{job_key}", summary="Standardjob des Mandanten konfigurieren")
+async def put_job_schedule(
+    job_key: str,
+    body: JobScheduleIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(MANAGE),
+) -> dict[str, Any]:
+    try:
+        validate_job(job_key, body.run_at)
+    except ValueError as exc:
+        raise ProblemError(ErrorCodes.VALIDATION, detail=str(exc)) from exc
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(TenantJobSchedule).where(TenantJobSchedule.job_key == job_key)
+        )
+        old = {"enabled": row.enabled, "run_at": row.run_at} if row else None
+        if row is None:
+            row = TenantJobSchedule(
+                tenant_id=principal.tenant_id,
+                created_by=principal.user_id,
+                updated_by=principal.user_id,
+                job_key=job_key,
+            )
+            session.add(row)
+        row.enabled, row.run_at = body.enabled, body.run_at
+        row.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="tenant_job_schedule.updated",
+            entity_type="tenant_job_schedule",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload={"job_key": job_key},
+            changes={"old": old, "new": {"enabled": row.enabled, "run_at": row.run_at}},
+        )
+        return {"job_key": job_key, "enabled": row.enabled, "run_at": row.run_at}

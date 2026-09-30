@@ -231,6 +231,7 @@ async def issue(
     billing: TenantBillingSettings | None,
     tenant_id: uuid.UUID,
     user_id: uuid.UUID | None,
+    period: tuple[date, date] | None = None,
 ) -> AdminFeeInvoice:
     """Freeze the issued fee invoice (number, date, amounts, lines, debtor) for the XML."""
     row = AdminFeeInvoice(
@@ -253,6 +254,8 @@ async def issue(
         ),
         invoice_debtor_party_id=fee.invoice_debtor_party_id,
         buyer_reference=(billing.leitweg_id if billing else None),
+        period_start=period[0] if period else None,
+        period_end=period[1] if period else None,
     )
     session.add(row)
     await session.flush()
@@ -755,6 +758,13 @@ async def _issued(session: AsyncSession, invoice_id: uuid.UUID) -> AdminFeeInvoi
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     if row.status not in (AdminFeeInvoiceStatus.ISSUED, AdminFeeInvoiceStatus.RELEASED):
         raise ProblemError(ErrorCodes.XRECHNUNG_NOT_ISSUED)
+    if row.kind != "invoice":
+        # M13-05: a credit note needs its own document type (UBL CreditNote or type code 381);
+        # not implemented and not validated, so no XML is produced (docs/OPEN_QUESTIONS.md).
+        raise ProblemError(
+            ErrorCodes.XRECHNUNG_NOT_ISSUED,
+            detail="Gutschriften werden noch nicht als XRechnung erzeugt.",
+        )
     return row
 
 

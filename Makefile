@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed ai-eval deploy backup backup-verify check-s3
+.PHONY: help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed ai-eval deploy staging-smoke backup backup-verify check-s3
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -80,6 +80,9 @@ ai-eval: ## Offline AI evaluation with recorded answers (no live calls)
 
 deploy: ## Deploy ENV=staging|prod (needs DEPLOY_HOST, DEPLOY_PATH, MHVP_IMAGE_*)
 	ENV=$(ENV) scripts/deploy.sh
+
+staging-smoke: ## Smoke test of the staging stack (needs STAGING_API_URL, STAGING_CRM_URL)
+	scripts/staging-smoke.sh
 
 backup: ## Encrypted pg_dump into BACKUP_DIR (needs PG*, BACKUP_AGE_RECIPIENT)
 	scripts/backup.sh

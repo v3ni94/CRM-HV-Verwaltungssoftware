@@ -110,3 +110,14 @@ Bericht zum Stichtag mit Nulldifferenz) und Umgestellt.
   unterjährige Übernahmen (V19).
 * Die Abrechnungen des Übernahmejahres lesen die Vorperiode aus dem Migrationsjournal noch
   nicht (D11, Folgeschritt in M10 und M14).
+
+## Ausgaben des Übernahmejahres und Abnahmeprotokoll (30.09.2026)
+
+* Jahresansicht: Über `GET /api/v1/imports/migration/ledgers/{id}/year-expenses?year=JJJJ`
+  werden die Ausgaben je Aufwandskonto getrennt nach Vorperiode (Migrationsjournal, vor dem
+  Stichtag) und Nachperiode (aktives Journal, ab dem Stichtag) ausgewiesen. Die Eröffnungsbuchung
+  zählt nicht als Ausgabe. Die Ansicht ist eine Auswertung und keine Abrechnung.
+* Abnahmeprotokoll je Objekt: Prüfumfang, verantwortliche Personen, nicht migrierbare Daten,
+  Rückfallplan und Archivkonzept erfassen, danach durch eine zweite Person unterzeichnen. Ein
+  unterzeichnetes Protokoll bleibt unverändert. Das Protokoll ersetzt keine Freigabe des
+  Wechsels des führenden Systems.

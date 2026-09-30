@@ -9,6 +9,7 @@ import { asAttention, type Attention } from "@/components/tickets/attention";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
+import { SavedFilters } from "@/components/workspace/SavedFilters";
 import { getMe } from "@/lib/me";
 import { problemMessage, type Problem } from "@/lib/problem";
 import { ui } from "@/lib/ui";
@@ -123,6 +124,13 @@ export default async function TicketsPage({ searchParams }: { searchParams: Prom
         <TicketCreate />
       </div>
       <TicketFilters meUserId={meUserId} />
+      <SavedFilters
+        resource="tickets"
+        basePath="/tickets"
+        current={Object.fromEntries(
+          [...FORWARDED_KEYS, "erledigt", "merged"].flatMap((key) => (params[key] ? [[key, params[key] as string]] : [])),
+        )}
+      />
       <div className="flex items-center gap-2 text-sm">
         <Link
           href={`/tickets${mergedToggleQuery.toString() ? `?${mergedToggleQuery.toString()}` : ""}`}

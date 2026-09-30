@@ -88,7 +88,7 @@ Check `https://<api host>/api/v1/health/ready`. Release gates G1 to G5 stay clos
 
     cp infra/systemd/mhvp-*.service infra/systemd/mhvp-*.timer /etc/systemd/system/
     systemctl daemon-reload
-    systemctl enable --now mhvp-backup.timer mhvp-health.timer mhvp-backup-verify.timer
+    systemctl enable --now mhvp-backup.timer mhvp-health.timer mhvp-backup-verify.timer mhvp-wal-offsite.timer
     systemctl start mhvp-backup.service && journalctl -u mhvp-backup -n 20
 
 * Daily 02:15: database dump, age encrypted with checksum, 30 days local retention, then the

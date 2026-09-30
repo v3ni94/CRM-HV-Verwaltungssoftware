@@ -103,6 +103,8 @@ class DocumentCategory(IdMixin, TimestampMixin, TenantMixin, Base):
     name: Mapped[str] = mapped_column(String(200), nullable=False)
     paperless_document_type: Mapped[str | None] = mapped_column(String(128))
     drive_folder: Mapped[str | None] = mapped_column(String(64))
+    # M6-09 (migration 0266): Paperless tag that documents of this category receive.
+    paperless_tag: Mapped[str | None] = mapped_column(String(128))
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     # M35 Stufe 2: objektakte `documents_documentcategory` takeover key (docs/rules/M35-01.md
     # pattern reused for the category catalog, so a repeated import matches instead of
@@ -281,6 +283,10 @@ class DocumentMirror(IdMixin, TimestampMixin, TenantMixin, Base):
     attempts: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     next_attempt_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_error: Mapped[str | None] = mapped_column(Text)
+    # M6-06 (migration 0266): metadata changed in the index, the mirror job pushes it (update_meta).
+    meta_dirty: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=sa_text("false")
+    )
 
 
 class MirrorDeletionAction(StrEnum):

@@ -34,6 +34,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     DateTime,
     ForeignKey,
@@ -77,6 +78,7 @@ DEFAULT_PRICING: tuple[dict[str, Any], ...] = (
     {"kind": "tier", "code": "tier_m", "label": "Stufe M", "min_units": 101, "max_units": 500},
     {"kind": "tier", "code": "tier_l", "label": "Stufe L", "min_units": 501, "max_units": 2000},
     {"kind": "tier", "code": "tier_xl", "label": "Stufe XL", "min_units": 2001, "max_units": None},
+    {"kind": "module", "code": "module_rental", "label": "Zusatzmodul Vermietung"},
     {"kind": "module", "code": "module_hoa", "label": "Zusatzmodul WEG"},
     {"kind": "module", "code": "module_accounting", "label": "Zusatzmodul Buchhaltung"},
     {"kind": "module", "code": "module_banking", "label": "Zusatzmodul Banking"},
@@ -707,6 +709,13 @@ class TenantExportRequest(IdMixin, TimestampMixin, Base):
     decided_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     comment: Mapped[str | None] = mapped_column(Text)
     downloads: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    # Background job of the full export (M27-01); NULL job_status: no job started.
+    job_status: Mapped[str | None] = mapped_column(String(16))
+    job_object_key: Mapped[str | None] = mapped_column(String(512))
+    job_size: Mapped[int | None] = mapped_column(BigInteger)
+    job_sha256: Mapped[str | None] = mapped_column(String(64))
+    job_error: Mapped[str | None] = mapped_column(Text)
+    job_finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class ExportRequestIn(BaseModel):
@@ -734,6 +743,11 @@ def _export_out(row: TenantExportRequest) -> dict[str, Any]:
         "comment": row.comment,
         "downloads": row.downloads,
         "created_at": row.created_at,
+        "job_status": row.job_status,
+        "job_size": row.job_size,
+        "job_sha256": row.job_sha256,
+        "job_error": row.job_error,
+        "job_finished_at": row.job_finished_at,
     }
 
 
@@ -910,6 +924,42 @@ async def build_tenant_export(
     return buffer.getvalue()
 
 
+@router.post(
+    "/tenants/{tenant_id}/export-requests/{request_id}/run",
+    status_code=202,
+    summary="Vollständigen Mandanten-Export als Hintergrundjob starten (nur nach Freigabe)",
+)
+async def run_export(
+    tenant_id: uuid.UUID,
+    request_id: uuid.UUID,
+    request: Request,
+    principal: Principal = Depends(require_platform_admin),
+) -> dict[str, Any]:
+    """Queues the job (M27-01): JSON lines plus document originals. Only an approved request
+    runs; a running or finished job is not started twice, a failed one may be retried."""
+    from mhvp.platform import export_job
+
+    async with tenant_transaction(sessions(request), tenant_id) as session:
+        row = await session.get(TenantExportRequest, request_id)
+        if row is None or row.tenant_id != tenant_id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if row.status != "approved":
+            raise ProblemError(ErrorCodes.GATE_STATE)
+        if row.job_status in (
+            export_job.JOB_QUEUED,
+            export_job.JOB_RUNNING,
+            export_job.JOB_READY,
+        ):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Export-Job bereits gestartet.")
+        row.job_status = export_job.JOB_QUEUED
+        row.job_error = None
+        row.updated_by = principal.user_id
+        await session.flush()
+        out = _export_out(row)
+    export_job.dispatch_export_job(str(request_id), str(tenant_id))
+    return out
+
+
 @router.get(
     "/tenants/{tenant_id}/export-requests/{request_id}/download",
     summary="Mandanten-Export herunterladen (ZIP, nur nach Freigabe)",
@@ -928,9 +978,19 @@ async def download_export(
         if row.status != "approved":
             raise ProblemError(ErrorCodes.GATE_STATE)
         purpose = row.purpose
+        job_status, job_key = row.job_status, row.job_object_key
+        if job_status in ("queued", "running"):
+            raise ProblemError(ErrorCodes.GATE_STATE, detail="Export-Job läuft noch.")
+        if job_status == "failed":
+            raise ProblemError(ErrorCodes.GATE_STATE, detail="Export-Job fehlgeschlagen.")
         row.downloads += 1
         row.updated_by = principal.user_id
-    data = await build_tenant_export(factory, tenant_id, purpose)
+    if job_status == "ready" and job_key:
+        from mhvp.documents.blobs import BlobStore
+
+        data = BlobStore(request.app.state.settings).get(job_key)
+    else:
+        data = await build_tenant_export(factory, tenant_id, purpose)
     async with tenant_transaction(factory, tenant_id) as session:
         await emit(
             session,

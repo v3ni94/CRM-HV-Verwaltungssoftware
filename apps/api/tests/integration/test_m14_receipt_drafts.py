@@ -3,6 +3,7 @@ confirmed), the provider receives masked text (no IBAN, e-mail, phone), the IBAN
 taken over without an explicit confirmation, drafts are tenant separated."""
 
 import asyncio
+import hashlib
 import json
 from collections.abc import Iterator
 from typing import Any
@@ -467,6 +468,41 @@ def test_d41_xrechnung_xml_is_read_without_provider_call_and_objection_blocks_re
     assert draft["conflicts"] == []
     assert draft["findings"] == []
     assert any("belegt keine erbrachte Leistung (D41)" in q for q in draft["questions"])
+    # S711-01, S711-04: variant, own formal check result and hashes of the received file.
+    xml_bytes = _xrechnung(number, supplier)
+    assert draft["original_sha256"] == hashlib.sha256(xml_bytes).hexdigest()
+    assert draft["structured_sha256"] == draft["original_sha256"]
+    assert draft["e_invoice_profile"]
+    assert draft["validation"]["official"] is False
+    assert draft["validation"]["result"] == "ok"
+    assert draft["hybrid_deviations"] == []
+    recorded = _ok(
+        client.post(
+            f"{R}/drafts/{draft['id']}/validation",
+            json={
+                "validator": "KoSIT Validator",
+                "validator_version": "1.5.0",
+                "configuration": "xrechnung 3.0.2",
+                "result": "valid",
+            },
+            headers=admin,
+        )
+    )
+    assert recorded["validation"]["official"] is True
+    assert recorded["validation"]["validator_version"] == "1.5.0"
+    assert recorded["validation"]["formal"]["validator"] == "mhvp-formal-check"
+    bad = client.post(
+        f"{R}/drafts/{draft['id']}/validation",
+        json={"validator": "KoSIT", "validator_version": "1", "result": "maybe"},
+        headers=admin,
+    )
+    assert bad.status_code == 422
+    foreign = client.post(
+        f"{R}/drafts/{draft['id']}/validation",
+        json={"validator": "KoSIT", "validator_version": "1", "result": "valid"},
+        headers=bearer(login(client, world, "rcother")),
+    )
+    assert foreign.status_code == 404
     # Supplier candidates come from the local duplicate search by name (several test
     # contacts share the name within one run).
     assert provider in {c["contact_id"] for c in draft["supplier_candidates"]}

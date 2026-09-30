@@ -36,6 +36,8 @@ export type Mailbox = {
   gmail_state_reconcile_status?: string;
   gmail_state_reconcile_counts?: Record<string, number>;
   sync_back_warning?: boolean;
+  // Stilvorgaben für KI-Antwortentwürfe (M20-02).
+  reply_style?: { tone?: string; rules?: string };
 };
 export type ReconcilePreview = {
   checked: number;
@@ -146,7 +148,7 @@ function MailboxRow({
         else onChange({ ...box, gmail_state_reconcile_status: "queued" });
       },
     );
-  const patch = (body: Partial<Pick<Mailbox, "enabled" | "is_default" | "calendar_enabled" | "sync_back_enabled">>) =>
+  const patch = (body: Partial<Pick<Mailbox, "enabled" | "is_default" | "calendar_enabled" | "sync_back_enabled" | "reply_style">>) =>
     run<Mailbox>(() => bff(`/api/bff/mail/mailboxes/${box.id}`, { method: "PATCH", body: JSON.stringify(body) }), onChange);
   const toggleUser = (userId: string, on: boolean) => {
     const user_ids = on ? [...box.user_ids, userId] : box.user_ids.filter((u) => u !== userId);
@@ -244,11 +246,25 @@ function MailboxRow({
             {t("syncBackEnabled")}
           </label>
         ) : null}
-        {box.kind === "gmail" ? (
+        {box.kind === "gmail" || box.kind === "imap" ? (
           <button type="button" className={ui.button} disabled={busy} onClick={() => void sync()}>
             {t("syncNow")}
           </button>
         ) : null}
+        <label className="flex items-center gap-1.5" title={t("replyToneHint")}>
+          {t("replyTone")}
+          <select
+            className={ui.input}
+            value={box.reply_style?.tone ?? "sachlich"}
+            disabled={busy}
+            onChange={(e) => void patch({ reply_style: { ...(box.reply_style ?? {}), tone: e.target.value } })}
+            data-testid="reply-tone"
+          >
+            <option value="formell">{t("replyToneFormell")}</option>
+            <option value="sachlich">{t("replyToneSachlich")}</option>
+            <option value="freundlich">{t("replyToneFreundlich")}</option>
+          </select>
+        </label>
         {box.kind === "gmail" ? (
           <button type="button" className={ui.button} disabled={busy} onClick={() => void reconcile(true)} data-testid="reconcile-preview">
             {t("reconcilePreview")}

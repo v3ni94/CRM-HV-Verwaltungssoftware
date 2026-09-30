@@ -6,7 +6,7 @@ Declaring the platform as leading system requires release gate G1 (18.0, 6.9.10)
 
 import uuid
 from collections.abc import Sequence
-from datetime import date
+from datetime import date, timedelta
 from decimal import Decimal
 from typing import Any
 from urllib.parse import quote
@@ -19,15 +19,19 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.accounting import (
     chart_release,
+    creditor_routers,
     dunning,
     dunning_letters,
+    invoice_checks,
     invoices,
+    ledger_ops,
     numbering,
     receivables,
     reports,
     settlement,
     tax,
     xrechnung,
+    xrechnung_credit,
 )
 from mhvp.accounting import services as svc
 from mhvp.accounting.models import (
@@ -61,6 +65,12 @@ from mhvp.accounting.models import (
 )
 from mhvp.accounting.schemas import (
     AccountIn,
+    AccountingAllocationIn,
+    AccountingAllocationItemOut,
+    AccountingAllocationOut,
+    AccountingCostTransferIn,
+    AccountingCreditorSyncOut,
+    AccountingInterestIn,
     AccountOut,
     AccountPatch,
     ChartTemplateOut,
@@ -674,6 +684,140 @@ async def reverse_entry(
         return await _out(session, reversal)
 
 
+# M10-01 allocation, M10-05 creditors, M10-06 cost transfer and interest -----------------
+
+
+async def _allocation_out(session: AsyncSession, account: LedgerAccount) -> AccountingAllocationOut:
+    rows = await ledger_ops.allocations(session, account)
+    items = [
+        AccountingAllocationItemOut(
+            allocation_key_id=row.allocation_key_id,
+            code=code,
+            name=name,
+            share_percent=row.share_percent,
+        )
+        for row, code, name in rows
+    ]
+    return AccountingAllocationOut(
+        ledger_account_id=account.id,
+        items=items,
+        total_percent=sum((i.share_percent for i in items), Decimal("0")),
+    )
+
+
+@router.get(
+    "/ledgers/{ledger_id}/accounts/{account_id}/allocations",
+    summary="Verteilung eines Kostenkontos auf Umlageschlüssel",
+)
+async def get_allocations(
+    ledger_id: uuid.UUID,
+    account_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> AccountingAllocationOut:
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        account = await ledger_ops.ledger_account(session, ledger, account_id)
+        return await _allocation_out(session, account)
+
+
+@router.put(
+    "/ledgers/{ledger_id}/accounts/{account_id}/allocations",
+    summary="Verteilung festlegen (Summe genau 100 %)",
+)
+async def put_allocations(
+    ledger_id: uuid.UUID,
+    account_id: uuid.UUID,
+    body: AccountingAllocationIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> AccountingAllocationOut:
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        account = await ledger_ops.ledger_account(session, ledger, account_id)
+        await ledger_ops.replace_allocations(
+            session,
+            ledger,
+            account,
+            [(i.allocation_key_id, i.share_percent) for i in body.items],
+        )
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ledger_account.allocation_changed",
+            entity_type="ledger_account",
+            entity_id=account.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "items": [
+                    {"allocation_key_id": str(i.allocation_key_id), "share": str(i.share_percent)}
+                    for i in body.items
+                ]
+            },
+        )
+        return await _allocation_out(session, account)
+
+
+@router.post(
+    "/ledgers/{ledger_id}/sync-creditors",
+    summary="Kreditorenkonten aus Dienstleisterverhältnissen anlegen",
+)
+async def sync_creditors(
+    ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(CREATE)
+) -> AccountingCreditorSyncOut:
+    async with tenant_tx(request, principal) as session:
+        created, linked = await ledger_ops.sync_creditor_accounts(
+            session, await _ledger(session, ledger_id)
+        )
+        return AccountingCreditorSyncOut(created=created, linked=linked)
+
+
+@router.post(
+    "/ledgers/{ledger_id}/entries/cost-transfer",
+    status_code=201,
+    summary="Kostenkorrektur als Entwurf",
+)
+async def create_cost_transfer(
+    ledger_id: uuid.UUID,
+    body: AccountingCostTransferIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> EntryOut:
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        entry = await ledger_ops.cost_transfer_draft(
+            session,
+            ledger,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            **body.model_dump(),
+        )
+        return await _out(session, entry)
+
+
+@router.post(
+    "/ledgers/{ledger_id}/entries/interest",
+    status_code=201,
+    summary="Zinsbuchung als Entwurf",
+)
+async def create_interest(
+    ledger_id: uuid.UUID,
+    body: AccountingInterestIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> EntryOut:
+    async with tenant_tx(request, principal) as session:
+        ledger = await _ledger(session, ledger_id)
+        entry = await ledger_ops.interest_draft(
+            session,
+            ledger,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            **body.model_dump(),
+        )
+        return await _out(session, entry)
+
+
 # Reports ------------------------------------------------------------------------------
 
 
@@ -895,6 +1039,7 @@ def _run_out(run: ReceivableRun, items: list[ReceivableItem]) -> dict[str, Any]:
         "posted_at": run.posted_at,
         "items": [
             {
+                "id": i.id,
                 "contract_id": i.contract_id,
                 "payment_type_code": i.payment_type_code,
                 "amount": i.amount,
@@ -907,6 +1052,14 @@ def _run_out(run: ReceivableRun, items: list[ReceivableItem]) -> dict[str, Any]:
                 "status": i.status.value,
                 "message": i.message,
                 "journal_entry_id": i.journal_entry_id,
+                "contract_payment_id": i.contract_payment_id,
+                "contract_version": i.contract_version,
+                "payment_schedule_id": i.payment_schedule_id,
+                "basis_valid_from": i.basis_valid_from,
+                "basis_reason": i.basis_reason,
+                "basis_document_id": i.basis_document_id,
+                "difference_of_item_id": i.difference_of_item_id,
+                "difference_amount": i.difference_amount,
             }
             for i in items
         ],
@@ -983,13 +1136,71 @@ async def preview_run(
         return _run_out(run, await _items(session, run.id))
 
 
+@router.get("/receivable-runs", summary="Sollstellungsläufe", responses=PAGE_HEADERS)
+async def list_runs(
+    request: Request,
+    response: Response,
+    period_month: date | None = None,
+    scope: str | None = Query(default=None, pattern="^(all|property|contract)$"),
+    scope_id: uuid.UUID | None = None,
+    status: str | None = Query(default=None, pattern="^(preview|posted|reversed)$"),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=50, ge=1, le=500),
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    """M13-08: earlier runs per month and scope, newest first, without items."""
+    async with tenant_tx(request, principal) as session:
+        query = select(ReceivableRun)
+        if period_month is not None:
+            query = query.where(ReceivableRun.period_month == period_month.replace(day=1))
+        if scope is not None:
+            query = query.where(ReceivableRun.scope == scope)
+        if scope_id is not None:
+            query = query.where(ReceivableRun.scope_id == scope_id)
+        if status is not None:
+            query = query.where(ReceivableRun.status == status)
+        query = query.order_by(ReceivableRun.period_month.desc(), ReceivableRun.created_at.desc())
+        rows = await paginate(
+            session, query, response, page=page, page_size=page_size, limit=page_size
+        )
+        return [
+            {
+                "id": r.id,
+                "period_month": r.period_month,
+                "scope": r.scope,
+                "scope_id": r.scope_id,
+                "status": r.status.value,
+                "totals": r.totals,
+                "created_at": r.created_at,
+                "created_by": r.created_by,
+                "posted_at": r.posted_at,
+            }
+            for r in rows
+        ]
+
+
 @router.get("/receivable-runs/{run_id}", summary="Sollstellungslauf")
 async def get_run(
-    run_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    run_id: uuid.UUID,
+    request: Request,
+    item_status: str | None = Query(
+        default=None, pattern="^(ready|manual|blocked|posted|reversed)$"
+    ),
+    contract_id: uuid.UUID | None = None,
+    payment_type_code: str | None = Query(default=None, max_length=63),
+    principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
+    """Items can be filtered by status, contract and payment type (M13-08)."""
     async with tenant_tx(request, principal) as session:
         run = await _get(session, ReceivableRun, run_id)
-        return _run_out(run, await _items(session, run.id))
+        items = [
+            i
+            for i in await _items(session, run.id)
+            if (item_status is None or i.status.value == item_status)
+            and (contract_id is None or i.contract_id == contract_id)
+            and (payment_type_code is None or i.payment_type_code == payment_type_code)
+        ]
+        return _run_out(run, items)
 
 
 @router.post("/receivable-runs/{run_id}/post", summary="Sollstellungslauf buchen")
@@ -1087,15 +1298,30 @@ async def fee_issue(
     fee_id: uuid.UUID,
     request: Request,
     invoice_date: date | None = None,
+    period_start: date | None = None,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> dict[str, Any]:
     """Allocates the gapless PREFIX-JJJJ-000001 invoice number (M13-04) and blocks when the
-    tenant's VAT status or tax data required for XRechnung is missing."""
+    tenant's VAT status or tax data required for XRechnung is missing. With ``period_start``
+    the invoice covers the service period of the fee interval containing that day (M13-06);
+    a period is invoiced once while the invoice is not cancelled (409)."""
+    from mhvp.accounting import admin_fees
     from mhvp.platform.models import TenantBillingSettings
 
     async with tenant_tx(request, principal) as session:
-        fee = await _get(session, AdminFeeSetting, fee_id)
+        fee = await session.get(AdminFeeSetting, fee_id, with_for_update=True)
+        if fee is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         issue_date = invoice_date or local_today()
+        period: tuple[date, date] | None = None
+        if period_start is not None:
+            period = admin_fees.period_for(fee.interval, period_start)
+            admin_fees.check_period(fee, *period)
+            if await admin_fees.issued_for_period(session, fee.id, period[0]) is not None:
+                raise ProblemError(
+                    ErrorCodes.CONFLICT,
+                    detail="Für diesen Leistungszeitraum ist bereits eine Rechnung ausgestellt.",
+                )
         counts = await receivables.fee_unit_counts(session, fee, issue_date)
         draft = await receivables.admin_fee_draft(session, fee, counts)
         billing_settings = await session.scalar(
@@ -1118,8 +1344,11 @@ async def fee_issue(
             billing=billing_settings,
             tenant_id=principal.tenant_id,
             user_id=principal.user_id,
+            period=period,
         )
         draft["id"] = str(issued.id)
+        draft["period_start"] = period[0] if period else None
+        draft["period_end"] = period[1] if period else None
         draft["number"] = number
         draft["invoice_date"] = issue_date
         draft["status"] = issued.status.value
@@ -1191,6 +1420,28 @@ class InvoiceIn(BaseModel):
     deductions: list[dict[str, Any]] = Field(default_factory=list, max_length=50)
     supersedes_id: uuid.UUID | None = None
     lines: list[InvoiceLineIn] = Field(min_length=1, max_length=200)
+    # M14-01 to M14-09 (migration 0252, docs/rules/M14-PU.md)
+    service_contract_id: uuid.UUID | None = None
+    reference_invoice_id: uuid.UUID | None = Field(
+        default=None, description="Pflicht bei kind=credit_note: Ursprungsrechnung"
+    )
+    service_place: str | None = Field(default=None, max_length=200)
+    issuer_vat_id: str | None = Field(default=None, max_length=20)
+    issuer_tax_number: str | None = Field(default=None, max_length=30)
+    attachment_document_ids: list[uuid.UUID] = Field(default_factory=list, max_length=50)
+    discount_amount: Decimal | None = Field(default=None, ge=0)
+    prepaid_amount: Decimal | None = Field(default=None, ge=0)
+    retention_amount: Decimal | None = Field(default=None, ge=0)
+    reverse_charge: bool = False
+    construction_withholding: bool = False
+    input_tax_deductible: bool | None = None
+
+
+class InvoiceReviewedItemIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    kind: str = Field(pattern="^(page|line|attachment)$")
+    ref: str = Field(min_length=1, max_length=100)
+    note: str | None = Field(default=None, max_length=500)
 
 
 class InvoiceReviewIn(BaseModel):
@@ -1199,6 +1450,26 @@ class InvoiceReviewIn(BaseModel):
     result: str = Field(pattern="^(ok|query|objected|reservation)$")
     reason: str = Field(min_length=3, max_length=4000)
     scope: str | None = Field(default=None, max_length=2000)
+    # M14-07: delegation proof (who delegated the step and why) and structured scope.
+    delegated_by: uuid.UUID | None = None
+    delegation_reason: str | None = Field(default=None, min_length=3, max_length=2000)
+    reviewed_items: list[InvoiceReviewedItemIn] = Field(default_factory=list, max_length=500)
+
+
+def _invoice_payload(body: InvoiceIn) -> dict[str, Any]:
+    """Column values of the body; a credit note needs its original (M14-09, S711-02)."""
+    if body.kind is InvoiceKind.CREDIT_NOTE and body.reference_invoice_id is None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Eine Gutschrift braucht den Bezug zur Ursprungsrechnung.",
+        )
+    if body.service_from and body.service_to and body.service_to < body.service_from:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Leistungszeitraum: Ende liegt vor dem Beginn."
+        )
+    data = body.model_dump(exclude={"lines", "payee_iban"})
+    data["attachment_document_ids"] = [str(d) for d in body.attachment_document_ids]
+    return data
 
 
 def _invoice_out(
@@ -1230,6 +1501,27 @@ def _invoice_out(
         "journal_entry_id": inv.journal_entry_id,
         "version": inv.version,
         "findings": inv.findings,
+        "service_from": inv.service_from,
+        "service_to": inv.service_to,
+        "order_reference": inv.order_reference,
+        "service_contract_id": inv.service_contract_id,
+        "recurring_plan_id": inv.recurring_plan_id,
+        "reference_invoice_id": inv.reference_invoice_id,
+        "service_place": inv.service_place,
+        "issuer_vat_id": inv.issuer_vat_id,
+        "issuer_tax_number": inv.issuer_tax_number,
+        "attachment_document_ids": inv.attachment_document_ids,
+        "discount_amount": inv.discount_amount,
+        "discount_expected": invoice_checks.stated_discount(inv),
+        "prepaid_amount": inv.prepaid_amount,
+        "retention_amount": inv.retention_amount,
+        "payable_amount": invoice_checks.payable_amount(
+            inv, sum((Decimal(str(d.get("gross", "0"))) for d in inv.deductions), Decimal("0.00"))
+        ),
+        "reverse_charge": inv.reverse_charge,
+        "construction_withholding": inv.construction_withholding,
+        "input_tax_deductible": inv.input_tax_deductible,
+        "mandatory_checklist": invoice_checks.mandatory_checklist(inv),
         "lines": [
             {
                 "id": ln.id,  # M14-04: § 35a markers are set per line (tax_routers)
@@ -1249,6 +1541,10 @@ def _invoice_out(
                 "user_id": r.user_id,
                 "version": r.invoice_version,
                 "decided_at": r.decided_at,
+                "scope": r.scope,
+                "delegated_by": r.delegated_by,
+                "delegation_reason": r.delegation_reason,
+                "reviewed_items": r.reviewed_items,
             }
             for r in reviews
         ],
@@ -1299,7 +1595,7 @@ async def create_invoice(
         inv = Invoice(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
-            **body.model_dump(exclude={"lines", "payee_iban"}),
+            **_invoice_payload(body),
         )
         await invoices.write(session, inv, [ln.model_dump() for ln in body.lines], body.payee_iban)
         return await _invoice_full(session, inv)
@@ -1320,7 +1616,7 @@ async def update_invoice(
                 detail="Gebuchte Rechnungen werden per Storno korrigiert.",
             )
         before_iban = inv.payee_iban_fingerprint
-        for key, value in body.model_dump(exclude={"lines", "payee_iban"}).items():
+        for key, value in _invoice_payload(body).items():
             setattr(inv, key, value)
         inv.version += 1
         inv.review_status = ReviewStatus.OPEN  # reviews refer to the old version (PÜ05)
@@ -1398,13 +1694,23 @@ async def review_invoice(
             raise ProblemError(ErrorCodes.CONFLICT, detail="Die Rechnung ist bereits gebucht.")
         if principal.user_id is None:
             raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Reviews need a person.")
+        if (body.delegated_by is None) != (body.delegation_reason is None):
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Delegation braucht delegierende Person und Vertretungsgrund.",
+            )
+        if body.delegated_by is not None and body.delegated_by == principal.user_id:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Eine Person kann nicht an sich selbst delegieren."
+            )
         session.add(
             InvoiceReview(
                 tenant_id=principal.tenant_id,
                 invoice_id=inv.id,
                 invoice_version=inv.version,
                 user_id=principal.user_id,
-                **body.model_dump(),
+                **body.model_dump(exclude={"reviewed_items"}),
+                reviewed_items=[i.model_dump() for i in body.reviewed_items],
             )
         )
         await session.flush()
@@ -1505,7 +1811,9 @@ async def invoice_discount(
         if inv is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         value = invoices.discount(inv, pay_date)
-        return {"discount": value, "payable": inv.gross - value}
+        # PÜ03: prepayments and the security retention reduce the amount to pay (M14-04).
+        base = invoice_checks.payable_amount(inv, Decimal("0.00"))
+        return {"discount": value, "payable": base - value}
 
 
 class PlanIn(BaseModel):
@@ -1518,6 +1826,10 @@ class PlanIn(BaseModel):
     start_date: date
     end_date: date | None = None
     text: str = Field(min_length=1, max_length=300)
+    # M14-01 (migration 0252): contract link, order reference and VAT rate of the plan.
+    service_contract_id: uuid.UUID | None = None
+    order_reference: str | None = Field(default=None, max_length=100)
+    vat_percent: Decimal = Field(default=Decimal(0), ge=0, le=100)
 
 
 @router.post("/recurring-invoices", status_code=201, summary="Rechnungsplan anlegen")
@@ -1529,10 +1841,14 @@ async def create_plan(
         account = await _get(session, LedgerAccount, body.account_id)
         if account.ledger_id != ledger.id:
             raise ProblemError(ErrorCodes.ACC_WRONG_ENTITY)
+        await creditor_routers.check_contract(
+            session, body.service_contract_id, body.provider_contact_id
+        )
         plan = RecurringInvoicePlan(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             next_due=body.start_date,
+            anchor_day=body.start_date.day,
             **body.model_dump(),
         )
         session.add(plan)
@@ -1553,32 +1869,46 @@ async def generate_plan(
         plan = await session.get(RecurringInvoicePlan, plan_id, with_for_update=True)
         if plan is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        if plan.end_date is not None and plan.next_due > plan.end_date:
+        if plan.ended_at is not None or (
+            plan.end_date is not None and plan.next_due > plan.end_date
+        ):
             raise ProblemError(ErrorCodes.CONFLICT, detail="Der Rechnungsplan ist beendet.")
+        following = creditor_routers.next_due(plan)
+        net, vat = creditor_routers.split_gross(plan.gross, plan.vat_percent)
         inv = Invoice(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             ledger_id=plan.ledger_id,
             provider_contact_id=plan.provider_contact_id,
             kind=InvoiceKind.RECURRING,
-            number=f"PLAN-{plan.id.hex[:8]}-{plan.next_due:%Y%m}",
+            # UUID v7: the leading hex digits are the creation time, the tail is random.
+            number=f"PLAN-{plan.id.hex[-8:]}-{plan.next_due:%Y%m%d}",
+            recurring_plan_id=plan.id,
             invoice_date=plan.next_due,
             due_date=plan.next_due,
             service_from=plan.next_due,
-            net=plan.gross,
-            vat=Decimal("0.00"),
+            service_to=following - timedelta(days=1),  # M14-01: full service period
+            net=net,
+            vat=vat,
             gross=plan.gross,
+            order_reference=plan.order_reference,
+            service_contract_id=plan.service_contract_id,
         )
         await invoices.write(
             session,
             inv,
-            [{"account_id": plan.account_id, "net": plan.gross, "text": plan.text}],
+            [
+                {
+                    "account_id": plan.account_id,
+                    "net": net,
+                    "vat_percent": plan.vat_percent,
+                    "vat": vat,
+                    "text": plan.text,
+                }
+            ],
             None,
         )
-        month = plan.next_due.month - 1 + plan.interval_months
-        plan.next_due = plan.next_due.replace(
-            year=plan.next_due.year + month // 12, month=month % 12 + 1
-        )
+        plan.next_due = following
         await session.flush()
         return await _invoice_full(session, inv)
 
@@ -2110,7 +2440,284 @@ async def _case_out(session: AsyncSession, case: DunningCase) -> dict[str, Any]:
         "delivered_at": case.delivered_at,
         "letter_document_id": case.letter_document_id,
         "warnings": dunning.case_warnings(case),
+        "interest_detail": case.interest_detail,
+        "interest_entry_id": case.interest_entry_id,
+        "interest_spread_suggestion": await _case_spread_suggestion(session, case),
+        "check_hints": dunning.case_check_hints(case, local_today()),
+        "delivery_proofs": [_proof_out(p) for p in await dunning.delivery_proofs(session, case.id)],
     }
+
+
+async def _case_spread_suggestion(session: AsyncSession, case: DunningCase) -> dict[str, Any]:
+    """Zinsaufschlag proposal from the debtor's consumer flag (M16-06), never applied."""
+    from mhvp.contacts import recipients
+    from mhvp.contacts.models import Contact
+    from mhvp.contracts.models import Contract
+
+    is_consumer: bool | None = None
+    contract = await session.get(Contract, case.contract_id) if case.contract_id else None
+    if contract is not None:
+        debtor_id = await recipients.debtor_contact_id(session, contract.party_id)
+        contact = await session.get(Contact, debtor_id) if debtor_id else None
+        is_consumer = contact.is_consumer if contact is not None else None
+    return dunning.spread_suggestion(is_consumer)
+
+
+def _proof_out(proof: Any) -> dict[str, Any]:
+    return {
+        "id": proof.id,
+        "case_id": proof.case_id,
+        "kind": proof.kind,
+        "proof_date": proof.proof_date,
+        "reference": proof.reference,
+        "document_id": proof.document_id,
+        "note": proof.note,
+        "created_by": proof.created_by,
+        "created_at": proof.created_at,
+    }
+
+
+class DunningDeliveryProofIn(BaseModel):
+    """Zustellnachweis zu einem versendeten Mahnfall (M16-01)."""
+
+    model_config = ConfigDict(extra="forbid")
+    kind: str = Field(
+        pattern="^(registered_mail|postal_receipt|email_receipt|portal_receipt|other)$"
+    )
+    proof_date: date
+    reference: str | None = Field(default=None, max_length=200)
+    document_id: uuid.UUID | None = None
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class DunningItemBlockIn(BaseModel):
+    """Strukturierte Mahnsperre je Posten (M16-03)."""
+
+    model_config = ConfigDict(extra="forbid")
+    reason_code: str = Field(pattern="^(installment_plan|disputed|set_off|litigation|insolvency)$")
+    note: str | None = Field(default=None, max_length=2000)
+
+
+class DunningInterestRateIn(BaseModel):
+    """Basiszinssatz mit Gültigkeitsbeginn und Quelle (M16-02)."""
+
+    model_config = ConfigDict(extra="forbid")
+    valid_from: date
+    base_rate: Decimal = Field(ge=Decimal("-100"), le=Decimal("100"), decimal_places=8)
+    source: str = Field(min_length=3, max_length=400)
+
+
+@router.post(
+    "/dunning-cases/{case_id}/delivery-proofs",
+    status_code=201,
+    summary="Zustellnachweis zum Mahnfall erfassen (Einschreiben, Post, E-Mail, Portal)",
+)
+async def dunning_add_delivery_proof(
+    case_id: uuid.UUID,
+    body: DunningDeliveryProofIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(DunningCase, case_id, with_for_update=True)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        proof = await dunning.add_delivery_proof(
+            session,
+            case,
+            kind=body.kind,
+            proof_date=body.proof_date,
+            reference=body.reference,
+            document_id=body.document_id,
+            note=body.note,
+            user_id=principal.user_id,
+        )
+        return _proof_out(proof)
+
+
+@router.get("/dunning-cases/{case_id}/delivery-proofs", summary="Zustellnachweise eines Mahnfalls")
+async def dunning_list_delivery_proofs(
+    case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    async with tenant_tx(request, principal) as session:
+        if await session.get(DunningCase, case_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return [_proof_out(p) for p in await dunning.delivery_proofs(session, case_id)]
+
+
+@router.post(
+    "/dunning-cases/{case_id}/interest-draft",
+    status_code=201,
+    summary="Verzugszinsen als Sollstellungsentwurf anlegen (Freigabe über Vier-Augen-Buchung)",
+)
+async def dunning_interest_draft(
+    case_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="Needs a person.")
+    async with tenant_tx(request, principal) as session:
+        case = await session.get(DunningCase, case_id, with_for_update=True)
+        if case is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        entry = await dunning.create_interest_draft(session, case, principal.user_id)
+        return {
+            "case_id": case.id,
+            "entry_id": entry.id,
+            "status": entry.status,
+            "amount": case.interest_amount,
+            "interest_detail": case.interest_detail,
+            "hinweis": (
+                "Entwurf, keine Buchung. Freigabe über die Vier-Augen-Buchung, nur mit "
+                "geöffnetem G1; Zinssatz und Anspruchsgrundlage durch Rechtsanwalt prüfen."
+            ),
+        }
+
+
+def _block_out(block: Any) -> dict[str, Any]:
+    return {
+        "id": block.id,
+        "open_item_id": block.open_item_id,
+        "reason_code": block.reason_code,
+        "reason_label": dunning.BLOCK_REASON_LABELS.get(block.reason_code),
+        "note": block.note,
+        "active": block.released_at is None,
+        "created_by": block.created_by,
+        "created_at": block.created_at,
+        "released_at": block.released_at,
+        "released_by": block.released_by,
+    }
+
+
+@router.post(
+    "/open-items/{open_item_id}/dunning-blocks",
+    status_code=201,
+    summary="Mahnsperre je Posten setzen (Ratenplan, bestritten, Aufrechnung, Prozess, Insolvenz)",
+)
+async def dunning_block_create(
+    open_item_id: uuid.UUID,
+    body: DunningItemBlockIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    from mhvp.accounting.models import DunningItemBlock
+
+    async with tenant_tx(request, principal) as session:
+        if await session.get(OpenItem, open_item_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        block = DunningItemBlock(
+            tenant_id=principal.tenant_id,
+            open_item_id=open_item_id,
+            reason_code=body.reason_code,
+            note=body.note,
+            created_by=principal.user_id,
+        )
+        session.add(block)
+        await session.flush()
+        return _block_out(block)
+
+
+@router.get("/dunning-blocks", summary="Mahnsperren je Posten")
+async def dunning_block_list(
+    request: Request,
+    open_item_id: uuid.UUID | None = None,
+    active: bool | None = None,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[dict[str, Any]]:
+    from mhvp.accounting.models import DunningItemBlock
+
+    async with tenant_tx(request, principal) as session:
+        query = select(DunningItemBlock).order_by(DunningItemBlock.created_at.desc())
+        if open_item_id is not None:
+            query = query.where(DunningItemBlock.open_item_id == open_item_id)
+        if active is not None:
+            query = query.where(
+                DunningItemBlock.released_at.is_(None)
+                if active
+                else DunningItemBlock.released_at.is_not(None)
+            )
+        return [_block_out(b) for b in (await session.scalars(query.limit(500))).all()]
+
+
+@router.post("/dunning-blocks/{block_id}/release", summary="Mahnsperre je Posten aufheben")
+async def dunning_block_release(
+    block_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    from datetime import UTC, datetime
+
+    from mhvp.accounting.models import DunningItemBlock
+
+    async with tenant_tx(request, principal) as session:
+        block = await session.get(DunningItemBlock, block_id, with_for_update=True)
+        if block is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if block.released_at is not None:
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Die Sperre ist bereits aufgehoben.")
+        block.released_at = datetime.now(UTC)
+        block.released_by = principal.user_id
+        block.updated_by = principal.user_id
+        await session.flush()
+        return _block_out(block)
+
+
+def _rate_out(rate: Any) -> dict[str, Any]:
+    return {
+        "id": rate.id,
+        "valid_from": rate.valid_from,
+        "base_rate": rate.base_rate,
+        "source": rate.source,
+        "created_by": rate.created_by,
+        "created_at": rate.created_at,
+    }
+
+
+@router.get("/dunning-interest-rates", summary="Basiszinssätze mit Gültigkeitszeitraum")
+async def dunning_interest_rates(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[dict[str, Any]]:
+    from mhvp.accounting.models import DunningInterestRate
+
+    async with tenant_tx(request, principal) as session:
+        rows = (
+            await session.scalars(
+                select(DunningInterestRate).order_by(DunningInterestRate.valid_from)
+            )
+        ).all()
+        out = [_rate_out(r) for r in rows]
+        for idx, item in enumerate(out):
+            nxt = rows[idx + 1].valid_from if idx + 1 < len(rows) else None
+            item["valid_to"] = nxt - timedelta(days=1) if nxt else None
+        return out
+
+
+@router.post(
+    "/dunning-interest-rates",
+    status_code=201,
+    summary="Basiszinssatz ab Gültigkeitsbeginn mit Quelle erfassen",
+)
+async def dunning_interest_rate_create(
+    body: DunningInterestRateIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
+) -> dict[str, Any]:
+    from mhvp.accounting.models import DunningInterestRate
+
+    async with tenant_tx(request, principal) as session:
+        exists = await session.scalar(
+            select(DunningInterestRate).where(DunningInterestRate.valid_from == body.valid_from)
+        )
+        if exists is not None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Für diesen Gültigkeitsbeginn ist bereits ein Satz erfasst.",
+            )
+        rate = DunningInterestRate(
+            tenant_id=principal.tenant_id,
+            valid_from=body.valid_from,
+            base_rate=body.base_rate,
+            source=body.source,
+            created_by=principal.user_id,
+        )
+        session.add(rate)
+        await session.flush()
+        return _rate_out(rate)
 
 
 @router.post(
@@ -2639,3 +3246,9 @@ async def paperless_intake(
         None,
     )
     return {"document_id": str(document_id), "run_id": str(run.id), "proposal_id": run.proposal_id}
+
+
+# M14-01, M14-08: creditors and the rest of the plan lifecycle (mhvp.accounting.creditor_routers).
+router.include_router(creditor_routers.router)
+# S711-02: credit note XRechnung with reference to the original (mhvp.accounting.xrechnung_credit).
+router.include_router(xrechnung_credit.router)

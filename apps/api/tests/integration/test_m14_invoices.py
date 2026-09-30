@@ -142,7 +142,11 @@ def test_invoice_review_release_post_and_d12(client: TestClient, world: World) -
         ],
     }
     inv = _ok(client.post(f"{A}/invoices", json=base, headers=h), 201)
-    assert inv["findings"] == ["Originalbeleg fehlt"]  # PÜ01 hint only
+    assert inv["findings"] == [  # PÜ01 hints only (M14-05: place and issuer tax data)
+        "Originalbeleg fehlt",
+        "Leistungsort fehlt (PÜ01)",
+        "Steuerangaben des Ausstellers fehlen (USt-IdNr. oder Steuernummer, PÜ01)",
+    ]
     assert inv["review_status"] == "open"
     wrong = _ok(
         client.post(

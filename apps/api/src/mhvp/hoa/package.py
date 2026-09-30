@@ -162,7 +162,13 @@ async def blocking_checks(session: AsyncSession, st: HoaStatement) -> list[dict[
                 )
             ).all()
         )
-        if covered and covered < all_units and not has_documented_basis(item.basis):
+        structured = item.basis_resolution_id is not None or item.basis_document_id is not None
+        if (
+            covered
+            and covered < all_units
+            and not structured
+            and not has_documented_basis(item.basis)
+        ):
             findings.append(
                 {
                     "code": "scope_unfounded",
@@ -173,6 +179,19 @@ async def blocking_checks(session: AsyncSession, st: HoaStatement) -> list[dict[
                     ),
                 }
             )
+    # M24-05: a receipt must not carry a § 35a share in two positions (no double statement).
+    receipts: dict[uuid.UUID, str] = {}
+    for item in items:
+        if item.labour_cost_35a and item.document_id is not None:
+            if item.document_id in receipts:
+                findings.append(
+                    {
+                        "code": "section35a_duplicate",
+                        "detail": f"{item.label}: Lohnanteil § 35a mit demselben Beleg wie "
+                        f"{receipts[item.document_id]}; nur einmal ausweisen.",
+                    }
+                )
+            receipts[item.document_id] = item.label
     open_tx = (
         await session.scalars(
             select(BankTransaction.id).where(
@@ -219,6 +238,33 @@ async def blocking_checks(session: AsyncSession, st: HoaStatement) -> list[dict[
             }
         )
     return findings
+
+
+def receipt_status(item: Any) -> str:
+    """M24-02: linked (receipt), entry_only (posted entry without receipt) or missing."""
+    if item.document_id is not None:
+        return "linked"
+    return "entry_only" if item.journal_entry_id is not None else "missing"
+
+
+async def entry_drilldown(
+    session: AsyncSession, entry_ids: list[uuid.UUID | None]
+) -> dict[uuid.UUID, dict[str, Any]]:
+    from mhvp.accounting.models import JournalEntry
+
+    ids = [e for e in entry_ids if e is not None]
+    if not ids:
+        return {}
+    return {
+        e.id: {
+            "number": e.number,
+            "booking_date": e.booking_date,
+            "text": e.text,
+            "bank_transaction_id": e.bank_transaction_id,
+            "document_id": e.document_id,
+        }
+        for e in (await session.scalars(select(JournalEntry).where(JournalEntry.id.in_(ids)))).all()
+    }
 
 
 async def reconciliation(
@@ -286,6 +332,7 @@ async def statement_package(
         positions = {p["label"]: p for p in (st.snapshot or {}).get("positions", [])}
         ledger = await session.get(Ledger, st.ledger_id)
         recon = await reconciliation(session, st, ledger, list(items)) if ledger else None
+        drill = await entry_drilldown(session, [i.journal_entry_id for i in items])
         return {
             "statement": {
                 "id": st.id,
@@ -307,9 +354,24 @@ async def statement_package(
                     else None,
                     "account_id": i.account_id,
                     "split": positions.get(i.label, {}).get("split"),
+                    # M24-02 drilldown: entry, receipt and payment behind the position.
+                    "journal_entry_id": i.journal_entry_id,
+                    "document_id": i.document_id,
+                    "payment": drill.get(i.journal_entry_id) if i.journal_entry_id else None,
+                    "receipt_status": receipt_status(i),
+                    "labour_cost_35a": str(i.labour_cost_35a) if i.labour_cost_35a else None,
+                    "basis_source": {
+                        "resolution_id": i.basis_resolution_id,
+                        "document_id": i.basis_document_id,
+                        "structured": i.basis_resolution_id is not None
+                        or i.basis_document_id is not None,
+                    },
                 }
                 for i in items
             ],
+            "missing_receipts": [i.label for i in items if receipt_status(i) == "missing"],
+            "key_figures": (st.snapshot or {}).get("key_figures"),
+            "section_35a": (st.snapshot or {}).get("section_35a"),
             "units": (st.snapshot or {}).get("units", []),
             "reserve": (st.snapshot or {}).get("reserve"),
             "asset_report": (st.snapshot or {}).get("asset_report"),

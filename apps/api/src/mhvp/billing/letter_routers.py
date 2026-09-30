@@ -150,3 +150,10 @@ async def letters_send(
         ),
         extensions={"locked": "statement_letters_send", "statement_id": str(statement_id)},
     )
+
+
+# Draft editing, results per contract, access, diff, result entries and Belegeinsicht
+# (M17-01 to M17-08) share the /statements prefix; included here so the app wiring stays.
+from mhvp.billing.result_routers import router as _result_router  # noqa: E402
+
+router.include_router(_result_router)

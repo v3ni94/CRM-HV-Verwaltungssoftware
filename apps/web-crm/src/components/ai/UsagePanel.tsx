@@ -48,6 +48,9 @@ export function UsagePanel({ usage }: { usage: Usage }) {
             <li key={task}>
               {tk.has(`tasks.${task}`) ? tk(`tasks.${task}`) : task}
               : {formatEur(cost)}
+              {usage.runs_by_task?.[task] !== undefined
+                ? ` (${t("usageRuns", { runs: usage.runs_by_task[task], tokens: (usage.tokens_in_by_task?.[task] ?? 0) + (usage.tokens_out_by_task?.[task] ?? 0) })})`
+                : ""}
             </li>
           ))}
         </ul>

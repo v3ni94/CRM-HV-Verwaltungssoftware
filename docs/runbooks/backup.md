@@ -29,6 +29,14 @@ Source: MASTER-PROMPT 3.5, 6.9.5 (E05), 16. Backup protects operation; it is not
   bind mounted `BACKUP_WAL_DIR` (default `/srv/mhvp-backup/wal`); `backup-offsite.sh`
   encrypts and uploads every new segment with the daily run. Section "WAL-Archivierung"
   below: base backup, restore with WAL replay, verification. Dev compose does not archive.
+* Hourly WAL copy (M9-06): `infra/systemd/mhvp-wal-offsite.timer` runs
+  `scripts/backup-offsite.sh --wal-only` at minute 20 of every hour. It encrypts and uploads
+  only new segments (dump, documents and retention stay with the daily run) and writes
+  `BACKUP_DIR/offsite-wal-status`; `healthcheck.sh` alarms when that file is older than
+  `WAL_MAX_AGE_HOURS` (default 3) or does not read `status=ok`. The segment on disk is at
+  most `PG_ARCHIVE_TIMEOUT` (900 s) old, so the off-site copy is at most about 75 minutes
+  behind. Install: `cp infra/systemd/mhvp-wal-offsite.* /etc/systemd/system/` and
+  `systemctl enable --now mhvp-wal-offsite.timer`.
 * Health: `healthcheck.sh` alarms when `BACKUP_DIR/offsite-status` is older than
   `BACKUP_MAX_AGE_HOURS` or does not read `status=ok`. The same line is reported by
   `GET /api/v1/platform/ops/metrics` as `jobs.backup_offsite` (status, stamp, age, WAL count)

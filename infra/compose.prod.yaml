@@ -166,6 +166,18 @@ services:
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.average=100"
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.burst=200"
       - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-ratelimit.ratelimit.period=1s"
+      # Stricter limit for the login paths (M9-05): 30 requests per minute and client address
+      # (burst 10), on top of the application limit of core/ratelimit.py. The router matches
+      # /api/v1/auth before the general API router (priority).
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth-ratelimit.ratelimit.average=${MHVP_AUTH_RATELIMIT_PER_MINUTE:-30}"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth-ratelimit.ratelimit.burst=10"
+      - "traefik.http.middlewares.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth-ratelimit.ratelimit.period=1m"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth.rule=Host(`${MHVP_HOST_API:-api.mueller-holding.ag}`) && PathPrefix(`/api/v1/auth`)"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth.priority=100"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth.middlewares=${MHVP_TRAEFIK_PREFIX:-mhvp}-headers,${MHVP_TRAEFIK_PREFIX:-mhvp}-auth-ratelimit"
+      - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-auth.service=${MHVP_TRAEFIK_PREFIX:-mhvp}-api"
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.rule=Host(`${MHVP_HOST_API:-api.mueller-holding.ag}`)"
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.entrypoints=${TRAEFIK_ENTRYPOINT:-websecure}"
       - "traefik.http.routers.${MHVP_TRAEFIK_PREFIX:-mhvp}-api.tls.certresolver=${TRAEFIK_CERTRESOLVER:?TRAEFIK_CERTRESOLVER must be set}"

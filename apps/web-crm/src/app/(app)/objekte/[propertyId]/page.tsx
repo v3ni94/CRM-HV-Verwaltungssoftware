@@ -15,6 +15,7 @@ import { CustomFieldsPanel } from "@/components/properties/CustomFieldsPanel";
 import { LegalEntityBankAccounts } from "@/components/properties/LegalEntityBankAccounts";
 import { MaintenancePanel, type MaintenanceRow } from "@/components/properties/MaintenancePanel";
 import { MetersPanel, type MeterRow } from "@/components/properties/MetersPanel";
+import { LegalEntityLine } from "@/components/properties/LegalEntityLine";
 import { OwnersDetails } from "@/components/properties/OwnersDetails";
 import { ManagerChangeChecklist } from "@/components/properties/ManagerChangeChecklist";
 import { ObjektakteExportPanel } from "@/components/properties/ObjektakteExportPanel";
@@ -167,6 +168,11 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
           </div>
         }
       />
+      <LegalEntityLine
+        label={t("legalEntities")}
+        entities={(data.legal_entities ?? []).map((e) => ({ id: e.id, name: e.name, kindLabel: t(`entityKind.${e.kind}`) }))}
+        ledgerHref={accounts.ledgerId ? `/buchhaltung/${accounts.ledgerId}` : null}
+      />
       <EntityLinksBar
         links={[
           { type: "unit", href: "#einheiten", count: unitRows.length, label: t("units") },
@@ -202,19 +208,6 @@ export default async function PropertyPage({ params }: { params: Promise<{ prope
       {termination || data.status === "terminated" ? <ObjektakteExportPanel propertyId={propertyId} canExport={canExport} /> : null}
 
       <PropertyMasterData property={data as unknown as PropertyMaster} canEdit={canEdit && data.status !== "terminated"} />
-
-      {(data.legal_entities ?? []).length ? (
-        <section className={ui.card}>
-          <h2 className={ui.subtitle}>{t("legalEntities")}</h2>
-          <ul className="mt-2 flex flex-wrap gap-2 text-sm">
-            {(data.legal_entities ?? []).map((e) => (
-              <li key={e.id} className={ui.badgeGold}>
-                {t(`entityKind.${e.kind}`)}: {e.name}
-              </li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
 
       <PropertyOwnerPanel propertyId={propertyId} managementType={data.management_type} owners={ownerRows} canEdit={canEdit} />
       {!isHoa ? (

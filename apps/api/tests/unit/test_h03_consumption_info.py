@@ -106,4 +106,4 @@ def test_average_ignores_missing_and_mixed_measures() -> None:
 def test_beat_entry(settings: Settings) -> None:
     entry = create_celery(settings).conf.beat_schedule["billing-consumption-info"]
     assert entry["task"] == "mhvp.billing.consumption_info"
-    assert entry["schedule"].day_of_month == {1, 2, 3}
+    assert entry["schedule"].day_of_month == {3}

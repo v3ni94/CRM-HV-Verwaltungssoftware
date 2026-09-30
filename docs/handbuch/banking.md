@@ -310,6 +310,59 @@ verschiedene Personen; jede Änderung hebt bereits erteilte Freigaben auf. Die
 Zahlungsdatei wird erst mit der Freigabestufe G2 erzeugt; Export oder Einreichung gilt
 in keinem Fall als ausgeführte Zahlung.
 
+## Zahllauf und Bankstatus
+
+Unter Bank, Zahlungsaufträge, Zahllauf (`/bank/zahllauf`) zeigt die Vorschau alle gebuchten,
+freigegebenen Rechnungen mit offenem Betrag je Rechtsträger, fällig in den nächsten sieben
+Tagen, dazu die fälligen Lastschriftläufe und fehlende Vorabinformationen. Gesperrte
+Rechnungen (fehlende oder unbestätigte IBAN, Buchungskreis nicht führend) sind nicht
+auswählbar. Nach Auswahl von Auftraggeberkonto und Ausführungsdatum legt die Schaltfläche die
+Aufträge als Entwurf an; jeder Auftrag braucht danach zwei Freigaben, die Zahlungsdatei erst
+Freigabestufe G2.
+
+Einzel- und Tageslimit sowie die Fristen für Erst- und Folgelastschrift und die Frist der
+Vorabinformation werden je Konto über die Schnittstelle `PUT
+/api/v1/accounting/payment-runs/bank-limits/{konto}` so hinterlegt, wie sie mit der Bank
+vereinbart sind (zu verifizieren). Eine Zahlungsdatei über einem Limit wird abgelehnt.
+
+Ein Bankstatusbericht (pain.002 oder camt.054) wird als XML-Datei eingelesen. Übernommen
+werden nur Status: Ablehnung, Annahme, Einzug, Rückgabe mit Grundcode. Gebucht wird nichts;
+eine Rückgabe nach Ausgleich korrigiert eine Person per Storno. Dieselbe Datei ein zweites
+Mal bleibt ohne Wirkung. Rückmeldungen je Lastschrift und die Abstimmung mit den offenen
+Posten stehen unter `/api/v1/accounting/direct-debits/{lauf}/bank-status` und
+`/reconciliation` bereit. Auszahlungen ohne Rechnung (Eigentümerauszahlung, Guthaben,
+Kautionsrückzahlung) legt `POST /api/v1/accounting/payment-runs/payout-orders` als Entwurf an.
+
+Die wöchentliche Vorschau (montags 08:00) wird je Mandant über `PUT
+/api/v1/accounting/payment-runs/settings` eingeschaltet; sie speichert nur eine Liste.
+
+## Bankabruf, Wochendigest und Zahler-IBAN (Stand 30.09.2026)
+
+- **Uhrzeit des täglichen Abrufs:** Einstellungen, Bank, Karte "Täglicher Bankabruf". Standard
+  06:00 Uhr; jede volle Stunde ist wählbar. Der Online-Abruf je Konto braucht weiterhin die
+  Zustimmung des Konnektors (finAPI: automatischer Abruf eingeschaltet). Vorübergehende
+  Störungen des Anbieters werden bis zu dreimal mit wachsendem Abstand wiederholt.
+- **Jetzt alle Konten abrufen:** dieselbe Karte, Schaltfläche für den manuellen Gesamtabruf
+  (Recht `accounting:update`). Es wird nur gelesen, nichts gebucht.
+- **Sync-Protokoll:** jeder Lauf zeigt zusätzlich die Zahl der Vorschläge und der
+  automatischen Buchungen.
+- **Getrennte Verbindungen:** in der Bankübersicht standardmäßig ausgeblendet; der Schalter
+  "Getrennte anzeigen (Anzahl)" blendet sie ein und wird je Browser gemerkt.
+- **KI-Kontierung:** im Buchungsdialog Bereich "KI-Kontierung" mit Modell, Kosten, Konto,
+  Begründung und Konfidenz, Schaltfläche "KI-Vorschlag anfordern". Mandantenschalter unter
+  Einstellungen, KI. Ohne freigegebenen Anbieter mit AVV lehnt das System mit Grund ab. Der
+  Vorschlag bucht nie; Übernahme nur durch eine Person.
+- **Zahler-IBAN vorschlagen:** in der Umsatzliste bei gebuchten Eingängen. Die IBAN wird als
+  Bankverbindung "zur Freigabe" beim gewählten Kontakt des Vertragspartners angelegt; eine
+  zweite Person mit `contacts:approve` gibt sie im Kontakt frei.
+- **Wochendigest Stufe L3:** Bank, Nachkontrolle. Je Rechtsträger und Woche automatische
+  Buchungen, Stichproben, offene Nachkontrollen, Befunde und Bankabstimmung des Vormonats.
+  "Bestätigen" (Recht `accounting:review`) ist erst möglich, wenn keine Stichprobe offen ist
+  und die Abstimmung ohne Differenz ist. Ohne Bestätigung bucht die Stufe L3 in der
+  Folgewoche nicht automatisch.
+- **Immoware24-Umsatzexport:** als CSV über den Bank-CSV-Import mit eigener Spaltenzuordnung;
+  eine feste Vorlage folgt erst mit einer Beispieldatei (OPEN_QUESTIONS M11-02).
+
 ## Was ist Vorschlag, was verbindlich
 
 Vorschläge zur Zuordnung eines Umsatzes sind stets zu prüfen; Buchung bestätigen im
@@ -334,3 +387,12 @@ gesperrt.
   das Sachkonto mit Verweis auf das Bankkonto; unter Buchhaltung anlegen.
 - **Die Freigabe muss eine andere Person erteilen**: Regeln werden nie von der vorschlagenden
   Person freigegeben (Vier Augen).
+
+## Zahllauf (Seite Bank, Zahllauf)
+
+Der Zahllauf zeigt die zahlbaren, freigegebenen und gebuchten Rechnungen je Rechtsträger als Vorschau. Je Rechtsträger werden das Auftraggeberkonto und das Tageslimit angezeigt; fehlt ein Auftraggeberkonto, weist die Seite darauf hin.
+
+- Jede Rechnung zeigt Empfänger, Fälligkeit, offenen Betrag und eine Prüfung (zahlbar oder überfällig). Die Summe der ausgewählten Rechnungen wird oben ausgewiesen.
+- Nach Auswahl und Ausführungsdatum legt die Schaltfläche "Aufträge als Entwurf anlegen" Zahlungsaufträge an. Es entstehen nur Entwürfe. Jeder Auftrag braucht zwei Freigaben, die Zahlungsdatei ist erst mit Freigabestufe G2 möglich. Banklimits werden bei der Datei geprüft und als Warnung angezeigt.
+- Der Bereich "Fällige Lastschriftläufe" listet die Läufe mit Anzahl der Lastschriften und weist auf fehlende Vorabinformationen hin.
+- Unter "Bankstatusbericht einlesen" wird eine XML-Datei (pain.002 oder camt.054) hochgeladen. Es werden nur Status übernommen. Eine bereits eingelesene Datei führt zu keiner Änderung. Rückgaben korrigiert eine Person per Storno.

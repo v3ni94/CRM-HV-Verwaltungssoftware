@@ -21,6 +21,9 @@ export default async function LedgersPage() {
       <Link href="/buchhaltung/sollstellungen" className="text-sm font-medium hover:underline">
         {t("receivablesLink")}
       </Link>
+      <Link href="/buchhaltung/verwalterhonorar" className="text-sm font-medium hover:underline">
+        {t("adminFeesLink")}
+      </Link>
       <Link href="/buchhaltung/mahnwesen" className="text-sm font-medium hover:underline">
         {t("dunningLink")}
       </Link>

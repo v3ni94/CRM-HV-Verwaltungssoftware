@@ -102,6 +102,9 @@ class HandoverProtocol(IdMixin, TimestampMixin, TenantMixin, Base):
     external_object_number: Mapped[str | None] = mapped_column(String(100))
     owner_name: Mapped[str | None] = mapped_column(String(200))
 
+    # Direction of a rental handover (S13-02): ``in`` sets the move-in date of the contract on
+    # completion, ``out`` the move-out date. Unset: the contract stays untouched.
+    move_direction: Mapped[str | None] = mapped_column(String(3))
     handover_date: Mapped[date | None] = mapped_column(Date)
     handover_start: Mapped[time | None] = mapped_column(Time)
     handover_end: Mapped[time | None] = mapped_column(Time)
@@ -237,6 +240,8 @@ class HandoverDefect(IdMixin, TimestampMixin, TenantMixin, Base):
     # replay time on the server.
     captured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     import_source: Mapped[str | None] = mapped_column(String(100), index=True)
+    # Ticket created from this defect (S13-01, section 13.4); one ticket per defect.
+    ticket_id: Mapped[uuid.UUID | None] = _fk("ticket.id", ondelete="SET NULL")
 
 
 class HandoverKey(IdMixin, TimestampMixin, TenantMixin, Base):

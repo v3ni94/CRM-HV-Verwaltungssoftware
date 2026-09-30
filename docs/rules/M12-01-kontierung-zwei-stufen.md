@@ -49,3 +49,16 @@ Rückläufer 15, Dienstleisterrechnung 25 (15 mit Rechnungsnummer, 10 nur IBAN u
 Kaution 15 (10 mit Kautionsforderung, 5 ohne), unklar 25, Regel 8. Erwartete Kontierung je
 Fall im JSON. Der Bestand ist vom Entwickler erzeugt und ersetzt nicht den fachlich
 zusammengestellten Bestand aus anonymisierten HVM-Umsätzen (M12-02 bleibt offen).
+
+## Nachtrag 30.09.2026 (Lückenliste M12-01, P09)
+
+Einheits- und Objekthinweise aus dem Verwendungszweck (`Whg`, `Wohnung`, `WE`, `VE`,
+`Einheit`, `Objekt`, `Obj`, `Liegenschaft`) werden gegen Einheit und Objekt des Vertrags des
+offenen Postens geprüft (`allocation.location_matches`, führende Nullen bei rein numerischen
+Nummern ignoriert). Übereinstimmung bestimmt bei mehreren Einheiten eines Debitors den
+Posten der genannten Einheit (Grund "Einheit oder Objekt aus Verwendungszweck"); ein
+Widerspruch verhindert, dass ein Rechnungs-, Sollstellungs- oder Zeitraumhinweis den Posten
+als bestimmt kennzeichnet (Grund "Einheit oder Objekt im Verwendungszweck weicht ab"). Die
+Prüfung ordnet und begründet nur; sie bucht nichts (D39). Abnahmefall:
+`tests/unit/test_banking_allocation_location.py`, Testbestand
+`tests/fixtures/banking/m12_02_testbestand.json` Fall `ein-03-einheit-bestimmt`.

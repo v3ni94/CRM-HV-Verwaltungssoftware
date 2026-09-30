@@ -484,6 +484,14 @@ class PaymentOrder(IdMixin, TimestampMixin, TenantMixin, Base):
     batch_id: Mapped[uuid.UUID | None] = _fk("payment_batch.id", nullable=True)
     bank_transaction_id: Mapped[uuid.UUID | None] = _fk("bank_transaction.id", nullable=True)
     journal_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+    # M15-07: payout without invoice (owner payout, statement credit, deposit refund); the
+    # payee IBAN comes from a released bank account of the contact.
+    contact_bank_account_id: Mapped[uuid.UUID | None] = _fk(
+        "contact_bank_account.id", nullable=True
+    )
+    payout_reason: Mapped[str | None] = mapped_column(String(32))
+    # M15-02: last ISO 20022 status reason code reported by the bank (pain.002, camt.054).
+    bank_status_reason_code: Mapped[str | None] = mapped_column(String(8))
 
 
 class PaymentApproval(IdMixin, TenantMixin, Base):
@@ -525,6 +533,14 @@ class PaymentBankConfig(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     confirmed_with_bank_on: Mapped[date | None] = mapped_column(Date)
     notes: Mapped[str | None] = mapped_column(Text)
+    # M15-04: limits agreed with the bank per ordering account (operator input, zu verifizieren).
+    single_order_limit: Mapped[Decimal | None] = mapped_column(MONEY)
+    daily_limit: Mapped[Decimal | None] = mapped_column(MONEY)
+    # M15-06: submission lead days per sequence type and pre-notification days as agreed with
+    # the bank and in the mandate; no legal default is derived (zu verifizieren).
+    dd_lead_days_frst: Mapped[int | None] = mapped_column(Integer)
+    dd_lead_days_rcur: Mapped[int | None] = mapped_column(Integer)
+    pre_notification_days: Mapped[int | None] = mapped_column(Integer)
 
 
 class PaymentFileDownload(IdMixin, TenantMixin, Base):
@@ -1027,3 +1043,60 @@ class BankingEventWatermark(IdMixin, TenantMixin, Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
+
+
+class BankSyncSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Per tenant configuration of the daily bank sync (8.2, M11-05). Without a row the
+    default hour 06:00 local time applies (beat entries ``banking-sync-all`` and
+    ``banking-finapi-scheduled-fetch``); with a row the hourly beat ``banking-sync-due``
+    runs the tenant at ``sync_hour`` instead."""
+
+    __tablename__ = "bank_sync_setting"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_bank_sync_setting_tenant"),
+        CheckConstraint("sync_hour BETWEEN 0 AND 23", name="bank_sync_setting_hour"),
+    )
+
+    sync_hour: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=6, server_default=text("6")
+    )
+
+
+class AutoPostingDigest(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Weekly digest of level L3 per legal entity (plan M12 S10, 7.4 no. 4, M12-02).
+
+    Counts the automatic postings and sampled reviews of one ISO week and the monthly bank
+    reconciliation B09 of the previous month as completeness check. A person must confirm
+    the digest before the next week without daily review: while a digest of an earlier week
+    is unconfirmed, the runner blocks the sampled classes at L3. Confirmation requires a
+    reconciliation without difference (``reconciliation_ok``)."""
+
+    __tablename__ = "auto_posting_digest"
+    __table_args__ = (
+        UniqueConstraint(
+            "tenant_id", "legal_entity_id", "week_start", name="uq_auto_posting_digest_week"
+        ),
+    )
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id")
+    week_start: Mapped[date] = mapped_column(Date, nullable=False)
+    auto_posted: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    sampled: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    reviews_open: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    findings: Mapped[int] = mapped_column(
+        Integer, nullable=False, default=0, server_default=text("0")
+    )
+    reconciliation: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    reconciliation_ok: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    confirmed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

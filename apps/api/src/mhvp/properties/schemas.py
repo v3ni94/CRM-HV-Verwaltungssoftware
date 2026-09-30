@@ -92,6 +92,22 @@ class PropertyIn(_In):
     managed_from: date | None = None
     managed_to: date | None = None
     custom_fields: dict[str, Any] = Field(default_factory=dict)
+    images: list[str] = Field(
+        default_factory=list,
+        max_length=50,
+        description="Bildgalerie: Dokumentverweise (DMS), Reihenfolge = Anzeigereihenfolge",
+    )
+
+    @field_validator("images")
+    @classmethod
+    def _images(cls, value: list[str]) -> list[str]:
+        try:
+            ids = [str(uuid.UUID(v)) for v in value]
+        except ValueError:
+            raise ValueError("Bilder müssen Dokument-IDs sein") from None
+        if len(set(ids)) != len(ids):
+            raise ValueError("Ein Bild ist mehrfach eingetragen")
+        return ids
 
 
 class LegalEntityOut(_Out):
@@ -491,6 +507,7 @@ class BankAccountIn(_Period):
     holder: str = Field(min_length=2, max_length=200)
     notes: str | None = None
     ledger_account_id: uuid.UUID | None = Field(default=None, description="Zugeordnetes Sachkonto")
+    bank_connection_id: uuid.UUID | None = Field(default=None, description="Bankzugang (M11)")
     is_default: bool = Field(
         default=False,
         description=(
@@ -521,7 +538,40 @@ class BankAccountOut(_Out):
     valid_to: date | None
     notes: str | None = None
     ledger_account_id: uuid.UUID | None = None
+    bank_connection_id: uuid.UUID | None = None
     is_default: bool = False
+
+
+class BankAccountPatch(_In):
+    """Nachträgliche Änderung eines Bankkontos: IBAN, Art und Rechtsträger bleiben fest."""
+
+    bic: str | None = Field(default=None, pattern=r"^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$")
+    bank_name: str | None = None
+    holder: str | None = Field(default=None, min_length=2, max_length=200)
+    notes: str | None = None
+    valid_to: date | None = None
+    ledger_account_id: uuid.UUID | None = None
+    bank_connection_id: uuid.UUID | None = None
+
+
+class ProviderPatch(_In):
+    """Dienstleisterverhältnis ändern oder beenden (nur die gesendeten Felder)."""
+
+    valid_to: date | None = None
+    notice_period: str | None = None
+    contact_bank_account_id: uuid.UUID | None = None
+    notes: str | None = None
+    customer_number: str | None = Field(default=None, max_length=50)
+    creditor_account_id: uuid.UUID | None = None
+    categories: list[str] | None = None
+
+
+class VatOptionHistoryOut(_Out):
+    id: uuid.UUID
+    option: VatOption
+    occupant: Occupant
+    valid_from: date
+    valid_to: date | None
 
 
 class BillingPeriodIn(_In):
@@ -655,6 +705,9 @@ class ReadingIn(_In):
     value: Qty = Field(ge=0)
     estimated: bool = False
     source: ReadingSource = ReadingSource.MANUAL
+    photo_document_id: uuid.UUID | None = Field(
+        default=None, description="Foto des Zählerstands (Dokument im DMS)"
+    )
     notes: str | None = None
 
 

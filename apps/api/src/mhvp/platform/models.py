@@ -11,6 +11,7 @@ from enum import StrEnum
 from typing import Any
 
 from sqlalchemy import (
+    BigInteger,
     Boolean,
     CheckConstraint,
     Date,
@@ -173,6 +174,13 @@ class Membership(IdMixin, TimestampMixin, Base):
     legal_entity_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
+    # Objektzuordnung (3.4, M2-02/S16-02, docs/rules/M2-02-objektzuordnung.md, migration 0263):
+    # Liste von ``property.id`` als Strings. Leere Liste bedeutet keine Einschränkung; eine
+    # nicht leere Liste beschränkt alle Rollen außer den Administratorrollen
+    # (``mhvp.core.auth.scope.PROPERTY_UNSCOPED_ROLES``) auf diese Objekte.
+    property_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
     # M20-03 (Betreiberentscheidung 26.09.2026, docs/rules/M20-06-mail-versand-nachweis.md,
     # Abschnitt Direktversand): Antworten aus dem Ticket dieses Mitglieds brauchen die Freigabe
     # einer zweiten Person (Grund ``azubi`` oder ``neuer_mitarbeiter``, optional befristet bis
@@ -235,6 +243,38 @@ class TrustedDevice(IdMixin, Base):
         DateTime(timezone=True), server_default=func.now(), nullable=False
     )
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class WebAuthnCredential(IdMixin, Base):
+    """Registered WebAuthn/passkey authenticator as optional second factor (3.4, M2-03/S16-01,
+    migration 0263). Platform table like ``trusted_device`` (checked before a tenant context
+    exists). Registration and assertion stay disabled until a verification library is released
+    (``mhvp.core.auth.webauthn``); the table and the management endpoints are prepared."""
+
+    __tablename__ = "webauthn_credential"
+
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("app_user.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    # Credential ID and COSE public key, base64url without padding (WebAuthn Level 2).
+    credential_id: Mapped[str] = mapped_column(String(1400), unique=True, nullable=False)
+    public_key: Mapped[str] = mapped_column(Text, nullable=False)
+    sign_count: Mapped[int] = mapped_column(
+        BigInteger, nullable=False, default=0, server_default=text("0")
+    )
+    transports: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    aaguid: Mapped[str | None] = mapped_column(String(36))
+    label: Mapped[str | None] = mapped_column(String(200))
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 

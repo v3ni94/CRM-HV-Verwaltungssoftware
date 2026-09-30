@@ -69,6 +69,7 @@
       "meetings": "Versammlungen",
       "contacts": "Ansprechpartner",
       "hoaAccount": "Hausgeldkonto",
+      "ownerOverview": "Eigentum",
       "consumption": "Verbrauch",
       "notices": "Aushänge",
       "forms": "Formulare",
@@ -118,6 +119,9 @@
     "empty": "Keine freigegebenen Dokumente.",
     "download": "Herunterladen",
     "created": "Bereitgestellt am",
+    "isNew": "Neu",
+    "read": "Gelesen",
+    "readNote": "Der Status Neu oder Gelesen zeigt, ob Sie das Dokument geöffnet haben. Er ist ein Indiz und keine Zustellung.",
     "handoversTitle": "Übergabeprotokolle",
     "handoversEmpty": "Keine Übergabeprotokolle vorhanden.",
     "handoverDate": "Übergabe am"
@@ -139,6 +143,15 @@
     "number": "Nummer",
     "titleRequired": "Bitte einen Titel eingeben.",
     "descriptionRequired": "Bitte eine Beschreibung eingeben.",
+    "locationField": "Standort des Schadens (optional)",
+    "locationHint": "Zum Beispiel Raum, Gebäudeteil oder Etage. Bitte keine weiteren persönlichen Angaben.",
+    "chatTitle": "Chat mit der Verwaltung",
+    "chatNote": "Der Chat ist kein Notdienst. Bei Gefahr für Leib und Leben rufen Sie bitte sofort den Notruf 112 an.",
+    "chatEmpty": "Noch keine Nachrichten.",
+    "chatField": "Ihre Nachricht",
+    "chatSend": "Nachricht senden",
+    "chatOwn": "Sie",
+    "chatManagement": "Verwaltung",
     "status": {
       "new": "Neu",
       "in_progress": "In Bearbeitung",
@@ -838,14 +851,14 @@
   },
   "Invitation": {
     "title": "Einladung annehmen",
-    "hint": "Bitte den Einladungscode aus dem Schreiben oder dem Link eingeben und ein Passwort mit mindestens 6 Zeichen wählen.",
+    "hint": "Bitte den Einladungscode aus dem Schreiben oder dem Link eingeben und ein Passwort mit mindestens 12 Zeichen wählen.",
     "code": "Einladungscode",
     "password": "Neues Passwort",
     "passwordRepeat": "Passwort wiederholen",
     "submit": "Zugang aktivieren",
     "submitting": "Bitte warten",
     "codeRequired": "Bitte den Einladungscode eingeben.",
-    "passwordTooShort": "Das Passwort muss mindestens 6 Zeichen haben.",
+    "passwordTooShort": "Das Passwort muss mindestens 12 Zeichen haben.",
     "passwordMismatch": "Die Passwörter stimmen nicht überein.",
     "done": "Ihr Zugang ist aktiviert. Bitte melden Sie sich jetzt mit E-Mail und Passwort an.",
     "toLogin": "Zur Anmeldung"
@@ -897,5 +910,37 @@
     "enforcementTitle": "Schlichtungsverfahren",
     "enforcement": "Bei nicht zufriedenstellender Antwort besteht die Möglichkeit, sich an die zuständige Überwachungsstelle zu wenden. [zu ergänzen: zuständige Schlichtungs- und Überwachungsstelle]",
     "backToStart": "Zur Übersicht"
+  },
+  "OwnerOverview": {
+    "title": "Eigentum",
+    "ownersOnly": "Diese Seite steht nur Eigentümern und Bevollmächtigten zur Verfügung.",
+    "paymentsTitle": "Beschlossene Zahlungen",
+    "paymentsEmpty": "Keine beschlossenen Zahlungen vorhanden.",
+    "resolution": "Beschluss {number}",
+    "kind": {
+      "economic_plan": "Wirtschaftsplan",
+      "special_levy": "Sonderumlage"
+    },
+    "decidedOn": "beschlossen am",
+    "validity": "Gültig ab",
+    "until": "bis",
+    "open": "offen",
+    "rhythm": "Zahlungsrhythmus",
+    "dueDay": "fällig am {day}. des Monats",
+    "total": "Gesamtbetrag",
+    "instalments": "{count} Raten",
+    "payee": "Zahlungsempfänger und Konto der Gemeinschaft",
+    "ticketsTitle": "Meldungen zum Objekt",
+    "ticketsEmpty": "Keine für Eigentümer freigegebenen Meldungen.",
+    "toAccount": "Zum Hausgeldkonto"
+  },
+  "SupportConsent": {
+    "title": "Einsicht durch die Verwaltung",
+    "intro": "Wenn Sie Hilfe benötigen, kann die Verwaltung für einen begrenzten Zeitraum lesend sehen, was Sie im Portal sehen. Jeder Einblick wird mit Grund protokolliert. Sie können die Einwilligung jederzeit widerrufen.",
+    "hours": "Einwilligung gültig für",
+    "hoursOption": "{hours} Stunden",
+    "grant": "Einwilligung erteilen",
+    "revoke": "Einwilligung widerrufen",
+    "active": "Die Verwaltung darf lesend Einsicht nehmen bis {until}."
   }
 }

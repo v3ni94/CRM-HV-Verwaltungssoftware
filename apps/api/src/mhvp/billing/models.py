@@ -43,6 +43,10 @@ class StatementKind(StrEnum):
 
 class Statement(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "statement"
+    __table_args__ = (
+        # A05: an interim statement (Sonderzeitraum) only with its stated purpose.
+        CheckConstraint("NOT interim OR purpose IS NOT NULL", name="interim_purpose"),
+    )
 
     kind: Mapped[StatementKind] = mapped_column(
         Enum(
@@ -69,6 +73,94 @@ class Statement(IdMixin, TimestampMixin, TenantMixin, Base):
     snapshot_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     delivered_at: Mapped[date | None] = mapped_column(Date)
     deadline_exception: Mapped[str | None] = mapped_column(Text)
+    # 6.5 operating_cost_statement (M17-04): interim statement with purpose, heating switch and
+    # letter settings (texts for Guthaben/Nachzahlung, format, bundled output).
+    interim: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+    purpose: Mapped[str | None] = mapped_column(Text)
+    include_heating: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=True, server_default="true"
+    )
+    settings: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    # M17-01: draft journal entries of the result (Forderung/Gutschrift) created behind G3.
+    result_entry_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+DELIVERY_METHODS = ("post", "registered_mail", "hand_delivery", "email", "portal")
+
+
+class StatementResult(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Result per contract (6.5 statement_result, M17-03): document and access per tenant.
+    Amounts stay in the snapshot; this row carries delivery and evidence only (A04)."""
+
+    __tablename__ = "statement_result"
+    __table_args__ = (
+        UniqueConstraint("statement_id", "contract_id", name="uq_statement_result_contract"),
+        CheckConstraint(
+            "delivery_method IS NULL OR delivery_method IN "
+            "('post', 'registered_mail', 'hand_delivery', 'email', 'portal')",
+            name="delivery_method",
+        ),
+        CheckConstraint(
+            "delivered_at IS NULL OR (delivery_method IS NOT NULL AND evidence IS NOT NULL)",
+            name="delivery_evidence",
+        ),
+        Index("ix_statement_result_statement_id", "statement_id"),
+    )
+
+    statement_id: Mapped[uuid.UUID] = _fk("statement.id", ondelete="CASCADE")
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id")
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True, ondelete="SET NULL")
+    delivery_method: Mapped[str | None] = mapped_column(String(16))
+    delivered_at: Mapped[date | None] = mapped_column(Date)
+    evidence: Mapped[str | None] = mapped_column(Text)
+    evidence_document_id: Mapped[uuid.UUID | None] = _fk(
+        "document.id", nullable=True, ondelete="SET NULL"
+    )
+
+
+class StatementInspection(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Tenant request for inspection of the receipts (Belegeinsicht, PÜ11, M17-06) with the
+    provision, the redaction note and a received objection. The objection deadline is shown as
+    orientation only."""
+
+    __tablename__ = "statement_inspection"
+    __table_args__ = (
+        CheckConstraint("status IN ('requested', 'provided', 'closed')", name="status"),
+        CheckConstraint(
+            "provision IS NULL OR provision IN ('electronic', 'copies', 'appointment')",
+            name="provision",
+        ),
+        CheckConstraint(
+            "status = 'requested' OR (provision IS NOT NULL AND provided_at IS NOT NULL)",
+            name="provided",
+        ),
+        Index("ix_statement_inspection_statement_id", "statement_id"),
+    )
+
+    statement_id: Mapped[uuid.UUID] = _fk("statement.id", ondelete="CASCADE")
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id")
+    requested_at: Mapped[date] = mapped_column(Date, nullable=False)
+    channel: Mapped[str] = mapped_column(String(16), nullable=False)
+    scope: Mapped[str | None] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="requested", server_default="requested"
+    )
+    provision: Mapped[str | None] = mapped_column(String(16))
+    provided_at: Mapped[date | None] = mapped_column(Date)
+    document_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    redaction_note: Mapped[str | None] = mapped_column(Text)
+    objection_received_at: Mapped[date | None] = mapped_column(Date)
+    objection_text: Mapped[str | None] = mapped_column(Text)
+    note: Mapped[str | None] = mapped_column(Text)
 
 
 class StatementCostItem(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -178,6 +270,11 @@ class ConsumptionInfo(IdMixin, TimestampMixin, TenantMixin, Base):
         UniqueConstraint("tenant_id", "unit_id", "month", name="uq_consumption_info_unit_month"),
         CheckConstraint("extract(day from month) = 1", name="month_first_day"),
         Index("ix_consumption_info_property_month", "tenant_id", "property_id", "month"),
+        CheckConstraint(
+            "delivered_on IS NULL OR (delivery_channel IN ('post', 'email', 'hand_delivery') "
+            "AND delivery_evidence IS NOT NULL)",
+            name="delivery",
+        ),
     )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id")
@@ -201,3 +298,8 @@ class ConsumptionInfo(IdMixin, TimestampMixin, TenantMixin, Base):
     snapshot_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True, ondelete="SET NULL")
     notified_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # D26 substitute process without portal: delivery recorded by a person with evidence.
+    delivery_channel: Mapped[str | None] = mapped_column(String(16))
+    delivered_on: Mapped[date | None] = mapped_column(Date)
+    delivery_evidence: Mapped[str | None] = mapped_column(Text)
+    delivery_recorded_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

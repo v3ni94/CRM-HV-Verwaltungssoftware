@@ -209,3 +209,7 @@ neuem Wert (Recht audit:read).
 - Kapitel Buchhaltung: Sollstellungslauf, offene Posten, Mahnwesen.
 - Kapitel WEG: Wirtschaftsplan und Übernahme der Vorschüsse in die Verträge.
 - Kapitel Abrechnung Miete: Nutzerzeiträume und Vorauszahlungen.
+
+## SEPA Mandate (Seite Verträge, SEPA Mandate)
+
+Die Übersicht zeigt alle SEPA Mandate der Verträge mit Referenz, IBAN, Art und Folge, Unterschriftsdatum, Gültigkeit und letzter Verwendung. Filter: Status (aktiv, widerrufen, abgelaufen), Suche nach Referenz oder IBAN, "Noch nie verwendet" und "Läuft innerhalb von 90 Tagen ab". Die Erfassung ist reine Dokumentation, der Einzug bleibt bis zur Freigabe Zahlungsanstoß (G2) gesperrt.

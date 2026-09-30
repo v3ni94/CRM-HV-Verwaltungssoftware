@@ -4,7 +4,7 @@ invoice end to end. Payment stays in accounting (M14/M15); board status never pa
 import uuid
 from datetime import UTC, date, datetime, timedelta
 from decimal import Decimal
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastapi.responses import Response
@@ -229,6 +229,12 @@ class TicketIn(_In):
     visible_for: list[str] = Field(default_factory=list)
     # Optional working due date (spec 4.9); the SLA due time stays separate.
     due_on: date | None = None
+    # 6.6 (Migration 0260): Gebäude, Beginn, Wiedervorlage, Sichtbarkeit externer Beiträge.
+    building_id: uuid.UUID | None = None
+    start_date: date | None = None
+    follow_up_date: date | None = None
+    external_comments: Literal["none", "to_manager", "open"] | None = None
+    external_attachments: Literal["none", "initiator_only", "open"] | None = None
 
 
 class TicketPatch(_In):
@@ -249,6 +255,12 @@ class TicketPatch(_In):
     internal_description: str | None = Field(default=None, max_length=20000)
     # Due date; an explicit null clears it (``model_fields_set``).
     due_on: date | None = None
+    # 6.6 (Migration 0260): Gebäude, Beginn, Wiedervorlage, Sichtbarkeit externer Beiträge.
+    building_id: uuid.UUID | None = None
+    start_date: date | None = None
+    follow_up_date: date | None = None
+    external_comments: Literal["none", "to_manager", "open"] | None = None
+    external_attachments: Literal["none", "initiator_only", "open"] | None = None
 
 
 class AssigneeIn(_In):
@@ -339,6 +351,11 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "extra_fields",
             "sla_due_at",
             "due_on",
+            "building_id",
+            "start_date",
+            "follow_up_date",
+            "external_comments",
+            "external_attachments",
             "resolved_at",
             "time_spent_minutes",
             "merged_into_ticket_id",
@@ -834,6 +851,22 @@ async def _assert_references_exist(
             raise ProblemError(
                 ErrorCodes.RESOURCE_NOT_FOUND, detail=f"{label} nicht gefunden: {value}"
             )
+
+
+async def _assert_building_of_property(
+    session: AsyncSession, building_id: uuid.UUID | None, property_id: uuid.UUID | None
+) -> None:
+    """A building reference must exist in the tenant and, when the ticket has a property,
+    belong to it (RLS hides rows of other tenants)."""
+    if building_id is None:
+        return
+    from mhvp.properties.models import Building
+
+    building = await session.get(Building, building_id)
+    if building is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Gebäude nicht gefunden.")
+    if property_id is not None and building.property_id != property_id:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Das Gebäude gehört nicht zum Objekt.")
 
 
 @router.get("/tickets/reply-templates", summary="Antwortvorlagen")
@@ -1563,6 +1596,7 @@ async def create_ticket_in_session(
         property_id=body.property_id,
         unit_id=body.unit_id,
     )
+    await _assert_building_of_property(session, body.building_id, body.property_id)
     priority = body.priority or (tpl.default_priority if tpl else Priority.NORMAL)
     hours = tpl.sla_hours if tpl and tpl.sla_hours else SLA_HOURS[priority]
     checklist = (
@@ -1590,7 +1624,10 @@ async def create_ticket_in_session(
         team_id=tpl.default_team_id if tpl else None,
         checklist=checklist,
         sla_due_at=datetime.now(UTC) + timedelta(hours=hours),
-        **body.model_dump(exclude={"title", "priority", "template_id", "topic"}),
+        **body.model_dump(
+            exclude={"title", "priority", "template_id", "topic"}
+            | {f for f in ("external_comments", "external_attachments") if getattr(body, f) is None}
+        ),
         topic=body.topic or (tpl.topic if tpl else None),
     )
     session.add(ticket)
@@ -2278,6 +2315,16 @@ async def patch_ticket(
             ticket.unit_id = body.unit_id
         if "due_on" in body.model_fields_set:
             ticket.due_on = body.due_on
+        for date_field in ("start_date", "follow_up_date"):
+            if date_field in body.model_fields_set:
+                setattr(ticket, date_field, getattr(body, date_field))
+        if "building_id" in body.model_fields_set:
+            await _assert_building_of_property(session, body.building_id, ticket.property_id)
+            ticket.building_id = body.building_id
+        for vis_field in ("external_comments", "external_attachments"):
+            value = getattr(body, vis_field)
+            if value is not None:
+                setattr(ticket, vis_field, value)
         if any(
             v is not None
             for v in (body.contact_id, body.property_id, body.unit_id, body.internal_description)
@@ -2515,7 +2562,7 @@ async def get_ticket(
         comments = (
             await session.scalars(
                 select(TicketComment)
-                .where(TicketComment.ticket_id == ticket.id)
+                .where(TicketComment.ticket_id == ticket.id, TicketComment.removed_at.is_(None))
                 .order_by(TicketComment.created_at)
             )
         ).all()
@@ -2770,7 +2817,9 @@ async def order_step(
 
 
 from mhvp.tickets.board import router as board_router  # noqa: E402
+from mhvp.tickets.order_routers import router as order_list_router  # noqa: E402
 from mhvp.tickets.proposals import router as proposals_router  # noqa: E402
 
 router.include_router(proposals_router)
+router.include_router(order_list_router)
 router.include_router(board_router)

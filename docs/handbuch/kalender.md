@@ -74,3 +74,7 @@ zeigt sieben Spalten erst ab 1024 px, darunter eine Tagesliste.
 - **Termin doppelt sichtbar**: Ein Immoware24-Kalender und ein Google-Kalender bilden
   denselben Termin ab; Quelle in der Legende prüfen, im Zweifel den Immoware24-Kalender
   als führend behandeln (Immoware24 bleibt Master der Stammdaten).
+
+## Kalender-Abo für externe Kalender
+
+Unter Kalender kann eine persönliche Abo-Adresse erzeugt werden. Sie wird nur einmal angezeigt und wie ein Passwort behandelt. Eine neue Adresse macht die bisherige ungültig, der Widerruf beendet das Abo. Der Feed enthält eigene und geteilte Termine sowie Fristen, soweit die Person die Rechte dafür hat.

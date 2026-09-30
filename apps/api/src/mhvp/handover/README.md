@@ -106,3 +106,8 @@ Ereignisse `handover.*` tragen `captured_at` und `idempotency_key` zusätzlich. 
 bei Unterschriften die Gerätezeit mit dem Hinweis vom Gerät gemeldet. Client:
 `apps/web-crm/src/components/handover/offline/` (verschlüsselte Warteschlange, Abgleich,
 Konfliktfrage, Abgleichsprotokoll). Test: `tests/integration/test_m30_handover_offline.py`.
+
+## Welle 2 (P21)
+
+- `POST /handover/protocols/{id}/defects/tickets`: Tickets aus Mängeln, `handover_defect.ticket_id` macht es idempotent.
+- `move_direction` (`in`/`out`): `complete` setzt `contract.move_in_on` oder `move_out_on` nur, wenn leer.

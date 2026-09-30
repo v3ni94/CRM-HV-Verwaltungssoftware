@@ -2,6 +2,7 @@
 
 import asyncio
 import uuid
+from datetime import date
 
 from celery import shared_task
 from sqlalchemy import select
@@ -44,6 +45,63 @@ async def dunning_previews(settings: Settings) -> dict[str, int]:
 @shared_task(name="mhvp.accounting.dunning_run")
 def dunning_run() -> dict[str, int]:
     return asyncio.run(dunning_previews(get_settings()))
+
+
+# Monthly receivable run (15.1 accounting.receivable_run, S15-01) ----------------------------
+
+
+async def receivable_previews(settings: Settings, today: date | None = None) -> dict[str, int]:
+    """Preview run for the current month per tenant that switched it on
+    (``TenantSettings.receivable_rules.monthly_preview_enabled``, default off). Only previews
+    are written; posting stays a manual action behind the existing gate checks (G1).
+    Idempotent: a tenant with a run for the month (any status, scope ``all``) is skipped."""
+    from mhvp.accounting import receivables
+    from mhvp.accounting.models import ReceivableRun
+    from mhvp.platform.models import TenantSettings
+
+    month = (today or local_today()).replace(day=1)
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals = {"tenants": 0, "runs": 0, "skipped": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            ids: list[uuid.UUID] = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                row = await session.scalar(select(TenantSettings))
+                rules = dict(row.receivable_rules or {}) if row is not None else {}
+                if not rules.get("monthly_preview_enabled"):
+                    continue
+                totals["tenants"] += 1
+                existing = await session.scalar(
+                    select(ReceivableRun.id).where(
+                        ReceivableRun.period_month == month, ReceivableRun.scope == "all"
+                    )
+                )
+                if existing is not None:
+                    totals["skipped"] += 1
+                    continue
+                await receivables.create_preview(
+                    session,
+                    tenant_id=tenant_id,
+                    user_id=None,
+                    period=month,
+                    scope="all",
+                    scope_id=None,
+                )
+                totals["runs"] += 1
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.accounting.receivable_run")
+def receivable_run() -> dict[str, int]:
+    return asyncio.run(receivable_previews(get_settings()))
 
 
 # Audit export (A26, 7.7, D55) ----------------------------------------------------------------

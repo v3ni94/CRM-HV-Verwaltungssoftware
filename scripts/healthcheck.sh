@@ -20,6 +20,16 @@ if [[ -n "${BACKUP_DIR:-}" ]]; then
     elif ! grep -q 'status=ok' "$status"; then
       problems+=("Off-site-Kopie fehlgeschlagen ($(cut -d' ' -f2-3 "$status"))")
     fi
+    # Hourly WAL copy (M9-06): only checked when the timer mhvp-wal-offsite is installed,
+    # i.e. its status file exists; stale after WAL_MAX_AGE_HOURS (default 3).
+    wal_status="$BACKUP_DIR/offsite-wal-status"
+    if [[ -f "$wal_status" ]]; then
+      if ! find "$wal_status" -mmin "-$((${WAL_MAX_AGE_HOURS:-3} * 60))" | grep -q .; then
+        problems+=("keine WAL-Kopie in den letzten ${WAL_MAX_AGE_HOURS:-3} Stunden")
+      elif ! grep -q 'status=ok' "$wal_status"; then
+        problems+=("WAL-Kopie fehlgeschlagen")
+      fi
+    fi
   fi
 fi
 

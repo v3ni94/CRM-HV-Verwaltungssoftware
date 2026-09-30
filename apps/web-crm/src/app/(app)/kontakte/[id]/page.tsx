@@ -4,6 +4,8 @@ import Link from "next/link";
 import { EntityLinksBar, type EntityLink } from "@/components/common/EntityLinksBar";
 import { LexofficeContactBadge, LexofficeContactSection } from "@/components/lexoffice/LexofficeContactStatus";
 import { CallsPanel, type CallOut } from "@/components/contacts/CallsPanel";
+import { DispatchPanel } from "@/components/contacts/DispatchPanel";
+import { HistoryPanel, type HistoryEvent } from "@/components/contacts/HistoryPanel";
 import { BankAccountsSection } from "@/components/contacts/BankAccountsSection";
 import { ConsentsPanel } from "@/components/contacts/ConsentsPanel";
 import { ContactActions } from "@/components/contacts/ContactActions";
@@ -188,6 +190,18 @@ export default async function ContactDetailPage({
   const calls: CallOut[] = callsRes?.ok
     ? ((await callsRes.json()) as CallOut[])
     : [];
+  // Kommunikationshistorie und Zustellung (M23-01, M23-02): Liste je nach Recht gefüllt.
+  const historyRes =
+    tab === "kommunikation"
+      ? await serverFetch(`/api/v1/contacts/${id}/history`)
+      : null;
+  const history: HistoryEvent[] = historyRes?.ok
+    ? ((await historyRes.json()) as HistoryEvent[])
+    : [];
+  const dispatchDocuments =
+    tab === "kommunikation" && (me.data?.permissions.includes("communication:create") ?? false)
+      ? ((await api.GET("/api/v1/documents", { params: { query: { entity_type: "contact", entity_id: id, page_size: 100 } } })).data?.items ?? [])
+      : [];
   const canCreateTicket =
     me.data?.permissions.includes("tickets:create") ?? false;
 
@@ -402,6 +416,15 @@ export default async function ContactDetailPage({
             canCreateTicket={canCreateTicket}
             canDismiss={canDismissCall}
           />
+          <h2 className="mb-1 mt-4 text-sm font-semibold">{t("dispatch.title")}</h2>
+          <DispatchPanel
+            contactId={contact.id}
+            documents={dispatchDocuments.map((d) => ({ id: d.id, title: d.title }))}
+            canCreate={me.data?.permissions.includes("communication:create") ?? false}
+            canRecord={me.data?.permissions.includes("communication:update") ?? false}
+          />
+          <h2 className="mb-1 mt-4 text-sm font-semibold">{t("history.title")}</h2>
+          <HistoryPanel events={history} />
         </section>
       ) : null}
       {tab === "notizen" ? <NotesPanel contactId={contact.id} notes={notes} /> : null}

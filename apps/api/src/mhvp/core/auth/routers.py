@@ -8,12 +8,12 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy import func, select
 
-from mhvp.core.auth import passwords, service, tokens
+from mhvp.core.auth import passwords, service, tokens, webauthn
 from mhvp.core.auth.principal import Principal, get_principal, sessions
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.platform.models import RefreshToken, User
+from mhvp.platform.models import RefreshToken, User, WebAuthnCredential
 
 router = APIRouter(prefix="/auth", tags=["Anmeldung"])
 
@@ -82,6 +82,21 @@ class TrustedDeviceOut(BaseModel):
     label: str | None
     created_at: datetime
     expires_at: datetime
+    last_used_at: datetime | None
+
+
+class AuthWebAuthnStatus(BaseModel):
+    """M2-03: Passkeys (WebAuthn) als optionaler zweiter Faktor."""
+
+    available: bool
+    reason: str | None = None
+    credential_count: int = 0
+
+
+class AuthWebAuthnCredentialOut(BaseModel):
+    id: uuid.UUID
+    label: str | None
+    created_at: datetime
     last_used_at: datetime | None
 
 
@@ -439,6 +454,90 @@ async def revoke_trusted_device(
     ):
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     return Response(status_code=204)
+
+
+def _webauthn_active(user_id: uuid.UUID) -> Any:
+    return select(WebAuthnCredential).where(
+        WebAuthnCredential.user_id == user_id, WebAuthnCredential.revoked_at.is_(None)
+    )
+
+
+@router.get("/webauthn/status", summary="Passkeys (WebAuthn): Verfügbarkeit (M2-03)")
+async def webauthn_status(
+    request: Request, principal: Principal = Depends(get_principal)
+) -> AuthWebAuthnStatus:
+    count = 0
+    if principal.user_id is not None:
+        async with platform_transaction(sessions(request)) as session:
+            count = len((await session.scalars(_webauthn_active(principal.user_id))).all())
+    return AuthWebAuthnStatus(
+        available=webauthn.AVAILABLE,
+        reason=None if webauthn.AVAILABLE else webauthn.UNAVAILABLE_REASON,
+        credential_count=count,
+    )
+
+
+@router.get("/webauthn/credentials", summary="Eigene Passkeys (WebAuthn) auflisten")
+async def list_webauthn_credentials(
+    request: Request, principal: Principal = Depends(get_principal)
+) -> list[AuthWebAuthnCredentialOut]:
+    if principal.user_id is None:
+        return []
+    async with platform_transaction(sessions(request)) as session:
+        rows = (
+            await session.scalars(
+                _webauthn_active(principal.user_id).order_by(WebAuthnCredential.created_at)
+            )
+        ).all()
+        return [
+            AuthWebAuthnCredentialOut(
+                id=r.id, label=r.label, created_at=r.created_at, last_used_at=r.last_used_at
+            )
+            for r in rows
+        ]
+
+
+@router.delete(
+    "/webauthn/credentials/{credential_id}", status_code=204, summary="Eigenen Passkey widerrufen"
+)
+async def revoke_webauthn_credential(
+    credential_id: uuid.UUID, request: Request, principal: Principal = Depends(get_principal)
+) -> Response:
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    async with platform_transaction(sessions(request)) as session:
+        row = await session.scalar(
+            _webauthn_active(principal.user_id).where(WebAuthnCredential.id == credential_id)
+        )
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        row.revoked_at = datetime.now(UTC)
+    return Response(status_code=204)
+
+
+@router.post(
+    "/webauthn/register/options",
+    summary="Passkey registrieren: Optionen (vorbereitet, M2-03)",
+    responses={503: {"description": "MHVP-AUTH-0012"}},
+)
+async def webauthn_register_options(principal: Principal = Depends(get_principal)) -> Response:
+    """Answers MHVP-AUTH-0012 until a WebAuthn verification library is released."""
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN)
+    webauthn.ensure_available()
+    raise ProblemError(ErrorCodes.WEBAUTHN_UNAVAILABLE)  # pragma: no cover - AVAILABLE False
+
+
+@router.post(
+    "/webauthn/register/verify",
+    summary="Passkey registrieren: Antwort prüfen (vorbereitet, M2-03)",
+    responses={503: {"description": "MHVP-AUTH-0012"}},
+)
+async def webauthn_register_verify(principal: Principal = Depends(get_principal)) -> Response:
+    if principal.user_id is None:
+        raise ProblemError(ErrorCodes.FORBIDDEN)
+    webauthn.ensure_available()
+    raise ProblemError(ErrorCodes.WEBAUTHN_UNAVAILABLE)  # pragma: no cover - AVAILABLE False
 
 
 @router.get("/me", summary="Aktueller Benutzer und Berechtigungen")

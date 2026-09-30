@@ -39,6 +39,9 @@ BANK_RULE_PROPOSAL_CREATED = "bank_rule_proposal.created"
 BANK_RULE_PROPOSAL_WITHDRAWN = "bank_rule_proposal.withdrawn"
 BANK_RULE_PROPOSAL_ACCEPTED = "bank_rule_proposal.accepted"
 BANK_RULE_PROPOSAL_REJECTED = "bank_rule_proposal.rejected"
+AUTO_POSTING_DIGEST_CREATED = "auto_posting_digest.created"
+AUTO_POSTING_DIGEST_CONFIRMED = "auto_posting_digest.confirmed"
+BANK_SYNC_REQUESTED = "bank_sync.requested"
 
 # Tenant switches.
 TENANT_LEARNING_BOOKKEEPER_CHANGED = "tenant.learning_bookkeeper_changed"

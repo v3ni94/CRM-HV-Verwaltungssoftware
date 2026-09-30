@@ -42,9 +42,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "mhvp.communication.tasks",
             "mhvp.communication.postal_tasks",
             "mhvp.banking.tasks",
+            "mhvp.banking.payment_run_tasks",
             "mhvp.accounting.tasks",
             "mhvp.letting.tasks",
+            "mhvp.contracts.tasks",
             "mhvp.platform.licensing",
+            "mhvp.platform.export_job",
             "mhvp.sla.tasks",
             "mhvp.immoware.tasks",
             "mhvp.objektakte.tasks",
@@ -139,6 +142,11 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.platform.usage_all",
                 "schedule": crontab(day_of_month=1, hour=2, minute=0),
             },
+            # Daily snapshot of the usage counters for the history (M27-05).
+            "platform-usage-daily": {
+                "task": "mhvp.platform.usage_all",
+                "schedule": crontab(hour=2, minute=10),
+            },
             # Learning examples older than the tenant's retention months are deleted daily
             # (ADR 0010 addendum 27.09.2026, M7-04); one journal event per tenant.
             "ai-examples-retention": {
@@ -155,6 +163,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.letting.purge_prospects",
                 "schedule": crontab(hour=3, minute=30),
             },
+            # Payment run preview (S15-02, 15.1 payments.payment_run): Monday 08:00, only for
+            # tenants that switched it on; lists only, no order, file or posting (G2).
+            "payments-payment-run-preview": {
+                "task": "mhvp.payments.payment_run",
+                "schedule": crontab(day_of_week=1, hour=8, minute=0),
+            },
             "banking-sync-all": {
                 "task": "mhvp.banking.sync_all",
                 "schedule": crontab(hour=6, minute=0),
@@ -169,17 +183,35 @@ def create_celery(settings: Settings | None = None) -> Celery:
             },
             # Consent reminder 10 days before an aggregator consent expires (A29, 8.2): daily,
             # per tenant, one notification per connection and expiry date.
+            # M11-05: tenants with a configured sync hour other than 06:00 (bank_sync_setting).
+            "banking-sync-due": {
+                "task": "mhvp.banking.sync_due",
+                "schedule": crontab(minute=2),
+                "options": {"queue": "io"},
+            },
+            # Plan M12 S10: weekly L3 digest of the previous week, Monday morning.
+            "banking-weekly-digest": {
+                "task": "mhvp.banking.weekly_digest",
+                "schedule": crontab(day_of_week=1, hour=5, minute=50),
+                "options": {"queue": "io"},
+            },
             "banking-consent-reminders": {
                 "task": "mhvp.banking.consent_reminders",
                 "schedule": crontab(hour=7, minute=5),
                 "options": {"queue": "io"},
             },
-            # Verbrauchsinformation (rule H03, 15.1 heating.consumption_info): beat on days 1
-            # to 3 at 05:40, the task runs only on the first working day, per tenant with the
-            # switch on (default off), idempotent per unit and month.
+            # Verbrauchsinformation (rule H03, 15.1 heating.consumption_info): monthly on the
+            # 3rd at 05:40 as specified (S15-05), per tenant with the switch on (default off),
+            # idempotent per unit and month.
             "billing-consumption-info": {
                 "task": "mhvp.billing.consumption_info",
-                "schedule": crontab(day_of_month="1-3", hour=5, minute=40),
+                "schedule": crontab(day_of_month=3, hour=5, minute=40),
+            },
+            # Receivable run (15.1 accounting.receivable_run, S15-01): on the 1st at 05:00 a
+            # preview per tenant that switched it on; posting stays manual (G1).
+            "accounting-receivable-run": {
+                "task": "mhvp.accounting.receivable_run",
+                "schedule": crontab(day_of_month=1, hour=5, minute=0),
             },
             # Dunning previews on the 5th (15.1); approval and sending stay manual.
             "accounting-dunning-run": {
@@ -191,6 +223,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "communication-gmail-sync": {
                 "task": "mhvp.communication.gmail_sync_all",
                 "schedule": 60.0,
+                "options": {"queue": "mail"},
+            },
+            # IMAP fetch for mailboxes of kind imap (M20-01, decision 5 a); BODY.PEEK only,
+            # same ingest pipeline as Gmail, runs do not overlap (Redis lock).
+            "communication-imap-sync": {
+                "task": "mhvp.communication.imap_sync_all",
+                "schedule": 120.0,
                 "options": {"queue": "mail"},
             },
             # Renewal of the Gmail push watches (Google ends them after seven days): daily
@@ -270,6 +309,12 @@ def create_celery(settings: Settings | None = None) -> Celery:
             "banking-learning-retention": {
                 "task": "mhvp.banking.learning_retention",
                 "schedule": crontab(hour=3, minute=50),
+            },
+            # SEPA mandates past ``valid_until`` become expired (M5-03), daily 03:40; no money
+            # flow, direct debit of the affected contracts stops like on revocation.
+            "contracts-expire-mandates": {
+                "task": "mhvp.contracts.expire_mandates",
+                "schedule": crontab(hour=3, minute=40),
             },
             "sla-check-clocks": {
                 "task": "mhvp.sla.check_clocks",

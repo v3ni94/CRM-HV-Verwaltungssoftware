@@ -88,6 +88,10 @@ class AccountPatch(_In):
     visible: bool | None = None
     active: bool | None = None
     booking_texts: list[str] | None = Field(default=None, max_length=3)
+    # M10-03: default VAT option and cash report flag are editable; VAT stays on the lines,
+    # so a change only affects future drafts, never posted entries (B03).
+    vat_option: AccountVatOption | None = None
+    relevant_for_cash_report: bool | None = None
 
 
 class AccountOut(BaseModel):
@@ -104,6 +108,9 @@ class AccountOut(BaseModel):
     allocation_category: AllocationCategory
     statement_kind: StatementKind
     section_35a_eligible: bool
+    eur_relevant: bool
+    ust_relevant: bool
+    mixed_use_review: bool
     review_status: str
     review_note: str | None
     party_id: uuid.UUID | None
@@ -228,3 +235,57 @@ class SettlementConfirmIn(SettlementProposalIn):
     text: str | None = Field(default=None, max_length=500)
     reference: str | None = Field(default=None, max_length=100)
     post_immediately: bool = False
+
+
+# M10-01 cost account allocation, M10-05 creditor sync, M10-06 cost transfer and interest --
+
+
+class AccountingAllocationItemIn(_In):
+    allocation_key_id: uuid.UUID
+    share_percent: Decimal = Field(gt=0, le=100, max_digits=12, decimal_places=4)
+
+
+class AccountingAllocationIn(_In):
+    items: list[AccountingAllocationItemIn] = Field(default_factory=list, max_length=50)
+
+
+class AccountingAllocationItemOut(BaseModel):
+    allocation_key_id: uuid.UUID
+    code: str
+    name: str
+    share_percent: Decimal
+
+
+class AccountingAllocationOut(BaseModel):
+    ledger_account_id: uuid.UUID
+    items: list[AccountingAllocationItemOut]
+    total_percent: Decimal
+
+
+class AccountingCreditorSyncOut(BaseModel):
+    created: int
+    linked: int
+
+
+class AccountingCostTransferIn(_In):
+    booking_date: date
+    from_account_id: uuid.UUID
+    to_account_id: uuid.UUID
+    amount: Money = Field(gt=0, max_digits=14, decimal_places=2)
+    text: str = Field(min_length=3, max_length=500)
+    unit_id: uuid.UUID | None = None
+    reference: str | None = Field(default=None, max_length=100)
+    document_id: uuid.UUID | None = None
+
+
+class AccountingInterestIn(_In):
+    booking_date: date
+    bank_account_id: uuid.UUID
+    interest_account_id: uuid.UUID
+    amount: Money = Field(gt=0, max_digits=14, decimal_places=2)
+    # credit: interest received (bank debit), debit: interest charged (bank credit)
+    direction: str = Field(pattern=r"^(credit|debit)$")
+    text: str = Field(min_length=3, max_length=500)
+    value_date: date | None = None
+    reference: str | None = Field(default=None, max_length=100)
+    document_id: uuid.UUID | None = None

@@ -242,3 +242,49 @@ fingerprint as before. The legal entity is derived in the browser from
 `GET /properties/{id}/legal-entities` with the same owner table as
 `properties.services.ACCOUNT_OWNERS` (6.9.1); the API check stays authoritative. Creditor
 contacts from a transaction live in `mhvp.properties.routers_creditors`.
+
+## Payment run, bank limits, status reports (M15-02 to M15-07, S15-02, rule M15-03)
+
+- `payment_run.py`: preview of payable invoices per legal entity (`GET
+  /api/v1/accounting/payment-runs/preview`), bulk draft orders with per invoice failures
+  (`POST /orders`), payouts without invoice on payable open items (`POST /payout-orders`,
+  reasons `owner_payout`, `statement_credit`, `deposit_refund`, `other_refund`), limits per
+  ordering account (`PUT /bank-limits/{account}`) enforced before `POST
+  /banking/payment-batches` (409), Verification of Payee as a hint only.
+- `bank_status.py`: pain.002 and camt.054 import along the public ISO 20022 structure,
+  matched by end to end id; status only, never a posting; same file checksum is a no-op.
+- `payment_run_tasks.py`: job `mhvp.payments.payment_run`, Monday 08:00, only for tenants
+  with `payment_run_setting.weekly_preview_enabled`; stores `payment_run_preview` rows.
+- Tables `bank_status_report`, `payment_run_setting`, `payment_run_preview` live in
+  `mhvp.accounting.direct_debit_models` (already registered in `mhvp.models`); migration 0253.
+
+## Lückenliste 30.09.2026, Paket P09 (Migration 0258)
+
+- Connector protocol (8.1, M11-03): `BankConnector` has `fetch_balance`, `consent_status` and
+  `submit_payment_batch`. Every read connector refuses payment submission
+  (`refuse_payment_submission`); payments stay on `payment_submitters` behind G2. finAPI reads
+  balances from GET /accounts and the connection status from GET /bankConnections/{id}; the
+  consent expiry stays unread until a field is verified (M11-41).
+- Sync (8.2, M11-04, M11-05): `finapi_fetch` is one task per account link with three retries
+  and exponential backoff (60, 120, 240 s) for provider unavailable or rate limited only.
+  `bank_sync_setting.sync_hour` per tenant (default 6); beat `banking-sync-due` (hourly)
+  serves tenants with another hour, the 06:00 entries skip them. `POST /banking/sync/run`
+  is the manual full sync (generic run plus one fetch task per assigned finAPI account).
+- Sync protocol (M11-06): `BankSyncRun.counts` gets `proposals` and `auto_posted` after the
+  proposal job (`tasks.record_run_metrics`).
+- Allocation (M12-01): unit and property hints are checked against the open item's contract
+  (`allocation.location_matches`), in `posting_proposal` and `matching.candidates`.
+- Weekly L3 digest (M12-02, rule `docs/rules/M12-S10-wochendigest-l3.md`): `digest.py`,
+  table `auto_posting_digest`, beat `banking-weekly-digest` (Monday 05:50), endpoints
+  `GET /banking/auto-posting/digests`, `POST .../digests/build`, `POST .../digests/{id}/confirm`.
+  The runner blocks the sampled classes at L3 while a digest of an earlier week is unconfirmed.
+- Payer IBAN (M12-03): `payer_iban.py`, `GET|POST /banking/transactions/{id}/payer-iban`
+  creates a `pending` contact bank account through `contacts.services.add_bank_account`
+  (four eyes release by `contacts:approve`).
+- AI posting (M12-04, M12-05): `GET /transactions/{id}/ai-posting` returns the run (provider,
+  model, prompt version, cost); prompt v2 with up to eight minimised examples of the same
+  counterparty only with `ai_learning_examples_enabled` (v1 unchanged otherwise);
+  `assert_minimised` checks the example keys; rules accepted from evidence with an AI
+  decision carry `learned_from_ai`.
+- Test set (M12-06): `tests/fixtures/banking/m12_02_testbestand.json`, 20 synthetic
+  transactions with 12 outgoing cases, `tests/unit/test_m12_02_testbestand.py`.

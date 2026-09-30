@@ -181,6 +181,72 @@ def check_lead_time(collection_date: date, lead_days: int, today: date) -> None:
         )
 
 
+async def bank_config(session: AsyncSession, account_id: uuid.UUID) -> Any:
+    """Agreement with the bank of the creditor account (``payment_bank_config``) or None."""
+    from mhvp.banking.models import PaymentBankConfig
+
+    return await session.scalar(
+        select(PaymentBankConfig).where(PaymentBankConfig.property_bank_account_id == account_id)
+    )
+
+
+def sequence_lead_block(
+    config: Any, seq: SequenceType | None, collection_date: date, today: date
+) -> str | None:
+    """Submission lead days per sequence type (M15-06). Only a value the operator entered as
+    agreed with the bank is checked; the platform derives no default (zu verifizieren)."""
+    if config is None or seq is None:
+        return None
+    days = config.dd_lead_days_frst if seq is SequenceType.FRST else config.dd_lead_days_rcur
+    if days is None or collection_date >= today + timedelta(days=days):
+        return None
+    return (
+        f"Einreichungsfrist {seq.value} von {days} Tagen unterschritten "
+        "(Bankvereinbarung, zu verifizieren)"
+    )
+
+
+def lead_time_rules(config: Any) -> dict[str, Any]:
+    """The configured lead times per procedure, each marked as to be verified (M15-06)."""
+    return {
+        "frst_days": getattr(config, "dd_lead_days_frst", None),
+        "rcur_days": getattr(config, "dd_lead_days_rcur", None),
+        "pre_notification_days": getattr(config, "pre_notification_days", None),
+        "source_status": "zu verifizieren",
+        "note": (
+            "Fristen je Verfahren sind Betreibereingaben nach Bankvereinbarung und Mandat; "
+            "ohne Eingabe prüft die Plattform nur die beim Lauf angegebene Vorlauffrist."
+        ),
+    }
+
+
+def pre_notification_check(
+    config: Any, collection_date: date, today: date, lead_days: int
+) -> dict[str, Any]:
+    """Distance between dispatch of the pre-notification (today) and the collection date
+    (M15-06). A configured agreement is enforced; without it the result is a warning only."""
+    configured = getattr(config, "pre_notification_days", None)
+    required = configured if configured is not None else lead_days
+    distance = (collection_date - today).days
+    ok = distance >= required
+    if configured is not None and not ok:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail=(
+                f"Die Vorabinformation muss mindestens {configured} Tage vor dem Einzug "
+                f"zugehen; bis zum {collection_date:%d.%m.%Y} verbleiben {distance} Tage "
+                "(Vereinbarung, zu verifizieren)."
+            ),
+        )
+    return {
+        "required_days": required,
+        "configured": configured is not None,
+        "days_until_collection": distance,
+        "ok": ok,
+        "source_status": "zu verifizieren",
+    }
+
+
 async def previous_uses(session: AsyncSession, contact_bank_account_id: uuid.UUID) -> int:
     count = await session.scalar(
         select(func.count(DirectDebitOrder.id))
@@ -354,6 +420,12 @@ async def create_run(
     selection = await select_due(
         session, ledger=ledger, collection_date=collection_date, open_item_ids=open_item_ids
     )
+    config = await bank_config(session, bank.id)
+    for c in selection.eligible:  # M15-06: lead days per sequence type as agreed with the bank
+        if (
+            reason := sequence_lead_block(config, c.sequence_type, collection_date, today)
+        ) is not None:
+            c.block_reason = reason
     if wanted_blocked := [c for c in selection.excluded if open_item_ids is not None]:
         raise ProblemError(
             ErrorCodes.CONFLICT,
@@ -934,6 +1006,7 @@ async def create_pre_notifications(
     *,
     principal: Any,
     lead_days: int = PRE_NOTIFICATION_LEAD_DAYS_DEFAULT,
+    today: date | None = None,
 ) -> list[dict[str, Any]]:
     """One draft per payer: text document filed at the contact plus a dispatch draft via
     ``mhvp.communication.dispatch`` (e-mail draft when an address exists, otherwise postal
@@ -956,6 +1029,12 @@ async def create_pre_notifications(
     if bank is None:  # pragma: no cover
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     creditor_masked = mask_iban(bank.iban)
+    config = await bank_config(session, bank.id)
+    if config is not None and config.pre_notification_days is not None:
+        lead_days = config.pre_notification_days
+    check = pre_notification_check(
+        config, run.collection_date, today or datetime.now(UTC).date(), lead_days
+    )
     result: list[dict[str, Any]] = []
     by_payer: dict[uuid.UUID, list[DirectDebitOrder]] = {}
     for order in await orders_of(session, run):
@@ -974,6 +1053,7 @@ async def create_pre_notifications(
                         else None
                     ),
                     "created": False,
+                    "lead_time_check": check,
                 }
             )
             continue
@@ -1016,6 +1096,7 @@ async def create_pre_notifications(
                 "document_id": str(document.id),
                 "dispatch_id": str(dispatch.id),
                 "created": True,
+                "lead_time_check": check,
             }
         )
     await session.flush()

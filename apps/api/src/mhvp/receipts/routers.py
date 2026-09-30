@@ -469,6 +469,45 @@ async def reject_draft(
         return await _out(session, draft)
 
 
+@router.post(
+    "/drafts/{draft_id}/validation", summary="Validierungsergebnis einer E-Rechnung speichern"
+)
+async def record_validation(
+    draft_id: uuid.UUID,
+    body: s.ReceiptValidationIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> s.ReceiptDraftOut:
+    """S711-01: variant, validator, version and result per e-invoice. The own formal check
+    stays in ``validation.formal``; the reported run becomes the current result."""
+    async with tenant_tx(request, principal) as session:
+        draft = await _draft(session, draft_id)
+        if draft.e_invoice_format == "none":
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Der Beleg hat keinen strukturierten Teil."
+            )
+        previous = dict(draft.validation or {})
+        formal = previous.get("formal") or (previous if not previous.get("official") else None)
+        draft.validation = {
+            **body.model_dump(),
+            "official": True,
+            "variant": draft.e_invoice_profile,
+            "structured_sha256": draft.structured_sha256,
+            "recorded_by": str(principal.user_id) if principal.user_id else None,
+            "recorded_at": datetime.now(UTC).isoformat(),
+            "formal": formal,
+        }
+        await _event(
+            session,
+            principal,
+            "receipt_draft.validation_recorded",
+            draft.id,
+            validator=body.validator,
+            result=body.result,
+        )
+        return await _out(session, draft)
+
+
 async def _carry_over(session: Any, draft: ReceiptDraft) -> None:
     """What the intake knows and the apply schema cannot carry: e-invoice format, the printed
     recipient (PÜ01 check against the legal entity) and the intake findings (D42 conflicts,
@@ -495,6 +534,9 @@ async def _carry_over(session: Any, draft: ReceiptDraft) -> None:
             "Zahlungsprüfung statt automatischer Auswahl (D42)"
         )
     extra.extend(f for f in draft.findings if f.startswith("§-35a"))
+    extra.extend(
+        f"E-Rechnung hybrid: {d.get('note')}" for d in (draft.hybrid_deviations or [])
+    )  # S711-04: kept independently of the acknowledged D42 conflicts
     if extra:
         invoice.findings = [*invoice.findings, *extra]
     await session.flush()

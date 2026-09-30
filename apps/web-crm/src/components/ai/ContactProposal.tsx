@@ -30,6 +30,7 @@ function defaultChoice(row: ContactRow): RowChoice {
 export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; onDecided?: () => void }) {
   const t = useTranslations("Ai");
   const preview = contactsPreview(proposal.proposed);
+  const [rejectReason, setRejectReason] = useState("");
   const [choices, setChoices] = useState<RowChoice[]>(() => preview.rows.map(defaultChoice));
   const [result, setResult] = useState<ImportRun | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -62,7 +63,11 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
 
   const reject = async () => {
     setBusy(true);
-    const res = await bff<Proposal>(`/api/bff/ai/proposals/${proposal.id}/reject`, { method: "POST" });
+    const reason = rejectReason.trim();
+    const res = await bff<Proposal>(`/api/bff/ai/proposals/${proposal.id}/reject`, {
+      method: "POST",
+      ...(reason ? { body: JSON.stringify({ reason }) } : {}),
+    });
     setBusy(false);
     if (res.ok) {
       setDecision(res.data.decision);
@@ -196,6 +201,10 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
           <button type="button" className={ui.primary} onClick={apply} disabled={busy || invalidLink || nothingToDo}>
             {t("confirmApply")}
           </button>
+          <label className="flex w-full flex-col gap-1 text-xs text-muted">
+            {t("rejectReasonLabel")}
+            <textarea className={ui.input} rows={2} maxLength={2000} value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} />
+          </label>
           <button type="button" className={ui.button} onClick={reject} disabled={busy}>
             {t("reject")}
           </button>

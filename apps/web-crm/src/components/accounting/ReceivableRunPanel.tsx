@@ -14,7 +14,12 @@ type Item = {
   due_date: string | null;
   status: string;
   message: string | null;
+  // 7.5 evidence and difference to an already posted item (M13-01, M13-02)
+  contract_version?: number | null;
+  basis_valid_from?: string | null;
+  difference_amount?: string | null;
 };
+type RunSummary = { id: string; period_month: string; status: string; created_at: string };
 export type Run = {
   id: string;
   period_month: string;
@@ -31,6 +36,20 @@ export function ReceivableRunPanel({ initialMonth }: { initialMonth: string }) {
   const [run, setRun] = useState<Run | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [runs, setRuns] = useState<RunSummary[] | null>(null);
+
+  const loadRuns = async () => {
+    setError(null);
+    const res = await bff<RunSummary[]>(`/api/bff/accounting/receivable-runs?period_month=${month}-01`);
+    if (res.ok) setRuns(res.data ?? []);
+    else setError(res.message);
+  };
+  const openRun = async (id: string) => {
+    setError(null);
+    const res = await bff<Run>(`/api/bff/accounting/receivable-runs/${id}`);
+    if (res.ok) setRun(res.data);
+    else setError(res.message);
+  };
 
   const preview = async () => {
     setBusy(true);
@@ -68,11 +87,15 @@ export function ReceivableRunPanel({ initialMonth }: { initialMonth: string }) {
             onChange={(e) => {
               setMonth(e.target.value);
               setRun(null);
+              setRuns(null);
             }}
           />
         </label>
         <button type="button" className={ui.button} onClick={preview} disabled={busy || !month}>
           {t("preview")}
+        </button>
+        <button type="button" className={ui.secondary} onClick={loadRuns} disabled={busy || !month}>
+          {t("earlierRuns")}
         </button>
         {run && run.status !== "posted" && ready ? (
           <button type="button" className={ui.primary} onClick={post} disabled={busy}>
@@ -84,6 +107,24 @@ export function ReceivableRunPanel({ initialMonth }: { initialMonth: string }) {
         <p role="alert" className={ui.alert}>
           {error}
         </p>
+      ) : null}
+      {runs ? (
+        runs.length === 0 ? (
+          <p className="text-sm text-muted">{t("noRuns")}</p>
+        ) : (
+          <ul className="flex flex-col gap-1 text-sm" data-testid="run-list">
+            {runs.map((r) => (
+              <li key={r.id} className="flex items-center gap-2">
+                <span>
+                  {formatDate(r.created_at)} · {t(`runStatus.${r.status}`)}
+                </span>
+                <button type="button" className={ui.buttonSm} onClick={() => openRun(r.id)}>
+                  {t("open")}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )
       ) : null}
       {run ? (
         <>
@@ -116,7 +157,15 @@ export function ReceivableRunPanel({ initialMonth }: { initialMonth: string }) {
                   <td className="num">{formatEur(i.amount)}</td>
                   <td>{formatDate(i.due_date)}</td>
                   <td>{t(`itemStatus.${i.status}`)}</td>
-                  <td className="text-muted">{i.message}</td>
+                  <td className="text-muted">
+                    {i.message}
+                    {i.difference_amount ? ` ${t("difference", { amount: formatEur(i.difference_amount) })}` : ""}
+                    {i.basis_valid_from ? (
+                      <span className="block text-xs">
+                        {t("basis", { date: formatDate(i.basis_valid_from), version: i.contract_version ?? 1 })}
+                      </span>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

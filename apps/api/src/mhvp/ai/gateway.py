@@ -25,13 +25,14 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from mhvp.ai import instructions as chat_instructions
 from mhvp.ai import lookup, providers, table_mapper, tasks
+from mhvp.ai.journal_history import journal_examples
+from mhvp.ai.masking import mask_personal_data
 from mhvp.ai.models import AiExample, AiProvider, AiProviderConfig, AiTask, AiTaskRun, RunStatus
 from mhvp.core.db.tenancy import tenant_transaction
 from mhvp.core.events import emit
 from mhvp.core.logging import get_logger
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document, TextStatus
-from mhvp.objektakte.masking import mask_identifiers
 
 log = get_logger("mhvp.ai.gateway")
 
@@ -596,14 +597,14 @@ async def build_input(
         text, document_ids, input_stats = fit_answer_input(
             parts, budget_tokens or DEFAULT_INPUT_BUDGET_TOKENS
         )
-        text = mask_identifiers(text)
+        text = mask_personal_data(text)
         return TaskInput(
             text=text,
             document_ids=document_ids,
             context=context,
             input_stats=input_stats,
             chunks=[],
-            instruction=mask_identifiers(question) if separate else None,
+            instruction=mask_personal_data(question) if separate else None,
         )
 
     records = ""
@@ -643,8 +644,8 @@ async def build_input(
                 f"{MAX_INPUT_CHARS}). Bitte in kleinere Teile aufteilen."
             )
     if run.task in MASKED_TASKS:
-        text = mask_identifiers(text)
-        question = mask_identifiers(question)
+        text = mask_personal_data(text)
+        question = mask_personal_data(question)
     return TaskInput(
         text=text,
         document_ids=document_ids,
@@ -917,7 +918,7 @@ def _messages(
     if shots:
         shots_json = json.dumps(shots, ensure_ascii=False)
         if masked:
-            shots_json = mask_identifiers(shots_json)
+            shots_json = mask_personal_data(shots_json)
         parts.append(
             "Bestätigte Beispiele dieses Mandanten (nur als Orientierung für Format und "
             f"Zuordnung):\n{shots_json}"
@@ -1571,6 +1572,9 @@ async def execute(
             run.input_ref = {**run.input_ref, "deduplicated_from": str(previous.id)}
             return run
         shots = await examples(session, task)
+        if task is AiTask.PROPOSE_POSTING:
+            # M8-05: comparable entries of the migrated journal as read only few shot examples.
+            shots = [*shots, *await journal_examples(session, item.text)]
         keys = {c.config.provider: c.config.api_key or "" for c, _, _ in [*plan, *map_plan]}
         chosen, spent, budget = plan[0]
         total_parts = len(item.chunks) if item.chunks else 1

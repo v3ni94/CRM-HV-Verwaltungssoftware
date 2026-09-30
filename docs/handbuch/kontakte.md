@@ -171,3 +171,7 @@ Telefonanlage.
   nicht freigegeben (Reiter Bankverbindungen, Freigabe).
 - **Rufnummer in der Anrufliste maskiert**: Recht Kontakte lesen fehlt (Kapitel
   Kommunikation).
+
+## Serienversand (Seite Kontakte, Serienversand)
+
+Je Empfänger wird aus einer aktiven Dokumentvorlage ein eigenes Dokument erzeugt und abgelegt. Danach wird je Zustellweg eine Zustellung vorbereitet. Versendet wird nichts automatisch.

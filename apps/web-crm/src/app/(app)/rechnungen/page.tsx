@@ -40,6 +40,9 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
       <PageHeader
         title={t("title")}
         action={
+          <div className="flex flex-wrap gap-2">
+          <Link href="/rechnungen/kreditoren" className={ui.button}>{t("creditorsLink")}</Link>
+          <Link href="/rechnungen/plaene" className={ui.button}>{t("plansLink")}</Link>
           <Link href="/rechnungen/belegeingang" className={ui.button}>
             {t("receiptIntakeLink")}
             {openDraftCount > 0 ? (
@@ -48,6 +51,7 @@ export default async function InvoicesPage({ searchParams }: { searchParams: Pro
               </span>
             ) : null}
           </Link>
+          </div>
         }
       />
       <p className={ui.notice}>{t("notice")}</p>
