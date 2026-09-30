@@ -561,7 +561,7 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
         Boolean, nullable=False, default=False, server_default=text("false")
     )
     gmail_settle_seconds: Mapped[int] = mapped_column(
-        Integer, nullable=False, default=600, server_default=text("600")
+        Integer, nullable=False, default=180, server_default=text("180")
     )
     gmail_reconcile_grace_seconds: Mapped[int] = mapped_column(
         Integer, nullable=False, default=300, server_default=text("300")

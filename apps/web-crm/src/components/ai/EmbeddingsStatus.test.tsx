@@ -73,3 +73,15 @@ describe("EmbeddingsStatus", () => {
     await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
   });
 });
+
+describe("EmbeddingsStatus lazy load", () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it("loads the status after the first render when the server did not deliver it", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => jsonResponse(STATUS));
+    renderIntl(<EmbeddingsStatus initial={null} />);
+    await waitFor(() => expect(screen.getByText("7 von 10 eingebettet, 3 ausstehend")).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock).toHaveBeenCalledWith("/api/bff/ai/embeddings/status", expect.anything());
+  });
+});

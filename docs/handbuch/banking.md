@@ -141,6 +141,17 @@ Automatikschalter des Mandanten, das Entscheidungsprotokoll und der Schalter der
 Ausgangsautomatik sind Voraussetzung; vor G1 bucht die Automatik nur im nicht führenden
 Buchungskreis (Vergleichsbuchung, Betreiberentscheidung vom 28.09.2026).
 
+## Buchungen ohne Beleg (Belegkette B05)
+
+Die Liste „Buchungen ohne Beleg“ auf der Bankseite zeigt jede unbelegte Bankbewegung mit
+Klärungsstatus, Betrag, Buchungstag, Alter in Tagen und dem Hinweis auf die angelegte Aufgabe.
+Eine Zeile entsteht durch die Automatik oder durch eine Person, die eine offene Bewegung als
+unbelegt meldet. Mögliche Status: Offen, In Klärung, Beleg angefordert, Kein Beleg erforderlich
+(nur mit Begründung der angemeldeten Person) und Erledigt (mit verknüpftem Beleg). Solange eine
+Zeile offen, in Klärung oder angefordert ist, lässt sich die Bewegung nicht buchen; die
+Plattform meldet dann „Beleg fehlt“. Nach der Entscheidung ist die Buchung wieder möglich.
+Entschiedene Zeilen bleiben erhalten und erscheinen im Prüfexport.
+
 ## Nachkontrolle, Mahnlauf und Rückläufer
 
 Solange eine Automatikbuchung nicht nachkontrolliert ist, lässt die Plattform den betroffenen

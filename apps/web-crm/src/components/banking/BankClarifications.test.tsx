@@ -65,6 +65,23 @@ describe("BankClarifications", () => {
     expect(await screen.findByText("Klärungsstatus gesetzt: Kein Beleg erforderlich.")).toBeInTheDocument();
   });
 
+  it("shows the age and requests the receipt", async () => {
+    const calls: { url: string; init?: RequestInit }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, init });
+      if (url.endsWith("/banking/clarifications")) return jsonResponse([{ ...row, age_days: 12 }]);
+      if (url.endsWith(`/banking/clarifications/${ROW}`)) return jsonResponse({ ...row, status: "receipt_requested" });
+      return jsonResponse({}, 404);
+    });
+    renderIntl(<BankClarifications canUpdate />);
+    expect(await screen.findByTestId("clarification-age")).toHaveTextContent("12 Tage offen");
+    await userEvent.click(screen.getByRole("button", { name: "Beleg anfordern" }));
+    await waitFor(() => expect(calls.some((c) => c.init?.method === "POST")).toBe(true));
+    expect(JSON.parse(String(calls.find((c) => c.init?.method === "POST")?.init?.body))).toEqual({ status: "receipt_requested" });
+    expect(await screen.findByText("Klärungsstatus gesetzt: Beleg angefordert.")).toBeInTheDocument();
+  });
+
   it("hides the actions without accounting:update", async () => {
     mockApi();
     renderIntl(<BankClarifications canUpdate={false} />);

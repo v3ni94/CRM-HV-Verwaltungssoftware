@@ -373,6 +373,7 @@ class ClarificationStatus(StrEnum):
 
     OPEN = "open"
     IN_CLARIFICATION = "in_clarification"
+    RECEIPT_REQUESTED = "receipt_requested"  # document asked for (migration 0248)
     NO_DOCUMENT_REQUIRED = "no_document_required"  # decided by a person with a reason
     RESOLVED = "resolved"  # document linked
 

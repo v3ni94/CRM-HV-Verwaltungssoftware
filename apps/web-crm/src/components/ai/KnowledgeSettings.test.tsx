@@ -26,7 +26,6 @@ describe("KnowledgeSettings", () => {
   it("lists existing entries and creates a new one", async () => {
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse([entry])) // reload on property filter effect (none set initially skipped, first call is create)
       .mockResolvedValueOnce(jsonResponse({ ...entry, id: "01920000-0000-7000-8000-0000000000k2", title: "Neu" }))
       .mockResolvedValueOnce(jsonResponse([entry, { ...entry, id: "01920000-0000-7000-8000-0000000000k2", title: "Neu" }]));
     vi.stubGlobal("fetch", fetchMock);
@@ -61,5 +60,13 @@ describe("KnowledgeSettings", () => {
     expect(usages[0]).toHaveTextContent("0x verwendet · 0 hilfreich, 0 nicht hilfreich");
     expect(usages[1]).toHaveTextContent("7x verwendet · 3 hilfreich, 1 nicht hilfreich");
     expect(screen.getAllByText("Lange nicht geprüft")).toHaveLength(1);
+  });
+
+  it("does not refetch the list on mount, only when a filter changes", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse([entry]));
+    vi.stubGlobal("fetch", fetchMock);
+    renderIntl(<KnowledgeSettings initial={[entry]} properties={[]} />);
+    await act(async () => {});
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

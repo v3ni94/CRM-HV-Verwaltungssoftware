@@ -205,7 +205,7 @@ Gmail are read per mailbox copy and, in mode `done`, complete or reopen the copy
   not newer, or whose state equals the expected state, is `ignored_own`. The replay guard
   `gmail_state_history_id` is monotone per copy. The archive job leaves copies alone that a
   user already archived or trashed (their state stays).
-* Settle period (`gmail_settle_seconds`, default 600): a completion waits (`settle_pending`),
+* Settle period (`gmail_settle_seconds`, default 180): a completion waits (`settle_pending`),
   beat `communication-gmail-settle` (60 s) executes it after a fresh check; a return into the
   inbox before drops it. Work labels (`gmail_keep_open_labels`, label names) keep a mail
   open: the history carries label ids, `sync_mailbox` maps them once per run through

@@ -9469,7 +9469,7 @@
             "title": "Reason"
           },
           "status": {
-            "pattern": "^(open|in_clarification|no_document_required|resolved)$",
+            "pattern": "^(open|in_clarification|receipt_requested|no_document_required|resolved)$",
             "title": "Status",
             "type": "string"
           }
@@ -9478,6 +9478,34 @@
           "status"
         ],
         "title": "ClarificationDecisionIn",
+        "type": "object"
+      },
+      "ClarificationOpenIn": {
+        "additionalProperties": false,
+        "properties": {
+          "assignee_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assignee User Id"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "reason"
+        ],
+        "title": "ClarificationOpenIn",
         "type": "object"
       },
       "ClassificationPatternType": {
@@ -52585,7 +52613,7 @@
             "type": "boolean"
           },
           "gmail_settle_seconds": {
-            "default": 600,
+            "default": 180,
             "title": "Gmail Settle Seconds",
             "type": "integer"
           },
@@ -66043,6 +66071,31 @@
               ],
               "title": "Status"
             }
+          },
+          {
+            "description": "Höchstzahl Einträge je Abruf",
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 200,
+              "description": "Höchstzahl Einträge je Abruf",
+              "maximum": 500,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
           }
         ],
         "responses": {
@@ -72066,6 +72119,62 @@
           }
         },
         "summary": "Zuordnungsvorschläge mit Begründung",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/transactions/{tx_id}/clarification": {
+      "post": {
+        "description": "A person opens the clarification row with responsible ticket; from then on booking\nthe movement needs the document or a reasoned no document decision (MHVP-BANK-0027).",
+        "operationId": "open_clarification_api_v1_banking_transactions__tx_id__clarification_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tx_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tx Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ClarificationOpenIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Open Clarification Api V1 Banking Transactions  Tx Id  Clarification Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bankbewegung als unbelegt melden (Klärung B05)",
         "tags": [
           "Bank"
         ]

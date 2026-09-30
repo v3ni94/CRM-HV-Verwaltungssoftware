@@ -527,6 +527,16 @@ class ErrorCodes:
             "until a person closed the review."
         ),
     )
+    BANK_RECEIPT_MISSING = ErrorCode(
+        "MHVP-BANK-0027",
+        409,
+        "Beleg fehlt",
+        (
+            "The bank movement has an open evidence chain clarification (B05): booking it "
+            "needs the linked document (status resolved) or a person's decision no document "
+            "required with reason. The transaction stays open."
+        ),
+    )
     BANK_AUTO_POST_REFUSED = ErrorCode(
         "MHVP-BANK-0025",
         409,

@@ -26,7 +26,7 @@ export const GMAIL_DONE_SYNC_DEFAULTS: GmailDoneSyncSettings = {
   gmail_done_on_trash: true,
   gmail_reopen_on_unarchive: true,
   gmail_restore_inbox_on_reopen: false,
-  gmail_settle_seconds: 600,
+  gmail_settle_seconds: 180,
   gmail_reconcile_grace_seconds: 300,
   gmail_keep_open_labels: [],
   gmail_spike_confirmed_at: null,

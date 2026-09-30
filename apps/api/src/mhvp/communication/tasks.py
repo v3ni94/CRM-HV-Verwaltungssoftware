@@ -2,6 +2,7 @@
 playbook learning (M20 Übernahme aus dem Immoware Hub, queue ``ai``)."""
 
 import asyncio
+import contextlib
 import logging
 import uuid
 from collections.abc import Callable, Coroutine
@@ -280,9 +281,48 @@ def _dispatch_runs(
         )
 
 
+GMAIL_SYNC_LOCK_KEY = "mhvp:gmail:sync_all:lock"
+GMAIL_SYNC_LOCK_TTL_SECONDS = 600
+
+
+def _lock_client(settings: Settings) -> Any:
+    import redis as redis_lib
+
+    try:
+        return redis_lib.Redis.from_url(settings.redis_url.get_secret_value())
+    except Exception:  # pragma: no cover - lock is best effort, mailbox row lock remains
+        return None
+
+
+def _try_sync_lock(client: Any) -> bool:
+    if client is None:
+        return True
+    try:
+        return bool(client.set(GMAIL_SYNC_LOCK_KEY, "1", nx=True, ex=GMAIL_SYNC_LOCK_TTL_SECONDS))
+    except Exception:
+        return True
+
+
+def _release_sync_lock(client: Any) -> None:
+    if client is None:
+        return
+    with contextlib.suppress(Exception):
+        client.delete(GMAIL_SYNC_LOCK_KEY)
+
+
 @shared_task(name="mhvp.communication.gmail_sync_all")
 def gmail_sync_all() -> dict[str, int]:
-    return asyncio.run(gmail_sync_all_once(get_settings()))
+    """Beat job every 60 s. A Redis lock keeps runs from overlapping: a run still busy (slow
+    mailbox, Google back off) makes the next tick skip instead of queueing up behind it."""
+    settings = get_settings()
+    client = _lock_client(settings)
+    if not _try_sync_lock(client):
+        log.info("gmail sync skipped, previous run still active")
+        return {"mailboxes": 0, "created": 0, "failed": 0, "skipped": 1}
+    try:
+        return asyncio.run(gmail_sync_all_once(settings))
+    finally:
+        _release_sync_lock(client)
 
 
 async def forward_queued_once(settings: Settings, tenant_id: uuid.UUID) -> dict[str, int]:

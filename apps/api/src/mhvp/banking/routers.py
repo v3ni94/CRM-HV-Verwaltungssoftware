@@ -631,6 +631,7 @@ async def _book(
     *,
     bulk: bool = False,
 ) -> Any:
+    await clarification_svc.ensure_booking_allowed(session, row)
     reasons = await matching.allocation_reasons(
         session, row, [s.open_item_id for s in body.settlements]
     )
@@ -1736,10 +1737,46 @@ async def decide_review(
 
 
 class ClarificationDecisionIn(_In):
-    status: str = Field(pattern="^(open|in_clarification|no_document_required|resolved)$")
+    status: str = Field(
+        pattern="^(open|in_clarification|receipt_requested|no_document_required|resolved)$"
+    )
     reason: str | None = Field(default=None, max_length=2000)
     document_id: uuid.UUID | None = None
     assignee_user_id: uuid.UUID | None = None
+
+
+class ClarificationOpenIn(_In):
+    reason: str = Field(min_length=1, max_length=2000)
+    assignee_user_id: uuid.UUID | None = None
+
+
+@router.post(
+    "/transactions/{tx_id}/clarification",
+    status_code=201,
+    summary="Bankbewegung als unbelegt melden (Klärung B05)",
+)
+async def open_clarification(
+    tx_id: uuid.UUID,
+    body: ClarificationOpenIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> dict[str, Any]:
+    """A person opens the clarification row with responsible ticket; from then on booking
+    the movement needs the document or a reasoned no document decision (MHVP-BANK-0027)."""
+    async with tenant_tx(request, principal) as session:
+        tx = await session.get(BankTransaction, tx_id, with_for_update=True)
+        if tx is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        ensure_legal_entity_allowed(principal, tx.legal_entity_id)
+        row, _ = await clarification_svc.open_by_person(
+            session,
+            tx,
+            tenant_id=principal.tenant_id,
+            user_id=principal.user_id,
+            reason=body.reason,
+            assignee_user_id=body.assignee_user_id,
+        )
+        return await clarification_svc.row_out(session, row)
 
 
 @router.get("/clarifications", summary="Buchungen ohne Beleg (Klärungsstatus B05)")

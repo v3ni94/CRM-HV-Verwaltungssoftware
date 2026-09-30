@@ -206,3 +206,115 @@ async def test_call_plan_without_secondary_fails_without_fallback(
     assert result.error == "Anbieterfehler: HTTP 503: upstream overloaded"
     assert result.chosen.config.provider is AiProvider.ANTHROPIC
     assert factory.calls == [("anthropic", None)]
+
+
+# OpenAI adapter over a mocked HTTP transport (no network) ----------------------------------
+
+
+def _openai_with(handler: Any) -> OpenAIClient:
+    import httpx
+    import openai
+
+    http = httpx.AsyncClient(transport=httpx.MockTransport(handler))
+    sdk = openai.AsyncOpenAI(
+        api_key="sk-test-not-real",
+        base_url="https://eu.api.openai.com/v1",
+        http_client=http,
+        max_retries=0,
+    )
+    return OpenAIClient("sk-test-not-real", client=sdk)
+
+
+async def test_openai_complete_parses_structured_output_and_usage() -> None:
+    import httpx
+
+    seen: dict[str, Any] = {}
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        seen["url"] = str(request.url)
+        seen["body"] = json.loads(request.content)
+        return httpx.Response(
+            200,
+            json={
+                "id": "x",
+                "object": "chat.completion",
+                "created": 0,
+                "model": "m-configured",
+                "choices": [
+                    {
+                        "index": 0,
+                        "finish_reason": "stop",
+                        "message": {
+                            "role": "assistant",
+                            "content": '{"summary": "ok"}',
+                            "refusal": None,
+                        },
+                    }
+                ],
+                "usage": {"prompt_tokens": 12, "completion_tokens": 3, "total_tokens": 15},
+            },
+        )
+
+    client = _openai_with(handler)
+    result = await client.complete(
+        model="m-configured",
+        system="s",
+        messages=[{"role": "user", "content": "u"}],
+        schema=SCHEMA,
+        max_tokens=50,
+    )
+    assert result.data == {"summary": "ok"}
+    assert (result.tokens_in, result.tokens_out) == (12, 3)
+    assert seen["url"].startswith("https://eu.api.openai.com/v1/")
+    assert seen["body"]["model"] == "m-configured"
+    assert seen["body"]["response_format"]["type"] == "json_schema"
+
+
+@pytest.mark.parametrize(("status", "retryable"), [(429, True), (503, True), (400, False)])
+async def test_openai_status_errors_map_to_provider_error(status: int, retryable: bool) -> None:
+    import httpx
+
+    client = _openai_with(lambda _r: httpx.Response(status, json={"error": {"message": "x"}}))
+    with pytest.raises(ProviderError) as info:
+        await client.complete(model="m", system="s", messages=[], schema=SCHEMA, max_tokens=5)
+    assert info.value.retryable is retryable
+    assert "sk-test" not in str(info.value)
+
+
+async def test_openai_timeout_is_a_retryable_provider_error() -> None:
+    import httpx
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        raise httpx.ReadTimeout("timed out", request=request)
+
+    client = _openai_with(handler)
+    with pytest.raises(ProviderError) as info:
+        await client.complete(model="m", system="s", messages=[], schema=SCHEMA, max_tokens=5)
+    assert info.value.retryable is True
+
+
+async def test_call_plan_falls_back_on_rate_limit(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(gateway, "RETRY_DELAYS_S", ())
+    factory = RecordingFactory(failing=set())
+
+    def failing_429(provider: AiProvider, key: str, region: str | None) -> Any:
+        client = factory(provider, key, region)
+        if provider is AiProvider.ANTHROPIC:
+
+            async def limited(**_kw: Any) -> Completion:
+                factory.calls.append((provider.value, region))
+                raise ProviderError("rate limited", retryable=True)
+
+            client.complete = limited
+        return client
+
+    providers.set_factory(failing_429)
+    plan = [
+        (_route(AiProvider.ANTHROPIC, "a-model"), Decimal(0), Decimal(100)),
+        (_route(AiProvider.OPENAI, "o-model"), Decimal(0), Decimal(100)),
+    ]
+    keys = {r.config.provider: "k" for r, _, _ in plan}
+    result = await gateway._call_plan(plan, keys, "s", [], SCHEMA, AiTask.SUMMARIZE)
+    assert result.chosen.config.provider is AiProvider.OPENAI
+    assert result.skips == ["anthropic: Anbieterfehler: rate limited"]
+    assert factory.calls == [("anthropic", None), ("openai", "eu")]

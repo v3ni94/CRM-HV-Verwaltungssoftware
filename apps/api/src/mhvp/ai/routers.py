@@ -1364,6 +1364,8 @@ async def list_knowledge(
     property_id: uuid.UUID | None = None,
     kind: AiKnowledgeKind | None = None,
     status: AiKnowledgeStatus | None = None,
+    limit: int = Query(default=200, ge=1, le=500, description="Höchstzahl Einträge je Abruf"),
+    offset: int = Query(default=0, ge=0),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[s.KnowledgeEntryOut]:
     async with tenant_tx(request, principal) as session:
@@ -1378,7 +1380,8 @@ async def list_knowledge(
             query = query.where(AiKnowledgeEntry.property_id == property_id)
         if kind is not None:
             query = query.where(AiKnowledgeEntry.kind == kind)
-        rows = (await session.scalars(query.order_by(AiKnowledgeEntry.created_at.desc()))).all()
+        ordered = query.order_by(AiKnowledgeEntry.created_at.desc(), AiKnowledgeEntry.id.desc())
+        rows = (await session.scalars(ordered.limit(limit).offset(offset))).all()
         return [_knowledge_out(r) for r in rows]
 
 

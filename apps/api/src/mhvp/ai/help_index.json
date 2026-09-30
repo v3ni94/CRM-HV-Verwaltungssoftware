@@ -2903,6 +2903,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Buchungen ohne Beleg (Belegkette B05)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Liste „Buchungen ohne Beleg“ auf der Bankseite zeigt jede unbelegte Bankbewegung mit Klärungsstatus, Betrag, Buchungstag, Alter in Tagen und dem Hinweis auf die angelegte Aufgabe. Eine Zeile entsteht durch die Automatik oder durch eine Person, die eine offene Bewegung als unb",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Nachkontrolle, Mahnlauf und Rückläufer",
   "source": "Handbuch: Banking",
   "href": "/bank",

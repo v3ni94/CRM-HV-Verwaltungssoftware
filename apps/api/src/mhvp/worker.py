@@ -187,10 +187,10 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": crontab(day_of_month=5, hour=6, minute=0),
             },
             # Gmail inbox sync for enabled mailboxes (M20-01); read only, Message-ID dedup.
-            # Since the Pub/Sub push (operator 26.09.2026) this is the safety net: 5 minutes.
+            # Safety net next to the Pub/Sub push, every 60 s; runs do not overlap (Redis lock).
             "communication-gmail-sync": {
                 "task": "mhvp.communication.gmail_sync_all",
-                "schedule": 300.0,
+                "schedule": 60.0,
                 "options": {"queue": "mail"},
             },
             # Renewal of the Gmail push watches (Google ends them after seven days): daily

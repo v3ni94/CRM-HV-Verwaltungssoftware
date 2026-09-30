@@ -22,7 +22,7 @@ Ticket. Voraussetzung ist das vom Betreiber eingerichtete Pub/Sub-Thema (siehe
 `docs/integrations/gmail.md`). Unabhängig davon ruft die Plattform jedes aktive Postfach alle
 fünf Minuten ab (Sicherheitsnetz, bisher alle zwei Minuten). In den Einstellungen unter
 Postfächer steht je Postfach, ob Push aktiv ist (Push aktiv bis) und wann der letzte Push
-eingegangen ist; ist Push nicht aktiv, gilt allein der Abruf alle fünf Minuten. Jetzt abrufen
+eingegangen ist; ist Push nicht aktiv, gilt allein der Abruf jede Minute. Jetzt abrufen
 löst den Abruf sofort aus.
 
 ## Posteingang vollständig abrufen
@@ -105,9 +105,9 @@ protokollierten Test des Gmail Verhaltens wählbar (`docs/integrations/gmail.md`
 - Wiederherstellen in Gmail öffnet die Mail wieder; liegt der Ticketabschluss innerhalb des
   Wiedereröffnungsfensters, wird auch das Ticket wieder in Bearbeitung gesetzt, sonst bleibt
   es geschlossen und die Mail erscheint wieder in der Übersicht.
-- Beruhigungsfrist (Standard zehn Minuten): Rückgängig, Zurückstellen oder Papierkorb in zwei
+- Beruhigungsfrist (Standard und Empfehlung drei Minuten): Rückgängig, Zurückstellen oder Papierkorb in zwei
   Schritten lösen erst nach Ablauf einen Statuswechsel aus.
-- Latenz: Änderungen werden per Push sofort, sonst spätestens nach fünf Minuten erkannt; ein
+- Latenz: Änderungen werden per Push sofort, sonst spätestens nach einer Minute erkannt; ein
   stündlicher Abgleich mit dem Posteingang fängt verpasste Änderungen auf. Unter
   Einstellungen, Postfächer gibt es eine Vorschau des Abgleichs ohne Wirkung.
 - Arbeitslabels: Mails, die in Gmail unter einem eingetragenen Label (zum Beispiel Warten)
@@ -202,8 +202,8 @@ sind vor der Freigabe der Geschäftsführung vorzulegen.
   Recht zur Freigabe fehlt; Zuständigkeit unter Einstellungen, Benutzer und Kompetenzen
   prüfen.
 - **Keine neuen Mails im Posteingang**: Das Postfach ist inaktiv oder zeigt Fehler
-  (Einstellungen, Postfächer); neue Mails kommen per Push, der Abruf erfolgt zusätzlich alle
-  fünf Minuten automatisch, Jetzt abrufen löst ihn sofort aus. Zeigt die Postfachzeile Push
+  (Einstellungen, Postfächer); neue Mails kommen per Push, der Abruf erfolgt zusätzlich jede
+  Minute automatisch, Jetzt abrufen löst ihn sofort aus. Zeigt die Postfachzeile Push
   nicht aktiv oder den Fehler Push-Registrierung, fehlt das Pub/Sub-Thema oder dessen
   Berechtigung (Betreiber, `docs/integrations/gmail.md`).
 - **Ältere Mails fehlen nach dem Verbinden**: Posteingang vollständig abrufen starten; der

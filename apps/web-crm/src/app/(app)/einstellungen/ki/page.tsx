@@ -20,13 +20,14 @@ export default async function AiSettingsPage() {
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
-  const [providers, usage, routing, knowledge, properties, embeddings] = await Promise.all([
+  // The embedding status runs several counts over documents and is loaded by the component
+  // after the first render, so it does not block the page.
+  const [providers, usage, routing, knowledge, properties] = await Promise.all([
     api.GET("/api/v1/ai/providers"),
     api.GET("/api/v1/ai/usage"),
     api.GET("/api/v1/ai/routing"),
     api.GET("/api/v1/ai/knowledge"),
     api.GET("/api/v1/properties"),
-    api.GET("/api/v1/ai/embeddings/status"),
   ]);
   const anthropic = providers.data?.find((p) => p.provider === "anthropic") ?? null;
   const openai = providers.data?.find((p) => p.provider === "openai") ?? null;
@@ -48,7 +49,7 @@ export default async function AiSettingsPage() {
         </>
       )}
       <p className="text-xs text-muted">{t("openaiHint")}</p>
-      <EmbeddingsStatus initial={embeddings.data ?? null} />
+      <EmbeddingsStatus initial={null} />
       <KnowledgeSettings initial={knowledge.data ?? []} properties={propertyOptions} />
     </div>
   );

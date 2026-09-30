@@ -42,7 +42,7 @@
   (Standard): Zustände und Ereignisse werden gespeichert, kein Statuswechsel. `done`: Gruppe
   wird erledigt, optional Ticketabschluss (`gmail_done_closes_ticket`). `done` ist erst nach
   `POST /tenant/settings/gmail-spike-confirm` wählbar (`MHVP-COMM-0007`).
-- Beruhigungsfrist (`gmail_settle_seconds`, Standard 600): eine Erledigung wird erst nach
+- Beruhigungsfrist (`gmail_settle_seconds`, Standard und Empfehlung 180 Sekunden): eine Erledigung wird erst nach
   Ablauf ausgeführt (`settle_pending`); eine Rückkehr in den Posteingang davor verwirft sie.
 - Arbeitslabels (`gmail_keep_open_labels`): eine im selben Lauf unter einem solchen Label
   abgelegte Mail bleibt offen (`ignored_keep_open`).

@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { KnowledgeEntry, KnowledgeStatus } from "@/lib/ai";
 import { bff } from "@/lib/bff";
@@ -90,7 +90,13 @@ export function KnowledgeSettings({
     if (res.ok) setEntries(res.data);
   };
 
+  // The server already delivered the unfiltered list: skip the duplicate request on mount.
+  const firstRun = useRef(true);
   useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
     void reload();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filterProperty, filterKind, filterStatus]);

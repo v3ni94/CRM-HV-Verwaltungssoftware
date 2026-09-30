@@ -109,7 +109,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [B02](B02.md) | Entwurf und Buchung | 7.1 | implemented, not accepted |
 | [B03](B03.md) | Korrektur statt Überschreiben | 7.1 | implemented, not accepted |
 | [B04](B04.md) | Eindeutige Nummern | 7.1 | implemented, not accepted |
-| [B05](B05.md) | Belegkette: Klärungsstatus und verantwortliche Aufgabe je unbelegter Bankbewegung, Liste „Buchungen ohne Beleg“ vor Festschreibung, Prüfexport `belegkette`, Verifier `recurring_expense` liest die Entscheidung (29.09.2026) | 7.1, 18.0 G1, M12-05 | implemented, not accepted (Belegpflicht je manueller Aufwandsbuchung offen, M12-09) |
+| [B05](B05.md) | Belegkette: Klärungsstatus und verantwortliche Aufgabe je unbelegter Bankbewegung, Liste „Buchungen ohne Beleg“ vor Festschreibung, Prüfexport `belegkette`, Verifier `recurring_expense` liest die Entscheidung (29.09.2026); Status `receipt_requested`, Meldung durch eine Person, Alter, Buchungssperre `MHVP-BANK-0027` (30.09.2026) | 7.1, 18.0 G1, M12-05 | implemented, not accepted (Belegpflicht je manueller Aufwandsbuchung ohne Klärungszeile offen, M12-09) |
 | [B06](D08-rest-cents.md) | Präzision | 7.1 | implemented, not accepted (M17, D08 tested) |
 | [B07](B07.md) | Stichtagswahrheit | 7.1 | implemented, not accepted |
 | [B08](B08.md) | Keine doppelte wirtschaftliche Wirkung (Transferpaar D04 seit 28.09.2026) | 7.1 | implemented, not accepted |

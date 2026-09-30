@@ -155,7 +155,7 @@ class TenantSettingsOut(BaseModel):
     gmail_done_on_trash: bool = True
     gmail_reopen_on_unarchive: bool = True
     gmail_restore_inbox_on_reopen: bool = False
-    gmail_settle_seconds: int = 600
+    gmail_settle_seconds: int = 180
     gmail_reconcile_grace_seconds: int = 300
     gmail_keep_open_labels: list[str] = Field(default_factory=list)
     gmail_close_assigned_tickets: bool = False

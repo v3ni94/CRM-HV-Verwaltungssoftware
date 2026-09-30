@@ -13,7 +13,7 @@ export type ClarificationRow = {
   id: string;
   bank_transaction_id: string;
   legal_entity_id: string;
-  status: "open" | "in_clarification" | "no_document_required" | "resolved" | string;
+  status: "open" | "in_clarification" | "receipt_requested" | "no_document_required" | "resolved" | string;
   reasons: string[];
   rule_id: string | null;
   reason: string | null;
@@ -23,6 +23,7 @@ export type ClarificationRow = {
   decided_by: string | null;
   decided_at: string | null;
   created_at: string;
+  age_days?: number | null;
   booking_date: string | null;
   amount: string | null;
   counterpart_name: string | null;
@@ -34,7 +35,7 @@ export type BankClarificationsProps = { canUpdate: boolean };
 
 /** Liste "Buchungen ohne Beleg" (B05, Regel M12-05): unbelegte Bankbewegungen mit Klärungsstatus und
  *  verantwortlicher Aufgabe. Eine Person setzt In Klärung, Kein Beleg erforderlich (mit Begründung) oder
- *  Erledigt (mit Beleg-ID). Die Liste bucht nichts; sie ist vor jeder Festschreibung zu leeren. */
+ *  Erledigt (mit Beleg-ID) oder fordert den Beleg an; das Alter zählt ab dem Buchungstag. Die Liste bucht nichts; sie ist vor jeder Festschreibung zu leeren. */
 export function BankClarifications({ canUpdate }: BankClarificationsProps) {
   const t = useTranslations("Bank.clarifications");
   const [rows, setRows] = useState<ClarificationRow[] | null>(null);
@@ -96,6 +97,11 @@ export function BankClarifications({ canUpdate }: BankClarificationsProps) {
                 <span className="text-muted">{formatDate(row.booking_date)}</span>
                 <StatusPill label={t(`status_${row.status}` as "status_open")} variant={row.status === "open" ? "danger" : "gold"} />
                 {row.ticket_id ? <span className={ui.badge}>{t("ticket")}</span> : null}
+                {row.age_days != null ? (
+                  <span className="text-muted" data-testid="clarification-age">
+                    {t("age", { days: row.age_days })}
+                  </span>
+                ) : null}
               </div>
               <p className="text-muted">
                 {row.purpose} · {row.reasons.join("; ")}
@@ -105,6 +111,11 @@ export function BankClarifications({ canUpdate }: BankClarificationsProps) {
                   {row.status === "open" ? (
                     <button type="button" className={ui.secondary} disabled={busy === row.id} onClick={() => decide(row, "in_clarification")}>
                       {t("inClarification")}
+                    </button>
+                  ) : null}
+                  {row.status !== "receipt_requested" ? (
+                    <button type="button" className={ui.secondary} disabled={busy === row.id} onClick={() => decide(row, "receipt_requested")}>
+                      {t("requestReceipt")}
                     </button>
                   ) : null}
                   <button type="button" className={ui.primary} disabled={busy === row.id} onClick={() => setDeciding(deciding === row.id ? null : row.id)}>

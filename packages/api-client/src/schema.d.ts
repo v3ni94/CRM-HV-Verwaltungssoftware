@@ -4307,6 +4307,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/transactions/{tx_id}/clarification": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bankbewegung als unbelegt melden (Klärung B05)
+         * @description A person opens the clarification row with responsible ticket; from then on booking
+         *     the movement needs the document or a reasoned no document decision (MHVP-BANK-0027).
+         */
+        post: operations["open_clarification_api_v1_banking_transactions__tx_id__clarification_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/transactions/{tx_id}/correct": {
         parameters: {
             query?: never;
@@ -23002,6 +23023,13 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** ClarificationOpenIn */
+        ClarificationOpenIn: {
+            /** Assignee User Id */
+            assignee_user_id?: string | null;
+            /** Reason */
+            reason: string;
+        };
         /**
          * ClassificationPatternType
          * @description M35 Stufe 3 (docs/plans/M35-objektakte-uebernahme.md section 4, rule stage): the four
@@ -37067,7 +37095,7 @@ export interface components {
             gmail_restore_inbox_on_reopen: boolean;
             /**
              * Gmail Settle Seconds
-             * @default 600
+             * @default 180
              */
             gmail_settle_seconds: number;
             /** Gmail Spike Confirmed At */
@@ -43606,6 +43634,9 @@ export interface operations {
                 property_id?: string | null;
                 kind?: components["schemas"]["AiKnowledgeKind"] | null;
                 status?: components["schemas"]["AiKnowledgeStatus"] | null;
+                /** @description Höchstzahl Einträge je Abruf */
+                limit?: number;
+                offset?: number;
             };
             header?: never;
             path?: never;
@@ -47791,6 +47822,43 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_clarification_api_v1_banking_transactions__tx_id__clarification_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                tx_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ClarificationOpenIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
                 headers: {
                     [name: string]: unknown;
                 };

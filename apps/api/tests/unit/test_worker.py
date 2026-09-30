@@ -34,6 +34,7 @@ def test_queues_and_reliability_settings(settings: Settings) -> None:
         "workspace-digest",
         "workspace-compliance-deadlines",
     }
+    assert conf.beat_schedule["communication-gmail-sync"]["schedule"] == 60.0
     assert conf.beat_schedule["workspace-digest"]["task"] == "mhvp.workspace.digest"
     assert (
         conf.beat_schedule["workspace-compliance-deadlines"]["task"]
@@ -69,3 +70,37 @@ def test_document_jobs_registered(settings: Settings) -> None:
     assert str(inbox["schedule"]) == "<crontab: 30 6 * * * (m/h/dM/MY/d)>"
     task = app.tasks[mirror_deletion.TASK_NAME]
     assert task.max_retries == len(mirror_deletion.BACKOFF_SECONDS)
+
+
+def test_gmail_sync_lock_prevents_overlap() -> None:
+    from mhvp.communication import tasks
+
+    class FakeRedis:
+        def __init__(self) -> None:
+            self.keys: set[str] = set()
+
+        def set(self, key: str, value: str, nx: bool = False, ex: int | None = None) -> bool:
+            if nx and key in self.keys:
+                return False
+            self.keys.add(key)
+            return True
+
+        def delete(self, key: str) -> None:
+            self.keys.discard(key)
+
+    fake = FakeRedis()
+    assert tasks._try_sync_lock(fake) is True
+    assert tasks._try_sync_lock(fake) is False
+    tasks._release_sync_lock(fake)
+    assert tasks._try_sync_lock(fake) is True
+    assert tasks._try_sync_lock(None) is True
+
+
+def test_gmail_settle_default_is_180() -> None:
+    from mhvp.platform.models import TenantSettings
+    from mhvp.platform.schemas import TenantSettingsOut, TenantSettingsPatch
+
+    assert TenantSettingsOut.model_fields["gmail_settle_seconds"].default == 180
+    assert TenantSettings.__table__.c.gmail_settle_seconds.default.arg == 180
+    field = TenantSettingsPatch.model_fields["gmail_settle_seconds"]
+    assert {type(m).__name__: m for m in field.metadata}["Ge"].ge == 0

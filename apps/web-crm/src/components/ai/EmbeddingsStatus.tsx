@@ -1,7 +1,7 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import type { EmbeddingStatus } from "@/lib/ai";
 import { bff } from "@/lib/bff";
@@ -18,6 +18,19 @@ export function EmbeddingsStatus({ initial }: { initial: EmbeddingStatus | null 
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (initial !== null) return;
+    let active = true;
+    void bff<EmbeddingStatus>("/api/bff/ai/embeddings/status").then((res) => {
+      if (!active) return;
+      if (res.ok) setStatus(res.data);
+      else setError(res.message);
+    });
+    return () => {
+      active = false;
+    };
+  }, [initial]);
 
   async function refresh() {
     setBusy(true);

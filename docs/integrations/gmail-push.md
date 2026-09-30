@@ -4,7 +4,7 @@ Stand 27.09.2026. Diese Anleitung ergänzt die technische Beschreibung in `docs/
 (Endpunkt `POST /api/v1/integrations/gmail/push`, Code `apps/api/src/mhvp/communication/gmail_push.py`,
 Watch-Erneuerung `apps/api/src/mhvp/communication/tasks.py`). Offener Punkt M20-05 in
 `docs/OPEN_QUESTIONS.md`: die Einrichtung selbst ist Betreiberaufgabe, hier festgehalten als
-nachvollziehbare Anleitung. Ohne diese Einrichtung bleibt der Sofortabruf aus, der Fünf-Minuten-
+nachvollziehbare Anleitung. Ohne diese Einrichtung bleibt der Sofortabruf aus, der Minuten-
 Beat-Sync läuft unverändert weiter.
 
 ## 1. Google Cloud Console: Projekt
@@ -72,7 +72,7 @@ die entsprechenden Prod-Dienste), damit die Werte geladen werden.
   jedes Postfach, dessen Watch innerhalb eines Tages abläuft; kein Zutun des Betreibers nötig,
   sobald Thema und Geheimnis gesetzt sind.
 * Erststart: die Watch-Registrierung läuft beim regulären History-Sync (`renew_watch=True`)
-  mit, also spätestens beim nächsten Fünf-Minuten-Sync nach dem Setzen der Variablen.
+  mit, also spätestens beim nächsten Minuten-Sync nach dem Setzen der Variablen.
 * Status je Postfach unter Einstellungen, Postfächer: „Watch aktiv bis <Datum, Uhrzeit>“ und
   „letzte Push-Nachricht <Zeitpunkt>“ (Feld `last_push_at`, Quelle `MailboxSettings.tsx`).
   Ein Postfach ohne „Watch aktiv bis“ nach dem nächsten Sync hat keine gültige Berechtigung

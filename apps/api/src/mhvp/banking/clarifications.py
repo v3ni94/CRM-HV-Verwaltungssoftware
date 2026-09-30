@@ -37,7 +37,11 @@ from mhvp.banking.models import (
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
-OPEN_STATUSES = (ClarificationStatus.OPEN.value, ClarificationStatus.IN_CLARIFICATION.value)
+OPEN_STATUSES = (
+    ClarificationStatus.OPEN.value,
+    ClarificationStatus.IN_CLARIFICATION.value,
+    ClarificationStatus.RECEIPT_REQUESTED.value,
+)
 
 
 async def for_transaction(session: AsyncSession, tx_id: uuid.UUID) -> BankClarification | None:
@@ -111,6 +115,44 @@ async def ensure_open(
         },
     )
     return row, True
+
+
+async def open_by_person(
+    session: AsyncSession,
+    tx: BankTransaction,
+    *,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    reason: str,
+    assignee_user_id: uuid.UUID | None,
+) -> tuple[BankClarification, bool]:
+    """A person reports a bank movement as unreceipted (B05): the row is opened with the
+    responsible ticket like the runner does; an existing row is returned unchanged."""
+    if tx.status is not TransactionStatus.NEW:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Nur offene Bankbewegungen erhalten eine Klärung."
+        )
+    row, created = await ensure_open(
+        session, tx, tenant_id=tenant_id, reasons=[reason.strip()], rule_id=None
+    )
+    if created:
+        row.created_by = user_id
+        if assignee_user_id is not None:
+            row.assignee_user_id = assignee_user_id
+        await session.flush()
+    return row, created
+
+
+async def ensure_booking_allowed(session: AsyncSession, tx: BankTransaction) -> None:
+    """Booking lock (B05): a bank movement with a clarification row is booked only once the
+    evidence chain is complete (resolved with document or a person's no document required).
+    A movement without row is not affected; nothing is decided automatically."""
+    row = await for_transaction(session, tx.id)
+    if row is not None and not evidence_complete(evidence_of(row)):
+        raise ProblemError(
+            ErrorCodes.BANK_RECEIPT_MISSING,
+            detail="Beleg verknüpfen oder „kein Beleg erforderlich“ mit Begründung entscheiden.",
+        )
 
 
 async def _create_ticket(
@@ -193,6 +235,9 @@ async def row_out(session: AsyncSession, row: BankClarification) -> dict[str, An
         "decided_by": row.decided_by,
         "decided_at": row.decided_at,
         "created_at": row.created_at,
+        "age_days": (
+            (datetime.now(UTC).date() - tx.booking_date).days if tx and tx.booking_date else None
+        ),
         "booking_date": tx.booking_date if tx else None,
         "amount": tx.amount if tx else None,
         "counterpart_name": tx.counterpart_name if tx else None,

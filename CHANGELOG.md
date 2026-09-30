@@ -5,6 +5,14 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.47.0 (30.09.2026) Belegkette B05 Sperre, Gmail Latenz, KI Einstellungen, Lückenliste 30.09.2026
+
+- Buchhaltung, Belegkette B05: neuer Klärungsstatus Beleg angefordert (Migration 0248); Bankbewegung durch eine Person als unbelegt melden (POST /banking/transactions/{id}/clarification mit Begründung und optionaler Zuständigkeit, Ticket wird angelegt); Buchung aus der Bankzeile mit offener Klärung ist gesperrt (Fehlercode MHVP-BANK-0027 Beleg fehlt), Freigabe durch verknüpften Beleg oder begründetes Kennzeichen kein Beleg erforderlich; Liste Buchungen ohne Beleg zeigt das Alter in Tagen, Knopf Beleg anfordern im CRM; Regel docs/rules/B05.md, Handbuch Bank.
+- Postfach, Gmail Rückkanal: Abruf alle 60 Sekunden statt 300, Redis Sperre verhindert überlappende Läufe; Beruhigungsfrist Standard 180 Sekunden statt 600 (Migration 0249 setzt Mandanten, die noch auf 600 standen, auf 180; abweichend gesetzte Werte bleiben), Empfehlung im CRM; Latenz von der Archivierung in Gmail bis erledigt im CRM sinkt von bis zu 15 auf rund 4 Minuten.
+- KI Einstellungen: Seite lädt schneller, der Einbettungsstatus (Zählabfragen über Dokumente und Wissen) lädt nach dem Seitenaufbau nach, die Wissensliste ist je Abruf auf 200 Einträge begrenzt (limit und offset, maximal 500), der doppelte Abruf beim Öffnen entfällt.
+- KI Anbieter: Tests für den OpenAI Adapter über gemockten HTTP Transport (Antwort, 429, 503, 400, Zeitüberschreitung) und für das Ausweichen auf den zweiten Anbieter; die Punkte M7-02 und M7-07 waren bereits umgesetzt und sind in docs/OPEN_QUESTIONS.md nachgetragen.
+- Planung: Lückenliste Spezifikation gegen Umsetzung, Stand 30.09.2026 (docs/plans/LUECKENLISTE-2026-09-30.md) mit 263 Befunden aus 36 Prüfbereichen, 224 ohne Betreiberentscheidung umsetzbar, 39 mit Entscheidungsbezug.
+
 ## 1.46.0 (29.09.2026) G1 Öffnungspaket, Automatik und Belegkette, Datenübernahme, Offline Erfassung, Schreiben und Objektakte
 
 - Buchhaltung, G1 Öffnung: Neue Seite Einstellungen, Buchhaltung, G1 Öffnung mit Checkliste zur Öffnung der Freigabestufe G1 (Kontenrahmen, abgenommene Anhang D Fälle, manuelle Prüfpunkte, Automatikstufen, Freigabestand), Ergebnis je Prüfpunkt mit Datum und Name, Antrag auf G1 über den bestehenden Vier Augen Pfad; die Seite öffnet die Stufe nie selbst (Migration 0242, Tabelle g1_acceptance). Betreiberunterlagen: Kontenrahmen Prüfung nach Anhang A.1 mit offenen Fragen, Abnahmeprotokoll Anhang D mit Rechenweg und Prüfort je Fall, Verfahrensdokumentation Kapitel 7 Automatik der Buchhaltung.

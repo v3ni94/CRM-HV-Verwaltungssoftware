@@ -430,3 +430,25 @@ def test_preparation_without_contact_match(
     assert computed["contact_id"] is None
     assert computed["property_id"] is None
     assert any("Kontakt" in r for r in computed["reasons"])
+
+
+def test_knowledge_list_is_limited(client: TestClient, world: World) -> None:
+    admin = bearer(login(client, world, "kbadmin"))
+    for i in range(3):
+        _ok(
+            client.post(
+                f"{M}/ai/knowledge",
+                json={"kind": "fact", "title": f"Limit {i}", "content": "x"},
+                headers=admin,
+            ),
+            201,
+        )
+    total = len(_ok(client.get(f"{M}/ai/knowledge", headers=admin)))
+    assert total >= 3
+    first = _ok(client.get(f"{M}/ai/knowledge?limit=2", headers=admin))
+    assert len(first) == 2
+    rest = _ok(client.get(f"{M}/ai/knowledge?limit=2&offset=2", headers=admin))
+    assert len(rest) == min(2, total - 2)
+    assert not {e["id"] for e in first} & {e["id"] for e in rest}
+    assert client.get(f"{M}/ai/knowledge?limit=501", headers=admin).status_code == 422
+    assert client.get(f"{M}/ai/knowledge?limit=0", headers=admin).status_code == 422

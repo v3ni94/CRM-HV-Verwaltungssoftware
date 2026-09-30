@@ -19,8 +19,9 @@ jede neue Mail erzeugt wie bisher ein Ticket.
    verlaufsbasierten Abruf (`gmail_history_id`). Mehrere Push-Nachrichten kurz hintereinander
    ergeben einen Auftrag; der Auftrag löscht die Marke beim Start, danach löst die nächste
    Nachricht wieder einen Auftrag aus.
-5. Sicherheitsnetz: der Beat-Job `communication-gmail-sync` läuft alle fünf Minuten (bisher
-   zwei Minuten) und holt alles nach, was Push nicht geliefert hat.
+5. Sicherheitsnetz: der Beat-Job `communication-gmail-sync` läuft jede Minute (bisher fünf
+   Minuten) und holt alles nach, was Push nicht geliefert hat. Ein Redis-Lock verhindert
+   überlappende Läufe; ein noch laufender Abruf lässt den nächsten Takt aussetzen.
 
 ## Pub/Sub einrichten (Betreiber, Google Cloud Projekt des OAuth-Clients)
 
@@ -118,7 +119,7 @@ docker compose exec worker python -m mhvp.communication.backfill --tenant hvm --
 
 ## Fallback und Betrieb
 
-- Push aus (kein Thema): Verhalten wie bisher, nur der Beat-Abruf, jetzt alle fünf Minuten.
+- Push aus (kein Thema): Verhalten wie bisher, nur der Beat-Abruf, jetzt jede Minute.
 - Worker oder Redis nicht erreichbar: der Endpunkt antwortet 204, löscht die Marke und
   protokolliert; der Beat-Abruf holt nach.
 - Erneut verbinden setzt Watch und Verlaufszeiger zurück und startet den Vollabruf erneut
