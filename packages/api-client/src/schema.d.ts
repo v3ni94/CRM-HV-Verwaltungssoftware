@@ -11053,9 +11053,12 @@ export interface paths {
         /**
          * Anzeige an den Makler-Provider übergeben
          * @description Explicit, operator-triggered handover only (rule 0.1.6, never automatic). Fails with
-         *     `BROKER_NOT_CONFIGURED` while the feature flag is off, and with
-         *     `BROKER_DOCUMENTATION_REQUIRED` for every provider today (see
-         *     `mhvp.letting.broker_provider` module docstring: no verified endpoint contract yet).
+         *     `BROKER_NOT_CONFIGURED` while the feature flag is off, `BROKER_DOCUMENTATION_REQUIRED` for
+         *     a provider/operation with no verified endpoint contract, `BROKER_AMBIGUOUS_MATCH` when the
+         *     provider's search-before-create finds more than one match, and `BROKER_UPSTREAM_ERROR` for
+         *     any other rejection by the provider (see `mhvp.letting.broker_provider` module docstring:
+         *     flowfact `create_or_update_listing` is implemented, other operations and providers are
+         *     not).
          */
         post: operations["sync_listing_to_broker_api_v1_letting_listings__listing_id__broker__provider__sync_post"];
         delete?: never;
@@ -21925,6 +21928,10 @@ export interface components {
              * @default false
              */
             enabled: boolean;
+            /** Settings */
+            settings?: {
+                [key: string]: unknown;
+            };
         };
         /** BuildingIn */
         BuildingIn: {

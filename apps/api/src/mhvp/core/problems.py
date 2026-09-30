@@ -911,6 +911,18 @@ class ErrorCodes:
             "contract for this operation/provider (rule 0.1.3)."
         ),
     )
+    BROKER_UPSTREAM_ERROR = ErrorCode(
+        "MHVP-BRKR-0003",
+        502,
+        "Der Makler-Anbieter hat die Übergabe abgelehnt",
+        "BrokerProvider raised BrokerUpstreamError; see the scrubbed detail for the reason.",
+    )
+    BROKER_AMBIGUOUS_MATCH = ErrorCode(
+        "MHVP-BRKR-0004",
+        409,
+        "Mehrere Objekte mit dieser Kennung beim Anbieter",
+        "BrokerProvider raised BrokerAmbiguousMatchError; manual review required.",
+    )
     # Deadline types and entries (rule WS-01, mhvp.workspace.deadlines).
     DEADLINE_DURATION_MISSING = ErrorCode(
         "MHVP-WS-0001",
