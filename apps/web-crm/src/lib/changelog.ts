@@ -33,6 +33,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Tests auf Handy und Tablet: Playwright Projekte für Handy, Tablet und Tablet Querformat mit Touch Emulation in CRM und Portal, Prüfungen auf Überlauf, 44 Pixel Ziele, einzeilige Kopfzeile und 16 Pixel Eingabefelder; Übergabepfad und Datenseiten gegen die API; Quelltestwächter gegen nackte Tabellen und feste Breiten; Geräte Checkliste für iPad, iPhone und Android; CI prüft zusätzlich das Projekt Handy.",
       "Portal: Eingabefelder mit 16 Pixel Schrift am Handy und 44 Pixel Höhe auf Touch Geräten.",
       "Tickets: Abschnitt Lexware Office in der Abschnittsnavigation; Dateien und Seiten der Anwendung öffnen im selben Tab (PDF, DMS Vorschau, Importbericht, Mietrechnung, Objektakte, Kontakt, Offener Posten, Vertrag), externe Links weiter im neuen Tab.",
+      "Vermietung, FLOWFACT: Übergabe von Vermietungsangeboten an FLOWFACT über den Maklerprovider mit Schemanamen je Angebotsart in der Mandantenkonfiguration (Regel M28-02, Migration 0247).",
     ],
   },
   {

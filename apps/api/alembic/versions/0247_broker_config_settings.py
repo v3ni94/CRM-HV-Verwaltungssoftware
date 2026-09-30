@@ -1,8 +1,8 @@
 """broker_tenant_config.settings: provider specific configuration with no shared column
 (M28-02). For flowfact: schema_rental/schema_sale, the FLOWFACT schema name per listing kind.
 
-Revision ID: 0242
-Revises: 0241
+Revision ID: 0247
+Revises: 0246
 Create Date: 2026-09-29
 """
 
@@ -14,8 +14,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0242"
-down_revision: str | None = "0241"
+revision: str = "0247"
+down_revision: str | None = "0246"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
