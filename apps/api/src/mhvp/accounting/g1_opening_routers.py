@@ -30,10 +30,10 @@ async def overview(
 @router.put("/items/{item_key}", summary="Ergebnis eines Prüfpunkts eintragen")
 async def set_item(
     item_key: str,
-    body: svc.ItemIn,
+    body: svc.G1AcceptanceItemIn,
     request: Request,
     principal: TenantPrincipal = Depends(APPROVE),
-) -> svc.ItemOut:
+) -> svc.G1AcceptanceItemOut:
     async with tenant_tx(request, principal) as session:
         return await svc.set_item(
             session,
@@ -46,7 +46,7 @@ async def set_item(
 
 @router.post("/request", status_code=201, summary="Freigabe G1 beantragen (Vier Augen)")
 async def file_request(
-    body: svc.RequestIn, request: Request, principal: TenantPrincipal = Depends(REQUEST)
+    body: svc.G1RequestIn, request: Request, principal: TenantPrincipal = Depends(REQUEST)
 ) -> svc.GateRequestSummary:
     if principal.user_id is None:
         raise ProblemError(

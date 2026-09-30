@@ -26987,6 +26987,31 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** G1AcceptanceItemIn */
+        G1AcceptanceItemIn: {
+            /** Confirmed By Name */
+            confirmed_by_name?: string | null;
+            /** Confirmed On */
+            confirmed_on?: string | null;
+            /** Note */
+            note?: string | null;
+            status: components["schemas"]["G1AcceptanceStatus"];
+        };
+        /** G1AcceptanceItemOut */
+        G1AcceptanceItemOut: {
+            /** Confirmed By Name */
+            confirmed_by_name: string | null;
+            /** Confirmed On */
+            confirmed_on: string | null;
+            /** Item Key */
+            item_key: string;
+            /** Note */
+            note: string | null;
+            /** Status */
+            status: string;
+            /** Title */
+            title: string;
+        };
         /**
          * G1AcceptanceStatus
          * @enum {string}
@@ -27001,7 +27026,7 @@ export interface components {
             /** Can Request */
             can_request: boolean;
             /** Cases */
-            cases: components["schemas"]["mhvp__accounting__g1_opening__ItemOut"][];
+            cases: components["schemas"]["G1AcceptanceItemOut"][];
             /** Cases Passed */
             cases_passed: number;
             /** Cases Total */
@@ -27016,7 +27041,7 @@ export interface components {
             /** Learning Bookkeeper Enabled */
             learning_bookkeeper_enabled: boolean;
             /** Manual */
-            manual: components["schemas"]["mhvp__accounting__g1_opening__ItemOut"][];
+            manual: components["schemas"]["G1AcceptanceItemOut"][];
             /** Manual Passed */
             manual_passed: number;
             /** Manual Total */
@@ -27024,6 +27049,13 @@ export interface components {
             open_request: components["schemas"]["GateRequestSummary"] | null;
             /** Requests */
             requests: components["schemas"]["GateRequestSummary"][];
+        };
+        /** G1RequestIn */
+        G1RequestIn: {
+            /** Comment */
+            comment?: string | null;
+            /** Scope */
+            scope: string;
         };
         /** G5EvidenceIn */
         G5EvidenceIn: {
@@ -28206,15 +28238,35 @@ export interface components {
             /** Withholding Proposal */
             withholding_proposal: string | null;
         };
-        /** ItemIn */
-        ItemIn: {
-            /** Confirmed By Name */
-            confirmed_by_name?: string | null;
-            /** Confirmed On */
-            confirmed_on?: string | null;
-            /** Note */
-            note?: string | null;
-            status: components["schemas"]["G1AcceptanceStatus"];
+        /** ItemOut */
+        ItemOut: {
+            /** Author Name */
+            author_name: string | null;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Direction */
+            direction: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Kind */
+            kind: string;
+            /** Last Error */
+            last_error: string | null;
+            /**
+             * Local Id
+             * Format: uuid
+             */
+            local_id: string;
+            /** Remote Id */
+            remote_id: string | null;
+            /** State */
+            state: string;
         };
         /** JobSettingsIn */
         JobSettingsIn: {
@@ -35046,6 +35098,28 @@ export interface components {
          * @enum {string}
          */
         ReportType: "properties" | "units" | "contacts" | "tenancies" | "ownerships" | "payments" | "journal" | "bank_transactions";
+        /** RequestIn */
+        RequestIn: {
+            /**
+             * Applicant Contact Id
+             * Format: uuid
+             */
+            applicant_contact_id: string;
+            /**
+             * Legal Entity Id
+             * Format: uuid
+             */
+            legal_entity_id: string;
+            /**
+             * Requested On
+             * Format: date
+             */
+            requested_on: string;
+            /** Scope Kinds */
+            scope_kinds?: string[];
+            /** Scope Text */
+            scope_text?: string | null;
+        };
         /** RequestOut */
         RequestOut: {
             /**
@@ -37275,7 +37349,7 @@ export interface components {
              * Items
              * @default []
              */
-            items: components["schemas"]["mhvp__integrations__schadenstool__schemas__ItemOut"][];
+            items: components["schemas"]["ItemOut"][];
             /** Last Error */
             last_error?: string | null;
             /** Last Synced At */
@@ -38430,28 +38504,6 @@ export interface components {
             /** Tag */
             tag?: string | null;
         };
-        /** ItemOut */
-        mhvp__accounting__g1_opening__ItemOut: {
-            /** Confirmed By Name */
-            confirmed_by_name: string | null;
-            /** Confirmed On */
-            confirmed_on: string | null;
-            /** Item Key */
-            item_key: string;
-            /** Note */
-            note: string | null;
-            /** Status */
-            status: string;
-            /** Title */
-            title: string;
-        };
-        /** RequestIn */
-        mhvp__accounting__g1_opening__RequestIn: {
-            /** Comment */
-            comment?: string | null;
-            /** Scope */
-            scope: string;
-        };
         /** ProviderIn */
         mhvp__ai__schemas__ProviderIn: {
             /**
@@ -38659,58 +38711,6 @@ export interface components {
             id: string;
             /** Name */
             name: string;
-        };
-        /** RequestIn */
-        mhvp__hoa__inspection__RequestIn: {
-            /**
-             * Applicant Contact Id
-             * Format: uuid
-             */
-            applicant_contact_id: string;
-            /**
-             * Legal Entity Id
-             * Format: uuid
-             */
-            legal_entity_id: string;
-            /**
-             * Requested On
-             * Format: date
-             */
-            requested_on: string;
-            /** Scope Kinds */
-            scope_kinds?: string[];
-            /** Scope Text */
-            scope_text?: string | null;
-        };
-        /** ItemOut */
-        mhvp__integrations__schadenstool__schemas__ItemOut: {
-            /** Author Name */
-            author_name: string | null;
-            /**
-             * Created At
-             * Format: date-time
-             */
-            created_at: string;
-            /** Direction */
-            direction: string;
-            /**
-             * Id
-             * Format: uuid
-             */
-            id: string;
-            /** Kind */
-            kind: string;
-            /** Last Error */
-            last_error: string | null;
-            /**
-             * Local Id
-             * Format: uuid
-             */
-            local_id: string;
-            /** Remote Id */
-            remote_id: string | null;
-            /** State */
-            state: string;
         };
         /** TenantOut */
         mhvp__platform__schemas__TenantOut: {
@@ -40635,7 +40635,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["ItemIn"];
+                "application/json": components["schemas"]["G1AcceptanceItemIn"];
             };
         };
         responses: {
@@ -40645,7 +40645,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["mhvp__accounting__g1_opening__ItemOut"];
+                    "application/json": components["schemas"]["G1AcceptanceItemOut"];
                 };
             };
             /** @description Validation Error */
@@ -40668,7 +40668,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__accounting__g1_opening__RequestIn"];
+                "application/json": components["schemas"]["G1RequestIn"];
             };
         };
         responses: {
@@ -54933,7 +54933,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__hoa__inspection__RequestIn"];
+                "application/json": components["schemas"]["RequestIn"];
             };
         };
         responses: {

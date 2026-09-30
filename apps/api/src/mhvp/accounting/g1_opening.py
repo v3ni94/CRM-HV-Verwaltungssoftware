@@ -81,7 +81,7 @@ DOCUMENTS: list[tuple[str, str]] = [
 ]
 
 
-class ItemIn(BaseModel):
+class G1AcceptanceItemIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     status: G1AcceptanceStatus
     confirmed_on: date | None = None
@@ -89,7 +89,7 @@ class ItemIn(BaseModel):
     note: str | None = Field(default=None, max_length=2000)
 
 
-class ItemOut(BaseModel):
+class G1AcceptanceItemOut(BaseModel):
     item_key: str
     title: str
     status: str
@@ -98,7 +98,7 @@ class ItemOut(BaseModel):
     note: str | None
 
 
-class RequestIn(BaseModel):
+class G1RequestIn(BaseModel):
     model_config = ConfigDict(extra="forbid")
     scope: str = Field(min_length=10, max_length=2000)
     comment: str | None = Field(default=None, max_length=1000)
@@ -122,10 +122,10 @@ class ChartState(BaseModel):
 
 class G1OpeningOut(BaseModel):
     chart: ChartState
-    cases: list[ItemOut]
+    cases: list[G1AcceptanceItemOut]
     cases_total: int
     cases_passed: int
-    manual: list[ItemOut]
+    manual: list[G1AcceptanceItemOut]
     manual_total: int
     manual_passed: int
     automation_levels: dict[str, str]
@@ -137,8 +137,8 @@ class G1OpeningOut(BaseModel):
     documents: dict[str, str]
 
 
-def _item_out(key: str, title: str, row: G1AcceptanceItem | None) -> ItemOut:
-    return ItemOut(
+def _item_out(key: str, title: str, row: G1AcceptanceItem | None) -> G1AcceptanceItemOut:
+    return G1AcceptanceItemOut(
         item_key=key,
         title=title,
         status=row.status if row else G1AcceptanceStatus.OPEN.value,
@@ -217,8 +217,8 @@ async def set_item(
     tenant_id: uuid.UUID,
     user_id: uuid.UUID | None,
     item_key: str,
-    body: ItemIn,
-) -> ItemOut:
+    body: G1AcceptanceItemIn,
+) -> G1AcceptanceItemOut:
     if item_key not in VALID_KEYS:
         raise ProblemError(
             ErrorCodes.VALIDATION, detail=f"Unbekannter Prüfpunkt der G1-Öffnung: {item_key}."
@@ -279,7 +279,7 @@ async def file_request(
     *,
     tenant_id: uuid.UUID,
     user_id: uuid.UUID,
-    body: RequestIn,
+    body: G1RequestIn,
 ) -> GateRequestSummary:
     """Create the G1 request of the existing release gate flow; a second person decides it."""
     state = await overview(session)

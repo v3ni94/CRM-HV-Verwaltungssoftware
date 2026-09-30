@@ -354,6 +354,7 @@ class HandoverClientWrite(IdMixin, TimestampMixin, TenantMixin, Base):
     __tablename__ = "handover_client_write"
     __table_args__ = (
         sa.UniqueConstraint("tenant_id", "client_key", name="uq_handover_client_write_key"),
+        sa.Index("ix_handover_client_write_tenant_id", "tenant_id"),
     )
 
     protocol_id: Mapped[uuid.UUID] = _protocol_fk()

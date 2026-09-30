@@ -339,6 +339,12 @@ class JournalEntry(IdMixin, TimestampMixin, TenantMixin, Base):
             "bank_transaction_id",
             postgresql_where=text("bank_transaction_id IS NOT NULL"),
         ),
+        Index(
+            "ix_journal_entry_auto_review_pending",
+            "tenant_id",
+            "ledger_id",
+            postgresql_where=text("auto_review_pending"),
+        ),
     )
 
     ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
@@ -943,7 +949,7 @@ class G1AcceptanceItem(IdMixin, TimestampMixin, TenantMixin, Base):
     """
 
     __tablename__ = "g1_acceptance"
-    __table_args__ = (UniqueConstraint("tenant_id", "item_key"),)
+    __table_args__ = (UniqueConstraint("tenant_id", "item_key", name="uq_g1_acceptance_tenant_id"),)
 
     item_key: Mapped[str] = mapped_column(String(32), nullable=False)
     status: Mapped[str] = mapped_column(

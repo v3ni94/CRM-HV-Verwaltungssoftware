@@ -21737,6 +21737,115 @@
         "title": "FullRunOut",
         "type": "object"
       },
+      "G1AcceptanceItemIn": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed_by_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed By Name"
+          },
+          "confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed On"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "$ref": "#/components/schemas/G1AcceptanceStatus"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "G1AcceptanceItemIn",
+        "type": "object"
+      },
+      "G1AcceptanceItemOut": {
+        "properties": {
+          "confirmed_by_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed By Name"
+          },
+          "confirmed_on": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confirmed On"
+          },
+          "item_key": {
+            "title": "Item Key",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_key",
+          "title",
+          "status",
+          "confirmed_on",
+          "confirmed_by_name",
+          "note"
+        ],
+        "title": "G1AcceptanceItemOut",
+        "type": "object"
+      },
       "G1AcceptanceStatus": {
         "enum": [
           "open",
@@ -21761,7 +21870,7 @@
           },
           "cases": {
             "items": {
-              "$ref": "#/components/schemas/mhvp__accounting__g1_opening__ItemOut"
+              "$ref": "#/components/schemas/G1AcceptanceItemOut"
             },
             "title": "Cases",
             "type": "array"
@@ -21794,7 +21903,7 @@
           },
           "manual": {
             "items": {
-              "$ref": "#/components/schemas/mhvp__accounting__g1_opening__ItemOut"
+              "$ref": "#/components/schemas/G1AcceptanceItemOut"
             },
             "title": "Manual",
             "type": "array"
@@ -21842,6 +21951,34 @@
           "documents"
         ],
         "title": "G1OpeningOut",
+        "type": "object"
+      },
+      "G1RequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "comment": {
+            "anyOf": [
+              {
+                "maxLength": 1000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Comment"
+          },
+          "scope": {
+            "maxLength": 2000,
+            "minLength": 10,
+            "title": "Scope",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "G1RequestIn",
         "type": "object"
       },
       "G5EvidenceIn": {
@@ -25642,53 +25779,81 @@
         "title": "InvoiceTaxOut",
         "type": "object"
       },
-      "ItemIn": {
-        "additionalProperties": false,
+      "ItemOut": {
         "properties": {
-          "confirmed_by_name": {
+          "author_name": {
             "anyOf": [
               {
-                "maxLength": 200,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Confirmed By Name"
+            "title": "Author Name"
           },
-          "confirmed_on": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "direction": {
+            "title": "Direction",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "last_error": {
             "anyOf": [
               {
-                "format": "date",
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Confirmed On"
+            "title": "Last Error"
           },
-          "note": {
+          "local_id": {
+            "format": "uuid",
+            "title": "Local Id",
+            "type": "string"
+          },
+          "remote_id": {
             "anyOf": [
               {
-                "maxLength": 2000,
                 "type": "string"
               },
               {
                 "type": "null"
               }
             ],
-            "title": "Note"
+            "title": "Remote Id"
           },
-          "status": {
-            "$ref": "#/components/schemas/G1AcceptanceStatus"
+          "state": {
+            "title": "State",
+            "type": "string"
           }
         },
         "required": [
-          "status"
+          "id",
+          "kind",
+          "direction",
+          "local_id",
+          "remote_id",
+          "author_name",
+          "state",
+          "last_error",
+          "created_at"
         ],
-        "title": "ItemIn",
+        "title": "ItemOut",
         "type": "object"
       },
       "JobSettingsIn": {
@@ -46668,6 +46833,53 @@
         "title": "ReportType",
         "type": "string"
       },
+      "RequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "applicant_contact_id": {
+            "format": "uuid",
+            "title": "Applicant Contact Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "requested_on": {
+            "format": "date",
+            "title": "Requested On",
+            "type": "string"
+          },
+          "scope_kinds": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 4,
+            "title": "Scope Kinds",
+            "type": "array"
+          },
+          "scope_text": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Text"
+          }
+        },
+        "required": [
+          "legal_entity_id",
+          "applicant_contact_id",
+          "requested_on"
+        ],
+        "title": "RequestIn",
+        "type": "object"
+      },
       "RequestOut": {
         "properties": {
           "applicant_contact_id": {
@@ -53293,7 +53505,7 @@
           "items": {
             "default": [],
             "items": {
-              "$ref": "#/components/schemas/mhvp__integrations__schadenstool__schemas__ItemOut"
+              "$ref": "#/components/schemas/ItemOut"
             },
             "title": "Items",
             "type": "array"
@@ -57331,94 +57543,6 @@
         "title": "WorkspaceBulkIn",
         "type": "object"
       },
-      "mhvp__accounting__g1_opening__ItemOut": {
-        "properties": {
-          "confirmed_by_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confirmed By Name"
-          },
-          "confirmed_on": {
-            "anyOf": [
-              {
-                "format": "date",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Confirmed On"
-          },
-          "item_key": {
-            "title": "Item Key",
-            "type": "string"
-          },
-          "note": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Note"
-          },
-          "status": {
-            "title": "Status",
-            "type": "string"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "item_key",
-          "title",
-          "status",
-          "confirmed_on",
-          "confirmed_by_name",
-          "note"
-        ],
-        "title": "ItemOut",
-        "type": "object"
-      },
-      "mhvp__accounting__g1_opening__RequestIn": {
-        "additionalProperties": false,
-        "properties": {
-          "comment": {
-            "anyOf": [
-              {
-                "maxLength": 1000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Comment"
-          },
-          "scope": {
-            "maxLength": 2000,
-            "minLength": 10,
-            "title": "Scope",
-            "type": "string"
-          }
-        },
-        "required": [
-          "scope"
-        ],
-        "title": "RequestIn",
-        "type": "object"
-      },
       "mhvp__ai__schemas__ProviderIn": {
         "additionalProperties": false,
         "properties": {
@@ -58139,130 +58263,6 @@
           "name"
         ],
         "title": "TenantOut",
-        "type": "object"
-      },
-      "mhvp__hoa__inspection__RequestIn": {
-        "additionalProperties": false,
-        "properties": {
-          "applicant_contact_id": {
-            "format": "uuid",
-            "title": "Applicant Contact Id",
-            "type": "string"
-          },
-          "legal_entity_id": {
-            "format": "uuid",
-            "title": "Legal Entity Id",
-            "type": "string"
-          },
-          "requested_on": {
-            "format": "date",
-            "title": "Requested On",
-            "type": "string"
-          },
-          "scope_kinds": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 4,
-            "title": "Scope Kinds",
-            "type": "array"
-          },
-          "scope_text": {
-            "anyOf": [
-              {
-                "maxLength": 4000,
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Scope Text"
-          }
-        },
-        "required": [
-          "legal_entity_id",
-          "applicant_contact_id",
-          "requested_on"
-        ],
-        "title": "RequestIn",
-        "type": "object"
-      },
-      "mhvp__integrations__schadenstool__schemas__ItemOut": {
-        "properties": {
-          "author_name": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Author Name"
-          },
-          "created_at": {
-            "format": "date-time",
-            "title": "Created At",
-            "type": "string"
-          },
-          "direction": {
-            "title": "Direction",
-            "type": "string"
-          },
-          "id": {
-            "format": "uuid",
-            "title": "Id",
-            "type": "string"
-          },
-          "kind": {
-            "title": "Kind",
-            "type": "string"
-          },
-          "last_error": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Last Error"
-          },
-          "local_id": {
-            "format": "uuid",
-            "title": "Local Id",
-            "type": "string"
-          },
-          "remote_id": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Remote Id"
-          },
-          "state": {
-            "title": "State",
-            "type": "string"
-          }
-        },
-        "required": [
-          "id",
-          "kind",
-          "direction",
-          "local_id",
-          "remote_id",
-          "author_name",
-          "state",
-          "last_error",
-          "created_at"
-        ],
-        "title": "ItemOut",
         "type": "object"
       },
       "mhvp__platform__schemas__TenantOut": {
@@ -61248,7 +61248,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ItemIn"
+                "$ref": "#/components/schemas/G1AcceptanceItemIn"
               }
             }
           },
@@ -61259,7 +61259,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/mhvp__accounting__g1_opening__ItemOut"
+                  "$ref": "#/components/schemas/G1AcceptanceItemOut"
                 }
               }
             },
@@ -61289,7 +61289,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__accounting__g1_opening__RequestIn"
+                "$ref": "#/components/schemas/G1RequestIn"
               }
             }
           },
@@ -83766,7 +83766,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__hoa__inspection__RequestIn"
+                "$ref": "#/components/schemas/RequestIn"
               }
             }
           },
