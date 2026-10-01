@@ -21,11 +21,12 @@
     "*.mts",
     "*.ts",
     ".next-check/types/**/*.ts",
+    ".next-r12/types/**/*.ts",
     ".next/types/**/*.ts",
     "e2e",
     "next-env.d.ts",
     "src",
-    ".next-r12/types/**/*.ts"
+    ".next-p08/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
