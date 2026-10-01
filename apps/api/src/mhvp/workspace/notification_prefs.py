@@ -43,6 +43,19 @@ MAIL_PAGES = 20
 EMAIL_MODE_IMMEDIATE = "immediate"
 EMAIL_MODE_DAILY = "daily"
 EMAIL_MODES = (EMAIL_MODE_IMMEDIATE, EMAIL_MODE_DAILY)
+# U15-04: content of the notification mails per tenant (``tenant_settings.sources``). ``voll``
+# is the previous behaviour; ``hinweis`` sends only the count and a link, no title or text.
+MAIL_CONTENT_FULL = "voll"
+MAIL_CONTENT_HINT = "hinweis"
+MAIL_CONTENT_KEY = "notification_mail_content"
+
+
+async def mail_content_mode(session: AsyncSession, tenant_id: uuid.UUID) -> str:
+    from mhvp.platform.models import TenantSettings
+
+    row = await session.scalar(select(TenantSettings).where(TenantSettings.tenant_id == tenant_id))
+    value = (row.sources or {}).get(MAIL_CONTENT_KEY) if row is not None else None
+    return MAIL_CONTENT_HINT if value == MAIL_CONTENT_HINT else MAIL_CONTENT_FULL
 
 
 @dataclass(frozen=True)
@@ -132,6 +145,7 @@ async def send_pending_mails(
             break
         last = (page[-1][0].created_at, page[-1][0].id)
     counts = {"sent": 0, "failed": 0, "skipped": 0, "mails": 0}
+    hint_only = await mail_content_mode(session, tenant_id) == MAIL_CONTENT_HINT
     by_user: dict[uuid.UUID, list[tuple[Notification, str | None]]] = {}
     for notification, email, user_active, membership_status in rows:
         allowed = bool(user_active) and membership_status == MembershipStatus.ACTIVE
@@ -160,7 +174,14 @@ async def send_pending_mails(
         if not due:
             continue
         address = entries[0][1] or ""
-        if len(due) == 1:
+        if hint_only:
+            # U15-04: no title and no text leave the platform, only count and link.
+            base = str(getattr(settings, "web_crm_url", "") or "").rstrip("/")
+            link = base if base else "dem CRM"
+            noun = "Benachrichtigung" if len(due) == 1 else "Benachrichtigungen"
+            subject = f"{len(due)} neue {noun}"
+            text = f"Es liegen {len(due)} neue Benachrichtigung(en) im CRM vor: {link}"
+        elif len(due) == 1:
             subject = due[0].title
             text = due[0].body or due[0].title
         else:

@@ -126,6 +126,21 @@ async def download_export_job(
                 ErrorCodes.CONFLICT,
                 detail="Das Exportarchiv wurde nach Ablauf der Aufbewahrung gelöscht.",
             )
+        limit = row.expires_at
+        if limit is None and row.finished_at is not None:
+            from datetime import timedelta
+
+            from mhvp.platform.models import TenantSettings
+
+            days = await session.scalar(select(TenantSettings.export_retention_days))
+            limit = row.finished_at + timedelta(days=days) if days else None
+        if limit is not None and limit <= datetime.now(UTC):
+            # Review W79 (T01-01): the retention ends at the same limit the nightly purge
+            # applies, not at its next run; the archive is no longer handed out in between.
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail="Die Aufbewahrung des Exportarchivs ist abgelaufen; es wird gelöscht.",
+            )
         if row.status != export_job.JOB_READY or not row.object_key:
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail=f"Der Export ist nicht fertig ({row.status})."

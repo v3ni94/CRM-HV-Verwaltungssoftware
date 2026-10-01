@@ -161,6 +161,42 @@ def test_purge_expires_archive_and_keeps_tenants_without_retention(
     assert datetime.now(UTC) > finished
 
 
+def test_download_refused_once_retention_ended_before_purge(
+    client: TestClient, world: World, database: Database, redis_url: str, monkeypatch: Any
+) -> None:
+    """Review W79: between ``expires_at`` and the next purge run the archive is not handed out
+    any more (409); the row stays ``ready`` until the purge deletes the object."""
+    from sqlalchemy import create_engine, text
+
+    from mhvp.platform import export_job
+
+    settings = _settings(database, redis_url)
+    monkeypatch.setattr(export_job, "dispatch_tenant_export_job", lambda j, t: None)
+    admin = bearer(login(client, world, "v04admin"))
+    client.patch(SETTINGS, json={"export_retention_days": 7}, headers=admin)
+    row = _run_job(client, admin, world.tenant_a, settings)
+    assert client.get(f"{URL}/{row['id']}/download", headers=admin).status_code == 200
+    engine = create_engine(database.migrator_url)
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+            )
+            conn.execute(
+                text(
+                    "UPDATE tenant_export_job SET expires_at = now() - interval '1 hour' "
+                    "WHERE id = :i"
+                ),
+                {"i": row["id"]},
+            )
+    finally:
+        engine.dispose()
+    resp = client.get(f"{URL}/{row['id']}/download", headers=admin)
+    assert resp.status_code == 409, resp.text
+    status = next(r for r in client.get(URL, headers=admin).json() if r["id"] == row["id"])
+    assert status["status"] == "ready"
+
+
 def test_purge_applies_retention_set_after_the_export(
     client: TestClient, world: World, database: Database, redis_url: str, monkeypatch: Any
 ) -> None:

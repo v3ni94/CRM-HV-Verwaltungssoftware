@@ -561,6 +561,42 @@ async def download(
     )
 
 
+async def _ensure_resolution_of_document(session: Any, document: Any, resolution: Any) -> None:
+    """Review W79 (U11-01): the resolution that starts the retention period belongs to the
+    community of the document, i.e. to a legal entity linked to the document directly or
+    through a linked property. Outside the legal entity or property scope of the membership the
+    resolution does not exist (404); a resolution of another community is refused (422), it
+    would move the deletion date of a record it does not concern."""
+    from mhvp.core.auth.scope import (
+        ensure_session_legal_entity_allowed,
+        ensure_session_property_allowed,
+    )
+    from mhvp.properties.models import LegalEntity
+
+    entity = await session.get(LegalEntity, resolution.legal_entity_id)
+    ensure_session_legal_entity_allowed(session, resolution.legal_entity_id)
+    if session_allowed_property_ids(session) is not None:
+        ensure_session_property_allowed(session, entity.property_id if entity else None)
+    links = (
+        await session.execute(
+            select(DocumentLink.entity_type, DocumentLink.entity_id).where(
+                DocumentLink.document_id == document.id,
+                DocumentLink.entity_type.in_(("legal_entity", "property")),
+            )
+        )
+    ).all()
+    entity_ids = {eid for kind, eid in links if kind == "legal_entity"}
+    property_ids = {eid for kind, eid in links if kind == "property"}
+    if resolution.legal_entity_id in entity_ids or (
+        entity is not None and entity.property_id in property_ids
+    ):
+        return
+    raise svc.invalid(
+        "Der Beschluss gehört nicht zur Gemeinschaft des Dokuments "
+        "(Verknüpfung mit Rechtsträger oder Objekt fehlt)."
+    )
+
+
 @router.patch("/documents/{document_id}", summary="Metadaten ändern")
 async def patch_document(
     document_id: uuid.UUID,
@@ -594,7 +630,8 @@ async def patch_document(
         if changes.get("retention_resolution_id"):
             from mhvp.hoa.models import Resolution
 
-            await _get(session, Resolution, changes["retention_resolution_id"])
+            resolution = await _get(session, Resolution, changes["retention_resolution_id"])
+            await _ensure_resolution_of_document(session, document, resolution)
         before_roles = set(document.visibility or []) - {"internal"}
         for key, value in changes.items():
             setattr(document, key, value)

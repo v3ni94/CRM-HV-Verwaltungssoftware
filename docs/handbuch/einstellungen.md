@@ -448,3 +448,7 @@ Die Kontenzuordnung der Honorarbuchung prüft die Kontoart: Forderungskonto Akti
 Unter Einstellungen, Übernahme-Tickets legen Sie fest, welchem Team und welchem Benutzer die Tickets aus der Übernahme-Checkliste eines Objekts zugewiesen werden. Beide Felder sind Auswahllisten aus den Teams und aktiven Benutzern des Mandanten. Die Auswahl "Keine Zuweisung" bedeutet, dass die Tickets ohne Team und ohne Zuständigen angelegt werden.
 
 Die Änderung gilt nur für Tickets, die nach dem Speichern aus der Checkliste angelegt werden, bestehende Tickets bleiben unverändert. Ansehen dürfen Sie die Werte mit dem Recht Mandanteneinstellungen lesen, ändern nur mit dem Recht Mandanteneinstellungen ändern. Fehlt Ihnen das Leserecht für Teams oder Benutzer, zeigt die Auswahl nur den gespeicherten Wert, und ein Hinweis weist darauf hin.
+
+## Inhalt der Benachrichtigungsmails (Mandant)
+
+Unter Einstellungen, Benachrichtigungen legt die Verwaltung für den Mandanten fest, was Benachrichtigungsmails enthalten. Voll (Standard) sendet Titel und Text. Hinweis sendet nur die Anzahl neuer Benachrichtigungen und einen Link ins CRM, ohne Titel und Text. Zum Ändern ist das Recht tenant_settings:update erforderlich. Welcher Modus gelten soll, ist eine Datenschutzentscheidung (Offene Frage U15-05).

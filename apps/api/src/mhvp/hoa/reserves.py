@@ -276,8 +276,9 @@ async def get_reserve(
 async def _ensure_opening_unlocked(
     session: AsyncSession, reserve: HoaReserve, changes: dict[str, Any]
 ) -> None:
-    """U15-03: once a statement of the opening year (old or new) is calculated or further,
-    opening balance and opening year are frozen; corrections only by a new movement."""
+    """U15-03: once a statement of the opening year (old or new) or of a later year is
+    calculated or further, opening balance and opening year are frozen; corrections only by a
+    new movement."""
     touched = [
         key
         for key in ("opening_balance", "opening_year")
@@ -285,18 +286,18 @@ async def _ensure_opening_unlocked(
     ]
     if not touched:
         return
-    years = {y for y in (reserve.opening_year, changes.get("opening_year")) if y is not None}
-    if not years:
-        return
-    hit = await session.scalar(
-        select(HoaStatement.id)
-        .where(
-            HoaStatement.ledger_id == reserve.ledger_id,
-            HoaStatement.year.in_(years),
-            HoaStatement.status != StatementStatus.DRAFT,
-        )
-        .limit(1)
-    )
+    # Review W79: the opening carries forward into every later year (``develop_years``) and,
+    # without an opening year, is the opening of every year (``opening_for_year``). The lock
+    # therefore covers each statement from the earlier of the old and new opening year on;
+    # with no opening year on either side it covers every statement of the ledger.
+    new_year = changes.get("opening_year", reserve.opening_year)
+    conditions = [
+        HoaStatement.ledger_id == reserve.ledger_id,
+        HoaStatement.status != StatementStatus.DRAFT,
+    ]
+    if reserve.opening_year is not None and new_year is not None:
+        conditions.append(HoaStatement.year >= min(reserve.opening_year, new_year))
+    hit = await session.scalar(select(HoaStatement.id).where(*conditions).limit(1))
     if hit is not None:
         raise ProblemError(
             ErrorCodes.HOA_RESERVE_OPENING_LOCKED,

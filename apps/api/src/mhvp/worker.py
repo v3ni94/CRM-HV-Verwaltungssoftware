@@ -221,6 +221,13 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "schedule": crontab(day_of_week=1, hour=5, minute=50),
                 "options": {"queue": "io"},
             },
+            # T03-02: provider comparison of the consent expiry before the reminders; tenants
+            # opt in (tenant_settings.sources["bank_consent_sync"], default off).
+            "banking-consent-provider-sync": {
+                "task": "mhvp.banking.consent_provider_sync",
+                "schedule": crontab(hour=7, minute=0),
+                "options": {"queue": "io"},
+            },
             "banking-consent-reminders": {
                 "task": "mhvp.banking.consent_reminders",
                 "schedule": crontab(hour=7, minute=5),

@@ -41,3 +41,7 @@
 - Offen (docs/OPEN_QUESTIONS.md M18-02): ob weitere Rollen (z. B. Beirat, externe Prüfer)
   einen Zugriffsbereich erhalten sollen; die Menge `SCOPED_ROLES` ist dafür der einzige
   Erweiterungspunkt.
+
+## Ergänzung Review W79 (01.10.2026)
+
+Die WEG-Router (`/hoa`) prüfen den Zugriffsbereich zusätzlich zentral (`HOA_GUARD`, `HOA_BOARD_GUARD` in `mhvp/hoa/property_scope.py`): ein Parameter `legal_entity_id` oder die ID eines WEG-Datensatzes mit Rechtsträgerbezug (Versammlung, Beschluss, Sonderumlage, Darlehen, Maßnahme, Versicherungsfall, Prüfauftrag, Buchungskreis) außerhalb von `Membership.legal_entity_ids` ergibt 404. Vorher lieferten die Listen Beschlüsse, Versammlungen, Sonderumlagen, Darlehen, Maßnahmen und Versicherungsfälle jeder Gemeinschaft des Mandanten an den Steuerberater (Leserecht `accounting:read`). Quellenstatus: Produktschutz. Abnahmefall: `apps/api/tests/integration/test_y04_review_w79.py`.

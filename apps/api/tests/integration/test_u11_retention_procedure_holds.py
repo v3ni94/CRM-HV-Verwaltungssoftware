@@ -225,6 +225,21 @@ def test_resolution_start_rule_takes_the_decision_date(gated: TestClient, world:
     )
     assert unknown.status_code == 404
     body = {"retention_resolution_id": resolution["id"]}
+    # Review W79: a resolution of a community the document is not linked to is refused.
+    unlinked = gated.patch(url, json=body, headers=h)
+    assert unlinked.status_code == 422, unlinked.text
+    _other_prop, _other_ledger, other_hoa = _hoa_property_without_account(
+        gated, h, "814", "Nachbarhaus"
+    )
+    foreign_link = {"entity_type": "legal_entity", "entity_id": other_hoa}
+    _ok(gated.post(f"{url}/links", json=foreign_link, headers=h), 201)
+    assert gated.patch(url, json=body, headers=h).status_code == 422
+    _ok(
+        gated.post(
+            f"{url}/links", json={"entity_type": "legal_entity", "entity_id": hoa}, headers=h
+        ),
+        201,
+    )
     assert gated.patch(url, json=body, headers=reader).status_code == 403
     assert gated.patch(url, json=body, headers=other).status_code == 404
     patched = _ok(gated.patch(url, json=body, headers=h), 200)

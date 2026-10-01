@@ -414,3 +414,35 @@ Empfehlung: Messung auf Staging mit produktionsnaher Datenmenge vor G1 durchfüh
 
 ### R09-02, R07-01, U15-01 Bereits technisch erledigt
 R09-02 (Migration 0296), R07-01 (Protokollabschluss V05) und U15-01 (Prüfsumme V01) sind umgesetzt. Empfehlung: als erledigt bestätigen; offene Restfrage zu R07-01 siehe V05-01.
+
+## Sonstige Entscheidungen ohne Gate-Bezug
+
+### V06-02 Sammelkonto bei Mietobjekten mit mehreren Eigentümern (Eigentümer Timo Müller)
+Ergebnis: Standard-Zuständiger und -Team der Übernahme-Tickets sind Mandanteneinstellung (leer = ohne Zuweisung) in Welle 9 (X02) umgesetzt. Offen ist nur, ob bei Mietobjekten mit mehreren Eigentümern ein Sammelkonto je Eigentümer angelegt werden soll.
+Empfehlung: Vorerst ohne Sammelkonto, da die Entscheidung fachlich offen ist; bei Bedarf in einem Folgepaket umsetzen.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Keine Sammelkonten, Entscheidung später | keiner | gering |
+| B Sammelkonto je Eigentümer standardmäßig anlegen | mittel | mittel, ggf. nicht genutzt |
+| C Sammelkonto optional über Mandanteneinstellung | mittel | gering |
+
+### W01-01 WebAuthn-Sicherheitsprüfung und Freischaltung (Eigentümer Timo Müller)
+Ergebnis: Sicherheitsprüfung vom 01.10.2026 abgeschlossen (`docs/reviews/WEBAUTHN-2026-10-01.md`), sieben Befunde behoben und mit Negativtests belegt (Welle 8, W01). Mengenbegrenzung für Passkey-Optionen je Client-Adresse (60) und je Benutzer (20) pro 300 Sekunden (429 MHVP-CORE-0006, Welle 9, X01).
+Empfehlung: Unabhängige Zweitprüfung durch externe Sicherheit durchführen oder auf eine geprüfte Bibliothek wechseln (P14-02), danach Tests mit echten Geräten (iOS, Android, Windows Hello, Sicherheitsschlüssel) und RP ID Konfiguration je Umgebung vor Aktivierung des Schalters MHVP_WEBAUTHN_ENABLED.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Externe Sicherheitsprüfung, dann Freischaltung | mittel | gering |
+| B Wechsel auf externe geprüfte Bibliothek | hoch | gering |
+| C Freischaltung nach internen Tests | gering | mittel, Restrisiko |
+
+### W04-01 Trigramm-Indizes der Portal-Belegsuche unter Row Level Security (Eigentümer Betreiber)
+Ergebnis: Portal-Belegsuche mit LIKE und Trigramm-Indizes implementiert (Welle 8, W04). Die Indizes werden unter RLS nicht automatisch genutzt, da lower() und LIKE unter RLS nicht leakproof sind. Index-Nutzung per EXPLAIN in den Leistungsmessungen dokumentiert.
+Empfehlung: Leistung bei produktionsnaher Datenmenge auf Staging prüfen; ggf. separate nicht-RLS-Indizes (mit Datenschutzvorkehrung) in einem Folgepaket planen.
+
+| Alternative | Aufwand | Risiko |
+| --- | --- | --- |
+| A Staging-Messung vor Go-live, ggf. Folgepaket für optimierte Indizes | gering | gering |
+| B Suche ohne Indizes im jetzigen Zustand akzeptieren | keiner | mittel, Antwortzeit bei großer Datenmenge |
+| C Separate nicht-RLS-Indizes sofort umsetzen | mittel | mittel, Datenschutzprüfung erforderlich |

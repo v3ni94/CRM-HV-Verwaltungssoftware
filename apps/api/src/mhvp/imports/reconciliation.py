@@ -728,6 +728,7 @@ async def build_report(
             {
                 "number": prop,
                 "name": figures.property_name,
+                "property_id": str(figures.property_id) if figures.property_id else None,
                 "on_platform": figures.property_id is not None,
                 "compared": len(prop_lines),
                 "deviations": sum(1 for line in prop_lines if line["deviates"]),
@@ -838,6 +839,32 @@ def format_eur(value: str | None) -> str:
         groups.insert(0, whole[-3:])
         whole = whole[:-3]
     return f"{sign}{'.'.join(groups)},{cents}"
+
+
+def scope_report(report: dict[str, Any], allowed: frozenset[uuid.UUID] | None) -> dict[str, Any]:
+    """Y01 (M2-02): the report of a member with a property assignment keeps only the
+    properties (and their lines) inside it; totals are recomputed and warnings, which may name
+    other properties, are dropped. Properties without platform match and reports created
+    before the property id was stored stay hidden. ``None`` returns the report unchanged."""
+    if allowed is None:
+        return report
+    keep = [str(p) for p in allowed]
+    properties = [p for p in report.get("properties", []) if p.get("property_id") in keep]
+    numbers = {p["number"] for p in properties}
+    lines = [line for line in report.get("lines", []) if line["property_number"] in numbers]
+    totals = {
+        "properties": len(properties),
+        "compared": len(lines),
+        "deviations": sum(1 for line in lines if line["deviates"]),
+        "missing_on_platform": 0,
+    }
+    return report | {
+        "properties": properties,
+        "lines": lines,
+        "totals": totals,
+        "warnings": [],
+        "counts": {},
+    }
 
 
 def report_csv(report: dict[str, Any]) -> str:

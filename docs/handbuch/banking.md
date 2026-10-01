@@ -414,3 +414,7 @@ In der Abstimmung eines Lastschriftlaufs lassen sich mehrere Lastschriften per A
 Unter Bank, Bankverbindungen zeigt jede finAPI-Verbindung dauerhaft, bis wann die Zustimmung gilt. Liefert der Anbieter kein Datum, steht dort ein Hinweis; ein manuell gepflegtes Datum bleibt erhalten. Zehn Tage vor Ablauf erhalten die Buchhaltungsnutzer eine Benachrichtigung und eine Aufgabe zur Erneuerung. Über "Zustimmung erneuern" öffnet sich das WebForm der Bank; danach die Verbindung prüfen.
 
 Jeder Kontoauszug und jeder finAPI-Abruf wird zusätzlich unverändert abgelegt (Schlüssel bank/Mandant/Konto/Datum) und mit dem Aufbewahrungsprofil 10 Jahre versehen. Die Freigabe des Profils durch die Steuerberatung ist offen (T03-01).
+
+## Täglicher Abgleich der Bankzustimmung (T03-02)
+
+Unter Einstellungen, Bank, Täglicher Bankabruf lässt sich "Zustimmungsablauf täglich beim Anbieter abgleichen" einschalten (Standard aus, Recht tenant_settings:update). Der Abgleich liest morgens nur das Ablaufdatum der Zustimmung von finAPI und speichert es bei Änderung. Liefert der Anbieter kein Datum, bleibt das vorhandene Datum stehen. Erinnerung und Aufgabe 10 Tage vor Ablauf bleiben wie beschrieben. Es werden keine Umsätze abgerufen und nichts gebucht.

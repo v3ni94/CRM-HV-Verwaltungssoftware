@@ -168,7 +168,11 @@ def test_fee_posting_drafts(clients: tuple[TestClient, TestClient], world: World
     manager_acc = [
         a for a in _ok(c.get(f"{A}/ledgers/{manager_ledger}/accounts", headers=h)) if a["active"]
     ]
-    payer_numbers = sorted(n for n, a in payer_acc.items() if a["active"])[:2]
+    active_payer = sorted((n, a["type"]) for n, a in payer_acc.items() if a["active"])
+    payer_numbers = [
+        next(n for n, t in active_payer if t == "expense"),
+        next(n for n, t in active_payer if t == "liability"),
+    ]
     by_type = {
         kind: [a for a in manager_acc if a["type"] == kind]
         for kind in ("asset", "income", "liability", "expense")
@@ -201,6 +205,16 @@ def test_fee_posting_drafts(clients: tuple[TestClient, TestClient], world: World
     wrong = c.put(cfg_url, json={**config, "manager_ledger_id": payer_ledger}, headers=h)
     assert wrong.status_code == 422
     assert wrong.json()["code"] == "MHVP-ACC-0004"
+    # Review W79: a payer account of the wrong kind is refused when the drafts are created.
+    swapped = {
+        **config,
+        "payer_expense_account_number": payer_numbers[1],
+        "payer_payable_account_number": payer_numbers[0],
+    }
+    _ok(c.put(cfg_url, json=swapped, headers=h))
+    kind = c.post(drafts_url, headers=h)
+    assert kind.status_code == 409, kind.text
+    assert "Kontoart" in kind.json()["detail"]
     saved = _ok(c.put(cfg_url, json=config, headers=h))
     assert saved["manager_ledger_id"] == manager_ledger
     assert _ok(c.get(cfg_url, headers=other)) is None

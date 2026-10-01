@@ -20,6 +20,10 @@
 6. Startregel Beschluss (U11-01, Migration 0300): Wert `resolution` der Aufzählung `retention_start`; das Dokument verweist über `retention_resolution_id` auf einen Beschluss (WEG), dessen Beschlussdatum nach `retention_base_on` übernommen wird. Die Frist beginnt mit dem 31.12. des Beschlussjahres (Jahresende, verkürzt nie, gekennzeichnete Annahme wie bei den anderen Basen) zuzüglich der Profilfrist. Ohne Bezug bleibt das Dokument gesperrt ("Fristbeginn fehlt"). Fristwerte der Profile bleiben Entwurf. Quellenstatus Anhang C: Produktschutz, keine Rechtsquelle. Abnahmefall: Test `test_resolution_start_rule_takes_the_decision_date`. Änderungsgrund: U11-01-Rest.
 7. Anzeige im CRM (Dokumentdetail): Karte "Aufbewahrung und Sperren" mit Fristende, Beschlussbezug, Sperrgrund, Sperrart, Löschhinderungsgrund und Vier-Augen-Hinweis (`hold_set_by_four_eyes_required` ist wahr, solange eine manuelle Sperre besteht).
 
+## Ergänzung Review W79 (01.10.2026)
+
+Der Beschluss für die Startregel `resolution` (`retention_resolution_id`) muss zur Gemeinschaft des Dokuments gehören: das Dokument ist mit dem Rechtsträger des Beschlusses oder mit dessen Objekt verknüpft, sonst 422. Außerhalb des Rechtsträger- oder Objektbereichs der Mitgliedschaft gilt der Beschluss als nicht vorhanden (404). Grund: ein fremder Beschluss verschob das Löschdatum eines Belegs, den er nicht betrifft. Abnahmefall: `test_resolution_start_rule_takes_the_decision_date`.
+
 ## Nicht geregelt (offen)
 
 * Steuerliche Verfahren (Außenprüfung, Einspruch) haben kein Datenmodell; Sperre bis dahin manuell mit Sperrart `tax_procedure`.

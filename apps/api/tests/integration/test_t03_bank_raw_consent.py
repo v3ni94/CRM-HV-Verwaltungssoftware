@@ -27,10 +27,19 @@ from tests.integration.test_m11_finapi import (
     _run_reminders,
     _set_consent,
     client,  # noqa: F401
-    world,  # noqa: F401
+)
+from tests.integration.test_m11_finapi import (
+    _world as _finapi_world,
 )
 
 pytestmark = pytest.mark.integration
+
+
+@pytest.fixture(scope="module")
+def world(database: Database, redis_url: str) -> World:
+    # Own tenants and users (prefix t03): the finAPI world cannot be provisioned twice
+    # in one process.
+    return asyncio.run(_finapi_world(_settings(database, redis_url), prefix="t03"))
 
 
 class _FakeS3:

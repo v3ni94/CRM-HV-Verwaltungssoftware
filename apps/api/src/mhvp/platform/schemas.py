@@ -165,6 +165,9 @@ class TenantSettingsOut(BaseModel):
     # Rückkanal Gmail zu Plattform (rule M20-08): mode off, record_only (Standard) or done
     # and its guards; ``gmail_spike_confirmed_at`` is set by the spike confirmation.
     gmail_done_sync_mode: str = "record_only"
+    # U15-04: Inhaltsmodus der Benachrichtigungsmails, ``voll`` (Standard) oder ``hinweis``
+    # (nur Anzahl und Link ins CRM). Gespeichert im JSON ``sources``, keine Migration.
+    notification_mail_content: str = "voll"
     gmail_done_closes_ticket: bool = False
     gmail_done_on_trash: bool = True
     gmail_reopen_on_unarchive: bool = True
@@ -220,6 +223,7 @@ class TenantSettingsPatch(BaseModel):
     company: CompanyData | None = None
     branding: Branding | None = None
     ticket_reply_approval_all: bool | None = None
+    notification_mail_content: str | None = Field(default=None, pattern="^(voll|hinweis)$")
     ticket_reopen_window_days: int | None = Field(default=None, ge=0, le=3650)
     portal_second_factor: str | None = Field(default=None, pattern="^(account_choice|required)$")
     # P08-04: Standardfrist in Tagen (1 bis 365); mit clear_inspection_package_default_days

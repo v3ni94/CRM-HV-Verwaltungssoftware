@@ -540,7 +540,7 @@ Aufwand: S klein, M mittel, L groß. Stand: Ergebnis der Prüfung, alle Befunde 
 
 ## Zählung
 
-Stand der Fortschreibung: Version 1.55.0 (Wellen 8 und 9, Zählung unverändert gegenüber Welle 7).
+Stand der Fortschreibung: Version 1.56.0 (Wellen 8 bis 10, Zählung unverändert gegenüber Welle 7; M2-02 und S16-02 Rest T14-01 in Welle 10 weiter reduziert).
 
 | Teil | Befunde | umgesetzt | teilweise | offen |
 | --- | --- | --- | --- | --- |

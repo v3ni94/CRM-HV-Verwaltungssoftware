@@ -17,6 +17,31 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.56.0",
+    date: "01.10.2026",
+    title:
+      "Welle 10 der Lückenliste: Objektzuordnung Restbereiche, finAPI-Abgleich, Mailinhalt, Prüfung der Wellen 7 bis 9",
+    changes: [
+      "Übersicht: Welle 10 der Lückenliste vom 30.09.2026 mit 5 Paketen, keine Migration: Restbereiche der Objektzuordnung (Mandatsvorschläge, Abgleichberichte, historische Bankverknüpfungen, Immoware24-Importe nur für unbeschränkte Mitglieder), täglicher finAPI-Zustimmungsabgleich hinter Mandantenschalter, Inhaltsmodus der Benachrichtigungsmails, Sicherheits- und Geldflussprüfung der Wellen 7 bis 9 mit sechs Behebungen (docs/reviews/REVIEW-W79-2026-10-01.md), Dokumentation der Wellen 7 bis 9. Neue Entscheidungen: T14-01a, U15-05, Y02-01, Y04-01, Y04-02.",
+      "Portal: Mandatsvorschläge der Portalverwaltung folgen der Objektzuordnung der Mitgliedschaft (Liste gefiltert, Entscheidung außerhalb 404).",
+      "Import: Abgleichberichte des Parallelbetriebs zeigen bei Objektzuordnung nur zugeordnete Objekte mit neu gebildeten Summen.",
+      "Import: Historische Bankverknüpfungen und Journalkandidaten folgen dem Bankkonto des Umsatzes.",
+      "Import: Immoware24 Datei- und Vollimporte ohne Zielobjekt sind für Mitglieder mit Objektzuordnung gesperrt (403).",
+      "Banking: Täglicher Beat-Job gleicht den Ablauf der Bankzustimmung beim Anbieter ab und schreibt nur bei geänderter Angabe, hinter einem Mandantenschalter (Standard aus).",
+      "Banking: Neue Einstellung unter Einstellungen, Bank zum Ein- und Ausschalten des Zustimmungsabgleichs (API /banking/consent-sync/settings).",
+      "Benachrichtigungen: Mandantenschalter für den Mailinhalt (voll oder nur Hinweis mit Anzahl und CRM-Link), Standard voll, Schalter unter Einstellungen, Benachrichtigungen.",
+      "WEG: Beschlüsse, Versammlungen, Sonderumlagen, Darlehen, Maßnahmen und Versicherungsfälle sind für Mitglieder mit Rechtsträgerbereich (Steuerberater) nur noch für die zugewiesenen Gemeinschaften abrufbar.",
+      "Dokumente: Der Beschluss als Fristbeginn der Aufbewahrung muss zur Gemeinschaft des Dokuments gehören.",
+      "WEG: Anfangsbestand und Anfangsjahr einer Rücklage sind auch bei berechneter Abrechnung eines Folgejahres gesperrt.",
+      "Plattform: Ein Mandantenexport ist ab Ablauf der Aufbewahrung nicht mehr herunterladbar, auch vor dem nächtlichen Löschlauf.",
+      "WEG: Der Protokollabschluss lehnt Dokumente außerhalb des Zugriffsbereichs oder einer anderen Gemeinschaft ab und sperrt die Versammlung während der Abschlussschritte.",
+      "Buchhaltung: Die Honorarbuchung prüft die Kontoart der Zahlerkonten beim Anlegen der Entwürfe.",
+      "Handbuch: Wellen 7 bis 9 dokumentiert, Versionsnummer 1.55.0, mit Schwerpunkt auf Korrektionen, Sicherheitshärtung und Verbesserungen zur Stabilisierung.",
+      "Regeln: Seed-Kontenrahmen und WebAuthn-Mengenbegrenzung im Regelindex ergänzt.",
+      "Entscheidungen: Neue Punkte zu Sammelkonten, WebAuthn-Freischaltung und Portal-Suchindizes mit Empfehlungen hinzugefügt.",
+    ],
+  },
+  {
     version: "1.55.0",
     date: "01.10.2026",
     title:

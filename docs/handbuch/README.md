@@ -1,6 +1,6 @@
 # Handbuch
 
-Stand: 01.10.2026, Version 1.52.0 (Kapitelindex am 01.10.2026 gegen alle CRM-Seiten und Kapiteldateien geprüft und ergänzt; Welle-6-Abschnitte am 30.09.2026 eingearbeitet). Kapitel zu den Versionen 1.20 bis 1.22 ergänzt am
+Stand: 01.10.2026, Version 1.55.0 (Kapitelindex am 01.10.2026 gegen alle CRM-Seiten und Kapiteldateien geprüft und ergänzt; Abschnitte der Wellen 7 bis 9 am 01.10.2026 eingearbeitet). Kapitel zu den Versionen 1.20 bis 1.22 ergänzt am
 26.09.2026 (Tickets mit Mailverlauf und TNR#, Automatisierung, Portal, WEG, Kommunikation,
 Dienstleisterverträge, IBAN-Freigabe, Energieausweis, Belegeingang, Einstellungen); Abschnitte
 zu 1.23.0 bis 1.25.0 ergänzt am 26.09.2026 (Erledigte ausblenden, Statusauswahl nach Rolle,
@@ -13,6 +13,7 @@ Magic-Link-Anmeldung, Mandantenübersicht, Objekt deaktivieren, Kautionsabrechnu
 Abschnitt "Welle 6 vom 01.10.2026" unten ergänzt (Passkeys als zweiter Faktor, Vollmacht und Vertreterrolle,
 Ticketsammelaktionen mit Priorität und Team, Rücklagenformular mit Kontoauswahl, Statusverlauf der Abrechnung,
 Portal-Rechnungseinreichung mit IBAN-Abgleich, Import-Rücknahme für Zahlungspläne und Mandate).
+Abschnitt "Wellen 7 bis 9 vom 01.10.2026" unten ergänzt mit Korrektionen und Verbesserungen zur Stabilisierung der Wellen 4 bis 7.
 Produktive Buchführung, Zahlungen und Abrechnungen sind gesperrt (Freigabestufen G1 bis G5,
 Abschnitt 18.0). Die Plattform zeigt keine Geldkennzahlen, solange G1 nicht freigegeben ist.
 
@@ -207,6 +208,22 @@ Erweiterungen und Verbesserungen seit Version 1.49.0:
 - **WEG, Rücklagenformular** ([WEG](weg.md)): Anlegen und Ändern einer Rücklage mit Auswahl von Bankkonto des Rechtsträgers und Buchungskonto; Entwicklung je Rücklage und Jahr als eigener Block in der Hausgeldabrechnung; Statusverlauf mit Überschrift und Leerzustand.
 - **Portal, Rechnungseinreichung** ([Portal](portal.md)): Die Rechnungseinreichung des Dienstleisters nimmt optional Netto, USt-Satz und IBAN an; der Belegentwurf zeigt Befunde zum IBAN-Abgleich mit dem Kreditorenstamm und zu Duplikaten im Rechnungsbuch.
 - **Import, Prüfbericht und Rücknahme** ([Importe](importe.md)): Der Prüfbericht vergleicht Kautionen und Darlehen mit der Eröffnungsbilanz; die Rücknahme eines SEPA-Imports entfernt Zahlungsplan und Mandat, sofern unverwendet, und öffnet beendete Vorgängerpläne wieder.
+
+## Wellen 7 bis 9 vom 01.10.2026
+
+Korrektionen, Sicherheitshärtung und Verbesserungen seit Version 1.52.0 (20 Pakete über neun Agenten parallel):
+
+- **Kommunikation** ([Mail](mail.md)): Freigabe des KI-Antwortentwurfs verlangt den Hash des Entwurfs (draft_hash), um Konflikte bei zwischenzeitlicher Neuerzeugung zu erkennen (409 MHVP-COMM-0010 bei Abweichung).
+- **Buchhaltung** ([Buchhaltung](buchhaltung.md)): Auftrag, Beschluss, Wirtschaftsplanposition und Rechnungsplan einer Eingangsrechnung müssen zum Objekt, zur Gemeinschaft oder zum Buchungskreis gehören, sonst wird die Eingabe mit 422 MHVP-ACC-0008 abgelehnt.
+- **WEG** ([WEG](weg.md)): Anfangsbestand und Anfangsjahr einer Rücklage sind nach berechneter oder freigegebener Abrechnung des Anfangsjahres gesperrt (409 MHVP-HOA-0005), Korrekturen erfolgen nur per neuer Bewegung. Der Protokollabschluss der Versammlung im Vier-Augen-Prinzip sperrt Tagesordnung, Anwesenheit und Beschlussfassung; die Startregel Beschluss für Aufbewahrungsfristen ist einsetzbar.
+- **Anmeldung** ([Einstellungen](einstellungen.md)): Passwortlose Passkey-Anmeldung ist für reine Portalkonten gesperrt; Passkey als zweiter Faktor bleibt möglich.
+- **Banking** ([Banking](banking.md)): Der FinTS-CSV-Import prüft, ob Datum, Betrag und IBAN zulässig sind (mehrdeutige Beträge, Zählerfehler, Währungsabweichung werden abgewiesen).
+- **Portal** ([Portal](portal.md)): Rechnungseinreichung des Dienstleisters lehnt fremde Dokumente ab (404), Einladungen lassen sich erneuern; neue Schaltfläche Einladung erneuern am Kontakt.
+- **Tickets** ([Tickets](tickets.md)): Sammelaktionen erledigen Priorität und Team mit Teilerfolgsbericht und Protokollierung im Ticketverlauf.
+- **Aufbewahrung** ([Einstellungen](einstellungen.md)): Archive von Mandantenexport-Läufen lassen sich zeitlich begrenzen und werden protokolliert abgelaufen und gelöscht.
+- **Sicherheit** ([Einstellungen](einstellungen.md)): WebAuthn-Prüfung gehärtet (Signaturzähler streng steigend, Restbytes, CBOR-Formate geprüft), Fehlerursachen serverseitig protokolliert nur.
+- **KI-Onboarding** ([Plattform](plattform.md)): Bank- und Debitorenkonten werden nicht mehr automatisch angelegt, sondern als Entscheidungspunkt je Rechtsträger ausgewiesen.
+- **Honora-Buchung** ([Buchhaltung](buchhaltung.md)): Die Kontenzuordnung prüft die Kontoart der Verwalterkonten (Forderung, Erlös, Umsatzsteuer) und lehnt abweichende Konten ab.
 
 ## Anmelden und Mandant wählen
 

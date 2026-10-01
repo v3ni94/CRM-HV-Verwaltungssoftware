@@ -81,3 +81,19 @@
     Bankverknüpfungen ohne Objekt, Änderungsvorschläge, Vollmachten und Mandatsvorschläge der
     Portalverwaltung; Sync-Läufe ohne Kontobezug sind für eingeschränkte Mitglieder
     unsichtbar. Abnahmefall: tests/integration/test_t14_property_scope_rest.py.
+- Stand 01.10.2026 (Paket Y01, Welle 10, Rest T14-01): angeschlossen sind jetzt
+  Mandatsvorschläge der Portalverwaltung (Liste über den Vertrag zum Objekt gefiltert,
+  Entscheidung außerhalb 404), Abgleichberichte des Parallelbetriebs (Liste, Bericht, CSV und
+  Neuerstellung zeigen nur zugeordnete Objekte samt Zeilen; Summen werden neu gebildet;
+  Warnungen und Zähler, die fremde Objekte nennen können, entfallen; Objekte ohne
+  Plattformtreffer und Altberichte ohne gespeicherte Objekt-Id bleiben verborgen) und
+  historische Bankverknüpfungen (über das Bankkonto des Umsatzes; Kandidatenliste außerhalb
+  404). Änderungsvorschläge und Vollmachten waren bereits mit Paket U15 angeschlossen.
+  - Immoware24 Datei- und Vollimporte (`/imports/immoware24`, `/imports/immoware24/vollimport`)
+    bleiben Admin-only: Mitglieder mit Objektzuordnung erhalten 403, Mitglieder ohne
+    Objektzuordnung und Administratorrollen arbeiten unverändert. Begründung: diese Importe
+    haben kein Zielobjekt und schreiben mandantenweite Stammdaten (Kontakte, Objekte,
+    Verträge); ein objektbezogener Filter wäre unvollständig, eine Ablehnung verrät kein
+    fremdes Objekt (Produktschutz, keine Rechtspflicht). Quellenstatus: Fachliche Umsetzung
+    3.4, kein Eintrag in Anhang C. Abnahmefall: tests/integration/test_y01_property_scope_rest.py,
+    tests/test_y01_reconciliation_scope.py.

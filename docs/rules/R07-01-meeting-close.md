@@ -15,3 +15,8 @@
 * Abnahmefall: `tests/integration/test_r07_01_meeting_close.py`, CRM `MeetingClose.test.tsx`;
   fachliche Abnahme durch den Betreiber offen.
 * Änderungsgrund: Lückenliste 30.09.2026, Befund R07-01 (Welle 7, Paket V05).
+* Ergänzung Review W79 (01.10.2026): das Protokolldokument muss im Dokumentbereich der
+  Mitgliedschaft liegen und darf nicht ausschließlich mit einer anderen Gemeinschaft (Rechtsträger
+  oder Objekt) verknüpft sein (422); ein unverknüpfter Upload bleibt zulässig. Antrag, Bestätigung
+  und Rücknahme sperren die Versammlungszeile (`FOR UPDATE`), damit Bestätigung und Rücknahme
+  nicht gegeneinander laufen.

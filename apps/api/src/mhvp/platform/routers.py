@@ -407,6 +407,11 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         # Structured entries (intake address, switches) have their own endpoints.
         sources={k: v for k, v in row.sources.items() if isinstance(v, str)},
         auto_posting_enabled=row.auto_posting_enabled,
+        notification_mail_content=(
+            "hinweis"
+            if (row.sources or {}).get("notification_mail_content") == "hinweis"
+            else "voll"
+        ),
         ticket_reply_approval_all=row.ticket_reply_approval_all,
         ticket_reopen_window_days=row.ticket_reopen_window_days,
         portal_second_factor=row.portal_second_factor,
@@ -503,6 +508,9 @@ async def patch_settings(
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
             "ticket_reopen_window_days": row.ticket_reopen_window_days,
             "portal_second_factor": row.portal_second_factor,
+            "notification_mail_content": (row.sources or {}).get(
+                "notification_mail_content", "voll"
+            ),
             "inspection_package_default_days": row.inspection_package_default_days,
             "export_retention_days": row.export_retention_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
@@ -526,6 +534,12 @@ async def patch_settings(
             row.company = body.company.model_dump(mode="json")
         if body.branding is not None:
             row.branding = body.branding.model_dump(mode="json", by_alias=True)
+        if body.notification_mail_content is not None:
+            # U15-04: Inhaltsmodus der Benachrichtigungsmails, Änderung protokolliert.
+            row.sources = {
+                **(row.sources or {}),
+                "notification_mail_content": body.notification_mail_content,
+            }
         if body.ticket_reply_approval_all is not None:
             # M20-03 Notbremse: Änderung wird mit Nutzer im Ereignis protokolliert.
             row.ticket_reply_approval_all = body.ticket_reply_approval_all
@@ -605,6 +619,9 @@ async def patch_settings(
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
             "ticket_reopen_window_days": row.ticket_reopen_window_days,
             "portal_second_factor": row.portal_second_factor,
+            "notification_mail_content": (row.sources or {}).get(
+                "notification_mail_content", "voll"
+            ),
             "inspection_package_default_days": row.inspection_package_default_days,
             "export_retention_days": row.export_retention_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,

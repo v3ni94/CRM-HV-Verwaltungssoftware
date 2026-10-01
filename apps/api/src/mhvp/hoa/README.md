@@ -163,3 +163,11 @@ V05-01); the response carries a hint text only. Migration 0302, rule `docs/rules
 Opening balance and year are frozen once a statement of the opening year is calculated or
 beyond (409 `MHVP-HOA-0005`); ended bank accounts and inactive ledger accounts are refused
 with 422. Rule M24-W5 addendum.
+
+## Review W79 (01.10.2026)
+
+`HOA_GUARD` and `HOA_BOARD_GUARD` now combine the property assignment guard with a legal entity
+scope guard (A37): a `legal_entity_id` parameter or the id of a WEG record with a legal entity
+outside `Membership.legal_entity_ids` answers 404. The reserve opening lock covers statements from
+the earlier opening year on; the minutes document of the closing is scope checked and must not
+belong to another community. See `docs/reviews/REVIEW-W79-2026-10-01.md`.

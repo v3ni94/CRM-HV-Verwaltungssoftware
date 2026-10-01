@@ -313,3 +313,7 @@ Bankregeln und Regelvorschläge (eigenes Objekt, sonst Objekt des Rechtsträgers
 `build_transactions` reports rows of another own account or another currency as row errors;
 `preview` reports a mismatch between the selected account and the file's own account, which
 blocks `POST /imports/csv`. Rule: `docs/rules/M11-02-csv-import.md` (Nachtrag V11).
+
+## Abgleich der Zustimmung beim Anbieter (T03-02, Y02)
+
+`tasks.sync_consent_from_provider` und der Beat-Job `mhvp.banking.consent_provider_sync` (07:00) gleichen `FinApiConnection.consent_valid_until` täglich mit der Anbieterantwort ab (`parse_consent_valid_until`), schreiben nur bei Änderung und emittieren `banking.consent_synced`. Schalter je Mandant: `tenant_settings.sources["bank_consent_sync"]` (Standard aus, API `/banking/consent-sync/settings`). Regel: `docs/rules/M11-08-consent-erneuerung.md` (Nachtrag Y02).

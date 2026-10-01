@@ -6162,6 +6162,33 @@
         "title": "BankStatusIn",
         "type": "object"
       },
+      "BankingConsentSyncIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "BankingConsentSyncIn",
+        "type": "object"
+      },
+      "BankingConsentSyncOut": {
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "BankingConsentSyncOut",
+        "type": "object"
+      },
       "BankingDigestBuildIn": {
         "additionalProperties": false,
         "properties": {
@@ -63881,6 +63908,11 @@
             "title": "Metering Module Enabled",
             "type": "boolean"
           },
+          "notification_mail_content": {
+            "default": "voll",
+            "title": "Notification Mail Content",
+            "type": "string"
+          },
           "portal_second_factor": {
             "default": "account_choice",
             "title": "Portal Second Factor",
@@ -64228,6 +64260,18 @@
               }
             ],
             "title": "Metering Module Enabled"
+          },
+          "notification_mail_content": {
+            "anyOf": [
+              {
+                "pattern": "^(voll|hinweis)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notification Mail Content"
           },
           "portal_second_factor": {
             "anyOf": [
@@ -86270,6 +86314,67 @@
           }
         },
         "summary": "Bankverbindung anlegen",
+        "tags": [
+          "Bank"
+        ]
+      }
+    },
+    "/api/v1/banking/consent-sync/settings": {
+      "get": {
+        "operationId": "get_consent_sync_settings_api_v1_banking_consent_sync_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankingConsentSyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Täglicher Abgleich des Zustimmungsablaufs lesen",
+        "tags": [
+          "Bank"
+        ]
+      },
+      "put": {
+        "description": "T03-02 (M11-08): default off. The daily job only reads the consent expiry from the\nprovider and writes it when it changed; reminder and task stay as before.",
+        "operationId": "put_consent_sync_settings_api_v1_banking_consent_sync_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BankingConsentSyncIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BankingConsentSyncOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Täglichen Abgleich des Zustimmungsablaufs je Mandant ein- oder ausschalten",
         "tags": [
           "Bank"
         ]

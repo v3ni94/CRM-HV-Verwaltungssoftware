@@ -190,3 +190,7 @@ mailboxes); no N+1. Tests: `tests/integration/test_workspace_ticket_analytics.py
 - Q04 (M3-05): `GET /workspace/search` findet Verträge zusätzlich über den Namen eines Parteimitglieds, Einheiten über die Objektstraße und Dokumente über Titel und Dateiname; zusammengeführte Kontakte (M3-03) sind ausgeblendet, der alte Name führt zum Ziel.
 - Paket R06 (Welle 4): `POST /workspace/notifications/mute` (alle nicht verpflichtenden Arten stummschalten oder aufheben, eigene Standardzeile `*`), `jobs.sync_work_order_entry` (Auftragstermin sofort im Kalender, Tagesjob bleibt Auffangnetz), `maintenance.done` in `POST /workspace/bulk` folgt dem Intervall wie die Einzelaktion (Feld `done_on`). UI: `NotificationBell`, `MaintenancePanel`.
 - Paket T08 (Welle 5): M23-04 Zustellung der Mail je Art (`notification_preference.email_mode` immediate oder daily, Migration 0293), `send_pending_mails` fasst je Benutzer und Lauf zu einer Sammelmail zusammen, Beat `workspace-notification-mails-daily` 07:30 für Einstellung täglich. Die Stummschaltung wirkt beim Anlegen der Benachrichtigung (`notify`).
+
+## Inhaltsmodus der Benachrichtigungsmails (U15-04)
+
+Der Mandantenschalter `notification_mail_content` (`voll` Standard, `hinweis`) liegt im JSON `tenant_settings.sources`. `send_pending_mails` liest ihn je Lauf (`mail_content_mode`); im Modus `hinweis` enthält die Sammelmail nur Anzahl und CRM-Link, keinen Titel und keinen Text. Regel `docs/rules/U15-04.md`.

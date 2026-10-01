@@ -156,6 +156,14 @@ async def history_bank_links(
         query = select(MigratedBankLink)
         if open_only:
             query = query.where(MigratedBankLink.journal_entry_id.is_(None))
+        allowed = session_allowed_property_ids(session)
+        if allowed is not None:
+            # Y01 (M2-02): only links whose bank transaction belongs to a visible account.
+            from mhvp.banking.property_scope import transaction_account_filter
+
+            query = query.where(
+                transaction_account_filter(allowed, MigratedBankLink.bank_transaction_id)
+            )
         rows = await session.scalars(
             query.order_by(MigratedBankLink.created_at, MigratedBankLink.id)
             .offset(offset)
@@ -210,5 +218,8 @@ async def history_bank_link_candidates(
         tx = await session.get(BankTransaction, bank_transaction_id)
         if tx is None or not (tx.raw or {}).get("migration", {}).get("history"):
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        from mhvp.banking.property_scope import ensure_account_visible
+
+        await ensure_account_visible(session, tx.property_bank_account_id)  # Y01, M2-02
         rows = await w3_reports.journal_candidates(session, tx, tolerance_days, limit)
         return [HistoryJournalCandidateOut.model_validate(r) for r in rows]

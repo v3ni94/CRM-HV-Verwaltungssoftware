@@ -106,6 +106,25 @@ describe("BankSyncSettingsCard (M11-05)", () => {
   });
 });
 
+describe("BankSyncSettingsCard consent switch (T03-02)", () => {
+  it("shows the switch off by default and saves it", async () => {
+    const calls: { url: string; method: string; body?: string }[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push({ url, method: init?.method ?? "GET", body: init?.body as string | undefined });
+      if (url.endsWith("/consent-sync/settings")) return jsonResponse({ enabled: init?.method === "PUT" });
+      return jsonResponse({ sync_hour: 6, configured: false });
+    });
+    renderIntl(<BankSyncSettingsCard canEdit canRun={false} />);
+    const box = await screen.findByRole("checkbox");
+    await waitFor(() => expect(box).not.toBeDisabled());
+    expect(box).not.toBeChecked();
+    await userEvent.click(box);
+    await waitFor(() => expect(box).toBeChecked());
+    expect(calls.find((c) => c.method === "PUT")?.body).toContain('"enabled":true');
+  });
+});
+
 describe("AutoPostingDigests (M12-02)", () => {
   it("lists digests and confirms one", async () => {
     let confirmed = false;

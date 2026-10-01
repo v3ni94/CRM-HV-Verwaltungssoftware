@@ -202,6 +202,14 @@ def _inspection(client: TestClient, h: dict[str, str], hoa: str, contact: str) -
     )
 
 
+def _assert_foreign_scope(response: Any, path: str) -> None:
+    """A list filtered by a legal entity outside the membership scope: 404 (router guard,
+    review W79) or an empty list (endpoint filter); never foreign rows."""
+    assert response.status_code in (200, 404), (path, response.text)
+    if response.status_code == 200:
+        assert response.json() == [], path
+
+
 def test_reconciliation_reports_need_accounting_rights(client: TestClient, world: World) -> None:
     """Befund 3: AI rights alone open no financial comparison; accounting:read does."""
     ai = bearer(login(client, world, "r22ai"))
@@ -237,8 +245,10 @@ def test_tax_advisor_scope_limits_hoa_finance_and_inspection(
             client.get(f"{H}/{path}", params={"legal_entity_id": w1["hoa"]}, headers=tax)
         )
         assert [r["id"] for r in listed_own] == [own], path
-        assert (
-            _ok(client.get(f"{H}/{path}", params={"legal_entity_id": w2["hoa"]}, headers=tax)) == []
+        # Review W79: a foreign ``legal_entity_id`` in the query answers 404 through the router
+        # guard (before: an empty list); both leak nothing.
+        _assert_foreign_scope(
+            client.get(f"{H}/{path}", params={"legal_entity_id": w2["hoa"]}, headers=tax), path
         )
         assert client.get(f"{H}/{path}/{own}", headers=tax).status_code == 200, path
         assert client.get(f"{H}/{path}/{foreign}", headers=tax).status_code == 404, path
@@ -371,7 +381,9 @@ def test_tax_advisor_scope_limits_board_and_majority_rules(
 
     own = _ok(client.get(f"{H}/audits", params={"legal_entity_id": w1["hoa"]}, headers=tax))
     assert [e["id"] for e in own] == [eng1]
-    assert _ok(client.get(f"{H}/audits", params={"legal_entity_id": w2["hoa"]}, headers=tax)) == []
+    _assert_foreign_scope(
+        client.get(f"{H}/audits", params={"legal_entity_id": w2["hoa"]}, headers=tax), "audits"
+    )
     for path in (
         f"{H}/audit-engagements/{eng2}/board",
         f"{H}/audits/{eng2}/candidates",

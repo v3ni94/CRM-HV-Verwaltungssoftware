@@ -279,6 +279,46 @@ def test_opening_locked_after_statement_of_opening_year(
     assert client.patch(url, json={"opening_balance": "1.00"}, headers=o).status_code == 404
 
 
+def test_opening_locked_by_statement_of_later_year(
+    client: TestClient, world: World, migrator_engine: Any
+) -> None:
+    """Review W79 (U15-03): the opening carries into every later year, and without an opening
+    year it is the opening of every year. A calculated statement of 2026 therefore freezes the
+    opening of a reserve opened in 2025 and of a reserve without opening year; a reserve
+    opened after the settled year stays editable."""
+    from sqlalchemy import text
+
+    h = bearer(login(client, world, "t09admin"))
+    w = _hoa_ledger(client, h, "795")
+
+    def reserve(name: str, year: int | None) -> str:
+        body: dict[str, Any] = {"ledger_id": w["ledger"], "name": name, "opening_balance": "100.00"}
+        if year is not None:
+            body["opening_year"] = year
+        return str(_ok(client.post(f"{H}/reserves", json=body, headers=h), 201)["id"])
+
+    earlier, undated, later = reserve("Dach", 2025), reserve("Heizung", None), reserve("Hof", 2027)
+    st = _ok(
+        client.post(f"{H}/statements", json={"ledger_id": w["ledger"], "year": 2026}, headers=h),
+        201,
+    )
+    with migrator_engine.begin() as conn:
+        conn.execute(
+            text("SELECT set_config('app.tenant_id', :t, true)"), {"t": str(world.tenant_a)}
+        )
+        conn.execute(
+            text("UPDATE hoa_statement SET status = 'calculated' WHERE id = :i"), {"i": st["id"]}
+        )
+    for rid in (earlier, undated):
+        resp = client.patch(f"{H}/reserves/{rid}", json={"opening_balance": "200.00"}, headers=h)
+        assert resp.status_code == 409, resp.text
+        assert resp.json()["code"] == "MHVP-HOA-0005"
+    ok = client.patch(f"{H}/reserves/{later}", json={"opening_balance": "200.00"}, headers=h)
+    assert ok.status_code == 200, ok.text
+    moved = client.patch(f"{H}/reserves/{later}", json={"opening_year": 2026}, headers=h)
+    assert moved.status_code == 409, moved.text
+
+
 def test_reserve_refuses_ended_bank_and_inactive_account(
     client: TestClient, world: World, migrator_engine: Any
 ) -> None:

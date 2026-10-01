@@ -911,3 +911,92 @@ def test_notification_mail_modes_collective(
         return len(rows.all())
 
     assert asyncio.run(_with_session(settings, world.tenant_a, open_mails)) == 0
+
+
+def test_notification_mail_content_mode_hint(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """U15-04: tenant switch for the mail content. Default ``voll`` keeps title and text,
+    ``hinweis`` sends only count and link; validation 422, reader 403, other tenant unaffected."""
+    from mhvp.workspace import notification_prefs
+    from mhvp.workspace.models import Notification
+    from mhvp.workspace.services import notify
+
+    settings = _settings(database, redis_url)
+    admin = bearer(login(client, world, "q11admin"))
+    care = bearer(login(client, world, "q11care"))
+    url = "/api/v1/tenant/settings"
+    assert _ok(client.get(url, headers=admin))["notification_mail_content"] == "voll"
+    assert (
+        client.patch(url, json={"notification_mail_content": "alles"}, headers=admin).status_code
+        == 422
+    )
+    assert (
+        client.patch(url, json={"notification_mail_content": "hinweis"}, headers=care).status_code
+        == 403
+    )
+    admin_id = world.users["q11admin"]
+    _ok(
+        client.put(
+            f"{W}/notification-preferences",
+            json={"items": [{"kind": "*", "muted_until": None}]},
+            headers=admin,
+        )
+    )
+    calls: list[tuple[str, str]] = []
+
+    async def seed(session: Any, titles: tuple[str, ...]) -> None:
+        for title in titles:
+            await notify(
+                session,
+                tenant_id=world.tenant_a,
+                user_id=admin_id,
+                kind="ticket_assigned",
+                title=title,
+                body="Vertraulicher Text",
+                entity_type="ticket",
+                entity_id=uuid.uuid4(),
+            )
+            row = await session.scalar(select(Notification).where(Notification.title == title))
+            row.email_pending = True
+            row.email_sent_at = None
+
+    async def send(session: Any) -> dict[str, int]:
+        import mhvp.sla.channels as channels
+
+        async def fake(_s: Any, _c: Any, _t: Any, to: str, subject: str, body: str) -> None:
+            calls.append((subject, body))
+
+        original = channels.send_email
+        channels.send_email = fake  # type: ignore[assignment]
+        try:
+            return await notification_prefs.send_pending_mails(session, settings, world.tenant_a)
+        finally:
+            channels.send_email = original  # type: ignore[assignment]
+
+    async def drain(session: Any) -> None:
+        await session.execute(Notification.__table__.update().values(email_pending=False))
+
+    asyncio.run(_with_session(settings, world.tenant_a, drain))
+    asyncio.run(_with_session(settings, world.tenant_a, lambda s: seed(s, ("Geheim Eins",))))
+    asyncio.run(_with_session(settings, world.tenant_a, send))
+    assert calls[-1][0] == "Geheim Eins"
+    assert "Vertraulicher Text" in calls[-1][1]
+
+    saved = _ok(client.patch(url, json={"notification_mail_content": "hinweis"}, headers=admin))
+    assert saved["notification_mail_content"] == "hinweis"
+    asyncio.run(_with_session(settings, world.tenant_a, drain))
+    asyncio.run(
+        _with_session(settings, world.tenant_a, lambda s: seed(s, ("Geheim Zwei", "Geheim Drei")))
+    )
+    result = asyncio.run(_with_session(settings, world.tenant_a, send))
+    assert result["mails"] == 1
+    assert result["sent"] == 2
+    subject, body = calls[-1]
+    assert subject == "2 neue Benachrichtigungen"
+    for secret in ("Geheim", "Vertraulicher"):
+        assert secret not in subject
+        assert secret not in body
+    assert "2 neue Benachrichtigung" in body
+
+    _ok(client.patch(url, json={"notification_mail_content": "voll"}, headers=admin))

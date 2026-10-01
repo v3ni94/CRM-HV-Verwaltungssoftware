@@ -285,6 +285,7 @@ def test_reconciliation_report_differences_csv_permissions_and_tenants(
     assert report["properties"][1] == {
         "number": "999",
         "name": None,
+        "property_id": None,  # Y01: stored for the property assignment filter
         "on_platform": False,
         "compared": 1,
         "deviations": 1,

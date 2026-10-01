@@ -159,7 +159,9 @@ async def put_posting_config(
         return AdminFeePostingConfigOut.model_validate(row)
 
 
-async def _payer_account(session: AsyncSession, ledger: Ledger, number: str) -> LedgerAccount:
+async def _payer_account(
+    session: AsyncSession, ledger: Ledger, number: str, kind: AccountType | None = None
+) -> LedgerAccount:
     account = await session.scalar(
         select(LedgerAccount).where(
             LedgerAccount.ledger_id == ledger.id, LedgerAccount.number == number
@@ -167,6 +169,13 @@ async def _payer_account(session: AsyncSession, ledger: Ledger, number: str) -> 
     )
     if account is None:
         raise _not_configured(f"Konto {number} fehlt im Buchungskreis {ledger.name} des Zahlers.")
+    # Review W79 (U01): the payer accounts are named by number and resolved per payer ledger,
+    # the PUT therefore cannot check them; the kind is checked here (expense, liability).
+    if kind is not None and account.type is not kind:
+        raise _not_configured(
+            f"Konto {number} im Buchungskreis {ledger.name} hat die Kontoart "
+            f"{account.type.value}, erwartet {kind.value}."
+        )
     return account
 
 
@@ -267,8 +276,12 @@ async def create_posting_drafts(
             )
         for ledger in (payer_ledger, manager_ledger):
             svc.ensure_open_period(ledger, invoice.invoice_date)
-        expense = await _payer_account(session, payer_ledger, config.payer_expense_account_number)
-        payable = await _payer_account(session, payer_ledger, config.payer_payable_account_number)
+        expense = await _payer_account(
+            session, payer_ledger, config.payer_expense_account_number, AccountType.EXPENSE
+        )
+        payable = await _payer_account(
+            session, payer_ledger, config.payer_payable_account_number, AccountType.LIABILITY
+        )
         payer_vat = (
             await _payer_account(session, payer_ledger, config.payer_vat_account_number)
             if config.payer_vat_account_number

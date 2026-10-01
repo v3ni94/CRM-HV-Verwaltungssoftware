@@ -7104,6 +7104,8 @@
     }
   },
   "BankSync": {
+    "consentSyncLabel": "Compare consent expiry with the provider daily",
+    "consentSyncHint": "Off by default. Only reads the bank consent expiry date from finAPI and stores it when it changed. The reminder and task 10 days before expiry stay unchanged.",
     "title": "Daily bank sync",
     "hour": "Time",
     "hint": "The online fetch per account still needs the connector's consent. Temporary provider errors are retried up to three times.",
@@ -12832,6 +12834,14 @@
     "readOnly": "Maintaining the catalogue needs the permission tenant_settings:update."
   },
   "NotificationSettings": {
+    "mailContent": {
+      "title": "Content of notification mails (tenant)",
+      "description": "Defines what notification mails of this tenant contain. Full sends title and text, hint sends only the count and a link to the CRM, without title and text.",
+      "full": "Full: title and text in the mail",
+      "hint": "Hint: count and CRM link only",
+      "saved": "Saved.",
+      "readOnly": "The permission tenant_settings:update is required to change this."
+    },
     "cardDescription": "Set your own in-app and e-mail notifications per type.",
     "title": "Notifications",
     "intro": "Choose which messages you receive in the app and by e-mail. The settings apply to your account only.",

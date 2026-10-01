@@ -11,6 +11,7 @@ from sqlalchemy import select
 
 from mhvp.ai.models import ImportRun
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import allowed_property_ids
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import reconciliation as rec
 
@@ -64,8 +65,8 @@ class ReconciliationReportOut(ReportListOut):
     lines: list[dict[str, Any]]
 
 
-def _list_out(run: ImportRun) -> ReportListOut:
-    s = run.summary
+def _list_out(run: ImportRun, allowed: frozenset[uuid.UUID] | None = None) -> ReportListOut:
+    s = rec.scope_report(run.summary, allowed)
     return ReportListOut(
         id=run.id,
         created_at=run.created_at,
@@ -76,10 +77,10 @@ def _list_out(run: ImportRun) -> ReportListOut:
     )
 
 
-def _out(run: ImportRun) -> ReconciliationReportOut:
-    s = run.summary
+def _out(run: ImportRun, allowed: frozenset[uuid.UUID] | None = None) -> ReconciliationReportOut:
+    s = rec.scope_report(run.summary, allowed)
     return ReconciliationReportOut(
-        **_list_out(run).model_dump(),
+        **_list_out(run, allowed).model_dump(),
         counts=s.get("counts", {}),
         warnings=s.get("warnings", []),
         columns=s.get("columns", {}),
@@ -110,7 +111,7 @@ async def list_reports(
                 .limit(limit)
             )
         ).all()
-        return [_list_out(r) for r in runs]
+        return [_list_out(r, allowed_property_ids(principal)) for r in runs]
 
 
 @router.post("", status_code=201, summary="Abgleichbericht jetzt erstellen")
@@ -129,7 +130,7 @@ async def create_report(
             trigger="manual",
         )
         await session.refresh(run)
-        return _out(run)
+        return _out(run, allowed_property_ids(principal))
 
 
 @router.get("/columns", summary="Spaltenzuordnung des Abgleichs")
@@ -170,7 +171,7 @@ async def get_report(
     report_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> ReconciliationReportOut:
     async with tenant_tx(request, principal) as session:
-        return _out(await _get_report(session, report_id))
+        return _out(await _get_report(session, report_id), allowed_property_ids(principal))
 
 
 @router.get("/{report_id}/csv", summary="Abgleichbericht (CSV)", response_class=Response)
@@ -179,7 +180,7 @@ async def get_report_csv(
 ) -> Response:
     async with tenant_tx(request, principal) as session:
         run = await _get_report(session, report_id)
-        text = rec.report_csv(run.summary)
+        text = rec.report_csv(rec.scope_report(run.summary, allowed_property_ids(principal)))
         as_of = run.summary.get("as_of") or run.created_at.date().isoformat()
     return Response(
         content=text.encode("utf-8"),

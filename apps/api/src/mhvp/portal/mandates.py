@@ -25,7 +25,9 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.contracts.models import Contract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import session_allowed_property_ids
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access
@@ -357,6 +359,14 @@ async def proposals(
             query = query.where(SepaMandateProposal.contact_id == contact_id)
         if status is not None:
             query = query.where(SepaMandateProposal.status == status)
+        allowed = session_allowed_property_ids(session)
+        if allowed is not None:
+            # Y01 (M2-02): with a property assignment only proposals whose contract lies in it.
+            query = query.where(
+                SepaMandateProposal.contract_id.in_(
+                    select(Contract.id).where(Contract.property_id.in_(allowed))
+                )
+            )
         return [_out(r) for r in (await session.scalars(query.limit(500))).all()]
 
 
@@ -380,6 +390,13 @@ async def decide(
         row = await session.get(SepaMandateProposal, proposal_id, with_for_update=True)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        allowed = session_allowed_property_ids(session)
+        if allowed is not None:  # Y01 (M2-02): contract outside the assignment answers 404
+            contract_property = await session.scalar(
+                select(Contract.property_id).where(Contract.id == row.contract_id)
+            )
+            if contract_property not in allowed:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         if row.status != STATUS_PROPOSED:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Bereits entschieden.")
         if body.accept:

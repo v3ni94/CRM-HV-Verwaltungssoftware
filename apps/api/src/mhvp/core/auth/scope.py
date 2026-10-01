@@ -158,6 +158,20 @@ async def property_path_guard(request: Request) -> None:
     ensure_property_allowed(await get_principal(request), property_id)
 
 
+async def property_unrestricted_guard(request: Request) -> None:
+    """Router dependency (Y01, M2-02): tenant wide functions without a target property (the
+    Immoware24 file and full imports) are reserved for members without a property
+    assignment; a restricted member gets 403 (the function, not a foreign object, is
+    refused, so 403 discloses nothing). API keys and administrators pass."""
+    principal = await get_principal(request)
+    if principal.tenant_id is not None and allowed_property_ids(principal) is not None:
+        raise ProblemError(
+            ErrorCodes.FORBIDDEN,
+            detail="Diese Funktion wirkt mandantenweit und ist bei Objektzuordnung gesperrt.",
+            developer_message="Membership has a property assignment (M2-02).",
+        )
+
+
 def _property_of(column: Any, value: uuid.UUID) -> Any:
     """Select of the property id of the row ``value`` of ``column``'s table."""
     from sqlalchemy import select
@@ -229,6 +243,7 @@ __all__ = [
     "property_allowed",
     "property_column_guard",
     "property_path_guard",
+    "property_unrestricted_guard",
     "session_allowed_legal_entity_ids",
     "session_allowed_property_ids",
     "session_principal",

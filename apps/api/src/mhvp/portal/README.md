@@ -139,3 +139,8 @@ Rule `docs/rules/P13-portal-w2.md`, migration 0262.
 ## Erneute Einladung (U12, T13-01)
 
 `POST /portal-admin/accounts` stellt für einen Kontakt mit abgelaufener, nie angenommener Einladung (Status invited, Ablauf erreicht) denselben Zugang erneut aus: neues Token, Ablauf auf INVITE_DAYS zurückgesetzt, Rechte neu abgeleitet, Ereignis `portal_account.invitation_reissued`, Antwort mit `reissued: true`. Aktives, gesperrtes oder noch gültig eingeladenes Konto bleibt 409.
+
+## Objektzuordnung der Mandatsvorschläge (Y01)
+
+Mandatsvorschläge der Portalverwaltung folgen dem Objekt ihres Vertrags: Liste gefiltert,
+Entscheidung außerhalb der Zuordnung 404.

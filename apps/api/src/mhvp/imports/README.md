@@ -207,3 +207,11 @@ The SEPA overview only matches a contract that has not ended before the row's va
 date. Undoing an imported payment schedule reopens the previous schedule only up to the
 contract end (`contract.end_date`), never open ended on an ended contract. Test:
 `tests/integration/test_v11_review_import_undo.py`.
+
+## Objektzuordnung, Rest (Y01, T14-01)
+
+- `/imports/immoware24` und `/imports/immoware24/vollimport` sind für Mitglieder mit
+  Objektzuordnung gesperrt (403, `property_unrestricted_guard`), weil sie mandantenweit wirken.
+- Abgleichberichte werden über `reconciliation.scope_report` auf zugeordnete Objekte gefiltert;
+  neue Berichte speichern dazu `property_id` je Objekt.
+- Historische Bankverknüpfungen folgen dem Bankkonto des Umsatzes.

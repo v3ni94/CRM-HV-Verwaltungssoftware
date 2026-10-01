@@ -14,6 +14,7 @@ type SyncRun = { connections: number; not_configured: number; queued: number };
 export function BankSyncSettingsCard({ canEdit, canRun }: { canEdit: boolean; canRun: boolean }) {
   const t = useTranslations("BankSync");
   const [hour, setHour] = useState<number | null>(null);
+  const [consentSync, setConsentSync] = useState<boolean | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +24,25 @@ export function BankSyncSettingsCard({ canEdit, canRun }: { canEdit: boolean; ca
       if (r.ok) setHour(r.data.sync_hour);
       else setError(r.message);
     });
+    bff<{ enabled: boolean }>("/api/bff/banking/consent-sync/settings").then((r) => {
+      if (r.ok) setConsentSync(r.data.enabled);
+    });
   }, []);
+
+  async function saveConsentSync(next: boolean) {
+    setBusy(true);
+    setError(null);
+    setMessage(null);
+    const r = await bff<{ enabled: boolean }>("/api/bff/banking/consent-sync/settings", {
+      method: "PUT",
+      body: JSON.stringify({ enabled: next }),
+    });
+    setBusy(false);
+    if (r.ok) {
+      setConsentSync(r.data.enabled);
+      setMessage(t("saved"));
+    } else setError(r.message);
+  }
 
   async function save(next: number) {
     setBusy(true);
@@ -66,6 +85,16 @@ export function BankSyncSettingsCard({ canEdit, canRun }: { canEdit: boolean; ca
         </select>
       </label>
       <p className="text-xs text-muted">{t("hint")}</p>
+      <label className="flex items-center gap-2 text-sm">
+        <input
+          type="checkbox"
+          checked={consentSync === true}
+          disabled={!canEdit || busy || consentSync === null}
+          onChange={(e) => void saveConsentSync(e.target.checked)}
+        />
+        {t("consentSyncLabel")}
+      </label>
+      <p className="text-xs text-muted">{t("consentSyncHint")}</p>
       {canRun ? (
         <div>
           <button type="button" className={ui.secondary} onClick={runNow} disabled={busy}>

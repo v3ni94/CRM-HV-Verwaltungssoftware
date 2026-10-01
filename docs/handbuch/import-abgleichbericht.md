@@ -192,3 +192,10 @@ Trockenlauf, Übernahme, zweiten Lauf und Aktualisierung durch; Differenzen 0. D
 Laufzeit am 27.09.2026 im Entwicklungscontainer: Übernahme mit Abgleich rund 31 Sekunden,
 zweiter Lauf ohne Änderungen rund 6 Sekunden, reiner Abgleich rund 1 Sekunde
 (`docs/plans/M8.md`). Die Messung mit den echten Exporten der HVM steht aus (M8-01).
+
+## Objektzuordnung
+
+Ist Ihre Mitgliedschaft auf einzelne Objekte beschränkt, zeigt der Abgleichbericht nur diese
+Objekte samt ihren Zeilen und Summen. Hinweise zu fremden Objekten werden ausgeblendet. Die
+Immoware24 Datei- und Vollimporte wirken mandantenweit und stehen nur Mitgliedern ohne
+Objektzuordnung zur Verfügung.

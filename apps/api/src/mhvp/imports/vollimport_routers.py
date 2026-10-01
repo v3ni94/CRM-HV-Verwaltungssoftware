@@ -15,6 +15,7 @@ from sqlalchemy import select
 from mhvp.ai.imports import Recorder
 from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
+from mhvp.core.auth.scope import property_unrestricted_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import objektdaten, vollimport
@@ -22,7 +23,11 @@ from mhvp.imports.models import FullRunStatus, ImportFullRun
 from mhvp.imports.routers import READ, WRITE, _need_domain
 from mhvp.platform.models import Tenant
 
-router = APIRouter(prefix="/imports/immoware24/vollimport", tags=["Import Immoware24"])
+router = APIRouter(
+    prefix="/imports/immoware24/vollimport",
+    tags=["Import Immoware24"],
+    dependencies=[Depends(property_unrestricted_guard)],  # Y01, M2-02
+)
 MODE = Query(default="preview", pattern="^(preview|apply|abgleich)$")
 
 

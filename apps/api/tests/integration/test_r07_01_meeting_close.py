@@ -133,6 +133,29 @@ def test_r07_01_close_four_eyes_lock_and_event(client: TestClient, world: World)
     assert client.post(f"{H}/meetings/{mid}/close", json={}, headers=h).status_code == 422
     missing = {"minutes_document_id": "00000000-0000-7000-8000-000000000000"}
     assert client.post(f"{H}/meetings/{mid}/close", json=missing, headers=h).status_code == 422
+    # Review W79: a document linked only to another community is refused.
+    neighbour = _ok(
+        client.post(
+            "/api/v1/properties",
+            json={"number": "756", "name": "WEG Nachbar", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    foreign = _doc(client, h, "fremd.pdf")
+    _ok(
+        client.post(
+            f"/api/v1/documents/{foreign}/links",
+            json={"entity_type": "property", "entity_id": neighbour["id"]},
+            headers=h,
+        ),
+        201,
+    )
+    refused = client.post(
+        f"{H}/meetings/{mid}/close", json={"minutes_document_id": foreign}, headers=h
+    )
+    assert refused.status_code == 422, refused.text
+    assert "anderen Gemeinschaft" in refused.json()["detail"]
     # read only 403, foreign tenant 404
     reader = bearer(login(client, world, "cl25reader"))
     assert client.post(f"{H}/meetings/{mid}/close", json=close, headers=reader).status_code == 403

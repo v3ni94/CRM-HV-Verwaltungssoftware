@@ -3391,6 +3391,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Täglicher Abgleich der Bankzustimmung (T03-02)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Bank, Täglicher Bankabruf lässt sich \"Zustimmungsablauf täglich beim Anbieter abgleichen\" einschalten (Standard aus, Recht tenantsettings:update). Der Abgleich liest morgens nur das Ablaufdatum der Zustimmung von finAPI und speichert es bei Änderung. Liefert ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Barrierefreiheit (Accessibility)",
   "href": null,
@@ -4641,6 +4651,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Inhalt der Benachrichtigungsmails (Mandant)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Benachrichtigungen legt die Verwaltung für den Mandanten fest, was Benachrichtigungsmails enthalten. Voll (Standard) sendet Titel und Text. Hinweis sendet nur die Anzahl neuer Benachrichtigungen und einen Link ins CRM, ohne Titel und Text. Zum Ändern ist das ",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Grundsatz: Hinweis statt Sperre",
   "source": "Handbuch: Erfassungsstandards",
   "href": null,
@@ -4817,6 +4837,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Neben dem täglichen Abgleich der Rohzeilen gibt es den Vollimport unter Importe, \"Vollimport mit Stichtag und Abgleichbericht\" (/importe/vollimport, API /api/v1/imports/immoware24/vollimport). Er belegt den Vollimport des Bestands (67 Objekte, 869 Einheiten) mit einem Abgleichber",
+  "file": "docs/handbuch/import-abgleichbericht.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Objektzuordnung",
+  "source": "Handbuch: Abgleichbericht im Parallelbetrieb (Immoware24 gegen Plattform)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ist Ihre Mitgliedschaft auf einzelne Objekte beschränkt, zeigt der Abgleichbericht nur diese Objekte samt ihren Zeilen und Summen. Hinweise zu fremden Objekten werden ausgeblendet. Die Immoware24 Datei- und Vollimporte wirken mandantenweit und stehen nur Mitgliedern ohne Objektzu",
   "file": "docs/handbuch/import-abgleichbericht.md"
  },
  {

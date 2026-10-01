@@ -455,6 +455,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^banking\/sync\/settings$/ },
   { method: "PUT", pattern: /^banking\/sync\/settings$/ },
   { method: "POST", pattern: /^banking\/sync\/run$/ },
+  { method: "GET", pattern: /^banking\/consent-sync\/settings$/ },
+  { method: "PUT", pattern: /^banking\/consent-sync\/settings$/ },
   { method: "GET", pattern: /^banking\/auto-posting\/digests$/ },
   { method: "POST", pattern: /^banking\/auto-posting\/digests\/build$/ },
   { method: "POST", pattern: new RegExp(`^banking/auto-posting/digests/${ID}/confirm$`) },

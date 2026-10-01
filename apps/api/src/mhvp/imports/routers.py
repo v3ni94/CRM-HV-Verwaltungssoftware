@@ -9,6 +9,7 @@ from sqlalchemy import func, select
 
 from mhvp.ai.models import ImportRun, ImportStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_unrestricted_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
@@ -24,7 +25,11 @@ from mhvp.imports.models import (
     StagingRow,
 )
 
-router = APIRouter(prefix="/imports/immoware24", tags=["Import Immoware24"])
+router = APIRouter(
+    prefix="/imports/immoware24",
+    tags=["Import Immoware24"],
+    dependencies=[Depends(property_unrestricted_guard)],  # Y01, M2-02
+)
 READ = require_permission("ai:read")
 WRITE = require_permission("ai:create")
 # Creating master data needs the domain permissions too.

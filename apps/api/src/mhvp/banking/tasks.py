@@ -284,6 +284,135 @@ async def consent_reminders_once(settings: Settings) -> dict[str, int]:
     return totals
 
 
+# T03-02 (M11-08): daily comparison of the consent expiry with the provider. Off by default per
+# tenant; the switch lives in the existing JSON ``tenant_settings.sources`` (key below), so no
+# migration is needed. Only reads from finAPI, writes only when the delivered date differs.
+CONSENT_SYNC_SETTING_KEY = "bank_consent_sync"
+CONSENT_SYNC_EVENT_TYPE = "banking.consent_synced"
+
+
+async def consent_sync_enabled(session: AsyncSession) -> bool:
+    from mhvp.platform.models import TenantSettings
+
+    sources = await session.scalar(select(TenantSettings.sources))
+    entry = (sources or {}).get(CONSENT_SYNC_SETTING_KEY)
+    return isinstance(entry, dict) and entry.get("enabled") is True
+
+
+async def sync_consent_from_provider(
+    session: AsyncSession, tenant_id: uuid.UUID, client: Any
+) -> dict[str, int]:
+    """Reads the consent expiry of every finAPI connection from the provider. ``client`` is
+    either an object with ``get_bank_connection`` or a factory ``fa -> client`` (per connection
+    user token). Writes ``consent_valid_until`` only when
+    the provider delivers a date that differs from the stored one; a missing date keeps the
+    stored (manual) date, a provider error is counted and never aborts the other connections.
+    Reminder and task stay with `remind_consent_expiry`."""
+    from mhvp.banking.finapi import parse_consent_valid_until
+    from mhvp.banking.models import FinApiConnection
+    from mhvp.core.events import emit
+
+    counts = {"checked": 0, "changed": 0, "unchanged": 0, "no_date": 0, "errors": 0}
+    rows = (
+        await session.execute(
+            select(FinApiConnection, BankConnection)
+            .join(BankConnection, BankConnection.id == FinApiConnection.bank_connection_id)
+            .where(FinApiConnection.finapi_bank_connection_id.is_not(None))
+        )
+    ).all()
+    for fa, conn in rows:
+        if conn.status is ConnectionStatus.DISABLED or not fa.finapi_bank_connection_id:
+            continue
+        counts["checked"] += 1
+        try:
+            api = client(fa) if callable(client) else client
+            details = api.get_bank_connection(fa.finapi_bank_connection_id)
+        except ProblemError:
+            counts["errors"] += 1
+            continue
+        found = parse_consent_valid_until(details)
+        if found is None:
+            counts["no_date"] += 1
+            continue
+        if found == fa.consent_valid_until:
+            counts["unchanged"] += 1
+            continue
+        before = fa.consent_valid_until
+        fa.consent_valid_until = found
+        # A renewed consent lifts the expired marker; the next status fetch confirms it.
+        if found >= local_today() and conn.status is ConnectionStatus.CONSENT_EXPIRED:
+            conn.status = ConnectionStatus.ACTIVE
+        counts["changed"] += 1
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type=CONSENT_SYNC_EVENT_TYPE,
+            entity_type="bank_connection",
+            entity_id=conn.id,
+            actor_user_id=None,
+            payload={
+                "before": before.isoformat() if before else None,
+                "after": found.isoformat(),
+            },
+        )
+    await session.flush()
+    return counts
+
+
+async def consent_provider_sync_once(
+    settings: Settings, today: date | None = None
+) -> dict[str, int]:
+    from mhvp.banking import finapi as finapi_client
+    from mhvp.banking.models import FinApiTenantConfig
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    totals = {"tenants": 0, "checked": 0, "changed": 0, "unchanged": 0, "no_date": 0, "errors": 0}
+    try:
+        async with platform_transaction(factory) as session:
+            ids = list(
+                await session.scalars(select(Tenant.id).where(Tenant.status == TenantStatus.ACTIVE))
+            )
+        for tenant_id in ids:
+            async with tenant_transaction(factory, tenant_id) as session:
+                if not await consent_sync_enabled(session):
+                    continue
+                cfg = await session.scalar(select(FinApiTenantConfig))
+                if cfg is None:
+                    continue
+
+                def build(fa: Any, cfg: Any = cfg) -> Any:
+                    return finapi_client.FinApiClient(
+                        finapi_client.FinApiCredentials(
+                            client_id=cfg.client_id,
+                            client_secret=cfg.client_secret,
+                            base_url=cfg.base_url,
+                            mandator_id=cfg.mandator_id,
+                            user_id=fa.finapi_user_id,
+                            user_password=fa.finapi_user_password,
+                            sandbox=cfg.sandbox,
+                        )
+                    )
+
+                totals["tenants"] += 1
+                for key, value in (
+                    await sync_consent_from_provider(session, tenant_id, build)
+                ).items():
+                    totals[key] += value
+    finally:
+        await engine.dispose()
+    return totals
+
+
+@shared_task(name="mhvp.banking.consent_provider_sync")
+def consent_provider_sync() -> dict[str, int]:
+    """Celery beat entry (daily, before the reminders): provider comparison of the consent
+    expiry, only for tenants that switched it on (T03-02, default off)."""
+    return asyncio.run(consent_provider_sync_once(get_settings()))
+
+
 @shared_task(name="mhvp.banking.consent_reminders")
 def consent_reminders() -> dict[str, int]:
     """Celery beat entry (daily): reminder 10 days before a consent expires, per tenant,

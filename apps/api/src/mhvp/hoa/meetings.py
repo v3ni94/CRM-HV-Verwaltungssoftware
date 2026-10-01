@@ -1873,11 +1873,46 @@ class MeetingCloseConfirmIn(MeetingBaseIn):
     minutes_document_id: uuid.UUID
 
 
-async def _minutes_document(session: AsyncSession, document_id: uuid.UUID) -> None:
-    from mhvp.documents.models import Document
+async def _minutes_document(
+    session: AsyncSession, document_id: uuid.UUID, meeting: Meeting | None = None
+) -> None:
+    """Review W79: the minutes document lies inside the document scope of the membership
+    (legal entity and property assignment, otherwise not found) and does not belong to another
+    community: a document linked to legal entities or properties must be linked to the GdWE of
+    the meeting or to its property. An unlinked upload stays allowed (DocumentPicker)."""
+    from mhvp.documents.models import Document, DocumentLink
+    from mhvp.documents.routers import _get as document_get
+    from mhvp.properties.models import LegalEntity
 
     if await session.get(Document, document_id) is None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Protokolldokument nicht gefunden.")
+    try:
+        await document_get(session, Document, document_id)
+    except ProblemError as exc:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail="Protokolldokument nicht gefunden."
+        ) from exc
+    if meeting is None:
+        return
+    links = (
+        await session.execute(
+            select(DocumentLink.entity_type, DocumentLink.entity_id).where(
+                DocumentLink.document_id == document_id,
+                DocumentLink.entity_type.in_(("legal_entity", "property")),
+            )
+        )
+    ).all()
+    if not links:
+        return
+    entity = await session.get(LegalEntity, meeting.legal_entity_id)
+    own = {("legal_entity", meeting.legal_entity_id)}
+    if entity is not None and entity.property_id is not None:
+        own.add(("property", entity.property_id))
+    if not own.intersection((kind, eid) for kind, eid in links):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Protokolldokument gehört zu einer anderen Gemeinschaft.",
+        )
 
 
 @router.post("/meetings/{meeting_id}/close", summary="Protokollabschluss beantragen (R07-01)")
@@ -1891,6 +1926,7 @@ async def request_close(
     (status closing). A second person confirms with ``/close/confirm``."""
     async with tenant_tx(request, principal) as session:
         meeting = await _get(session, Meeting, meeting_id)
+        await session.refresh(meeting, with_for_update=True)  # review W79: serialize steps
         if meeting.status in CLOSING_STATUSES:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Abschluss bereits beantragt.")
         if meeting.status != "held":
@@ -1898,7 +1934,7 @@ async def request_close(
                 ErrorCodes.CONFLICT,
                 detail="Abschluss nur für eine durchgeführte Versammlung ohne offene Störung.",
             )
-        await _minutes_document(session, body.minutes_document_id)
+        await _minutes_document(session, body.minutes_document_id, meeting)
         meeting.minutes_document_id = body.minutes_document_id
         meeting.status = "closing"
         meeting.close_requested_by = principal.user_id
@@ -1930,6 +1966,7 @@ async def confirm_close(
     event ``meeting.closed`` (webhook)."""
     async with tenant_tx(request, principal) as session:
         meeting = await _get(session, Meeting, meeting_id)
+        await session.refresh(meeting, with_for_update=True)  # review W79: serialize steps
         if meeting.status != "closing":
             raise ProblemError(ErrorCodes.CONFLICT, detail="Kein offener Abschlussantrag.")
         if meeting.close_requested_by == principal.user_id:
@@ -1968,6 +2005,7 @@ async def withdraw_close(
     closed."""
     async with tenant_tx(request, principal) as session:
         meeting = await _get(session, Meeting, meeting_id)
+        await session.refresh(meeting, with_for_update=True)  # review W79: serialize steps
         if meeting.status != "closing":
             raise ProblemError(ErrorCodes.CONFLICT, detail="Kein offener Abschlussantrag.")
         meeting.status = "held"

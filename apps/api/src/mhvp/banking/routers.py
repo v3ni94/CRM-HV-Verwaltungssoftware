@@ -3843,6 +3843,57 @@ async def put_sync_settings(
         return BankingSyncSettingOut(sync_hour=row.sync_hour, configured=True)
 
 
+class BankingConsentSyncIn(_In):
+    enabled: bool
+
+
+class BankingConsentSyncOut(BaseModel):
+    enabled: bool
+
+
+@router.get("/consent-sync/settings", summary="Täglicher Abgleich des Zustimmungsablaufs lesen")
+async def get_consent_sync_settings(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> BankingConsentSyncOut:
+    from mhvp.banking.tasks import consent_sync_enabled
+
+    async with tenant_tx(request, principal) as session:
+        return BankingConsentSyncOut(enabled=await consent_sync_enabled(session))
+
+
+@router.put(
+    "/consent-sync/settings",
+    summary="Täglichen Abgleich des Zustimmungsablaufs je Mandant ein- oder ausschalten",
+)
+async def put_consent_sync_settings(
+    body: BankingConsentSyncIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(FINAPI_SETTINGS),
+) -> BankingConsentSyncOut:
+    """T03-02 (M11-08): default off. The daily job only reads the consent expiry from the
+    provider and writes it when it changed; reminder and task stay as before."""
+    from mhvp.banking.tasks import CONSENT_SYNC_SETTING_KEY, consent_sync_enabled
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        before = await consent_sync_enabled(session)
+        row.sources = {**row.sources, CONSENT_SYNC_SETTING_KEY: {"enabled": body.enabled}}
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="tenant_settings.bank_consent_sync_changed",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            changes={"enabled": [before, body.enabled]},
+        )
+        return BankingConsentSyncOut(enabled=body.enabled)
+
+
 class BankingSyncRunOut(BaseModel):
     connections: int
     not_configured: int

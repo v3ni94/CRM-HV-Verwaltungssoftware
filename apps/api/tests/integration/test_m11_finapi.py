@@ -190,7 +190,19 @@ def _fake_finapi(monkeypatch: pytest.MonkeyPatch, database: Database, redis_url:
     monkeypatch.setattr(banking_tasks.finapi_fetch, "delay", run_now)
 
 
-async def _world(settings: Any) -> World:
+class _NamespacedWorld(World):
+    """World whose e-mail addresses carry a prefix, so that other test modules can build
+    their own copy of this world in the same process (RUN is a module constant)."""
+
+    prefix: str = ""
+
+    def email(self, name: str) -> str:
+        return f"{self.prefix}{super().email(name)}"
+
+
+async def _world(settings: Any, prefix: str = "finapi") -> World:
+    """Tenants and users of the finAPI tests. Other modules pass their own ``prefix`` so that
+    slugs and e-mail addresses do not collide with this module's world."""
     from mhvp.core import crypto
     from mhvp.core.db.engine import create_app_engine, create_session_factory
 
@@ -198,11 +210,21 @@ async def _world(settings: Any) -> World:
     engine = create_app_engine(settings)
     factory = create_session_factory(engine)
     try:
-        a, _ = await services.provision_tenant(factory, slug=f"finapi-{RUN}", name=f"FinApi {RUN}")
-        b, _ = await services.provision_tenant(
-            factory, slug=f"finapi-sep-{RUN}", name=f"FinApi Sep {RUN}"
+        a, _ = await services.provision_tenant(
+            factory, slug=f"{prefix}-{RUN}", name=f"FinApi {prefix} {RUN}"
         )
-        world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        b, _ = await services.provision_tenant(
+            factory, slug=f"{prefix}-sep-{RUN}", name=f"FinApi Sep {prefix} {RUN}"
+        )
+        world: World = (
+            World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+            if prefix == "finapi"
+            else _NamespacedWorld(
+                tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value()
+            )
+        )
+        if isinstance(world, _NamespacedWorld):
+            world.prefix = f"{prefix}-"
         for name, role, tenant_id in [
             ("fa-admin", "tenant_admin", a),
             ("fa-banking", "accountant_banking", a),

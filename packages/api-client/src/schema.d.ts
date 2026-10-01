@@ -4698,6 +4698,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/banking/consent-sync/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Täglicher Abgleich des Zustimmungsablaufs lesen */
+        get: operations["get_consent_sync_settings_api_v1_banking_consent_sync_settings_get"];
+        /**
+         * Täglichen Abgleich des Zustimmungsablaufs je Mandant ein- oder ausschalten
+         * @description T03-02 (M11-08): default off. The daily job only reads the consent expiry from the
+         *     provider and writes it when it changed; reminder and task stay as before.
+         */
+        put: operations["put_consent_sync_settings_api_v1_banking_consent_sync_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/banking/csv-mappings": {
         parameters: {
             query?: never;
@@ -26491,6 +26513,16 @@ export interface components {
             /** Status */
             status: string;
         };
+        /** BankingConsentSyncIn */
+        BankingConsentSyncIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** BankingConsentSyncOut */
+        BankingConsentSyncOut: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** BankingDigestBuildIn */
         BankingDigestBuildIn: {
             /**
@@ -45140,6 +45172,11 @@ export interface components {
              */
             metering_module_enabled: boolean;
             /**
+             * Notification Mail Content
+             * @default voll
+             */
+            notification_mail_content: string;
+            /**
              * Portal Second Factor
              * @default account_choice
              */
@@ -45232,6 +45269,8 @@ export interface components {
             mail_approval_mode?: string | null;
             /** Metering Module Enabled */
             metering_module_enabled?: boolean | null;
+            /** Notification Mail Content */
+            notification_mail_content?: string | null;
             /** Portal Second Factor */
             portal_second_factor?: string | null;
             /** Position Catalogue Extra */
@@ -57181,6 +57220,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ConnectionOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_consent_sync_settings_api_v1_banking_consent_sync_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankingConsentSyncOut"];
+                };
+            };
+        };
+    };
+    put_consent_sync_settings_api_v1_banking_consent_sync_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BankingConsentSyncIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BankingConsentSyncOut"];
                 };
             };
             /** @description Validation Error */

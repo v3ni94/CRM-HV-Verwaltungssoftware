@@ -7104,6 +7104,8 @@
     }
   },
   "BankSync": {
+    "consentSyncLabel": "Zustimmungsablauf täglich beim Anbieter abgleichen",
+    "consentSyncHint": "Standard aus. Liest nur das Ablaufdatum der Bankzustimmung von finAPI und speichert es bei Änderung. Erinnerung und Aufgabe 10 Tage vor Ablauf bleiben unverändert.",
     "title": "Täglicher Bankabruf",
     "hour": "Uhrzeit",
     "hint": "Der Online-Abruf je Konto braucht weiterhin die Zustimmung des Konnektors. Vorübergehende Anbieterfehler werden bis zu dreimal wiederholt.",
@@ -12832,6 +12834,14 @@
     "readOnly": "Zum Pflegen ist das Recht tenant_settings:update erforderlich."
   },
   "NotificationSettings": {
+    "mailContent": {
+      "title": "Inhalt der Benachrichtigungsmails (Mandant)",
+      "description": "Legt fest, was Benachrichtigungsmails dieses Mandanten enthalten. Voll sendet Titel und Text, Hinweis sendet nur die Anzahl und einen Link ins CRM, ohne Titel und Text.",
+      "full": "Voll: Titel und Text in der Mail",
+      "hint": "Hinweis: nur Anzahl und Link ins CRM",
+      "saved": "Gespeichert.",
+      "readOnly": "Zum Ändern ist das Recht tenant_settings:update erforderlich."
+    },
     "cardDescription": "Eigene Meldungen in der App und per E-Mail je Art einstellen.",
     "title": "Benachrichtigungen",
     "intro": "Legen Sie fest, welche Meldungen Sie in der App und per E-Mail erhalten. Die Einstellungen gelten nur für Ihr Konto.",
