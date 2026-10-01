@@ -20,12 +20,11 @@
   "include": [
     "*.mts",
     "*.ts",
-    ".next-r12/types/**/*.ts",
     ".next/types/**/*.ts",
     "e2e",
     "next-env.d.ts",
     "src",
-    ".next-p09/types/**/*.ts"
+    ".next-r12/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"
