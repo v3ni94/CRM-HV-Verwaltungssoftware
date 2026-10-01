@@ -1,0 +1,22 @@
+"""AD05: documentation and tests only, no schema change; placeholder that keeps the revision chain linear.
+
+Revision ID: 0350
+Revises: 0349
+"""
+
+from __future__ import annotations
+
+from collections.abc import Sequence
+
+revision: str = "0350"
+down_revision: str | None = "0349"
+branch_labels: str | Sequence[str] | None = None
+depends_on: str | Sequence[str] | None = None
+
+
+def upgrade() -> None:
+    pass
+
+
+def downgrade() -> None:
+    pass

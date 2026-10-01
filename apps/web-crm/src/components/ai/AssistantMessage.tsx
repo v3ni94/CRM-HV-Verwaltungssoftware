@@ -4,13 +4,14 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 
-import { reasoningOf, type Message, type Proposal, type Run } from "@/lib/ai";
+import { reasoningOf, toolsUsedOf, type Message, type Proposal, type Run } from "@/lib/ai";
 import { bff } from "@/lib/bff";
 import { formatDateTime } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { ChatActionProposal } from "./ChatActionProposal";
 import { ChatLinks } from "./ChatLinks";
+import { ChatTools } from "./ChatTools";
 import { ContactProposal } from "./ContactProposal";
 import { PropertyProposal } from "./PropertyProposal";
 import { ProposalBadge } from "./ProposalBadge";
@@ -82,6 +83,7 @@ export function AssistantMessage({ message }: { message: Message }) {
       {failed ? null : <ProposalBadge confidence={run?.confidence} reasoning={reasoningOf(run?.output ?? null)} />}
       <p className="whitespace-pre-wrap">{message.content}</p>
       <ChatLinks links={message.links} />
+      <ChatTools tools={toolsUsedOf(message)} />
       <p className="text-xs text-muted">{formatDateTime(message.created_at)}</p>
       {run && run.status === "succeeded" && message.task_run_id ? (
         <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("feedback.hint")}>

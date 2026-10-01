@@ -2,9 +2,10 @@
 
 Replays the exported deletion journal against a restored database. Without ``--apply`` the
 run only reports what would happen. Documents under a deletion hold, with a blocking retention
-rule, with a different content hash or with an open DMS mirror are never deleted; they are
-listed for manual review. Exit code 0 when every entry was applied or is absent, 1 when
-entries were kept for review, 2 for an unreadable journal.
+rule or with a different content hash are never deleted; they are listed for manual review.
+Mirrored documents are deleted together with their mirror steps (M6-03), the mirror deletion
+is re-requested afterwards (AC07 deletion checklist). Exit code 0 when every entry was
+applied or is absent, 1 when entries were kept for review, 2 for an unreadable journal.
 """
 
 import argparse

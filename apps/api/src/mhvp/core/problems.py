@@ -1280,6 +1280,13 @@ class ErrorCodes:
             "lies more than three years after the date of the enabling resolution (GA07-01)."
         ),
     )
+    # AD06 / GA11-03: online meeting in the owner portal, per tenant switch (default off).
+    HOA_ONLINE_MEETING_DISABLED = ErrorCode(
+        "MHVP-HOA-0031",
+        403,
+        "Online-Versammlung im Eigentümerportal ist für diesen Mandanten nicht freigeschaltet",
+        "hoa_online_meeting_setting.enabled is false or missing (default off, AD06).",
+    )
     HOA_RESERVE_OPENING_LOCKED = ErrorCode(
         "MHVP-HOA-0005",
         409,

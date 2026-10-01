@@ -159,24 +159,14 @@ def seed_journal_entries(
     count: int = ROWS_LARGE,
 ) -> None:
     """GA12-08: ``count`` posted two line entries in one ledger, set based in one transaction
-    as the application role (RLS applies). Entries are inserted as posted with numbers per
-    fiscal year; equal amounts per line pair so each entry balances.
+    as the application role (RLS applies). Entries are inserted as drafts, the lines
+    follow, then one UPDATE posts all entries with numbers per fiscal year; equal amounts per
+    line pair so each entry balances.
 
-    The line guard trigger ``journal_line_guard`` looks the entry up with
-    ``COALESCE(NEW.journal_entry_id, OLD.journal_entry_id)``, which is not an index condition
-    (measured: 3.4 ms per line at 20,000 entries, growing linearly with the table; ADR 0021).
-    A bulk load of 200,000 lines is therefore impossible with the guard active. The seed
-    disables only this trigger on the test database for the duration of the load (owner role,
-    re-enabled in ``finally``); lines are constructed to satisfy what the guard checks (entry
-    still a draft, account of the entry's ledger). Never use this on a productive database."""
-    import psycopg
-
-    with psycopg.connect(_sync_url(migrator_url), autocommit=True) as owner:
-        owner.execute("ALTER TABLE journal_line DISABLE TRIGGER journal_line_guard")
-        try:
-            _load_journal(app_url, tenant_id, ledger_id, debit_account, credit_account, count)
-        finally:
-            owner.execute("ALTER TABLE journal_line ENABLE TRIGGER journal_line_guard")
+    AD01: the line guard ``journal_line_guard`` stays active (indexable lookup since 0346,
+    ADR 0021); ``migrator_url`` is kept for call compatibility and no longer used."""
+    del migrator_url
+    _load_journal(app_url, tenant_id, ledger_id, debit_account, credit_account, count)
 
 
 def _load_journal(
@@ -193,9 +183,9 @@ def _load_journal(
         cur.execute("SELECT set_config('app.tenant_id', %s, true)", (tenant_id,))
         # Deterministic ids from the row counter (the application role may not create temp
         # tables); a second call for the same ledger would collide, which is intended.
-        # Entries are inserted as posted right away (number per fiscal year, no later UPDATE);
-        # the lines follow while the line guard is disabled. The deferred balance trigger still
-        # checks every entry at commit.
+        # Entries are inserted as drafts (no number), the lines pass the active
+        # line guard, then one UPDATE posts all entries. The deferred balance trigger checks
+        # every entry at commit.
         ids = (
             "(SELECT g, md5('perf-entry-' || %s || '-' || g)::uuid AS id, "
             "DATE '2022-01-01' + (g * 7 %% (365 * %s)) AS booking_date, "
@@ -208,8 +198,8 @@ def _load_journal(
         cur.execute(
             "INSERT INTO journal_entry (id, tenant_id, ledger_id, status, fiscal_year, number, "
             "booking_date, text, kind, source, settlement_plan, posted_at) "
-            "SELECT id, %s, %s, 'posted', fy, rn, booking_date, 'Lastbuchung ' || g, 'custom', "
-            "'manual', '[]'::jsonb, now() FROM " + ids,
+            "SELECT id, %s, %s, 'draft', fy, NULL, booking_date, 'Lastbuchung ' || g, 'custom', "
+            "'manual', '[]'::jsonb, NULL FROM " + ids,
             (tenant_id, ledger_id, *id_args),
         )
         for line_no, (account, side) in enumerate(
@@ -222,6 +212,11 @@ def _load_journal(
                 "(10 + g %% 90)::numeric(14,2), 0 FROM " + ids,
                 (tenant_id, line_no, account, *id_args),
             )
+        cur.execute(
+            "UPDATE journal_entry SET status = 'posted', number = perf_ids.rn, posted_at = now() "
+            "FROM " + ids + " WHERE journal_entry.id = perf_ids.id",
+            id_args,
+        )
         conn.commit()
 
 

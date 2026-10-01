@@ -197,7 +197,7 @@ Rule: `docs/rules/AA08-abrechnungszeitraum-status.md`.
 
 ## Sprache am Portalkonto (GA11-01, AB12)
 
-* `portal_account.locale` (migration 0331, nullable). `PATCH /portal/me/locale` speichert `de` oder `en` (`PORTAL_LOCALES`, sonst 422, `null` löscht); `GET /portal/me` liefert `locale`. Das Portal übernimmt die Sprache bei der Anmeldung in den Cookie (`apps/web-portal/src/lib/locale-sync.ts`); der Cookie hat Vorrang für nicht angemeldete Besucher.
+* `portal_account.locale` (migration 0331, nullable). `PATCH /portal/me/locale` speichert einen Sprachcode aus `MHVP_PORTAL_LOCALES` (Standard `de,en`, sonst 422, `null` löscht; ein Test vergleicht den Standard mit `apps/web-portal/messages`); `GET /portal/me` liefert `locale`. Das Portal übernimmt die Sprache bei der Anmeldung in den Cookie (`apps/web-portal/src/lib/locale-sync.ts`); der Cookie hat Vorrang für nicht angemeldete Besucher.
 * CRM: Seite `/einstellungen/dienstleister-portal` (Zeitfenster und Klassenfreigaben, bestehende API `portal-admin/provider-availability` und `document-class-grants`).
 * Offen: AB12-01 (Gate G5 für Klassenfreigaben, nichts geändert).
 

@@ -193,6 +193,8 @@ class MessageOut(_Out):
     task_run_id: uuid.UUID | None
     proposal_id: uuid.UUID | None
     links: list[ChatLink] = Field(default_factory=list)
+    # Lookups of the answer's run (GA10-06), also in the reloaded history; None without run.
+    tools_used: list["AiToolUseOut"] | None = None
     created_at: datetime
 
 
@@ -300,6 +302,7 @@ class AiToolUseOut(BaseModel):
     arguments: dict[str, str] = Field(default_factory=dict)
     permitted: bool
     count: int
+    links: list[ChatLink] | None = None
 
 
 class ProposalOut(_Out):

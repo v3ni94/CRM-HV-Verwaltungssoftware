@@ -354,4 +354,20 @@ Ist die Einladung eines Kontakts abgelaufen und nicht angenommen, zeigt der Absc
 
 Beim Anlegen eines Portalzugangs in der Kontaktakte steuert der Schalter "Einladung sofort senden", ob die Einladung direkt versendet wird. Ist er aus, entsteht der Zugang mit dem Status "Nicht eingeladen"; die Einladung lässt sich später mit der Aktion "Einladen" nachholen. Bei abgelaufener Einladung steht die Aktion "Einladung erneuern" bereit. Angezeigt werden alle sechs Status: Nicht eingeladen, Eingeladen, Zugang aktiv, gesperrt, Einladung abgelaufen und Zugang entzogen. Ein entzogener Zugang bleibt entzogen.
 
-Die Einstellungsseite "Dienstleister im Portal" bietet die Rechtsträgerauswahl über einen eigenen Lesepfad (`GET /portal-admin/legal-entities`, nur Id und Name) an, der das Recht tenant_settings:read verlangt; das Recht members:read ist dafür nicht nötig. Pflegen der Fenster und Freigaben verlangt weiterhin contacts:update.
+Die Einstellungsseite "Dienstleister im Portal" bietet die Rechtsträgerauswahl über einen eigenen Lesepfad (`GET /portal-admin/legal-entities`, nur Id und Name) an, der das Recht tenant_settings:read verlangt; das Recht members:read ist dafür nicht nötig. Pflegen der Fenster und Freigaben verlangt weiterhin contacts:update. Fehlt Ihnen tenant_settings:read, ersetzt ein Hinweistext die leere Rechtsträgerauswahl im Bereich der Klassenfreigaben; die Verfügbarkeitsfenster bleiben bedienbar, Klassenfreigaben setzt die Mandantenadministration (AD05).
+
+## Nutzungsbedingungen annehmen (AD03)
+
+Hat der Verwalter für den Mandanten eine Fassung der Nutzungsbedingungen veröffentlicht (Einwilligungsregeln unter Einstellungen, Feld Fassung der Portal-Nutzungsbedingungen), leitet das Portal nach der Anmeldung auf die Seite Nutzungsbedingungen weiter, bis die Fassung angenommen ist. Dort wird die Fassung angezeigt und mit dem Haken und der Schaltfläche Annehmen und fortfahren bestätigt. Zeitpunkt und Fassung werden beim Kontakt als Einwilligung gespeichert. Bei der Aktivierung einer Einladung erscheint der Haken nach dem ersten Versuch, sobald eine Fassung veröffentlicht ist. Ein Widerruf der Annahme im CRM sperrt den Portalzugang sofort wieder bis zur erneuten Annahme.
+
+Kontaktdaten des Mieters oder Eigentümers sehen Dienstleister im Auftrag nur, wenn der Kontakt der Weitergabe an Dienstleister zugestimmt hat (Einwilligung data_sharing) oder der Mandant die vertragliche Notwendigkeit zulässt. Sonst erscheint der Auftrag ohne diese Angaben, der Grund steht im Ereignisprotokoll.
+
+## Online-Teilnahme an der Versammlung (AD06)
+
+Nur für Eigentümer und nur, wenn die Verwaltung die Online-Versammlung freigeschaltet hat. Unter "Versammlungen" bei einer hybriden oder virtuellen Versammlung "Online-Teilnahme anzeigen" wählen.
+
+- "Online-Teilnahme zusagen" meldet die eigenen Einheiten für die Online-Teilnahme an.
+- "Videokonferenz öffnen" führt zur Videolösung, die die Verwaltung hinterlegt hat.
+- "Wortmeldung abgeben" trägt Sie in die Rednerliste ein; die Verwaltung ruft auf.
+- Abstimmen ist nur möglich, solange die Verwaltung die Abstimmung zum TOP geöffnet hat, eine Stimme je Einheit. Das Ergebnis erscheint erst nach der Verkündung.
+- "Vollmacht erteilen": Einheit wählen, Bevollmächtigten (Einheit eines anderen Eigentümers oder Verwaltung), Zeitraum und das unterschriebene Vollmachtsdokument hochladen. Eine erteilte Vollmacht kann jederzeit widerrufen werden.

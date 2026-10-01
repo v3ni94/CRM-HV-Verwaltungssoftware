@@ -228,3 +228,14 @@ every new code in `mhvp.core.problems` at the end of the HOA block and in the ru
 
 - `POST /hoa/asset-reports/{id}/dispatch` (accounting:create, G4, status `issued`): one letter per resolved recipient of each ownership contract on the reporting date, filed as generated document (`generated_document.context_type = hoa_asset_report`) and handed to `mhvp.communication.dispatch` (channel of the request, else contact preference, else tenant default). Default only owners without portal retrieval; contracts with an existing letter are skipped. The provision log lists `dispatches` per contract.
 - `acquisition.py`: German case labels (`case_label`, findings) for first acquisition, forced sale and special succession; tests for these cases. No allocation rule (AA07-01), `calc.py` unchanged.
+
+## Online meeting in the owner portal (AD06, GA11-03)
+
+`online_meeting.py` (CRM) and `mhvp.portal.owner_meetings` (portal). Per tenant switch
+`hoa_online_meeting_setting.enabled` (default off, `GET/PUT /hoa/online-meeting-settings`,
+403 MHVP-HOA-0031). CRM: `POST /hoa/meetings/{id}/agenda/{item}/voting/open|close`,
+`POST /hoa/meetings/{id}/speaker-requests/{rid}`, `GET /hoa/meetings/{id}/online`. Portal:
+`GET /portal/meetings/{id}`, `POST .../participation`, `POST .../speaker-requests`,
+`GET/POST /portal/meeting-proxies`, `POST /portal/meeting-proxies/{id}/revoke`,
+`POST /portal/meetings/{id}/agenda/{item}/votes` (G4, channel online, one per unit, 409 when
+the item is not open). Migration 0351. Rule: `docs/rules/AD06-online-versammlung.md`.

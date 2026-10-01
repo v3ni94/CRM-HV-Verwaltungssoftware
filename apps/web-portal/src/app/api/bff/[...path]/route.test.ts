@@ -23,6 +23,20 @@ describe("portal bff", () => {
     expect(serverFetch.mock.calls[0]![0]).toBe("/api/v1/portal/me/locale");
   });
 
+  it("relays the terms status and the acceptance (AC06)", async () => {
+    serverFetch.mockImplementation(
+      async () => new Response(JSON.stringify({}), { status: 200, headers: { "content-type": "application/json" } }),
+    );
+    expect((await GET(new Request("http://portal.localhost/x"), ctx("portal/terms"))).status).toBe(200);
+    expect(serverFetch.mock.calls[0]![0]).toBe("/api/v1/portal/terms");
+    const post = await POST(
+      new Request("http://portal.localhost/x", { method: "POST", headers: ORIGIN, body: "{}" }),
+      ctx("portal/terms/accept"),
+    );
+    expect(post.status).toBe(200);
+    expect(serverFetch.mock.calls[1]![0]).toBe("/api/v1/portal/terms/accept");
+  });
+
   it("relays the granted portal handover operations", async () => {
     serverFetch.mockImplementation(
       async () =>

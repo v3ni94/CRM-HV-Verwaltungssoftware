@@ -697,6 +697,44 @@
       "closed": "abgeschlossen"
     }
   },
+  "OnlineMeeting": {
+    "title": "Online-Teilnahme",
+    "load": "Online-Teilnahme anzeigen",
+    "disabled": "Die Online-Teilnahme ist für diese Versammlung nicht freigeschaltet.",
+    "conference": "Videokonferenz öffnen",
+    "confirm": "Online-Teilnahme zusagen",
+    "confirmed": "Online-Teilnahme zugesagt",
+    "speak": "Wortmeldung abgeben",
+    "speakOpen": "Ihre Wortmeldung ist eingetragen.",
+    "agenda": "Tagesordnung",
+    "unit": "Einheit {number}",
+    "represented": "vertreten",
+    "voted": "abgestimmt",
+    "state": {
+      "not_opened": "Abstimmung noch nicht geöffnet",
+      "open": "Abstimmung geöffnet",
+      "closed": "Abstimmung geschlossen",
+      "announced": "Ergebnis verkündet"
+    },
+    "choice": {
+      "yes": "Ja",
+      "no": "Nein",
+      "abstain": "Enthaltung"
+    },
+    "result": "Ergebnis: Ja {yes}, Nein {no}, Enthaltung {abstain}",
+    "proxyTitle": "Vollmacht erteilen",
+    "proxyUnit": "Für Einheit",
+    "proxyKind": "Bevollmächtigt",
+    "proxyOwner": "Eigentümer einer anderen Einheit",
+    "proxyManager": "Verwaltung",
+    "proxyTarget": "Einheit des Bevollmächtigten",
+    "proxyFrom": "Gültig ab",
+    "proxyTo": "Gültig bis (optional)",
+    "proxyFile": "Vollmachtsdokument (PDF oder Foto)",
+    "proxySubmit": "Vollmacht erteilen",
+    "proxyDone": "Vollmacht erteilt.",
+    "error": "Die Aktion ist fehlgeschlagen: {message}"
+  },
   "Resolutions": {
     "title": "Beschlüsse",
     "intro": "Verkündete Beschlüsse Ihrer Gemeinschaft. Maßgeblich bleibt die Beschluss-Sammlung der Verwaltung.",
@@ -918,7 +956,21 @@
     "passwordTooShort": "Das Passwort muss mindestens 12 Zeichen haben.",
     "passwordMismatch": "Die Passwörter stimmen nicht überein.",
     "done": "Ihr Zugang ist aktiviert. Bitte melden Sie sich jetzt mit E-Mail und Passwort an.",
-    "toLogin": "Zur Anmeldung"
+    "toLogin": "Zur Anmeldung",
+    "termsNeeded": "Für die Aktivierung ist die Annahme der Nutzungsbedingungen erforderlich.",
+    "termsAccept": "Ich habe die Nutzungsbedingungen (Fassung {version}) gelesen und nehme sie an.",
+    "termsMissingVersion": "Die Fassung der Nutzungsbedingungen konnte nicht ermittelt werden. Bitte beim Verwalter nachfragen."
+  },
+  "Terms": {
+    "title": "Nutzungsbedingungen",
+    "hint": "Für die Nutzung des Portals ist die Annahme der Nutzungsbedingungen erforderlich.",
+    "version": "Fassung: {version}",
+    "accept": "Ich habe die Nutzungsbedingungen gelesen und nehme sie an.",
+    "submit": "Annehmen und fortfahren",
+    "submitting": "Bitte warten",
+    "mustAccept": "Bitte bestätigen Sie die Annahme der Nutzungsbedingungen.",
+    "loadFailed": "Der Stand der Nutzungsbedingungen konnte nicht geladen werden.",
+    "alreadyAccepted": "Die Nutzungsbedingungen sind angenommen."
   },
   "Security": {
     "passkeysTitle": "Passkeys (zweiter Faktor)",
@@ -1065,5 +1117,10 @@
       "available": "Verfügbar",
       "unavailable": "Nicht verfügbar"
     }
+  },
+  "AD10": {
+    "bannerAnnounced": "Geplante Wartung.",
+    "bannerActive": "Wartung läuft.",
+    "bannerPeriod": "Zeitraum: {from} bis {to} (Ortszeit Berlin)"
   }
 }

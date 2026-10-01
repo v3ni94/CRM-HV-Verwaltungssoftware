@@ -21,7 +21,11 @@ the rendered signature text itself (whitespace normalised), not on the ``-- `` d
 At submit (``respect_delimiter``) a ``-- `` delimiter line also counts as present, so an
 edited signature block or a changed profile, template or mailbox never gets a second
 signature. When it appends, the template closing lines ``[Name]`` and ``[Firma]`` are
-removed, since the signature supplies name and company.
+removed, since the signature supplies name and company. AD11 (operator 01.10.2026): in
+addition, lines after the last closing formula ("Mit freundlichen Grüßen") that only carry a
+member's display name or the tenant's company name are removed (``strip_closing_names``), so
+an AI or preparation proposal with its own name block never stands before, or contradicts,
+the signature of the acting user. The preview reports ``position_missing``.
 
 Outgoing mail is text/plain in 1.36.0. The HTML signature (``with_signature_html``, preview
 endpoint) is preview only and not sent.
@@ -422,8 +426,47 @@ def has_delimiter(body: str | None) -> bool:
     return any(line == TEXT_MARKER for line in (body or "").splitlines())
 
 
+# Closing formulas after which a proposal (AI, preparation, template) may put its own name and
+# company lines (AD11, operator 01.10.2026).
+_CLOSING_RE = re.compile(
+    r"^(mit\s+)?(freundlich(en|e)|beste[n]?|viele[n]?|herzliche[n]?|liebe)\s+gr(ü|ue)(ß|ss)(e|en)\b"
+    r"|^gruß\b|^mfg\b",
+    re.IGNORECASE,
+)
+
+
+def strip_closing_names(text: str, names: list[str] | tuple[str, ...] | set[str]) -> str:
+    """Removes the lines after the last closing formula that only carry a known name or
+    company (any tenant member, the tenant's company, ``[Name]``, ``[Firma]``), so the
+    signature of the acting user is not preceded by a second, possibly foreign, name block
+    (AD11). Only the contiguous block directly after the closing is removed; the first other
+    line (a P.S., a phone note) and everything after it stay."""
+    known = {_normalised(n).casefold() for n in names if n and _normalised(n)}
+    known |= {p.casefold() for p in _CLOSING_PLACEHOLDERS}
+    lines = text.split("\n")
+    closing = None
+    for index, line in enumerate(lines):
+        if _CLOSING_RE.match(line.strip().rstrip(",")):
+            closing = index
+    if closing is None:
+        return text
+    # Only the contiguous name block directly after the closing (blank lines allowed).
+    tail = lines[closing + 1 :]
+    index = 0
+    while index < len(tail) and (
+        not tail[index].strip() or _normalised(tail[index]).casefold() in known
+    ):
+        index += 1
+    tail = tail[index:]
+    return "\n".join([*lines[: closing + 1], *tail])
+
+
 def with_signature(
-    body: str | None, signature: Signature | None, *, respect_delimiter: bool = False
+    body: str | None,
+    signature: Signature | None,
+    *,
+    respect_delimiter: bool = False,
+    closing_names: list[str] | tuple[str, ...] | set[str] = (),
 ) -> str:
     """Plain text with the signature appended; unchanged when the signature text is already
     present. Appending removes the closing placeholder lines ``[Name]`` and ``[Firma]``.
@@ -437,6 +480,8 @@ def with_signature(
     if has_signature(text, signature) or (respect_delimiter and has_delimiter(text)):
         return text
     kept = "\n".join(line for line in text.split("\n") if line.strip() not in _CLOSING_PLACEHOLDERS)
+    if closing_names:
+        kept = strip_closing_names(kept, closing_names)
     return f"{kept.rstrip()}\n\n{signature.text}\n"
 
 
@@ -546,7 +591,33 @@ async def sign_body(
     signature = await signature_for_user(
         session, tenant_id, user_id, email=await mailbox_address(session, mailbox_id)
     )
-    return with_signature(body, signature, respect_delimiter=respect_delimiter)
+    if signature is None:
+        return body or ""
+    # At creation (not at submit): a submitted text is never rewritten beyond the signature.
+    names = set() if respect_delimiter else await closing_names_for_tenant(session, tenant_id)
+    return with_signature(body, signature, respect_delimiter=respect_delimiter, closing_names=names)
+
+
+async def closing_names_for_tenant(session: AsyncSession, tenant_id: uuid.UUID) -> set[str]:
+    """Display names of all members and the company names of the tenant: a proposal's closing
+    line with one of them is replaced by the acting user's signature (AD11)."""
+    names = set(
+        (
+            await session.scalars(
+                select(User.display_name)
+                .join(Membership, Membership.user_id == User.id)
+                .where(Membership.tenant_id == tenant_id)
+            )
+        ).all()
+    )
+    company = await session.scalar(
+        select(TenantSettings.company).where(TenantSettings.tenant_id == tenant_id)
+    )
+    for key in ("name", "legal_name", "short_name"):
+        value = (company or {}).get(key)
+        if value:
+            names.add(str(value))
+    return {str(n) for n in names if n}
 
 
 # --- API -----------------------------------------------------------------------------------
@@ -565,6 +636,11 @@ class SignaturePreviewOut(BaseModel):
     html: str = Field(
         description="Nur Vorschau: die HTML-Signatur wird derzeit nicht versendet "
         "(ausgehende Mails sind Klartext)."
+    )
+    position_missing: bool | None = Field(
+        default=None,
+        description="Keine Funktionsbezeichnung in der Mitgliedschaft (nicht beim "
+        "Einzelunternehmen); die Signatur enthält dann nur Name und Gesellschaft (AD11).",
     )
 
 
@@ -648,10 +724,19 @@ async def preview_signature(
             membership.user_id,
             email=await personal_mailbox_address(session, principal.tenant_id, membership.user_id),
         )
+        company = await session.scalar(
+            select(TenantSettings.company).where(TenantSettings.tenant_id == principal.tenant_id)
+        )
+        position_missing = not (membership.position or "").strip() and not (
+            is_sole_proprietorship(dict(company or {}))
+        )
     if signature is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     return SignaturePreviewOut(
-        membership_id=membership.id, text=signature.text, html=signature.html
+        membership_id=membership.id,
+        text=signature.text,
+        html=signature.html,
+        position_missing=position_missing,
     )
 
 

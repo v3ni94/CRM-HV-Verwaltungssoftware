@@ -23,6 +23,8 @@ export default defineConfig({
   reporter: process.env.CI ? [["list"], ["html", { open: "never" }]] : "list",
   use: {
     baseURL: `http://127.0.0.1:${port}`,
+    // The portal resolves its language from Accept-Language (GB14-01); the specs assert German texts.
+    locale: "de-DE",
     trace: "retain-on-failure",
   },
   projects: [

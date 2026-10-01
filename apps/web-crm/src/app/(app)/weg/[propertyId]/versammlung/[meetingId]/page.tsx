@@ -6,6 +6,7 @@ import { MeetingDeadlineForm } from "@/components/hoa/MeetingDeadlineForm";
 import { MeetingDetailsForm, type MeetingDetails } from "@/components/hoa/MeetingDetailsForm";
 import { MeetingFormPanel, type AttendanceRow, type MeetingFormData } from "@/components/hoa/MeetingFormPanel";
 import { MemberVoting } from "@/components/hoa/MemberVoting";
+import { OnlineParticipation, type OnlineOverview } from "@/components/hoa/OnlineParticipation";
 import { ProtocolDraft } from "@/components/hoa/ProtocolDraft";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { formatDate, formatDateTime } from "@/lib/format";
@@ -18,12 +19,15 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
   const { meetingId } = await params;
   const t = await getTranslations("HoaWork");
   const api = serverApi();
-  const [{ data, error, response }, members, attendanceResponse] = await Promise.all([
+  const [{ data, error, response }, members, attendanceResponse, onlineResponse] = await Promise.all([
     api.GET("/api/v1/hoa/meetings/{meeting_id}", { params: { path: { meeting_id: meetingId } } }),
     api.GET("/api/v1/hoa/meetings/{meeting_id}/members", { params: { path: { meeting_id: meetingId } } }),
     // M25-03: Teilnahmenachweis mit Kanal (Präsenz, online, Vollmacht).
     serverFetch(`/api/v1/hoa/meetings/${encodeURIComponent(meetingId)}/attendance-list`),
+    // AD06: Online-Teilnahme aus dem Portal (Zusagen, Vollmachten, Wortmeldungen, TOP-Abstimmung).
+    serverFetch(`/api/v1/hoa/meetings/${encodeURIComponent(meetingId)}/online`),
   ]);
+  const online = onlineResponse.ok ? ((await onlineResponse.json()) as OnlineOverview) : null;
   // GA03-01: Vorlagen als Auswahlliste (aktive Vorlagen des Mandanten).
   const templatesResponse = await serverFetch("/api/v1/document-templates");
   const templates = templatesResponse.ok ? ((await templatesResponse.json()) as { id: string; name: string }[]) : [];
@@ -60,6 +64,13 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
         members={(members.data ?? []) as never}
         agenda={(data.agenda ?? []) as never}
       />
+      {online && data.mode !== "presence" ? (
+        <OnlineParticipation
+          meetingId={meetingId}
+          data={online}
+          units={Object.fromEntries(((members.data ?? []) as { contract_id: string; unit_number: string | null }[]).map((m) => [m.contract_id, m.unit_number ?? ""]))}
+        />
+      ) : null}
       <MeetingPanel
         id={meetingId}
         status={String(data.status)}

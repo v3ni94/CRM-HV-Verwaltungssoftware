@@ -741,6 +741,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements$`) },
   { method: "DELETE", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
+  // AD06 / GA11-03: Online-Abstimmung je TOP öffnen/schließen, Wortmeldung abarbeiten.
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/agenda/${ID}/voting/(open|close)$`) },
+  { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/speaker-requests/${ID}$`) },
   // Protokollentwurf der Versammlung als PDF (A62); Download über /api/handover-files.
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/protocol-draft$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/close(/confirm|/withdraw)?$`) },
@@ -1266,6 +1269,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/g5-evidence$`) },
   { method: "PUT", pattern: new RegExp(`^platform/tenants/${ID}/g5-evidence/[a-z0-9_]{1,48}$`) },
   { method: "POST", pattern: /^platform\/onboarding$/ },
+  // AD10 (GB16-01, GB16-02): Wartungsfenster und Monatsverfuegbarkeit, Plattformadministratoren (API prueft).
+  { method: "GET", pattern: /^platform\/maintenance-windows$/ },
+  { method: "POST", pattern: /^platform\/maintenance-windows$/ },
+  { method: "PATCH", pattern: new RegExp(`^platform/maintenance-windows/${ID}$`) },
+  { method: "GET", pattern: /^platform\/availability$/ },
+  { method: "PUT", pattern: /^platform\/availability$/ },
   { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/export-requests$`) },
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/export-requests$`) },
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/export-requests/${ID}/(approve|reject)$`) },
@@ -1299,6 +1308,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/domains$`) },
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/domains$`) },
   { method: "DELETE", pattern: new RegExp(`^platform/tenants/${ID}/domains/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^platform/domains/${ID}/verify$`) },
   { method: "PATCH", pattern: new RegExp(`^platform/tenants/${ID}$`) },
   { method: "GET", pattern: /^platform\/audit-events$/ },
   { method: "GET", pattern: /^platform\/oidc-clients$/ },

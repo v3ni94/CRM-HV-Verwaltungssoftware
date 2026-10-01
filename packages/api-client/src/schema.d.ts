@@ -10753,6 +10753,40 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/meetings/{meeting_id}/agenda/{item_id}/voting/close": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Online-Abstimmung des TOP schließen */
+        post: operations["close_voting_api_v1_hoa_meetings__meeting_id__agenda__item_id__voting_close_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings/{meeting_id}/agenda/{item_id}/voting/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Online-Abstimmung des TOP öffnen */
+        post: operations["open_voting_api_v1_hoa_meetings__meeting_id__agenda__item_id__voting_open_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/meetings/{meeting_id}/attendance": {
         parameters: {
             query?: never;
@@ -10948,6 +10982,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/meetings/{meeting_id}/online": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Online-Teilnahme: Zusagen, Vollmachten, Wortmeldungen, Online-Stimmen */
+        get: operations["online_overview_api_v1_hoa_meetings__meeting_id__online_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/meetings/{meeting_id}/protocol-draft": {
         parameters: {
             query?: never;
@@ -10966,6 +11017,44 @@ export interface paths {
          *     (accounting:create, as for every other meeting action).
          */
         post: operations["protocol_draft_api_v1_hoa_meetings__meeting_id__protocol_draft_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/meetings/{meeting_id}/speaker-requests/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Wortmeldung abarbeiten */
+        post: operations["handle_speaker_request_api_v1_hoa_meetings__meeting_id__speaker_requests__request_id__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/online-meeting-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Online-Versammlung im Portal (Schalter) */
+        get: operations["get_online_setting_api_v1_hoa_online_meeting_settings_get"];
+        /**
+         * Online-Versammlung im Portal setzen
+         * @description Operator decision after legal review (AD06-01); the system asserts no admissibility.
+         */
+        put: operations["put_online_setting_api_v1_hoa_online_meeting_settings_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -17662,6 +17751,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/platform/availability": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verfügbarkeit je Monat gegen das Ziel 99,5 Prozent */
+        get: operations["availability_api_v1_platform_availability_get"];
+        /** Monatszahl der Verfügbarkeit importieren */
+        put: operations["import_availability_api_v1_platform_availability_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/domains/{domain_id}/verify": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Kundendomain per DNS prüfen
+         * @description GA01-10: compare CNAME or A record with the platform host; stores status and finding.
+         */
+        post: operations["verify_tenant_domain_api_v1_platform_domains__domain_id__verify_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/platform/licenses": {
         parameters: {
             query?: never;
@@ -17711,6 +17838,58 @@ export interface paths {
          * @description Ends a licence via ``valid_until``; licences are never deleted (billing trail).
          */
         post: operations["end_license_api_v1_platform_licenses__license_id__end_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/maintenance-windows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Wartungsfenster auflisten */
+        get: operations["list_maintenance_windows_api_v1_platform_maintenance_windows_get"];
+        put?: never;
+        /** Wartungsfenster ankündigen */
+        post: operations["create_maintenance_window_api_v1_platform_maintenance_windows_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/platform/maintenance-windows/{window_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Wartungsfenster ändern oder absagen */
+        patch: operations["update_maintenance_window_api_v1_platform_maintenance_windows__window_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/platform/maintenance/current": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Aktuelle und angekündigte Wartungsfenster (öffentlich, für Banner und Statusseite) */
+        get: operations["current_maintenance_api_v1_platform_maintenance_current_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -19738,6 +19917,49 @@ export interface paths {
         patch: operations["set_locale_api_v1_portal_me_locale_patch"];
         trace?: never;
     };
+    "/api/v1/portal/meeting-proxies": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Erteilte und erhaltene Vollmachten (Eigentümer) */
+        get: operations["list_proxies_api_v1_portal_meeting_proxies_get"];
+        put?: never;
+        /**
+         * Vollmacht erteilen (Eigentümer, G4)
+         * @description Proxy of an own unit to another owner of the same community or to the manager; the
+         *     text form document is an own upload (POST /portal/uploads).
+         */
+        post: operations["grant_proxy_api_v1_portal_meeting_proxies_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/meeting-proxies/{proxy_id}/revoke": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Vollmacht widerrufen (Eigentümer)
+         * @description The revocation is always possible (also with gate G4 closed); the row stays as
+         *     evidence with the time of revocation. Votes cast before stay unchanged.
+         */
+        post: operations["revoke_proxy_api_v1_portal_meeting_proxies__proxy_id__revoke_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/meetings": {
         parameters: {
             query?: never;
@@ -19749,6 +19971,88 @@ export interface paths {
         get: operations["meetings_api_v1_portal_meetings_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/meetings/{meeting_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Versammlung mit Tagesordnung und Online-Teilnahme (Eigentümer)
+         * @description Invitation view. Results only after the announcement; while voting, only whether the
+         *     own units have voted (never a running tally).
+         */
+        get: operations["meeting_detail_api_v1_portal_meetings__meeting_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/meetings/{meeting_id}/agenda/{item_id}/votes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Online abstimmen (Eigentümer, G4)
+         * @description One vote per unit and item, channel online, only while the manager has opened the
+         *     voting of the item. Own units and units represented by an active proxy to an own unit;
+         *     the voter must have confirmed the online participation. No result before the
+         *     announcement.
+         */
+        post: operations["cast_online_vote_api_v1_portal_meetings__meeting_id__agenda__item_id__votes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/meetings/{meeting_id}/participation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Online-Teilnahme zusagen (Eigentümer)
+         * @description Records the online participation (channel online) of the own units; the attendance
+         *     itself (present) is still confirmed by the manager during the meeting.
+         */
+        post: operations["confirm_participation_api_v1_portal_meetings__meeting_id__participation_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/portal/meetings/{meeting_id}/speaker-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Wortmeldung (Eigentümer) */
+        post: operations["request_to_speak_api_v1_portal_meetings__meeting_id__speaker_requests_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -26374,6 +26678,8 @@ export interface components {
             count: number;
             /** Label */
             label: string;
+            /** Links */
+            links?: components["schemas"]["ChatLink"][] | null;
             /** Permitted */
             permitted: boolean;
             /** Tool */
@@ -27412,6 +27718,46 @@ export interface components {
             trigger_event_type?: string | null;
             /** Trigger Kind */
             trigger_kind?: string | null;
+        };
+        /** AvailabilityIn */
+        AvailabilityIn: {
+            /** Month */
+            month: string;
+            /**
+             * Probe
+             * @enum {string}
+             */
+            probe: "api" | "crm" | "portal";
+            /** Source Note */
+            source_note: string;
+            /** Uptime Percent */
+            uptime_percent: number | string;
+        };
+        /** AvailabilityMonth */
+        AvailabilityMonth: {
+            /** Actual Percent */
+            actual_percent: string | null;
+            /** Adjusted Percent */
+            adjusted_percent: string | null;
+            /** Month */
+            month: string;
+            /** Month Seconds */
+            month_seconds: number;
+            /** Planned Downtime Seconds */
+            planned_downtime_seconds: number;
+            /** Probes */
+            probes: components["schemas"]["ProbeFigure"][];
+            /** Target Met */
+            target_met: boolean | null;
+            /** Target Met Adjusted */
+            target_met_adjusted: boolean | null;
+        };
+        /** AvailabilityOut */
+        AvailabilityOut: {
+            /** Months */
+            months: components["schemas"]["AvailabilityMonth"][];
+            /** Target Percent */
+            target_percent: string;
         };
         /** BackfillIn */
         BackfillIn: {
@@ -35173,6 +35519,11 @@ export interface components {
             /** Basis Resolution Id */
             basis_resolution_id?: string | null;
         };
+        /** HoaOnlineSettingIn */
+        HoaOnlineSettingIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** HoaPlanIn */
         HoaPlanIn: {
             /** As Of Date */
@@ -35366,6 +35717,11 @@ export interface components {
             location?: string | null;
             /** Status */
             status?: string | null;
+        };
+        /** HoaSpeakerHandleIn */
+        HoaSpeakerHandleIn: {
+            /** Status */
+            status: string;
         };
         /** HoaStatementIn */
         HoaStatementIn: {
@@ -38350,6 +38706,16 @@ export interface components {
             /** User Ids */
             user_ids: string[];
         };
+        /** MaintenanceCurrentOut */
+        MaintenanceCurrentOut: {
+            /** Items */
+            items: components["schemas"]["MaintenancePublicItem"][];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "operational" | "maintenance";
+        };
         /**
          * MaintenanceDoneIn
          * @description Completion of a maintenance item (C2). With an interval the next due date is
@@ -38447,6 +38813,95 @@ export interface components {
             title?: string | null;
             /** Unit Id */
             unit_id?: string | null;
+        };
+        /** MaintenancePublicItem */
+        MaintenancePublicItem: {
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "announced" | "active";
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Text De */
+            text_de: string;
+            /** Text En */
+            text_en: string;
+        };
+        /** MaintenanceWindowIn */
+        MaintenanceWindowIn: {
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /** Notice Hours */
+            notice_hours?: number | null;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Text De */
+            text_de: string;
+            /** Text En */
+            text_en: string;
+        };
+        /** MaintenanceWindowOut */
+        MaintenanceWindowOut: {
+            /** Cancelled At */
+            cancelled_at: string | null;
+            /**
+             * Ends At
+             * Format: date-time
+             */
+            ends_at: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Notice Hours */
+            notice_hours: number | null;
+            /** Phase */
+            phase: string;
+            /**
+             * Starts At
+             * Format: date-time
+             */
+            starts_at: string;
+            /** Text De */
+            text_de: string;
+            /** Text En */
+            text_en: string;
+        };
+        /** MaintenanceWindowPatch */
+        MaintenanceWindowPatch: {
+            /** Cancel */
+            cancel?: boolean | null;
+            /** Ends At */
+            ends_at?: string | null;
+            /** Notice Hours */
+            notice_hours?: number | null;
+            /** Starts At */
+            starts_at?: string | null;
+            /** Text De */
+            text_de?: string | null;
+            /** Text En */
+            text_en?: string | null;
         };
         /** MajorityRuleIn */
         MajorityRuleIn: {
@@ -39159,6 +39614,8 @@ export interface components {
             role: string;
             /** Task Run Id */
             task_run_id: string | null;
+            /** Tools Used */
+            tools_used?: components["schemas"]["AiToolUseOut"][] | null;
         };
         /** MeterChangeIn */
         MeterChangeIn: {
@@ -41997,6 +42454,47 @@ export interface components {
             /** Iban */
             iban: string;
         };
+        /** PortalMeetingParticipationIn */
+        PortalMeetingParticipationIn: {
+            /** Contract Ids */
+            contract_ids?: string[] | null;
+        };
+        /** PortalMeetingProxyIn */
+        PortalMeetingProxyIn: {
+            /**
+             * Document Id
+             * Format: uuid
+             */
+            document_id: string;
+            /**
+             * Grantor Contract Id
+             * Format: uuid
+             */
+            grantor_contract_id: string;
+            /** Meeting Id */
+            meeting_id?: string | null;
+            /** Proxy Contract Id */
+            proxy_contract_id?: string | null;
+            /** Proxy Kind */
+            proxy_kind: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
+            /** Valid To */
+            valid_to?: string | null;
+        };
+        /** PortalMeetingVoteIn */
+        PortalMeetingVoteIn: {
+            /** Choice */
+            choice: string;
+            /**
+             * Contract Id
+             * Format: uuid
+             */
+            contract_id: string;
+        };
         /** PortalMeterIn */
         PortalMeterIn: {
             /**
@@ -42069,6 +42567,13 @@ export interface components {
         PortalSecurityIn: {
             /** Magic Link 2Fa */
             magic_link_2fa: boolean;
+        };
+        /** PortalSpeakerRequestIn */
+        PortalSpeakerRequestIn: {
+            /** Agenda Item Id */
+            agenda_item_id?: string | null;
+            /** Note */
+            note?: string | null;
         };
         /** PortalSupportConsentIn */
         PortalSupportConsentIn: {
@@ -42558,6 +43063,21 @@ export interface components {
             third_country: boolean;
             /** Third Country Note */
             third_country_note?: string | null;
+        };
+        /** ProbeFigure */
+        ProbeFigure: {
+            /** Adjusted Percent */
+            adjusted_percent: string | null;
+            /** Probe */
+            probe: string;
+            /** Source Note */
+            source_note: string | null;
+            /** Target Met */
+            target_met: boolean | null;
+            /** Target Met Adjusted */
+            target_met_adjusted: boolean | null;
+            /** Uptime Percent */
+            uptime_percent: string | null;
         };
         /**
          * PropertyBulkIn
@@ -45915,6 +46435,11 @@ export interface components {
              */
             membership_id: string;
             /**
+             * Position Missing
+             * @description Keine Funktionsbezeichnung in der Mitgliedschaft (nicht beim Einzelunternehmen); die Signatur enthält dann nur Name und Gesellschaft (AD11).
+             */
+            position_missing?: boolean | null;
+            /**
              * Text
              * @description Klartextsignatur, so wie sie in ausgehende Mails eingefügt wird.
              */
@@ -47001,6 +47526,15 @@ export interface components {
             id: string;
             /** Purpose */
             purpose: string;
+            /** Verification Checked At */
+            verification_checked_at?: string | null;
+            /** Verification Finding */
+            verification_finding?: string | null;
+            /**
+             * Verification Status
+             * @default unverified
+             */
+            verification_status: string;
         };
         /** TenantFigures */
         TenantFigures: {
@@ -72425,6 +72959,74 @@ export interface operations {
             };
         };
     };
+    close_voting_api_v1_hoa_meetings__meeting_id__agenda__item_id__voting_close_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    open_voting_api_v1_hoa_meetings__meeting_id__agenda__item_id__voting_open_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     attendance_api_v1_hoa_meetings__meeting_id__attendance_post: {
         parameters: {
             query?: never;
@@ -72779,6 +73381,39 @@ export interface operations {
             };
         };
     };
+    online_overview_api_v1_hoa_meetings__meeting_id__online_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     protocol_draft_api_v1_hoa_meetings__meeting_id__protocol_draft_post: {
         parameters: {
             query?: never;
@@ -72792,6 +73427,101 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    handle_speaker_request_api_v1_hoa_meetings__meeting_id__speaker_requests__request_id__post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaSpeakerHandleIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_online_setting_api_v1_hoa_online_meeting_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    put_online_setting_api_v1_hoa_online_meeting_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaOnlineSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -86870,6 +87600,101 @@ export interface operations {
             };
         };
     };
+    availability_api_v1_platform_availability_get: {
+        parameters: {
+            query?: {
+                months?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AvailabilityOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_availability_api_v1_platform_availability_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AvailabilityIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProbeFigure"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    verify_tenant_domain_api_v1_platform_domains__domain_id__verify_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                domain_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TenantDomainOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_licenses_api_v1_platform_licenses_get: {
         parameters: {
             query: {
@@ -87008,6 +87833,125 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_maintenance_windows_api_v1_platform_maintenance_windows_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceWindowOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_maintenance_window_api_v1_platform_maintenance_windows_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceWindowIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceWindowOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_maintenance_window_api_v1_platform_maintenance_windows__window_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                window_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MaintenanceWindowPatch"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceWindowOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    current_maintenance_api_v1_platform_maintenance_current_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MaintenanceCurrentOut"];
                 };
             };
         };
@@ -91039,6 +91983,96 @@ export interface operations {
             };
         };
     };
+    list_proxies_api_v1_portal_meeting_proxies_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    grant_proxy_api_v1_portal_meeting_proxies_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalMeetingProxyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revoke_proxy_api_v1_portal_meeting_proxies__proxy_id__revoke_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                proxy_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     meetings_api_v1_portal_meetings_get: {
         parameters: {
             query?: never;
@@ -91057,6 +92091,151 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     }[];
+                };
+            };
+        };
+    };
+    meeting_detail_api_v1_portal_meetings__meeting_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cast_online_vote_api_v1_portal_meetings__meeting_id__agenda__item_id__votes_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+                item_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalMeetingVoteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_participation_api_v1_portal_meetings__meeting_id__participation_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalMeetingParticipationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    request_to_speak_api_v1_portal_meetings__meeting_id__speaker_requests_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                meeting_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PortalSpeakerRequestIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

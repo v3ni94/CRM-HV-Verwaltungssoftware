@@ -84,3 +84,23 @@ describe("AssistantMessage feedback", () => {
     expect(screen.queryByRole("button", { name: "Hilfreich" })).not.toBeInTheDocument();
   });
 });
+
+describe("AssistantMessage tools in the reloaded history", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("shows the lookups and the contact link of a stored message", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => jsonResponse(run)));
+    const stored = {
+      ...message,
+      links: [{ type: "contact", id: "c1", label: "Erika Beispiel", href: "/kontakte/c1", detail: "" }],
+      tools_used: [{ tool: "kontakte", label: "Kontakte", arguments: { suche: "Beispiel" }, permitted: true, count: 1 }],
+    } as unknown as Message;
+    renderIntl(
+      <ul>
+        <AssistantMessage message={stored} />
+      </ul>,
+    );
+    expect(await screen.findByTestId("chat-tools")).toHaveTextContent("Kontakte");
+    expect(screen.getByRole("link", { name: "Erika Beispiel" })).toHaveAttribute("href", "/kontakte/c1");
+  });
+});

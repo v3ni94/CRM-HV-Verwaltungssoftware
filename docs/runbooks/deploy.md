@@ -3,6 +3,9 @@
 Source: MASTER-PROMPT 3.1, 17. The IONOS server already runs Traefik; the stack joins its
 network (`infra/compose.prod.yaml`).
 
+0. Before a deploy that interrupts service: announce the maintenance window (CRM, Platform,
+   Maintenance and availability; banner from the lead time, default 48 hours) and mirror it in
+   Uptime Kuma, see `verfuegbarkeit.md` section 3 (GB16-01).
 1. CI green on the commit; the workflow `Images` (`.github/workflows/images.yml`) has pushed
    `ghcr.io/v3ni94/mhvp-{api,web-crm,web-portal}:<VERSION>` (M1-03, decided 26.09.2026). The
    server is logged in to ghcr.io with a read:packages token (`server-setup.md` section 4).
@@ -20,4 +23,5 @@ Own server without Traefik: see `server-setup.md` (`infra/compose.edge.yaml`). W
 access (fallback): `DEPLOY_BUILD=1` builds on the server. Missing server data: M9-01.
 Manual release directly on the production server in `/opt/mhvp` (local images, `./mhvp.sh`
 wrapper, verified backup, rollback hints): `infra/scripts/release.sh`, see `release.md`.
-Monitoring and alerts after the deployment: `monitoring.md`.
+Monitoring and alerts after the deployment: `monitoring.md`. Availability target 99.5 percent
+per month and monthly evaluation: `verfuegbarkeit.md`.

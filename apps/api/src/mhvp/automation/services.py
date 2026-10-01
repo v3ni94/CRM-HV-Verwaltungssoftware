@@ -2251,6 +2251,8 @@ async def _record(
     )
     session.add(run)
     await session.flush()
+    if pending and event.type == "contact.updated" and event.entity_id is not None:
+        pending = await _apply_data_sharing(session, tenant_id, rule, event, pending)
     for spec, result in pending:
         delivery = AutomationWebhookDelivery(
             tenant_id=tenant_id, run_id=run.id, rule_id=rule.id, next_attempt_at=now, **spec
@@ -2265,6 +2267,54 @@ async def _record(
         run.actions = [dict(a) for a in actions]
         await session.flush()
     return run
+
+
+async def _apply_data_sharing(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event: DomainEvent,
+    pending: list[tuple[dict[str, Any], dict[str, Any]]],
+) -> list[tuple[dict[str, Any], dict[str, Any]]]:
+    """AC06 (GA02-06): a webhook for ``contact.updated`` passes contact data to a third party.
+    Without a valid ``data_sharing`` consent of the contact (or the tenant policy accepting
+    contractual necessity) the payload is queued without personal fields (event payload and
+    entity), the reason is logged as event ``automation.webhook_data_withheld``."""
+    from mhvp.contacts import consent_rules
+
+    if event.entity_id is None:
+        return pending
+    decision = await consent_rules.data_sharing_decision(
+        session, event.entity_id, contractual_necessity=False
+    )
+    if decision.allowed:
+        return pending
+    out: list[tuple[dict[str, Any], dict[str, Any]]] = []
+    for spec, result in pending:
+        document = json.loads(spec["body"])
+        document["event"]["payload"] = None
+        document["entity"] = None
+        document["personal_data_withheld"] = True
+        result["detail"] = "Webhook eingereiht ohne personenbezogene Felder."
+        out.append(
+            (
+                spec
+                | {
+                    "body": json.dumps(document, sort_keys=True, separators=(",", ":"), default=str)
+                },
+                result,
+            )
+        )
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="automation.webhook_data_withheld",
+        entity_type="contact",
+        entity_id=event.entity_id,
+        actor_user_id=None,
+        payload={"rule_id": str(rule.id), "reason": decision.reason},
+    )
+    return out
 
 
 async def process_tenant(

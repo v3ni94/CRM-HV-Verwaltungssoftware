@@ -418,3 +418,14 @@ Jeder Kontoauszug und jeder finAPI-Abruf wird zusätzlich unverändert abgelegt 
 ## Täglicher Abgleich der Bankzustimmung (T03-02)
 
 Unter Einstellungen, Bank, Täglicher Bankabruf lässt sich "Zustimmungsablauf täglich beim Anbieter abgleichen" einschalten (Standard aus, Recht tenant_settings:update). Der Abgleich liest morgens nur das Ablaufdatum der Zustimmung von finAPI und speichert es bei Änderung. Liefert der Anbieter kein Datum, bleibt das vorhandene Datum stehen. Erinnerung und Aufgabe 10 Tage vor Ablauf bleiben wie beschrieben. Es werden keine Umsätze abgerufen und nichts gebucht.
+
+## Bankzugang gesperrt oder Bank nicht erreichbar (FinTS)
+
+Meldet die Verbindung "Bankzugang gesperrt" (MHVP-BANK-0010), stammt die Sperre von der Bank
+(Rückmeldecode 3938). Die Plattform verwirft die gespeicherte PIN und startet keinen zweiten
+Versuch. Prüfreihenfolge: Online-Banking der Bank im Browser testen (dort entsperren oder
+die Bank anrufen), Freischaltung des FinTS- oder HBCI-Zugangs für den Nutzer prüfen,
+Anmeldename prüfen (oft nicht die Kontonummer), danach die Verbindung mit neuer PIN starten.
+Nach einer Bankfusion gelten gegebenenfalls neue Bankleitzahl, neuer Anmeldename oder eine
+neue Zugangsadresse; die Umstellungshinweise der Bank sind maßgeblich. Alte Adressen der
+Rechenzentren GAD und Fiducia werden seit 1.60.0 automatisch auf Atruvia umgestellt.

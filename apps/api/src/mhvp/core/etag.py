@@ -8,6 +8,7 @@ every update), so no schema change is needed.
 """
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 
 from mhvp.core.problems import ErrorCodes, ProblemError
 
@@ -29,3 +30,23 @@ def check_if_match(if_match: str | None, value: int | datetime) -> None:
         if candidate == "*" or candidate.removeprefix("W/") == current:
             return
     raise ProblemError(ErrorCodes.VERSION_CONFLICT)
+
+
+async def load_for_etag(
+    session: Any,
+    model: Any,
+    entity_id: Any,
+    tenant_id: Any | None = None,
+    *,
+    detail: str | None = None,
+) -> Any:
+    """Load the row ``FOR UPDATE`` before ``check_if_match`` (AC01-01, ADR 0012).
+
+    The lock serialises concurrent writers carrying the same ETag: the second waits, then
+    sees the new ``updated_at`` and gets 412. RLS hides rows of other tenants (404); the
+    optional ``tenant_id`` adds an explicit check for callers outside a tenant session.
+    """
+    row = await session.get(model, entity_id, with_for_update=True)
+    if row is None or (tenant_id is not None and getattr(row, "tenant_id", tenant_id) != tenant_id):
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail=detail)
+    return row

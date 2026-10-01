@@ -12,16 +12,19 @@ test.describe("CRM core paths GA01-06 @backend", () => {
   test("Objekt über das Formular anlegen @backend", async ({ page }) => {
     test.setTimeout(120_000);
     await uiLogin(page, "/objekte");
+    // The tenant click navigates on its own; a goto before it settles aborts the session setup.
+    await expect(page).toHaveURL(/\/objekte/, { timeout: 30_000 });
     const run = Date.now().toString(36);
     const name = `E2E Objekt ${run}`;
     let created = false;
     for (let i = 0; i < 30 && !created; i++) {
       const number = String(Math.floor(Math.random() * 900) + 100);
       await page.goto("/objekte");
-      await page.getByRole("button", { name: "Objekt anlegen" }).first().click();
+      // "Objekt anlegen" is the summary of a details element, not a button.
+      await page.locator("summary", { hasText: "Objekt anlegen" }).first().click();
       await page.getByLabel("Objektnummer (3 Ziffern)").fill(number);
       await page.getByLabel("Name", { exact: true }).fill(name);
-      await page.getByLabel("Verwaltungsart").selectOption("rental");
+      await page.getByRole("combobox", { name: "Verwaltungsart" }).selectOption("rental");
       await page.getByRole("button", { name: "Anlegen" }).click();
       // A taken number answers with an alert; try the next random number.
       created = await page
@@ -53,7 +56,7 @@ test.describe("CRM core paths GA01-06 @backend", () => {
     expect(property, "no free property number").not.toBeNull();
     await uiLogin(page, `/vertraege/neu?objekt=${property!.id}`);
     await expect(page).toHaveURL(/\/vertraege\/neu/);
-    await expect(page.getByLabel("Objekt", { exact: true })).toHaveValue(property!.id);
+    await expect(page.getByRole("combobox", { name: "Objekt", exact: true })).toHaveValue(property!.id, { timeout: 30_000 });
     // Without partner and unit the form must not create a contract.
     await page.getByRole("button", { name: /Speichern|Anlegen/ }).first().click();
     await expect(page).toHaveURL(/\/vertraege\/neu/);

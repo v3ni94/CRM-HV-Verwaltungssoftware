@@ -2999,7 +2999,23 @@ async def create_order(
             actor_user_id=principal.user_id,
             payload={"ticket_id": str(order.ticket_id) if order.ticket_id else None},
         )
-        return _order_out(order)
+        # AC06 (GA02-06): log whether the resident's contact data may go to the provider.
+        from mhvp.tickets.order_sharing import order_contact_share
+
+        share = await order_contact_share(session, order)
+        if order.ticket_id is not None:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="work_order.contact_data_shared"
+                if share["shared"]
+                else "work_order.contact_data_withheld",
+                entity_type="work_order",
+                entity_id=order.id,
+                actor_user_id=principal.user_id,
+                payload={"reason": share["reason"]},
+            )
+        return _order_out(order) | {"contact_share": {k: share[k] for k in ("shared", "reason")}}
 
 
 @router.post(

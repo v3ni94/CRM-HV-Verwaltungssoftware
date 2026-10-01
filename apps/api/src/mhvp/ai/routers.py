@@ -560,6 +560,32 @@ async def _conversation_out(session: Any, row: AiConversation) -> s.Conversation
     names = await _user_names(session, {row.created_by})
     out.created_by_name = names.get(row.created_by) if row.created_by else None
     out.messages = [s.MessageOut.model_validate(m) for m in messages]
+    run_ids = {m.task_run_id for m in messages if m.role == "assistant" and m.task_run_id}
+    refs = (
+        dict(
+            (
+                await session.execute(
+                    select(AiTaskRun.id, AiTaskRun.input_ref).where(AiTaskRun.id.in_(run_ids))
+                )
+            )
+            .tuples()
+            .all()
+        )
+        if run_ids
+        else {}
+    )
+    for message in out.messages:
+        used = (
+            tool_use.used_tools(refs.get(message.task_run_id))
+            if message.role == "assistant" and message.task_run_id
+            else []
+        )
+        if used:
+            message.tools_used = [s.AiToolUseOut.model_validate(x) for x in used]
+            message.links = [
+                s.ChatLink.model_validate(x)
+                for x in tool_use.merge_links([x.model_dump() for x in message.links], used)
+            ]
     out.message_count = len(messages)
     out.last_message_at = messages[-1].created_at if messages else None
     return out
@@ -921,7 +947,13 @@ async def get_run(
         if ref.get("lookup") is not None:
             out.links = [s.ChatLink.model_validate(x) for x in lookup.links_of(ref["lookup"])]
             out.lookup_answer = lookup.answer_text(ref["lookup"])
-        out.tools_used = [s.AiToolUseOut.model_validate(x) for x in tool_use.used_tools(ref)]
+        used = tool_use.used_tools(ref)
+        out.tools_used = [s.AiToolUseOut.model_validate(x) for x in used]
+        if used:
+            out.links = [
+                s.ChatLink.model_validate(x)
+                for x in tool_use.merge_links([x.model_dump() for x in out.links], used)
+            ]
         out.proposal_id = await session.scalar(
             select(AiProposal.id).where(AiProposal.task_run_id == run.id)
         )

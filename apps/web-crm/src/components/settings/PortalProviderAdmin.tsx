@@ -36,10 +36,13 @@ export function PortalProviderAdmin({
   canManage,
   legalEntities,
   documentClasses,
+  entitiesRestricted = false,
 }: {
   canManage: boolean;
   legalEntities: EntityOption[];
   documentClasses: string[];
+  /** true: the user may not read the legal entity list (tenant_settings:read missing). */
+  entitiesRestricted?: boolean;
 }) {
   const t = useTranslations("PortalProviders");
   const [contact, setContact] = useState<PickedContact | null>(null);
@@ -241,7 +244,12 @@ export function PortalProviderAdmin({
                     </li>
                   ))}
                 </ul>
-                {canManage ? (
+                {canManage && entitiesRestricted ? (
+                  <p role="status" data-testid="entities-restricted" className={`mt-3 ${ui.help}`}>
+                    {t("grants.entitiesRestricted")}
+                  </p>
+                ) : null}
+                {canManage && !entitiesRestricted ? (
                   <form onSubmit={addGrant} noValidate className="mt-3 grid gap-2 sm:grid-cols-2" aria-label={t("grants.add")}>
                     <label className="flex flex-col gap-1">
                       <span className={ui.label}>{t("grants.entity")}</span>

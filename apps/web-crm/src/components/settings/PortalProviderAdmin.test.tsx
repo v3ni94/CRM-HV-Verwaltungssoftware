@@ -109,4 +109,13 @@ describe("PortalProviderAdmin (GA11-04)", () => {
     expect(screen.queryByRole("button", { name: "Klasse freigeben" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Entfernen" })).not.toBeInTheDocument();
   });
+
+  it("shows a hint instead of an empty entity choice without tenant_settings:read", async () => {
+    mockApi([]);
+    const user = userEvent.setup();
+    renderIntl(<PortalProviderAdmin canManage legalEntities={[]} documentClasses={["abrechnungsbeleg"]} entitiesRestricted />);
+    await pickProvider(user);
+    expect(await screen.findByTestId("entities-restricted")).toHaveTextContent("Recht zum Lesen der Mandanteneinstellungen fehlt");
+    expect(screen.queryByRole("button", { name: "Klasse freigeben" })).not.toBeInTheDocument();
+  });
 });

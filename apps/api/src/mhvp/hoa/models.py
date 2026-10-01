@@ -320,6 +320,10 @@ class AgendaItem(IdMixin, TenantMixin, Base):
     minutes_text: Mapped[str | None] = mapped_column(Text)
     voting_principle: Mapped[str | None] = mapped_column(String(16))
     voting_principle_basis: Mapped[str | None] = mapped_column(Text)
+    # AD06 / GA11-03 (migration 0351): online voting window of the item, opened and closed
+    # by the manager in the CRM; portal votes are accepted only while it is open.
+    voting_opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    voting_closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Attendance(IdMixin, TenantMixin, Base):
@@ -331,6 +335,8 @@ class Attendance(IdMixin, TenantMixin, Base):
     proxy_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id")
     proxy_document_id: Mapped[uuid.UUID | None] = _fk("document.id")
     online: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # AD06 (migration 0351): time the owner confirmed the online participation in the portal.
+    portal_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class Vote(IdMixin, TenantMixin, Base):
@@ -709,3 +715,65 @@ class HoaAcquisitionRelease(IdMixin, TimestampMixin, TenantMixin, Base):
     released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     release_note: Mapped[str | None] = mapped_column(Text)
+
+
+class HoaOnlineMeetingSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AD06 / GA11-03 (migration 0351): per tenant switch for the online meeting in the owner
+    portal, default off. One row per tenant; no row means off."""
+
+    __tablename__ = "hoa_online_meeting_setting"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
+
+
+class MeetingProxy(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AD06 (migration 0351): proxy of an ownership unit granted in the owner portal to
+    another owner of the same community or to the manager, with period, text form document
+    (own portal upload) and revocation. Never deleted; a revocation sets revoked_at."""
+
+    __tablename__ = "meeting_proxy"
+    __table_args__ = (
+        CheckConstraint("proxy_kind IN ('owner', 'manager')", name="kind"),
+        CheckConstraint(
+            "(proxy_kind = 'owner') = (proxy_contract_id IS NOT NULL)",
+            name="target",
+        ),
+        CheckConstraint("valid_to IS NULL OR valid_to >= valid_from", name="period"),
+        Index("ix_meeting_proxy_grantor", "tenant_id", "grantor_contract_id"),
+    )
+
+    legal_entity_id: Mapped[uuid.UUID] = _fk("legal_entity.id", nullable=False)
+    grantor_contract_id: Mapped[uuid.UUID] = _fk("contract.id", nullable=False)
+    proxy_kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    proxy_contract_id: Mapped[uuid.UUID | None] = _fk("contract.id")
+    meeting_id: Mapped[uuid.UUID | None] = _fk("owners_meeting.id")
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    valid_to: Mapped[date | None] = mapped_column(Date)
+    document_id: Mapped[uuid.UUID] = _fk("document.id", nullable=False)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class MeetingSpeakerRequest(IdMixin, TimestampMixin, TenantMixin, Base):
+    """AD06 (migration 0351): request to speak of an owner (portal), with time stamp, handled
+    by the manager in the CRM (status open, done, withdrawn)."""
+
+    __tablename__ = "meeting_speaker_request"
+    __table_args__ = (
+        CheckConstraint("status IN ('open', 'done', 'withdrawn')", name="status"),
+        Index("ix_meeting_speaker_request_meeting", "tenant_id", "meeting_id", "requested_at"),
+    )
+
+    meeting_id: Mapped[uuid.UUID] = _fk("owners_meeting.id", nullable=False, ondelete="CASCADE")
+    agenda_item_id: Mapped[uuid.UUID | None] = _fk("meeting_agenda_item.id", ondelete="SET NULL")
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id", nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    note: Mapped[str | None] = mapped_column(String(500))
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="open", server_default="open"
+    )
+    handled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    handled_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))

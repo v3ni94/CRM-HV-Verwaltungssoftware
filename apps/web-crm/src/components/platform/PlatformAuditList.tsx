@@ -25,6 +25,10 @@ const ACTIONS = [
   "oidc_client_secret_rotated",
   "oidc_client_activated",
   "oidc_client_deactivated",
+  "maintenance_window_created",
+  "maintenance_window_updated",
+  "maintenance_window_cancelled",
+  "availability_measurement_recorded",
 ] as const;
 const PAGE_SIZE = 50;
 

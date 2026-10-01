@@ -439,6 +439,34 @@ export type PortalMeeting = {
   dial_in_note: string | null;
 };
 
+/** AD06 / GA11-03: meeting detail with online participation (switch off by default). Results
+ *  only after the announcement; while voting, only the markers of the own units. */
+export type PortalMeetingItem = {
+  id: string;
+  position: number;
+  title: string;
+  proposal: string | null;
+  voting_state: "not_opened" | "open" | "closed" | "announced";
+  voted_contract_ids: string[];
+  result: { status: string; votes: { yes?: string; no?: string; abstain?: string } | null } | null;
+};
+
+export type PortalMeetingDetail = {
+  id: string;
+  mode: string;
+  status: string;
+  online_enabled: boolean;
+  online_note: string;
+  conference_url: string | null;
+  conference_access: string | null;
+  own_contract_ids: string[];
+  confirmed_contract_ids: string[];
+  represented_contract_ids: string[];
+  units: { contract_id: string; unit_number: string; own: boolean }[];
+  items: PortalMeetingItem[];
+  speaker_requests: { id: string; requested_at: string; status: string; agenda_item_id: string | null }[];
+};
+
 /** M19-02: submission to the board as the portal shows it (no CRM user ids, no other member's
  *  comments beyond the tally). */
 export type PortalBoardSubmission = {

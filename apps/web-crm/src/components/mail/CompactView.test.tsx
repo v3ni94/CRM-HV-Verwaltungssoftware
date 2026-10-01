@@ -51,7 +51,7 @@ describe("CompactView", () => {
     renderIntl(<CompactView messageId="m1" canUpdate onDraftCreated={onDraft} />);
     await userEvent.click(await screen.findByRole("button", { name: "Kurz senden" }));
     await waitFor(() => expect(onDraft).toHaveBeenCalledWith({ id: "d1", status: "pending" }));
-    expect(calls).toEqual([
+    expect(calls.filter((c) => !c.includes("/signature/"))).toEqual([
       "GET /api/bff/mail/messages/m1/compact",
       "POST /api/bff/mail/messages/m1/reply-draft",
       "POST /api/bff/mail/messages/d1/submit",
@@ -67,7 +67,7 @@ describe("CompactView", () => {
       calls.push(`${init?.method ?? "GET"} ${url}`);
       if (url.endsWith("/compact")) {
         return jsonResponse(
-          calls.length > 1
+          calls.filter((c) => c.endsWith("/compact")).length > 1
             ? { ...DATA, reply: { source: "reply_task", text: "KI Text", approved, draft_hash: "a".repeat(64), draft: { tone: "sachlich", style_tone: "sachlich", placeholders: [], unknown_placeholders: [], open_questions: ["Termin"] } } }
             : DATA,
           200,
@@ -88,6 +88,33 @@ describe("CompactView", () => {
     expect(screen.getByTestId("reply-draft-meta")).toHaveTextContent("Termin");
     await userEvent.click(screen.getByRole("button", { name: "Entwurf freigeben" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Kurz senden" })).toBeEnabled());
+  });
+
+  it("shows the signed-in user's signature before Kurz senden (AD11)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+      String(input).endsWith("/signature/preview")
+        ? jsonResponse({ membership_id: "ms1", text: "-- \nIna Brink\nAssistenz\nHausverwaltung Müller GmbH", html: "", position_missing: false }, 200)
+        : jsonResponse(DATA, 200),
+    );
+    renderIntl(<CompactView messageId="m1" canUpdate />);
+    const block = await screen.findByTestId("mail-compact-signature");
+    expect(block).toHaveTextContent("Ina Brink");
+    expect(block).toHaveTextContent("Assistenz");
+    expect(block).toHaveTextContent("Hausverwaltung Müller GmbH");
+    expect(block.textContent).not.toContain("-- ");
+    expect(screen.queryByTestId("mail-compact-signature-hint")).not.toBeInTheDocument();
+  });
+
+  it("hints at the missing position with a link to the own profile (AD11)", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
+      String(input).endsWith("/signature/preview")
+        ? jsonResponse({ membership_id: "ms1", text: "-- \nIna Brink\nHausverwaltung Müller GmbH", html: "", position_missing: true }, 200)
+        : jsonResponse(DATA, 200),
+    );
+    renderIntl(<CompactView messageId="m1" canUpdate />);
+    const hint = await screen.findByTestId("mail-compact-signature-hint");
+    expect(hint).toHaveTextContent("Funktionsbezeichnung fehlt");
+    expect(screen.getByRole("link", { name: "Eigene Position pflegen" })).toHaveAttribute("href", "/einstellungen/profil");
   });
 
   it("keeps the excerpt when no AI provider is released", async () => {

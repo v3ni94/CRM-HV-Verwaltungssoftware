@@ -197,6 +197,7 @@ export const ROUTES: Rule[] = [
   { path: "/immoware/lernphase", area: "immoware", subArea: "learning" },
   { path: "/immoware", area: "immoware" },
   { path: "/plattform/audit", area: "platform", subArea: "audit" },
+  { path: "/plattform/betrieb", area: "platform", subArea: "operations" },
   { path: "/plattform/domains", area: "platform", subArea: "domains" },
   { path: "/plattform/freigabe-g5", area: "platform", subArea: "gateG5" },
   { path: "/plattform/freigabestufen", area: "platform", subArea: "releaseGates" },

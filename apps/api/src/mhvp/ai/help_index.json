@@ -2898,6 +2898,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Nachschlagewerkzeuge: Schalter, Verlauf und Links (Nachtrag 01.10.2026)",
+  "source": "Handbuch: KI-Assistent im Chat",
+  "href": "/assistent",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Schalter: Unter Einstellungen, KI-Anbieter gibt es je Stufe (klein, groß) die Option \"Werkzeuge (Tool Use) für Stufe ... erlauben\". Standard aus. Wie alle Anbieterfelder hebt jede Änderung eine bestehende Freigabe auf; wirksam wird sie erst nach der Freigabe im Vier-Augen-Prinzip",
+  "file": "docs/handbuch/assistent-chat.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Ziel",
   "source": "Handbuch: Aufgabenverteilung Mail und Tickets: Vorschlag",
   "href": null,
@@ -3454,6 +3464,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Einstellungen, Bank, Täglicher Bankabruf lässt sich \"Zustimmungsablauf täglich beim Anbieter abgleichen\" einschalten (Standard aus, Recht tenantsettings:update). Der Abgleich liest morgens nur das Ablaufdatum der Zustimmung von finAPI und speichert es bei Änderung. Liefert ",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Bankzugang gesperrt oder Bank nicht erreichbar (FinTS)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Meldet die Verbindung \"Bankzugang gesperrt\" (MHVP-BANK-0010), stammt die Sperre von der Bank (Rückmeldecode 3938). Die Plattform verwirft die gespeicherte PIN und startet keinen zweiten Versuch. Prüfreihenfolge: Online-Banking der Bank im Browser testen (dort entsperren oder die ",
   "file": "docs/handbuch/banking.md"
  },
  {
@@ -5468,6 +5488,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Kurz senden",
+  "source": "Handbuch: Kommunikation (Telefonie, Zustellungen, ausgehende Webhooks)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Kompaktansicht einer Mail steht unter dem Antwortvorschlag die Signatur, mit der die Antwort versendet wird. Es ist immer die Signatur der angemeldeten Person: Name, eigene Funktionsbezeichnung (zum Beispiel Assistenz) und darunter die Firmendaten der Gesellschaft des Mand",
+  "file": "docs/handbuch/kommunikation.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Kontakte",
   "href": "/kontakte",
@@ -6448,6 +6478,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Kundendomain per DNS prüfen",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Plattform, Kundendomains steht je Domain die Schaltfläche DNS prüfen. Die Prüfung löst den CNAME oder den A-Eintrag der Domain auf und vergleicht ihn mit dem Plattformhost. Das Ergebnis (nicht geprüft, geprüft, fehlgeschlagen), der Zeitpunkt der letzten Prüfung und der Befu",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Wartung und Verfügbarkeit",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Plattform, Wartung und Verfügbarkeit (nur Plattformadministratoren) kündigen Sie ein Wartungsfenster an: Beginn, Ende und ein kurzer Text auf Deutsch und Englisch. CRM und Portal zeigen den Hinweis automatisch ab der Vorlaufzeit vor Beginn (Standard 48 Stunden, je Fenster e",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
   "href": null,
@@ -6744,6 +6794,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Beim Anlegen eines Portalzugangs in der Kontaktakte steuert der Schalter \"Einladung sofort senden\", ob die Einladung direkt versendet wird. Ist er aus, entsteht der Zugang mit dem Status \"Nicht eingeladen\"; die Einladung lässt sich später mit der Aktion \"Einladen\" nachholen. Bei ",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Nutzungsbedingungen annehmen (AD03)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Hat der Verwalter für den Mandanten eine Fassung der Nutzungsbedingungen veröffentlicht (Einwilligungsregeln unter Einstellungen, Feld Fassung der Portal-Nutzungsbedingungen), leitet das Portal nach der Anmeldung auf die Seite Nutzungsbedingungen weiter, bis die Fassung angenomme",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Online-Teilnahme an der Versammlung (AD06)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Nur für Eigentümer und nur, wenn die Verwaltung die Online-Versammlung freigeschaltet hat. Unter \"Versammlungen\" bei einer hybriden oder virtuellen Versammlung \"Online-Teilnahme anzeigen\" wählen. - \"Online-Teilnahme zusagen\" meldet die eigenen Einheiten für die Online-Teilnahme a",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -7764,6 +7834,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Beim Anlegen einer Versammlung wählen Sie die Art (ordentlich, außerordentlich, Teilversammlung, Umlaufverfahren); Wiederholung und Fortsetzung werden mit Bezug auf die Ursprungsversammlung über die Schnittstelle angelegt. In der Versammlung erfassen Sie unter \"Art, Dauer, Vorlag",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Online-Teilnahme an der Versammlung (AD06, Stand 01.10.2026)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Technisch vorbereitet, Standard aus. Der Schalter wird über PUT /hoa/online-meeting-settings gesetzt, erst nach Klärung durch die Rechtsberatung (AD06-01). Vollmacht und Stimmabgabe im Portal brauchen zusätzlich die Freigabestufe G4. 1. Hybride oder virtuelle Versammlung anlegen,",
   "file": "docs/handbuch/weg.md"
  }
 ]

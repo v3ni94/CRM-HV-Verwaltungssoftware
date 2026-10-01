@@ -43,3 +43,10 @@ checked by hand (`docs/acceptance/M31-geraetepruefung.md`).
   have no preference endpoint. The inline script in `src/app/layout.tsx` sets `data-theme`
   before the first paint; `public/offline.html` reads the same key.
 - All data access goes through the documented API (rule 0.1.4).
+- Languages (GB14-01): the list is derived from the files `messages/<code>.json` (`next.config.ts`
+  sets `NEXT_PUBLIC_PORTAL_LOCALES` at build time, `src/lib/locale.ts` reads it, German always
+  stays available). A further language is a new file plus the same code in `MHVP_PORTAL_LOCALES`
+  of the API (validation of `PATCH /portal/me/locale`); missing keys fall back to German
+  (`src/i18n/request.ts`). Language names come from `Intl.DisplayNames`.
+- Maintenance banner (GB16-01): `src/components/shell/MaintenanceBanner.tsx` reads the public feed
+  `GET /api/v1/platform/maintenance/current` (cached 30 seconds, no banner on failure).

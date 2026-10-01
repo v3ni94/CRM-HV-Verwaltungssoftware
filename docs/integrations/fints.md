@@ -114,6 +114,17 @@ laufen lassen, ausliefern. Die Bundesbank veröffentlicht die BLZ-Datei quartals
 FinTS-URLs stammen aus der Liste der DK bzw. der jeweiligen Bank. Ein Institut ohne
 FinTS-URL ist nicht verbindbar (`MHVP-BANK-0008`).
 
+Altadressen der Rechenzentren: Die DK-Liste nennt bei rund 590 Genossenschaftsbanken noch die
+abgeschalteten Hosts `hbci-pintan.gad.de` (GAD) und `hbci11.fiducia.de` (Fiducia), während
+die Spalte HBCI-Domain bereits den Atruvia-Host (`fints1.atruvia.de` oder
+`fints2.atruvia.de`) führt. Der Parser baut die URL in diesem Fall aus der Domain-Spalte
+(`https://<domain>/cgi-bin/hbciservlet`). Geprüft am 01.10.2026: beide Althosts lehnen die
+Verbindung ab, beide Atruvia-Hosts antworten. Betreiberbefund: Heinsberger Volksbank
+(39061981). Fusionen (zum Beispiel Aachener Bank eG und Volksbank Heinsberg eG zur
+Volksbank im Westen eG) ändern Bankleitzahl oder Anmeldename erst mit der technischen
+Fusion; bis zur nächsten DK-Liste gilt die Angabe der Bank, Umstellungshinweise der Bank
+beachten.
+
 ## Grenzen
 
 - 90-Tage-Regel (PSD2): erneute TAN nach spätestens 90 Tagen; manche Banken verlangen die

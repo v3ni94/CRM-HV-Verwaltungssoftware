@@ -65,6 +65,19 @@ describe("TenantDomainsAdmin", () => {
     expect(await screen.findByText("Keine Domain hinterlegt.")).toBeInTheDocument();
   });
 
+  it("checks DNS of a domain and shows the stored finding", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse([domain]));
+    renderIntl(<TenantDomainsAdmin tenants={tenants} />);
+    await screen.findByText("portal.kunde.test");
+    expect(screen.getByText("nicht geprüft")).toBeInTheDocument();
+    const verified = { ...domain, verification_status: "verified", verification_checked_at: "2026-10-01T10:00:00Z", verification_finding: "CNAME zeigt auf crm.example.org." };
+    fetchMock.mockResolvedValueOnce(jsonResponse(verified)).mockResolvedValueOnce(jsonResponse([verified]));
+    await userEvent.click(screen.getByRole("button", { name: "DNS prüfen" }));
+    await waitFor(() => expect(urls()).toContain("POST /api/bff/platform/domains/d1/verify"));
+    expect(await screen.findByText("geprüft")).toBeInTheDocument();
+    expect(screen.getByText(/CNAME zeigt auf crm.example.org/)).toBeInTheDocument();
+  });
+
   it("suspends the tenant only after confirmation", async () => {
     fetchMock.mockImplementation(async () => jsonResponse([]));
     renderIntl(<TenantDomainsAdmin tenants={tenants} />);

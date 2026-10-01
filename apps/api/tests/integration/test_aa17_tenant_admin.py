@@ -221,3 +221,59 @@ def test_oidc_clients_api(client: TestClient, world: World, migrator_engine: Any
             conn.execute(
                 text("DELETE FROM oidc_client WHERE client_id LIKE :p"), {"p": f"aa17-{RUN}%"}
             )
+
+
+def test_domain_dns_verification(
+    client: TestClient, world: World, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """GA01-10 (AD07): DNS check with a patched resolver, no real DNS."""
+    from mhvp.platform import domain_dns
+
+    p = bearer(login(client, world, "aa17padmin"))
+    t = bearer(login(client, world, "aa17admin"))
+    base = f"/api/v1/platform/tenants/{world.tenant_a}"
+    host = f"ad07-{RUN}.kunde.test"
+    created = client.post(base + "/domains", json={"host": host}, headers=p).json()
+    assert created["verification_status"] == "unverified"
+    assert created["verification_checked_at"] is None
+    url = f"/api/v1/platform/domains/{created['id']}/verify"
+
+    answers: dict[str, domain_dns.DnsResult] = {}
+    monkeypatch.setattr(
+        domain_dns, "resolve_host", lambda h: answers.get(h, domain_dns.DnsResult())
+    )
+    # nothing resolves
+    out = client.post(url, headers=p)
+    assert out.status_code == 200
+    assert out.json()["verification_status"] == "failed"
+    assert out.json()["verification_checked_at"] is not None
+    # wrong CNAME
+    answers[host] = domain_dns.DnsResult(cnames=["fremd.example.net"])
+    assert client.post(url, headers=p).json()["verification_status"] == "failed"
+    # correct CNAME: platform host is the host of web_crm_url
+    from types import SimpleNamespace
+
+    from mhvp.platform.admin_routers import _platform_hosts
+
+    target = sorted(_platform_hosts(SimpleNamespace(app=client.app)))[0]  # type: ignore[arg-type]
+    answers[host] = domain_dns.DnsResult(cnames=[target])
+    ok = client.post(url, headers=p).json()
+    assert ok["verification_status"] == "verified"
+    assert target in ok["verification_finding"]
+    listed = client.get(base + "/domains", headers=p).json()
+    assert listed[0]["verification_status"] == "verified"
+    # A record match
+    answers[host] = domain_dns.DnsResult(addresses={"203.0.113.7"})
+    answers[target] = domain_dns.DnsResult(addresses={"203.0.113.7"})
+    assert client.post(url, headers=p).json()["verification_status"] == "verified"
+    answers[target] = domain_dns.DnsResult(addresses={"203.0.113.9"})
+    assert client.post(url, headers=p).json()["verification_status"] == "failed"
+    # audit entry
+    audit = client.get("/api/v1/platform/audit-events?action=tenant_domain_verified", headers=p)
+    assert audit.status_code == 200
+    assert "tenant_domain_verified" in audit.text
+    # authorization and not found
+    assert client.post(url, headers=t).status_code == 403
+    missing = "/api/v1/platform/domains/00000000-0000-4000-8000-000000000000/verify"
+    assert client.post(missing, headers=p).status_code == 404
+    client.delete(f"{base}/domains/{created['id']}", headers=p)

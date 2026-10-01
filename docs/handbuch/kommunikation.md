@@ -136,3 +136,20 @@ erhalten müssen, sind die Abonnements dieses Kapitels vorgesehen.
 - Am Kontakt, Reiter Kommunikation, lässt sich ein abgelegtes Dokument je Zustellweg vorbereiten: Post (auf Wunsch mit Postauftrag), E-Mail (Entwurf), Portal, SMS, Einschreiben oder Bote. SMS, Einschreiben und Bote werden nicht von der Plattform versendet, sondern mit Nachweis erfasst. Der Zugang wird nur mit Nachweisart und Referenz gebucht.
 - Serienversand: Unter Kontakte, Serienversand wird eine Vorlage je Empfänger zu einem eigenen Dokument zusammengeführt. Danach liegt je Empfänger eine Zustellung vor, gruppiert je Zustellweg. Ein Fehler bricht den ganzen Lauf ab.
 - Kommunikationshistorie: Der Reiter Kommunikation zeigt E-Mails, Zustellungen und Tickets des Kontakts, neueste zuerst. Welche Arten sichtbar sind, hängt von den Rechten ab.
+
+- Einwilligung zur E-Mail-Zustellung (Version 1.59.0): Dokumente gehen nur mit gültiger Einwilligung des Kontakts (Art email_delivery) per E-Mail; ohne sie wird die Zustellung als Post vorbereitet und der Grund protokolliert. Die Einwilligung pflegen Sie in der Kontaktakte (siehe Handbuch Kontakte). Der Serienversand mit Kennzeichen Werbung erreicht nur Kontakte mit gültiger Werbeeinwilligung, übersprungene werden gezählt.
+
+## Kurz senden
+
+In der Kompaktansicht einer Mail steht unter dem Antwortvorschlag die Signatur, mit der die
+Antwort versendet wird. Es ist immer die Signatur der angemeldeten Person: Name, eigene
+Funktionsbezeichnung (zum Beispiel Assistenz) und darunter die Firmendaten der Gesellschaft des
+Mandanten. Beim Einzelunternehmen entfällt die Funktionsbezeichnung.
+
+- Enthält der Vorschlag nach der Grußformel bereits einen Namen oder den Firmennamen, wird
+  dieser Block beim Anlegen des Entwurfs entfernt; Name und Firma stehen dann nur einmal in
+  der Signatur.
+- Fehlt die eigene Funktionsbezeichnung, erscheint ein Hinweis mit dem Link "Eigene Position
+  pflegen" (Einstellungen, Profil). Bis dahin enthält die Signatur nur Name und Gesellschaft.
+- "Kurz senden" reicht den Entwurf zur Freigabe ein; beim Einreichen wird keine zweite Signatur
+  angefügt. Vier-Augen-Regel und Bestätigung gelten wie beim normalen Versand.

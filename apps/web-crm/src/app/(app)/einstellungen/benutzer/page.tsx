@@ -1,9 +1,18 @@
 import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
-import { MembersAdmin, type LegalEntityOption, type PropertyOption } from "@/components/settings/MembersAdmin";
-import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
+import {
+  MembersAdmin,
+  type LegalEntityOption,
+  type PropertyOption,
+} from "@/components/settings/MembersAdmin";
+import {
+  redirectIfUnauthenticated,
+  serverApi,
+  serverFetch,
+} from "@/lib/api-server";
 import { getMe } from "@/lib/me";
+import { fetchAllProperties } from "@/lib/properties-all";
 import { ui } from "@/lib/ui";
 import { PageHeader } from "@/components/ui/PageHeader";
 
@@ -11,27 +20,44 @@ export const dynamic = "force-dynamic";
 
 /** Query parameters `email` and `role` prefill the invitation form (used by the objektakte
  * user mapping report, M35 Stufe 4); nothing is created without the administrator submitting. */
-export default async function MembersPage({ searchParams }: { searchParams: Promise<Record<string, string | string[] | undefined>> }) {
-  const [t, query] = await Promise.all([getTranslations("Members"), searchParams]);
-  const first = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v) ?? "";
+export default async function MembersPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
+  const [t, query] = await Promise.all([
+    getTranslations("Members"),
+    searchParams,
+  ]);
+  const first = (v: string | string[] | undefined) =>
+    (Array.isArray(v) ? v[0] : v) ?? "";
   const api = serverApi();
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
   if (!can("members:read")) notFound();
-  const [members, roles, competenceCatalogue, legalEntities, positionCatalogue, properties] = await Promise.all([
+  const [
+    members,
+    roles,
+    competenceCatalogue,
+    legalEntities,
+    positionCatalogue,
+    properties,
+  ] = await Promise.all([
     api.GET("/api/v1/tenant/members"),
     api.GET("/api/v1/tenant/roles"),
     api.GET("/api/v1/tenant/competence-catalogue"),
     // Zugriffsbereich je Rechtsträger für Steuerberater (A37); Liste ist nur eine Auswahlhilfe.
-    serverFetch("/api/v1/tenant/legal-entities").then(async (r) => (r.ok ? ((await r.json()) as LegalEntityOption[]) : [])),
+    serverFetch("/api/v1/tenant/legal-entities").then(async (r) =>
+      r.ok ? ((await r.json()) as LegalEntityOption[]) : [],
+    ),
     // Positionen für die E-Mail-Signatur (operator 27.09.2026), Katalog plus Mandantenliste.
-    serverFetch("/api/v1/tenant/position-catalogue").then(async (r) => (r.ok ? ((await r.json()) as string[]) : [])),
+    serverFetch("/api/v1/tenant/position-catalogue").then(async (r) =>
+      r.ok ? ((await r.json()) as string[]) : [],
+    ),
     // Objektzuordnung je Mitglied (M2-02); nur für Mandantenadministration geladen.
     can("tenant_settings:update")
-      ? serverFetch("/api/v1/properties?page_size=500").then(async (r) =>
-          r.ok ? (((await r.json()) as { items?: PropertyOption[] }).items ?? []) : [],
-        )
+      ? fetchAllProperties<PropertyOption>().then((r) => r.items ?? [])
       : Promise.resolve([] as PropertyOption[]),
   ]);
   return (
@@ -41,14 +67,19 @@ export default async function MembersPage({ searchParams }: { searchParams: Prom
       <MembersAdmin
         initialMembers={members.data ?? []}
         roles={roles.data ?? []}
-        competenceCatalogue={(competenceCatalogue.data ?? []) as { code: string; label: string }[]}
+        competenceCatalogue={
+          (competenceCatalogue.data ?? []) as { code: string; label: string }[]
+        }
         legalEntityOptions={legalEntities}
         propertyOptions={properties}
         positionCatalogue={positionCatalogue}
         canCreate={can("members:create")}
         canUpdate={can("members:update")}
         canUpdateScope={can("tenant_settings:update")}
-        prefill={{ email: first(query.email), roleCodes: first(query.role) ? [first(query.role)] : [] }}
+        prefill={{
+          email: first(query.email),
+          roleCodes: first(query.role) ? [first(query.role)] : [],
+        }}
       />
     </div>
   );

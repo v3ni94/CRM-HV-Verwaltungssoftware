@@ -7,7 +7,15 @@ import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
 export type DomTenant = { id: string; slug: string; name: string; status: string };
-type Domain = { id: string; host: string; purpose: string; cname_hint: string };
+type Domain = {
+  id: string;
+  host: string;
+  purpose: string;
+  cname_hint: string;
+  verification_status?: string;
+  verification_checked_at?: string | null;
+  verification_finding?: string | null;
+};
 
 /** GA01-10: Kundendomains je Mandant (tenant_domain) und Mandantenstatus. */
 export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
@@ -45,6 +53,13 @@ export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
   const remove = async (id: string) => {
     setError(null);
     const res = await bff(`/api/bff/platform/tenants/${tenantId}/domains/${id}`, { method: "DELETE" });
+    if (!res.ok) return setError(res.message);
+    await load();
+  };
+
+  const verify = async (id: string) => {
+    setError(null);
+    const res = await bff<Domain>(`/api/bff/platform/domains/${id}/verify`, { method: "POST" });
     if (!res.ok) return setError(res.message);
     await load();
   };
@@ -94,6 +109,7 @@ export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
                 <th>{t("host")}</th>
                 <th>{t("purpose")}</th>
                 <th>{t("cname")}</th>
+                <th>{t("dnsStatus")}</th>
                 <th />
               </tr>
             </thead>
@@ -104,6 +120,20 @@ export function TenantDomainsAdmin({ tenants }: { tenants: DomTenant[] }) {
                   <td>{t(`purposes.${d.purpose}`)}</td>
                   <td className={ui.mono}>{d.cname_hint}</td>
                   <td>
+                    <span className={d.verification_status === "verified" ? ui.badgeSuccess : ui.badgeWarning}>
+                      {t(`verification.${d.verification_status ?? "unverified"}`)}
+                    </span>
+                    {d.verification_checked_at ? (
+                      <div className={ui.help}>
+                        {new Date(d.verification_checked_at).toLocaleString("de-DE")}
+                        {d.verification_finding ? `: ${d.verification_finding}` : ""}
+                      </div>
+                    ) : null}
+                  </td>
+                  <td className="flex gap-2">
+                    <button type="button" className={ui.secondary} onClick={() => void verify(d.id)}>
+                      {t("verify")}
+                    </button>
                     <button type="button" className={ui.secondary} onClick={() => void remove(d.id)}>
                       {t("remove")}
                     </button>

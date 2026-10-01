@@ -2539,6 +2539,20 @@
             "title": "Label",
             "type": "string"
           },
+          "links": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ChatLink"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Links"
+          },
           "permitted": {
             "title": "Permitted",
             "type": "boolean"
@@ -5658,6 +5672,155 @@
           }
         },
         "title": "AutomationRulePatch",
+        "type": "object"
+      },
+      "AvailabilityIn": {
+        "additionalProperties": false,
+        "properties": {
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "probe": {
+            "enum": [
+              "api",
+              "crm",
+              "portal"
+            ],
+            "title": "Probe",
+            "type": "string"
+          },
+          "source_note": {
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Source Note",
+            "type": "string"
+          },
+          "uptime_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,6}|(?=[\\d.]{1,13}0*$)\\d{0,6}\\.\\d{0,6}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Uptime Percent"
+          }
+        },
+        "required": [
+          "month",
+          "probe",
+          "uptime_percent",
+          "source_note"
+        ],
+        "title": "AvailabilityIn",
+        "type": "object"
+      },
+      "AvailabilityMonth": {
+        "properties": {
+          "actual_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Percent"
+          },
+          "adjusted_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjusted Percent"
+          },
+          "month": {
+            "title": "Month",
+            "type": "string"
+          },
+          "month_seconds": {
+            "title": "Month Seconds",
+            "type": "integer"
+          },
+          "planned_downtime_seconds": {
+            "title": "Planned Downtime Seconds",
+            "type": "integer"
+          },
+          "probes": {
+            "items": {
+              "$ref": "#/components/schemas/ProbeFigure"
+            },
+            "title": "Probes",
+            "type": "array"
+          },
+          "target_met": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Met"
+          },
+          "target_met_adjusted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Met Adjusted"
+          }
+        },
+        "required": [
+          "month",
+          "month_seconds",
+          "planned_downtime_seconds",
+          "probes",
+          "actual_percent",
+          "adjusted_percent",
+          "target_met",
+          "target_met_adjusted"
+        ],
+        "title": "AvailabilityMonth",
+        "type": "object"
+      },
+      "AvailabilityOut": {
+        "properties": {
+          "months": {
+            "items": {
+              "$ref": "#/components/schemas/AvailabilityMonth"
+            },
+            "title": "Months",
+            "type": "array"
+          },
+          "target_percent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Target Percent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "target_percent",
+          "months"
+        ],
+        "title": "AvailabilityOut",
         "type": "object"
       },
       "BackfillIn": {
@@ -30014,6 +30177,20 @@
         "title": "HoaCostsFromLedgerIn",
         "type": "object"
       },
+      "HoaOnlineSettingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled"
+        ],
+        "title": "HoaOnlineSettingIn",
+        "type": "object"
+      },
       "HoaPlanIn": {
         "additionalProperties": false,
         "properties": {
@@ -30716,6 +30893,21 @@
           }
         },
         "title": "HoaResolutionPatch",
+        "type": "object"
+      },
+      "HoaSpeakerHandleIn": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "pattern": "^(done|withdrawn)$",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "HoaSpeakerHandleIn",
         "type": "object"
       },
       "HoaStatementIn": {
@@ -40444,6 +40636,31 @@
         "title": "MailboxUsersIn",
         "type": "object"
       },
+      "MaintenanceCurrentOut": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/MaintenancePublicItem"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "operational",
+              "maintenance"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "items"
+        ],
+        "title": "MaintenanceCurrentOut",
+        "type": "object"
+      },
       "MaintenanceDoneIn": {
         "additionalProperties": false,
         "description": "Completion of a maintenance item (C2). With an interval the next due date is\n``done_on`` plus ``interval_months`` (day clamped to the month end) and the item stays\nopen; without an interval the item is closed.",
@@ -40814,6 +41031,246 @@
           }
         },
         "title": "MaintenancePatch",
+        "type": "object"
+      },
+      "MaintenancePublicItem": {
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "phase": {
+            "enum": [
+              "announced",
+              "active"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "text_de": {
+            "title": "Text De",
+            "type": "string"
+          },
+          "text_en": {
+            "title": "Text En",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "starts_at",
+          "ends_at",
+          "text_de",
+          "text_en",
+          "phase"
+        ],
+        "title": "MaintenancePublicItem",
+        "type": "object"
+      },
+      "MaintenanceWindowIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "notice_hours": {
+            "anyOf": [
+              {
+                "maximum": 720.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Hours"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "text_de": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Text De",
+            "type": "string"
+          },
+          "text_en": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Text En",
+            "type": "string"
+          }
+        },
+        "required": [
+          "starts_at",
+          "ends_at",
+          "text_de",
+          "text_en"
+        ],
+        "title": "MaintenanceWindowIn",
+        "type": "object"
+      },
+      "MaintenanceWindowOut": {
+        "properties": {
+          "cancelled_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancelled At"
+          },
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "notice_hours": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Hours"
+          },
+          "phase": {
+            "title": "Phase",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          },
+          "text_de": {
+            "title": "Text De",
+            "type": "string"
+          },
+          "text_en": {
+            "title": "Text En",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "starts_at",
+          "ends_at",
+          "text_de",
+          "text_en",
+          "notice_hours",
+          "cancelled_at",
+          "phase"
+        ],
+        "title": "MaintenanceWindowOut",
+        "type": "object"
+      },
+      "MaintenanceWindowPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "cancel": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cancel"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "notice_hours": {
+            "anyOf": [
+              {
+                "maximum": 720.0,
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice Hours"
+          },
+          "starts_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Starts At"
+          },
+          "text_de": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text De"
+          },
+          "text_en": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "minLength": 3,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Text En"
+          }
+        },
+        "title": "MaintenanceWindowPatch",
         "type": "object"
       },
       "MajorityRuleIn": {
@@ -42849,6 +43306,20 @@
               }
             ],
             "title": "Task Run Id"
+          },
+          "tools_used": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/AiToolUseOut"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tools Used"
           }
         },
         "required": [
@@ -50722,6 +51193,119 @@
         "title": "PortalMandateIn",
         "type": "object"
       },
+      "PortalMeetingParticipationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Ids"
+          }
+        },
+        "title": "PortalMeetingParticipationIn",
+        "type": "object"
+      },
+      "PortalMeetingProxyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "grantor_contract_id": {
+            "format": "uuid",
+            "title": "Grantor Contract Id",
+            "type": "string"
+          },
+          "meeting_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Meeting Id"
+          },
+          "proxy_contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Contract Id"
+          },
+          "proxy_kind": {
+            "pattern": "^(owner|manager)$",
+            "title": "Proxy Kind",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "grantor_contract_id",
+          "proxy_kind",
+          "valid_from",
+          "document_id"
+        ],
+        "title": "PortalMeetingProxyIn",
+        "type": "object"
+      },
+      "PortalMeetingVoteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "choice": {
+            "pattern": "^(yes|no|abstain)$",
+            "title": "Choice",
+            "type": "string"
+          },
+          "contract_id": {
+            "format": "uuid",
+            "title": "Contract Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "contract_id",
+          "choice"
+        ],
+        "title": "PortalMeetingVoteIn",
+        "type": "object"
+      },
       "PortalMeterIn": {
         "additionalProperties": false,
         "properties": {
@@ -50908,6 +51492,37 @@
           "magic_link_2fa"
         ],
         "title": "PortalSecurityIn",
+        "type": "object"
+      },
+      "PortalSpeakerRequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "agenda_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Agenda Item Id"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "PortalSpeakerRequestIn",
         "type": "object"
       },
       "PortalSupportConsentIn": {
@@ -52531,6 +53146,81 @@
           "id"
         ],
         "title": "PrivacyRegisterOut",
+        "type": "object"
+      },
+      "ProbeFigure": {
+        "properties": {
+          "adjusted_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adjusted Percent"
+          },
+          "probe": {
+            "title": "Probe",
+            "type": "string"
+          },
+          "source_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Note"
+          },
+          "target_met": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Met"
+          },
+          "target_met_adjusted": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Met Adjusted"
+          },
+          "uptime_percent": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Uptime Percent"
+          }
+        },
+        "required": [
+          "probe",
+          "uptime_percent",
+          "source_note",
+          "adjusted_percent",
+          "target_met",
+          "target_met_adjusted"
+        ],
+        "title": "ProbeFigure",
         "type": "object"
       },
       "PropertyBulkIn": {
@@ -63100,6 +63790,18 @@
             "title": "Membership Id",
             "type": "string"
           },
+          "position_missing": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Keine Funktionsbezeichnung in der Mitgliedschaft (nicht beim Einzelunternehmen); die Signatur enthält dann nur Name und Gesellschaft (AD11).",
+            "title": "Position Missing"
+          },
           "text": {
             "description": "Klartextsignatur, so wie sie in ausgehende Mails eingefügt wird.",
             "title": "Text",
@@ -66421,6 +67123,34 @@
           },
           "purpose": {
             "title": "Purpose",
+            "type": "string"
+          },
+          "verification_checked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Checked At"
+          },
+          "verification_finding": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Verification Finding"
+          },
+          "verification_status": {
+            "default": "unverified",
+            "title": "Verification Status",
             "type": "string"
           }
         },
@@ -109901,6 +110631,116 @@
         ]
       }
     },
+    "/api/v1/hoa/meetings/{meeting_id}/agenda/{item_id}/voting/close": {
+      "post": {
+        "operationId": "close_voting_api_v1_hoa_meetings__meeting_id__agenda__item_id__voting_close_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Close Voting Api V1 Hoa Meetings  Meeting Id  Agenda  Item Id  Voting Close Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Online-Abstimmung des TOP schließen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}/agenda/{item_id}/voting/open": {
+      "post": {
+        "operationId": "open_voting_api_v1_hoa_meetings__meeting_id__agenda__item_id__voting_open_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Open Voting Api V1 Hoa Meetings  Meeting Id  Agenda  Item Id  Voting Open Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Online-Abstimmung des TOP öffnen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/meetings/{meeting_id}/attendance": {
       "post": {
         "operationId": "attendance_api_v1_hoa_meetings__meeting_id__attendance_post",
@@ -110423,6 +111263,51 @@
         ]
       }
     },
+    "/api/v1/hoa/meetings/{meeting_id}/online": {
+      "get": {
+        "operationId": "online_overview_api_v1_hoa_meetings__meeting_id__online_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Online Overview Api V1 Hoa Meetings  Meeting Id  Online Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Online-Teilnahme: Zusagen, Vollmachten, Wortmeldungen, Online-Stimmen",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/meetings/{meeting_id}/protocol-draft": {
       "post": {
         "description": "Renders the minutes template (agenda, attendance with voting rights, resolution text,\ntally, announcement, signature lines) on the tenant letterhead and files it as a draft\ndocument linked to the meeting (`minutes_draft_document_id`). The signed minutes in\n`minutes_document_id` are never replaced. Permission: the write right of the HOA module\n(accounting:create, as for every other meeting action).",
@@ -110464,6 +111349,136 @@
           }
         },
         "summary": "Protokollentwurf als PDF (A62, Entwurf ohne Rechtsfolge)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/meetings/{meeting_id}/speaker-requests/{request_id}": {
+      "post": {
+        "operationId": "handle_speaker_request_api_v1_hoa_meetings__meeting_id__speaker_requests__request_id__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "request_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Request Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaSpeakerHandleIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Handle Speaker Request Api V1 Hoa Meetings  Meeting Id  Speaker Requests  Request Id  Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wortmeldung abarbeiten",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/online-meeting-settings": {
+      "get": {
+        "operationId": "get_online_setting_api_v1_hoa_online_meeting_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Online Setting Api V1 Hoa Online Meeting Settings Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Online-Versammlung im Portal (Schalter)",
+        "tags": [
+          "hoa"
+        ]
+      },
+      "put": {
+        "description": "Operator decision after legal review (AD06-01); the system asserts no admissibility.",
+        "operationId": "put_online_setting_api_v1_hoa_online_meeting_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaOnlineSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Online Setting Api V1 Hoa Online Meeting Settings Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Online-Versammlung im Portal setzen",
         "tags": [
           "hoa"
         ]
@@ -131715,6 +132730,134 @@
         ]
       }
     },
+    "/api/v1/platform/availability": {
+      "get": {
+        "operationId": "availability_api_v1_platform_availability_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "months",
+            "required": false,
+            "schema": {
+              "default": 12,
+              "maximum": 36,
+              "minimum": 1,
+              "title": "Months",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvailabilityOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verfügbarkeit je Monat gegen das Ziel 99,5 Prozent",
+        "tags": [
+          "Plattform"
+        ]
+      },
+      "put": {
+        "operationId": "import_availability_api_v1_platform_availability_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvailabilityIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProbeFigure"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Monatszahl der Verfügbarkeit importieren",
+        "tags": [
+          "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/domains/{domain_id}/verify": {
+      "post": {
+        "description": "GA01-10: compare CNAME or A record with the platform host; stores status and finding.",
+        "operationId": "verify_tenant_domain_api_v1_platform_domains__domain_id__verify_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDomainOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kundendomain per DNS prüfen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/platform/licenses": {
       "get": {
         "operationId": "list_licenses_api_v1_platform_licenses_get",
@@ -131912,6 +133055,168 @@
         "summary": "Lizenz beenden (Gültigkeit setzen)",
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/maintenance-windows": {
+      "get": {
+        "operationId": "list_maintenance_windows_api_v1_platform_maintenance_windows_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/MaintenanceWindowOut"
+                  },
+                  "title": "Response List Maintenance Windows Api V1 Platform Maintenance Windows Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wartungsfenster auflisten",
+        "tags": [
+          "Plattform"
+        ]
+      },
+      "post": {
+        "operationId": "create_maintenance_window_api_v1_platform_maintenance_windows_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceWindowIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceWindowOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wartungsfenster ankündigen",
+        "tags": [
+          "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/maintenance-windows/{window_id}": {
+      "patch": {
+        "operationId": "update_maintenance_window_api_v1_platform_maintenance_windows__window_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "window_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Window Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceWindowPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceWindowOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wartungsfenster ändern oder absagen",
+        "tags": [
+          "Plattform"
+        ]
+      }
+    },
+    "/api/v1/platform/maintenance/current": {
+      "get": {
+        "operationId": "current_maintenance_api_v1_platform_maintenance_current_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceCurrentOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Aktuelle und angekündigte Wartungsfenster (öffentlich, für Banner und Statusseite)",
+        "tags": [
+          "Plattform"
         ]
       }
     },
@@ -137785,6 +139090,117 @@
         ]
       }
     },
+    "/api/v1/portal/meeting-proxies": {
+      "get": {
+        "operationId": "list_proxies_api_v1_portal_meeting_proxies_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Proxies Api V1 Portal Meeting Proxies Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Erteilte und erhaltene Vollmachten (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      },
+      "post": {
+        "description": "Proxy of an own unit to another owner of the same community or to the manager; the\ntext form document is an own upload (POST /portal/uploads).",
+        "operationId": "grant_proxy_api_v1_portal_meeting_proxies_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalMeetingProxyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Grant Proxy Api V1 Portal Meeting Proxies Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vollmacht erteilen (Eigentümer, G4)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/meeting-proxies/{proxy_id}/revoke": {
+      "post": {
+        "description": "The revocation is always possible (also with gate G4 closed); the row stays as\nevidence with the time of revocation. Votes cast before stay unchanged.",
+        "operationId": "revoke_proxy_api_v1_portal_meeting_proxies__proxy_id__revoke_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proxy_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proxy Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Revoke Proxy Api V1 Portal Meeting Proxies  Proxy Id  Revoke Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vollmacht widerrufen (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
     "/api/v1/portal/meetings": {
       "get": {
         "operationId": "meetings_api_v1_portal_meetings_get",
@@ -137806,6 +139222,229 @@
           }
         },
         "summary": "Eigentümerversammlungen der eigenen Gemeinschaft (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/meetings/{meeting_id}": {
+      "get": {
+        "description": "Invitation view. Results only after the announcement; while voting, only whether the\nown units have voted (never a running tally).",
+        "operationId": "meeting_detail_api_v1_portal_meetings__meeting_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Meeting Detail Api V1 Portal Meetings  Meeting Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Versammlung mit Tagesordnung und Online-Teilnahme (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/meetings/{meeting_id}/agenda/{item_id}/votes": {
+      "post": {
+        "description": "One vote per unit and item, channel online, only while the manager has opened the\nvoting of the item. Own units and units represented by an active proxy to an own unit;\nthe voter must have confirmed the online participation. No result before the\nannouncement.",
+        "operationId": "cast_online_vote_api_v1_portal_meetings__meeting_id__agenda__item_id__votes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalMeetingVoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Cast Online Vote Api V1 Portal Meetings  Meeting Id  Agenda  Item Id  Votes Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Online abstimmen (Eigentümer, G4)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/meetings/{meeting_id}/participation": {
+      "post": {
+        "description": "Records the online participation (channel online) of the own units; the attendance\nitself (present) is still confirmed by the manager during the meeting.",
+        "operationId": "confirm_participation_api_v1_portal_meetings__meeting_id__participation_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalMeetingParticipationIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Confirm Participation Api V1 Portal Meetings  Meeting Id  Participation Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Online-Teilnahme zusagen (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/meetings/{meeting_id}/speaker-requests": {
+      "post": {
+        "operationId": "request_to_speak_api_v1_portal_meetings__meeting_id__speaker_requests_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "meeting_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Meeting Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PortalSpeakerRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Request To Speak Api V1 Portal Meetings  Meeting Id  Speaker Requests Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Wortmeldung (Eigentümer)",
         "tags": [
           "Portal"
         ]

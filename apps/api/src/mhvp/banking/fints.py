@@ -76,6 +76,27 @@ class Institute:
         return bool(self.fints_url)
 
 
+# Legacy FinTS hosts of the Fiducia and GAD data centres. Both were merged into Atruvia and
+# the old endpoints no longer answer (checked 01.10.2026: hbci-pintan.gad.de and
+# hbci11.fiducia.de refuse the connection, fints1 and fints2.atruvia.de answer). The DK list
+# still carries the old URL for about 590 institutes while its HBCI domain column already
+# names the Atruvia host, so the URL is rebuilt from that column.
+LEGACY_FINTS_HOSTS = frozenset({"hbci-pintan.gad.de", "hbci11.fiducia.de"})
+_ATRUVIA_DOMAINS = frozenset({"fints1.atruvia.de", "fints2.atruvia.de"})
+
+
+def _effective_fints_url(url: str, domain: str) -> str | None:
+    """The URL of the DK list, or the Atruvia servlet of the domain column when the URL still
+    points to a shut down legacy host. A legacy URL without a usable domain stays as it is
+    (the connection attempt then reports ``MHVP-BANK-0013`` with the bank's host)."""
+    if not url:
+        return None
+    host = url.split("//", 1)[-1].split("/", 1)[0].casefold()
+    if host in LEGACY_FINTS_HOSTS and domain.casefold() in _ATRUVIA_DOMAINS:
+        return f"https://{domain.casefold()}/cgi-bin/hbciservlet"
+    return url
+
+
 def _parse_line(line: str) -> Institute | None:
     line = line.strip()
     if not line or line.startswith("#") or "=" not in line:
@@ -84,13 +105,13 @@ def _parse_line(line: str) -> Institute | None:
     parts = rest.split("|")
     if not _BLZ.fullmatch(blz.strip()) or len(parts) < 8:
         return None
-    name, city, bic, _check, _domain, url, hbci, fints = (p.strip() for p in parts[:8])
+    name, city, bic, _check, domain, url, hbci, fints = (p.strip() for p in parts[:8])
     return Institute(
         blz=blz.strip(),
         name=name,
         city=city,
         bic=bic.upper() or None,
-        fints_url=url or None,
+        fints_url=_effective_fints_url(url, domain),
         hbci_version=hbci or None,
         fints_version=fints or None,
     )

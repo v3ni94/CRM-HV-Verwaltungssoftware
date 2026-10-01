@@ -449,3 +449,15 @@ In der Ansicht des ausgegebenen Vermögensberichts zeigt das Bereitstellungsprot
 Ersterwerb, Zwangsversteigerung, Erbfall, Schenkung, sonstiger Erwerb und Sonderrechtsnachfolge im Abrechnungsjahr sperren das Abrechnungspaket, bis eine erste Person die Freigabe beantragt und eine zweite Person sie erteilt hat. Der Zuordnungsvorschlag ist ein Prüfhinweis, keine Rechtsregel.
 
 Der Versandstatus im Bereitstellungsprotokoll erscheint auf Deutsch (vorbereitet, versendet, zugegangen, fehlgeschlagen). Mit dem Brief erzeugte Dokumente sind direkt mit dem Vermögensbericht verknüpft.
+
+## Online-Teilnahme an der Versammlung (AD06, Stand 01.10.2026)
+
+Technisch vorbereitet, Standard aus. Der Schalter wird über `PUT /hoa/online-meeting-settings` gesetzt, erst nach Klärung durch die Rechtsberatung (AD06-01). Vollmacht und Stimmabgabe im Portal brauchen zusätzlich die Freigabestufe G4.
+
+1. Hybride oder virtuelle Versammlung anlegen, Konferenzlink der externen Videolösung unter Zugangsdaten hinterlegen und einladen.
+2. Auf der Versammlungsseite zeigt der Bereich "Online-Teilnahme (Portal)" die Zusagen, die Vollmachten mit Zeitraum und Widerruf und die Wortmeldungen mit Zeitstempel.
+3. Wortmeldungen in der Reihenfolge des Eingangs aufrufen und mit "Erledigt" abarbeiten.
+4. Je TOP "Abstimmung öffnen", nach Ende der Stimmabgabe "Abstimmung schließen". Online-Stimmen erscheinen in der Auszählung mit Kanal online.
+5. Ergebnis wie bisher verkünden; erst danach sehen die Eigentümer das Ergebnis im Portal.
+
+Ob eine rein virtuelle Versammlung zulässig ist, prüft das System nicht.

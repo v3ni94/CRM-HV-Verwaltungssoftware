@@ -171,8 +171,9 @@ async def _document_property_refs(
     return out
 
 
-async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
-    row = await session.get(model, entity_id)
+async def _get(session: Any, model: Any, entity_id: uuid.UUID, *, lock: bool = False) -> Any:
+    # AC01-01: lock=True loads FOR UPDATE before an If-Match comparison.
+    row = await session.get(model, entity_id, with_for_update=True if lock else None)
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     if model is Document:
@@ -669,7 +670,7 @@ async def patch_document(
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> s.DocumentOut:
     async with tenant_tx(request, principal) as session:
-        document = await _get(session, Document, document_id)
+        document = await _get(session, Document, document_id, lock=True)
         check_if_match(if_match, document.updated_at)
         changes = body.model_dump(exclude_unset=True)
         if "permanent_record" in changes:

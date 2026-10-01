@@ -255,3 +255,7 @@ AC09-01, keine Rechtsregeln:
 - `docs/runbooks/leistungsmessung.md`, `docs/runbooks/backup.md`
 - `apps/api/tests/integration/test_ga12_perf.py`, `apps/api/tests/integration/perf_seed.py`
 - `docs/OPEN_QUESTIONS.md` AC09-01
+
+## Nachtrag Welle 15 (AD01, 01.10.2026)
+
+Befund 3 behoben mit Migration 0346 (gleiche Fachlogik, indexierbarer Zugriff je Operation; Planbeweis im Test `test_ad01_line_guard.py`), Befund 2 mit dem Index `ix_bank_transaction_booking_date`. Befund 1: Die App-Rolle darf kein ANALYZE ausführen, deshalb Wartungsjob außerhalb des Workers (Runbook `leistungsmessung.md`, Abschnitt AD01). Messwerte nachher für 200.000 Zeilen mit aktivem Wächter stehen noch aus. Die Freigabe der Geschäftsführung nach AC09-01 (4) ist formal weiter offen.

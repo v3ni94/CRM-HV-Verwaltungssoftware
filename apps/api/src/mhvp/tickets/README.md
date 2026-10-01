@@ -262,3 +262,12 @@ of `mhvp.workspace.jobs.DEADLINE_KINDS`, never a duration) and document kinds.
 
 * AA05 (GA04-07): `WorkOrder.approval_workflow_id` (optional UUID without FK, in `POST /work-orders` and the order output, migration 0307). The board vote stays the effective approval until AA05-01 is decided.
 * AB05 (GA04-07): `PATCH /work-orders/{id}/approval-workflow` sets or clears the reference (`tickets:update`, 404 other tenant, 422 invalid UUID); list and detail output carry `approval_workflow_id`. No check against a workflow table (AA05-01). CRM: reference field on the order page.
+
+## Contact data on work orders (AD03, GA02-06)
+
+`order_sharing.order_contact_share` decides whether the resident's contact (ticket contact,
+else initiator) goes to the provider: `consent_rules.data_sharing_decision` with contractual
+necessity, tenant switch `consent_policy.data_sharing`. `POST /work-orders` returns
+`contact_share` and logs `work_order.contact_data_shared` or `work_order.contact_data_withheld`;
+the portal order list carries `resident_contact` (checked on every read, revocation applies
+at once). Rule: docs/rules/AC06-einwilligungen.md.

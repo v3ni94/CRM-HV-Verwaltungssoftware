@@ -7,7 +7,7 @@ specification is `docs/MASTER-PROMPT.md`; the shared rules below are identical t
 `CLAUDE.md`.
 
 Single source for `CLAUDE.md` and `AGENTS.md` (rule 0.1.11: no contradicting parallel rule
-sets). Edit this file only, then run `make agent-docs` (or `python3 scripts/sync_agent_docs.py`).
+sets). Edit `docs/AGENT_RULES.md` only (the generated copies are overwritten), then run `make agent-docs` (or `python3 scripts/sync_agent_docs.py`).
 
 ## 1. Project identity
 
@@ -172,7 +172,9 @@ Rule 0.1.12 and section 17:
 | `make agent-docs` | regenerate `CLAUDE.md` and `AGENTS.md` from this file |
 | `make seed` | tenants HVM and Timo Müller from `mhvp/tenant/seeds` (optional first admin via `MHVP_SEED_ADMIN_*`) |
 | `make ai-eval` | offline AI evaluation with recorded answers (`tests/ai_eval`) |
-| `make deploy`, `make backup-verify` | not yet available (M9), exit 2 |
+| `make deploy` | `scripts/deploy.sh` for `ENV=staging\|prod` (needs `DEPLOY_HOST`, `DEPLOY_PATH`, `MHVP_IMAGE_*`; exit 2 if missing) |
+| `make backup`, `make backup-verify` | encrypted `pg_dump` into `BACKUP_DIR`; restore of the newest backup into a throwaway database (exit 2 without the variables) |
+| `make staging-smoke` | smoke test of the staging stack (`STAGING_API_URL`, `STAGING_CRM_URL`) |
 
 ## 13. Repository map
 

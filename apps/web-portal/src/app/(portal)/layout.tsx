@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { getTranslations } from "next-intl/server";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 
 import { InstallHint } from "@/components/shell/InstallHint";
 import { LogoutButton } from "@/components/shell/LogoutButton";
@@ -10,7 +11,7 @@ import { LanguageSwitch } from "@/components/shell/LanguageSwitch";
 import { ThemeSwitch } from "@/components/shell/ThemeToggle";
 import { type Me, showsHandover } from "@/components/portal/types";
 import { BrandMark, LegalLinks } from "@/components/shell/Branding";
-import { serverApi } from "@/lib/api-server";
+import { serverApi, serverFetch } from "@/lib/api-server";
 import { fetchPortalBranding } from "@/lib/branding";
 
 /** Signed-in area of the portal: slim header with role aware navigation, content, footer note.
@@ -25,8 +26,23 @@ async function currentMe(): Promise<Me | null> {
   }
 }
 
+/** AC06 (GA02-06): with a published terms version the portal needs its acceptance
+ *  (MHVP-CONT-0020); the layout sends the account to the acceptance mask. A failed query
+ *  never blocks the page, the API enforces the rule on every call. */
+async function termsPending(): Promise<boolean> {
+  try {
+    const response = await serverFetch("/api/v1/portal/terms");
+    if (!response.ok) return false;
+    const status = (await response.json()) as { terms_version?: string | null; accepted?: boolean };
+    return Boolean(status.terms_version) && status.accepted === false;
+  } catch {
+    return false;
+  }
+}
+
 /** Signed-in area of the portal: slim header, content, footer note. */
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
+  if (await termsPending()) redirect("/nutzungsbedingungen");
   const [t, home, me, branding] = await Promise.all([
     getTranslations("Portal"),
     getTranslations("Home"),

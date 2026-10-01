@@ -66,8 +66,9 @@ def _nf() -> ProblemError:
     return ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
 
 
-async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
-    row = await session.get(model, entity_id)
+async def _get(session: Any, model: Any, entity_id: uuid.UUID, *, lock: bool = False) -> Any:
+    # AC01-01: lock=True loads FOR UPDATE before an If-Match comparison.
+    row = await session.get(model, entity_id, with_for_update=True if lock else None)
     if row is None:
         raise _nf()
     # M2-02/S16-02: property assignment of the membership (404 outside it).
@@ -766,7 +767,7 @@ async def patch_contract_notes(
     """In place update without a new contract version (AP8): remarks, dunning block and its
     reason only. Payments, terms and parties keep the version path (``POST .../versions``)."""
     async with tenant_tx(request, principal) as session:
-        contract = await _get(session, Contract, contract_id)
+        contract = await _get(session, Contract, contract_id, lock=True)
         check_if_match(if_match, contract.updated_at)
         before = {k: getattr(contract, k) for k in _NOTES_FIELDS}
         after = before | body.model_dump(exclude_unset=True)

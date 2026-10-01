@@ -145,3 +145,13 @@ Zahlungsfunktionen nur für das genannte Objekt.
 ## Audit (Plattform)
 
 Unter Plattform, Plattformaudit sehen Plattformadministratoren die festgeschriebenen Plattformaktionen ohne Mandantenkontext: Kundendomain angelegt oder entfernt, Mandantenstatus geändert, OIDC-Client angelegt, Secret erneuert, aktiviert, deaktiviert. Die Liste zeigt Zeitpunkt, Aktion, Akteur und Ziel, ist nach Aktion filterbar und seitenweise (50 Einträge je Seite, Parameter limit und offset der API) abrufbar. Der Payload lässt sich je Eintrag aufklappen. Grenzen: Die Einträge sind nicht änderbar, enthalten keine Secrets und werden nur gelesen; die Seite ist nur für Plattformadministratoren erreichbar.
+
+## Kundendomain per DNS prüfen
+
+Unter Plattform, Kundendomains steht je Domain die Schaltfläche DNS prüfen. Die Prüfung löst den CNAME oder den A-Eintrag der Domain auf und vergleicht ihn mit dem Plattformhost. Das Ergebnis (nicht geprüft, geprüft, fehlgeschlagen), der Zeitpunkt der letzten Prüfung und der Befund (zum Beispiel gefundener CNAME) werden gespeichert und in der Tabelle angezeigt; jede Prüfung erscheint im Plattformaudit als tenant_domain_verified. Grenzen: Die Prüfung ist eine Momentaufnahme und wird nicht automatisch wiederholt. Der Status hat keine Wirkung auf die Anmeldung; auch die Sperre eines Mandanten wirkt dort weiterhin unverändert (offene Entscheidung AA17-03). Ohne installiertes dnspython wird nur der A-Eintrag verglichen.
+
+## Wartung und Verfügbarkeit
+
+Unter Plattform, Wartung und Verfügbarkeit (nur Plattformadministratoren) kündigen Sie ein Wartungsfenster an: Beginn, Ende und ein kurzer Text auf Deutsch und Englisch. CRM und Portal zeigen den Hinweis automatisch ab der Vorlaufzeit vor Beginn (Standard 48 Stunden, je Fenster einstellbar) bis zum Ende. Ein Fenster, das entfällt, sagen Sie ab; es wird nicht gelöscht.
+
+Darunter steht die Verfügbarkeit je Monat gegen das Ziel von 99,500 Prozent. Die Zahlen je Messpunkt (API, CRM, Portal) tragen Sie aus Uptime Kuma nach Monatsende ein und vermerken die Quelle. Die Tabelle zeigt auch die geplante Ausfallzeit der Wartungsfenster und den Wert ohne diese; eine Bewertung erscheint, sobald alle drei Messpunkte vorliegen. Welcher der beiden Werte das Ziel belegt, ist noch nicht entschieden (Frage AD10-02). Ablauf: `docs/runbooks/verfuegbarkeit.md`.

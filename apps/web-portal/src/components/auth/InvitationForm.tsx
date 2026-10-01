@@ -18,6 +18,10 @@ export function InvitationForm({ code }: { code?: string }) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
+  // AC06: once the tenant has published terms, the API answers MHVP-CONT-0020 and names the
+  // version; the form then asks for the acceptance and sends it with the next attempt.
+  const [termsVersion, setTermsVersion] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -34,13 +38,27 @@ export function InvitationForm({ code }: { code?: string }) {
       setError(t("passwordMismatch"));
       return;
     }
+    if (termsVersion && !termsAccepted) {
+      setError(t("termsNeeded"));
+      return;
+    }
     setBusy(true);
     const result = await bff<{ status: string }>("/api/session/invitation", {
       method: "POST",
-      body: JSON.stringify({ token: token.trim(), password }),
+      body: JSON.stringify({
+        token: token.trim(),
+        password,
+        ...(termsVersion && termsAccepted ? { accept_terms: true, terms_version: termsVersion } : {}),
+      }),
     });
     setBusy(false);
     if (!result.ok) {
+      if (result.problem?.code === "MHVP-CONT-0020") {
+        const version = /Fassung\s+(\S+?)\s+annehmen/.exec(result.problem.detail ?? "")?.[1];
+        setTermsVersion(version ?? null);
+        setError(version ? t("termsNeeded") : t("termsMissingVersion"));
+        return;
+      }
       setError(result.message);
       return;
     }
@@ -104,6 +122,12 @@ export function InvitationForm({ code }: { code?: string }) {
           onChange={(e) => setRepeat(e.target.value)}
         />
       </div>
+      {termsVersion ? (
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" className="mt-1" checked={termsAccepted} onChange={(e) => setTermsAccepted(e.target.checked)} />
+          <span>{t("termsAccept", { version: termsVersion })}</span>
+        </label>
+      ) : null}
       <button type="submit" className={ui.primary} disabled={busy}>
         {busy ? t("submitting") : t("submit")}
       </button>

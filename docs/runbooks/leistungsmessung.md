@@ -165,3 +165,10 @@ Hinweise für den Betrieb:
 - Offen: Messung mit 1, 5 und 10 Millionen Zeilen, mit 10 und 50 Mandanten und mit mehreren Celery-Workern
   gegen dieselbe Queue (Messplan in ADR 0021, Zeitpunkt vor G5, Frage AC09-01). Bis dahin ist die Zielgröße
   Phase 4 aus Abschnitt 16 nicht nachgewiesen.
+
+## Welle 15, Paket AD01: Wächterfunktion und Index der Bankumsatzliste
+
+- Migration 0346 ersetzt den Rumpf von `mhvp_journal_line_guard` (gleiche Regeln B02 und B03, getrennte Zweige für INSERT, UPDATE und DELETE, kein `COALESCE` im WHERE) und legt `ix_bank_transaction_booking_date (tenant_id, booking_date)` an. Downgrade stellt den Rumpf aus 0010 wieder her.
+- Nachweis Plan (Test `test_ad01_line_guard.py::test_guard_lookup_uses_primary_key_index`, generischer Plan wie in PL/pgSQL, App-Rolle mit RLS): neu `Index Scan using pk_journal_entry`, `Index Cond: (id = $1)`; alt `Index Cond` nur auf `tenant_id`, `id = COALESCE($1, $2)` als Filter. Das bestätigt die Ursache des Befunds aus ADR 0021.
+- Der Generator `seed_journal_entries` schaltet den Wächter nicht mehr ab (Entwürfe, Zeilen, dann eine Buchung aller Entwürfe). Lasttest `test_bulk_load_200k_lines_with_guard_active` (nur `MHVP_PERF=1`, Schwelle `MHVP_PERF_GUARD_LIMIT`, Vorgabe 300 s). Messwert nachher: in Welle 15 nicht abgeschlossen (Lauf auf geteilter Maschine nach Fristende abgebrochen). Vorher: 3,4 ms je Zeile bei 20.000 Buchungen, 200.000 Zeilen nach mehr als 9 Minuten abgebrochen.
+- ANALYZE nach Massenimporten: Die App-Rolle darf `ANALYZE` nicht ausführen (geprüft: `WARNING: permission denied to analyze "bank_transaction", skipping it`; Eigentümer ist `mhvp_migrator`). Keine Rechteausweitung. Vorgesehen ist ein Wartungsjob über eine Wartungsverbindung mit Eigentümerrechten außerhalb des Workers (zum Beispiel zeitgesteuert auf dem Datenbankhost: `ANALYZE journal_entry, journal_line, bank_transaction` nach CAMT-Import und Immoware24-Vollimport mit mehr als 10.000 geschriebenen Zeilen, sonst nächtlich). Bis zur Umsetzung manuell durch den Betreiber; Autovacuum zieht ohnehin nach.

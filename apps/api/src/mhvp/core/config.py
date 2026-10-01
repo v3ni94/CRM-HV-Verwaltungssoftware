@@ -45,6 +45,12 @@ class Settings(BaseSettings):
     # OpenTelemetry tracing (M9-02, section 16): off unless an OTLP/HTTP endpoint is set.
     otel_endpoint: str | None = None
     otel_service_name: str = "mhvp-api"
+    # GB14-01: portal languages, comma separated codes. Must list the files in
+    # apps/web-portal/messages (a test compares both); validates PATCH /portal/me/locale only.
+    portal_locales: str = "de,en"
+    # GB16-01: lead time in hours before a maintenance window starts from which CRM and portal
+    # show the banner (a window may carry its own value).
+    maintenance_notice_hours: int = Field(default=48, ge=0, le=720)
 
     # Runtime role (mhvp_app): never superuser, never table owner (ADR 0002).
     database_url: SecretStr

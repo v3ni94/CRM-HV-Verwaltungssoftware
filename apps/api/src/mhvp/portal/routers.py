@@ -1441,9 +1441,15 @@ async def me(request: Request, ctx: Portal = Depends(portal_user)) -> dict[str, 
         }
 
 
-# GA11-01: portal languages; a further language needs its message file in the portal and its code
-# here (the code list is the only server side place).
+# GA11-01, GB14-01: portal languages. The portal derives its list from messages/*.json; the API
+# validates against the setting ``MHVP_PORTAL_LOCALES`` (default de,en), so a further language is
+# a message file plus one setting value, no code change.
 PORTAL_LOCALES = ("de", "en")
+
+
+def portal_locales(settings: Settings) -> tuple[str, ...]:
+    codes = tuple(c.strip() for c in settings.portal_locales.split(",") if c.strip())
+    return codes or PORTAL_LOCALES
 
 
 class PortalLocaleIn(_In):
@@ -1455,7 +1461,7 @@ async def set_locale(
     body: PortalLocaleIn, request: Request, ctx: Portal = Depends(portal_user)
 ) -> None:
     principal, account = ctx
-    if body.locale is not None and body.locale not in PORTAL_LOCALES:
+    if body.locale is not None and body.locale not in portal_locales(_settings(request)):
         raise ProblemError(ErrorCodes.VALIDATION, detail="Sprache nicht verfügbar.")
     async with tenant_tx(request, principal) as session:
         row = await session.get(PortalAccount, account.id)
@@ -2352,7 +2358,16 @@ async def _order(session: AsyncSession, o: Any) -> dict[str, Any]:
         # superseded) and the execution photos linked as attachments.
         "appointment_proposals": [_proposal_out(p) for p in proposals],
         "photos": await entity_attachments(session, "work_order", o.id),
+        # AC06: the resident's contact data only with a valid data_sharing consent.
+        "resident_contact": await _resident_contact(session, o),
     }
+
+
+async def _resident_contact(session: AsyncSession, o: Any) -> dict[str, Any]:
+    from mhvp.tickets.order_sharing import order_contact_share
+
+    share = await order_contact_share(session, o)
+    return {"shared": share["shared"], "reason": share["reason"], "contact": share["contact"]}
 
 
 @router.get(

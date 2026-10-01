@@ -2,6 +2,7 @@
 
 import { useFormatter, useTranslations } from "next-intl";
 
+import { OnlineMeetingPanel } from "@/components/portal/OnlineMeetingPanel";
 import type { PortalMeeting } from "@/components/portal/types";
 import { ui } from "@/lib/ui";
 
@@ -46,6 +47,10 @@ export function MeetingList({ rows }: { rows: PortalMeeting[] }) {
               {row.dial_in_access ? <p className="text-sm whitespace-pre-line break-words">{row.dial_in_access}</p> : null}
               {row.dial_in_note ? <p className="text-xs text-subtle">{row.dial_in_note}</p> : null}
             </div>
+          ) : null}
+          {/* AD06: online participation of hybrid or virtual meetings (switch checked by the API). */}
+          {row.mode !== "presence" && (row.status === "invited" || row.status === "held") ? (
+            <OnlineMeetingPanel meetingId={row.id} />
           ) : null}
         </li>
       ))}

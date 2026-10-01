@@ -168,9 +168,33 @@ def test_tool_loop_runs_masks_and_logs(
     assert EMAIL not in str(used[0]["arguments"])
     sent = _all_sent(fake)
     assert "<werkzeugdaten>" in sent
-    assert contact in sent
+    assert "[contact " in sent  # the id itself may be hit by the phone masker
     assert EMAIL not in sent
     assert "777001" not in sent
+    # Hits come back as chat links (no phone or e-mail in the detail) and the reloaded
+    # conversation carries tools_used and the link on the answer message.
+    link = next(x for x in used[0]["links"] if x["type"] == "contact")
+    assert link["id"] == contact
+    assert link["href"] == f"/kontakte/{contact}"
+    assert link["detail"] == ""
+    assert contact in [x["id"] for x in run["links"]]
+    listing = _ok(client.get("/api/v1/ai/conversations", headers=admin), 200)
+    items = listing["items"] if isinstance(listing, dict) else listing
+    conv = next(
+        c
+        for c in (
+            _ok(client.get(f"/api/v1/ai/conversations/{i['id']}", headers=admin), 200)
+            for i in items
+        )
+        if any(m["task_run_id"] == run["id"] for m in c["messages"])
+    )
+    answer = next(
+        m for m in conv["messages"] if m["task_run_id"] == run["id"] and m["role"] == "assistant"
+    )
+    assert [u["tool"] for u in answer["tools_used"]] == ["kontakte"]
+    assert contact in [x["id"] for x in answer["links"]]
+    user_msg = next(m for m in conv["messages"] if m["role"] == "user")
+    assert user_msg["tools_used"] is None
 
 
 def test_tool_loop_ends_at_limits(

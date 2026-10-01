@@ -236,6 +236,11 @@ def log_entry(entry: dict[str, Any], round_: int) -> dict[str, Any]:
         "count": entry["count"],
         "round": round_,
         "hits": [f"{x['type']}:{x['id']}" for x in entry["links"]],
+        # Chat links of the hits (type, id, label, CRM path); no detail, so no phone or e-mail.
+        "links": [
+            {k: x.get(k, "") for k in ("type", "id", "label", "href")} | {"detail": ""}
+            for x in entry["links"]
+        ],
     }
 
 
@@ -341,6 +346,21 @@ def used_tools(ref: dict[str, Any] | None) -> list[dict[str, Any]]:
             "arguments": dict(e.get("arguments") or {}),
             "permitted": bool(e.get("permitted")),
             "count": int(e.get("count") or 0),
+            "links": list(e.get("links") or []),
         }
         for e in (ref or {}).get("tool_calls") or []
     ]
+
+
+def merge_links(links: list[dict[str, Any]], tools: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Message links plus the tool hits (contact, contract, document, property ...), without
+    duplicates; permission checked when the tool ran, the platform builds them (AI-TOOL-01)."""
+    seen = {(x.get("type"), x.get("id")) for x in links}
+    merged = list(links)
+    for tool in tools:
+        for link in tool.get("links") or []:
+            key = (link.get("type"), link.get("id"))
+            if key not in seen and link.get("href"):
+                seen.add(key)
+                merged.append(link)
+    return merged

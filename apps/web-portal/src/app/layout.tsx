@@ -3,6 +3,7 @@ import { Inter } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getLocale, getTranslations } from "next-intl/server";
 
+import { MaintenanceBanner } from "@/components/shell/MaintenanceBanner";
 import { PwaRegister } from "@/components/shell/PwaRegister";
 import { ThemeController } from "@/components/shell/ThemeToggle";
 import { brandingCssVars, fetchPortalBranding } from "@/lib/branding";
@@ -59,7 +60,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           paddingRight: "env(safe-area-inset-right)",
         }}
       >
-        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <NextIntlClientProvider>
+          <MaintenanceBanner />
+          {children}
+        </NextIntlClientProvider>
         <ThemeController />
         <PwaRegister />
       </body>

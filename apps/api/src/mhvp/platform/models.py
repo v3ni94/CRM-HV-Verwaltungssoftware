@@ -7,6 +7,7 @@ tenant scoped.
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
@@ -20,6 +21,7 @@ from sqlalchemy import (
     ForeignKey,
     Index,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -72,12 +74,24 @@ class TenantDomain(IdMixin, TimestampMixin, Base):
     """Host names resolving to a tenant (portal domains, section 3.3)."""
 
     __tablename__ = "tenant_domain"
+    __table_args__ = (
+        CheckConstraint(
+            "verification_status IN ('unverified', 'verified', 'failed')",
+            name="verification_status",
+        ),
+    )
 
     tenant_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), ForeignKey("tenant.id", ondelete="CASCADE"), nullable=False
     )
     host: Mapped[str] = mapped_column(String(253), unique=True, nullable=False)
     purpose: Mapped[str] = mapped_column(String(32), nullable=False, default="portal")
+    # GA01-10: DNS check result (unverified, verified, failed), time and finding.
+    verification_status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="unverified", server_default="unverified"
+    )
+    verification_checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    verification_finding: Mapped[str | None] = mapped_column(Text)
 
 
 class User(IdMixin, TimestampMixin, Base):
@@ -156,6 +170,53 @@ class PlatformAuditEvent(IdMixin, Base):
     payload: Mapped[dict[str, Any]] = mapped_column(
         JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
     )
+
+
+class MaintenanceWindow(IdMixin, TimestampMixin, Base):
+    """Announced maintenance window of the platform (GB16-01, section 16 availability).
+
+    Platform table, no RLS (section 5.3). A window is never deleted, only cancelled, so the audit
+    trail and the availability evaluation (planned downtime) stay traceable.
+    """
+
+    __tablename__ = "platform_maintenance_window"
+    __table_args__ = (
+        CheckConstraint("ends_at > starts_at", name="ck_platform_maintenance_window_period"),
+        CheckConstraint(
+            "notice_hours IS NULL OR (notice_hours >= 0 AND notice_hours <= 720)",
+            name="ck_platform_maintenance_window_notice",
+        ),
+        Index("ix_platform_maintenance_window_starts_at", "starts_at"),
+    )
+
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    text_de: Mapped[str] = mapped_column(Text, nullable=False)
+    text_en: Mapped[str] = mapped_column(Text, nullable=False)
+    notice_hours: Mapped[int | None] = mapped_column(Integer)
+    cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class AvailabilityMeasurement(IdMixin, TimestampMixin, Base):
+    """Monthly availability figure of one measuring point (GB16-02, target 99,5 percent).
+
+    The figure is imported from the external monitoring (Uptime Kuma), never computed or invented
+    here. One row per month and measuring point; changes are recorded in the platform audit.
+    """
+
+    __tablename__ = "platform_availability_measurement"
+    __table_args__ = (
+        UniqueConstraint("month", "probe", name="uq_platform_availability_measurement_month_probe"),
+        CheckConstraint(
+            "uptime_percent >= 0 AND uptime_percent <= 100",
+            name="ck_platform_availability_measurement_percent",
+        ),
+    )
+
+    month: Mapped[date] = mapped_column(Date, nullable=False)
+    probe: Mapped[str] = mapped_column(String(20), nullable=False)
+    uptime_percent: Mapped[Decimal] = mapped_column(Numeric(20, 8), nullable=False)
+    source_note: Mapped[str] = mapped_column(String(200), nullable=False)
 
 
 class Membership(IdMixin, TimestampMixin, Base):

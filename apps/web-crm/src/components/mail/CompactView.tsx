@@ -35,6 +35,9 @@ export type CompactData = {
 
 type Draft = { id: string; status: string };
 
+/** GET /mail/signature/preview: signature of the signed-in user (AD11). */
+type SignaturePreview = { text: string; position_missing?: boolean | null };
+
 /** Compact block above a mail or a ticket's mail thread: summary, CRM hint and reply
  *  proposal. "Kurz senden" creates the reply draft and submits it through the existing path
  *  (POST reply-draft, POST submit); four eyes rule and re-authentication stay on the server
@@ -56,6 +59,18 @@ export function CompactView({
   const [error, setError] = useState<string | null>(null);
 
   const [reload, setReload] = useState(0);
+  const [signature, setSignature] = useState<SignaturePreview | null>(null);
+  useEffect(() => {
+    // AD11: "Kurz senden" signs with the acting user's signature; show it before sending.
+    if (!canUpdate) return;
+    let cancelled = false;
+    void bff<SignaturePreview>("/api/bff/mail/signature/preview").then((res) => {
+      if (!cancelled && res.ok && res.data && typeof res.data === "object" && "text" in res.data) setSignature(res.data);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [canUpdate]);
   useEffect(() => {
     let cancelled = false;
     if (reload === 0) setData(null);
@@ -203,6 +218,18 @@ export function CompactView({
             </p>
           ) : null}
           <textarea className={ui.input} rows={5} value={reply} onChange={(e) => setReply(e.target.value)} aria-label={t("reply")} disabled={!canUpdate} />
+          {signature ? (
+            <div className="flex flex-col gap-1" data-testid="mail-compact-signature">
+              <span className="text-xs font-semibold">{t("signaturePreview")}</span>
+              <pre className="whitespace-pre-wrap break-words text-xs text-muted">{signature.text.replace(/^-- \n/, "")}</pre>
+              {signature.position_missing ? (
+                <p className="text-xs" role="note" data-testid="mail-compact-signature-hint">
+                  {t("signatureMissingPosition")}{" "}
+                  <Link className="underline" href="/einstellungen/profil">{t("signatureEditProfile")}</Link>
+                </p>
+              ) : null}
+            </div>
+          ) : null}
           {canUpdate ? (
             <div className="flex flex-wrap items-center gap-2">
               <button type="button" className={ui.primary} disabled={busy || !reply.trim() || needsApproval} onClick={() => void quickSend()}>

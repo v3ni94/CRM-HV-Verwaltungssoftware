@@ -12,6 +12,9 @@ const ID = "[0-9a-fA-F-]{36}";
 const SECTION = "(participants|meters|rooms|defects|keys|items|notes)";
 const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/me$/ },
+  // AC06 (GA02-06): Annahme der Nutzungsbedingungen des Portals.
+  { method: "GET", pattern: /^portal\/terms$/ },
+  { method: "POST", pattern: /^portal\/terms\/accept$/ },
   // GA11-01: language choice stored at the portal account.
   { method: "PATCH", pattern: /^portal\/me\/locale$/ },
   // Sicherheit (operator 26.09.2026, M2-01): optional second factor and remembered devices of
@@ -47,6 +50,13 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^portal\/account$/ },
   // A51 Portal Eigentümer, lesend: Beschlüsse, Ansprechpartner, Hausgeldkonto.
   { method: "GET", pattern: /^portal\/resolutions$/ },
+  // AD06 / GA11-03: Online-Versammlung (Zusage, Wortmeldung, Vollmacht, Stimmabgabe).
+  { method: "GET", pattern: new RegExp(`^portal/meetings/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^portal/meetings/${ID}/(participation|speaker-requests)$`) },
+  { method: "POST", pattern: new RegExp(`^portal/meetings/${ID}/agenda/${ID}/votes$`) },
+  { method: "GET", pattern: /^portal\/meeting-proxies$/ },
+  { method: "POST", pattern: /^portal\/meeting-proxies$/ },
+  { method: "POST", pattern: new RegExp(`^portal/meeting-proxies/${ID}/revoke$`) },
   { method: "GET", pattern: /^portal\/property-contacts$/ },
   { method: "GET", pattern: /^portal\/hoa-account$/ },
   // P13: Chat zur Meldung (M21-01), Eigentümerübersicht (M21-06, M21-07, SA-05), Einwilligung in

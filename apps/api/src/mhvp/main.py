@@ -94,6 +94,7 @@ from mhvp.hoa.levies import router as hoa_levies_router
 from mhvp.hoa.majority import router as hoa_majority_router
 from mhvp.hoa.meeting_rules import router as hoa_meeting_rules_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
+from mhvp.hoa.online_meeting import router as hoa_online_meeting_router
 from mhvp.hoa.package import router as hoa_package_router
 from mhvp.hoa.reserve_statement import router as hoa_reserve_statement_router
 from mhvp.hoa.reserves import router as hoa_reserves_router
@@ -131,6 +132,7 @@ from mhvp.platform.admin_routers import router as platform_admin_additions_route
 from mhvp.platform.export_routers import router as tenant_export_job_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.licensing import router as licensing_router
+from mhvp.platform.maintenance import router as platform_maintenance_router
 from mhvp.platform.market_readiness import router as market_readiness_router
 from mhvp.platform.overview import router as platform_overview_router
 from mhvp.platform.routers import platform_router, tenant_router
@@ -340,6 +342,7 @@ def create_app(
     app.include_router(advance_proposal_router, prefix=API_PREFIX)
     app.include_router(hoa_router, prefix=API_PREFIX)
     app.include_router(hoa_meetings_router, prefix=API_PREFIX)
+    app.include_router(hoa_online_meeting_router, prefix=API_PREFIX)
     app.include_router(hoa_meeting_rules_router, prefix=API_PREFIX)
     app.include_router(hoa_levies_router, prefix=API_PREFIX)
     app.include_router(hoa_board_router, prefix=API_PREFIX)
@@ -358,6 +361,7 @@ def create_app(
     app.include_router(licensing_router, prefix=API_PREFIX)
     app.include_router(market_readiness_router, prefix=API_PREFIX)
     app.include_router(platform_overview_router, prefix=API_PREFIX)
+    app.include_router(platform_maintenance_router, prefix=API_PREFIX)
     app.include_router(assignment_review_router, prefix=API_PREFIX)
     app.include_router(rule_proposal_router, prefix=API_PREFIX)
     app.include_router(tickets_router, prefix=API_PREFIX)

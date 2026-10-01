@@ -22,7 +22,8 @@ export type PropertyRow = {
 /** Objektliste als Karten (mobil) und Tabelle; Mietverwaltung ohne aktiven Eigentümer trägt
  *  das Kennzeichen "Eigentümer fehlt" (operator 26.09.2026). Deaktivierte Objekte
  *  (operator 27.09.2026) sind grau und tragen den StatusChip Deaktiviert. */
-export function PropertyList({ rows }: { rows: PropertyRow[] }) {
+/** detailBase: Zielpfad je Zeile, Standard Objektakte; die WEG-Liste verweist auf die WEG-Verwaltung. */
+export function PropertyList({ rows, detailBase = "/objekte" }: { rows: PropertyRow[]; detailBase?: string }) {
   const t = useTranslations("Properties");
   return (
     <>
@@ -32,7 +33,7 @@ export function PropertyList({ rows }: { rows: PropertyRow[] }) {
       >
         {rows.map((p) => (
           <li key={p.id} className={`${ui.cardLink} ${p.status === TERMINATED ? "opacity-60" : ""}`} data-testid="property-card" data-status={p.status}>
-            <Link href={`/objekte/${p.id}`} className="flex flex-col gap-1.5">
+            <Link href={`${detailBase}/${p.id}`} className="flex flex-col gap-1.5">
               <span className="flex items-center justify-between gap-2">
                 <span className="font-medium">
                   {p.number} · {p.name}
@@ -75,14 +76,14 @@ export function PropertyList({ rows }: { rows: PropertyRow[] }) {
               <tr key={p.id} className={p.status === TERMINATED ? "text-muted opacity-60" : undefined} data-status={p.status}>
                 <td className="tabular-nums">
                   <Link
-                    href={`/objekte/${p.id}`}
+                    href={`${detailBase}/${p.id}`}
                     className="font-medium hover:underline"
                   >
                     {p.number}
                   </Link>
                 </td>
                 <td>
-                  <Link href={`/objekte/${p.id}`} className="hover:underline">
+                  <Link href={`${detailBase}/${p.id}`} className="hover:underline">
                     {p.name}
                   </Link>
                 </td>

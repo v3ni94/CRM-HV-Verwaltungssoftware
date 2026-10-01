@@ -8,6 +8,7 @@
 * ``/platform/oidc-clients``: OIDC relying parties (list, create, rotate secret, activate).
 """
 
+import asyncio
 import re
 import uuid
 from datetime import UTC, datetime
@@ -42,6 +43,7 @@ from mhvp.core.number_format import (
     preview,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.platform import domain_dns
 from mhvp.platform.models import (
     OidcClient,
     PlatformAuditEvent,
@@ -302,6 +304,9 @@ class TenantDomainOut(BaseModel):
     host: str
     purpose: str
     cname_hint: str
+    verification_status: str = "unverified"
+    verification_checked_at: datetime | None = None
+    verification_finding: str | None = None
 
 
 class TenantDomainIn(BaseModel):
@@ -335,7 +340,44 @@ def _domain_out(request: Request, row: TenantDomain) -> TenantDomainOut:
         host=row.host,
         purpose=row.purpose,
         cname_hint=f"CNAME {row.host} -> {target}",
+        verification_status=row.verification_status,
+        verification_checked_at=row.verification_checked_at,
+        verification_finding=row.verification_finding,
     )
+
+
+@router.post("/platform/domains/{domain_id}/verify", summary="Kundendomain per DNS prüfen")
+async def verify_tenant_domain(
+    domain_id: uuid.UUID,
+    request: Request,
+    principal: Principal = Depends(require_platform_admin),
+) -> TenantDomainOut:
+    """GA01-10: compare CNAME or A record with the platform host; stores status and finding."""
+    crm = getattr(request.app.state.settings, "web_crm_url", None) or ""
+    primary = re.sub(r"^https?://", "", crm).split("/")[0].split(":")[0].lower().rstrip(".")
+    targets = ([primary] if primary else []) + sorted(_platform_hosts(request) - {primary})
+    async with platform_transaction(sessions(request)) as session:
+        row = await session.get(TenantDomain, domain_id)
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        host = row.host
+        if targets:
+            status, finding = await asyncio.to_thread(domain_dns.evaluate, host, targets)
+        else:
+            status, finding = "failed", "Kein Plattformhost konfiguriert."
+        row.verification_status = status
+        row.verification_checked_at = datetime.now(UTC)
+        row.verification_finding = finding
+        _audit(
+            session,
+            principal,
+            "tenant_domain_verified",
+            "tenant",
+            str(row.tenant_id),
+            {"host": host, "status": status, "finding": finding},
+        )
+        await session.flush()
+        return _domain_out(request, row)
 
 
 @router.get(

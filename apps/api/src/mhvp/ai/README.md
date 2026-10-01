@@ -406,3 +406,4 @@ CRM: `EntityDecisions` in `OnboardingExtras.tsx`, eingebunden in `PropertyPropos
 transaction with the caller's principal (`input_ref.tool_grant`, written by `send_message`),
 masks the results (`results_text`) and logs every call in `input_ref.tool_calls`
 (`RunOut.tools_used`). Switch: `models.<tier>.tool_use` of the provider config, default off.
+AD04: `GET /ai/conversations/{id}` returns `MessageOut.tools_used` (optional) and merges the tool hit links (`tool_calls[].links`) into `links` (`tool_use.merge_links`); `ProviderSettings` carries the `tool_use` switch.

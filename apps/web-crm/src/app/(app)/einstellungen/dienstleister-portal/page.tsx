@@ -16,11 +16,13 @@ export default async function PortalProvidersPage() {
   redirectIfUnauthenticated(me.response);
   const permissions = me.data?.permissions ?? [];
   if (!permissions.includes("contacts:update")) notFound();
+  // The legal entity choice needs tenant_settings:read; without it a hint replaces the empty list.
+  const entitiesRestricted = !permissions.includes("tenant_settings:read");
   const [entitiesRes, profilesRes] = await Promise.all([
-    serverFetch("/api/v1/portal-admin/legal-entities"),
+    entitiesRestricted ? Promise.resolve(null) : serverFetch("/api/v1/portal-admin/legal-entities"),
     serverFetch("/api/v1/retention-profiles"),
   ]);
-  const legalEntities = entitiesRes.ok ? ((await entitiesRes.json()) as EntityOption[]) : [];
+  const legalEntities = entitiesRes?.ok ? ((await entitiesRes.json()) as EntityOption[]) : [];
   const profiles = profilesRes.ok ? ((await profilesRes.json()) as { document_class: string }[]) : [];
   const documentClasses = [...new Set(profiles.map((p) => p.document_class))].sort();
   return (
@@ -30,7 +32,12 @@ export default async function PortalProvidersPage() {
         title={t("title")}
         description={t("description")}
       />
-      <PortalProviderAdmin canManage legalEntities={legalEntities} documentClasses={documentClasses} />
+      <PortalProviderAdmin
+        canManage
+        legalEntities={legalEntities}
+        documentClasses={documentClasses}
+        entitiesRestricted={entitiesRestricted}
+      />
     </div>
   );
 }

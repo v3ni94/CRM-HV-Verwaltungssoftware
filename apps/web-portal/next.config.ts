@@ -1,3 +1,4 @@
+import { readdirSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -7,7 +8,15 @@ import createNextIntlPlugin from "next-intl/plugin";
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../..");
 const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
+// GB14-01: portal languages = files messages/<code>.json (same rule as src/lib/locale-files.ts).
+const portalLocales = readdirSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "messages"))
+  .filter((f) => f.endsWith(".json"))
+  .map((f) => f.slice(0, -".json".length))
+  .sort()
+  .join(",");
+
 const nextConfig: NextConfig = {
+  env: { NEXT_PUBLIC_PORTAL_LOCALES: portalLocales },
   output: "standalone",
   // Test runs may build into their own folder (e.g. .next-e2e) so parallel builds do not collide.
   distDir: process.env.NEXT_DIST_DIR || ".next",

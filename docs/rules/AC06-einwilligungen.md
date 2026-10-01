@@ -4,7 +4,7 @@
 - Geltungsbereich: alle Mandanten; Module contacts (consent, consent_rules), communication (Dispatch, Serienversand), portal (Aktivierung, Zugang).
 - Spezifikation: 6.1 consent (kind data_sharing, portal_terms, email_delivery, marketing), 7.11 S06 (Pflichtverarbeitung nicht ausschließlich auf widerrufliche Einwilligung stützen).
 - Quellenstatus (Anhang C): keine Rechtsquelle im Register für die Einordnung je Zweck. Anforderungstyp Fachliche Umsetzung; die rechtliche Einordnung ist Offene Entscheidung (AC06-01 bis AC06-03). Es werden keine Rechtstexte erstellt.
-- Abnahmefall: kein eigener Fall in Anhang D; Tests in apps/api/tests/integration/test_ac06_consents.py und apps/web-crm/src/components/contacts/SerialDispatchForm.test.tsx.
+- Abnahmefall: kein eigener Fall in Anhang D; Tests in apps/api/tests/integration/test_ac06_consents.py, test_ad03_data_sharing.py, apps/web-portal/src/components/auth/TermsAcceptForm.test.tsx und apps/web-crm/src/components/contacts/SerialDispatchForm.test.tsx.
 
 ## Gültigkeit
 
@@ -31,11 +31,26 @@ GET und PUT /api/v1/consent-policy (lesen contacts:read, setzen contacts:approve
 
 Die Standardwerte sind die restriktive Variante. Eine Erweiterung ist eine Entscheidung des Betreibers nach Klärung von AC06-01 bzw. AC06-02.
 
+## Weitergabestellen data_sharing (AD03)
+
+| Stelle | Prüfung | Ohne Erlaubnis | Protokoll |
+| --- | --- | --- | --- |
+| Auftrag an Dienstleister (tickets, Portal GET /portal/work-orders) | Kontakt des Tickets (Feld contact_id, sonst Ersteller) wird nur mit gültiger data_sharing-Einwilligung weitergegeben; vertragliche Notwendigkeit zählt bei Mandantenregel consent_or_contract. Die Prüfung läuft bei jedem Lesen, ein Widerruf wirkt sofort | Auftrag ohne personenbezogene Felder (resident_contact.contact leer, shared false mit Grund) | Ereignis work_order.contact_data_withheld bzw. work_order.contact_data_shared beim Anlegen, Antwortfeld contact_share |
+| Webhook contact.updated (automation, beim Einreihen in den Ausgang) | Prüfung des betroffenen Kontakts, ausschließlich Einwilligung (keine vertragliche Notwendigkeit) | Nutzlast ohne event.payload und entity, Kennzeichen personal_data_withheld | Ereignis automation.webhook_data_withheld mit Grund data_sharing_consent_missing |
+
+Nur zu contact.updated wird geprüft; andere Ereignisarten behalten ihre Nutzlast (Offen AD03-02).
+
+## Portal Nutzungsbedingungen (AD03)
+
+- Nach der Anmeldung leitet das Portal bei veröffentlichter Fassung ohne Annahme auf /nutzungsbedingungen weiter (Abfrage GET /portal/terms, BFF-Pfade portal/terms und portal/terms/accept). Die Annahme ruft POST /portal/terms/accept mit accept_terms und terms_version.
+- Bei der Aktivierung der Einladung erscheint nach der Antwort MHVP-CONT-0020 die Annahmebox mit der Fassung aus der Fehlermeldung, der nächste Versuch sendet accept_terms und terms_version.
+- Der Text der Nutzungsbedingungen wird nicht von der Plattform erzeugt (AC06-03).
+
 ## Offen
 
-- data_sharing: Einbau der Prüfung an den Weitergabestellen in tickets (Auftrag) und automation (Webhook contact.updated) steht aus (AC06-02).
-- portal_terms: Anzeige und Annahmemaske im Portal (apps/web-portal) sowie Text der Nutzungsbedingungen (AC06-03).
+- data_sharing: Einordnung der Weitergabe an Dienstleister (AC06-02); weitere Weitergabestellen (Export an Dritte, andere Webhook-Ereignisse mit Kontaktbezug) sind nicht geprüft (AD03-02).
+- portal_terms: Text und Fassung der Nutzungsbedingungen (AC06-03); eine öffentliche Abfrage der Fassung vor der Aktivierung fehlt, die Maske liest sie aus der Fehlermeldung (AD03-01).
 
 ## Änderungsgrund
 
-Befund GA02-06 (Lückenliste 01.10.2026): die Arten wurden erfasst, aber nur whatsapp ausgewertet.
+Befund GA02-06 (Lückenliste 01.10.2026): die Arten wurden erfasst, aber nur whatsapp ausgewertet. AD03: Einbau an den Weitergabestellen und Portal-Annahmemaske.

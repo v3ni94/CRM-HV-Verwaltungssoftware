@@ -261,3 +261,8 @@ keine E-Mail-Option, ersatzweise einen Webhook-Kanal auf die Push-URL eines eige
 Kuma-Monitors (Muster wie beim Monitor `Server Skripte`, Abschnitt 5) einrichten, damit der
 Alarm über den bestehenden E-Mail-Weg von Uptime Kuma beim Betreiber ankommt; diese Verknüpfung
 ist noch nicht eingerichtet und wird in `docs/OPEN_QUESTIONS.md` nachgetragen.
+
+## Verfügbarkeitsziel
+
+Das Ziel 99,5 Prozent je Monat, die Messpunkte, die Monatsauswertung und die Ankündigung von
+Wartungsfenstern stehen in `verfuegbarkeit.md` (Befunde GB16-01 und GB16-02).

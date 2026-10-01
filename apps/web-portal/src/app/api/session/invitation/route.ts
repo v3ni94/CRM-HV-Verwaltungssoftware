@@ -9,7 +9,14 @@ export async function POST(request: Request): Promise<Response> {
   if ("error" in parsed) return parsed.error;
   try {
     const { data, error, response } = await publicApi().POST("/api/v1/portal/invitations/accept", {
-      body: { token: str(parsed.body.token), password: str(parsed.body.password) },
+      body: {
+        token: str(parsed.body.token),
+        password: str(parsed.body.password),
+        // AC06: acceptance of the published terms version (only sent when the form has it).
+        ...(parsed.body.accept_terms === true
+          ? { accept_terms: true, terms_version: str(parsed.body.terms_version) }
+          : {}),
+      },
     });
     if (!data) return relayProblem(response.status, error);
     return NextResponse.json({ status: data.status }, { headers: { "cache-control": "no-store" } });

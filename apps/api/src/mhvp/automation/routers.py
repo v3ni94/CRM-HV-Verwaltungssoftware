@@ -51,7 +51,7 @@ from mhvp.automation.services import (
     seal_actions,
 )
 from mhvp.core.auth.principal import TenantPrincipal, get_principal, require_permission, tenant_tx
-from mhvp.core.etag import check_if_match, etag_of
+from mhvp.core.etag import check_if_match, etag_of, load_for_etag
 from mhvp.core.events import emit
 from mhvp.core.listparams import ListParams, ListSpec, sparse, strict_query
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -142,7 +142,14 @@ def _run_out(
     }
 
 
-async def _get_rule(session: AsyncSession, rule_id: uuid.UUID) -> AutomationRule:
+async def _get_rule(
+    session: AsyncSession, rule_id: uuid.UUID, *, lock: bool = False
+) -> AutomationRule:
+    if lock:  # AC01-01: row lock before the If-Match comparison
+        locked: AutomationRule = await load_for_etag(
+            session, AutomationRule, rule_id, detail="Regel nicht gefunden."
+        )
+        return locked
     rule = await session.get(AutomationRule, rule_id)
     if rule is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Regel nicht gefunden.")
@@ -267,7 +274,7 @@ async def patch_rule(
     principal: TenantPrincipal = Depends(MANAGE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        rule = await _get_rule(session, rule_id)
+        rule = await _get_rule(session, rule_id, lock=True)
         check_if_match(if_match, rule.updated_at)  # GA04-06
         values = body.model_dump(exclude_unset=True)
         if "name" in values and values["name"] is not None:

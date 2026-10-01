@@ -286,3 +286,35 @@ def test_sca_due_after_90_days() -> None:
     assert fints_mod.sca_due(date(2026, 6, 29), today)
     assert fints_mod.initial_since(None, today) == date(2026, 6, 30)
     assert fints_mod.initial_since(date(2026, 9, 20), today) == date(2026, 9, 17)
+
+
+def test_legacy_fiducia_and_gad_hosts_are_rebuilt_from_the_atruvia_domain() -> None:
+    """DK list rows still naming the shut down GAD or Fiducia servlet get the Atruvia host of
+    their domain column (operator finding 01.10.2026, Heinsberger Volksbank 39061981)."""
+    gad = fints_mod._parse_line(
+        "39061981=Heinsberger Volksbank|Heinsberg|GENODED1HNB|06|fints1.atruvia.de|"
+        "https://hbci-pintan.gad.de/cgi-bin/hbciservlet|300|300|"
+    )
+    fiducia = fints_mod._parse_line(
+        "50090500=Testbank|Ort|GENODEF1S12|00|fints2.atruvia.de|"
+        "https://hbci11.fiducia.de/cgi-bin/hbciservlet|300|300|"
+    )
+    kept = fints_mod._parse_line(
+        "39060180=Aachener Bank eG|Aachen|GENODED1AAC|06|fints1.atruvia.de|"
+        "https://fints1.atruvia.de/cgi-bin/hbciservlet|300|300|"
+    )
+    no_domain = fints_mod._parse_line(
+        "10000001=Alt|Ort|XXXXDE00|00||https://hbci-pintan.gad.de/cgi-bin/hbciservlet|300|300|"
+    )
+    assert gad is not None
+    assert gad.fints_url == "https://fints1.atruvia.de/cgi-bin/hbciservlet"
+    assert fiducia is not None
+    assert fiducia.fints_url == "https://fints2.atruvia.de/cgi-bin/hbciservlet"
+    assert kept is not None
+    assert kept.fints_url == "https://fints1.atruvia.de/cgi-bin/hbciservlet"
+    assert no_domain is not None
+    assert no_domain.fints_url == "https://hbci-pintan.gad.de/cgi-bin/hbciservlet"
+    live = {inst.blz: inst for inst in fints_mod.load_institutes()}
+    assert live["39061981"].fints_url == "https://fints1.atruvia.de/cgi-bin/hbciservlet"
+    legacy = [i for i in live.values() if i.fints_url and "gad.de" in i.fints_url]
+    assert len(legacy) <= 2  # only rows without a domain column stay on the old host

@@ -277,10 +277,19 @@ Order (every step is recorded, the run is part of the restore protocol):
    review the report (`would_delete`, `absent`, `kept_*`), then
    `python -m mhvp.documents.replay_deletions --journal <Datei> --apply --report <Bericht.json>`.
    The replay deletes only what the journal names, only when the stored hash equals the hash
-   recorded at the original deletion, and never a document with a deletion hold, a blocking
-   retention rule or an open DMS mirror. Each applied deletion and each refusal is written to
-   the event log again (`replay: true`, `journal_event_id`). Exit code 1 means entries were
-   kept for review; they are listed with their reason.
+   recorded at the original deletion, and never a document with a deletion hold or a blocking
+   retention rule. A DMS mirror (Paperless, Google Drive) no longer blocks the replay (M6-03,
+   decision 26.09.2026): the replay deletes mirrored documents like the regular deletion,
+   writes the mirror steps (`document_mirror_deletion`, event
+   `document.mirror_delete_requested`) in the same transaction and queues them after the commit.
+   The mirror steps run through the Celery task `mhvp.documents.delete_mirror` (Drive copy
+   deleted, Paperless document tagged "gelöscht"); until both succeed the deletion counts as
+   open and is retried by the standard ladder. Steps that were already done before the backup
+   are reset to `open` after the restore (`reset_after_restore`, AC07). Each applied deletion
+   and each refusal is written to the event log again (`replay: true`, `journal_event_id`).
+   Exit code 1 means entries were kept for review; they are listed with their reason. Check
+   the state per document in the deletion checklist (section "Löschcheckliste, Nachlauf und
+   Backups (AC07, GA08-08)" below, `GET /api/v1/documents/deletions/{id}/checklist`).
 4. **Prüfung:** compare the report with the journal (every `document.deleted` entry is
    `deleted` or `absent`, or has a documented reason), check `kept_hold` entries with the
    person responsible for the hold, and file the report with the restore protocol. Only then

@@ -331,6 +331,20 @@ geändert hat, keine zweite Signatur. Ein eingefügter Fremdtext mit Trennzeile 
 Signatur beim Einreichen; das ist vor der Freigabe im Text sichtbar. Beim Anfügen entfallen
 die Platzhalterzeilen `[Name]` und `[Firma]` der Antwortvorlagen.
 
+Kurz senden (AD11, Betreiber 01.10.2026): Die Kompaktansicht legt den Entwurf über `POST
+/mail/messages/{id}/reply-draft` mit dem Vorschlagstext an und reicht ihn über `POST
+/mail/messages/{id}/submit` ein. Signiert wird immer mit dem angemeldeten Nutzer
+(`TenantPrincipal.user_id`, Position und Durchwahl aus dessen Mitgliedschaft, Firmendaten des
+Mandanten); ein offener Entwurf wird nur wiederverwendet, wenn ihn derselbe Nutzer angelegt
+hat. Beim Anlegen entfernt `strip_closing_names` den zusammenhängenden Namensblock direkt nach
+der letzten Grußformel, sofern er nur Anzeigenamen von Mitgliedern des Mandanten, den
+Firmennamen oder `[Name]`/`[Firma]` enthält (KI-Vorschläge mit eigener Grußformel). Beim
+Einreichen wird nichts entfernt, nur eine fehlende Signatur ergänzt. Die Vorschau liefert
+`position_missing` (keine Position, nicht beim Einzelunternehmen); die Kompaktansicht zeigt den
+Signaturblock und dann einen Hinweis mit Link auf das eigene Profil (`PUT
+/mail/signature/profile`). Tests: `tests/integration/test_ad11_compact_signature.py`,
+`tests/unit/test_ad11_closing_names.py`.
+
 Versand nur als `text/plain`: Die HTML-Signatur (`with_signature_html`, Feld `html` der
 Vorschau, Kennlinie, Logo aus `logo_url`, eigene HTML-Vorlage) ist nur Vorschau und wird nicht
 versendet. Das Feld `text` der Vorschau entspricht dem Block, der in ausgehende Mails

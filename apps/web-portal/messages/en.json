@@ -697,6 +697,44 @@
       "closed": "closed"
     }
   },
+  "OnlineMeeting": {
+    "title": "Online participation",
+    "load": "Show online participation",
+    "disabled": "Online participation is not enabled for this meeting.",
+    "conference": "Open video conference",
+    "confirm": "Confirm online participation",
+    "confirmed": "Online participation confirmed",
+    "speak": "Request to speak",
+    "speakOpen": "Your request to speak is recorded.",
+    "agenda": "Agenda",
+    "unit": "Unit {number}",
+    "represented": "represented",
+    "voted": "voted",
+    "state": {
+      "not_opened": "Voting not opened yet",
+      "open": "Voting open",
+      "closed": "Voting closed",
+      "announced": "Result announced"
+    },
+    "choice": {
+      "yes": "Yes",
+      "no": "No",
+      "abstain": "Abstain"
+    },
+    "result": "Result: yes {yes}, no {no}, abstain {abstain}",
+    "proxyTitle": "Grant proxy",
+    "proxyUnit": "For unit",
+    "proxyKind": "Proxy holder",
+    "proxyOwner": "Owner of another unit",
+    "proxyManager": "Management",
+    "proxyTarget": "Unit of the proxy holder",
+    "proxyFrom": "Valid from",
+    "proxyTo": "Valid until (optional)",
+    "proxyFile": "Proxy document (PDF or photo)",
+    "proxySubmit": "Grant proxy",
+    "proxyDone": "Proxy granted.",
+    "error": "The action failed: {message}"
+  },
   "Resolutions": {
     "title": "Resolutions",
     "intro": "Announced resolutions of your community. The resolution collection of the management remains authoritative.",
@@ -918,7 +956,21 @@
     "passwordTooShort": "The password needs at least 12 characters.",
     "passwordMismatch": "The passwords do not match.",
     "done": "Your access is active. Please sign in with e-mail and password now.",
-    "toLogin": "To sign in"
+    "toLogin": "To sign in",
+    "termsNeeded": "Activation requires acceptance of the terms of use.",
+    "termsAccept": "I have read the terms of use (version {version}) and accept them.",
+    "termsMissingVersion": "The version of the terms of use could not be determined. Please ask your property manager."
+  },
+  "Terms": {
+    "title": "Terms of use",
+    "hint": "Using the portal requires acceptance of the terms of use.",
+    "version": "Version: {version}",
+    "accept": "I have read the terms of use and accept them.",
+    "submit": "Accept and continue",
+    "submitting": "Please wait",
+    "mustAccept": "Please confirm that you accept the terms of use.",
+    "loadFailed": "The status of the terms of use could not be loaded.",
+    "alreadyAccepted": "The terms of use have been accepted."
   },
   "Security": {
     "passkeysTitle": "Passkeys (second factor)",
@@ -1065,5 +1117,10 @@
       "available": "Available",
       "unavailable": "Not available"
     }
+  },
+  "AD10": {
+    "bannerAnnounced": "Planned maintenance.",
+    "bannerActive": "Maintenance in progress.",
+    "bannerPeriod": "Period: {from} to {to} (Berlin time)"
   }
 }

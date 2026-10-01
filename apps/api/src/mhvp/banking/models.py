@@ -141,6 +141,7 @@ class BankTransaction(IdMixin, TimestampMixin, TenantMixin, Base):
             postgresql_where=text("bank_reference IS NOT NULL"),
         ),
         Index("ix_bank_transaction_hash", "tenant_id", "property_bank_account_id", "hash"),
+        Index("ix_bank_transaction_booking_date", "tenant_id", "booking_date"),
     )
 
     property_bank_account_id: Mapped[uuid.UUID] = _fk("property_bank_account.id")

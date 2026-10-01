@@ -10,7 +10,7 @@ import { ui } from "@/lib/ui";
 
 const TIERS = ["small", "large", "embedding"] as const;
 type Tier = (typeof TIERS)[number];
-type TierForm = { model: string; input: string; output: string; maxOutput: string };
+type TierForm = { model: string; input: string; output: string; maxOutput: string; toolUse: boolean };
 /** Tiers that answer prompts; the connection test and the output limit apply to these only. */
 const PROMPT_TIERS: readonly Tier[] = ["small", "large"];
 const INTEGER = /^\d+$/;
@@ -24,7 +24,7 @@ const norm = (v: string) => v.trim().replace(",", ".");
 function tierOf(models: Record<string, unknown>, tier: Tier): TierForm {
   const m = (models[tier] ?? {}) as Record<string, unknown>;
   const s = (v: unknown) => (v === undefined || v === null ? "" : String(v));
-  return { model: s(m.model), input: s(m.input_eur_per_mtok), output: s(m.output_eur_per_mtok), maxOutput: s(m.max_output_tokens) };
+  return { model: s(m.model), input: s(m.input_eur_per_mtok), output: s(m.output_eur_per_mtok), maxOutput: s(m.max_output_tokens), toolUse: m.tool_use === true };
 }
 
 /** Provider configuration (9.2): only the Anthropic adapter exists in the API so far. */
@@ -47,7 +47,7 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<ProviderTest | null>(null);
 
-  const setTier = (tier: Tier, key: keyof TierForm, value: string) =>
+  const setTier = (tier: Tier, key: Exclude<keyof TierForm, "toolUse">, value: string) =>
     setTiers((prev) => ({ ...prev, [tier]: { ...prev[tier], [key]: value } }));
 
   const validate = (): string | null => {
@@ -91,6 +91,8 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
           input_eur_per_mtok: norm(f.input),
           output_eur_per_mtok: norm(f.output),
           ...(PROMPT_TIERS.includes(tier) && limit ? { max_output_tokens: Number(limit) } : {}),
+          // Lookup tools of the chat (AI-TOOL-01); only sent when on, off is the default.
+          ...(PROMPT_TIERS.includes(tier) && f.toolUse ? { tool_use: true } : {}),
         };
       }
     }
@@ -193,6 +195,19 @@ export function ProviderSettings({ provider: name, initial }: { provider: "anthr
                 </label>
                 <input id={`max-${tier}`} inputMode="numeric" className={ui.input} value={tiers[tier].maxOutput} placeholder="16000" onChange={(e) => setTier(tier, "maxOutput", e.target.value)} />
                 <p className={ui.help}>{t("maxOutputHint")}</p>
+              </div>
+            ) : null}
+            {PROMPT_TIERS.includes(tier) ? (
+              <div className="sm:col-span-4">
+                <label className="flex items-center gap-2 text-sm">
+                  <input
+                    type="checkbox"
+                    checked={tiers[tier].toolUse}
+                    onChange={(e) => setTiers((prev) => ({ ...prev, [tier]: { ...prev[tier], toolUse: e.target.checked } }))}
+                  />
+                  {t("toolUse", { tier: t(`tier.${tier}`) })}
+                </label>
+                <p className={ui.help}>{t("toolUseHint")}</p>
               </div>
             ) : null}
           </div>

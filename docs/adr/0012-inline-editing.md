@@ -57,3 +57,18 @@ overwrite concurrent changes of other fields.
 - Reads send `ETag`, writes return the new `ETag`. Authorization (403), property assignment
   (404) and validation (422) are checked before the lock.
 - Making `If-Match` mandatory is a product decision and stays open.
+
+## Addendum 01.10.2026 (package AD02, AC01-01): If-Match under row lock
+
+- Rule: every `If-Match` comparison runs against a row loaded `FOR UPDATE` in the same
+  transaction. Two concurrent writes with the same ETag are serialised: the first commits,
+  the second waits, then sees the new `updated_at` and answers 412. Without the lock both
+  could pass the check (lost update despite the version check).
+- Helper: `mhvp.core.etag.load_for_etag(session, model, id, tenant_id=None)` loads with
+  `with_for_update=True` and answers 404 when the row is missing or belongs to another
+  tenant (RLS hides it; the optional `tenant_id` is an extra check). Domain helpers gained a
+  keyword `lock=True` (`automation._get_rule`, `contracts._get`, `documents._get`); message,
+  mailbox and payment order helpers already locked. Names of existing symbols unchanged.
+- 403, property assignment (404) and validation (422) unchanged. No migration (0347 is a
+  placeholder). Test: `tests/integration/test_ad02_etag_lock.py` (two threads, one 200, one
+  412).

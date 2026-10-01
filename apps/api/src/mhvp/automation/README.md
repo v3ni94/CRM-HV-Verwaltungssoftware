@@ -179,3 +179,9 @@ Geschlossene Liste `models.RECORD_FIELDS`: Auftrag (`status` nur `requested` ode
 - GA12-01: `job_allowed` wird jetzt auch in `documents.process_inbox` (Schlüssel `documents-process-inbox`), im geplanten Abstimmungsbericht (`imports-reconciliation-report`, nur Auslöser `beat`, ein manueller Lauf bleibt möglich) und im Zahllauf (`payments-payment-run-preview`, neu im `JOB_CATALOG`, nur Vorschau) geprüft. `ops-backup-verify` ist plattformweit und nicht mehr im Katalog.
 - GA12-06: `in_window` löst die Startzeit auf einen echten Zeitpunkt (erste Entsprechung, UTC) auf; am 25.10.2026 öffnet das Fenster einmal, nicht in beiden Stunden 02:00, am 29.03.2026 verschiebt sich eine Startzeit in der fehlenden Stunde auf den ersten gültigen Zeitpunkt. `lock_job` (Advisory Lock je Mandant und Job) serialisiert planmäßigen und manuellen Lauf; Mahnlauf und Zahllauf Vorschau legen je Mandant und Tag nur einen geplanten Lauf an. Tests: `tests/integration/test_ga12_jobs.py`.
 - GA12-02, GA12-03: CRM `/einstellungen/automatisierung` zeigt unter den Regeln die Tabelle der Standardjobs (Schalter, Uhrzeit HH:MM, `JobSchedulesAdmin`), im Regelformular den Schalter Testmodus (nur Protokoll), in der Regelliste die Kennzeichnung und im Protokoll den Ergebnisfilter (Testlauf).
+
+## Data sharing for webhooks (AD03, GA02-06)
+
+A rule webhook for `contact.updated` is queued without `event.payload` and `entity` (flag
+`personal_data_withheld`) when the contact has no valid `data_sharing` consent; the reason is
+logged as event `automation.webhook_data_withheld`. Rule: docs/rules/AC06-einwilligungen.md.

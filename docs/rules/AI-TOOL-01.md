@@ -32,3 +32,9 @@
   zeigt "Verwendete Nachschlagewerkzeuge".
 - Die Schnittstelle ist anbieterneutral: das Modell fordert Werkzeuge im strukturierten
   Antwortschema an (`tool_calls`). Native Tool-Use-Parameter der Anbieter werden nicht genutzt.
+
+## Nachtrag AD04 (Migration 0349, noop)
+
+- Einstellungsmaske: `ProviderSettings` bietet den Schalter `tool_use` je Prompt-Stufe, Standard aus; die Freigaberegeln der Anbieterfelder (Vier-Augen-Freigabe, AVV) gelten unverändert (Entscheidung AC08-01 offen).
+- Verlauf: `GET /ai/conversations/{id}` liefert `tools_used` je Antwortnachricht (optional, `null` ohne Lauf).
+- Links: `input_ref.tool_calls[].links` (Typ, Id, Bezeichnung, CRM-Pfad, ohne Detail) werden als `ChatLink` mit den Nachrichtenlinks zusammengeführt (`GET /ai/runs/{id}`, Konversation); nur die Plattform erzeugt Links, Rechte wurden beim Werkzeuglauf geprüft.

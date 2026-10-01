@@ -146,3 +146,9 @@ als Sie: Werkzeuge ohne Ihre Berechtigung liefern nichts. Unter der Antwort steh
 "Verwendete Nachschlagewerkzeuge" mit Werkzeug, Suchtext (E-Mail, Telefon und Anschrift
 maskiert) und Trefferzahl. Je Frage sind höchstens sechs Abfragen möglich. Die Antwort bleibt
 ein Vorschlag; Änderungen entstehen weiterhin nur über bestätigte Vorschläge.
+
+## Nachschlagewerkzeuge: Schalter, Verlauf und Links (Nachtrag 01.10.2026)
+
+* Schalter: Unter Einstellungen, KI-Anbieter gibt es je Stufe (klein, groß) die Option "Werkzeuge (Tool Use) für Stufe ... erlauben". Standard aus. Wie alle Anbieterfelder hebt jede Änderung eine bestehende Freigabe auf; wirksam wird sie erst nach der Freigabe im Vier-Augen-Prinzip mit AVV-Nachweis. Ob und für welchen Mandanten das Nachschlagen eingeschaltet wird, ist eine offene Entscheidung des Betreibers (AC08-01).
+* Verlauf: Auch in einem wieder geöffneten Chat steht unter jeder Antwort, welche Nachschlagewerkzeuge verwendet wurden, mit Suchtext und Trefferzahl.
+* Links: Treffer der Werkzeuge (Kontakt, Vertrag, Dokument, Objekt und weitere) erscheinen unter der Antwort als Links in die jeweilige Akte. Die Links erzeugt die Plattform nach Prüfung Ihrer Rechte, nicht das Modell. Kontakttreffer zeigen keine Telefonnummer und keine E-Mail-Adresse.
