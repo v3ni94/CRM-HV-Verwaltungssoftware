@@ -104,7 +104,7 @@ class FastTableImportOut(BaseModel):
     enabled: bool
 
 
-class AutomationIn(_In):
+class AiAutomationIn(_In):
     """Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged."""
 
     rent_increase_check: bool | None = None

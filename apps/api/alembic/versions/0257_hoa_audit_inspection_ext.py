@@ -77,7 +77,11 @@ def downgrade() -> None:
     for statement in drop_tenant_rls_statements(EVENT):
         op.execute(statement)
     op.drop_table(EVENT)
+    # RLS is forced on the table, so the migrator sees no rows: lift the force for the delete
+    # and restore it afterwards (as in 0139, 0151, 0203 and 0213).
+    op.execute("ALTER TABLE hoa_inspection_event NO FORCE ROW LEVEL SECURITY")
     op.execute("DELETE FROM hoa_inspection_event WHERE kind = 'revoked'")
+    op.execute("ALTER TABLE hoa_inspection_event FORCE ROW LEVEL SECURITY")
     op.drop_constraint(f"ck_{INSPECTION_EVENT}_kind", INSPECTION_EVENT, type_="check")
     op.create_check_constraint(
         f"ck_{INSPECTION_EVENT}_kind",

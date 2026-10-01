@@ -24415,6 +24415,16 @@ export interface components {
             title: string;
         };
         /**
+         * AiAutomationIn
+         * @description Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged.
+         */
+        AiAutomationIn: {
+            /** Batch Mail Classification */
+            batch_mail_classification?: boolean | null;
+            /** Rent Increase Check */
+            rent_increase_check?: boolean | null;
+        };
+        /**
          * AiKnowledgeKind
          * @enum {string}
          */
@@ -25299,6 +25309,13 @@ export interface components {
         AutomationActivateIn: {
             /** Active */
             active: boolean;
+        };
+        /** AutomationIn */
+        AutomationIn: {
+            /** Enabled */
+            enabled: boolean;
+            /** Reason */
+            reason: string;
         };
         /** AutomationOut */
         AutomationOut: {
@@ -45424,16 +45441,6 @@ export interface components {
             /** Tag */
             tag?: string | null;
         };
-        /**
-         * AutomationIn
-         * @description Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged.
-         */
-        mhvp__ai__schemas__AutomationIn: {
-            /** Batch Mail Classification */
-            batch_mail_classification?: boolean | null;
-            /** Rent Increase Check */
-            rent_increase_check?: boolean | null;
-        };
         /** ProviderIn */
         mhvp__ai__schemas__ProviderIn: {
             /**
@@ -45500,13 +45507,6 @@ export interface components {
             };
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
-        };
-        /** AutomationIn */
-        mhvp__banking__routers__AutomationIn: {
-            /** Enabled */
-            enabled: boolean;
-            /** Reason */
-            reason: string;
         };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
@@ -52676,7 +52676,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__ai__schemas__AutomationIn"];
+                "application/json": components["schemas"]["AiAutomationIn"];
             };
         };
         responses: {
@@ -55217,7 +55217,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["mhvp__banking__routers__AutomationIn"];
+                "application/json": components["schemas"]["AutomationIn"];
             };
         };
         responses: {

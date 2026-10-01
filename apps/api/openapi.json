@@ -1886,6 +1886,36 @@
         "title": "AgendaIn",
         "type": "object"
       },
+      "AiAutomationIn": {
+        "additionalProperties": false,
+        "description": "Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged.",
+        "properties": {
+          "batch_mail_classification": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Batch Mail Classification"
+          },
+          "rent_increase_check": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rent Increase Check"
+          }
+        },
+        "title": "AiAutomationIn",
+        "type": "object"
+      },
       "AiKnowledgeKind": {
         "enum": [
           "filing_rule",
@@ -4506,6 +4536,27 @@
           "active"
         ],
         "title": "AutomationActivateIn",
+        "type": "object"
+      },
+      "AutomationIn": {
+        "additionalProperties": false,
+        "properties": {
+          "enabled": {
+            "title": "Enabled",
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "enabled",
+          "reason"
+        ],
+        "title": "AutomationIn",
         "type": "object"
       },
       "AutomationOut": {
@@ -67422,36 +67473,6 @@
         "title": "WorkspaceBulkIn",
         "type": "object"
       },
-      "mhvp__ai__schemas__AutomationIn": {
-        "additionalProperties": false,
-        "description": "Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged.",
-        "properties": {
-          "batch_mail_classification": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Batch Mail Classification"
-          },
-          "rent_increase_check": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Rent Increase Check"
-          }
-        },
-        "title": "AutomationIn",
-        "type": "object"
-      },
       "mhvp__ai__schemas__ProviderIn": {
         "additionalProperties": false,
         "properties": {
@@ -67656,27 +67677,6 @@
           "released_by"
         ],
         "title": "ProviderOut",
-        "type": "object"
-      },
-      "mhvp__banking__routers__AutomationIn": {
-        "additionalProperties": false,
-        "properties": {
-          "enabled": {
-            "title": "Enabled",
-            "type": "boolean"
-          },
-          "reason": {
-            "maxLength": 2000,
-            "minLength": 3,
-            "title": "Reason",
-            "type": "string"
-          }
-        },
-        "required": [
-          "enabled",
-          "reason"
-        ],
-        "title": "AutomationIn",
         "type": "object"
       },
       "mhvp__contacts__schemas__BankAccountIn": {
@@ -79731,7 +79731,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__ai__schemas__AutomationIn"
+                "$ref": "#/components/schemas/AiAutomationIn"
               }
             }
           },
@@ -83389,7 +83389,7 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/mhvp__banking__routers__AutomationIn"
+                "$ref": "#/components/schemas/AutomationIn"
               }
             }
           },

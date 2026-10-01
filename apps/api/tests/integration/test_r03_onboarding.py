@@ -25,7 +25,6 @@ from tests.integration.test_m7_ai import (
     _setup_provider,
     _unit,
     _upload,
-    _world,
 )
 
 pytestmark = pytest.mark.integration
@@ -33,14 +32,31 @@ IBAN = "DE02120300000000202051"
 
 
 async def _world_with_reader(settings: Any) -> World:
+    # Own tenants and users: ``_world`` of test_m7_ai is not reusable in the same process
+    # (slugs and e-mail addresses are derived from the module constant RUN).
+    from mhvp.core import crypto
     from mhvp.core.db.engine import create_app_engine, create_session_factory
     from mhvp.platform import services
-    from tests.integration.test_m2_platform import PASSWORD
+    from tests.integration.test_m2_platform import PASSWORD, RUN, World
 
-    world = await _world(settings)
+    crypto.set_master_key(b"k" * 32)
     engine = create_app_engine(settings)
     try:
         factory = create_session_factory(engine)
+        a, _ = await services.provision_tenant(factory, slug=f"r03-{RUN}", name=f"R03 {RUN}")
+        b, _ = await services.provision_tenant(factory, slug=f"r03b-{RUN}", name=f"R03 B {RUN}")
+        world = World(tenant_a=a, tenant_b=b, app_url=settings.database_url.get_secret_value())
+        for name, tenant, role in [
+            ("r03admin", a, "tenant_admin"),
+            ("r03other", b, "tenant_admin"),
+        ]:
+            uid = await services.create_user(
+                factory, email=world.email(name), display_name=name, password=PASSWORD
+            )
+            world.users[name] = uid
+            await services.add_member(
+                factory, tenant_id=tenant, user_id=uid, role_codes=[role], actor_user_id=None
+            )
         uid = await services.create_user(
             factory, email=world.email("r03reader"), display_name="Lesend", password=PASSWORD
         )
@@ -229,9 +245,9 @@ def test_onboarding_extras_validation(client: TestClient, world: World, fake: Fa
 
 
 def test_takeover_tickets_from_open_points(client: TestClient, world: World) -> None:
-    admin = bearer(login(client, world, "m7admin"))
+    admin = bearer(login(client, world, "r03admin"))
     clerk = bearer(login(client, world, "r03reader"))
-    other = bearer(login(client, world, "m7other"))
+    other = bearer(login(client, world, "r03other"))
     prop = _ok(
         client.post(
             "/api/v1/properties",
@@ -284,9 +300,9 @@ def test_takeover_tickets_from_open_points(client: TestClient, world: World) -> 
 
 
 def test_person_match_batch_preview(client: TestClient, world: World) -> None:
-    admin = bearer(login(client, world, "m7admin"))
+    admin = bearer(login(client, world, "r03admin"))
     other = bearer(login(client, world, "r03reader"))
-    foreign = bearer(login(client, world, "m7other"))
+    foreign = bearer(login(client, world, "r03other"))
     name = f"Batchtest{IBAN[-4:]}"
     _ok(
         client.post(

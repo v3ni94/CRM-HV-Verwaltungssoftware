@@ -423,7 +423,7 @@ async def get_automation(
 
 @router.put("/ai/automation", summary="Schalter der automatischen KI-Läufe setzen")
 async def put_automation(
-    body: s.AutomationIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+    body: s.AiAutomationIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
 ) -> s.AutomationOut:
     """R09: automatic proposal for rent increase cases and the nightly mail classification
     (default off). Neither switch opens the provider release; the gateway still checks it."""

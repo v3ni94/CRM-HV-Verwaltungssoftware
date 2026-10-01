@@ -65,7 +65,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    # RLS is forced on the table, so the migrator sees no rows: lift the force for the delete
+    # and restore it afterwards (as in 0139, 0151, 0203 and 0213).
+    op.execute(f"ALTER TABLE {EVENT} NO FORCE ROW LEVEL SECURITY")
     op.execute(f"DELETE FROM {EVENT} WHERE kind IN ('notified', 'owner_check')")  # noqa: S608
+    op.execute(f"ALTER TABLE {EVENT} FORCE ROW LEVEL SECURITY")
     op.drop_constraint("kind", EVENT, type_="check")
     # Restore the doubled name that 0257 created (its downgrade drops exactly that name).
     op.create_check_constraint(
