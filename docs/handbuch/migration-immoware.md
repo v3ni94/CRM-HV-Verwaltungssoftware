@@ -4,8 +4,10 @@ Stand 29.09.2026. Die Seite Importe, Migration von Immoware24 führt je Objekt u
 Buchungskreis durch die Übernahme zum Stichtag: Migrationsjournal einlesen, Eröffnungssalden
 erfassen und durch eine zweite Person freigeben, buchen, Abgleich mit Nulldifferenzprüfung,
 Wechsel des führenden Systems. Grundlage ist Abschnitt 6.9.10 des Master-Prompts (Regel
-M8-05). Solange die Umstellung nicht freigegeben ist, bleibt Immoware24 führend; nur das
-führende System mahnt und zieht ein.
+M8-05). Immoware24 ist kein dauerhaft führendes System: Die Daten werden einmalig als Grundlage
+übernommen, die Buchhaltung wird danach ausschließlich im CRM geführt (Betreiberentscheidung
+01.10.2026, B27). Bis zur freigegebenen Umstellung eines Buchungskreises mahnt und zieht das CRM
+nicht ein, damit keine Doppelwirkung mit dem Altbestand entsteht.
 
 ## Voraussetzungen
 

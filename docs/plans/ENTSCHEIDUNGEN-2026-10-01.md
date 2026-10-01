@@ -38,6 +38,7 @@ Empfehlung: Profil accounting_records nach Bestätigung durch den Steuerberater 
 | C Ohne Freigabe weiterlaufen | keiner | mittel, G1 bleibt blockiert |
 
 ### M11-09-01 Immoware24-Umsatzexport (Eigentümer Timo Müller)
+Betreiberhinweis 01.10.2026 (B27): Immoware24 ist nur einmalige Datengrundlage, das CRM führt die Buchhaltung später allein. Damit ist Alternative A bestätigt, eine Rücknahme von Bankimporten über Immoware24 entfällt.
 Ergebnis: Import mit Vorschau und generischem Mapping; Spaltennamen, Dezimal- und Datumsformat sind mangels Beispieldatei nicht belegt. Bankdatei-Importe haben keine Rücknahme über den Import-Undo.
 Empfehlung: Eine echte Exportdatei bereitstellen; Rücknahme von Bankimporten vorerst nicht bauen, da Buchungen ohnehin nur per Storno korrigiert werden.
 
