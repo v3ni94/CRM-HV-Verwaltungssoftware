@@ -363,3 +363,17 @@ Kontakt, sonst wird ein unvollständiger Kontakt angelegt (Hinweis bei Vorschlag
 * Rent increase AI check (M26-01): task `rent_increase_check` (migration 0275), `rent_increase_check.py`, endpoints `POST`/`GET /letting/rent-increases/{id}/ai-check`; hint proposals are refused by `apply` (409).
 * Portal chat pre-qualification (M21-01): `portal_prequalify.py`, called from `mhvp.portal.chat.prequalify` when switch and gateway gate are open.
 * Historical bank assignments (M8-05): `journal_history.bank_examples` (`migrated_bank_link`) next to the journal examples of `propose_posting`.
+* R09 (package of 01.10.2026): `automation.py` (tenant switches `rent_increase_check` and `batch_mail_classification`, default off, `GET`/`PUT /ai/automation`, stored under `objektakte_classification["ai_automation"]` without migration); `rent_increase_check.auto_queue` for the automatic proposal; `batch.run_callers` connects callers to the nightly collective run (M7-07). See `docs/rules/R09.md`.
+
+## R03 (01.10.2026): Anlage beim Objekt-Onboarding und Abgleichvorschau
+
+`PropertyChoice` (Body von `POST /ai/proposals/{id}/apply`, Feld `property`) nimmt zusätzlich
+`bank_accounts`, `allocation_keys` (alle vier Arten, Werte je Einheitennummer),
+`create_debtor_accounts`, `link_source_documents` (Standard an) und `document_ids` entgegen.
+`imports._apply_onboarding_extras` legt alles in der Transaktion von `apply_property` an und
+protokolliert `property_bank_account`, `ledger`, `ledger_account` und `document_link` als
+`ImportRunItem`; die Rücknahme entfernt sie vor dem Objekt, solange nichts gebucht oder
+zugeordnet wurde. Zusatzrechte: `properties:update` (Konten, Schlüssel), `accounting:create`
+(Debitorenkonten), `documents:update` (Verknüpfungen). `POST /onboarding/person-match-batch`
+liefert den Abgleich für bis zu 500 Personen als Vorschau (Tabelle im Import-Dialog).
+Regel: `docs/rules/R03-onboarding-uebernahme.md`.

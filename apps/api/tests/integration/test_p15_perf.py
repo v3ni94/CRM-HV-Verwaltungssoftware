@@ -5,9 +5,8 @@ PostgreSQL, never in the shared CI run. Each test prints its measurement as a
 
 Targets (16): P95 below 300 ms for a list of 10.000 rows; monthly receivable run of 1.000
 contracts below 2 minutes (covered by ``test_m13_receivables.py::test_a27_...``, 869 units);
-statement of 100 units below 1 minute; bank retrieval of 100 accounts. The seed lives in
-``perf_seed.py``; the last two still lack statement data and a connector stub and are skipped
-with that reason, not faked."""
+statement of 100 units below 1 minute; bank retrieval of 100 accounts (connector stub in
+``tests/bank_connector_stub.py``, no network). The seeds live in ``perf_seed.py``."""
 
 import asyncio
 import os
@@ -31,6 +30,8 @@ pytestmark = [
 ROWS = 10_000
 SAMPLES = 40
 P95_LIMIT_SECONDS = 0.3
+STATEMENT_LIMIT_SECONDS = 60.0
+RETRIEVAL_LIMIT_SECONDS = 60.0  # operator threshold, spec names no limit
 
 
 async def _seed(settings: Any) -> World:
@@ -130,11 +131,104 @@ def test_seed_of_100_units_and_100_bank_accounts(client: TestClient, world: Worl
     )
 
 
-def test_statement_of_100_units_below_one_minute() -> None:
-    pytest.skip(
-        "Seed der 100 Einheiten vorhanden; Abrechnungsdaten (Wirtschaftsplan, Kosten) fehlen (S16-08)"
+def test_statement_of_100_units_below_one_minute(client: TestClient, world: World) -> None:
+    """Statement calculation for a WEG with 100 units (16): below 60 seconds. The seed creates
+    owners, ledger, one posted cost payment and the draft; only ``calculate`` is timed."""
+    from tests.integration.perf_seed import seed_statement_data
+
+    headers = bearer(login(client, world, "perfadmin"))
+    data = seed_statement_data(client, headers)
+    started = time.perf_counter()
+    response = client.post(
+        f"/api/v1/hoa/statements/{data['statement_id']}/calculate", headers=headers
     )
+    seconds = time.perf_counter() - started
+    assert response.status_code == 200, response.text
+    print(  # noqa: T201 - measurement protocol
+        f"PERF statement_calculate units={data['units']} seconds={seconds:.1f}"
+    )
+    assert seconds < STATEMENT_LIMIT_SECONDS
 
 
-def test_bank_retrieval_of_100_accounts() -> None:
-    pytest.skip("Seed der 100 Konten vorhanden; Konnektor-Attrappe für den Abruf fehlt (S16-08)")
+async def _retrieve(
+    settings: Any, tenant_id: Any, account_ids: list[str]
+) -> tuple[int, int, float]:
+    """Retrieval of all accounts through the connector stub into bank_transaction (same import
+    path as the finAPI fetch task); returns accounts, new transactions, seconds."""
+    from datetime import date
+    from uuid import UUID
+
+    from sqlalchemy import select
+
+    from mhvp.banking import services as bank_services
+    from mhvp.banking.models import BankSyncRun
+    from mhvp.core import crypto
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.properties.models import PropertyBankAccount
+    from tests.bank_connector_stub import StubBankConnector
+
+    engine = create_app_engine(settings)
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            rows = list(
+                await session.scalars(
+                    select(PropertyBankAccount).where(
+                        PropertyBankAccount.id.in_([UUID(a) for a in account_ids])
+                    )
+                )
+            )
+            assert len(rows) == len(account_ids)
+            connector = StubBankConnector([r.iban for r in rows])
+            infos = {i.iban: i for i in connector.list_accounts()}
+            started = time.perf_counter()
+            new = 0
+            for row in rows:
+                raw = connector.fetch_transactions(
+                    infos[row.iban], date(2026, 9, 1), date(2026, 9, 30)
+                )
+                run = BankSyncRun(
+                    tenant_id=tenant_id,
+                    property_bank_account_id=row.id,
+                    source="connector_stub",
+                    status="ok",
+                    counts={},
+                )
+                session.add(run)
+                await session.flush()
+                counts = await bank_services.import_finapi_transactions(
+                    session,
+                    tenant_id=tenant_id,
+                    property_bank_account_id=row.id,
+                    legal_entity_id=row.legal_entity_id,
+                    iban_fingerprint=crypto.fingerprint(row.iban),
+                    run=run,
+                    transactions=raw,
+                )
+                new += counts["new"]
+            seconds = time.perf_counter() - started
+            assert connector.fetch_calls == len(rows)
+        return len(rows), new, seconds
+    finally:
+        await engine.dispose()
+
+
+def test_bank_retrieval_of_100_accounts(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """Bank retrieval for 100 accounts with the connector stub (16): the stub delivers 20
+    transactions per account; all must be imported. Limit is an operator threshold."""
+    from tests.integration.perf_seed import ACCOUNTS, seed_bank_accounts
+
+    headers = bearer(login(client, world, "perfadmin"))
+    ids = seed_bank_accounts(client, headers, start=200)
+    assert len(ids) == ACCOUNTS
+    accounts, new, seconds = asyncio.run(
+        _retrieve(_settings(database, redis_url), world.tenant_a, ids)
+    )
+    print(  # noqa: T201 - measurement protocol
+        f"PERF bank_retrieval accounts={accounts} transactions={new} seconds={seconds:.1f}"
+    )
+    assert (accounts, new) == (ACCOUNTS, ACCOUNTS * 20)
+    assert seconds < RETRIEVAL_LIMIT_SECONDS

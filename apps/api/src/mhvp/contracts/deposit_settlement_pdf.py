@@ -37,6 +37,7 @@ CENT = Decimal("0.01")
 INTEREST_MODE_LABELS: dict[str, str] = {
     "individual": "individuell je Jahr erfasst",
     "reference_rate": "gesetzlicher Referenzzinssatz je Jahr",
+    "deposit_rates": "Zinssatz der Kaution mit Gültigkeit ab Datum",
     "none": "ohne Verzinsung",
 }
 

@@ -20,11 +20,16 @@ from mhvp.billing.models import (
 )
 from mhvp.billing.status import StatementStatus, TransitionError, check_transition
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.workspace.services import local_today
 
-router = APIRouter(prefix="/statements", tags=["Abrechnung"])
+# M2-02/S16-02: statements outside the membership's property assignment answer 404.
+STATEMENT_GUARD = property_column_guard({"statement_id": Statement.property_id})
+router = APIRouter(
+    prefix="/statements", tags=["Abrechnung"], dependencies=[Depends(STATEMENT_GUARD)]
+)
 # Issuing, due, result posting and period lock of a rental statement stay behind G3 (M17-01).
 RESULT_GATED = frozenset(
     {
@@ -293,6 +298,20 @@ async def transition(
         if body.target is StatementStatus.LOCKED:
             st.locked_at = datetime.now(UTC)
         await _transition(session, st, body.target, principal, body.note)
+        if body.target is StatementStatus.ISSUED:
+            # Q12 webhook statement.confirmed: a rental statement counts as confirmed when it
+            # is issued (A-R07-01, docs/ASSUMPTIONS.md); the issue itself stays behind G3.
+            from mhvp.core.events import emit
+
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="statement.confirmed",
+                entity_type="statement",
+                entity_id=st.id,
+                actor_user_id=principal.user_id,
+                payload={"kind": "rental", "status": body.target.value},
+            )
         await session.flush()
         return await _out(session, st)
 
@@ -385,6 +404,9 @@ async def list_statements(
         query = select(Statement).order_by(Statement.period_to.desc(), Statement.version.desc())
         if ledger_id is not None:
             query = query.where(Statement.ledger_id == ledger_id)
+        allowed = session_allowed_property_ids(session)  # M2-02/S16-02
+        if allowed is not None:
+            query = query.where(Statement.property_id.in_(allowed))
         rows = (await session.scalars(query.limit(200))).all()
         return [
             {

@@ -169,7 +169,7 @@ export function AuditReportsPanel({ auditId, reports }: { auditId: string; repor
           </li>
         ))}
       </ul>
-      <form onSubmit={createReport} className="flex flex-col gap-2">
+      <form onSubmit={createReport} className="flex flex-col gap-2" aria-label={t("audit.reports.create")}>
         <h3 className="font-medium">{t("audit.reports.create")}</h3>
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("audit.reports.findings")}</span>

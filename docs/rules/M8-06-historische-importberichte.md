@@ -33,3 +33,11 @@
 * Abnahmefälle: `apps/api/tests/integration/test_q08_import_history.py` (Zahlen im Test
   kommentiert), D11 bleibt unberührt.
 * Änderungsgrund: Lückenliste 30.09.2026 M8-02, M8-03, M8-04, M8-06, M8-07.
+
+## Ergänzung Welle 4 (R04, 01.10.2026)
+
+* Geltungsbereich: Prüfbericht Einzelposten gegen Eröffnungsbilanz (M8-07), Kandidatenliste Journalzuordnung (M8-04), Rücknahme der Berichtsarten.
+* Quellenstatus Anhang C: Produktschutz, keine Rechtsnorm. Vorzeichenregel als Annahme A-Q08-01, offen in Q08-03.
+* Regel: Der Prüfbericht vergleicht je Gruppe (Debitoren, Kreditoren, Rücklagen) Offene-Posten-Summe und Salden der Eröffnungsbilanz und korrigiert nie. Die Kandidatenliste nennt Journalbuchungen im Buchungskreis der Bankverbindung mit gleichem Betrag und Datum innerhalb der Toleranz (Standard 3 Tage) und ordnet nie automatisch zu. Die Rücknahme entfernt importierte Konten (nur Prüfstatus entwurf und unverwendet), historische Bankumsätze (nur Status ignoriert), Tickets und Einzelposten; andere bleiben mit Grund.
+* Abnahmefall: tests/integration/test_q08_import_history.py (test_r04_balance_check_candidates_undo).
+* Änderungsgrund: Lückenliste 30.09.2026, M8-04 und M8-07.

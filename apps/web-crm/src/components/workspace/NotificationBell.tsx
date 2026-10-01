@@ -46,6 +46,13 @@ export function NotificationBell() {
     if (result.ok) setItems([]);
   }
 
+  /** Sammelaktion: alle nicht verpflichtenden Benachrichtigungen für einen Zeitraum stummschalten. */
+  async function mute(hours: number | null) {
+    const until = hours === null ? null : new Date(Date.now() + hours * 3_600_000).toISOString();
+    await bff<unknown>("/api/bff/workspace/notifications/mute", { method: "POST", body: JSON.stringify({ muted_until: until }) });
+    setOpen(false);
+  }
+
   /** Operator 26.09.2026: a click opens the subject and marks only this entry as read. */
   function readOne(id: string) {
     setItems((prev) => prev.filter((n) => n.id !== id));
@@ -118,6 +125,21 @@ export function NotificationBell() {
               </button>
             </>
           )}
+          <div className="mt-2 flex flex-wrap items-center gap-1 border-t border-border pt-2 text-xs" data-testid="notification-mute">
+            <span className="text-muted">{t("muteAll")}</span>
+            <button type="button" className={ui.buttonSm} onClick={() => void mute(1)}>
+              {t("mute1h")}
+            </button>
+            <button type="button" className={ui.buttonSm} onClick={() => void mute(24)}>
+              {t("mute1d")}
+            </button>
+            <button type="button" className={ui.buttonSm} onClick={() => void mute(24 * 7)}>
+              {t("mute7d")}
+            </button>
+            <button type="button" className={ui.buttonSm} onClick={() => void mute(null)}>
+              {t("unmute")}
+            </button>
+          </div>
         </div>
       ) : null}
     </div>

@@ -5,6 +5,7 @@ import { EntryActions } from "@/components/accounting/EntryActions";
 import { JournalEntryForm } from "@/components/accounting/JournalEntryForm";
 import { LedgerLockForm } from "@/components/accounting/LedgerLockForm";
 import { OpenItemsTable, type OpenItem } from "@/components/accounting/OpenItemsTable";
+import { YearCarryoverPanel } from "@/components/accounting/YearCarryoverPanel";
 import { SettlementProposalPanel } from "@/components/accounting/SettlementProposalPanel";
 import { TicketsPagination } from "@/components/tickets/TicketsPagination";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -161,6 +162,7 @@ export default async function LedgerPage({
 </div>
         <TicketsPagination page={page} pageSize={PAGE_SIZE} total={journalCount} shown={journalRows.length} buildHref={pageHref} />
       </section>
+      {canCreate ? <YearCarryoverPanel ledgerId={id} defaultYear={new Date().getFullYear() - 1} /> : null}
       {canApprove ? <LedgerLockForm ledgerId={id} lockedUntil={ledger.data.locked_until ?? null} /> : null}
     </div>
   );

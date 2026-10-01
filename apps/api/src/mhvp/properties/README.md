@@ -182,6 +182,9 @@ readings, `bank_connection_id` on bank accounts (migration 0265). Rule:
 Sieben Kategorien (Legitimation, Bankvollmachten, Versicherungen, Dienstleisterverträge,
 Zähler, Rücklagenstände, offene Posten) mit Status offen, angefordert, erhalten, nicht
 zutreffend. Anlegen ist idempotent. Anzeige im CRM am Objekt (`TakeoverChecklist`).
-Aufgabenerzeugung für fehlende Punkte ist noch nicht umgesetzt.
+`POST /properties/{id}/takeover-checklist/tickets` (R03, Migration 0285) legt je offenem oder
+angefordertem Punkt ohne Ticket ein internes Ticket an (`tickets.routers.create_ticket_in_session`,
+Objektbezug, Fälligkeit als `due_on`), speichert `ticket_id` am Punkt und ist idempotent. Nötig
+sind `properties:update` und `tickets:create`. Regel: `docs/rules/R03-onboarding-uebernahme.md`.
 
 Paket Q05 (Welle 3): CRM-Oberflächen für die Historie der Umsatzsteueroptionen (Einheitenseite), die Bildgalerie (Feld `images`, Änderung per `PATCH /properties/{id}` mit If-Match, Upload über `POST /documents` mit Verknüpfung `property`) und die Belegungsliste mit Stichtag (`GET /properties/{id}/occupancy`). Regel: `docs/rules/Q05-crm-oberflaechen.md`.

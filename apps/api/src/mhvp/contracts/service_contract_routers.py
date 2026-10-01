@@ -16,6 +16,12 @@ from sqlalchemy import select
 from mhvp.contacts.models import Contact
 from mhvp.contracts.service_contracts import ServiceContract, terms_of
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_property_allowed,
+    property_allowed,
+    session_allowed_property_ids,
+    session_principal,
+)
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.models import Property
@@ -118,7 +124,10 @@ async def _check_refs(session: Any, contact_id: uuid.UUID, property_id: uuid.UUI
     contact = await session.get(Contact, contact_id)
     if contact is None:
         raise ProblemError(ErrorCodes.VALIDATION, detail="Der Dienstleister ist unbekannt.")
-    if property_id is not None and await session.get(Property, property_id) is None:
+    if property_id is not None and (
+        await session.get(Property, property_id) is None
+        or not property_allowed(session_principal(session), property_id)  # M2-02/S16-02
+    ):
         raise ProblemError(ErrorCodes.VALIDATION, detail="Das Objekt ist unbekannt.")
     return str(contact.display_name)
 
@@ -132,6 +141,8 @@ async def _get(session: Any, contract_id: uuid.UUID) -> ServiceContract:
     row = await session.get(ServiceContract, contract_id)
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    # M2-02/S16-02: a contract without property is visible only to unrestricted members.
+    ensure_session_property_allowed(session, row.property_id)
     return row  # type: ignore[no-any-return]
 
 
@@ -163,6 +174,9 @@ async def list_service_contracts(
         )
         if property_id is not None:
             query = query.where(ServiceContract.property_id == property_id)
+        allowed = session_allowed_property_ids(session)  # M2-02/S16-02
+        if allowed is not None:
+            query = query.where(ServiceContract.property_id.in_(allowed))
         if provider_contact_id is not None:
             query = query.where(ServiceContract.provider_contact_id == provider_contact_id)
         rows = (

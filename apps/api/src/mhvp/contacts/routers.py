@@ -36,8 +36,8 @@ from mhvp.core.listparams import (
     apply_filters,
     apply_sort,
     check_include,
+    embed,
     list_params,
-    sparse,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError, body_validation_error
 from mhvp.integrations.lexoffice_ext import sync as lexoffice_sync
@@ -84,11 +84,46 @@ _CONTACT_SORT = {
 }
 
 
+async def _contact_property_refs(
+    session: Any, contact_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[dict[str, Any]]]:
+    """Q12 include=properties: properties a contact is linked to through a party (contract
+    party or recorded property owner), within the property assignment (M2-02)."""
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import PropertyOwner
+    from mhvp.properties.refs import property_refs
+
+    if not contact_ids:
+        return {}
+    links: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    for source in (
+        select(PartyMember.contact_id, Contract.property_id).join(
+            Contract, Contract.party_id == PartyMember.party_id
+        ),
+        select(PartyMember.contact_id, PropertyOwner.property_id).join(
+            PropertyOwner, PropertyOwner.party_id == PartyMember.party_id
+        ),
+    ):
+        rows = await session.execute(
+            source.where(PartyMember.contact_id.in_(contact_ids)).distinct()
+        )
+        links |= {(c, p) for c, p in rows.all()}
+    refs = await property_refs(session, {p for _, p in links})
+    out: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for contact_id, prop_id in links:
+        if prop_id in refs:
+            out.setdefault(contact_id, []).append(refs[prop_id])
+    for value in out.values():
+        value.sort(key=lambda r: r["number"])
+    return out
+
+
 @router.get(
     "/contacts",
     summary="Kontakte suchen und auflisten",
     response_model=schemas.ContactPage,
-    description=LIST_PARAMS_DOC,
+    description=LIST_PARAMS_DOC
+    + " include: properties (Objekte über Vertragspartei oder Objekteigentum).",
 )
 async def list_contacts(
     request: Request,
@@ -103,7 +138,7 @@ async def list_contacts(
     params: ListParams = Depends(list_params),
     principal: TenantPrincipal = Depends(READ),
 ) -> Any:
-    check_include(params, ())
+    includes = check_include(params, ("properties",))
     async with tenant_tx(request, principal) as session:
         query = apply_filters(select(Contact), params, _CONTACT_FILTERS)
         if not include_deleted:
@@ -132,16 +167,17 @@ async def list_contacts(
                 .limit(page_size)
             )
         ).all()
-        return sparse(
-            schemas.ContactPage(
-                items=await services.summaries(session, list(rows)),
-                total=total,
-                page=page,
-                page_size=page_size,
-            ),
-            params,
-            schemas.ContactSummary,
+        page_out = schemas.ContactPage(
+            items=await services.summaries(session, list(rows)),
+            total=total,
+            page=page,
+            page_size=page_size,
         )
+        embedded: dict[str, Any] = {}
+        if "properties" in includes:
+            by_contact = await _contact_property_refs(session, [r.id for r in rows])
+            embedded["properties"] = lambda item: by_contact.get(uuid.UUID(item["id"]), [])
+        return embed(page_out, params, schemas.ContactSummary, embedded)
 
 
 @router.post("/contacts", status_code=201, summary="Kontakt anlegen")

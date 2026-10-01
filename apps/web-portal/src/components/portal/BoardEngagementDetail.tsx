@@ -289,7 +289,7 @@ export function BoardEngagementDetail({ detail, reports = [] }: { detail: Detail
         </ul>
       </section>
 
-      <form onSubmit={submit} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submit} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`} aria-label={t("newNote")}>
         <h2 className={ui.h2}>{t("newNote")}</h2>
         {error ? (
           <p role="alert" className={ui.alert}>

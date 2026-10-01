@@ -19,6 +19,11 @@ from sqlalchemy import select
 from mhvp.banking.models import BankTransaction
 from mhvp.contacts.models import BankAccountApproval, Contact, ContactBankAccount
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import (
+    ensure_session_property_allowed,
+    property_path_guard,
+    session_allowed_property_ids,
+)
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties import creditors as svc
@@ -30,7 +35,8 @@ from mhvp.properties.models import (
 )
 from mhvp.workspace.services import local_today
 
-router = APIRouter(tags=["Objekte"])
+# M2-02/S16-02: path ids outside the property assignment answer 404.
+router = APIRouter(tags=["Objekte"], dependencies=[Depends(property_path_guard)])
 READ = require_permission("properties:read")
 UPDATE = require_permission("properties:update")
 CONTACTS_READ = require_permission("contacts:read")
@@ -240,6 +246,10 @@ async def backfill_creditors(
     async with tenant_tx(request, principal) as session:
         if body.property_id is not None and await session.get(Property, body.property_id) is None:
             raise _nf()
+        if body.property_id is None and session_allowed_property_ids(session) is not None:
+            raise _nf()  # M2-02/S16-02: a tenant wide backfill needs an unrestricted member
+        if body.property_id is not None:
+            ensure_session_property_allowed(session, body.property_id)
         result = await svc.backfill(
             session,
             tenant_id=principal.tenant_id,
@@ -257,7 +267,12 @@ async def creditor_properties(
         if await session.get(Contact, contact_id) is None:
             raise _nf()
         rows = await svc.properties_of_creditor(session, contact_id)
-        return [CreditorPropertyOut.model_validate(r) for r in rows]
+        allowed = session_allowed_property_ids(session)  # M2-02/S16-02
+        return [
+            CreditorPropertyOut.model_validate(r)
+            for r in rows
+            if allowed is None or r["property_id"] in allowed
+        ]
 
 
 async def _tx_with_property(session: object, tx_id: uuid.UUID) -> tuple[BankTransaction, uuid.UUID]:
@@ -270,6 +285,7 @@ async def _tx_with_property(session: object, tx_id: uuid.UUID) -> tuple[BankTran
     account = await session.get(PropertyBankAccount, tx.property_bank_account_id)
     if account is None:
         raise _nf()
+    ensure_session_property_allowed(session, account.property_id)  # M2-02/S16-02
     return tx, account.property_id
 
 

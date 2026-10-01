@@ -118,3 +118,8 @@ Rule `docs/rules/P13-portal-w2.md`, migration 0262.
 - `GET /portal/owner/statements` und `.../statements/{id}/units/{unit_id}/pdf` (M24-03, Status issued bis locked, G4), `GET /portal/owner/allocation-properties` und `/rental-income`, `own_share` in `/portal/owner/payment-resolutions`.
 - `POST /portal/work-orders/{id}/einvoice` (M22-01, XML, Vorschlag über `mhvp.receipts.einvoice`).
 - `GET /portal/board/engagements/{id}/positions/{item_id}/context` (M25-04, lesend).
+- `GET /portal/documents?q&sort` (R05) filters and sorts in the database via `access.visible_documents(q=, sort=)`; the matrix still decides what is visible. The owner statement PDF path is covered by `tests/integration/test_r05_positive_paths.py`.
+
+- R10 (B20, B26): Mandanteneinstellung `portal_second_factor` (`account_choice` Standard, `required`) steuert den E-Mail-Code der Magic-Link-Anmeldung (`magic_link.consume_link`). Das öffentliche Branding liefert `platform` (`GET /tenant/branding`, `/tenant/branding/logo/{variant}`, Header `X-Portal-Host`); das Portal wendet es über `apps/web-portal/src/lib/branding.ts` an. Regel: `docs/rules/R10.md`.
+
+- `GET /portal/owner/takeover-checklist` (R03, M7-01): Stand der Objektübernahme der eigenen Objekte (Bezeichnung, Status, Fälligkeit), lesend, ohne Notizen, Dokumente und Tickets; Mieter und Dienstleister erhalten 403. Anzeige auf der Seite Eigentum.

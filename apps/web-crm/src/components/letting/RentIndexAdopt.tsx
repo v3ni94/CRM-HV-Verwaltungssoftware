@@ -46,7 +46,7 @@ export function RentIndexAdopt({ caseId, livingArea, canEdit }: { caseId: string
   return (
     <section className={ui.card} data-testid="rent-index-adopt">
       <h2 className={ui.h2}>{t("title")}</h2>
-      <form onSubmit={search} className="mt-2 flex flex-wrap items-end gap-2">
+      <form onSubmit={search} className="mt-2 flex flex-wrap items-end gap-2" aria-label={t("title")}>
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("municipality")}</span>
           <input className={ui.input} required value={municipality} onChange={(e) => setMunicipality(e.target.value)} />

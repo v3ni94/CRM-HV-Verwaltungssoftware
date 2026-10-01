@@ -12,6 +12,8 @@ import { ConsumptionInfoSwitch, type ConsumptionInfoSettings } from "@/component
 import { HandoverOfflineSwitch } from "@/components/settings/HandoverOfflineSwitch";
 import { MeteringModuleSwitch } from "@/components/settings/MeteringModuleSwitch";
 import { GMAIL_DONE_SYNC_DEFAULTS, GmailDoneSync, type GmailDoneSyncSettings } from "@/components/settings/GmailDoneSync";
+import { InspectionPackageDefaultDays } from "@/components/settings/InspectionPackageDefaultDays";
+import { PortalSettings, type PortalSecondFactor } from "@/components/settings/PortalSettings";
 import { TicketReopenWindow } from "@/components/settings/TicketReopenWindow";
 import { TicketReplyApprovalAll } from "@/components/settings/TicketReplyApprovalAll";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -41,6 +43,11 @@ export default async function CompanySettingsPage() {
     <div className="flex flex-col gap-4">
       <PageHeader title={t("title")} />
       <CompanySettings initial={settings.data.company} branding={settings.data.branding} canUpdate={can("tenant_settings:update")} />
+      <PortalSettings
+        branding={settings.data.branding as Record<string, unknown>}
+        secondFactor={((settings.data as { portal_second_factor?: PortalSecondFactor }).portal_second_factor ?? "account_choice")}
+        canUpdate={can("tenant_settings:update")}
+      />
       <ManagerEntitySetup initial={managerData} canUpdate={can("tenant_settings:update")} />
       <SignatureTemplateSettings
         initial={((settings.data as { signature_template?: SignatureTemplate }).signature_template ?? { text: null, html: null, logo_url: null })}
@@ -49,6 +56,10 @@ export default async function CompanySettingsPage() {
       <TicketReplyApprovalAll initial={settings.data.ticket_reply_approval_all} canUpdate={can("tenant_settings:update")} />
       <TicketReopenWindow
         initial={settings.data.ticket_reopen_window_days ?? 30}
+        canUpdate={can("tenant_settings:update")}
+      />
+      <InspectionPackageDefaultDays
+        initial={(settings.data as { inspection_package_default_days?: number | null }).inspection_package_default_days ?? null}
         canUpdate={can("tenant_settings:update")}
       />
       <GmailDoneSync

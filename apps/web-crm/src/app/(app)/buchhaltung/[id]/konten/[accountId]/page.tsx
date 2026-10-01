@@ -73,7 +73,7 @@ export default async function AccountSheetPage({
         title={`${data.number} ${data.name}`}
         description={t("sheet.description", { start: formatDate(start), end: formatDate(end) })}
       />
-      <form className="flex flex-wrap items-end gap-3" method="get">
+      <form className="flex flex-wrap items-end gap-3" method="get" aria-label={t("sheet.show")}>
         <label className="flex flex-col gap-1">
           <span className={ui.label}>{t("sheet.start")}</span>
           <input type="date" name="start" defaultValue={start} className={ui.input} />

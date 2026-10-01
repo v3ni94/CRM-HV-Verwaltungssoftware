@@ -289,7 +289,9 @@ async def create_request(
 
 
 async def _load(session: AsyncSession, request_id: uuid.UUID) -> PrivacyErasureRequest:
-    row = await session.get(PrivacyErasureRequest, request_id)
+    # Row lock: two parallel approve/execute calls are serialised and the second one sees the
+    # changed status (SECURITY-2026-10-01, Befund 6).
+    row = await session.get(PrivacyErasureRequest, request_id, with_for_update=True)
     if row is None:
         raise _nf()
     return row

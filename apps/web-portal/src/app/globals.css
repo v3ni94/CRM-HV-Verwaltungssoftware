@@ -2,3 +2,14 @@
 @import "@mhvp/ui/tokens.css";
 @import "@mhvp/ui/theme.css";
 @import "@mhvp/ui/base.css";
+
+/* Tenant logo variants (B26, M21-04): the evening logo only shows in the evening theme. */
+.brand-logo-evening {
+  display: none;
+}
+:root[data-theme="evening"] .brand-logo-day {
+  display: none;
+}
+:root[data-theme="evening"] .brand-logo-evening {
+  display: block;
+}

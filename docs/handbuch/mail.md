@@ -249,3 +249,7 @@ Zu einer Mail zeigt die Kompaktansicht eine Zusammenfassung (KI-Zusammenfassung,
 - HTML-Mails erscheinen in einem geschützten Rahmen ohne Skripte. Bilder aus dem Internet sind zunächst blockiert; "Bilder laden" lädt sie für diese Mail (Zählpixel möglich).
 - Stilregeln: In den Postfacheinstellungen lassen sich Tonfall und freie Regeln für KI-Antwortentwürfe pflegen. Die Entwürfe werden nie selbstständig versendet.
 - Postversand: Der Kanal Post legt den Postauftrag automatisch an, sofern der Postdienst freigegeben ist; sonst bleibt die Zustellung vorbereitet.
+
+## Automatische KI-Läufe (Einstellungen, KI)
+
+Unter Einstellungen, KI stehen zwei Schalter, beide standardmäßig aus: Neue oder geänderte Mieterhöhungsfälle werden automatisch von der KI auf Stimmigkeit geprüft (Hinweise, keine Freigabe, keine Rechtsprüfung), und E-Mails ohne Vorschlag werden nachts von der KI eingeordnet (höchstens 100 je Nacht). Beide Schalter ersetzen weder die Anbieterfreigabe noch das Monatsbudget. In der Kompaktansicht zeigt der Antwortvorschlag eine Hinweiszeile mit Tonfall und Platzhaltern ohne Wert.

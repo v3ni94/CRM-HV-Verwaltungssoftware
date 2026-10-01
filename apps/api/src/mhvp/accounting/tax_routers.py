@@ -30,6 +30,7 @@ from mhvp.accounting.tax_models import (
 from mhvp.contacts.models import Contact, Party, PartyMember
 from mhvp.contracts.models import Contract
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
@@ -37,7 +38,10 @@ from mhvp.documents.models import Document, DocumentSource, LinkRole
 from mhvp.properties.models import Property, Unit
 from mhvp.workspace.services import local_today
 
-router = APIRouter(prefix="/accounting/tax", tags=["Buchhaltung"])
+# M2-02/S16-02: path ids outside the property assignment answer 404.
+router = APIRouter(
+    prefix="/accounting/tax", tags=["Buchhaltung"], dependencies=[Depends(property_path_guard)]
+)
 READ = require_permission("accounting:read")
 UPDATE = require_permission("accounting:update")
 APPROVE = require_permission("accounting:approve")

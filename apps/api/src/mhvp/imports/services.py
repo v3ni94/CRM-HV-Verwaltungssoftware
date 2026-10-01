@@ -542,6 +542,13 @@ async def run(
             session, principal, source.report_type, row.values, rec, ctx
         )
         counts[status.value] += 1
+        if (
+            rec is not None
+            and status is RowStatus.CREATED
+            and entity_type in w3_reports.UNDOABLE_ENTITY_TYPES
+            and entity_id is not None
+        ):
+            rec.add(entity_type, entity_id)  # Q08: history rows are undone like other imports
         if amount_field is not None:
             source_sum += Decimal(row.values[amount_field])
             if status is RowStatus.CREATED:

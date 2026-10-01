@@ -209,8 +209,11 @@ Kundennummer und Kreditorenkonto bleibt ein eigener Abschnitt.
 
 Am Objekt erscheint der Abschnitt "Objektübernahme". Mit "Checkliste anlegen" entstehen sieben Punkte, deren Status je Punkt auf offen, angefordert, erhalten oder nicht zutreffend gesetzt wird.
 
+Mit "Aufgaben für fehlende Punkte anlegen" entsteht für jeden offenen oder angeforderten Punkt ohne Aufgabe ein internes Ticket am Objekt (Fälligkeit des Punkts als Arbeitsfrist). Ein zweiter Klick legt nichts doppelt an, der Link "Aufgabe öffnen" steht beim Punkt. Nötig sind die Rechte Objekte ändern und Tickets anlegen. Eigentümer sehen den Stand ihrer Objektübernahme (ohne Notizen) im Portal unter Eigentum.
+
 ## Bildgalerie, Belegungsliste und USt-Historie (Paket Q05, 30.09.2026)
 
 * **Bildgalerie** (Objektseite): Bilder werden als Dokument am Objekt abgelegt (Metadaten werden entfernt) und in der Anzeigereihenfolge geführt. Mit "Nach vorn" und "Nach hinten" wird die Reihenfolge geändert, "Entfernen" nimmt das Bild nur aus der Galerie, das Dokument bleibt erhalten. Wurde das Objekt zwischenzeitlich geändert, erscheint ein Hinweis zum Neuladen.
 * **Belegungsliste** (Objektseite, Recht Verträge lesen): Je Einheit der Mieter und der Eigentümer zum gewählten Stichtag, leere Eingabe heißt heute. Der Filter "Nur Leerstand" blendet belegte Einheiten aus.
 * **Historie der Umsatzsteueroptionen** (Einheitenseite): Zeiträume mit Option und Belegung (Leerstand oder Vertrag). Neue Zeiträume dürfen sich nicht überschneiden. Die Erfassung ist reine Stammdatenpflege, die steuerliche Behandlung folgt einer freigegebenen Regel.
+* **Wartungen als erledigt erfassen (Sammelaktion)** (Objektseite, Wartung): Offene Wartungen markieren, Erledigungsdatum wählen, "Ausgewählte erledigen". Wartungen mit Intervall bleiben offen und die Fälligkeit rückt um das Intervall vor, Wartungen ohne Intervall werden geschlossen, wie bei der Einzelaktion.

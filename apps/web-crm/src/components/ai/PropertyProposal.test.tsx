@@ -95,7 +95,7 @@ describe("PropertyProposal", () => {
     const [url, init] = fetchMock.mock.calls[0]!;
     expect(url).toBe(`/api/bff/ai/proposals/${ID}/apply`);
     expect(JSON.parse(init.body as string)).toEqual({
-      property: { number: "123", name: "Musterstraße 1", management_type: "hoa", as_of: "2026-01-01", vat_percent_by_payment_type: { hoa_fee: "0" } },
+      property: { number: "123", name: "Musterstraße 1", management_type: "hoa", as_of: "2026-01-01", vat_percent_by_payment_type: { hoa_fee: "0" }, bank_accounts: [], allocation_keys: [], create_debtor_accounts: false, link_source_documents: true },
     });
     expect(await screen.findByText(/Zahlung reserve ohne bestätigten Steuersatz/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rückgängig" })).toBeInTheDocument();

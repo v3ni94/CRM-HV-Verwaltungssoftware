@@ -34,7 +34,8 @@ const STATUSES = ["accepted", "rejected", "collected", "returned"] as const;
 export function DirectDebitReconciliation({ runId }: { runId: string }) {
   const t = useTranslations("DirectDebitFeedback");
   const [data, setData] = useState<Reconciliation | null>(null);
-  const [open, setOpen] = useState<string | null>(null);
+  // Q02/M15-01: Auswahl mehrerer Lastschriften für die Sammelrückmeldung (ein Aufruf, alles oder nichts).
+  const [selected, setSelected] = useState<string[]>([]);
   const [f, setF] = useState({ status: "collected", reason_code: "", reason: "", collected_amount: "" });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -47,13 +48,14 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
     if (res.ok) setData(res.data);
     else setError(res.message);
   };
-  const save = async (row: Row) => {
+  const toggle = (id: string) => setSelected((cur) => (cur.includes(id) ? cur.filter((v) => v !== id) : [...cur, id]));
+  const save = async () => {
     setBusy(true);
     setError(null);
-    const body: Record<string, unknown> = { status: f.status, order_ids: [row.order_id] };
+    const body: Record<string, unknown> = { status: f.status, order_ids: selected };
     if (f.reason.trim()) body.reason = f.reason.trim();
     if (f.reason_code.trim()) body.reason_code = f.reason_code.trim();
-    if (f.status === "collected" && f.collected_amount.trim()) body.collected_amount = f.collected_amount.trim().replace(",", ".");
+    if (f.status === "collected" && selected.length === 1 && f.collected_amount.trim()) body.collected_amount = f.collected_amount.trim().replace(",", ".");
     const res = await bff<Reconciliation>(`/api/bff/accounting/direct-debits/${runId}/bank-status`, {
       method: "POST",
       body: JSON.stringify(body),
@@ -61,7 +63,7 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
     setBusy(false);
     if (!res.ok) return setError(res.message);
     setData(res.data);
-    setOpen(null);
+    setSelected([]);
   };
 
   return (
@@ -85,6 +87,14 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
             <table className="mhvp-table">
               <thead>
                 <tr>
+                  <th>
+                    <input
+                      type="checkbox"
+                      aria-label={t("selectAll")}
+                      checked={data.orders.length > 0 && selected.length === data.orders.length}
+                      onChange={(e) => setSelected(e.target.checked ? data.orders.map((o) => o.order_id) : [])}
+                    />
+                  </th>
                   <th>{t("debtor")}</th>
                   <th className="num">{t("amount")}</th>
                   <th>{t("bankStatus")}</th>
@@ -97,6 +107,14 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
               <tbody>
                 {data.orders.map((r) => (
                   <tr key={r.order_id} className="align-top">
+                    <td>
+                      <input
+                        type="checkbox"
+                        aria-label={t("selectOrder", { name: r.debtor_name })}
+                        checked={selected.includes(r.order_id)}
+                        onChange={() => toggle(r.order_id)}
+                      />
+                    </td>
                     <td>
                       {r.debtor_name}
                       <span className="block text-xs text-muted">{r.end_to_end_id}</span>
@@ -112,7 +130,7 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
                     <td className="num">{formatEur(r.open_item_remaining)}</td>
                     <td className={r.finding ? "text-warning-fg" : "text-muted"}>{r.finding ?? t("noFinding")}</td>
                     <td>
-                      <button type="button" className={ui.buttonSm} onClick={() => setOpen(open === r.order_id ? null : r.order_id)}>
+                      <button type="button" className={ui.buttonSm} onClick={() => setSelected(selected.length === 1 && selected[0] === r.order_id ? [] : [r.order_id])}>
                         {t("record")}
                       </button>
                     </td>
@@ -121,8 +139,9 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
               </tbody>
             </table>
           </div>
-          {open ? (
+          {selected.length > 0 ? (
             <div className="flex flex-wrap items-end gap-2" data-testid="dd-feedback-form">
+              <p className="w-full text-sm" data-testid="dd-selection">{t("selection", { count: selected.length })}</p>
               <label className="flex flex-col gap-1">
                 <span className={ui.label}>{t("bankStatus")}</span>
                 <select className={ui.input} value={f.status} onChange={(e) => setF((v) => ({ ...v, status: e.target.value }))}>
@@ -139,7 +158,7 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
                 <span className={ui.label}>{t("reason")}</span>
                 <input className={ui.input} value={f.reason} onChange={(e) => setF((v) => ({ ...v, reason: e.target.value }))} />
               </label>
-              {f.status === "collected" ? (
+              {f.status === "collected" && selected.length === 1 ? (
                 <label className="flex flex-col gap-1">
                   <span className={ui.label}>{t("collectedAmount")}</span>
                   <input className={`${ui.input} w-32`} inputMode="decimal" value={f.collected_amount} onChange={(e) => setF((v) => ({ ...v, collected_amount: e.target.value }))} />
@@ -149,12 +168,9 @@ export function DirectDebitReconciliation({ runId }: { runId: string }) {
                 type="button"
                 className={ui.button}
                 disabled={busy}
-                onClick={() => {
-                  const row = data.orders.find((o) => o.order_id === open);
-                  if (row) void save(row);
-                }}
+                onClick={() => void save()}
               >
-                {t("save")}
+                {selected.length > 1 ? t("saveSelection", { count: selected.length }) : t("save")}
               </button>
             </div>
           ) : null}

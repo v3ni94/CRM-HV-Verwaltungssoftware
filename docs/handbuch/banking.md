@@ -404,3 +404,7 @@ Der Zahllauf zeigt die zahlbaren, freigegebenen und gebuchten Rechnungen je Rech
 ## Lastschriften: Bankrückmeldung und Abstimmung, Banklimits
 
 In der Lastschriftliste zeigt "Bankrückmeldung und Abstimmung" je Lastschrift Bankstatus, eingezogenen Betrag, Rest des offenen Postens und Befunde. Mit "Rückmeldung erfassen" wird die Antwort der Bank festgehalten (angenommen, abgelehnt, eingezogen mit Betrag, zurückgegeben mit Rückgabecode). Es wird nichts gebucht; eine Rücklastschrift nach Ausgleich erscheint als Befund und wird durch Storno korrigiert. Im Zahllauf pflegt der Bereich "Banklimits und Einreichungsfristen" je Auftraggeberkonto das Limit je Auftrag, das Tageslimit und die Vorlauffristen nach Bankvereinbarung (Betreibereingabe, zu verifizieren) und weist auf die bankseitige Empfängerprüfung hin.
+
+## Lastschriften: Sammelrückmeldung
+
+In der Abstimmung eines Lastschriftlaufs lassen sich mehrere Lastschriften per Auswahlfeld markieren ("Alle Lastschriften auswählen" markiert alle). Eine Rückmeldung (angenommen, abgelehnt, eingezogen, zurückgegeben) gilt dann für alle markierten Lastschriften in einem Schritt; tritt bei einer ein Fehler auf, wird nichts gespeichert. Betrag und Bankumsatz werden nur bei einer einzelnen Lastschrift erfasst. Es wird nichts gebucht.

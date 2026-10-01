@@ -15,12 +15,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.billing import consumption_info
 from mhvp.billing.models import ConsumptionInfo
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_column_guard, property_path_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.platform.models import TenantSettings
 from mhvp.properties.models import Property
 
-router = APIRouter(tags=["Abrechnung"])
+# M2-02/S16-02: property and consumption info outside the assignment answer 404.
+router = APIRouter(
+    tags=["Abrechnung"],
+    dependencies=[
+        Depends(property_path_guard),
+        Depends(property_column_guard({"info_id": ConsumptionInfo.property_id})),
+    ],
+)
 READ = require_permission("accounting:read")
 UPDATE = require_permission("properties:update")
 P = "/properties/{property_id}/consumption-info"

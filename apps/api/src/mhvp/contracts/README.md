@@ -170,3 +170,7 @@ item refers to the row, 409), `PATCH /deposits/{id}` (status model open, active,
 `mandates.py` and job `mhvp.contracts.expire_mandates`: expiry by `valid_until`, usage bookkeeping
 for the collection after G2. New columns in migration 0265: `contract.custom_fields`,
 `contract_payment.revenue_account_id`, `deposit.documents`. Rule: `docs/rules/P16-stammdaten-pflege.md`.
+
+## R10 Kautionsverzinsung (B15)
+
+`deposit_settlement.py` / `deposit_settlement_routers.py`: Zinssatzverlauf je Kautionskonto (`deposit_interest_rate`, `GET/PUT/DELETE /deposits/{id}/interest-rates[/{valid_from}]`), Jahresgutschrift als Entwurf (`deposit_interest_draft`, `POST/GET /deposits/{id}/interest-drafts`, `POST /deposit-interest-drafts/run|{id}/confirm|{id}/discard`) und Zinsart `deposit_rates` der Kautionsabrechnung (`interest_by_rate_history`). Bestätigung erfasst nur eine Zinsbewegung, keine Buchung. Migration 0288. Regel: `docs/rules/R10.md`.

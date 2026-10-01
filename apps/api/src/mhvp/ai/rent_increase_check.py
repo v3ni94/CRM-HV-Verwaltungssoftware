@@ -208,3 +208,40 @@ async def latest_run(session: AsyncSession, case_id: uuid.UUID) -> AiTaskRun | N
         .limit(1)
     )
     return row
+
+
+async def auto_queue(
+    session: AsyncSession, *, tenant_id: uuid.UUID, user_id: uuid.UUID | None, case: Any
+) -> uuid.UUID | None:
+    """Automatic proposal after a case was created or changed (Q14-02, package R09).
+
+    Returns the id of the queued run, or ``None`` when nothing was queued: switch off, case
+    not in the status draft, no released provider (the gateway repeats this check before any
+    call), the input unchanged since the last run, or the input not maskable. Never raises
+    for these reasons, so creating or changing the case is never blocked by the AI."""
+    from mhvp.ai import automation
+
+    if case.status != "draft" or not await automation.is_enabled(session, "rent_increase_check"):
+        return None
+    try:
+        usable, _reasons = await gateway.routes(session, AiTask.RENT_INCREASE_CHECK)
+    except gateway.GatewayBlockedError:
+        return None
+    if not usable:
+        return None
+    try:
+        payload = build_payload(case)
+        assert_masked(payload)
+    except (ProblemError, TypeError, ValueError):
+        return None
+    prompt = tasks.prompt(AiTask.RENT_INCREASE_CHECK)
+    context = {"context_type": CONTEXT_TYPE, "context_id": str(case.id)}
+    digest = gateway.input_hash(
+        AiTask.RENT_INCREASE_CHECK, prompt.version, prompt_text(payload), context
+    )
+    previous = await latest_run(session, case.id)
+    if previous is not None and previous.input_hash == digest:
+        return None
+    run = queue_run(session, tenant_id=tenant_id, user_id=user_id, case=case)
+    await session.flush()
+    return run.id

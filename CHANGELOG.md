@@ -5,6 +5,80 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.50.0 (01.10.2026) Welle 4 der Lückenliste: Rechnungen, Dokumente, Übernahme, Import, Rechte, Kautionen, Portal, Prüfungen
+
+- Übersicht: Welle 4 der Lückenliste vom 30.09.2026 mit 16 Paketen (Reste aus Welle 3 und Prüfungen), Migrationen 0284 bis 0288. Schwerpunkte: Belegmaske mit Anlagen, Rechnungsplan-Erfassung, Sammelrückmeldung Lastschriften, Honorarlauf mit PDF, Jahresübernahme, geschwärzte Kopien und Eingangsadresse je Mandant, Tickets aus der Übernahme-Checkliste, Onboarding-Anlage von Konten und Schlüsseln, Prüfbericht und Rücknahme des Altdatenimports, Einsichtspaket-Frist, Stummschalten, Wartungs-Sammelaktion, include-Parameter und Webhook statement.confirmed, Objektzuordnung in Banking, Abrechnung, WEG, Suche und Assistent, If-Match im CRM, KI-Automatik-Schalter, Kautionszinsverlauf, Portal-Branding und Anmeldestrenge, Leistungs- und Playwright-Tests, Sicherheits- und Geldflussprüfung (docs/reviews), Navigation, Hilfeindex und Handbuch. Reste und Entscheidungen stehen in docs/OPEN_QUESTIONS.md (R02 bis R09).
+- Rechnungen: Die Belegmaske nimmt jetzt Anlagen und Seiten des Originals als Menge von Dokument-IDs auf (höchstens 50, ungültige oder doppelte IDs sperren das Speichern).
+- Rechnungen: Unter Rechnungspläne gibt es eine Erfassungsmaske für neue Rechnungspläne mit Aussteller, Kostenkonto, Betrag, Rhythmus und erster Fälligkeit.
+- Lastschriften: Die Abstimmung erlaubt eine Sammelrückmeldung für mehrere ausgewählte Lastschriften in einem Schritt (alles oder nichts).
+- Verwalterhonorar: Neuer Honorarlauf mit Vorschau und Bestätigung sowie PDF-Erzeugung und Download der Honorarrechnung im CRM.
+- Buchhaltung: Am Buchungskreis lässt sich die Jahresübernahme der Schlussbestände anzeigen und als Entwurf anlegen.
+- WEG: Die Gesamtabrechnung kann in der Abrechnungsansicht als PDF heruntergeladen werden (nach interner Freigabe und bei offenem G4).
+- Dokumente: Am Dokument gibt es den Abschnitt Geschwärzte Kopien mit Anlage, Freigabe durch eine zweite Person und Liste.
+- Dokumente: Einstellungen, DMS enthalten die Eingangsadresse je Mandant mit Absenderliste, Token-Erneuerung und Verteilungsschalter.
+- Dokumente: Der Dokumenteingang verteilt Nachrichten eines gemeinsamen Sammelpostfachs nach Token an den Zielmandanten, wenn der Hub die Verteilung eingeschaltet hat.
+- Dokumente: Der direkte Upload per signierter URL ist im CRM nur mit Mandantenschalter (Standard aus) aktiv und fällt bei Fehlern auf den Upload über die API zurück.
+- Mandant: Die Abfrage der Mandanteneinstellungen liefert wieder, wenn strukturierte Einträge (Eingangsadresse) hinterlegt sind.
+- Betrieb: Runbook Objektspeicher um Abschnitt zu Erreichbarkeit und CORS für den direkten Upload ergänzt.
+- Objekte: Aus offenen oder angeforderten Punkten der Checkliste Objektübernahme legt der Knopf 'Aufgaben für fehlende Punkte anlegen' interne Tickets am Objekt an (idempotent, Migration 0285, Endpunkt POST /properties/{id}/takeover-checklist/tickets).
+- Portal: Eigentümer sehen den Stand der Objektübernahme ihrer Objekte lesend auf der Seite Eigentum (GET /portal/owner/takeover-checklist, ohne Notizen und Dokumente).
+- KI-Onboarding: Beim Übernehmen eines Objektvorschlags werden Bankkonten, Umlageschlüssel aller Arten mit Einheitenwerten, Debitorenkonten und Dokumentverknüpfungen in derselben Transaktion angelegt und per Import-Rücknahme wieder entfernt.
+- KI-Onboarding: Der Import-Dialog zeigt die Vorschau des Personenabgleichs als Tabelle (neuer Endpunkt POST /onboarding/person-match-batch, schreibt nichts).
+- Import: Prüfbericht vergleicht die Einzelposten der Altdaten je Gruppe mit der Eröffnungsbilanz (Vorzeichenregel als Annahme A-Q08-01), ohne automatische Korrektur.
+- Import: Kandidatenliste schlägt zu historischen Bankumsätzen Journalbuchungen nach Datum und Betrag vor, ohne automatische Zuordnung.
+- Import: Die Rücknahme eines Imports entfernt jetzt auch übernommene Konten, historische Bankumsätze, Tickets und Einzelposten, soweit unverändert.
+- Arbeitsbereich: Die globale Suche findet Zählernummern, Rechnungsnummern und Mieter über die Objektadresse.
+- Hausverwaltung/WEG: Standardfrist für Einsichtspakete als Mandanteneinstellung (leer bedeutet ohne Ablauf, je Paket überschreibbar), Migration 0287 und Karte unter Einstellungen, Mandant.
+- Portal: Belegsuche und Sortierung laufen in der Datenbankabfrage statt im Speicher, Platzhalterzeichen werden maskiert.
+- Tests: Positivpfade für Einzelabrechnung als PDF im Eigentümerportal und für den Prüfkontext einer Position mit Auftrag, Zahlung und Umlageschlüssel.
+- Portal: Angenommene Rechnungseinreichungen verlinken im Kontakt direkt den Belegentwurf im Belegeingang.
+- Workspace: Neue Sammelaktion Alle Benachrichtigungen stummschalten (1 Stunde, 24 Stunden, 7 Tage, aufheben) im Benachrichtigungsmenü, verpflichtende Hinweise bleiben aktiv.
+- Tickets: Der Auftragstermin erscheint beim Setzen sofort im internen Kalender (CRM und Portal), der Tagesjob bleibt Auffangnetz.
+- Objekte: Sammelaktion Wartungen als erledigt erfassen mit Erledigungsdatum in der Wartungsliste; Wartungen mit Intervall rücken die Fälligkeit vor, statt geschlossen zu werden.
+- Tickets: Neuer Endpunkt POST /tickets/bulk meldet die Sammelaktion Status im gemeinsamen Teilerfolgsbericht (je Ticket Erfolg oder Fehlercode).
+- Listen: Kontakte, Objekte, Vertraege, Dokumente und Rechnungen bieten include an (Objekte, Rechtstraeger, Vertragspartei und Objekt, Objekte, Kreditor); eingebettete Objekte beachten die Objektzuordnung.
+- Webhooks: statement.confirmed wird bei Ausgabe der Mietabrechnung und bei interner Freigabe der Hausgeldabrechnung erzeugt.
+- Dokumentation: Annahmen A-R07-01 und A-R07-02 sowie offene Frage R07-01 zum fehlenden Protokollabschluss fuer meeting.closed.
+- Rechte: Die Objektzuordnung je Mitgliedschaft wirkt jetzt auch im Banking (Bankkonten, Umsätze, Zahlungsaufträge und Sammler nach Heimatobjekt oder Kontozuordnung, fremde Datensätze 404).
+- Abrechnung: Betriebskosten-, Eigentümerabrechnungen und Verbrauchsinformationen außerhalb der Objektzuordnung antworten 404, die Listen sind gefiltert.
+- WEG: Abrechnungen, Wirtschaftspläne, Versammlungen, Beschlüsse, Sonderumlagen, Darlehen, Maßnahmen, Versicherungsfälle, Prüfaufträge, Vermögensberichte und Einsichtsanfragen folgen der Objektzuordnung.
+- Buchhaltung: Auswertungen eines Buchungskreises und das Umsatzsteuerprofil je Objekt folgen der Objektzuordnung.
+- Objekte: Übernahme, Stammdaten, Kreditoren, Teiländerung, Bankkonten und Dienstleister, Verwaltungsende und Aushänge prüfen die Objektzuordnung; Dienstleisterverträge und Kautionsabrechnungen ebenso.
+- Suche: Die globale Suche zeigt nur Treffer der zugeordneten Objekte und übernimmt dafür Rechtsträger- und Objektzuordnung des Benutzers.
+- Assistent: Die Nachschlagewerkzeuge beachten die Objektzuordnung; ein geöffneter Datensatz außerhalb wird wie nicht vorhanden behandelt.
+- CRM: Verträge, Tickets, Dokumente und Eingangsrechnungen senden beim Speichern den beim Laden gemerkten Änderungsstand (If-Match) und melden einen zwischenzeitlichen Fremdstand mit Hinweis zum Neuladen.
+- KI: Neue Schalter für automatische KI-Läufe (Einstellungen, KI), beide standardmäßig aus, mit GET und PUT /ai/automation.
+- Vermietung: Neue oder geänderte Mieterhöhungsfälle stoßen bei eingeschaltetem Schalter und freigegebenem Anbieter die KI-Prüfung an und verknüpfen sie als ai_check_id.
+- KI: Der nächtliche Sammellauf klassifiziert E-Mails ohne Vorschlag (höchstens 100 je Mandant und Nacht) hinter einem Mandantenschalter.
+- Postfach: Die Kompaktansicht zeigt zum Antwortvorschlag Tonfall und Platzhalter ohne Wert aus dem Ergebnisobjekt draft_reply.
+- Verträge: Kautionen haben einen Zinssatzverlauf je Kautionskonto mit Gültigkeitsdatum, die Zinsart Zinssatz der Kaution rechnet die Kautionsabrechnung bei Vertragsende taggenau mit diesem Verlauf.
+- Verträge: Die jährliche Zinsgutschrift der Kaution entsteht als Entwurf (einzeln oder im Jahreslauf), die Bestätigung erfasst nur eine Zinsbewegung ohne Buchung und Zahlung, Versicherung, Bürgschaft und Patronatserklärung werden nicht verzinst.
+- Portal: Das Kundenportal zeigt je Mandant Logo, Anzeigename, Farben sowie Impressum und Datenschutz aus den Mandanteneinstellungen und bleibt ohne Angaben neutral.
+- Plattform: Das Branding ist je Portal-Domain öffentlich abrufbar (inklusive Logo als PNG oder JPEG), die Einstellungen kennen Anzeigename, Impressum und Datenschutz des Portals.
+- Portal: Die Anmeldestrenge ist je Mandant einstellbar, Standard bleibt die Wahl je Konto, die Option Pflicht verlangt bei der Anmeldung per Link immer den E-Mail-Code.
+- Leistung: Konnektor-Attrappe fuer den Bankabruf von 100 Konten und Abrechnungsdaten-Seed fuer 100 Einheiten, Leistungstests laufen mit MHVP_PERF=1, Messwerte im Runbook Leistungsmessung.
+- E2E: Playwright-Kernpfade für die neuen CRM-Seiten der Wellen 2 und 3 (Zahllauf, Verwalterhonorar, Kreditoren, Rechnungspläne, Bank, SEPA, Lizenzen, Zusammenführung, Datenschutz, Mietspiegel, Benachrichtigungen, Rücklagen) gegen das Backend ergänzt.
+- E2E: Playwright-Kernpfade im Portal für Dokumentensuche, Hausgeldabrechnungen und Rollenwechsel ergänzt.
+- Dokumente: Der ZIP-Massenupload begrenzt zusätzlich die Gesamtgröße aller entpackten Dateien auf das Achtfache der Einzelgrenze.
+- Portal: Der E-Rechnungs-Upload liest Dateien nur bis zur Größengrenze und bereinigt den Dateinamen.
+- Portal: Antworten der Verwaltung im Portal-Chat sind nur zu Meldungen zugeordneter Objekte möglich.
+- Portal: Das Inhaltsverzeichnis des Sammel-Downloads schützt Titel und Dateinamen vor Formelausführung in Tabellenprogrammen.
+- Anmeldung: Ein Passwortwechsel beendet alle Sitzungen des Nutzers, sobald deren Zugangstoken abläuft.
+- Datenschutz: Freigabe, Ablehnung und Ausführung von Löschanträgen sperren den Antrag gegen parallele Bearbeitung.
+- Zahlungsverkehr: Zahlungsauftrag aus einer Rechnung sperrt den offenen Posten, parallele Anfragen erzeugen keinen zweiten Auftrag.
+- Verwalterhonorar: Der Honorarlauf prüft den bereits abgerechneten Zeitraum erneut unter Sperre, parallele Läufe stellen keine Doppelrechnung aus.
+- Betriebskostenabrechnung: Ergebnisbuchungen einer korrigierten Version erst nach Storno der Ergebnisbuchungen der ersetzten Version.
+- WEG-Abrechnung: Kostenübernahme aus der Buchhaltung überspringt im Jahr stornierte Buchungen samt Storno und meldet Stornos bereits übernommener Buchungen.
+- Mahnwesen: Verzugszinsentwurf wird bei aktiver Mahnsperre am Vertrag oder Posten abgelehnt.
+- Navigation: Hauptmenüpunkt Aufträge und Kachel Benachrichtigungen in der Einstellungsübersicht ergänzt.
+- Hilfeindex: Aufträge und zehn weitere Handbuchkapitel den CRM-Seiten zugeordnet, Index neu erzeugt.
+- Oberfläche: Verwalterhonorar, Kreditoren und Rechnungspläne zeigen Ladefehler sichtbar an.
+- Barrierefreiheit: aria-label an Formularen in CRM (11) und Portal (8), Spaltenkopf Saldo übersetzbar.
+- Tests: surface-consistency.test.ts prüft Menü, Fehlerzustände und Formularbeschriftung.
+- Handbuch: Abschnitte Schadenbearbeiter, Mandantenübersicht und Löschvorschläge ergänzt, Kapitelindex vollständig.
+- Regeln: Index um neun fehlende Regeldateien ergänzt.
+- Pläne: Statuszeilen Version 1.49.0 mit den Lieferungen der Welle 3 nachgezogen.
+
 ## 1.49.0 (01.10.2026) Welle 3 der Lückenliste: Oberflächen, Dokumente, Datenschutz, Assistent, Import, WEG, Portal, API
 
 - Übersicht: Welle 3 der Lückenliste vom 30.09.2026 mit 17 Paketen (Reste aus Welle 2), Migrationen 0271 bis 0283. Schwerpunkte: Freigabeentscheidungen mit Snapshot-Hash und gepflegte Offene-Posten-Tabelle, CRM-Oberflächen für Mahnwesen, Zahllauf, Rechnungspläne, Stammdaten, Vollmachten und Teams, Dokumentablage mit Ablagezone, ZIP-Import, Eingangsadresse, Drive-Abgleich und Schwärzungskopien, Kontakt-Zusammenführung und Datenschutzoberfläche, Chat-Aktionen und Modellkaskade des Assistenten, Objektübernahme-Checkliste und Personenabgleich, weitere Immoware24-Berichtsarten, WEG-Rücklagenbindung und Gesamtabrechnung, Portal-Belegsuche und Eigentümerabrechnung, Benachrichtigungseinstellungen und Sammelaktionen, generische Listenparameter und Massenendpunkte, Objektzuordnung je Mitgliedschaft mit ETag und Schlüsselrotation, Mietspiegel und Exposé, Honorar-PDF und Jahresübernahme, Mahnlauf-Fehlerstatus und gespeicherte Filter. Reste und Entscheidungen stehen in docs/OPEN_QUESTIONS.md (Q01 bis Q16).

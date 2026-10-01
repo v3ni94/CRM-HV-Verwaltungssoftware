@@ -243,8 +243,36 @@ async def staff_permissions(session: AsyncSession, account: PortalAccount) -> fr
     return effective_permissions_for_role_codes(settings or {}, role_codes)
 
 
+def _search_sort(query: Any, document: Any, q: str | None, sort: str | None) -> Any:
+    """Receipt search and sort in the database (Q10, M25-06): a substring match on title and
+    filename (case insensitive, wildcards escaped) and the requested order, both on top of the
+    already scoped query, so the matrix of the account still decides what can be found."""
+    from sqlalchemy import func
+
+    needle = (q or "").strip()
+    if needle:
+        query = query.where(
+            or_(
+                func.lower(document.title).contains(needle.lower(), autoescape=True),
+                func.lower(document.filename).contains(needle.lower(), autoescape=True),
+            )
+        )
+    key, _, direction = (sort or "created_desc").rpartition("_")
+    column = {
+        "created": document.created_at,
+        "title": func.lower(document.title),
+        "filename": func.lower(document.filename),
+    }.get(key, document.created_at)
+    order = column.desc() if direction == "desc" else column.asc()
+    return query.order_by(order, document.id)
+
+
 async def visible_documents(
-    session: AsyncSession, account: PortalAccount, today: date
+    session: AsyncSession,
+    account: PortalAccount,
+    today: date,
+    q: str | None = None,
+    sort: str | None = None,
 ) -> list[Any]:
     """Documents linked to a granted scope and released for the role of that grant. A staff
     account with "documents:read" (M2-08 entschieden) sees every document of the tenant instead,
@@ -253,11 +281,8 @@ async def visible_documents(
 
     staff_perms = await staff_permissions(session, account)
     if "documents:read" in staff_perms:
-        query = (
-            select(Document)
-            .where(Document.tenant_id == account.tenant_id)
-            .order_by(Document.created_at.desc())
-        )
+        query = select(Document).where(Document.tenant_id == account.tenant_id)
+        query = _search_sort(query, Document, q, sort)
         return list((await session.scalars(query)).all())
 
     active = await grants(session, account, today)
@@ -283,9 +308,21 @@ async def visible_documents(
         ).all()
     )
     allowed: set[uuid.UUID] = set()
+    link_ids = {document_id for document_id, _t, _i in links}
+    visibility = (
+        {}
+        if not link_ids
+        else {
+            row_id: set(vis or [])
+            for row_id, vis in (
+                await session.execute(
+                    select(Document.id, Document.visibility).where(Document.id.in_(link_ids))
+                )
+            ).all()
+        }
+    )
     for document_id, entity_type, entity_id in links:
-        document = await session.get(Document, document_id)
-        if document is not None and scopes[(entity_type, entity_id)] & set(document.visibility):
+        if scopes[(entity_type, entity_id)] & visibility.get(document_id, set()):
             allowed.add(document_id)
     # Portal inbox (M23): documents dispatched to this contact via the portal and own uploads;
     # other documents merely linked to the contact stay internal.
@@ -303,7 +340,7 @@ async def visible_documents(
     )
     if not allowed:
         return []
-    query = select(Document).where(Document.id.in_(allowed)).order_by(Document.created_at.desc())
+    query = _search_sort(select(Document).where(Document.id.in_(allowed)), Document, q, sort)
     return list((await session.scalars(query)).all())
 
 

@@ -37,3 +37,5 @@ Mahnwesen: `components/accounting/DunningCaseDetails.tsx` (Prüfhinweise, Aufsch
 Zinsdetail und Zinsentwurf, Zustellnachweise, Sperren je Posten) und `DunningInterestRates.tsx`
 (Basiszinssatzhistorie). Rechnungen: Plan bearbeiten, Kreditorenkonten anlegen, optionale
 Prüfangaben in `InvoiceForms.tsx`.
+
+Sammelrückmeldung (R01): `DirectDebitReconciliation.tsx` markiert mehrere Lastschriften und sendet eine Rückmeldung mit `order_ids` in einem Aufruf (alles oder nichts, Betrag nur bei einer Lastschrift).

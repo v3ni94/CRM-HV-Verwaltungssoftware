@@ -138,6 +138,7 @@ async def create_result_drafts(
             ErrorCodes.CONFLICT,
             detail="Konto für Abrechnungsergebnisse (Zahlungsart statement_result) fehlt.",
         )
+    await ensure_superseded_results_reversed(session, statement)
     await acc.sync_debtor_accounts(session, ledger)
     ids: list[str] = list(statement.result_entry_ids)
     for row in snapshot_rows(snapshot):
@@ -211,6 +212,31 @@ async def create_result_drafts(
     statement.result_entry_ids = ids
     await session.flush()
     return ids
+
+
+async def ensure_superseded_results_reversed(session: AsyncSession, statement: Statement) -> None:
+    """A corrected version books its full result per contract. The result entries of the
+    version it supersedes must therefore be reversed (posted) or deleted (draft) first,
+    otherwise the same claim or credit would exist twice (B03, B08)."""
+    from mhvp.accounting.models import EntryStatus, JournalEntry
+
+    if statement.supersedes_id is None:
+        return
+    old = await session.get(Statement, statement.supersedes_id)
+    if old is None:
+        return
+    for entry_id in old.result_entry_ids or []:
+        entry = await session.get(JournalEntry, uuid.UUID(str(entry_id)))
+        if entry is None:
+            continue  # draft discarded
+        if entry.status is EntryStatus.DRAFT or entry.reversed_by_id is None:
+            raise ProblemError(
+                ErrorCodes.CONFLICT,
+                detail=(
+                    "Ergebnisbuchungen der ersetzten Abrechnung bestehen noch: zuerst "
+                    "stornieren oder den Entwurf verwerfen."
+                ),
+            )
 
 
 async def check_result_entries_posted(session: AsyncSession, statement: Statement) -> None:

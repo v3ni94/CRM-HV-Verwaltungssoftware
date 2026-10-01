@@ -483,3 +483,4 @@ Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen
   mit den Sperren des Postmoduls (siehe `docs/rules/M23-DISP-02-zustellwege-serienbrief.md`).
 * M20-02: `suggest.MailDraftReply` und `draft_reply_payload`, Ergebnisfeld `draft_reply` im Mailvorschlag; Stilregeln im CRM pflegbar.
 * P12-02: CRM zeigt HTML-Mails im sandboxed iframe mit CSP, externe Bilder erst auf Klick (`MailHtmlFrame`).
+* R09: `compact.reply_block` carries `draft` (tone, placeholders, unknown placeholders) of the `draft_reply` result object; `batch_classify.py` classifies inbound mails without a suggestion in the nightly run `mhvp.ai.batch_nightly` (switch `ai_automation.batch_mail_classification`).

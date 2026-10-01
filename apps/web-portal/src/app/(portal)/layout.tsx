@@ -8,7 +8,9 @@ import { RoleSwitcher } from "@/components/shell/RoleSwitcher";
 import { PortalNav } from "@/components/shell/PortalNav";
 import { ThemeSwitch } from "@/components/shell/ThemeToggle";
 import { type Me, showsHandover } from "@/components/portal/types";
+import { BrandMark, LegalLinks } from "@/components/shell/Branding";
 import { serverApi } from "@/lib/api-server";
+import { fetchPortalBranding } from "@/lib/branding";
 
 /** Signed-in area of the portal: slim header with role aware navigation, content, footer note.
  *  A failed /me (e.g. session boundary) falls back to the tenant/owner navigation; the pages
@@ -24,10 +26,11 @@ async function currentMe(): Promise<Me | null> {
 
 /** Signed-in area of the portal: slim header, content, footer note. */
 export default async function PortalLayout({ children }: { children: React.ReactNode }) {
-  const [t, home, me] = await Promise.all([
+  const [t, home, me, branding] = await Promise.all([
     getTranslations("Portal"),
     getTranslations("Home"),
     currentMe(),
+    fetchPortalBranding(),
   ]);
   // M21-05, S16-10: an account with several portal roles may narrow the navigation to one of
   // them (cookie); an unknown value is ignored. This grants nothing, the API decides access.
@@ -86,7 +89,11 @@ export default async function PortalLayout({ children }: { children: React.React
           <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
             <div className="flex items-baseline gap-3">
               <Link href="/start" className="text-sm font-semibold">
-                {home("productName")}
+                {branding.hasLogoLight || branding.hasLogoDark ? (
+                  <BrandMark branding={branding} fallback={home("productName")} />
+                ) : (
+                  (branding.name ?? home("productName"))
+                )}
               </Link>
               <span className="mhvp-label">{t("title")}</span>
             </div>
@@ -116,6 +123,7 @@ export default async function PortalLayout({ children }: { children: React.React
         style={{ paddingBottom: "max(1rem, env(safe-area-inset-bottom))" }}
       >
         {t("footer")} <Link href="/barrierefreiheit" className="underline hover:text-fg">{t("accessibilityLink")}</Link>
+        <LegalLinks branding={branding} />
       </footer>
     </div>
   );

@@ -583,6 +583,13 @@ def test_d18_sub_community_without_basis_blocks_release(
         )
     )
     assert approved["status"] == "internally_approved"
+    # R07/Q12: the internal approval emits statement.confirmed (A-R07-01); the refused
+    # approval of sid emits nothing.
+    confirmed = _ok(
+        client.get("/api/v1/tenant/events", params={"type": "statement.confirmed"}, headers=h)
+    )
+    assert sid2 in {e["entity_id"] for e in confirmed}
+    assert sid not in {e["entity_id"] for e in confirmed}
 
 
 def test_d19_reserve_contribution_unpaid_no_settlement_entry(

@@ -852,3 +852,8 @@ class PropertyTakeoverItem(IdMixin, TimestampMixin, TenantMixin, Base):
     document_id: Mapped[uuid.UUID | None] = _fk(
         "document.id", nullable=True, ondelete="SET NULL", index=False
     )
+    # R03 (migration 0285): ticket created from this open point by the button on the
+    # checklist; at most one ticket per point, so the action is idempotent.
+    ticket_id: Mapped[uuid.UUID | None] = _fk(
+        "ticket.id", nullable=True, ondelete="SET NULL", index=False
+    )

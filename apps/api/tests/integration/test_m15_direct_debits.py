@@ -447,7 +447,9 @@ def test_direct_debit_requires_leading_ledger_and_own_account(
     assert "führende System" in refused.json()["detail"]
 
 
-def _setup_run(client: TestClient, world: World, number: str) -> tuple[dict[str, str], str, str]:
+def _setup_run(
+    client: TestClient, world: World, number: str, months: tuple[str, ...] = ("2026-03-01",)
+) -> tuple[dict[str, str], str, str]:
     """A minimal single-payer run, approved and its file generated (M15-01 follow-up tests)."""
     h = bearer(login(client, world, "ddadmin"))
     approver = bearer(login(client, world, "ddapprover"))
@@ -503,7 +505,8 @@ def _setup_run(client: TestClient, world: World, number: str) -> tuple[dict[str,
                 headers=h,
             )
         )
-    _receivables(client, h, ledger, "2026-03-01")
+    for month in months:
+        _receivables(client, h, ledger, month)
     collection = (local_today() + timedelta(days=7)).isoformat()
     run = _ok(
         client.post(
@@ -659,3 +662,44 @@ def test_direct_debit_download_protocol_and_submit(
         "direct_debit_run.file_downloaded",
         "direct_debit_run.submitted",
     ]
+
+
+def test_direct_debit_batch_feedback(clients: tuple[TestClient, TestClient], world: World) -> None:
+    """Q02 (M15-01): one feedback call covers several collections; an unknown order refuses the
+    whole call (nothing is saved), a repeat has no effect (B08), another tenant sees nothing."""
+    client, open_g2 = clients
+    h, _, run_id = _setup_run(client, world, "791", ("2026-03-01", "2026-04-01"))
+    other = bearer(login(client, world, "ddother"))
+    gh = bearer(login(open_g2, world, "ddadmin"))
+    assert open_g2.get(f"{D}/{run_id}/file", headers=gh).status_code == 200
+    _ok(open_g2.post(f"{D}/{run_id}/submit", json={"reference": "BANKREF-Q02"}, headers=gh))
+    orders = _ok(client.get(f"{D}/{run_id}/orders", headers=h))
+    assert len(orders) >= 2
+    ids = [o["id"] for o in orders]
+
+    # Tenant separation and validation.
+    body = {"status": "rejected", "reason_code": "AC04", "order_ids": ids}
+    assert client.post(f"{D}/{run_id}/bank-status", json=body, headers=other).status_code == 404
+    bogus = client.post(
+        f"{D}/{run_id}/bank-status",
+        json={"status": "rejected", "order_ids": [ids[0], "0192abcd-0000-7000-8000-00000000dead"]},
+        headers=h,
+    )
+    assert bogus.status_code == 422, bogus.text
+    invalid = client.post(f"{D}/{run_id}/bank-status", json={**body, "status": "paid"}, headers=h)
+    assert invalid.status_code == 422, invalid.text
+    amount = client.post(
+        f"{D}/{run_id}/bank-status",
+        json={"status": "collected", "order_ids": ids, "collected_amount": "1.00"},
+        headers=h,
+    )
+    assert amount.status_code == 422, amount.text
+    untouched = _ok(client.get(f"{D}/{run_id}/reconciliation", headers=h))
+    assert {o["bank_status"] for o in untouched["orders"]} == {"open"}
+
+    # One call, both orders; a repeat changes nothing.
+    done = _ok(client.post(f"{D}/{run_id}/bank-status", json=body, headers=h))
+    assert {o["bank_status"] for o in done["orders"]} == {"rejected"}
+    assert {o["reason_code"] for o in done["orders"]} == {"AC04"}
+    again = _ok(client.post(f"{D}/{run_id}/bank-status", json=body, headers=h))
+    assert {o["bank_status"] for o in again["orders"]} == {"rejected"}

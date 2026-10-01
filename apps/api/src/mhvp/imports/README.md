@@ -167,6 +167,11 @@ idempotent, nie überschreibend. Schreibziele: `payment_schedule` und bei vollst
 `document_link` auf vorhandene Dokumente, `migrated_ticket` und `migrated_open_item` (nur lesend,
 Migration 0277). `history_models.py` hält die drei neuen Tabellen, `w3_routers.py` die Leseendpunkte
 unter `/imports/immoware24/history` (tickets, open-items, open-items/summary, bank-links). Die
-Handler registrieren nichts im `Recorder`: die Rücknahme `/imports/{id}/undo` kennt diese
-Entitätsarten nicht. Regel `docs/rules/M8-06-historische-importberichte.md`, Test
+Handler-Ergebnisse (`ledger_account`, `bank_transaction`, `migrated_ticket`, `migrated_open_item`)
+werden in `services.run` im `Recorder` registriert; `/imports/{id}/undo` entfernt sie
+(`ai/imports.py`, `_history_referenced`: Bankumsatz nur im Status `ignored`, Konto nur im Prüfstatus
+`entwurf` und unverwendet, sonst bleibt die Zeile mit Grund).
+Q08-01: `GET .../history/open-items/balance-check` (Prüfbericht Einzelposten gegen Eröffnungsbilanz
+je Gruppe, Vorzeichenregel A-Q08-01, keine Korrektur). Q08-04: `GET .../history/bank-links/{id}/candidates`
+(Kandidatenliste Journal nach Datum und Betrag, keine automatische Zuordnung). Regel `docs/rules/M8-06-historische-importberichte.md`, Test
 `tests/integration/test_q08_import_history.py`.

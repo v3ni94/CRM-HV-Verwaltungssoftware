@@ -34,8 +34,10 @@ from mhvp.hoa.models import (
     Resolution,
     SpecialLevy,
 )
+from mhvp.hoa.property_scope import HOA_GUARD
 
-router = APIRouter(prefix="/hoa", tags=["WEG"])
+# M2-02/S16-02: WEG records outside the property assignment answer 404.
+router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
 # Same permission family as the other WEG endpoints (plans, statements, levies): reading needs
 # accounting:read, recording needs accounting:create. No separate hoa:* permission exists in
 # the permission catalogue (mhvp.core.auth.permissions).

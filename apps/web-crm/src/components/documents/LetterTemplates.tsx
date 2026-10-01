@@ -187,7 +187,7 @@ export function LetterTemplates({ templates: initial, canManage }: { templates: 
               </li>
             ))}
           </ul>
-          <form onSubmit={saveTemplate} className="grid gap-2 sm:grid-cols-2">
+          <form onSubmit={saveTemplate} className="grid gap-2 sm:grid-cols-2" aria-label={t("formLabel")}>
             <label className={ui.label}>
               {t("code")}
               <input className={ui.input} required pattern="[a-z0-9_]{2,63}" value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} />

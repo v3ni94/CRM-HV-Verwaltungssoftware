@@ -25,7 +25,7 @@ export type DepositOut = {
   outstanding: string;
   movements: DepositMovementOut[];
 };
-export type InterestMode = "individual" | "reference_rate" | "none";
+export type InterestMode = "individual" | "reference_rate" | "deposit_rates" | "none";
 export type DepositSettlementOut = {
   id: string | null;
   deposit_id: string;
@@ -48,7 +48,7 @@ export type DepositSettlementOut = {
 
 type DeductionRow = { label: string; amount: string };
 
-const MODES: InterestMode[] = ["individual", "reference_rate", "none"];
+const MODES: InterestMode[] = ["individual", "reference_rate", "deposit_rates", "none"];
 
 /** Amount input "1.234,56" or "1234.56" -> API string "1234.56" (no float). */
 export function parseAmount(value: string): string | null {

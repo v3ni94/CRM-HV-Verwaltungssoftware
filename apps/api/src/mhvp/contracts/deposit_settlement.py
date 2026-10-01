@@ -9,6 +9,8 @@ end is a draft. The settlement lets the user choose the interest mode:
 - ``reference_rate``: interest computed per year from the tenant maintained reference rate
   table ("Referenzzinssatz je Jahr", ``deposit_interest_reference_rate``), day exact on the
   deposit balance;
+- ``deposit_rates``: interest computed per year from the rate history of the deposit itself
+  (``deposit_interest_rate``, rate with valid from date per deposit account, B15);
 - ``none``: no interest.
 
 All arithmetic uses ``Decimal`` (rule 6.9.8, no float). The settlement is a record, never a
@@ -35,9 +37,20 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from enum import StrEnum
+from itertools import pairwise
 from typing import Any
 
-from sqlalchemy import Date, Enum, ForeignKey, Integer, Numeric, String, Text, UniqueConstraint
+from sqlalchemy import (
+    CheckConstraint,
+    Date,
+    Enum,
+    ForeignKey,
+    Integer,
+    Numeric,
+    String,
+    Text,
+    UniqueConstraint,
+)
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -53,6 +66,8 @@ ZERO = Decimal("0.00")
 class DepositInterestMode(StrEnum):
     INDIVIDUAL = "individual"
     REFERENCE_RATE = "reference_rate"
+    # B15: rate history per deposit account (``deposit_interest_rate``), see rule B15.
+    DEPOSIT_RATES = "deposit_rates"
     NONE = "none"
 
 
@@ -69,6 +84,49 @@ class DepositInterestReferenceRate(IdMixin, TimestampMixin, TenantMixin, Base):
 
     year: Mapped[int] = mapped_column(Integer, nullable=False)
     rate: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class DepositInterestRate(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Interest rate (percent per year) of one deposit account from ``valid_from`` on (B15).
+
+    The rate in force on a day is the one with the latest ``valid_from`` on or before that day.
+    No rate is fetched or invented; the operator maintains the history (bank confirmation)."""
+
+    __tablename__ = "deposit_interest_rate"
+    __table_args__ = (UniqueConstraint("deposit_id", "valid_from"),)
+
+    deposit_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("deposit.id", ondelete="CASCADE"), nullable=False
+    )
+    valid_from: Mapped[date] = mapped_column(Date, nullable=False)
+    rate: Mapped[Decimal] = mapped_column(RATE, nullable=False)
+    note: Mapped[str | None] = mapped_column(Text)
+
+
+class DepositInterestDraft(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Yearly interest credit as a draft (B15). ``confirmed`` creates a deposit movement of kind
+    interest (a record, never a posting or payment); ``discarded`` drafts stay for the trail."""
+
+    __tablename__ = "deposit_interest_draft"
+    __table_args__ = (
+        UniqueConstraint("deposit_id", "year"),
+        CheckConstraint(
+            "status IN ('draft', 'confirmed', 'discarded')", name="deposit_interest_draft_status"
+        ),
+    )
+
+    deposit_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("deposit.id", ondelete="CASCADE"), nullable=False
+    )
+    year: Mapped[int] = mapped_column(Integer, nullable=False)
+    rate: Mapped[Decimal | None] = mapped_column(RATE)
+    days: Mapped[int] = mapped_column(Integer, nullable=False)
+    amount: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    status: Mapped[str] = mapped_column(String(12), nullable=False, default="draft")
+    movement_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), ForeignKey("deposit_movement.id", ondelete="SET NULL")
+    )
     note: Mapped[str | None] = mapped_column(Text)
 
 
@@ -253,6 +311,57 @@ def interest_by_reference_rate(
     return result
 
 
+def interest_by_rate_history(
+    changes: list[BalanceChange],
+    history: list[tuple[date, Decimal]],
+    until: date,
+    years: list[int] | None = None,
+) -> list[YearInterest]:
+    """Day exact interest per calendar year with the rate history of one deposit (B15).
+
+    Same basis and rounding as ``interest_by_reference_rate``; the rate of a day is the latest
+    entry of ``history`` with ``valid_from`` on or before the day. An interval without a rate
+    (before the first entry) refuses the computation, no rate is assumed."""
+    steps = sorted(history)
+    span = year_span(changes, until)
+    selected = span if years is None else [y for y in years if y in span]
+    intervals = balance_intervals(changes, until)
+    result: list[YearInterest] = []
+    for year in selected:
+        year_start = date(year, 1, 1)
+        year_end_exclusive = date(year + 1, 1, 1)
+        basis = days_in_year(year)
+        total = Decimal(0)
+        counted_days = 0
+        used: set[Decimal] = set()
+        for start, end, balance in intervals:
+            lo = max(start, year_start)
+            hi = min(end, year_end_exclusive)
+            if hi <= lo:
+                continue
+            cuts = sorted({lo, hi} | {d for d, _ in steps if lo < d < hi})
+            for seg_start, seg_end in pairwise(cuts):
+                rate = next((r for d, r in reversed(steps) if d <= seg_start), None)
+                if rate is None:
+                    raise SettlementError(
+                        f"Für die Kaution ist ab {seg_start.strftime('%d.%m.%Y')} kein Zinssatz "
+                        "hinterlegt."
+                    )
+                days = (seg_end - seg_start).days
+                counted_days += days
+                used.add(rate)
+                total += balance * rate / Decimal(100) * Decimal(days) / Decimal(basis)
+        result.append(
+            YearInterest(
+                year=year,
+                rate=next(iter(used)) if len(used) == 1 else None,
+                days=counted_days,
+                amount=total.quantize(CENT, ROUND_HALF_UP),
+            )
+        )
+    return result
+
+
 def interest_individual(
     changes: list[BalanceChange], entered: dict[int, Decimal], until: date
 ) -> list[YearInterest]:
@@ -287,6 +396,7 @@ def compute_settlement(
     deductions: list[Deduction],
     rates: dict[int, Decimal] | None = None,
     entered_interest: dict[int, Decimal] | None = None,
+    rate_history: list[tuple[date, Decimal]] | None = None,
 ) -> SettlementResult:
     """Build the settlement result from recorded movements and the chosen interest mode."""
     if not payments:
@@ -301,6 +411,10 @@ def compute_settlement(
     )
     if interest_mode is DepositInterestMode.REFERENCE_RATE:
         years = interest_by_reference_rate(changes, rates or {}, settlement_date)
+    elif interest_mode is DepositInterestMode.DEPOSIT_RATES:
+        if not rate_history:
+            raise SettlementError("Für die Kaution ist kein Zinssatz hinterlegt.")
+        years = interest_by_rate_history(changes, rate_history, settlement_date)
     elif interest_mode is DepositInterestMode.INDIVIDUAL:
         years = interest_individual(changes, entered_interest or {}, settlement_date)
     else:

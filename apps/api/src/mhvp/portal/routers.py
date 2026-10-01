@@ -486,7 +486,36 @@ async def change_requests(
             query = query.where(PortalAccount.contact_id == contact_id)
         if status is not None:
             query = query.where(ChangeRequest.status == status)
-        rows = await session.execute(query.order_by(ChangeRequest.created_at.desc()).limit(500))
+        rows = (
+            await session.execute(query.order_by(ChangeRequest.created_at.desc()).limit(500))
+        ).all()
+        # Accepted invoice submissions point to their receipt draft (M22-02, Q11).
+        from mhvp.receipts.models import ReceiptDraft
+
+        document_ids: list[uuid.UUID] = []
+        for r, _cid in rows:
+            if r.kind == "invoice_submission" and r.status == "accepted":
+                try:
+                    document_ids.append(uuid.UUID(json.loads(r.payload)["document_id"]))
+                except (KeyError, ValueError, TypeError):
+                    continue
+        drafts: dict[uuid.UUID, uuid.UUID] = {}
+        if document_ids:
+            draft_rows = await session.execute(
+                select(ReceiptDraft.document_id, ReceiptDraft.id).where(
+                    ReceiptDraft.document_id.in_(document_ids), ReceiptDraft.source == "portal"
+                )
+            )
+            drafts = {doc_id: draft_id for doc_id, draft_id in draft_rows.all()}  # noqa: C416
+
+        def _draft_id(r: ChangeRequest) -> uuid.UUID | None:
+            if r.kind != "invoice_submission":
+                return None
+            try:
+                return drafts.get(uuid.UUID(json.loads(r.payload)["document_id"]))
+            except (KeyError, ValueError, TypeError):
+                return None
+
         return [
             {
                 "id": r.id,
@@ -497,8 +526,9 @@ async def change_requests(
                 "contact_id": cid,
                 "created_at": r.created_at,
                 "decision_note": r.decision_note,
+                "receipt_draft_id": _draft_id(r),
             }
-            for r, cid in rows.all()
+            for r, cid in rows
         ]
 
 
@@ -1000,9 +1030,7 @@ async def documents(
 ) -> list[dict[str, Any]]:
     principal, account = ctx
     async with tenant_tx(request, principal) as session:
-        docs = _filter_sort_documents(
-            await access.visible_documents(session, account, local_today()), q, sort
-        )
+        docs = await access.visible_documents(session, account, local_today(), q=q, sort=sort)
         ids = {d.id for d in docs}
         notes = await access.redaction_notes(session, ids)
         states = await read_receipts.states_for_account(session, account, ids)
@@ -1061,6 +1089,7 @@ async def documents_bundle(
     import io
     import zipfile
 
+    from mhvp.core.escaping import csv_safe_cell
     from mhvp.documents.blobs import BlobStore
 
     principal, account = ctx
@@ -1085,8 +1114,14 @@ async def documents_bundle(
                     name = f"x_{name}"
                 used.add(name)
                 archive.writestr(name, data)
-                writer.writerow(
-                    [name, d.title, d.created_at.strftime("%d.%m.%Y"), d.mime_type, len(data)]
+                writer.writerow(  # formula injection (SECURITY-2026-10-01, Befund 4)
+                    [
+                        csv_safe_cell(name),
+                        csv_safe_cell(d.title),
+                        d.created_at.strftime("%d.%m.%Y"),
+                        d.mime_type,
+                        len(data),
+                    ]
                 )
                 await read_receipts.record(session, account, d.id, "downloaded")
             archive.writestr("INDEX.csv", "\ufeff" + index.getvalue())
@@ -1960,6 +1995,10 @@ async def appointment(
         order = await _own_order(session, account, order_id)
         await _step(session, order, OrderStatus.SCHEDULED, principal, "Termin")
         order.scheduled_at = body.scheduled_at
+        await session.flush()
+        from mhvp.workspace.jobs import sync_work_order_entry
+
+        await sync_work_order_entry(session, order)
         return await _order(session, order)
 
 
@@ -2180,6 +2219,10 @@ async def accept_appointment(
                 )
             )
         order.scheduled_at = proposal.starts_at
+        await session.flush()
+        from mhvp.workspace.jobs import sync_work_order_entry
+
+        await sync_work_order_entry(session, order)
         when = proposal.starts_at.astimezone(ZoneInfo("Europe/Berlin")).strftime("%d.%m.%Y %H:%M")
         session.add(
             TicketComment(

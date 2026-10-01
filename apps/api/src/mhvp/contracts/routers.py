@@ -44,8 +44,8 @@ from mhvp.core.listparams import (
     apply_filters,
     apply_sort,
     check_include,
+    embed,
     list_params,
-    sparse,
 )
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, FieldError, ProblemError
@@ -356,7 +356,8 @@ _CONTRACT_SORT = {
     summary="Verträge",
     responses=PAGE_HEADERS,
     response_model=list[s.ContractOut],
-    description=LIST_PARAMS_DOC,
+    description=LIST_PARAMS_DOC
+    + " include: party (Vertragspartei mit Mitgliedern), property (Objekt).",
 )
 async def list_contracts(
     request: Request,
@@ -392,7 +393,7 @@ async def list_contracts(
     """Verträge nach Nummer und Version. Paginierung wie ``GET /tickets``: die Antwort bleibt
     eine Liste, Gesamtzahl und Seite stehen in ``X-Total-Count``, ``X-Page``, ``X-Page-Size``.
     ``status=ended`` liefert beendete Verträge (Ende vor dem Stichtag)."""
-    check_include(params, ())
+    includes = check_include(params, ("party", "property"))
     async with tenant_tx(request, principal) as session:
         query = apply_filters(select(Contract), params, _CONTRACT_FILTERS)
         if status is not None:
@@ -434,7 +435,36 @@ async def list_contracts(
             page_size=page_size,
             limit=limit,
         )
-        return sparse(await _outs(session, rows), params, s.ContractOut, response=response)
+        embedded: dict[str, Any] = {}
+        if "property" in includes:
+            from mhvp.properties.refs import property_refs
+
+            props = await property_refs(session, [c.property_id for c in rows])
+            embedded["property"] = lambda item: props.get(uuid.UUID(item["property_id"]))
+        if "party" in includes:
+            parties = await _party_refs(session, {c.party_id for c in rows})
+            embedded["party"] = lambda item: parties.get(uuid.UUID(item["party_id"]))
+        return embed(await _outs(session, rows), params, s.ContractOut, embedded, response=response)
+
+
+async def _party_refs(session: Any, party_ids: set[uuid.UUID]) -> dict[uuid.UUID, dict[str, Any]]:
+    """Q12 include=party: contract party with its members (contact id, name, role)."""
+    if not party_ids:
+        return {}
+    out: dict[uuid.UUID, dict[str, Any]] = {
+        p.id: {"id": p.id, "name": p.name, "members": []}
+        for p in (await session.scalars(select(Party).where(Party.id.in_(party_ids)))).all()
+    }
+    rows = await session.execute(
+        select(PartyMember.party_id, PartyMember.role, Contact.id, Contact.display_name)
+        .join(Contact, Contact.id == PartyMember.contact_id)
+        .where(PartyMember.party_id.in_(party_ids))
+        .order_by(Contact.display_name, Contact.id)
+    )
+    for party_id, role, contact_id, name in rows.all():
+        if party_id in out:
+            out[party_id]["members"].append({"contact_id": contact_id, "name": name, "role": role})
+    return out
 
 
 class ContractBulkIn(BaseModel):

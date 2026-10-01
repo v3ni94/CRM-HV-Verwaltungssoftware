@@ -125,3 +125,7 @@ the API on port 8000 (`MHVP_E2E_API_PORT`), builds the CRM and runs Playwright w
 and Strg+K, edits and deletes it. The API log is written to `playwright-report-api.log`.
 Defaults match the local dev database (`mhvp_app`/`dev-app`, `mhvp_migrator`/`dev-migrator`).
 CI runs the same script in the `e2e-backend` job.
+
+## Oberflächenkonsistenz (R15, Wellen 2 und 3)
+
+Prüfregeln, abgesichert durch `src/lib/surface-consistency.test.ts`: jede neue Seite ist über Hauptmenü, Einstellungsübersicht oder einen Link der Elternseite erreichbar; Ladefehler von Seiten sind sichtbar (`role="alert"`, Schlüssel `loadError`); Formulare tragen ein `aria-label`; Tabellen liegen in einem Scroll-Wrapper (`table-wrapper.test.ts`); Katalogvollständigkeit de und en über `scripts/check_i18n.py`; Hilfeindex über `scripts/build_help_index.py --check`.

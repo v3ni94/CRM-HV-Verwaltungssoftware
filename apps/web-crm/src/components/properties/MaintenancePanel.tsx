@@ -78,6 +78,8 @@ export function MaintenancePanel({
   const [doneOn, setDoneOn] = useState(todayIso());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [notice, setNotice] = useState<string | null>(null);
 
   const providerLabel = (id: string | null) => {
     if (!id) return null;
@@ -134,6 +136,36 @@ export function MaintenancePanel({
       setDoneOn(todayIso());
     }
   };
+
+  /** Sammelaktion: POST /workspace/bulk (maintenance.done), mit Intervall rückt die Fälligkeit vor. */
+  const completeSelected = async () => {
+    const ids = Array.from(selected);
+    if (ids.length === 0) {
+      setNotice(t("bulkNone"));
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ changed: number }>("/api/bff/workspace/bulk", {
+      method: "POST",
+      body: JSON.stringify({ action: "maintenance.done", ids, done_on: doneOn }),
+    });
+    setBusy(false);
+    if (!res.ok) {
+      setError(res.message);
+      return;
+    }
+    setNotice(t("bulkResult", { changed: res.data.changed }));
+    setSelected(new Set());
+    router.refresh();
+  };
+  const toggle = (id: string, on: boolean) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (on) next.add(id);
+      else next.delete(id);
+      return next;
+    });
 
   const form = (d: Draft, set: (d: Draft) => void) => (
     <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -210,6 +242,22 @@ export function MaintenancePanel({
           </button>
         ) : null}
       </div>
+      {canEdit && rows.some((r) => r.status !== "done") ? (
+        <div className="mt-2 flex flex-wrap items-end gap-2 text-sm" data-testid="maintenance-bulk">
+          <label className={ui.label}>
+            {t("bulkDoneOn")}
+            <input type="date" className={ui.input} value={doneOn} onChange={(e) => setDoneOn(e.target.value)} />
+          </label>
+          <button type="button" className={ui.buttonSm} disabled={busy || !doneOn} onClick={() => void completeSelected()} data-testid="maintenance-bulk-done">
+            {t("bulkDone")}
+          </button>
+          {notice ? (
+            <span role="status" className="text-muted">
+              {notice}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       {rows.length === 0 ? (
         <p className="mt-2 text-sm text-muted">{t("empty")}</p>
       ) : (
@@ -217,6 +265,7 @@ export function MaintenancePanel({
           <table className={ui.table}>
             <thead>
               <tr>
+                {canEdit ? <th>{t("selectRow")}</th> : null}
                 <th>{t("titleField")}</th>
                 <th>{t("kind")}</th>
                 <th className="num">{t("intervalMonths")}</th>
@@ -232,6 +281,13 @@ export function MaintenancePanel({
                 const provider = providerLabel(row.provider_relation_id);
                 return (
                   <tr key={row.id} className={row.status === "done" ? "text-muted" : undefined}>
+                    {canEdit ? (
+                      <td>
+                        {row.status !== "done" ? (
+                          <input type="checkbox" aria-label={`${t("selectRow")} ${row.title}`} checked={selected.has(row.id)} onChange={(e) => toggle(row.id, e.target.checked)} />
+                        ) : null}
+                      </td>
+                    ) : null}
                     <td>
                       <span className="font-medium">{row.title}</span>
                       {row.unit_id ? <span className="ml-1 text-xs text-muted">{unitLabel(row.unit_id)}</span> : null}

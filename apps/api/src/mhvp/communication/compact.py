@@ -248,7 +248,20 @@ def reply_block(message: Message, salutation: str, ticket_number: int | None) ->
     suggestion = message.suggestion or {}
     prep = suggestion.get("preparation") or {}
     if suggestion.get("reply_draft"):
-        return {"source": "suggestion", "text": str(suggestion["reply_draft"])}
+        block: dict[str, Any] = {"source": "suggestion", "text": str(suggestion["reply_draft"])}
+        # Own schema of the draft (``suggest.MailDraftReply``, R09): tone, used and unknown
+        # placeholders, mailbox style. Without it (older suggestion) the block stays as before.
+        draft = suggestion.get("draft_reply")
+        if isinstance(draft, dict):
+            block["draft"] = {
+                "tone": draft.get("tone"),
+                "style_tone": draft.get("style_tone"),
+                "placeholders": [str(p) for p in draft.get("placeholders") or []][:20],
+                "unknown_placeholders": [str(p) for p in draft.get("unknown_placeholders") or []][
+                    :20
+                ],
+            }
+        return block
     if isinstance(prep, dict) and prep.get("draft"):
         return {"source": "preparation", "text": str(prep["draft"])}
     return {

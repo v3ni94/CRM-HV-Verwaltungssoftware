@@ -35,6 +35,7 @@
     "rememberDevice": "Remember this device for 90 days"
   },
   "Shell": {
+    "workOrders": "Work orders",
     "palette": {
       "title": "Command palette",
       "open": "Open search and commands",
@@ -350,6 +351,7 @@
       "confirmedAt": "Confirmed on",
       "validFrom": "valid from",
       "evidence": "Evidence",
+      "receiptDraft": "Receipt draft in the intake",
       "note": "Note (optional)",
       "accept": "Accept",
       "reject": "Reject",
@@ -794,7 +796,8 @@
       "unhelpful": "Not helpful",
       "saved": "Thanks, feedback saved.",
       "hint": "Feedback on the answer (counted on the knowledge entries used)"
-    }
+    },
+    "invalidExtras": "further property details invalid"
   },
   "Imports": {
     "title": "Imports",
@@ -1317,6 +1320,12 @@
     "notifications": "Notifications",
     "noNotifications": "No new notifications.",
     "markAllRead": "Mark all as read",
+    "muteAll": "Mute all",
+    "mute1h": "1 hour",
+    "mute1d": "24 hours",
+    "mute7d": "7 days",
+    "unmute": "Lift mute",
+    "mutedUntil": "Muted until {when}",
     "markRead": "Mark as read",
     "themeGroup": "Appearance",
     "theme": {
@@ -4539,6 +4548,7 @@
     "onboardingLink": "Third party onboarding and export"
   },
   "Creditors": {
+    "loadError": "The ledgers could not be loaded. Reload the page or check permissions.",
     "sync": "Create creditor accounts",
     "syncHint": "Creates missing creditor accounts for all service provider relations of the ledger and links existing ones.",
     "syncDone": "{created} accounts created, {linked} linked.",
@@ -4563,6 +4573,26 @@
     "runningBalance": "Balance"
   },
   "RecurringPlans": {
+    "createTitle": "Create a new invoice plan",
+    "createFields": {
+      "provider_search": "Search issuer",
+      "provider": "Issuer",
+      "account": "Cost account",
+      "text": "Service",
+      "gross": "Gross per invoice",
+      "vat_percent": "VAT in percent",
+      "interval_months": "Interval in months (1 to 12)",
+      "start_date": "First due date",
+      "end_date": "End date (optional)",
+      "order_reference": "Order reference (optional)",
+      "service_contract_id": "Service contract ID (optional)"
+    },
+    "search": "Search",
+    "choose": "Please choose",
+    "createHint": "The plan only creates unreviewed invoice drafts. The anchor day follows the first due date; shorter months use the last day.",
+    "createSubmit": "Create invoice plan",
+    "createdDone": "Invoice plan created.",
+    "loadError": "The ledgers could not be loaded. Reload the page or check permissions.",
     "edit": "Edit",
     "editTitle": "Edit invoice plan",
     "save": "Save",
@@ -4605,6 +4635,9 @@
   },
   "Invoices": {
     "extra": {
+      "attachment_document_ids": "Attachments of the invoice (document IDs)",
+      "attachment_hint": "{count} attachment(s) linked. Separate several IDs by space, comma or line break; the document must exist in the DMS.",
+      "attachment_invalid": "At least one document ID is invalid or duplicated (at most 50).",
       "title": "Further details for document review",
       "hint": "Optional. Used for arithmetic and factual review; the tax assessment (consideration, construction withholding, input tax) is made by staff or a tax adviser.",
       "service_to": "Service period until",
@@ -5175,7 +5208,12 @@
       "doneHintInterval": "The due date moves {months} months after the completion date; the item stays open.",
       "doneHintOnce": "The item is closed with the completion date.",
       "doneOn": "Done on",
-      "confirmDone": "Record completion"
+      "confirmDone": "Record completion",
+      "selectRow": "Select",
+      "bulkDone": "Complete selected",
+      "bulkDoneOn": "Completion date of the bulk action",
+      "bulkNone": "Select at least one open maintenance item.",
+      "bulkResult": "{changed} maintenance items completed."
     },
     "customFields": {
       "title": "Custom fields",
@@ -6123,6 +6161,16 @@
     "retentionInvalid": "Please enter a whole number between 1 and 120.",
     "retentionSave": "Save retention"
   },
+  "InspectionPackageDefaultDays": {
+    "title": "Default period for inspection packages",
+    "description": "Applies to provision packages of inspection requests created without their own period. After expiry the package can no longer be retrieved. The period of a single package can differ when it is created.",
+    "label": "Period in days (empty: no expiry)",
+    "hint": "Allowed 1 to 365 days. Empty means no expiry. Packages already created keep their period.",
+    "save": "Save period",
+    "saved": "Saved.",
+    "invalid": "Please enter a whole number between 1 and 365 or clear the field.",
+    "readOnly": "Changing this requires the permission to update tenant settings."
+  },
   "TicketReopenWindow": {
     "title": "Reopening closed tickets by email",
     "description": "When a new email arrives for a completed, closed or rejected ticket, the ticket is reopened only if it was closed at most this many calendar days ago. Otherwise a follow up ticket linked to the old one is created; property, unit and contact are taken over. Automatic replies such as out of office notices never reopen a ticket.",
@@ -6938,6 +6986,7 @@
     "started": "Fetch started: {connections} connections, {queued} accounts queued."
   },
   "BankConnections": {
+    "balanceColumn": "Balance",
     "showDisconnected": "Show disconnected ({count})",
     "title": "Bank connections",
     "intro": "Connect bank accounts via finAPI and link them permanently to a ledger or property. Read only: no transfers, no automatic posting.",
@@ -8352,6 +8401,13 @@
     "accounting": "Accounting",
     "noLedgers": "No ledger available. Without a ledger no owner statement can be created."
   },
+  "AiAutomation": {
+    "title": "Automatic AI runs",
+    "rentIncrease": "Let the AI check new or changed rent increase cases for consistency",
+    "batchMail": "Let the AI classify mails without a suggestion overnight",
+    "hint": "Both switches are off by default and bypass neither the provider release nor the monthly budget. Results are proposals and hints, not an approval and not a legal review.",
+    "noProvider": "No AI provider is usable at the moment: {reason}"
+  },
   "InvoiceIntakeAuto": {
     "title": "Automatic invoice intake",
     "label": "Capture invoices from new emails automatically",
@@ -9075,6 +9131,60 @@
     "next": "Next",
     "pageOf": "Page {page} of {pages}, {total} documents",
     "lettersLink": "Letters and templates"
+  },
+  "DocumentRedactions": {
+    "title": "Redacted copies",
+    "intro": "Redacted copies of this document with reason, scope and processing steps. The original stays unchanged. Redaction takes place outside the system, the already redacted file is uploaded. A copy becomes visible in the portal only after release by a second person.",
+    "empty": "No redacted copies.",
+    "statusPending": "awaiting release",
+    "statusReleased": "released",
+    "reason": "Reason",
+    "scope": "Scope of redaction",
+    "steps": "Processing steps",
+    "stepsHint": "One step per line.",
+    "file": "Redacted file",
+    "new": "Create redacted copy",
+    "create": "Create copy",
+    "created": "The redacted copy was created and awaits release.",
+    "released": "The copy was released.",
+    "releasedAt": "Released on {at}",
+    "openCopy": "Open copy",
+    "release": "Release",
+    "releaseConfirm": "Release now",
+    "cancel": "Cancel",
+    "fourEyes": "A second person releases the copy.",
+    "visibilityLegend": "Visible in the portal for",
+    "visibility": {
+      "tenant": "Tenants",
+      "owner": "Owners",
+      "provider": "Service providers",
+      "board": "Advisory board"
+    },
+    "errors": {
+      "missing": "File, reason (at least 5 characters), scope and at least one processing step are required.",
+      "visibility": "Select at least one visibility."
+    }
+  },
+  "DocumentIntakeSettings": {
+    "title": "Intake address for forwarded mail",
+    "intro": "Receipts can be forwarded to an address of the tenant. The address is built from the shared mailbox and a token (belege+token@domain). Attachments enter the document inbox and appear there as a proposal.",
+    "address": "Intake address",
+    "notConfigured": "Not set up yet.",
+    "mailbox": "Shared mailbox",
+    "senders": "Allowed senders",
+    "sendersHint": "One address or @domain per line. Without entries all senders are accepted.",
+    "enabled": "Intake address active",
+    "distribute": "Distribute messages of other tenants of this mailbox",
+    "distributeHint": "Only for the tenant that fetches the shared mailbox. Messages with the token of another tenant of the same mailbox are handed over to that tenant if the sender is allowed there. Without this switch they are skipped.",
+    "save": "Save",
+    "rotate": "Create new token",
+    "saved": "Setting saved.",
+    "rotated": "New token created. Forwards to the old address are no longer recognised.",
+    "direct": {
+      "title": "Direct upload in the browser",
+      "label": "Upload files directly to object storage (signed URL)",
+      "hint": "Default: off, the CRM then uploads through the API. Switch on only if the object storage is reachable from the browser and allows CORS for PUT from the CRM address (see object storage runbook). If the direct upload fails, the CRM falls back to the API upload."
+    }
   },
   "DocumentDetail": {
     "area": "Documents",
@@ -9921,6 +10031,7 @@
     "modes": {
       "individual": "Enter interest per year",
       "reference_rate": "Reference interest rate per year (settings)",
+      "deposit_rates": "Deposit interest rate (history per deposit account)",
       "none": "no interest"
     },
     "errors": {
@@ -12512,6 +12623,7 @@
     "readOnly": "Maintaining the catalogue needs the permission tenant_settings:update."
   },
   "NotificationSettings": {
+    "cardDescription": "Set your own in-app and e-mail notifications per type.",
     "title": "Notifications",
     "intro": "Choose which messages you receive in the app and by e-mail. The settings apply to your account only.",
     "channels": "Channels per kind",
@@ -12632,7 +12744,11 @@
       "requested": "Requested",
       "received": "Received",
       "not_applicable": "Not applicable"
-    }
+    },
+    "createTickets": "Create tasks for missing points",
+    "ticketsCreated": "{count} tasks created.",
+    "ticketsNone": "No new tasks, every missing point already has one.",
+    "ticketLink": "Open task"
   },
   "ManagerChecklist": {
     "title": "Checklist manager change",
@@ -12821,6 +12937,8 @@
     "recent": "Recent activity",
     "reply": "Reply proposal",
     "replySuggestion": "from AI proposal",
+    "replyTone": "Tone: {tone}",
+    "replyUnknownPlaceholders": "Placeholders without value: {list}",
     "replyPreparation": "from mail preparation",
     "replyTemplate": "template",
     "quickSend": "Quick send",
@@ -12829,6 +12947,27 @@
     "showFull": "Show full text",
     "showLess": "Show less",
     "loading": "Loading compact view …"
+  },
+  "HoaStatementPdf": {
+    "download": "Total statement as PDF",
+    "hint": "Draft on the letterhead; only after internal approval and with release gate G4 open. All values come from the stored snapshot."
+  },
+  "YearCarryover": {
+    "title": "Year carryover",
+    "hint": "Carry the closing balances of a finished fiscal year into the opening balance of the next year. Only drafts are created; they are reviewed and approved by a second person like any posting. The carryover is repeatable, an existing draft is not created twice.",
+    "year": "Fiscal year (start year)",
+    "show": "Show closing balances",
+    "take": "Take over as draft",
+    "confirm": "Create the closing balance {year} and the opening balance {next} as posting drafts now?",
+    "created": "{count, plural, one {# draft} other {# drafts}} created, review and approval in the journal.",
+    "period": "Fiscal year {start} to {end}, opening balance on {target}",
+    "alreadyDrafted": "The carryover already exists as a draft or posting.",
+    "carried": "Accounts carried over",
+    "notCarried": "Accounts not carried over",
+    "noneCarried": "No closing balances to carry over.",
+    "account": "Account",
+    "category": "Category",
+    "balance": "Balance"
   },
   "Bookkeeping": {
     "actions": {
@@ -12976,6 +13115,27 @@
     }
   },
   "AdminFees": {
+    "pdf": "Create PDF",
+    "pdfDownload": "Download PDF",
+    "run": {
+      "title": "Fee run",
+      "hint": "Check the preview first, then issue all due fees of the period together. At most one invoice per property and period; periods already issued are skipped. Nothing is sent.",
+      "periodDate": "Day within the period to bill",
+      "invoiceDate": "Invoice date",
+      "preview": "Preview",
+      "issue": "Issue {count} invoice(s)",
+      "confirm": "Issue {count} invoice(s) now? Invoice numbers are assigned permanently.",
+      "previewCount": "Preview: {count} invoice(s) would be due.",
+      "issuedCount": "{count} invoice(s) issued.",
+      "rowStatus": {
+        "preview": "due",
+        "issued": "issued",
+        "already_issued": "already issued",
+        "skipped": "skipped",
+        "error": "error"
+      }
+    },
+    "loadError": "The property list could not be loaded. Reload the page or check permissions.",
     "title": "Management fee",
     "notice": "Set up the fee per property, review the due service periods and issue each period once. An issued invoice is never changed, corrections only by credit note. Nothing is sent; posting the fee stays open until release gate G1.",
     "newFee": "Set up fee",
@@ -13176,6 +13336,10 @@
     "added": "Base rate recorded."
   },
   "DirectDebitFeedback": {
+    "selectAll": "Select all direct debits",
+    "selectOrder": "Select direct debit of {name}",
+    "selection": "{count, plural, one {# direct debit selected} other {# direct debits selected}}. The feedback applies to all selected direct debits together; on errors nothing is saved.",
+    "saveSelection": "Save feedback for {count} direct debits",
     "show": "Bank feedback and reconciliation",
     "summary": "Control sum {sum}, open findings: {findings}",
     "debtor": "Debtor",
@@ -13570,6 +13734,7 @@
     }
   },
   "ContactMerge": {
+    "proposeFormLabel": "Propose merge",
     "breadcrumb": "Contacts",
     "title": "Merge contacts",
     "intro": "Duplicates are proposed, checked and executed by a second person. All references of the source move to the target. The source stays as merged and is not deleted.",
@@ -13640,6 +13805,7 @@
     "create": "Create"
   },
   "LetterTemplates": {
+    "formLabel": "Edit letter template",
     "breadcrumb": "Documents",
     "title": "Letters and templates",
     "intro": "Create a letter from a template on the tenant letterhead, preview it as PDF or create a serial letter for several recipients. Letters are filed and linked, not sent.",
@@ -13706,5 +13872,106 @@
     "movementPurpose": "Purpose",
     "movementSubmit": "Record",
     "movementHint": "Recording is information for the statement and posts nothing. Receipts are linked on the statement."
+  },
+  "OnboardingExtras": {
+    "title": "Further property details (optional)",
+    "hint": "These details do not come from the proposal. They are entered here and created together with the confirmation. On an error nothing is created.",
+    "banksTitle": "Bank accounts",
+    "bankKind": "Kind",
+    "bankKinds": {
+      "hoa": "Community account",
+      "reserve": "Reserve account",
+      "hoa_fee": "Fee account",
+      "rent": "Rent account",
+      "deposit": "Deposit account",
+      "other": "Other"
+    },
+    "iban": "IBAN",
+    "holder": "Account holder",
+    "bankName": "Bank",
+    "bankDefault": "Default account of the legal entity",
+    "bankAdd": "Add bank account",
+    "remove": "Remove",
+    "keysTitle": "Allocation keys",
+    "keysHint": "An existing key (for example MEA or WFL) only receives values, a new key needs name, unit and kind. Consumption keys receive no values, consumption comes from the meters.",
+    "keyCode": "Code",
+    "keyKind": "Kind",
+    "keyKindExisting": "existing key",
+    "keyKinds": {
+      "static": "Static",
+      "consumption": "Consumption",
+      "fixed_amount": "Fixed amount",
+      "fixed_share": "Fixed share"
+    },
+    "keyName": "Name",
+    "keyUnit": "Unit",
+    "keyValues": "Values per unit",
+    "keyValuesPlaceholder": "01=70.5",
+    "keyAdd": "Add allocation key",
+    "debtor": "Adopt debtor accounts into the ledger",
+    "debtorHint": "If the legal entity has no ledger yet, it is created from the draft chart template. Nothing is posted.",
+    "linkDocuments": "Link source documents to the property",
+    "linkDocumentsHint": "The originals of the takeover are assigned to the property as originals.",
+    "matchTitle": "Person match (preview)",
+    "matchLoad": "Show match",
+    "matchReload": "Refresh match",
+    "matchHint": "Shows whether a person would be linked to an existing contact. Nothing is linked or created.",
+    "colUnit": "Unit",
+    "colRole": "Role",
+    "colName": "Name",
+    "colDecision": "Result",
+    "colCandidate": "Best candidate",
+    "roleOwner": "Owner",
+    "roleTenant": "Tenant",
+    "noName": "unnamed",
+    "decision": {
+      "link": "Will be linked",
+      "suggest": "Possible match, new contact",
+      "none": "New contact"
+    },
+    "noCandidate": "no candidate",
+    "thresholds": "Thresholds: link from {link}, suggestion from {suggest}."
+  },
+  "DepositInterest": {
+    "title": "Interest and interest credit",
+    "notice": "The rate applies per deposit account from the stated date. The yearly interest credit is calculated as a draft; confirming only records an interest movement on the deposit account, nothing is posted and nothing is paid.",
+    "ratesTitle": "Rate history",
+    "ratesEmpty": "No rate recorded. Without a rate no draft is created.",
+    "validFrom": "Valid from",
+    "rate": "Rate",
+    "ratePercent": "Rate in percent",
+    "saveRate": "Save rate",
+    "remove": "Remove",
+    "draftsTitle": "Interest credit per year",
+    "draftsEmpty": "No draft yet.",
+    "year": "Year",
+    "amount": "Amount",
+    "status": "Status",
+    "varying": "varying",
+    "statuses": {
+      "draft": "Draft",
+      "confirmed": "Confirmed",
+      "discarded": "Discarded"
+    },
+    "confirm": "Confirm",
+    "discard": "Discard",
+    "createDraft": "Calculate draft"
+  },
+  "PortalSettings": {
+    "title": "Tenant portal",
+    "description": "Name, legal notice and privacy links appear in the portal under the tenant domain, together with the colours and logo of the letterhead data. Empty fields keep the portal neutral.",
+    "name": "Display name in the portal",
+    "imprint": "Link to the legal notice (https)",
+    "privacy": "Link to the privacy policy (https)",
+    "secondFactor": "Portal sign-in strictness",
+    "factor": {
+      "account_choice": "Each account chooses its second factor (default)",
+      "required": "Require the e-mail code for every link sign-in"
+    },
+    "factorHint": "Default is the choice per account (operator decision 26.09.2026). Required applies to link sign-in; password sign-in with TOTP stays optional.",
+    "invalid": "Links must start with https://, the name may have at most 80 characters.",
+    "save": "Save",
+    "saved": "Saved.",
+    "readOnly": "No permission to change."
   }
 }

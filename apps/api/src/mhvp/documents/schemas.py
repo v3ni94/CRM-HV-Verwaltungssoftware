@@ -439,6 +439,8 @@ class DocumentIntakeAddressIn(_In):
     )
     allowed_senders: list[str] = Field(default_factory=list, max_length=50)
     enabled: bool = True
+    # Shared mailbox hub (Q03-02): hand messages with another tenant's token over to that tenant.
+    distribute: bool = False
 
     @field_validator("allowed_senders")
     @classmethod
@@ -458,6 +460,15 @@ class DocumentIntakeAddressOut(BaseModel):
     address: str | None = None
     mailbox_address: str | None = None
     allowed_senders: list[str] = Field(default_factory=list)
+    distribute: bool = False
+
+
+class DocumentDirectUploadIn(_In):
+    enabled: bool
+
+
+class DocumentDirectUploadOut(BaseModel):
+    enabled: bool
 
 
 class DocumentDriveChangesOut(BaseModel):

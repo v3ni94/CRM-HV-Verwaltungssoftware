@@ -338,6 +338,14 @@ async def fee_run(
                     locked = await session.get(AdminFeeSetting, fee.id, with_for_update=True)
                     if locked is None:
                         continue
+                    # Re-check under the row lock: a parallel run may have issued the period
+                    # since the unlocked check above (B08).
+                    if await admin_fees.issued_for_period(session, fee.id, start) is not None:
+                        raise ProblemError(
+                            ErrorCodes.CONFLICT,
+                            detail="Für diesen Leistungszeitraum ist bereits eine Rechnung "
+                            "ausgestellt.",
+                        )
                     number = await numbering.allocate_invoice_number(
                         session, principal.tenant_id, issue_date.year
                     )

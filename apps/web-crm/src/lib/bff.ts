@@ -1,4 +1,5 @@
 /** Browser-side calls to the same-origin BFF (cookies are sent automatically). */
+import { ifMatchFor, rememberEtag } from "./etag-lock";
 import { problemMessage, readProblem, type Problem } from "./problem";
 
 export type BffResult<T> =
@@ -19,12 +20,17 @@ export async function bff<T>(path: string, init: RequestInit = {}): Promise<BffR
   const headers = new Headers(init.headers);
   // FormData sets its own multipart content type including the boundary.
   if (init.body && !(init.body instanceof FormData) && !headers.has("content-type")) headers.set("content-type", "application/json");
+  // S12-04: optimistic lock of contracts, tickets, documents and invoices (ETag from GET).
+  const method = (init.method ?? "GET").toUpperCase();
+  const ifMatch = headers.has("if-match") ? null : ifMatchFor(method, path);
+  if (ifMatch) headers.set("if-match", ifMatch);
   let response: Response;
   try {
     response = await fetch(path, { ...init, headers, credentials: "same-origin", cache: "no-store" });
   } catch {
     return { ok: false, status: 0, problem: null, message: problemMessage(null, 0) };
   }
+  rememberEtag(method, path, response.ok, response.headers?.get?.("etag") ?? null);
   if (!response.ok) {
     const problem = await readProblem(response);
     return { ok: false, status: response.status, problem, message: problemMessage(problem, response.status) };

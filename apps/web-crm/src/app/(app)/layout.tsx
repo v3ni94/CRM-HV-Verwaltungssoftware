@@ -58,6 +58,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
         ...(can("contracts:read")
           ? [{ href: "/dienstleistervertraege", label: t("serviceContracts"), icon: "letting" }]
           : []),
+        ...(can("tickets:read") ? [{ href: "/auftraege", label: t("workOrders"), icon: "letting" }] : []),
         ...(can("documents:read") ? [{ href: "/dokumente", label: t("documents"), icon: "dms" }] : []),
         ...(can("documents:read") ? [{ href: "/dms", label: t("dms"), icon: "dms" }] : []),
         ...(can("objektakte:read")

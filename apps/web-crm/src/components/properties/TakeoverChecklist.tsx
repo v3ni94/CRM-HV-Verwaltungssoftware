@@ -1,12 +1,22 @@
 "use client";
 
 import { useTranslations } from "next-intl";
+import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
-export type TakeoverItem = { id: string; category: string; label: string; status: string; note: string | null; due_date: string | null };
+export type TakeoverItem = {
+  id: string;
+  category: string;
+  label: string;
+  status: string;
+  note: string | null;
+  due_date: string | null;
+  ticket_id?: string | null;
+};
+type TakeoverTickets = { created: { category: string; ticket_number: number }[]; skipped: string[]; checklist: TakeoverList };
 export type TakeoverList = { property_id: string; items: TakeoverItem[]; open_count: number; complete: boolean };
 
 const STATUSES = ["open", "requested", "received", "not_applicable"] as const;
@@ -18,6 +28,7 @@ export function TakeoverChecklist({ propertyId, canEdit }: { propertyId: string;
   const [list, setList] = useState<TakeoverList | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState<number | null>(null);
   const url = `/api/bff/properties/${propertyId}/takeover-checklist`;
 
   const load = useCallback(async () => {
@@ -36,6 +47,17 @@ export function TakeoverChecklist({ propertyId, canEdit }: { propertyId: string;
     setBusy(false);
     if (res.ok) setList(res.data);
     else setError(res.message);
+  }
+
+  async function createTickets() {
+    setBusy(true);
+    setError(null);
+    const res = await bff<TakeoverTickets>(`${url}/tickets`, { method: "POST", body: JSON.stringify({}) });
+    setBusy(false);
+    if (res.ok) {
+      setList(res.data.checklist);
+      setCreated(res.data.created.length);
+    } else setError(res.message);
   }
 
   async function setStatus(category: string, status: string) {
@@ -76,7 +98,17 @@ export function TakeoverChecklist({ propertyId, canEdit }: { propertyId: string;
         <ul className="flex flex-col gap-2 text-sm" data-testid="takeover-items">
           {list.items.map((item) => (
             <li key={item.category} className="flex flex-wrap items-center justify-between gap-2">
-              <span>{item.label}</span>
+              <span>
+                {item.label}
+                {item.ticket_id ? (
+                  <>
+                    {" "}
+                    <Link href={`/tickets/${item.ticket_id}`} className="text-xs underline" data-testid={`takeover-ticket-${item.category}`}>
+                      {t("ticketLink")}
+                    </Link>
+                  </>
+                ) : null}
+              </span>
               <select
                 aria-label={item.label}
                 value={item.status}
@@ -94,6 +126,24 @@ export function TakeoverChecklist({ propertyId, canEdit }: { propertyId: string;
           ))}
         </ul>
       )}
+      {list && list.items.length > 0 && canEdit ? (
+        <div className={ui.formActions}>
+          <button
+            type="button"
+            className={ui.button}
+            onClick={createTickets}
+            disabled={busy || !list.items.some((i) => (i.status === "open" || i.status === "requested") && !i.ticket_id)}
+            data-testid="takeover-tickets"
+          >
+            {t("createTickets")}
+          </button>
+          {created !== null ? (
+            <p role="status" className={ui.help} data-testid="takeover-tickets-result">
+              {created === 0 ? t("ticketsNone") : t("ticketsCreated", { count: created })}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
     </section>
   );
 }

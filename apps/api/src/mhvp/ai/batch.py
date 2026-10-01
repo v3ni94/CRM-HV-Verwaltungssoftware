@@ -83,3 +83,22 @@ async def submit_deferred(
         else:
             report["other"] += 1
     return report
+
+
+async def run_callers(
+    factory: async_sessionmaker[AsyncSession], tenant_id: uuid.UUID, settings: Any
+) -> dict[str, Any]:
+    """Callers of the collective run (M7-07): the nightly classification of inbound mails
+    without a suggestion, behind the tenant switch ``batch_mail_classification``. Each caller
+    reports counts or ``skipped``; a failing caller never stops the others."""
+    from mhvp.communication import batch_classify
+
+    report: dict[str, Any] = {}
+    try:
+        report["mail_classification"] = await batch_classify.run_for_tenant(
+            factory, settings, tenant_id
+        )
+    except Exception:
+        log.exception("ai batch caller failed", caller="mail_classification")
+        report["mail_classification"] = {"error": True}
+    return report

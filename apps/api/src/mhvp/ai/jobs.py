@@ -355,6 +355,8 @@ async def batch_nightly_once(settings: Settings) -> dict[str, Any]:
         for tenant_id in ids:
             try:
                 summary = await batch.submit_deferred(factory, tenant_id, BlobStore(settings))
+                callers = await batch.run_callers(factory, tenant_id, settings)
+                report.setdefault("callers", {})[str(tenant_id)] = callers
             except Exception as exc:  # the other tenants must still run
                 log.exception("ai batch nightly failed", tenant_id=str(tenant_id))
                 report["errors"].append(f"{tenant_id}: {failure_text(exc)}")

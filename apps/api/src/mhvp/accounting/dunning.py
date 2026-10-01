@@ -968,6 +968,17 @@ async def create_interest_draft(
         )
     if case.interest_amount <= 0:
         raise ProblemError(ErrorCodes.CONFLICT, detail="Der Fall weist keine Verzugszinsen aus.")
+    # A block set after the run was approved stops the interest draft as well (M16-03).
+    from mhvp.contracts.models import Contract
+
+    contract = await session.get(Contract, case.contract_id) if case.contract_id else None
+    if contract is not None and contract.dunning_block:
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Mahnsperre am Vertrag: kein Zinsentwurf.")
+    item_ids = [uuid.UUID(str(i["open_item_id"])) for i in case.open_items or []]
+    if await active_item_blocks(session, item_ids):
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Mahnsperre an einem Posten des Falls: kein Zinsentwurf."
+        )
     ledger = await session.get(Ledger, case.ledger_id)
     if ledger is None or ledger.leading_system is not LeadingSystem.MHVP:
         raise ProblemError(ErrorCodes.CONFLICT, detail="Nur das führende System darf mahnen.")

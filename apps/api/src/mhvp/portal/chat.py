@@ -20,6 +20,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import ensure_session_property_allowed
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import features
@@ -232,6 +233,8 @@ async def reply_message(
         ticket = await session.get(Ticket, ticket_id)
         if ticket is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        # Property assignment of the membership (M2-02/S16-02, SECURITY-2026-10-01, Befund 3).
+        ensure_session_property_allowed(session, ticket.property_id)
         row = TicketComment(
             tenant_id=principal.tenant_id,
             ticket_id=ticket.id,

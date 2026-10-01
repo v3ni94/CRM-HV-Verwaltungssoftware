@@ -34,8 +34,8 @@ from mhvp.core.listparams import (
     apply_filters,
     apply_sort,
     check_include,
+    embed,
     list_params,
-    sparse,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.models import Document
@@ -145,7 +145,8 @@ _PROPERTY_SORT = {
     "/properties",
     summary="Objekte",
     response_model=s.PropertyPage,
-    description=LIST_PARAMS_DOC,
+    description=LIST_PARAMS_DOC
+    + " include: legal_entities (Rechtsträger des Objekts und der Objekteigentümer).",
 )
 async def list_properties(
     request: Request,
@@ -174,7 +175,7 @@ async def list_properties(
 ) -> Any:
     from mhvp.contracts.models import Contract
 
-    check_include(params, ())
+    includes = check_include(params, ("legal_entities",))
 
     today = datetime.now(ZoneInfo("Europe/Berlin")).date()
     owned = select(PropertyOwner.property_id).where(svc.active_owner_filter(today))
@@ -245,10 +246,17 @@ async def list_properties(
                 r.id not in with_owner
             )
             items.append(item)
-        return sparse(
+        embedded: dict[str, Any] = {}
+        if "legal_entities" in includes:
+            from mhvp.properties.refs import legal_entity_refs_by_property
+
+            entities = await legal_entity_refs_by_property(session, [r.id for r in rows])
+            embedded["legal_entities"] = lambda item: entities.get(uuid.UUID(item["id"]), [])
+        return embed(
             s.PropertyPage(items=items, total=total, page=page, page_size=page_size),
             params,
             s.PropertySummary,
+            embedded,
         )
 
 

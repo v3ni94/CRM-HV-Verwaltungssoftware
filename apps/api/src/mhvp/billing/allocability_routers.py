@@ -18,10 +18,15 @@ from mhvp.accounting.models import AccountCategory, ChartTemplate, LedgerAccount
 from mhvp.billing import betrkv
 from mhvp.billing.models import Statement, StatementCostItem
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 router = APIRouter(prefix="/billing/operating-cost-types", tags=["Abrechnung"])
-statement_router = APIRouter(prefix="/statements", tags=["Abrechnung"])
+# M2-02/S16-02: statements outside the membership's property assignment answer 404.
+STATEMENT_GUARD = property_column_guard({"statement_id": Statement.property_id})
+statement_router = APIRouter(
+    prefix="/statements", tags=["Abrechnung"], dependencies=[Depends(STATEMENT_GUARD)]
+)
 READ = require_permission("accounting:read")
 UPDATE = require_permission("accounting:update")
 

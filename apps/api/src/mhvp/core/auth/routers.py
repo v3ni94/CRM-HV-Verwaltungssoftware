@@ -6,7 +6,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, EmailStr, Field
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 
 from mhvp.core.auth import passwords, service, tokens, webauthn
 from mhvp.core.auth.principal import Principal, get_principal, sessions
@@ -351,8 +351,9 @@ async def logout(body: RefreshRequest, request: Request) -> Response:
 async def change_password(
     body: PasswordChange, request: Request, principal: Principal = Depends(get_principal)
 ) -> Response:
-    """Requires the current password; other sessions of the user end (only the current token
-    family stays valid until it expires)."""
+    """Requires the current password. All refresh tokens of the user are revoked, so every
+    session (also on other devices) ends once its access token expires and needs the new
+    password (SECURITY-2026-10-01, Befund 5: before, no session ended)."""
     if principal.user_id is None:
         raise ProblemError(ErrorCodes.FORBIDDEN)
     violation = passwords.policy_violation(body.new_password)
@@ -365,6 +366,11 @@ async def change_password(
                 ErrorCodes.INVALID_CREDENTIALS, detail="Aktuelles Passwort ist falsch."
             )
         user.password_hash = passwords.hash_password(body.new_password)
+        await session.execute(
+            update(RefreshToken)
+            .where(RefreshToken.user_id == user.id, RefreshToken.revoked_at.is_(None))
+            .values(revoked_at=datetime.now(UTC))
+        )
     return Response(status_code=204)
 
 

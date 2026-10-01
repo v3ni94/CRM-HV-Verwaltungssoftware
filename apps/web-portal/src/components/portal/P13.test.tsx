@@ -118,6 +118,43 @@ describe("OwnerOverview", () => {
   });
 });
 
+describe("OwnerOverview takeover checklist (R03)", () => {
+  it("shows the status of the takeover points read only", () => {
+    renderIntl(
+      <OwnerOverview
+        payments={[]}
+        note="n"
+        tickets={[]}
+        takeoverNote="Stand der Objektübernahme."
+        takeover={[
+          {
+            property_id: "p1",
+            property_name: "WEG Musterstraße",
+            open_count: 1,
+            complete: false,
+            points: [
+              { category: "insurance", label: "Versicherungen", status: "requested", status_label: "angefordert", due_date: "2026-11-15" },
+              { category: "meters", label: "Zähler", status: "received", status_label: "erhalten", due_date: null },
+            ],
+          },
+        ]}
+      />,
+    );
+    const section = screen.getByTestId("owner-takeover");
+    expect(section).toHaveTextContent("Objektübernahme");
+    expect(section).toHaveTextContent("WEG Musterstraße: 1 Punkte offen");
+    expect(section).toHaveTextContent("Versicherungen");
+    expect(section).toHaveTextContent("angefordert, fällig am 15.11.2026");
+    expect(section).toHaveTextContent("erhalten");
+    expect(section.querySelector("button, input, select")).toBeNull();
+  });
+
+  it("hides the section without a checklist", () => {
+    renderIntl(<OwnerOverview payments={[]} note="n" tickets={[]} />);
+    expect(screen.queryByTestId("owner-takeover")).not.toBeInTheDocument();
+  });
+});
+
 describe("SupportConsent", () => {
   beforeEach(() => {
     vi.stubGlobal("fetch", vi.fn());

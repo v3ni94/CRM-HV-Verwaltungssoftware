@@ -23,6 +23,7 @@ from sqlalchemy.orm.attributes import flag_modified
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
+from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents.letter_records import LetterRecordIn
@@ -53,6 +54,7 @@ from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/letting", tags=["letting"])
 READ = require_permission("contracts:read")
+log = get_logger("mhvp.letting")
 CREATE = require_permission("contracts:create")
 UPDATE = require_permission("contracts:update")
 APPROVE = require_permission("contracts:approve")
@@ -264,6 +266,37 @@ def _check(case: RentIncreaseCase, block_until: date | None) -> dict[str, Any]:
     return out
 
 
+async def _auto_ai_check(
+    session: Any, principal: TenantPrincipal, case: RentIncreaseCase
+) -> uuid.UUID | None:
+    """Q14-02: queues the AI plausibility run of a new or changed draft case when the tenant
+    switch is on and a provider is released; never blocks the case itself."""
+    from mhvp.ai import rent_increase_check
+
+    try:
+        # Reload so JSON columns hold the stored (serializable) values, as in the manual path.
+        await session.refresh(case)
+        return await rent_increase_check.auto_queue(
+            session, tenant_id=principal.tenant_id, user_id=principal.user_id, case=case
+        )
+    except Exception:
+        log.exception("rent increase auto ai check not queued", case_id=str(case.id))
+        return None
+
+
+async def _dispatch_auto_ai_check(
+    request: Request, principal: TenantPrincipal, run_id: uuid.UUID | None
+) -> None:
+    if run_id is None:
+        return
+    from mhvp.billing.ai_check_routers import _dispatch
+
+    try:
+        await _dispatch(request, principal, run_id)
+    except Exception:  # the case is saved; the run can be started by hand (POST .../ai-check)
+        log.exception("rent increase auto ai check not dispatched", run_id=str(run_id))
+
+
 @router.post("/rent-increases", status_code=201, summary="Mieterhöhung anlegen und prüfen")
 async def create_rent_increase(
     body: RentIncreaseIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
@@ -318,7 +351,10 @@ async def create_rent_increase(
         case.check = check
         session.add(case)
         await session.flush()
-        return _case_out(case)
+        out = _case_out(case)
+        auto_run_id = await _auto_ai_check(session, principal, case)
+    await _dispatch_auto_ai_check(request, principal, auto_run_id)
+    return out
 
 
 @router.get("/rent-increases", summary="Mieterhöhungsfälle")
@@ -401,7 +437,10 @@ async def adopt_rent_index(
             check["ok"] = check["ok"] and not statutory["flags"]
         case.check = check
         await session.flush()
-        return _case_out(case)
+        out = _case_out(case)
+        auto_run_id = await _auto_ai_check(session, principal, case)
+    await _dispatch_auto_ai_check(request, principal, auto_run_id)
+    return out
 
 
 @router.put(

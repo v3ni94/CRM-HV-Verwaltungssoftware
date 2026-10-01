@@ -83,4 +83,15 @@ describe("AdminFeePanel", () => {
     expect(prompt).toHaveBeenCalledTimes(2);
     expect(JSON.parse(fetchMock.mock.calls[3]?.[1]?.body as string)).toEqual({ reason: "Einheiten korrigiert" });
   });
+
+  it("files the fee invoice PDF and then offers the download (Q15)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    mockLoad(fetchMock, [period("issued")], [invoice]);
+    fetchMock.mockResolvedValueOnce(jsonResponse({ document_id: "0192abcd-0000-7000-8000-00000000d001", created: true }, 201));
+    renderIntl(<AdminFeePanel properties={[{ id: "p1", label: "P022 Honorarhaus" }]} today="2026-02-15" />);
+    await userEvent.click(await screen.findByRole("button", { name: "PDF erzeugen" }));
+    const link = await screen.findByRole("link", { name: "PDF herunterladen" });
+    expect(link).toHaveAttribute("href", "/api/handover-files/documents/0192abcd-0000-7000-8000-00000000d001/content");
+    expect(fetchMock.mock.calls[3]?.[0]).toBe(`/api/bff/accounting/admin-fee-invoices/${INV}/document`);
+  });
 });

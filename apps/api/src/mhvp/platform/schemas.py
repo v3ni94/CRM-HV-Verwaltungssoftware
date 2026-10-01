@@ -56,6 +56,10 @@ class Branding(BaseModel):
     logo_light_document_id: uuid.UUID | None = None
     logo_dark_document_id: uuid.UUID | None = None
     letter_band: list[BandSegment] | None = Field(default=None, max_length=8)
+    # B26/M21-04: Portal white label. Empty means neutral portal; nothing is invented.
+    portal_name: str | None = Field(default=None, max_length=80)
+    imprint_url: str | None = Field(default=None, max_length=500, pattern=r"^https://")
+    privacy_url: str | None = Field(default=None, max_length=500, pattern=r"^https://")
 
     @field_validator(
         "primary_color",
@@ -117,6 +121,11 @@ class TenantSettingsOut(BaseModel):
     # Regel M19-10: Wiedereröffnung per Mail nur bis so viele Kalendertage nach dem Abschluss,
     # danach Folgeticket (Standard 30, 0 bedeutet immer Folgeticket).
     ticket_reopen_window_days: int = 30
+    # B20: Portal zweiter Faktor, ``account_choice`` (Standard) oder ``required``.
+    portal_second_factor: str = "account_choice"
+    # P08-04, M25-07: Standardfrist der Bereitstellung von Einsichtspaketen in Tagen,
+    # None ohne Ablauf.
+    inspection_package_default_days: int | None = None
     # ADR 0010, M7-04: Lernbeispiele aus Ticketabschlüssen speichern (Standard aus).
     ai_learning_examples_enabled: bool = False
     # ADR 0010 Nachtrag 27.09.2026: Aufbewahrung der Lernbeispiele in Monaten (Standard 24).
@@ -210,6 +219,11 @@ class TenantSettingsPatch(BaseModel):
     branding: Branding | None = None
     ticket_reply_approval_all: bool | None = None
     ticket_reopen_window_days: int | None = Field(default=None, ge=0, le=3650)
+    portal_second_factor: str | None = Field(default=None, pattern="^(account_choice|required)$")
+    # P08-04: Standardfrist in Tagen (1 bis 365); mit clear_inspection_package_default_days
+    # wird sie geleert (ohne Ablauf).
+    inspection_package_default_days: int | None = Field(default=None, ge=1, le=365)
+    clear_inspection_package_default_days: bool = False
     ai_learning_examples_enabled: bool | None = None
     ai_learning_examples_retention_months: int | None = Field(default=None, ge=1, le=120)
     rule_proposal_threshold: int | None = Field(default=None, ge=2, le=50)
@@ -303,6 +317,9 @@ class BrandingOut(BaseModel):
     tenant_id: uuid.UUID
     name: str
     branding: Branding
+    # B26/M21-04: PNG or JPEG logo available at ``/tenant/branding/logo/{variant}``.
+    has_logo_light: bool = False
+    has_logo_dark: bool = False
 
 
 class TenantCreate(BaseModel):

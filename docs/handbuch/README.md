@@ -1,6 +1,6 @@
 # Handbuch
 
-Stand: 26.09.2026, Version 1.25.0. Kapitel zu den Versionen 1.20 bis 1.22 ergänzt am
+Stand: 01.10.2026, Version 1.49.0 (Kapitelindex am 01.10.2026 gegen alle CRM-Seiten und Kapiteldateien geprüft und ergänzt). Kapitel zu den Versionen 1.20 bis 1.22 ergänzt am
 26.09.2026 (Tickets mit Mailverlauf und TNR#, Automatisierung, Portal, WEG, Kommunikation,
 Dienstleisterverträge, IBAN-Freigabe, Energieausweis, Belegeingang, Einstellungen); Abschnitte
 zu 1.23.0 bis 1.25.0 ergänzt am 26.09.2026 (Erledigte ausblenden, Statusauswahl nach Rolle,
@@ -31,6 +31,9 @@ Grundlagen
 - [Kontakte (mit IBAN-Freigabe im Vier-Augen-Prinzip, Beziehungen zu Objekten und Einheiten)](kontakte.md)
 - [Erfassungsstandards und Bericht Datenqualität (Objektname, Namensfelder, Fristen)](erfassungsstandards.md)
 - [Kalender](kalender.md)
+- [Fristen (zentrale Liste der Fälligkeiten und Stichtage)](fristen.md)
+- [Stammdaten direkt bearbeiten](bearbeiten.md)
+- [Barrierefreiheit](barrierefreiheit.md)
 
 Vorgänge und Kommunikation
 
@@ -42,24 +45,28 @@ Vorgänge und Kommunikation
 
 Dokumente und Belege
 
-- [Dokumente und DMS (Paperless, Belegeingang)](dokumente-dms.md)
+- [Dokumente und DMS (Paperless, Belegeingang, Löschvorschläge im Vier-Augen-Prinzip)](dokumente-dms.md)
 - [Belegeingang (mit automatischem Eingang und Maskierung)](belegeingang.md)
 
 Finanzen
 
 - [Buchhaltung (Buchungskreis, Sollstellung, offene Posten, Bankabgleich, Mahnwesen, Zahlläufe)](buchhaltung.md)
 - [DATEV-Importtest (Testdatei, formale Selbstprüfung, Begleitschreiben)](datev-importtest.md)
+- [Rechnungen (Eingangsrechnungen, Honorarrechnungen, Dauerrechnungen und Rechnungspläne)](rechnungen.md)
 - [Banking](banking.md)
 - [WEG (Versammlung, Beschlüsse, Mehrheitsregeln, Abrechnung mit Überleitungsrechnung, Darlehen, Versicherungsfälle, Maßnahmen, Prüfauftrag, Einsichtsanfragen)](weg.md)
 - [Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)](abrechnung-miete.md)
 
 Vermietung und Makler
 
+- [Vermietung (Leerstand, Mieterhöhungen, Mietspiegel)](vermietung.md)
 - [Makler (Anzeigen mit Energieausweis und Angebotsmiete, OpenImmo, Übergabeprotokoll)](makler.md)
+- [Übergabeprotokoll (Mängel als Tickets, Ein- und Auszugsdatum)](uebergabeprotokoll.md)
 
 Datenübernahme und Importe
 
 - [Datenübernahmen](datenuebernahmen.md)
+- [Importe (Verlauf und Rückgängigmachen)](importe.md)
 - [Objekte und Einheiten aus der Immoware24-Objektliste](import-objektdaten.md)
 - [Kontakte aus den Immoware24-Kontaktlisten](import-kontakte.md)
 - [Eigentümer und Mieter den Einheiten zuordnen (Listenimport, Zuordnung)](import-zuordnung.md)
@@ -68,12 +75,13 @@ Datenübernahme und Importe
 
 System
 
-- [Einstellungen (Benutzer, Rollen, Postfächer mit Telefonassistenz, DMS, SLA, KI, Wissen, Telefonie, Portalformulare, Automatisierung, WEG, Kautionszinsen, DATEV)](einstellungen.md)
+- [Einstellungen (Benutzer, Rollen, Postfächer mit Telefonassistenz, DMS, SLA, KI, Wissen, Telefonie, Portalformulare, Automatisierung, WEG, Kautionszinsen, DATEV, Kontenrahmen, G1 Öffnung, Schadenbearbeiter, Datenschutz, Teams, Benachrichtigungen)](einstellungen.md)
 - [Kataloge und benutzerdefinierte Felder](kataloge.md)
 - [Lexware Office (Organisationen je Gesellschaft, Kontakte zuordnen, Rechnungskopien, Rechnungsentwürfe, Dauerrechnungen)](lexware-office.md)
+- [Dienstleisterverträge (Kündigungsfristen, Fristenliste)](dienstleistervertraege.md)
 - [Messdienstleister (Verbindungen, Einrichtungsassistent, Zuordnungsübersicht, CSV, Objektreiter, Einheitenzuordnung, Abruf)](messdienstleister.md)
 - [Verfahrensdokumentation (GoBD-orientierter Entwurf für den Steuerberater)](verfahrensdokumentation.md)
-- [Plattform (Mandanten, Preisstruktur, Freigabe G5, Onboarding Drittmandanten, Export)](plattform.md)
+- [Plattform (Mandanten, Mandantenübersicht, Preisstruktur, Freigabe G5, Onboarding Drittmandanten, Export)](plattform.md)
 
 ## Handlungsanweisungen
 
@@ -233,6 +241,8 @@ Monatsansicht mit eigenen Terminen, Terminen, die Kollegen für alle freigegeben
 Das Menü Benachrichtigungen zeigt ungelesene Hinweise, zum Beispiel fällige oder überfällige Wartungen des Objekts, das man betreut, Fristen mit Vorfrist, neue Mails an eigenen Tickets und interne Benachrichtigungen aus Automatisierungsregeln. Die Erinnerung an Wartungen kommt entsprechend der Vorlaufzeit der Wartung, sonst 14 Tage vorher.
 
 Ein Klick auf eine Benachrichtigung öffnet den Betreff direkt: das Ticket, den Auftrag, die Mail im Postfach, das Dokument, den Vertrag, bei Wartungen die Objektakte, bei Fristen die Fristenliste und bei Terminen den Kalender mit geöffnetem Termin. Die angeklickte Benachrichtigung gilt danach als gelesen; alle anderen bleiben ungelesen. Benachrichtigungen ohne zugehörige Seite lassen sich mit einem Klick nur als gelesen markieren.
+
+Im Menü Benachrichtigungen schaltet die Zeile Alle stummschalten (1 Stunde, 24 Stunden, 7 Tage) alle Hinweise für den Zeitraum stumm, Stummschaltung aufheben nimmt das zurück. Verpflichtende Hinweise (Eskalation bei Fristüberschreitung, Pflichtfristen, ablaufende Bankzustimmung) bleiben davon unberührt. Mit Alle als gelesen markieren werden alle offenen Hinweise auf einmal gelesen.
 
 ## Bedienung auf Handy und Tablet
 

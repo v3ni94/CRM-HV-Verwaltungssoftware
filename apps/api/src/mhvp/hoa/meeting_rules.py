@@ -26,8 +26,10 @@ from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import Attendance, Meeting, Resolution
+from mhvp.hoa.property_scope import HOA_GUARD
 
-router = APIRouter(prefix="/hoa", tags=["hoa"])
+# M2-02/S16-02: WEG records outside the property assignment answer 404.
+router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 SETTINGS_READ = require_permission("tenant_settings:read")

@@ -124,4 +124,22 @@ describe("MaintenancePanel", () => {
     expect(patch?.body).toMatchObject({ title: "Heizung Wartung 2027", interval_months: null, provider_relation_id: PROVIDER.id });
     expect(patch?.body).not.toHaveProperty("status");
   });
+
+  it("completes selected items with one bulk call", async () => {
+    const calls: Call[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      calls.push({ url: String(input), method: init?.method ?? "GET", body: init?.body ? JSON.parse(String(init.body)) : null });
+      return jsonResponse({ action: "maintenance.done", requested: 1, changed: 1 });
+    });
+    renderIntl(<MaintenancePanel propertyId={PID} rows={[ITEM]} providers={[PROVIDER]} units={[]} canEdit canCreate={false} />);
+    await userEvent.click(screen.getByTestId("maintenance-bulk-done"));
+    expect(calls).toHaveLength(0);
+    expect(screen.getByRole("status")).toHaveTextContent("mindestens eine offene Wartung");
+    await userEvent.click(screen.getByRole("checkbox", { name: /Heizungswartung/ }));
+    await userEvent.click(screen.getByTestId("maintenance-bulk-done"));
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0]?.url).toBe("/api/bff/workspace/bulk");
+    expect(calls[0]?.body).toMatchObject({ action: "maintenance.done", ids: [ITEM.id] });
+    await waitFor(() => expect(refresh).toHaveBeenCalled());
+  });
 });

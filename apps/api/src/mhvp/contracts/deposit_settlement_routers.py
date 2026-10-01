@@ -19,8 +19,15 @@ from sqlalchemy import select
 
 from mhvp.contracts import deposit_settlement as ds
 from mhvp.contracts import deposit_settlement_pdf as ds_pdf
-from mhvp.contracts.models import Contract, Deposit, DepositMovement, DepositMovementKind
+from mhvp.contracts.models import (
+    Contract,
+    Deposit,
+    DepositKind,
+    DepositMovement,
+    DepositMovementKind,
+)
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import ensure_session_property_allowed, session_allowed_property_ids
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
@@ -131,6 +138,21 @@ async def _rates(session: Any) -> dict[int, Decimal]:
     return {r.year: r.rate for r in rows}
 
 
+async def _rate_history(session: Any, deposit_id: uuid.UUID) -> list[tuple[date, Decimal]]:
+    rows = (
+        (
+            await session.execute(
+                select(ds.DepositInterestRate)
+                .where(ds.DepositInterestRate.deposit_id == deposit_id)
+                .order_by(ds.DepositInterestRate.valid_from)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return [(r.valid_from, r.rate) for r in rows]
+
+
 async def _compute(
     session: Any, deposit: Deposit, body: DepositSettlementIn
 ) -> ds.SettlementResult:
@@ -157,6 +179,11 @@ async def _compute(
         if body.interest_mode is ds.DepositInterestMode.REFERENCE_RATE
         else None
     )
+    history = (
+        await _rate_history(session, deposit.id)
+        if body.interest_mode is ds.DepositInterestMode.DEPOSIT_RATES
+        else None
+    )
     try:
         return ds.compute_settlement(
             settlement_date=body.settlement_date,
@@ -168,6 +195,7 @@ async def _compute(
             deductions=[ds.Deduction(d.label, d.amount) for d in body.deductions],
             rates=rates,
             entered_interest={y.year: y.amount for y in body.interest_years},
+            rate_history=history,
         )
     except ds.SettlementError as exc:
         raise _invalid(str(exc)) from None
@@ -234,6 +262,12 @@ async def _deposit(session: Any, deposit_id: uuid.UUID) -> Deposit:
     deposit: Deposit | None = await session.get(Deposit, deposit_id)
     if deposit is None:
         raise _nf()
+    # M2-02/S16-02: property assignment of the membership via the contract (404 outside it).
+    if session_allowed_property_ids(session) is not None:
+        property_id = await session.scalar(
+            select(Contract.property_id).where(Contract.id == deposit.contract_id)
+        )
+        ensure_session_property_allowed(session, property_id)
     return deposit
 
 
@@ -422,6 +456,7 @@ async def release_settlement(
         row = await session.get(ds.DepositSettlement, settlement_id)
         if row is None:
             raise _nf()
+        await _deposit(session, row.deposit_id)  # M2-02/S16-02
         if row.status is not ds.DepositSettlementStatus.DRAFT:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Der Entwurf ist bereits freigegeben.")
         row.status = ds.DepositSettlementStatus.RELEASED
@@ -462,6 +497,7 @@ async def create_settlement_document(
         row = await session.get(ds.DepositSettlement, settlement_id)
         if row is None:
             raise _nf()
+        await _deposit(session, row.deposit_id)  # M2-02/S16-02
         deposit = await session.get(Deposit, row.deposit_id)
         if deposit is None:
             raise _nf()
@@ -519,6 +555,7 @@ async def preview_settlement_document(
         row = await session.get(ds.DepositSettlement, settlement_id)
         if row is None:
             raise _nf()
+        await _deposit(session, row.deposit_id)  # M2-02/S16-02
         deposit = await session.get(Deposit, row.deposit_id)
         if deposit is None:
             raise _nf()
@@ -540,3 +577,374 @@ async def preview_settlement_document(
             "Content-Disposition": f'attachment; filename="{filename}"',
         },
     )
+
+
+# Interest rate history per deposit and yearly interest drafts (B15) -------------------------
+
+# Product safeguard (docs/ASSUMPTIONS.md, rule B15): forms of deposit that are not held as a
+# money balance bear no interest in this module; the operator decides every other case.
+NON_INTEREST_KINDS = frozenset(
+    {DepositKind.INSURANCE, DepositKind.GUARANTEE, DepositKind.LETTER_OF_COMFORT}
+)
+
+
+class DepositRateIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    rate: Decimal = Field(ge=0, le=100, max_digits=8, decimal_places=5)
+    note: str | None = Field(default=None, max_length=500)
+
+
+class DepositRateOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+    id: uuid.UUID
+    deposit_id: uuid.UUID
+    valid_from: date
+    rate: Decimal
+    note: str | None
+
+
+class DepositInterestDraftIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    year: int = Field(ge=1900, le=2200)
+
+
+class DepositInterestRunIn(DepositInterestDraftIn):
+    pass
+
+
+class DepositInterestDraftOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True, extra="ignore")
+    id: uuid.UUID
+    deposit_id: uuid.UUID
+    year: int
+    rate: Decimal | None
+    days: int
+    amount: Money
+    status: str
+    movement_id: uuid.UUID | None
+    note: str | None
+
+
+class DepositInterestRunOut(BaseModel):
+    year: int
+    created: int
+    skipped: list[dict[str, str]]
+
+
+def _ensure_open(deposit: Deposit) -> None:
+    if deposit.status == "settled":
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Die Kaution ist bereits abgerechnet.")
+
+
+@router.get(
+    "/deposits/{deposit_id}/interest-rates", summary="Zinssatzverlauf der Kaution (Anlageform)"
+)
+async def list_deposit_rates(
+    deposit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[DepositRateOut]:
+    async with tenant_tx(request, principal) as session:
+        await _deposit(session, deposit_id)
+        rows = (
+            (
+                await session.execute(
+                    select(ds.DepositInterestRate)
+                    .where(ds.DepositInterestRate.deposit_id == deposit_id)
+                    .order_by(ds.DepositInterestRate.valid_from)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [DepositRateOut.model_validate(r) for r in rows]
+
+
+@router.put(
+    "/deposits/{deposit_id}/interest-rates/{valid_from}",
+    summary="Zinssatz der Kaution ab einem Datum setzen",
+)
+async def put_deposit_rate(
+    deposit_id: uuid.UUID,
+    valid_from: date,
+    body: DepositRateIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> DepositRateOut:
+    rate = body.rate.quantize(Decimal("0.00001"))
+    async with tenant_tx(request, principal) as session:
+        deposit = await _deposit(session, deposit_id)
+        _ensure_open(deposit)
+        if deposit.kind in NON_INTEREST_KINDS:
+            raise _invalid("Für diese Anlageform wird keine Verzinsung geführt.")
+        row = (
+            await session.execute(
+                select(ds.DepositInterestRate).where(
+                    ds.DepositInterestRate.deposit_id == deposit_id,
+                    ds.DepositInterestRate.valid_from == valid_from,
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            row = ds.DepositInterestRate(
+                tenant_id=principal.tenant_id,
+                deposit_id=deposit_id,
+                valid_from=valid_from,
+                rate=rate,
+                note=body.note,
+                created_by=principal.user_id,
+            )
+            session.add(row)
+        else:
+            row.rate = rate
+            row.note = body.note
+            row.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="deposit_interest_rate.deposit_set",
+            entity_type="deposit",
+            entity_id=deposit_id,
+            actor_user_id=principal.user_id,
+            payload={"valid_from": valid_from.isoformat(), "rate": str(rate)},
+        )
+        return DepositRateOut.model_validate(row)
+
+
+@router.delete(
+    "/deposits/{deposit_id}/interest-rates/{valid_from}",
+    status_code=204,
+    summary="Zinssatzeintrag der Kaution entfernen",
+)
+async def delete_deposit_rate(
+    deposit_id: uuid.UUID,
+    valid_from: date,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        deposit = await _deposit(session, deposit_id)
+        _ensure_open(deposit)
+        row = (
+            await session.execute(
+                select(ds.DepositInterestRate).where(
+                    ds.DepositInterestRate.deposit_id == deposit_id,
+                    ds.DepositInterestRate.valid_from == valid_from,
+                )
+            )
+        ).scalar_one_or_none()
+        if row is None:
+            raise _nf()
+        await session.delete(row)
+        return Response(status_code=204)
+
+
+async def _draft_for_year(
+    session: Any, principal: TenantPrincipal, deposit: Deposit, year: int
+) -> ds.DepositInterestDraft:
+    """Computes (or recomputes) the draft of one completed year; refuses without a rate."""
+    if year >= local_today().year:
+        raise _invalid("Die Zinsgutschrift kann erst nach Ablauf des Jahres entworfen werden.")
+    _ensure_open(deposit)
+    if deposit.kind in NON_INTEREST_KINDS:
+        raise _invalid("Für diese Anlageform wird keine Verzinsung geführt.")
+    history = await _rate_history(session, deposit.id)
+    if not history:
+        raise _invalid("Für die Kaution ist kein Zinssatz hinterlegt.")
+    movements = (
+        (
+            await session.execute(
+                select(DepositMovement).where(DepositMovement.deposit_id == deposit.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    sign = {
+        DepositMovementKind.PAYMENT: 1,
+        DepositMovementKind.OFFSET: -1,
+        DepositMovementKind.PAYOUT: -1,
+    }
+    changes = [
+        ds.BalanceChange(m.date, sign[m.kind] * m.amount) for m in movements if m.kind in sign
+    ]
+    try:
+        years = ds.interest_by_rate_history(changes, history, date(year, 12, 31), [year])
+    except ds.SettlementError as exc:
+        raise _invalid(str(exc)) from None
+    if not years or years[0].amount <= ds.ZERO:
+        raise _invalid("Für dieses Jahr ergibt sich keine Zinsgutschrift.")
+    result = years[0]
+    row: ds.DepositInterestDraft | None = (
+        await session.execute(
+            select(ds.DepositInterestDraft).where(
+                ds.DepositInterestDraft.deposit_id == deposit.id,
+                ds.DepositInterestDraft.year == year,
+            )
+        )
+    ).scalar_one_or_none()
+    if row is not None and row.status == "confirmed":
+        raise ProblemError(
+            ErrorCodes.CONFLICT, detail="Die Zinsgutschrift des Jahres ist bereits bestätigt."
+        )
+    if row is None:
+        row = ds.DepositInterestDraft(
+            tenant_id=principal.tenant_id,
+            deposit_id=deposit.id,
+            year=year,
+            created_by=principal.user_id,
+        )
+        session.add(row)
+    row.rate, row.days, row.amount, row.status = result.rate, result.days, result.amount, "draft"
+    row.updated_by = principal.user_id
+    await session.flush()
+    await emit(
+        session,
+        tenant_id=principal.tenant_id,
+        type="deposit_interest.drafted",
+        entity_type="deposit",
+        entity_id=deposit.id,
+        actor_user_id=principal.user_id,
+        payload={"year": str(year), "amount": str(result.amount)},
+    )
+    return row
+
+
+@router.post(
+    "/deposits/{deposit_id}/interest-drafts",
+    status_code=201,
+    summary="Jährliche Zinsgutschrift der Kaution als Entwurf berechnen",
+)
+async def create_interest_draft(
+    deposit_id: uuid.UUID,
+    body: DepositInterestDraftIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> DepositInterestDraftOut:
+    async with tenant_tx(request, principal) as session:
+        deposit = await _deposit(session, deposit_id)
+        row = await _draft_for_year(session, principal, deposit, body.year)
+        return DepositInterestDraftOut.model_validate(row)
+
+
+@router.get("/deposits/{deposit_id}/interest-drafts", summary="Zinsgutschrift Entwürfe der Kaution")
+async def list_interest_drafts(
+    deposit_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> list[DepositInterestDraftOut]:
+    async with tenant_tx(request, principal) as session:
+        await _deposit(session, deposit_id)
+        rows = (
+            (
+                await session.execute(
+                    select(ds.DepositInterestDraft)
+                    .where(ds.DepositInterestDraft.deposit_id == deposit_id)
+                    .order_by(ds.DepositInterestDraft.year)
+                )
+            )
+            .scalars()
+            .all()
+        )
+        return [DepositInterestDraftOut.model_validate(r) for r in rows]
+
+
+@router.post(
+    "/deposit-interest-drafts/run",
+    summary="Jahreslauf: Zinsgutschrift Entwürfe für alle Kautionen mit Zinssatz",
+)
+async def run_interest_drafts(
+    body: DepositInterestRunIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> DepositInterestRunOut:
+    """Creates drafts only; deposits without rate, without balance or with a confirmed year
+    are listed as skipped. Nothing is booked or paid."""
+    created = 0
+    skipped: list[dict[str, str]] = []
+    async with tenant_tx(request, principal) as session:
+        deposits = (
+            (
+                await session.execute(
+                    select(Deposit)
+                    .join(ds.DepositInterestRate, ds.DepositInterestRate.deposit_id == Deposit.id)
+                    .where(Deposit.status != "settled")
+                    .distinct()
+                )
+            )
+            .scalars()
+            .all()
+        )
+        for deposit in deposits:
+            try:
+                async with session.begin_nested():
+                    await _draft_for_year(session, principal, deposit, body.year)
+                created += 1
+            except ProblemError as exc:
+                skipped.append({"deposit_id": str(deposit.id), "reason": str(exc.detail)})
+    return DepositInterestRunOut(year=body.year, created=created, skipped=skipped)
+
+
+async def _draft(session: Any, draft_id: uuid.UUID) -> ds.DepositInterestDraft:
+    row: ds.DepositInterestDraft | None = await session.get(ds.DepositInterestDraft, draft_id)
+    if row is None:
+        raise _nf()
+    await _deposit(session, row.deposit_id)  # M2-02/S16-02: scope check as for settlements
+    return row
+
+
+@router.post(
+    "/deposit-interest-drafts/{draft_id}/confirm",
+    summary="Zinsgutschrift bestätigen (erfasst eine Zinsbewegung, keine Buchung, keine Zahlung)",
+)
+async def confirm_interest_draft(
+    draft_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> DepositInterestDraftOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _draft(session, draft_id)
+        deposit = await _deposit(session, row.deposit_id)
+        _ensure_open(deposit)
+        if row.status != "draft":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Nur ein Entwurf kann bestätigt werden.")
+        movement = DepositMovement(
+            tenant_id=principal.tenant_id,
+            deposit_id=row.deposit_id,
+            date=date(row.year, 12, 31),
+            amount=row.amount,
+            kind=DepositMovementKind.INTEREST,
+            reason=f"Zinsgutschrift {row.year}",
+            created_by=principal.user_id,
+        )
+        session.add(movement)
+        await session.flush()
+        row.status, row.movement_id, row.updated_by = "confirmed", movement.id, principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="deposit_interest.confirmed",
+            entity_type="deposit",
+            entity_id=row.deposit_id,
+            actor_user_id=principal.user_id,
+            payload={"year": str(row.year), "amount": str(row.amount)},
+        )
+        return DepositInterestDraftOut.model_validate(row)
+
+
+@router.post(
+    "/deposit-interest-drafts/{draft_id}/discard", summary="Zinsgutschrift Entwurf verwerfen"
+)
+async def discard_interest_draft(
+    draft_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> DepositInterestDraftOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _draft(session, draft_id)
+        if row.status != "draft":
+            raise ProblemError(ErrorCodes.CONFLICT, detail="Nur ein Entwurf kann verworfen werden.")
+        row.status, row.updated_by = "discarded", principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="deposit_interest.discarded",
+            entity_type="deposit",
+            entity_id=row.deposit_id,
+            actor_user_id=principal.user_id,
+            payload={"year": str(row.year)},
+        )
+        return DepositInterestDraftOut.model_validate(row)

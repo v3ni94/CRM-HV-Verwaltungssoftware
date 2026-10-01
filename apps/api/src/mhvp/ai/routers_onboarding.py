@@ -40,6 +40,18 @@ class OnboardingMatchOut(BaseModel):
     candidates: list[OnboardingMatchCandidateOut]
 
 
+class OnboardingMatchBatchIn(BaseModel):
+    persons: list[OnboardingMatchIn] = Field(min_length=1, max_length=500)
+
+
+class OnboardingMatchBatchOut(BaseModel):
+    """One result per person, in the order of the request (preview table of the import)."""
+
+    results: list[OnboardingMatchOut]
+    link_threshold: Decimal
+    suggest_threshold: Decimal
+
+
 class OnboardingMatchSettingIn(BaseModel):
     link_threshold: Decimal = Field(ge=Decimal("0.01"), le=Decimal("1"), decimal_places=2)
     suggest_threshold: Decimal = Field(ge=Decimal("0.01"), le=Decimal("1"), decimal_places=2)
@@ -74,6 +86,39 @@ async def person_match_preview(
             )
             for c in result.candidates
         ],
+    )
+
+
+@router.post(
+    "/onboarding/person-match-batch",
+    summary="Personenabgleich für viele Personen als Vorschau (schreibt nichts)",
+)
+async def person_match_batch(
+    body: OnboardingMatchBatchIn, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> OnboardingMatchBatchOut:
+    """Table preview of the import dialog (10.2 step 4): per person the decision (link, suggest,
+    none) and the best candidates with reasons under the thresholds of the tenant. Nothing is
+    linked or created here; the apply step decides again with the same rules."""
+    async with tenant_tx(request, principal) as session:
+        link, suggest = await person_match.load_thresholds(session)
+        results = [
+            await person_match.match_person(session, person.model_dump()) for person in body.persons
+        ]
+    return OnboardingMatchBatchOut(
+        results=[
+            OnboardingMatchOut(
+                decision=r.decision,
+                candidates=[
+                    OnboardingMatchCandidateOut(
+                        contact_id=str(c.contact_id), name=c.name, score=c.score, reasons=c.reasons
+                    )
+                    for c in r.candidates
+                ],
+            )
+            for r in results
+        ],
+        link_threshold=link,
+        suggest_threshold=suggest,
     )
 
 

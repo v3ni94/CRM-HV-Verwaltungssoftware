@@ -1,7 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { OwnerOverview } from "@/components/portal/OwnerOverview";
-import type { OwnerAllocationUnit, OwnerRentalIncome, OwnerTicket, PaymentResolution } from "@/components/portal/types";
+import type { OwnerAllocationUnit, OwnerRentalIncome, OwnerTakeoverProperty, OwnerTicket, PaymentResolution } from "@/components/portal/types";
 import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { ui } from "@/lib/ui";
 
@@ -11,11 +11,12 @@ export const dynamic = "force-dynamic";
  *  lesend; nur mit Eigentümerrolle oder Vollmacht (sonst 403 der API). */
 export default async function OwnerOverviewPage() {
   const t = await getTranslations("OwnerOverview");
-  const [payments, tickets, allocations, income] = await Promise.all([
+  const [payments, tickets, allocations, income, takeover] = await Promise.all([
     serverFetch("/api/v1/portal/owner/payment-resolutions"),
     serverFetch("/api/v1/portal/owner/tickets"),
     serverFetch("/api/v1/portal/owner/allocation-properties"),
     serverFetch("/api/v1/portal/owner/rental-income"),
+    serverFetch("/api/v1/portal/owner/takeover-checklist"),
   ]);
   redirectIfUnauthenticated(payments);
   if (payments.status === 403) {
@@ -33,6 +34,9 @@ export default async function OwnerOverviewPage() {
     ? ((await allocations.json()) as { items: OwnerAllocationUnit[] }).items
     : [];
   const incomeData = income.ok ? ((await income.json()) as { items: OwnerRentalIncome[] }).items : [];
+  const takeoverData = takeover.ok
+    ? ((await takeover.json()) as { items: OwnerTakeoverProperty[]; note: string })
+    : { items: [], note: "" };
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
@@ -42,6 +46,8 @@ export default async function OwnerOverviewPage() {
         tickets={ticketData}
         allocations={allocationData}
         income={incomeData}
+        takeover={takeoverData.items}
+        takeoverNote={takeoverData.note}
       />
     </div>
   );

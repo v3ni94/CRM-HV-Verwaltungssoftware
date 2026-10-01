@@ -94,6 +94,22 @@ def test_search_tickets_buildings_postings_with_permission_per_type(
         ),
         201,
     )
+    # Q04-02: a meter number leads to the property.
+    _ok(
+        client.post(
+            f"/api/v1/properties/{prop['id']}/meters",
+            json={
+                "meter_type_code": "cold_water",
+                "number": f"ZNR{RUN}",
+                "valid_from": "2024-01-01",
+            },
+            headers=h,
+        ),
+        201,
+    )
+    meter_hits = _types(client, h, f"ZNR{RUN}")["property"]
+    assert [x["id"] for x in meter_hits] == [prop["id"]]
+    assert meter_hits[0]["title"] == f"Zähler ZNR{RUN}"
     ticket = _ok(
         client.post(
             "/api/v1/tickets",

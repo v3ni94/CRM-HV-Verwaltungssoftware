@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { DocumentRedactions, type Redaction } from "@/components/documents/DocumentRedactions";
 import { DocumentVisibilityEditor } from "@/components/documents/DocumentVisibilityEditor";
 import { PortalReadReceipts, type PortalReadReceiptsOut } from "@/components/documents/PortalReadReceipts";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -46,6 +47,10 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
   const filing: Filing | null = filingResponse.ok ? ((await filingResponse.json()) as Filing) : null;
   const receiptsResponse = await serverFetch(`/api/v1/documents/${documentId}/portal-read-receipts`);
   const receipts: PortalReadReceiptsOut | null = receiptsResponse.ok ? ((await receiptsResponse.json()) as PortalReadReceiptsOut) : null;
+  // Geschwärzte Kopien (Q03-03): Liste am Original; eine Kopie ist selbst kein Original.
+  const redactionsResponse = await serverFetch(`/api/v1/documents/${documentId}/redactions`);
+  const redactions: Redaction[] = redactionsResponse.ok ? ((await redactionsResponse.json()) as Redaction[]) : [];
+  const isRedactedCopy = !redactionsResponse.ok ? false : data.links?.some((l) => l.entity_type === "document" && l.role === "generated") ?? false;
   const contactNames: Record<string, string> = {};
   if (receipts) {
     await Promise.all(
@@ -97,6 +102,15 @@ export default async function DocumentPage({ params }: { params: Promise<{ docum
             ) : null}
           </div>
         </div>
+      ) : null}
+      {redactionsResponse.ok && !isRedactedCopy ? (
+        <DocumentRedactions
+          documentId={documentId}
+          initial={redactions}
+          userId={me.data?.user_id ?? null}
+          canCreate={me.data?.permissions.includes("documents:update") ?? false}
+          canApprove={me.data?.permissions.includes("documents:approve") ?? false}
+        />
       ) : null}
       {receipts ? (
         <PortalReadReceipts data={receipts} contactNames={contactNames} />

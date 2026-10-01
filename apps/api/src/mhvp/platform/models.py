@@ -365,11 +365,21 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
             "gmail_settle_seconds BETWEEN 0 AND 3600", name="gmail_settle_seconds_range"
         ),
         CheckConstraint(
+            "portal_second_factor IN ('account_choice', 'required')",
+            name="portal_second_factor_values",
+        ),
+        CheckConstraint(
             "gmail_reconcile_grace_seconds BETWEEN 60 AND 3600",
             name="gmail_reconcile_grace_seconds_range",
         ),
     )
 
+    # B20: second factor in the customer portal. ``account_choice`` (default, operator decision
+    # 26.09.2026, M2-01) leaves the optional e-mail code to each portal account; ``required``
+    # makes the tenant demand the e-mail code for every magic link login.
+    portal_second_factor: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="account_choice", server_default="account_choice"
+    )
     company: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     branding: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     sources: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
@@ -464,6 +474,10 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     ticket_reopen_window_days: Mapped[int] = mapped_column(
         Integer, nullable=False, default=30, server_default=text("30")
     )
+    # Standardfrist der Bereitstellung von Einsichtspaketen in Tagen (P08-04, M25-07, PÜ13,
+    # Migration 0287): NULL bedeutet ohne Ablauf. Gilt nur, wenn beim Erzeugen des Pakets keine
+    # Frist angegeben ist; die Frist je Paket bleibt überschreibbar.
+    inspection_package_default_days: Mapped[int | None] = mapped_column(Integer)
     # Lernbeispiele aus Ticketabschlüssen (ADR 0010, M7-04, Regel M19-07, Migration 0134):
     # bei false wird beim Abschluss kein ``AiExample`` (Aufgabe ``ticket_resolution``)
     # gespeichert. Standard aus (Regel 0.1.3: Datenschutzregel offen); der Betreiber schaltet

@@ -70,7 +70,7 @@ export function SupportConsent({ initial }: { initial: Consent }) {
           </button>
         </div>
       ) : (
-        <form onSubmit={grant} className="flex flex-col gap-2">
+        <form onSubmit={grant} className="flex flex-col gap-2" aria-label={t("title")}>
           <label htmlFor="support-hours" className={ui.label}>
             {t("hours")}
           </label>

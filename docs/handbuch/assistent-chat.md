@@ -132,3 +132,7 @@ Nach einer Übernahme zeigt der Chat mögliche nächste Schritte, zum Beispiel P
 Am Kontakt gibt es den Reiter Assistent, am Objekt den Bereich Assistent (Schaltfläche oben rechts). Beide öffnen den Chat mit dem geöffneten Datensatz als Kontext.
 
 Kosten: Liefert das kleine Modell eine ungültige Antwort oder eine Konfidenz unter der eingetragenen Schwelle, fragt die Plattform einmal das große Modell. Beide Stufen erscheinen getrennt mit ihren Kosten im Lauf. Ist das Monatsbudget erreicht, sperrt die Plattform weitere Läufe und benachrichtigt die Personen mit Recht auf die Einstellungen.
+
+## Objekt anlegen: weitere Angaben und Personenabgleich (Nachtrag 01.10.2026)
+
+Vor dem Bestätigen eines Objektvorschlags zeigt die Tabelle "Personenabgleich (Vorschau)" nach Klick auf "Abgleich anzeigen", ob eine Person mit einem vorhandenen Kontakt verknüpft würde, nur vorgeschlagen wird oder neu entsteht. Dabei wird nichts angelegt. Unter "Weitere Angaben zum Objekt" können Bankkonten (IBAN, Inhaber, Art, Standardkonto), Umlageschlüssel (vorhandener Schlüssel nur mit Werten, neuer Schlüssel mit Name, Einheit und Art; Werte als Zeilen "01=70,5"), die Übernahme der Debitorenkonten und die Verknüpfung der Quelldokumente gewählt werden. Alles wird mit "Bestätigen und übernehmen" in einem Schritt angelegt, bei einem Fehler entsteht nichts. "Rückgängig" entfernt die Anlage wieder, solange nichts darauf gebucht oder zugeordnet wurde.

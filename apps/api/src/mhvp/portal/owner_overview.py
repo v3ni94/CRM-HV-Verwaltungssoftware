@@ -3,6 +3,9 @@
 * ``GET /portal/owner/allocation-properties``: per own unit the allocation keys of the property
   (code, name, unit of measure, kind) with the unit's key value valid today. Information about
   the master data; the keys that apply to a statement are the resolved ones (see the statement).
+* ``GET /portal/owner/takeover-checklist`` (R03, M7-01): status of the takeover checklist of
+  the own properties (label, status, due date, read only). Internal notes, documents and
+  tickets of the management are not part of it.
 * ``GET /portal/owner/rental-income``: for own units that the management administers for the
   owner (special property administration, ``sev_enabled`` on the ownership contract) the
   current agreed rent components of the active tenancy, summed per property. No tenant name,
@@ -166,3 +169,74 @@ async def rental_income(request: Request, ctx: Portal = Depends(portal_user)) ->
                 entry["total_gross"] += gross
         items = [{**v, "total_gross": str(v["total_gross"])} for v in per_property.values()]
         return {"items": items, "currency": "EUR", "note": INCOME_NOTE}
+
+
+TAKEOVER_NOTE = (
+    "Stand der Objektübernahme durch die Verwaltung. Die Anzeige dient der Information, "
+    "Notizen und Unterlagen der Verwaltung sind nicht enthalten."
+)
+TAKEOVER_STATUS_LABELS = {
+    "open": "offen",
+    "requested": "angefordert",
+    "received": "erhalten",
+    "not_applicable": "nicht erforderlich",
+}
+
+
+@router.get("/takeover-checklist", summary="Checkliste der Objektübernahme (Eigentümer, lesend)")
+async def takeover_checklist(
+    request: Request, ctx: Portal = Depends(portal_user)
+) -> dict[str, Any]:
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import (
+        TAKEOVER_CATEGORIES,
+        Property,
+        PropertyTakeoverItem,
+    )
+    from mhvp.properties.routers_takeover import LABELS
+
+    principal, account = ctx
+    async with tenant_tx(request, principal) as session:
+        _, ownership = await _owner_scope(session, account, local_today())
+        items: list[dict[str, Any]] = []
+        if not ownership:
+            return {"items": items, "note": TAKEOVER_NOTE}
+        properties = (
+            await session.scalars(
+                select(Property)
+                .where(
+                    Property.id.in_(select(Contract.property_id).where(Contract.id.in_(ownership)))
+                )
+                .order_by(Property.number)
+            )
+        ).all()
+        order = {c: i for i, c in enumerate(TAKEOVER_CATEGORIES)}
+        for prop in properties:
+            rows = (
+                await session.scalars(
+                    select(PropertyTakeoverItem).where(PropertyTakeoverItem.property_id == prop.id)
+                )
+            ).all()
+            if not rows:
+                continue
+            points = [
+                {
+                    "category": r.category,
+                    "label": LABELS[r.category],
+                    "status": r.status,
+                    "status_label": TAKEOVER_STATUS_LABELS[r.status],
+                    "due_date": r.due_date,
+                }
+                for r in sorted(rows, key=lambda r: order[r.category])
+            ]
+            open_count = sum(1 for p in points if p["status"] in ("open", "requested"))
+            items.append(
+                {
+                    "property_id": prop.id,
+                    "property_name": prop.name,
+                    "points": points,
+                    "open_count": open_count,
+                    "complete": open_count == 0,
+                }
+            )
+        return {"items": items, "note": TAKEOVER_NOTE}

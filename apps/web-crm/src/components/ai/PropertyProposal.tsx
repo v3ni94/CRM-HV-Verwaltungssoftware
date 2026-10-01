@@ -9,6 +9,8 @@ import { formatDate, formatDecimal, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
 import { ImportResult } from "./ImportResult";
+import { EMPTY_EXTRAS, extrasPayload, extrasProblems, OnboardingExtras, type ExtrasState } from "./OnboardingExtras";
+import { PersonMatchTable } from "./PersonMatchTable";
 
 const MANAGEMENT = ["rental", "hoa", "hoa_with_sev"] as const;
 
@@ -22,6 +24,7 @@ export function PropertyProposal({ proposal, onDecided }: { proposal: Proposal; 
   const [management, setManagement] = useState<string>(preview.property.management_type ?? "");
   const [asOf, setAsOf] = useState("");
   const [vat, setVat] = useState<Record<string, string>>(() => Object.fromEntries(codes.map((c) => [c, ""])));
+  const [extras, setExtras] = useState<ExtrasState>(EMPTY_EXTRAS);
   const [result, setResult] = useState<ImportRun | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -34,6 +37,7 @@ export function PropertyProposal({ proposal, onDecided }: { proposal: Proposal; 
   if (!management) missing.push(t("missingManagement"));
   if (!asOf) missing.push(t("missingAsOf"));
   if (invalid.length) missing.push(t("invalidVat"));
+  if (extrasProblems(extras).length) missing.push(t("invalidExtras"));
   const skipped = codes.filter((c) => !(c in map));
 
   const apply = async () => {
@@ -48,6 +52,7 @@ export function PropertyProposal({ proposal, onDecided }: { proposal: Proposal; 
           management_type: management,
           as_of: asOf,
           vat_percent_by_payment_type: map,
+          ...extrasPayload(extras),
         },
       }),
     });
@@ -156,6 +161,7 @@ export function PropertyProposal({ proposal, onDecided }: { proposal: Proposal; 
           </ul>
         </li>
       </ul>
+      {decision === "pending" ? <PersonMatchTable parties={preview.parties} /> : null}
       {preview.parties.some((party) => !preview.units.some((u) => u.number === party.unit_number)) ? (
         <p className="text-xs text-muted">{t("partiesWithoutUnit")}</p>
       ) : null}
@@ -210,6 +216,7 @@ export function PropertyProposal({ proposal, onDecided }: { proposal: Proposal; 
               <input id="prop-asof" type="date" className={ui.input} value={asOf} onChange={(e) => setAsOf(e.target.value)} />
             </div>
           </div>
+          <OnboardingExtras state={extras} onChange={setExtras} />
           {codes.length > 0 ? (
             <fieldset className="flex flex-col gap-2">
               <legend className="text-sm font-medium">{t("vatTitle")}</legend>

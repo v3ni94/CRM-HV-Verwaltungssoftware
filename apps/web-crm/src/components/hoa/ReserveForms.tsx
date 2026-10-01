@@ -37,7 +37,7 @@ export function ReserveCreateForm({ ledgerId }: { ledgerId: string }) {
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2" data-testid="reserve-create">
+    <form onSubmit={submit} className="flex flex-col gap-2" data-testid="reserve-create" aria-label={t("create")}>
       <h3 className="font-medium">{t("create")}</h3>
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">
@@ -98,7 +98,7 @@ export function ReserveMovementForm({ statementId, reserves }: { statementId: st
   }
 
   return (
-    <form onSubmit={submit} className="flex flex-col gap-2" data-testid="reserve-movement">
+    <form onSubmit={submit} className="flex flex-col gap-2" data-testid="reserve-movement" aria-label={t("movementTitle")}>
       <h3 className="font-medium">{t("movementTitle")}</h3>
       <div className="flex flex-wrap items-end gap-2">
         <label className="flex flex-col gap-1">

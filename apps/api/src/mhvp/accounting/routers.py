@@ -101,8 +101,8 @@ from mhvp.core.listparams import (
     apply_filters,
     apply_sort,
     check_include,
+    embed,
     list_params,
-    sparse,
 )
 from mhvp.core.pagination import PAGE_HEADERS, paginate
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -1731,7 +1731,7 @@ _INVOICE_SORT = {
     summary="Rechnungseingang",
     responses=PAGE_HEADERS,
     response_model=list[dict[str, Any]],
-    description=LIST_PARAMS_DOC,
+    description=LIST_PARAMS_DOC + " include: creditor (Kreditor, Kontakt des Rechnungsstellers).",
 )
 async def list_invoices(
     request: Request,
@@ -1751,7 +1751,7 @@ async def list_invoices(
 ) -> Any:
     """Rechnungen, neueste zuerst. Paginierung wie ``GET /tickets`` (Kopfzeilen
     ``X-Total-Count``, ``X-Page``, ``X-Page-Size``), Antwort bleibt eine Liste."""
-    check_include(params, ())
+    includes = check_include(params, ("creditor",))
     async with tenant_tx(request, principal) as session:
         query = apply_sort(
             apply_filters(select(Invoice), params, _INVOICE_FILTERS),
@@ -1771,7 +1771,25 @@ async def list_invoices(
                 )
             )
         rows = await paginate(session, query, response, page=page, page_size=page_size, limit=limit)
-        return sparse(await _invoices_full(session, rows), params, None, response=response)
+        embedded: dict[str, Any] = {}
+        if "creditor" in includes:
+            from mhvp.contacts.models import Contact
+
+            creditor_ids = {i.provider_contact_id for i in rows}
+            creditors = (
+                {
+                    c.id: {"id": c.id, "display_name": c.display_name, "kind": c.kind}
+                    for c in (
+                        await session.scalars(select(Contact).where(Contact.id.in_(creditor_ids)))
+                    ).all()
+                }
+                if creditor_ids
+                else {}
+            )
+            embedded["creditor"] = lambda item: creditors.get(
+                uuid.UUID(str(item["provider_contact_id"]))
+            )
+        return embed(await _invoices_full(session, rows), params, None, embedded, response=response)
 
 
 @router.post(

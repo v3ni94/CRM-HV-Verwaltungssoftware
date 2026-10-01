@@ -411,6 +411,11 @@ def test_operating_cost_statement(clients: tuple[TestClient, TestClient], world:
         )
     )
     assert issued["status"] == "issued"
+    # R07/Q12: the issue emits statement.confirmed (A-R07-01).
+    confirmed = _ok(
+        client.get("/api/v1/tenant/events", params={"type": "statement.confirmed"}, headers=h)
+    )
+    assert (st["id"], "rental") in {(e["entity_id"], e["payload"]["kind"]) for e in confirmed}
     assert (
         client.post(
             f"{S}/{st['id']}/transition", json={"target": "resolved"}, headers=acc_user

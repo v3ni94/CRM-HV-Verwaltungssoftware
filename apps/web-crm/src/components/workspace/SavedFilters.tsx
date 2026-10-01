@@ -73,7 +73,7 @@ export function SavedFilters({
           </button>
         </span>
       ))}
-      <form onSubmit={save} className="flex items-center gap-1">
+      <form onSubmit={save} className="flex items-center gap-1" aria-label={t("filterName")}>
         <label htmlFor="filter-name" className="sr-only">
           {t("filterName")}
         </label>

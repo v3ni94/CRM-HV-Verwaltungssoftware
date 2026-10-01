@@ -7,7 +7,7 @@ import secrets
 import uuid
 from collections.abc import Sequence
 from datetime import UTC, datetime
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from sqlalchemy import select, update
@@ -55,6 +55,7 @@ from mhvp.platform.models import (
     RolePermission,
     Tenant,
     TenantBillingSettings,
+    TenantDomain,
     TenantSettings,
     User,
 )
@@ -384,10 +385,13 @@ def _settings_out(row: TenantSettings) -> TenantSettingsOut:
         tenant_id=row.tenant_id,
         company=CompanyData.model_validate(row.company),
         branding=Branding.model_validate(row.branding),
-        sources=row.sources,
+        # Structured entries (intake address, switches) have their own endpoints.
+        sources={k: v for k, v in row.sources.items() if isinstance(v, str)},
         auto_posting_enabled=row.auto_posting_enabled,
         ticket_reply_approval_all=row.ticket_reply_approval_all,
         ticket_reopen_window_days=row.ticket_reopen_window_days,
+        portal_second_factor=row.portal_second_factor,
+        inspection_package_default_days=row.inspection_package_default_days,
         ai_learning_examples_enabled=row.ai_learning_examples_enabled,
         ai_learning_examples_retention_months=row.ai_learning_examples_retention_months,
         learning_bookkeeper_enabled=row.learning_bookkeeper_enabled,
@@ -478,6 +482,8 @@ async def patch_settings(
             "branding": row.branding,
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
             "ticket_reopen_window_days": row.ticket_reopen_window_days,
+            "portal_second_factor": row.portal_second_factor,
+            "inspection_package_default_days": row.inspection_package_default_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "rule_proposal_threshold": row.rule_proposal_threshold,
@@ -505,6 +511,14 @@ async def patch_settings(
         if body.ticket_reopen_window_days is not None:
             # Regel M19-10: Wiedereröffnungsfenster in Kalendertagen, Änderung protokolliert.
             row.ticket_reopen_window_days = body.ticket_reopen_window_days
+        if body.clear_inspection_package_default_days:
+            row.inspection_package_default_days = None
+        elif body.inspection_package_default_days is not None:
+            # P08-04: Standardfrist der Einsichtspakete, Änderung protokolliert.
+            row.inspection_package_default_days = body.inspection_package_default_days
+        if body.portal_second_factor is not None:
+            # B20: Anmeldestrenge des Kundenportals je Mandant, Änderung protokolliert.
+            row.portal_second_factor = body.portal_second_factor
         if body.ai_learning_examples_enabled is not None:
             # ADR 0010, M7-04: Speicherung der Lernbeispiele je Mandant, Änderung protokolliert.
             row.ai_learning_examples_enabled = body.ai_learning_examples_enabled
@@ -564,6 +578,8 @@ async def patch_settings(
             "branding": row.branding,
             "ticket_reply_approval_all": row.ticket_reply_approval_all,
             "ticket_reopen_window_days": row.ticket_reopen_window_days,
+            "portal_second_factor": row.portal_second_factor,
+            "inspection_package_default_days": row.inspection_package_default_days,
             "ai_learning_examples_enabled": row.ai_learning_examples_enabled,
             "ai_learning_examples_retention_months": row.ai_learning_examples_retention_months,
             "rule_proposal_threshold": row.rule_proposal_threshold,
@@ -767,10 +783,39 @@ async def resync_portal_role_permissions(
     return {"members": applied}
 
 
+async def _public_branding_tenant(request: Request) -> uuid.UUID | None:
+    """Tenant of a portal domain. The portal server calls the API under its internal address and
+    names the browser host in ``X-Portal-Host``; without it the Host header decides (3.3). The
+    result is public branding only (colours, logo, legal links), never tenant data."""
+    forwarded = (request.headers.get("x-portal-host") or "").split(":")[0].strip().lower()
+    if forwarded:
+        async with platform_transaction(sessions(request)) as session:
+            found: uuid.UUID | None = await session.scalar(
+                select(TenantDomain.tenant_id).where(TenantDomain.host == forwarded)
+            )
+        return found
+    return await resolve_host_tenant(request)
+
+
+async def _logo_document(session: AsyncSession, branding: dict[str, Any], variant: str) -> Any:
+    from mhvp.documents.models import Document
+
+    raw = branding.get(f"logo_{variant}_document_id")
+    if not raw:
+        return None
+    try:
+        document = await session.get(Document, uuid.UUID(str(raw)))
+    except ValueError:
+        return None
+    if document is None or document.mime_type not in ("image/png", "image/jpeg"):
+        return None
+    return document
+
+
 @tenant_router.get("/branding", summary="Branding des Mandanten (White-Label)")
 async def branding(request: Request) -> BrandingOut:
     """Public for portals: resolved from the Host header (3.3); with a token from its tenant."""
-    tenant_id = await resolve_host_tenant(request)
+    tenant_id = await _public_branding_tenant(request)
     if tenant_id is None and request.headers.get("authorization"):
         from mhvp.core.auth.principal import get_principal
 
@@ -781,10 +826,42 @@ async def branding(request: Request) -> BrandingOut:
         tenant = await session.get(Tenant, tenant_id)
     async with tenant_transaction(sessions(request), tenant_id) as session:
         row = await session.scalar(select(TenantSettings))
-    if tenant is None or row is None:
-        raise _not_found()
+        if tenant is None or row is None:
+            raise _not_found()
+        light = await _logo_document(session, row.branding, "light")
+        dark = await _logo_document(session, row.branding, "dark")
     return BrandingOut(
-        tenant_id=tenant_id, name=tenant.name, branding=Branding.model_validate(row.branding)
+        tenant_id=tenant_id,
+        name=tenant.name,
+        branding=Branding.model_validate(row.branding),
+        has_logo_light=light is not None,
+        has_logo_dark=dark is not None,
+    )
+
+
+@tenant_router.get(
+    "/branding/logo/{variant}",
+    summary="Logo des Mandanten für das Portal (öffentlich, PNG oder JPEG)",
+    response_class=Response,
+    responses={200: {"content": {"image/png": {}, "image/jpeg": {}}}},
+)
+async def branding_logo(variant: Literal["light", "dark"], request: Request) -> Response:
+    from mhvp.documents.blobs import BlobStore
+
+    tenant_id = await _public_branding_tenant(request)
+    if tenant_id is None:
+        raise _not_found()
+    async with tenant_transaction(sessions(request), tenant_id) as session:
+        row = await session.scalar(select(TenantSettings))
+        document = None if row is None else await _logo_document(session, row.branding, variant)
+        if document is None:
+            raise _not_found()
+        mime, ref = document.mime_type, document.storage_ref
+    data = BlobStore(request.app.state.settings).get(ref)
+    return Response(
+        content=data,
+        media_type=mime,
+        headers={"Cache-Control": "public, max-age=300", "X-Content-Type-Options": "nosniff"},
     )
 
 

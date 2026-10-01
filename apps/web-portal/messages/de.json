@@ -972,7 +972,11 @@
     "allocationsTitle": "Umlageeigenschaften",
     "unit": "Einheit",
     "noValue": "kein Wert hinterlegt",
-    "incomeTitle": "Mieterträge je Objekt (vereinbarte Miete)"
+    "incomeTitle": "Mieterträge je Objekt (vereinbarte Miete)",
+    "takeoverTitle": "Objektübernahme",
+    "takeoverComplete": "alle Punkte erledigt",
+    "takeoverOpen": "{count} Punkte offen",
+    "takeoverDue": "fällig am {date}"
   },
   "SupportConsent": {
     "title": "Einsicht durch die Verwaltung",
@@ -990,5 +994,10 @@
     "row": "Einzelabrechnung {year}, Einheit {unit}",
     "version": "Version {version}",
     "download": "PDF herunterladen"
+  },
+  "Branding": {
+    "logoAlt": "Logo {name}",
+    "imprint": "Impressum",
+    "privacy": "Datenschutz"
   }
 }

@@ -15,6 +15,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, File, Request, UploadFile
 
 from mhvp.core.auth.principal import tenant_tx
+from mhvp.core.escaping import sanitize_filename
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal.routers import Portal, _own_order, portal_user
 from mhvp.receipts import einvoice
@@ -42,13 +43,14 @@ async def upload_einvoice(
     from mhvp.documents.services import check_upload, store_document
 
     principal, account = ctx
-    data = await file.read()
+    limit = request.app.state.settings.document_max_bytes
+    data = await file.read(limit + 1)  # bounded read (SECURITY-2026-10-01, Befund 2)
     mime = (file.content_type or "application/xml").split(";")[0].strip()
     if mime not in einvoice.XML_MIME_TYPES:
         raise ProblemError(
             ErrorCodes.UPLOAD_REJECTED, detail="Erwartet wird eine XML-Datei (XRechnung)."
         )
-    check_upload(mime, data, request.app.state.settings.document_max_bytes)
+    check_upload(mime, data, limit)
     result = einvoice.read(mime, data)
     if result.einvoice is None:
         detail = "; ".join(result.findings) or "Die Datei enthält keine lesbare E-Rechnung."
@@ -60,13 +62,13 @@ async def upload_einvoice(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Rechnung erst nach dokumentierter Ausführung."
             )
-        name = file.filename or "e-rechnung.xml"
+        name, _ = sanitize_filename(file.filename or "e-rechnung.xml")
         doc = await store_document(
             session,
             BlobStore(request.app.state.settings),
             tenant_id=principal.tenant_id,
             data=data,
-            title=name,
+            title=name[:300],
             filename=name,
             mime_type=mime,
             source=DocumentSource.PORTAL,

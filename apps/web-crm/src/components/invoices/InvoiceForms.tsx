@@ -11,6 +11,7 @@ import { ui } from "@/lib/ui";
 
 type Option = { id: string; label: string };
 const MONEY = /^\d+([.,]\d{1,2})?$/;
+const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 const cents = (v: string) => Math.round(Number(v.replace(",", ".")) * 100);
 const fmt = (c: number) => (c / 100).toFixed(2);
 
@@ -27,6 +28,10 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
   const [x, setX] = useState({ service_to: "", service_place: "", issuer_vat_id: "", issuer_tax_number: "", prepaid_amount: "", retention_amount: "", discount_percent: "", discount_until: "", reverse_charge: false, construction_withholding: false, input_tax_deductible: "" });
   const xMoney = (v: string) => v.trim() === "" || MONEY.test(v.trim());
   const xValid = xMoney(x.prepaid_amount) && xMoney(x.retention_amount) && xMoney(x.discount_percent);
+  // Anlagen zum Beleg (Q02, 7.9.1 PÜ01): Dokument-IDs aus dem DMS, getrennt durch Leerzeichen, Komma oder Zeilenumbruch.
+  const [attachments, setAttachments] = useState("");
+  const attachmentIds = attachments.split(/[\s,;]+/).filter(Boolean);
+  const attachmentsValid = attachmentIds.length <= 50 && attachmentIds.every((v) => UUID.test(v)) && new Set(attachmentIds).size === attachmentIds.length;
   const xNum = (v: string) => (v.trim() === "" ? null : v.trim().replace(",", "."));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -37,7 +42,7 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
   };
   const net = MONEY.test(f.net) ? cents(f.net) : NaN;
   const vat = Number.isFinite(net) ? Math.round((net * Number(f.vat_percent)) / 100) : NaN;
-  const valid = xValid && ledger && provider && f.number.trim() && f.invoice_date && Number.isFinite(net) && f.account;
+  const valid = xValid && attachmentsValid && ledger && provider && f.number.trim() && f.invoice_date && Number.isFinite(net) && f.account;
   const submit = async () => {
     setBusy(true);
     setError(null);
@@ -53,6 +58,7 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
       order_reference: f.order_reference.trim() || null,
       recipient_name: f.recipient_name.trim() || null,
       service_to: x.service_to || null,
+      attachment_document_ids: attachmentIds,
       service_place: x.service_place.trim() || null,
       issuer_vat_id: x.issuer_vat_id.trim() || null,
       issuer_tax_number: x.issuer_tax_number.trim() || null,
@@ -158,6 +164,11 @@ export function InvoiceCreate({ ledgers, accounts }: { ledgers: Option[]; accoun
             </label>
           ))}
         </div>
+        <label className="mt-2 flex flex-col gap-1">
+          <span className={ui.label}>{t("extra.attachment_document_ids")}</span>
+          <textarea className={ui.input} rows={2} value={attachments} onChange={(e) => setAttachments(e.target.value)} aria-invalid={!attachmentsValid} data-testid="attachment-ids" />
+          <span className={ui.help}>{attachmentsValid ? t("extra.attachment_hint", { count: attachmentIds.length }) : t("extra.attachment_invalid")}</span>
+        </label>
       </details>
       <p className="text-sm text-muted" data-testid="gross">
         {Number.isFinite(net) ? t("gross", { gross: formatEur(fmt(net + vat)), vat: formatEur(fmt(vat)) }) : ""}

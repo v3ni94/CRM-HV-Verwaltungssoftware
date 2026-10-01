@@ -370,3 +370,7 @@ zeigt die Seite einen Hinweis.
   (Ist), Entnahmen, Zinsen, Endbestand sowie Bankbestand und Differenz zum Endbestand.
 * Mittelverwendung erfassen: Art (Entnahme, Steuer, Gebühr, Zins), Betrag und Zweck. Die Erfassung
   ist eine Information für die Abrechnung und bucht nichts; Belege werden an der Abrechnung verknüpft.
+
+## Gesamtabrechnung als PDF
+
+In der Abrechnung einer WEG lädt "Gesamtabrechnung als PDF" die Gesamtabrechnung auf dem Briefbogen herunter. Das PDF ist ein Entwurf und steht erst nach interner Freigabe der Abrechnung und bei offener Freigabestufe G4 zur Verfügung; andernfalls erscheint eine Meldung.

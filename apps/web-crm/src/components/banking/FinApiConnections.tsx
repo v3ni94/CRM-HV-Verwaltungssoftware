@@ -207,7 +207,7 @@ export function FinApiConnections() {
                     <thead>
                       <tr>
                         <th>{t("title")}</th>
-                        <th className="num">Saldo</th>
+                        <th className="num">{t("balanceColumn")}</th>
                         <th>{t("unassigned")}</th>
                         <th>{t("fetch")}</th>
                       </tr>

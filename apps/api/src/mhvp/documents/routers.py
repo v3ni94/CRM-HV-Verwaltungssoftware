@@ -24,8 +24,8 @@ from mhvp.core.listparams import (
     apply_filters,
     apply_sort,
     check_include,
+    embed,
     list_params,
-    sparse,
 )
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters, mirror_deletion, retention
@@ -123,6 +123,50 @@ def _property_scope_filter(session: Any) -> Any:
             & DocumentLink.entity_id.in_(select(Ticket.id).where(Ticket.property_id.in_(ids))),
         )
     )
+
+
+async def _document_property_refs(
+    session: Any, document_ids: list[uuid.UUID]
+) -> dict[uuid.UUID, list[dict[str, Any]]]:
+    """Q12 include=properties: properties of the links (property, unit, contract, ticket),
+    within the property assignment (M2-02)."""
+    from mhvp.contracts.models import Contract
+    from mhvp.properties.models import Unit
+    from mhvp.properties.refs import property_refs
+
+    if not document_ids:
+        return {}
+    links = (
+        await session.execute(
+            select(
+                DocumentLink.document_id, DocumentLink.entity_type, DocumentLink.entity_id
+            ).where(
+                DocumentLink.document_id.in_(document_ids),
+                DocumentLink.entity_type.in_(("property", "unit", "contract", "ticket")),
+            )
+        )
+    ).all()
+    resolve: dict[str, dict[uuid.UUID, uuid.UUID]] = {}
+    for kind, model in (("unit", Unit), ("contract", Contract), ("ticket", Ticket)):
+        ids = {e for _, t, e in links if t == kind}
+        if ids:
+            rows = await session.execute(
+                select(model.id, model.property_id).where(model.id.in_(ids))
+            )
+            resolve[kind] = {i: p for i, p in rows.all() if p is not None}
+    pairs: set[tuple[uuid.UUID, uuid.UUID]] = set()
+    for doc_id, kind, entity_id in links:
+        prop_id = entity_id if kind == "property" else resolve.get(kind, {}).get(entity_id)
+        if prop_id is not None:
+            pairs.add((doc_id, prop_id))
+    refs = await property_refs(session, {p for _, p in pairs})
+    out: dict[uuid.UUID, list[dict[str, Any]]] = {}
+    for doc_id, prop_id in pairs:
+        if prop_id in refs:
+            out.setdefault(doc_id, []).append(refs[prop_id])
+    for value in out.values():
+        value.sort(key=lambda r: r["number"])
+    return out
 
 
 async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
@@ -278,7 +322,8 @@ _DOCUMENT_SORT = {
     "/documents",
     summary="Dokumente suchen (Volltext)",
     response_model=s.DocumentPage,
-    description=LIST_PARAMS_DOC,
+    description=LIST_PARAMS_DOC
+    + " include: properties (Objekte über Verknüpfung mit Objekt, Einheit, Vertrag, Ticket).",
 )
 async def list_documents(
     request: Request,
@@ -296,7 +341,7 @@ async def list_documents(
     params: ListParams = Depends(list_params),
     principal: TenantPrincipal = Depends(READ),
 ) -> Any:
-    check_include(params, ())
+    includes = check_include(params, ("properties",))
     async with tenant_tx(request, principal) as session:
         query = apply_filters(select(Document), params, _DOCUMENT_FILTERS)
         if is_draft is not None:
@@ -351,10 +396,15 @@ async def list_documents(
             hit.is_draft = bool((row[0].source_meta or {}).get("is_draft"))
             hit.snippet = row[1] if len(row) > 1 else None
             items.append(hit)
-        return sparse(
+        embedded: dict[str, Any] = {}
+        if "properties" in includes:
+            by_doc = await _document_property_refs(session, [row[0].id for row in rows])
+            embedded["properties"] = lambda item: by_doc.get(uuid.UUID(item["id"]), [])
+        return embed(
             s.DocumentPage(items=items, total=total, page=page, page_size=page_size),
             params,
             s.DocumentHit,
+            embedded,
         )
 
 

@@ -5,6 +5,7 @@ Column headers are invented for the test and make no statement about real Immowa
 (13.1, M8-01 stays open)."""
 
 import asyncio
+import uuid
 from collections.abc import Iterator
 from typing import Any
 
@@ -369,6 +370,39 @@ def test_q08_history_imports(client: TestClient, world: World) -> None:
     conflict = _run(client, h, "open_items", changed, oi_cols, name="c.xlsx", kind=kind_map)
     assert conflict["counts"] == {"conflict": 1}
 
+    # R04 / Q08-01 balance check (report only). Items: receivable 200,00 + 300,00 and special
+    # levy 3.000,00 -> debtor 3.500,00; credit 50,00; reserve 2.000,50. Opening balance:
+    # debtor +3.500,00 (match), no creditor line (difference 50,00), reserve -2.000,00 (difference 0,50).
+    check_url = f"{HISTORY}/open-items/balance-check"
+    assert client.get(check_url, params={"ledger_id": ledger}, headers=h).status_code == 404
+    by_cat = {}
+    for a in acc_rows:
+        by_cat.setdefault(a["category"], a["id"])
+    ids = [by_cat["debtor"], by_cat["reserve"]]
+    ob = {
+        "cutoff_date": "2026-01-31",
+        "lines": [
+            {"kind": "debtor", "account_id": ids[0], "amount": "3500.00"},
+            {"kind": "reserve", "account_id": ids[1], "amount": "-2000.00"},
+        ],
+    }
+    _ok(client.put(f"{M}/ledgers/{ledger}/opening-balances", json=ob, headers=h))
+    check = _ok(client.get(check_url, params={"ledger_id": ledger}, headers=h))
+    by_group = {g["group"]: g for g in check["groups"]}
+    assert by_group["debtor"]["difference"] == "0.00"
+    assert (by_group["creditor"]["status"], by_group["creditor"]["difference"]) == (
+        "deviation",
+        "50.00",
+    )
+    assert (by_group["reserve"]["items_open_sum"], by_group["reserve"]["difference"]) == (
+        "2000.50",
+        "0.50",
+    )
+    assert check["all_match"] is False
+    assert {n["kind"] for n in check["not_comparable"]} == {"deposit", "loan"}
+    assert client.get(check_url, params={"ledger_id": ledger}, headers=other).status_code == 404
+    assert client.get(check_url, params={"ledger_id": "x"}, headers=h).status_code == 422
+
     # M8-04 journal of the ledger (J2 booked) and historical bank transactions.
     _ok(
         client.post(
@@ -453,6 +487,54 @@ def test_q08_history_imports(client: TestClient, world: World) -> None:
         == 3
     )
     assert _ok(client.get(f"{HISTORY}/bank-links", headers=other)) == []
+
+    # R04 candidate list: the first 200,00 payment is booked as J2 (candidate, nothing assigned),
+    # the second one finds no free entry (J2 is linked); permission and tenant separation.
+    tx200 = sorted((t for t in txs if t["amount"] in ("200.00", 200, "200")), key=lambda t: t["id"])
+    cand_counts = []
+    for t in tx200:
+        cands = _ok(client.get(f"{HISTORY}/bank-links/{t['id']}/candidates", headers=h))
+        cand_counts.append(sorted(c["source_entry_id"] for c in cands))
+    assert sorted(cand_counts) == [[], ["J2"]]
+    first = tx200[0]["id"]
+    assert client.get(f"{HISTORY}/bank-links/{first}/candidates", headers=other).status_code == 404
+    assert (
+        client.get(f"{HISTORY}/bank-links/{uuid.uuid4()}/candidates", headers=h).status_code == 404
+    )
+    assert (
+        client.get(
+            f"{HISTORY}/bank-links/{first}/candidates", params={"tolerance_days": 99}, headers=h
+        ).status_code
+        == 422
+    )
+    assert len(_ok(client.get(f"{HISTORY}/bank-links", headers=h))) == 2  # unchanged
+
+    # R04 undo: a new account of an extra run is removed again, rows stay for used accounts.
+    src = _stage(
+        client,
+        h,
+        "chart_of_accounts",
+        "undo.xlsx",
+        _xlsx(
+            [
+                ["Objekt", "Konto", "Bezeichnung", "Kategorie", "Art"],
+                ["881", "97", "Undo", "Kosten", "Aufwand"],
+            ]
+        ),
+        XLSX,
+    )
+    mp = _map(client, h, "chart_of_accounts", chart_cols, **maps)
+    _ok(client.post(f"{BASE}/files/{src['id']}/validate", json={"mapping_id": mp["id"]}, headers=h))
+    run = _ok(client.post(f"{BASE}/files/{src['id']}/apply", headers=h), 201)
+    run_id = run.get("import_run_id") or run["report"]["import_run_id"]
+
+    def numbers() -> set[str]:
+        rows = _ok(client.get(f"{A}/ledgers/{ledger}/accounts", headers=h))
+        return {a["number"] for a in rows}
+
+    assert "000097" in numbers()
+    _ok(client.post(f"/api/v1/imports/{run_id}/undo", headers=h))
+    assert "000097" not in numbers()
 
     # M8-02 SEPA overview: quarterly on day 5 from 01.01.2026 with complete mandate evidence.
     evidence = _ok(

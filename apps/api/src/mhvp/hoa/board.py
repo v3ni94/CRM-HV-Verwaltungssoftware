@@ -23,6 +23,7 @@ from mhvp.core.auth.scope import (
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import AuditEngagement, AuditItem, AuditReport
+from mhvp.hoa.property_scope import HOA_BOARD_GUARD
 from mhvp.portal.board import (
     BOARD_LEGAL_BASIS,
     BOARD_ROLE,
@@ -35,7 +36,8 @@ from mhvp.portal.board import (
 from mhvp.portal.models import AccessGrant, PortalAccount
 from mhvp.workspace.services import local_today
 
-router = APIRouter(prefix="/hoa", tags=["hoa"])
+# M2-02/S16-02: WEG records outside the property assignment answer 404.
+router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_BOARD_GUARD)])
 READ = require_permission("accounting:read")
 ANSWER = require_permission("accounting:create")
 # Creating a portal account is contact management (same right as the owner invitation).

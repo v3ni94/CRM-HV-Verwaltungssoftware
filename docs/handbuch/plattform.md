@@ -113,3 +113,11 @@ Nur für Plattformadministratoren. Die Seite verwaltet je Mandant die Lizenzen j
 - Die Abrechnungsvorschau berechnet für einen Monat Einheiten, Betrag und Summe netto, mit Kennzeichen für Testphase und Überschreitung des Kontingents. Fehlt für eine Lizenz der Preis, wird die Summe als unvollständig markiert.
 - Der Nutzungsverlauf zeigt je Monat und je Tag Benutzer, KI-Kosten und Speicher; "Nutzung jetzt zählen" löst eine Zählung aus.
 - Der Preisverlauf je Modul zeigt die Preislisteneinträge. Es sind keine Preise vorbelegt, die Rechnungsstellung ist offen.
+
+## Mandantenübersicht (Seite Plattform, Übersicht)
+
+Nur für Plattformadministratoren. Rein lesende Sicht über die Mandanten, in denen Sie Mitglied sind. Jeder Mandant wird getrennt gelesen, die Zeilen tragen das Mandantenkennzeichen, jeder Aufruf wird je Mandant protokolliert.
+
+* Kennzahlen je Mandant und als Summe: Objekte, Einheiten, offene Tickets, Fristen (fällig in 30 Tagen), offene Freigaben.
+* Listen: offene Tickets nach Dringlichkeit (Nummer, Titel, Priorität, Status, SLA fällig) und Objekte (Nummer, Name, Ort, Einheiten, offene Tickets). Der Mandantenwähler schränkt auf einen Mandanten ein.
+* Die Übersicht zeigt keine Buchungen, Forderungen, Bankbestände oder Belege. Bearbeiten ist erst nach dem Wechsel über Im Mandanten öffnen möglich.

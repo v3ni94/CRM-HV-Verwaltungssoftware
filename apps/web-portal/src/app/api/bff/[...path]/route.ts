@@ -46,7 +46,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // die lesende Support-Sicht (SA-02).
   { method: "GET", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
   { method: "POST", pattern: new RegExp(`^portal/tickets/${ID}/messages$`) },
-  { method: "GET", pattern: /^portal\/owner\/(tickets|payment-resolutions|consumption-info|allocation-properties|rental-income|statements)$/ },
+  { method: "GET", pattern: /^portal\/owner\/(tickets|payment-resolutions|consumption-info|allocation-properties|rental-income|statements|takeover-checklist)$/ },
   { method: "GET", pattern: new RegExp(`^portal/owner/consumption-info/${ID}$`) },
   { method: "GET", pattern: /^portal\/support-consent$/ },
   { method: "POST", pattern: /^portal\/support-consent$/ },

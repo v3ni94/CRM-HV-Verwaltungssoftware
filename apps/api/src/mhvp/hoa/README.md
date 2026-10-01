@@ -117,3 +117,13 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 * Reports list returns `confirmed_by_name`, `confirmed_at`, `confirmation_note`.
 * `statement_kind` accepts `special_levy` and `heating` (accounting enum, SA-08).
 * Rules: `docs/rules/M24-W3-ruecklage-rhythmus.md`, `docs/rules/M25-W3-einsicht-pruefrolle.md`.
+* Inspection (R05, migration 0287): `PackageIn.valid_days` falls back to `tenant_settings.inspection_package_default_days` (empty: no expiry); `no_expiry=true` overrides a set default for one package. Rule P08-06.
+
+
+## Package R08 (01.10.2026): property assignment (M2-02/S16-02, Q13-01)
+
+`property_scope.py` (`HOA_GUARD`, `HOA_BOARD_GUARD`): WEG ids in path or query (statement, plan,
+meeting, resolution, levy, loan, measure, claim, engagement, audit, asset report, legal entity,
+ledger) resolve to the property; outside the membership assignment 404. Inspection requests
+are guarded in `inspection.py` and their list is filtered. Audit reports of the board carry no
+legal entity and are not guarded by id.

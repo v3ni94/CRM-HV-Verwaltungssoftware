@@ -762,6 +762,16 @@ async def process_inbox_once(
                     select(Tenant).where(Tenant.status == TenantStatus.ACTIVE)
                 )
             ]
+        from mhvp.documents.distribution import distribute_shared_mailboxes
+
+        # Q03-02: hand messages of a shared mailbox over to the tenant named by the token
+        # before the tenants process their own inbox.
+        try:
+            totals["distributed"] = await distribute_shared_mailboxes(
+                factory, store, settings, tenant_ids
+            )
+        except Exception:
+            log.exception("document_intake_distribution_failed")
         for tenant_id in tenant_ids:
             async with tenant_transaction(factory, tenant_id) as session:
                 counts = await process_tenant_inbox(session, store, settings, tenant_id, http)

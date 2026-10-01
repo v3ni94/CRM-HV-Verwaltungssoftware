@@ -279,6 +279,15 @@ def _like(term: str) -> str:
 # Tools -------------------------------------------------------------------------------------
 
 
+def _assigned(session: AsyncSession, column: Any) -> list[Any]:
+    """M2-02/S16-02: condition list limiting ``column`` (a property id) to the membership's
+    property assignment; empty when unrestricted. Rows without property drop out."""
+    from mhvp.core.auth.scope import session_allowed_property_ids
+
+    allowed = session_allowed_property_ids(session)
+    return [] if allowed is None else [column.in_(allowed)]
+
+
 async def search_contacts(session: AsyncSession, query: Query) -> list[dict[str, Any]]:
     """Name, e-mail, phone (``Contact.search_text``, as the global search) and role."""
     from mhvp.contacts import services
@@ -355,7 +364,10 @@ async def search_properties(session: AsyncSession, query: Query) -> list[dict[st
         ]
     rows = (
         await session.scalars(
-            select(Property).where(or_(*conditions)).order_by(Property.number).limit(PREFETCH)
+            select(Property)
+            .where(or_(*conditions), *_assigned(session, Property.id))
+            .order_by(Property.number)
+            .limit(PREFETCH)
         )
     ).all()
 
@@ -396,7 +408,7 @@ async def search_units(session: AsyncSession, query: Query) -> list[dict[str, An
         await session.execute(
             select(Unit, Property)
             .join(Property, Property.id == Unit.property_id)
-            .where(or_(*conditions))
+            .where(or_(*conditions), *_assigned(session, Property.id))
             .order_by(Property.number, Unit.number)
             .limit(PREFETCH * 4)
         )
@@ -435,7 +447,7 @@ async def search_contracts(session: AsyncSession, query: Query) -> list[dict[str
             .join(Party, Party.id == Contract.party_id)
             .join(Property, Property.id == Contract.property_id)
             .join(Unit, Unit.id == Contract.unit_id)
-            .where(_search_condition(" ".join(query.terms)))
+            .where(_search_condition(" ".join(query.terms)), *_assigned(session, Property.id))
             .order_by(Contract.start_date.desc())
             .limit(LIMIT)
         )
@@ -473,7 +485,10 @@ async def search_tickets(session: AsyncSession, query: Query) -> list[dict[str, 
         conditions.append(Ticket.title.ilike(_like(term), escape="\\"))
     rows = (
         await session.scalars(
-            select(Ticket).where(or_(*conditions)).order_by(Ticket.number.desc()).limit(PREFETCH)
+            select(Ticket)
+            .where(or_(*conditions), *_assigned(session, Ticket.property_id))
+            .order_by(Ticket.number.desc())
+            .limit(PREFETCH)
         )
     ).all()
 
@@ -592,7 +607,10 @@ async def _ticket_links(session: AsyncSession, *conditions: Any) -> list[dict[st
 
     rows = (
         await session.scalars(
-            select(Ticket).where(*conditions).order_by(Ticket.number.desc()).limit(LIMIT)
+            select(Ticket)
+            .where(*conditions, *_assigned(session, Ticket.property_id))
+            .order_by(Ticket.number.desc())
+            .limit(LIMIT)
         )
     ).all()
     return [
@@ -618,7 +636,7 @@ async def _contract_links(session: AsyncSession, *conditions: Any) -> list[dict[
             .join(Party, Party.id == Contract.party_id)
             .join(Property, Property.id == Contract.property_id)
             .join(Unit, Unit.id == Contract.unit_id)
-            .where(*conditions)
+            .where(*conditions, *_assigned(session, Property.id))
             .order_by(Contract.start_date.desc())
             .limit(LIMIT)
         )
@@ -675,6 +693,26 @@ async def _mail_facts(session: AsyncSession, *conditions: Any) -> list[str]:
     return facts
 
 
+async def _focus_in_assignment(
+    session: AsyncSession, entity_type: str, entity_id: uuid.UUID
+) -> bool:
+    """Whether the open record's property lies inside the membership's property assignment."""
+    from mhvp.contracts.models import Contract
+    from mhvp.core.auth.scope import property_allowed, session_principal
+    from mhvp.properties.models import Unit
+    from mhvp.tickets.models import Ticket
+
+    principal = session_principal(session)
+    models: dict[str, Any] = {"unit": Unit, "contract": Contract, "ticket": Ticket}
+    if entity_type in ("property", "hoa"):
+        return property_allowed(principal, entity_id)
+    model = models.get(entity_type)
+    if model is None or not _assigned(session, model.property_id):
+        return True
+    row = await session.get(model, entity_id)
+    return row is None or property_allowed(principal, row.property_id)
+
+
 async def focus_record(
     session: AsyncSession, permissions: frozenset[str], entity_type: str, entity_id: uuid.UUID
 ) -> tuple[list[dict[str, Any]], list[str], bool]:
@@ -689,6 +727,8 @@ async def focus_record(
     permission = FOCUS_PERMISSION.get(entity_type)
     if permission is None or permission not in permissions:
         return [], [], permission is None
+    if not await _focus_in_assignment(session, entity_type, entity_id):
+        return [], [], True  # M2-02/S16-02: outside the assignment reads like not found
     can = permissions.__contains__
     links: list[dict[str, Any]] = []
     facts: list[str] = []

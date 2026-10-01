@@ -143,3 +143,53 @@ async def history_bank_links(
             .limit(limit)
         )
         return [HistoryBankLinkOut.model_validate(r) for r in rows.all()]
+
+
+@router.get(
+    "/open-items/balance-check",
+    summary="Prüfbericht: Einzelposten gegen Eröffnungsbilanz (ohne Korrektur)",
+)
+async def history_open_item_balance_check(
+    request: Request,
+    ledger_id: uuid.UUID,
+    opening_balance_id: uuid.UUID | None = None,
+    principal: TenantPrincipal = Depends(READ_ACCOUNTING),
+) -> dict[str, Any]:
+    """Compares item sums with the opening balance per group (sign rule: A-Q08-01). Report
+    only: nothing is corrected, posted or released."""
+    async with tenant_tx(request, principal) as session:
+        report = await w3_reports.open_item_balance_check(session, ledger_id, opening_balance_id)
+        if report is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        return report
+
+
+class HistoryJournalCandidateOut(BaseModel):
+    journal_entry_id: uuid.UUID
+    source_entry_id: str
+    booking_date: date
+    day_difference: int
+    amount: Decimal
+    text: str | None
+
+
+@router.get(
+    "/bank-links/{bank_transaction_id}/candidates",
+    summary="Vorschlag: Journalbuchungen zu einem historischen Bankumsatz (Kandidatenliste)",
+)
+async def history_bank_link_candidates(
+    request: Request,
+    bank_transaction_id: uuid.UUID,
+    tolerance_days: int = Query(default=3, ge=0, le=10),
+    limit: int = Query(default=10, ge=1, le=50),
+    principal: TenantPrincipal = Depends(READ_ACCOUNTING),
+) -> list[HistoryJournalCandidateOut]:
+    """Candidates by date and amount; nothing is assigned automatically."""
+    from mhvp.banking.models import BankTransaction
+
+    async with tenant_tx(request, principal) as session:
+        tx = await session.get(BankTransaction, bank_transaction_id)
+        if tx is None or not (tx.raw or {}).get("migration", {}).get("history"):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        rows = await w3_reports.journal_candidates(session, tx, tolerance_days, limit)
+        return [HistoryJournalCandidateOut.model_validate(r) for r in rows]

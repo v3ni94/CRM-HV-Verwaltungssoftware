@@ -288,3 +288,12 @@ contacts from a transaction live in `mhvp.properties.routers_creditors`.
   decision carry `learned_from_ai`.
 - Test set (M12-06): `tests/fixtures/banking/m12_02_testbestand.json`, 20 synthetic
   transactions with 12 outgoing cases, `tests/unit/test_m12_02_testbestand.py`.
+
+
+## Package R08 (01.10.2026): property assignment (M2-02/S16-02, Q13-01)
+
+`property_scope.py`: a bank account is visible to a restricted member when its home property or
+one of its `bank_account_assignment` properties is assigned. `GET /banking/accounts`,
+`/banking/transactions` and `/banking/payment-orders` are filtered; `banking_path_guard` answers
+404 for `tx_id`, `transaction_id`, `bank_account_id`, `account_id`, `order_id` and `batch_id`
+paths outside the assignment. Rule docs/rules/M2-02-objektzuordnung.md.

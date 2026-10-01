@@ -18,6 +18,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -29,7 +30,8 @@ from mhvp.portal.routers import Portal, portal_user
 from mhvp.properties.models import LegalEntity, Property, Unit
 from mhvp.workspace.services import local_today
 
-crm_router = APIRouter(tags=["Objekte"])
+# M2-02/S16-02: path ids outside the property assignment answer 404.
+crm_router = APIRouter(tags=["Objekte"], dependencies=[Depends(property_path_guard)])
 portal_router = APIRouter(prefix="/portal", tags=["Portal"])
 READ = require_permission("properties:read")
 UPDATE = require_permission("properties:update")

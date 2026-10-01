@@ -90,3 +90,35 @@ describe("InvoiceCreate extra details (M14)", () => {
     }
   });
 });
+
+describe("InvoiceCreate attachments (Q02)", () => {
+  afterEach(() => vi.restoreAllMocks());
+  const A = "0192abcd-0000-7000-8000-0000000000a1";
+  const B = "0192abcd-0000-7000-8000-0000000000a2";
+
+  it("sends the attachment set and rejects invalid IDs", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementationOnce(async () => jsonResponse({ items: [{ id: "p1", display_name: "Dachdecker GmbH" }], total: 1, page: 1, page_size: 50 }))
+      .mockImplementationOnce(async () => jsonResponse({ id: ID }, 201));
+    renderIntl(<InvoiceCreate ledgers={[{ id: "l1", label: "WEG" }]} accounts={{ l1: [{ id: "a1", label: "043000 Allgemeinstrom" }] }} />);
+    await userEvent.type(screen.getByLabelText("Aussteller suchen"), "Dach");
+    await userEvent.click(screen.getByText("Suchen"));
+    await userEvent.selectOptions(await screen.findByLabelText("Aussteller"), "p1");
+    await userEvent.type(screen.getByLabelText("Rechnungsnummer"), "D-2");
+    await userEvent.type(screen.getByLabelText("Rechnungsdatum"), "2026-03-01");
+    await userEvent.type(screen.getByLabelText("Netto"), "10");
+    await userEvent.selectOptions(screen.getByLabelText("Kostenkonto"), "a1");
+    const field = screen.getByTestId("attachment-ids");
+    await userEvent.type(field, "kein-uuid");
+    expect(screen.getByText("Rechnung erfassen")).toBeDisabled();
+    await userEvent.clear(field);
+    await userEvent.click(field);
+    await userEvent.paste(`${A}, ${B}`);
+    expect(screen.getByText(/2 Anlage\(n\) verknüpft/)).toBeInTheDocument();
+    await userEvent.click(screen.getByText("Rechnung erfassen"));
+    await waitFor(() => expect(push).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[1]?.[1]?.body as string);
+    expect(body.attachment_document_ids).toEqual([A, B]);
+  }, 20000);
+});

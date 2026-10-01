@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.contacts.validation import InvalidValueError, normalise_iban
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_session_property_allowed, session_allowed_property_ids
+from mhvp.core.bulk import BULK_MAX_ITEMS, BulkResultOut, run_bulk
 from mhvp.core.escaping import content_disposition
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
@@ -284,6 +285,12 @@ class BulkStatusIn(_In):
     ticket_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
     status: TicketStatus
     # Gemeinsame Erledigungsnotiz für alle Tickets, Pflicht bei abschließendem Status.
+    resolution: ResolutionIn | None = None
+
+
+class TicketBulkIn(_In):
+    ids: list[uuid.UUID] = Field(min_length=1, max_length=BULK_MAX_ITEMS)
+    status: TicketStatus
     resolution: ResolutionIn | None = None
 
 
@@ -2610,6 +2617,47 @@ async def bulk_status(
 
 
 @router.post(
+    "/tickets/bulk",
+    summary="Massenaktion Tickets mit Teilerfolgsbericht",
+    response_model=BulkResultOut,
+)
+async def bulk_tickets(
+    body: TicketBulkIn, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> BulkResultOut:
+    """Same rules as bulk-status (limit, flow, resolution), reported in the shared bulk format;
+    each ticket runs in its own savepoint."""
+    ids = list(dict.fromkeys(body.ids))
+    if len(ids) > BULK_LIMIT_STANDARD and not _is_bulk_unlimited(principal):
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail=f"Höchstens {BULK_LIMIT_STANDARD} Tickets gleichzeitig"
+        )
+    async with tenant_tx(request, principal) as session:
+
+        async def act(ticket_id: uuid.UUID) -> None:
+            ticket = await session.scalar(
+                select(Ticket).where(Ticket.id == ticket_id).with_for_update()
+            )
+            if ticket is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+            _assert_not_merged(ticket)
+            if body.status is ticket.status:
+                return
+            await transition_status(
+                session,
+                request.app.state.settings,
+                ticket,
+                body.status,
+                principal.user_id,
+                bulk=True,
+                skip_flow=_may_skip_flow(principal),
+                resolution=body.resolution,
+            )
+            await session.flush()
+
+        return await run_bulk(ids, act, savepoint=session.begin_nested)
+
+
+@router.post(
     "/tickets/{ticket_id}/comments", status_code=201, summary="Kommentar (intern oder extern)"
 )
 async def comment(
@@ -2876,6 +2924,10 @@ async def order_step(
             if body.scheduled_at is None:
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Termin fehlt.")
             order.scheduled_at = body.scheduled_at
+            await session.flush()
+            from mhvp.workspace.jobs import sync_work_order_entry
+
+            await sync_work_order_entry(session, order)
         if body.status is OrderStatus.DONE:
             order.completion_report = body.completion_report
             order.photo_document_ids = body.photo_document_ids or []

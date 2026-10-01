@@ -2,9 +2,10 @@ import { getTranslations } from "next-intl/server";
 import { notFound } from "next/navigation";
 
 import { DmsConnectionSettings, type DmsConnection } from "@/components/documents/DmsConnectionSettings";
+import { DocumentIntakeSettings, type IntakeAddress } from "@/components/documents/DocumentIntakeSettings";
 import { InvoiceIntakeAutoSettings } from "@/components/invoices/InvoiceIntakeAutoSettings";
 import type { OAuthStatus } from "@/components/mail/MailboxSettings";
-import { redirectIfUnauthenticated, serverApi } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
 import { getMe } from "@/lib/me";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { ui } from "@/lib/ui";
@@ -27,11 +28,15 @@ export default async function DmsSettingsPage({
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   if (!me.data?.permissions.includes("tenant_settings:update")) notFound();
-  const [connections, oauth, intake] = await Promise.all([
+  const [connections, oauth, intake, intakeAddress, directUpload] = await Promise.all([
     api.GET("/api/v1/dms-connections"),
     api.GET("/api/v1/mail/oauth/google"),
     api.GET("/api/v1/ai/invoice-intake-auto"),
+    serverFetch("/api/v1/document-intake-address"),
+    serverFetch("/api/v1/document-direct-upload"),
   ]);
+  const intakeData = intakeAddress.ok ? ((await intakeAddress.json()) as IntakeAddress) : null;
+  const directData = directUpload.ok ? ((await directUpload.json()) as { enabled: boolean }) : null;
   const list = (connections.data ?? []) as DmsConnection[];
   const paperless = list.find((c) => c.kind === "paperless") ?? null;
   const googleDrive = list.find((c) => c.kind === "google_drive") ?? null;
@@ -57,6 +62,10 @@ export default async function DmsSettingsPage({
         oauth={(oauth.data ?? { client_id: null, configured: false, source: null, redirect_uri: "" }) as OAuthStatus}
       />
       <InvoiceIntakeAutoSettings initial={intake.data?.enabled ?? false} />
+      <DocumentIntakeSettings
+        initial={(intakeData ?? { configured: false, enabled: false, address: null, mailbox_address: null, allowed_senders: [], distribute: false }) as IntakeAddress}
+        directUpload={directData?.enabled ?? false}
+      />
     </div>
   );
 }

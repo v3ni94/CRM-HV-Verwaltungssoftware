@@ -45,6 +45,11 @@ from mhvp.banking.models import (
     RuleState,
     TransactionStatus,
 )
+from mhvp.banking.property_scope import (
+    banking_path_guard,
+    session_account_filter,
+    visible_account_ids,
+)
 from mhvp.core.auth.permissions import ACCOUNTING_REVIEW
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import ensure_legal_entity_allowed
@@ -58,7 +63,9 @@ from mhvp.workspace.services import local_today
 BANKING_APPROVE = require_permission("banking:approve")
 FINAPI_SETTINGS = require_permission("tenant_settings:update")
 
-router = APIRouter(prefix="/banking", tags=["Bank"])
+router = APIRouter(
+    prefix="/banking", tags=["Bank"], dependencies=[Depends(banking_path_guard)]
+)  # M2-02/S16-02
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 UPDATE = require_permission("accounting:update")
@@ -327,6 +334,9 @@ async def transactions(
         query = select(BankTransaction)
         if bank_account_id:
             query = query.where(BankTransaction.property_bank_account_id == bank_account_id)
+        visible = session_account_filter(session)  # M2-02/S16-02
+        if visible is not None:
+            query = query.where(BankTransaction.property_bank_account_id.in_(visible))
         if status:
             query = query.where(BankTransaction.status == status)
         if start:
@@ -1947,6 +1957,9 @@ async def list_orders(
         query = select(PaymentOrder).order_by(PaymentOrder.execution_date.desc(), PaymentOrder.id)
         if status is not None:
             query = query.where(PaymentOrder.status == OrderStatus(status))
+        visible = session_account_filter(session)  # M2-02/S16-02
+        if visible is not None:
+            query = query.where(PaymentOrder.property_bank_account_id.in_(visible))
         rows = (await session.scalars(query.limit(limit))).all()
         return [await _order_out(session, o) for o in rows]
 
@@ -3388,7 +3401,8 @@ async def list_bank_accounts(
         items = await account_selection.list_accounts(
             session, property_id=property_id, legal_entity_id=legal_entity_id, q=q, limit=limit
         )
-        return [account_list_out(i) for i in items]
+        visible = await visible_account_ids(session, [i.id for i in items])
+        return [account_list_out(i) for i in items if visible is None or i.id in visible]
 
 
 @router.put(

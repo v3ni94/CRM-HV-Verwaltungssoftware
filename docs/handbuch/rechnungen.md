@@ -138,3 +138,7 @@ Rechnungspläne erzeugen wiederkehrende Rechnungsentwürfe. Die Liste je Buchung
 ## Rechnungspläne bearbeiten, Kreditorenkonten, Prüfangaben am Beleg
 
 Rechnungspläne lassen sich unter "Bearbeiten" ändern (Leistung, Betrag, Rhythmus, Enddatum, Auftragsbezug, Dienstleistervertrag); geändert werden nur künftige Entwürfe. Bei Plänen mit Stichtag am 29. bis 31. zeigt die Liste den Hinweis auf den letzten Tag kürzerer Monate. Auf der Kreditorenseite legt "Kreditorenkonten anlegen" fehlende Konten für alle Dienstleisterverhältnisse des Buchungskreises an. Beim Erfassen einer Rechnung stehen unter "Weitere Angaben zur Prüfung am Beleg" optional Leistungszeitraum, Leistungsort, Steuerangaben des Ausstellers, Anzahlung, Sicherheitseinbehalt, Skonto, Reverse Charge und Bauabzugsteuer bereit; die steuerliche Bewertung bleibt bei Fachpersonal oder Steuerberater.
+
+## Anlagen am Beleg und neuen Rechnungsplan anlegen
+
+Beim Erfassen einer Rechnung können unter "Weitere Angaben zur Prüfung am Beleg" die Dokument-IDs der Anlagen und Seiten des Originals eingetragen werden (mehrere IDs mit Leerzeichen, Komma oder Zeilenumbruch trennen, höchstens 50). Ungültige oder doppelte IDs sperren das Speichern. Unter "Rechnungspläne" legt "Neuen Rechnungsplan anlegen" einen Plan an (Aussteller, Kostenkonto, Leistung, Brutto, Umsatzsteuer, Rhythmus, erste Fälligkeit, optional Enddatum, Auftragsbezug, Dienstleistervertrag). Der Plan erzeugt nur ungeprüfte Rechnungsentwürfe.

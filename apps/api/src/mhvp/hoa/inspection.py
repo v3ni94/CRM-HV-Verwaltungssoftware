@@ -44,7 +44,9 @@ from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import (
     ensure_session_legal_entity_allowed,
+    property_column_guard,
     session_allowed_legal_entity_ids,
+    session_allowed_property_ids,
 )
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin, TimestampMixin
@@ -120,6 +122,13 @@ class InspectionRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     package_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))  # M25-07
 
 
+# M2-02/S16-02: inspection requests outside the property assignment answer 404 (the router
+# is declared above the model, the guard is attached before the first route).
+router.dependencies.append(
+    Depends(property_column_guard({"request_id": InspectionRequest.property_id}))
+)
+
+
 class InspectionEvent(IdMixin, TenantMixin, Base):
     """Append-only trail: status changes, notes (questions and answers), package, retrieval."""
 
@@ -170,7 +179,10 @@ class InspectionNoteIn(_In):
 
 class PackageIn(_In):
     document_ids: list[uuid.UUID] = Field(min_length=1, max_length=500)
-    valid_days: int | None = Field(default=None, ge=1, le=365)  # M25-07, None: no expiry
+    # M25-07: None takes the tenant default (P08-04, empty default means no expiry);
+    # ``no_expiry`` overrides a set default for this one package.
+    valid_days: int | None = Field(default=None, ge=1, le=365)
+    no_expiry: bool = False
 
 
 class InspectionEventOut(BaseModel):
@@ -315,6 +327,9 @@ async def list_requests(
         allowed = session_allowed_legal_entity_ids(session)
         if allowed is not None:
             query = query.where(InspectionRequest.legal_entity_id.in_(list(allowed)))
+        allowed_props = session_allowed_property_ids(session)  # M2-02/S16-02
+        if allowed_props is not None:
+            query = query.where(InspectionRequest.property_id.in_(allowed_props))
         rows = (await session.scalars(query)).all()
         return [RequestOut.model_validate(r, from_attributes=True) for r in rows]
 
@@ -714,9 +729,12 @@ async def create_package(
         row.package_document_id = document.id
         row.package_sha256 = document.sha256
         row.package_created_at = _now()
-        row.package_expires_at = (
-            row.package_created_at + timedelta(days=body.valid_days) if body.valid_days else None
-        )
+        days = body.valid_days
+        if days is None and not body.no_expiry:
+            from mhvp.platform.models import TenantSettings
+
+            days = await session.scalar(select(TenantSettings.inspection_package_default_days))
+        row.package_expires_at = row.package_created_at + timedelta(days=days) if days else None
         row.updated_by = principal.user_id
         await session.flush()
         await _trail(

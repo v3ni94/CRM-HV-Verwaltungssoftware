@@ -1182,7 +1182,7 @@ export interface paths {
         };
         /**
          * Rechnungseingang
-         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt.
+         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt. include: creditor (Kreditor, Kontakt des Rechnungsstellers).
          */
         get: operations["list_invoices_api_v1_accounting_invoices_get"];
         put?: never;
@@ -2976,6 +2976,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/ai/automation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Schalter der automatischen KI-Läufe lesen */
+        get: operations["get_automation_api_v1_ai_automation_get"];
+        /**
+         * Schalter der automatischen KI-Läufe setzen
+         * @description R09: automatic proposal for rent increase cases and the nightly mail classification
+         *     (default off). Neither switch opens the provider release; the gateway still checks it.
+         */
+        put: operations["put_automation_api_v1_ai_automation_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/ai/conversations": {
         parameters: {
             query?: never;
@@ -3659,8 +3681,9 @@ export interface paths {
         put?: never;
         /**
          * Eigenes Passwort ändern
-         * @description Requires the current password; other sessions of the user end (only the current token
-         *     family stays valid until it expires).
+         * @description Requires the current password. All refresh tokens of the user are revoked, so every
+         *     session (also on other devices) ends once its access token expires and needs the new
+         *     password (SECURITY-2026-10-01, Befund 5: before, no session ended).
          */
         post: operations["change_password_api_v1_auth_password_post"];
         delete?: never;
@@ -6318,7 +6341,7 @@ export interface paths {
         };
         /**
          * Kontakte suchen und auflisten
-         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt.
+         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt. include: properties (Objekte über Vertragspartei oder Objekteigentum).
          */
         get: operations["list_contacts_api_v1_contacts_get"];
         put?: never;
@@ -6799,7 +6822,7 @@ export interface paths {
         };
         /**
          * Verträge
-         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt.
+         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt. include: party (Vertragspartei mit Mitgliedern), property (Objekt).
          */
         get: operations["list_contracts_api_v1_contracts_get"];
         put?: never;
@@ -7435,6 +7458,61 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/deposit-interest-drafts/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Jahreslauf: Zinsgutschrift Entwürfe für alle Kautionen mit Zinssatz
+         * @description Creates drafts only; deposits without rate, without balance or with a confirmed year
+         *     are listed as skipped. Nothing is booked or paid.
+         */
+        post: operations["run_interest_drafts_api_v1_deposit_interest_drafts_run_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deposit-interest-drafts/{draft_id}/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Zinsgutschrift bestätigen (erfasst eine Zinsbewegung, keine Buchung, keine Zahlung) */
+        post: operations["confirm_interest_draft_api_v1_deposit_interest_drafts__draft_id__confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deposit-interest-drafts/{draft_id}/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Zinsgutschrift Entwurf verwerfen */
+        post: operations["discard_interest_draft_api_v1_deposit_interest_drafts__draft_id__discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/deposit-interest-rates": {
         parameters: {
             query?: never;
@@ -7527,6 +7605,59 @@ export interface paths {
         head?: never;
         /** Kaution ändern (Status, Dokumente, Betrag) */
         patch: operations["patch_deposit_api_v1_deposits__deposit_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/deposits/{deposit_id}/interest-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zinsgutschrift Entwürfe der Kaution */
+        get: operations["list_interest_drafts_api_v1_deposits__deposit_id__interest_drafts_get"];
+        put?: never;
+        /** Jährliche Zinsgutschrift der Kaution als Entwurf berechnen */
+        post: operations["create_interest_draft_api_v1_deposits__deposit_id__interest_drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deposits/{deposit_id}/interest-rates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zinssatzverlauf der Kaution (Anlageform) */
+        get: operations["list_deposit_rates_api_v1_deposits__deposit_id__interest_rates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/deposits/{deposit_id}/interest-rates/{valid_from}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Zinssatz der Kaution ab einem Datum setzen */
+        put: operations["put_deposit_rate_api_v1_deposits__deposit_id__interest_rates__valid_from__put"];
+        post?: never;
+        /** Zinssatzeintrag der Kaution entfernen */
+        delete: operations["delete_deposit_rate_api_v1_deposits__deposit_id__interest_rates__valid_from__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
         trace?: never;
     };
     "/api/v1/deposits/{deposit_id}/movements": {
@@ -7841,6 +7972,29 @@ export interface paths {
         patch: operations["patch_category_api_v1_document_categories__category_id__patch"];
         trace?: never;
     };
+    "/api/v1/document-direct-upload": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Direkter Browser-Upload (Mandantenschalter) */
+        get: operations["get_direct_upload_api_v1_document_direct_upload_get"];
+        /**
+         * Direkten Browser-Upload ein- oder ausschalten
+         * @description Default off. The CRM uploads through the API unless this switch is on; the object
+         *     storage endpoint must then be reachable from the browser and allow CORS for PUT
+         *     (runbook object storage). The API endpoints stay available either way.
+         */
+        put: operations["put_direct_upload_api_v1_document_direct_upload_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/document-folders": {
         parameters: {
             query?: never;
@@ -7915,7 +8069,7 @@ export interface paths {
         };
         /**
          * Dokumente suchen (Volltext)
-         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt.
+         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt. include: properties (Objekte über Verknüpfung mit Objekt, Einheit, Vertrag, Ticket).
          */
         get: operations["list_documents_api_v1_documents_get"];
         put?: never;
@@ -11068,6 +11222,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/imports/immoware24/history/bank-links/{bank_transaction_id}/candidates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vorschlag: Journalbuchungen zu einem historischen Bankumsatz (Kandidatenliste)
+         * @description Candidates by date and amount; nothing is assigned automatically.
+         */
+        get: operations["history_bank_link_candidates_api_v1_imports_immoware24_history_bank_links__bank_transaction_id__candidates_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/imports/immoware24/history/open-items": {
         parameters: {
             query?: never;
@@ -11077,6 +11251,27 @@ export interface paths {
         };
         /** Übernommene Einzelposten der Altdaten */
         get: operations["history_open_items_api_v1_imports_immoware24_history_open_items_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/imports/immoware24/history/open-items/balance-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Prüfbericht: Einzelposten gegen Eröffnungsbilanz (ohne Korrektur)
+         * @description Compares item sums with the opening balance per group (sign rule: A-Q08-01). Report
+         *     only: nothing is corrected, posted or released.
+         */
+        get: operations["history_open_item_balance_check_api_v1_imports_immoware24_history_open_items_balance_check_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -16287,6 +16482,28 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/onboarding/person-match-batch": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Personenabgleich für viele Personen als Vorschau (schreibt nichts)
+         * @description Table preview of the import dialog (10.2 step 4): per person the decision (link, suggest,
+         *     none) and the best candidates with reasons under the thresholds of the tenant. Nothing is
+         *     linked or created here; the apply step decides again with the same rules.
+         */
+        post: operations["person_match_batch_api_v1_onboarding_person_match_batch_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/parties": {
         parameters: {
             query?: never;
@@ -18395,6 +18612,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/portal/owner/takeover-checklist": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Checkliste der Objektübernahme (Eigentümer, lesend) */
+        get: operations["takeover_checklist_api_v1_portal_owner_takeover_checklist_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/portal/owner/tickets": {
         parameters: {
             query?: never;
@@ -19105,7 +19339,7 @@ export interface paths {
         };
         /**
          * Objekte
-         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt.
+         * @description Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt. include: legal_entities (Rechtsträger des Objekts und der Objekteigentümer).
          */
         get: operations["list_properties_api_v1_properties_get"];
         put?: never;
@@ -19900,6 +20134,28 @@ export interface paths {
         put?: never;
         /** Checkliste Objektübernahme anlegen (ergänzt fehlende Punkte, idempotent) */
         post: operations["init_checklist_api_v1_properties__property_id__takeover_checklist_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/properties/{property_id}/takeover-checklist/tickets": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Aufgaben (Tickets) für fehlende Punkte der Checkliste anlegen (idempotent)
+         * @description One ticket per open or requested point that has none yet (M7-01, R03). Points that are
+         *     received or not applicable, and points that already carry a ticket, are skipped, so a
+         *     second call creates nothing. The tickets are internal (not released for portal users).
+         */
+        post: operations["create_tickets_api_v1_properties__property_id__takeover_checklist_tickets_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21335,6 +21591,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/branding/logo/{variant}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Logo des Mandanten für das Portal (öffentlich, PNG oder JPEG) */
+        get: operations["branding_logo_api_v1_tenant_branding_logo__variant__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/competence-catalogue": {
         parameters: {
             query?: never;
@@ -21992,6 +22265,27 @@ export interface paths {
         put?: never;
         /** Rückmeldung eines Beiratsmitglieds im CRM erfassen (z. B. per Telefon oder Brief) */
         post: operations["record_vote_api_v1_tickets_board_submissions__submission_id__votes_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tickets/bulk": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Massenaktion Tickets mit Teilerfolgsbericht
+         * @description Same rules as bulk-status (limit, flow, resolution), reported in the shared bulk format;
+         *     each ticket runs in its own savepoint.
+         */
+        post: operations["bulk_tickets_api_v1_tickets_bulk_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -23419,6 +23713,27 @@ export interface paths {
         get: operations["notifications_api_v1_workspace_notifications_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspace/notifications/mute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Alle Benachrichtigungen stummschalten oder die Stummschaltung aufheben
+         * @description Bulk action on the own user default (kind ``*``): silences every kind that is not
+         *     mandatory; mandatory kinds (SLA escalation, compliance reminders) ignore it.
+         */
+        post: operations["mute_notifications_api_v1_workspace_notifications_mute_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -24985,12 +25300,16 @@ export interface components {
             /** Active */
             active: boolean;
         };
-        /** AutomationIn */
-        AutomationIn: {
-            /** Enabled */
-            enabled: boolean;
-            /** Reason */
-            reason: string;
+        /** AutomationOut */
+        AutomationOut: {
+            /** Batch Mail Classification */
+            batch_mail_classification: boolean;
+            /** Blocked Reason */
+            blocked_reason?: string | null;
+            /** Provider Released */
+            provider_released: boolean;
+            /** Rent Increase Check */
+            rent_increase_check: boolean;
         };
         /** AutomationRuleIn */
         AutomationRuleIn: {
@@ -25909,6 +26228,8 @@ export interface components {
             accent_color?: string | null;
             /** Font Family */
             font_family?: string | null;
+            /** Imprint Url */
+            imprint_url?: string | null;
             /** Letter Band */
             letter_band?: components["schemas"]["BandSegment"][] | null;
             /** Logo Dark Document Id */
@@ -25917,8 +26238,12 @@ export interface components {
             logo_light_document_id?: string | null;
             /** Muted Color */
             muted_color?: string | null;
+            /** Portal Name */
+            portal_name?: string | null;
             /** Primary Color */
             primary_color?: string | null;
+            /** Privacy Url */
+            privacy_url?: string | null;
             /** Secondary Color */
             secondary_color?: string | null;
             /** Surface Color */
@@ -25929,6 +26254,16 @@ export interface components {
         /** BrandingOut */
         BrandingOut: {
             branding: components["schemas"]["Branding"];
+            /**
+             * Has Logo Dark
+             * @default false
+             */
+            has_logo_dark: boolean;
+            /**
+             * Has Logo Light
+             * @default false
+             */
+            has_logo_light: boolean;
             /** Name */
             name: string;
             /**
@@ -29595,11 +29930,59 @@ export interface components {
             /** Valid To */
             valid_to?: string | null;
         };
+        /** DepositInterestDraftIn */
+        DepositInterestDraftIn: {
+            /** Year */
+            year: number;
+        };
+        /** DepositInterestDraftOut */
+        DepositInterestDraftOut: {
+            /** Amount */
+            amount: string;
+            /** Days */
+            days: number;
+            /**
+             * Deposit Id
+             * Format: uuid
+             */
+            deposit_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Movement Id */
+            movement_id: string | null;
+            /** Note */
+            note: string | null;
+            /** Rate */
+            rate: string | null;
+            /** Status */
+            status: string;
+            /** Year */
+            year: number;
+        };
         /**
          * DepositInterestMode
          * @enum {string}
          */
-        DepositInterestMode: "individual" | "reference_rate" | "none";
+        DepositInterestMode: "individual" | "reference_rate" | "deposit_rates" | "none";
+        /** DepositInterestRunIn */
+        DepositInterestRunIn: {
+            /** Year */
+            year: number;
+        };
+        /** DepositInterestRunOut */
+        DepositInterestRunOut: {
+            /** Created */
+            created: number;
+            /** Skipped */
+            skipped: {
+                [key: string]: string;
+            }[];
+            /** Year */
+            year: number;
+        };
         /**
          * DepositKind
          * @enum {string}
@@ -29774,6 +30157,35 @@ export interface components {
             status?: ("open" | "active" | "settled") | null;
             /** Valid To */
             valid_to?: string | null;
+        };
+        /** DepositRateIn */
+        DepositRateIn: {
+            /** Note */
+            note?: string | null;
+            /** Rate */
+            rate: number | string;
+        };
+        /** DepositRateOut */
+        DepositRateOut: {
+            /**
+             * Deposit Id
+             * Format: uuid
+             */
+            deposit_id: string;
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Note */
+            note: string | null;
+            /** Rate */
+            rate: string;
+            /**
+             * Valid From
+             * Format: date
+             */
+            valid_from: string;
         };
         /** DepositSettlementIn */
         DepositSettlementIn: {
@@ -30252,6 +30664,16 @@ export interface components {
             /** Steps */
             steps: components["schemas"]["MirrorDeletionStepOut"][];
         };
+        /** DocumentDirectUploadIn */
+        DocumentDirectUploadIn: {
+            /** Enabled */
+            enabled: boolean;
+        };
+        /** DocumentDirectUploadOut */
+        DocumentDirectUploadOut: {
+            /** Enabled */
+            enabled: boolean;
+        };
         /** DocumentDownloadUrlOut */
         DocumentDownloadUrlOut: {
             /** Expires In */
@@ -30303,6 +30725,11 @@ export interface components {
             /** Allowed Senders */
             allowed_senders?: string[];
             /**
+             * Distribute
+             * @default false
+             */
+            distribute: boolean;
+            /**
              * Enabled
              * @default true
              */
@@ -30318,6 +30745,11 @@ export interface components {
             allowed_senders?: string[];
             /** Configured */
             configured: boolean;
+            /**
+             * Distribute
+             * @default false
+             */
+            distribute: boolean;
             /**
              * Enabled
              * @default false
@@ -32007,6 +32439,27 @@ export interface components {
             journal_entry_id: string | null;
             /** Source Entry Id */
             source_entry_id: string | null;
+        };
+        /** HistoryJournalCandidateOut */
+        HistoryJournalCandidateOut: {
+            /** Amount */
+            amount: string;
+            /**
+             * Booking Date
+             * Format: date
+             */
+            booking_date: string;
+            /** Day Difference */
+            day_difference: number;
+            /**
+             * Journal Entry Id
+             * Format: uuid
+             */
+            journal_entry_id: string;
+            /** Source Entry Id */
+            source_entry_id: string;
+            /** Text */
+            text: string | null;
         };
         /** HistoryOpenItemOut */
         HistoryOpenItemOut: {
@@ -36704,6 +37157,11 @@ export interface components {
              */
             verify: boolean;
         };
+        /** NotificationMuteIn */
+        NotificationMuteIn: {
+            /** Muted Until */
+            muted_until?: string | null;
+        };
         /**
          * NotificationOut
          * @description ``target_type``/``target_id`` name the subject of the notification; ``href`` is the
@@ -36979,6 +37437,62 @@ export interface components {
             /** Password */
             password: string;
         };
+        /**
+         * OnboardingAllocationKeyChoice
+         * @description Allocation key of any kind with optional unit values (R03, M7-02). An existing code
+         *     (copied template key, MEA) only receives values; a new code creates the key.
+         */
+        OnboardingAllocationKeyChoice: {
+            /** Code */
+            code: string;
+            /** Expected Total */
+            expected_total?: number | string | null;
+            /** Kind */
+            kind?: ("static" | "consumption" | "fixed_amount" | "fixed_share") | null;
+            /** Meter Type Code */
+            meter_type_code?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Unit Of Measure */
+            unit_of_measure?: string | null;
+            /**
+             * Values
+             * @description Wert je Einheitennummer; nicht für Verbrauchsschlüssel (Zähler)
+             */
+            values?: {
+                [key: string]: number | string;
+            };
+        };
+        /**
+         * OnboardingBankAccountChoice
+         * @description Bank account entered by the reviewer in the onboarding dialog (R03, M7-02); the AI
+         *     proposal never carries bank data.
+         */
+        OnboardingBankAccountChoice: {
+            /** Bank Name */
+            bank_name?: string | null;
+            /** Bic */
+            bic?: string | null;
+            /** Holder */
+            holder: string;
+            /** Iban */
+            iban: string;
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "rent" | "hoa" | "reserve" | "deposit" | "hoa_fee" | "other";
+            /**
+             * Valid From
+             * @description ohne Angabe: Gültig ab des Objekts
+             */
+            valid_from?: string | null;
+        };
         /** OnboardingIn */
         OnboardingIn: {
             admin: components["schemas"]["OnboardingAdmin"];
@@ -37007,6 +37521,23 @@ export interface components {
             kind: string;
             /** Name */
             name: string;
+        };
+        /** OnboardingMatchBatchIn */
+        OnboardingMatchBatchIn: {
+            /** Persons */
+            persons: components["schemas"]["OnboardingMatchIn"][];
+        };
+        /**
+         * OnboardingMatchBatchOut
+         * @description One result per person, in the order of the request (preview table of the import).
+         */
+        OnboardingMatchBatchOut: {
+            /** Link Threshold */
+            link_threshold: string;
+            /** Results */
+            results: components["schemas"]["OnboardingMatchOut"][];
+            /** Suggest Threshold */
+            suggest_threshold: string;
         };
         /** OnboardingMatchCandidateOut */
         OnboardingMatchCandidateOut: {
@@ -37524,6 +38055,11 @@ export interface components {
         PackageIn: {
             /** Document Ids */
             document_ids: string[];
+            /**
+             * No Expiry
+             * @default false
+             */
+            no_expiry: boolean;
             /** Valid Days */
             valid_days?: number | null;
         };
@@ -38966,12 +39502,33 @@ export interface components {
         };
         /** PropertyChoice */
         PropertyChoice: {
+            /** Allocation Keys */
+            allocation_keys?: components["schemas"]["OnboardingAllocationKeyChoice"][];
             /**
              * As Of
              * Format: date
              * @description Gültig ab für Miteigentumsanteile
              */
             as_of: string;
+            /** Bank Accounts */
+            bank_accounts?: components["schemas"]["OnboardingBankAccountChoice"][];
+            /**
+             * Create Debtor Accounts
+             * @description Debitorenkonten der Verträge ins Kontenbuch übernehmen; fehlt der Buchungskreis, wird er aus der Kontenvorlage (Entwurf) angelegt. Es wird nichts gebucht.
+             * @default false
+             */
+            create_debtor_accounts: boolean;
+            /**
+             * Document Ids
+             * @description weitere Dokumente (Ablage) zum Objekt
+             */
+            document_ids?: string[];
+            /**
+             * Link Source Documents
+             * @description Quelldokumente des Vorschlags mit dem Objekt verknüpfen
+             * @default true
+             */
+            link_source_documents: boolean;
             /** Management Type */
             management_type?: ("rental" | "hoa" | "hoa_with_sev") | null;
             /** Name */
@@ -42918,6 +43475,8 @@ export interface components {
             note: string | null;
             /** Status */
             status: string;
+            /** Ticket Id */
+            ticket_id?: string | null;
         };
         /** TakeoverItemPatch */
         TakeoverItemPatch: {
@@ -42971,6 +43530,36 @@ export interface components {
             sync_status: string;
             /** Ticket Id */
             ticket_id: string | null;
+        };
+        /** TakeoverTicketOut */
+        TakeoverTicketOut: {
+            /** Category */
+            category: string;
+            /** Label */
+            label: string;
+            /**
+             * Ticket Id
+             * Format: uuid
+             */
+            ticket_id: string;
+            /** Ticket Number */
+            ticket_number: number;
+        };
+        /** TakeoverTicketsIn */
+        TakeoverTicketsIn: {
+            /**
+             * Categories
+             * @description nur diese Punkte; ohne Angabe alle fehlenden Punkte
+             */
+            categories?: string[] | null;
+        };
+        /** TakeoverTicketsOut */
+        TakeoverTicketsOut: {
+            checklist: components["schemas"]["TakeoverChecklistOut"];
+            /** Created */
+            created: components["schemas"]["TakeoverTicketOut"][];
+            /** Skipped */
+            skipped: string[];
         };
         /**
          * TanIn
@@ -43301,6 +43890,8 @@ export interface components {
              * @default false
              */
             handover_offline_enabled: boolean;
+            /** Inspection Package Default Days */
+            inspection_package_default_days?: number | null;
             /**
              * Learning Bookkeeper Enabled
              * @default false
@@ -43316,6 +43907,11 @@ export interface components {
              * @default false
              */
             metering_module_enabled: boolean;
+            /**
+             * Portal Second Factor
+             * @default account_choice
+             */
+            portal_second_factor: string;
             /** Position Catalogue Extra */
             position_catalogue_extra?: string[];
             receivable_rules?: components["schemas"]["ReceivableRulesConfig"];
@@ -43359,6 +43955,11 @@ export interface components {
             /** Bank Rule Recurring Threshold */
             bank_rule_recurring_threshold?: number | null;
             branding?: components["schemas"]["Branding"] | null;
+            /**
+             * Clear Inspection Package Default Days
+             * @default false
+             */
+            clear_inspection_package_default_days: boolean;
             company?: components["schemas"]["CompanyData"] | null;
             /** Consumption Info Enabled */
             consumption_info_enabled?: boolean | null;
@@ -43386,10 +43987,14 @@ export interface components {
             gmail_settle_seconds?: number | null;
             /** Handover Offline Enabled */
             handover_offline_enabled?: boolean | null;
+            /** Inspection Package Default Days */
+            inspection_package_default_days?: number | null;
             /** Mail Approval Mode */
             mail_approval_mode?: string | null;
             /** Metering Module Enabled */
             metering_module_enabled?: boolean | null;
+            /** Portal Second Factor */
+            portal_second_factor?: string | null;
             /** Position Catalogue Extra */
             position_catalogue_extra?: string[] | null;
             receivable_rules?: components["schemas"]["ReceivableRulesConfig"] | null;
@@ -43519,6 +44124,13 @@ export interface components {
         TicketApplyProcessIn: {
             /** Process Code */
             process_code: string;
+        };
+        /** TicketBulkIn */
+        TicketBulkIn: {
+            /** Ids */
+            ids: string[];
+            resolution?: components["schemas"]["ResolutionIn"] | null;
+            status: components["schemas"]["TicketStatus"];
         };
         /** TicketHoldOut */
         TicketHoldOut: {
@@ -44803,12 +45415,24 @@ export interface components {
             assignee_user_id?: string | null;
             /** Category Id */
             category_id?: string | null;
+            /** Done On */
+            done_on?: string | null;
             /** Ids */
             ids: string[];
             /** Property Id */
             property_id?: string | null;
             /** Tag */
             tag?: string | null;
+        };
+        /**
+         * AutomationIn
+         * @description Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged.
+         */
+        mhvp__ai__schemas__AutomationIn: {
+            /** Batch Mail Classification */
+            batch_mail_classification?: boolean | null;
+            /** Rent Increase Check */
+            rent_increase_check?: boolean | null;
         };
         /** ProviderIn */
         mhvp__ai__schemas__ProviderIn: {
@@ -44876,6 +45500,13 @@ export interface components {
             };
             /** Training Opt Out Confirmed */
             training_opt_out_confirmed: boolean;
+        };
+        /** AutomationIn */
+        mhvp__banking__routers__AutomationIn: {
+            /** Enabled */
+            enabled: boolean;
+            /** Reason */
+            reason: string;
         };
         /** BankAccountIn */
         mhvp__contacts__schemas__BankAccountIn: {
@@ -52016,6 +52647,59 @@ export interface operations {
             };
         };
     };
+    get_automation_api_v1_ai_automation_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationOut"];
+                };
+            };
+        };
+    };
+    put_automation_api_v1_ai_automation_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["mhvp__ai__schemas__AutomationIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AutomationOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_conversations_api_v1_ai_conversations_get: {
         parameters: {
             query?: {
@@ -54533,7 +55217,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["AutomationIn"];
+                "application/json": components["schemas"]["mhvp__banking__routers__AutomationIn"];
             };
         };
         responses: {
@@ -61163,6 +61847,101 @@ export interface operations {
             };
         };
     };
+    run_interest_drafts_api_v1_deposit_interest_drafts_run_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepositInterestRunIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositInterestRunOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    confirm_interest_draft_api_v1_deposit_interest_drafts__draft_id__confirm_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositInterestDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    discard_interest_draft_api_v1_deposit_interest_drafts__draft_id__discard_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                draft_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositInterestDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_reference_rates_api_v1_deposit_interest_rates_get: {
         parameters: {
             query?: never;
@@ -61345,6 +62124,169 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["DepositOut"];
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_interest_drafts_api_v1_deposits__deposit_id__interest_drafts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deposit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositInterestDraftOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_interest_draft_api_v1_deposits__deposit_id__interest_drafts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deposit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepositInterestDraftIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositInterestDraftOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_deposit_rates_api_v1_deposits__deposit_id__interest_rates_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deposit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositRateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_deposit_rate_api_v1_deposits__deposit_id__interest_rates__valid_from__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deposit_id: string;
+                valid_from: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DepositRateIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DepositRateOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_deposit_rate_api_v1_deposits__deposit_id__interest_rates__valid_from__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                deposit_id: string;
+                valid_from: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -61896,6 +62838,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["CategoryOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_direct_upload_api_v1_document_direct_upload_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDirectUploadOut"];
+                };
+            };
+        };
+    };
+    put_direct_upload_api_v1_document_direct_upload_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["DocumentDirectUploadIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DocumentDirectUploadOut"];
                 };
             };
             /** @description Validation Error */
@@ -69042,6 +70037,40 @@ export interface operations {
             };
         };
     };
+    history_bank_link_candidates_api_v1_imports_immoware24_history_bank_links__bank_transaction_id__candidates_get: {
+        parameters: {
+            query?: {
+                tolerance_days?: number;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                bank_transaction_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HistoryJournalCandidateOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     history_open_items_api_v1_imports_immoware24_history_open_items_get: {
         parameters: {
             query?: {
@@ -69063,6 +70092,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HistoryOpenItemOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    history_open_item_balance_check_api_v1_imports_immoware24_history_open_items_balance_check_get: {
+        parameters: {
+            query: {
+                ledger_id: string;
+                opening_balance_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -79960,6 +81023,39 @@ export interface operations {
             };
         };
     };
+    person_match_batch_api_v1_onboarding_person_match_batch_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OnboardingMatchBatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OnboardingMatchBatchOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_parties_api_v1_parties_get: {
         parameters: {
             query: {
@@ -84121,6 +85217,28 @@ export interface operations {
             };
         };
     };
+    takeover_checklist_api_v1_portal_owner_takeover_checklist_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
     owner_tickets_api_v1_portal_owner_tickets_get: {
         parameters: {
             query?: never;
@@ -87815,6 +88933,41 @@ export interface operations {
             };
         };
     };
+    create_tickets_api_v1_properties__property_id__takeover_checklist_tickets_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                property_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TakeoverTicketsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TakeoverTicketsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     patch_item_api_v1_properties__property_id__takeover_checklist__category__patch: {
         parameters: {
             query?: never;
@@ -91210,6 +92363,38 @@ export interface operations {
             };
         };
     };
+    branding_logo_api_v1_tenant_branding_logo__variant__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                variant: "light" | "dark";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "image/jpeg": unknown;
+                    "image/png": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     get_competence_catalogue_api_v1_tenant_competence_catalogue_get: {
         parameters: {
             query?: never;
@@ -92566,6 +93751,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    bulk_tickets_api_v1_tickets_bulk_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TicketBulkIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["BulkResultOut"];
                 };
             };
             /** @description Validation Error */
@@ -95811,6 +97029,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["NotificationOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    mute_notifications_api_v1_workspace_notifications_mute_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["NotificationMuteIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["NotificationPreferencesOut"];
                 };
             };
             /** @description Validation Error */

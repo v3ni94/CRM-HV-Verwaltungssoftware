@@ -190,3 +190,4 @@ created_at)` (migration 0127). Measurements in `docs/reviews/2026-09-26-performa
 * `POST /dms-changes/google-drive/sync` and beat `mhvp.documents.drive_changes`: Drive Changes API with cursor `changes_page_token` in `DmsConnection.options` (`drive_changes.py`, M6-05).
 * Beat `mhvp.documents.cleanup_tmp`: lifecycle rule on `tmp/` plus sweep (M6-08).
 * Retention (S711-06): `document.retention_hold_kind`, `document.permanent_record`, `retention.profile_for_document` (profile per legal entity kind), `retention.related_hold`; see `docs/rules/Q03-documents-w3.md`.
+* R02: `GET/PUT /document-direct-upload` (tenant switch for the browser upload, default off, stored in `TenantSettings.sources`), `distribute` flag in `/document-intake-address` and `distribution.py` (hub tenant hands messages with another tenant's token over to that tenant before `process_mailbox`; watermark `document_intake_distribution_watermark`). Migration 0284 is a no-op that keeps the chain.

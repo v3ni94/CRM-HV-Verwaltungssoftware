@@ -26,9 +26,11 @@ from mhvp.core.auth.scope import (
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.hoa.models import HoaMajorityRule, Resolution
+from mhvp.hoa.property_scope import HOA_GUARD
 from mhvp.properties.models import LegalEntity, LegalEntityKind
 
-router = APIRouter(prefix="/hoa", tags=["WEG"])
+# M2-02/S16-02: WEG records outside the property assignment answer 404.
+router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
 APPROVE = require_permission("accounting:approve")
 

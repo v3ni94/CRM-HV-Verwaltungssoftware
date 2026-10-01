@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import Link from "next/link";
 
 import { formatEur } from "@/components/portal/HoaAccountTable";
-import type { OwnerAllocationUnit, OwnerRentalIncome, OwnerTicket, PaymentResolution } from "@/components/portal/types";
+import type { OwnerAllocationUnit, OwnerRentalIncome, OwnerTakeoverProperty, OwnerTicket, PaymentResolution } from "@/components/portal/types";
 import { ui } from "@/lib/ui";
 
 /** Eigentümerübersicht (M21-06, SA-05), lesend: beschlossene Zahlungen der Gemeinschaft mit
@@ -17,12 +17,16 @@ export function OwnerOverview({
   tickets,
   allocations = [],
   income = [],
+  takeover = [],
+  takeoverNote = "",
 }: {
   payments: PaymentResolution[];
   note: string;
   tickets: OwnerTicket[];
   allocations?: OwnerAllocationUnit[];
   income?: OwnerRentalIncome[];
+  takeover?: OwnerTakeoverProperty[];
+  takeoverNote?: string;
 }) {
   const t = useTranslations("OwnerOverview");
   const format = useFormatter();
@@ -118,6 +122,37 @@ export function OwnerOverview({
                     {t("unit")} {u.unit_number}: {formatEur(u.gross)}
                   </span>
                 ))}
+              </li>
+            ))}
+          </ul>
+        </section>
+      ) : null}
+      {takeover.length > 0 ? (
+        <section className="flex flex-col gap-3" aria-labelledby="owner-takeover" data-testid="owner-takeover">
+          <h2 id="owner-takeover" className={ui.h2}>
+            {t("takeoverTitle")}
+          </h2>
+          {takeoverNote ? <p className={ui.notice}>{takeoverNote}</p> : null}
+          <ul className="flex flex-col gap-3">
+            {takeover.map((prop) => (
+              <li key={prop.property_id} className={`${ui.card} flex flex-col gap-1 text-sm`}>
+                <span className="font-medium">
+                  {prop.property_name}:{" "}
+                  {prop.complete ? t("takeoverComplete") : t("takeoverOpen", { count: prop.open_count })}
+                </span>
+                <ul className="flex flex-col gap-1">
+                  {prop.points.map((point) => (
+                    <li key={point.category} className="flex flex-wrap items-center justify-between gap-2">
+                      <span>{point.label}</span>
+                      <span className={point.status === "open" || point.status === "requested" ? ui.badgeWarning : ui.badgeSuccess}>
+                        {point.status_label}
+                        {point.due_date && (point.status === "open" || point.status === "requested")
+                          ? `, ${t("takeoverDue", { date: date(point.due_date) })}`
+                          : ""}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </li>
             ))}
           </ul>

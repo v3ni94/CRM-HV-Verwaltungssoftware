@@ -11,6 +11,7 @@ export type EntityType =
   | "document"
   | "ticket"
   | "posting"
+  | "invoice"
   | "ledger"
   | "meeting"
   | "resolution";
@@ -37,6 +38,8 @@ export function entityHref(type: string, id: string, parentId?: string | null): 
       return `/tickets/${id}`;
     case "posting":
       return parentId ? `/buchhaltung/${parentId}` : null;
+    case "invoice":
+      return `/rechnungen/${id}`;
     case "ledger":
       return `/buchhaltung/${id}`;
     case "meeting":

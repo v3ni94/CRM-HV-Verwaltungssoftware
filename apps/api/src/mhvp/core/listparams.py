@@ -17,7 +17,7 @@ parameters only narrow further.
 
 import enum
 import uuid
-from collections.abc import Iterable, Mapping, Sequence
+from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from typing import Any
@@ -206,6 +206,37 @@ def sparse(
     if isinstance(result, list | tuple):
         return _with_headers(JSONResponse([_sparse_item(i, keep) for i in result]), response)
     return result
+
+
+def embed(
+    result: Any,
+    params: ListParams,
+    item_model: type[BaseModel] | None,
+    embedded: Mapping[str, Callable[[dict[str, Any]], Any]],
+    *,
+    response: Response | None = None,
+) -> Any:
+    """Like :func:`sparse`, but adds included relations (Q12): for each ``name`` in
+    ``embedded`` every item gets ``item[name] = resolver(item)``. Without ``embedded`` the
+    result goes through :func:`sparse` unchanged. With ``embedded`` the response bypasses the
+    response model so the additional keys survive."""
+    if not embedded:
+        return sparse(result, params, item_model, response=response)
+    if params.fields and item_model is not None:
+        check_fields(params, item_model)
+    data = jsonable_encoder(result)
+    items = data.get("items", []) if isinstance(data, dict) else data
+    for item in items:
+        for name, resolve in embedded.items():
+            item[name] = jsonable_encoder(resolve(item))
+    if params.fields:
+        keep = {"id", *params.fields, *embedded}
+        reduced = [{k: v for k, v in i.items() if k in keep} for i in items]
+        if isinstance(data, dict):
+            data["items"] = reduced
+        else:
+            data = reduced
+    return _with_headers(JSONResponse(data), response)
 
 
 LIST_PARAMS_DOC = (

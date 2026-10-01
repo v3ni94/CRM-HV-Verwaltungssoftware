@@ -17,11 +17,16 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.billing import letters as tenant_letters
 from mhvp.billing.models import Statement, StatementSnapshot
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ReleaseGateResolver, ensure_release_gate_open
 from mhvp.workspace.services import local_today
 
-router = APIRouter(prefix="/statements", tags=["Abrechnung"])
+# M2-02/S16-02: statements outside the membership's property assignment answer 404.
+STATEMENT_GUARD = property_column_guard({"statement_id": Statement.property_id})
+router = APIRouter(
+    prefix="/statements", tags=["Abrechnung"], dependencies=[Depends(STATEMENT_GUARD)]
+)
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")

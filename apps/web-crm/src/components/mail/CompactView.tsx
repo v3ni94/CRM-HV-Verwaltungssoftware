@@ -22,7 +22,11 @@ export type CompactData = {
     open_items: { count: number; overdue: number; remaining: string } | null;
     recent: { id: string; direction: string; subject: string | null; at: string }[];
   };
-  reply: { source: "suggestion" | "preparation" | "template"; text: string };
+  reply: {
+    source: "suggestion" | "preparation" | "template";
+    text: string;
+    draft?: { tone: string | null; style_tone: string | null; placeholders: string[]; unknown_placeholders: string[] };
+  };
   can_reply: boolean;
   body_long: boolean;
 };
@@ -168,6 +172,14 @@ export function CompactView({
             <h3 className="text-sm font-semibold">{t("reply")}</h3>
             <span className="text-xs text-muted">{replySource}</span>
           </div>
+          {data.reply.draft ? (
+            <p className="text-xs text-muted" data-testid="reply-draft-meta">
+              {t("replyTone", { tone: data.reply.draft.tone ?? data.reply.draft.style_tone ?? "-" })}
+              {data.reply.draft.unknown_placeholders.length > 0
+                ? ` · ${t("replyUnknownPlaceholders", { list: data.reply.draft.unknown_placeholders.join(", ") })}`
+                : ""}
+            </p>
+          ) : null}
           <textarea className={ui.input} rows={5} value={reply} onChange={(e) => setReply(e.target.value)} aria-label={t("reply")} disabled={!canUpdate} />
           {canUpdate ? (
             <div className="flex flex-wrap items-center gap-2">

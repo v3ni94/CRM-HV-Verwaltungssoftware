@@ -35,8 +35,10 @@ from mhvp.hoa.models import (
     Resolution,
     Vote,
 )
+from mhvp.hoa.property_scope import HOA_GUARD
 
-router = APIRouter(prefix="/hoa", tags=["hoa"])
+# M2-02/S16-02: WEG records outside the property assignment answer 404.
+router = APIRouter(prefix="/hoa", tags=["hoa"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")

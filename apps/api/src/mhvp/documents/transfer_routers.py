@@ -43,6 +43,9 @@ APPROVE = require_permission("documents:approve")
 SETTINGS = require_permission("tenant_settings:update")
 URL_SECONDS = 300
 ZIP_MAX_ENTRIES = 200
+# Total of all unpacked entries as a multiple of the single file limit (SECURITY-2026-10-01,
+# Befund 1): 200 entries of the single limit each would otherwise be held in memory at once.
+ZIP_MAX_TOTAL_FACTOR = 8
 _LINKS = TypeAdapter(list[s.LinkIn])
 _STEPS = TypeAdapter(list[str])
 
@@ -195,6 +198,8 @@ def _zip_entries(
         )
     entries: list[tuple[str, bytes]] = []
     skipped: list[s.DocumentZipSkippedOut] = []
+    total_limit = limit * ZIP_MAX_TOTAL_FACTOR
+    total = 0
     for info in files:
         name = info.filename.replace("\\", "/")
         base = name.rsplit("/", 1)[-1]
@@ -211,6 +216,15 @@ def _zip_entries(
         if len(content) > limit:
             skipped.append(s.DocumentZipSkippedOut(name=name, reason="zu groß"))
             continue
+        total += len(content)
+        if total > total_limit:
+            raise ProblemError(
+                ErrorCodes.UPLOAD_REJECTED,
+                detail=(
+                    "Der entpackte Inhalt der ZIP-Datei ist größer als "
+                    f"{total_limit // (1024 * 1024)} MB."
+                ),
+            )
         entries.append((name, content))
     return entries, skipped
 
@@ -480,6 +494,7 @@ def _intake_out(config: intake_address.IntakeAddress | None) -> s.DocumentIntake
         address=config.address,
         mailbox_address=config.mailbox_address,
         allowed_senders=config.allowed_senders,
+        distribute=config.distribute,
     )
 
 
@@ -524,6 +539,7 @@ async def put_intake_address(
             token=token,
             allowed_senders=body.allowed_senders,
             enabled=body.enabled,
+            distribute=body.distribute,
         )
         row.sources = {**(row.sources or {}), intake_address.CONFIG_KEY: config.as_dict()}
         await _r()._event(
@@ -532,9 +548,46 @@ async def put_intake_address(
             "document.intake_address_set",
             principal.tenant_id,
             enabled=config.enabled,
+            distribute=config.distribute,
             rotated=current is None or token != current.token,
         )
         return _intake_out(config)
+
+
+# Direct browser upload switch (S12-06, Q03-01) --------------------------------------------
+
+DIRECT_UPLOAD_KEY = "document_direct_upload"
+
+
+@router.get("/document-direct-upload", summary="Direkter Browser-Upload (Mandantenschalter)")
+async def get_direct_upload(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> s.DocumentDirectUploadOut:
+    async with tenant_tx(request, principal) as session:
+        row = await _tenant_settings(session)
+        return s.DocumentDirectUploadOut(enabled=bool((row.sources or {}).get(DIRECT_UPLOAD_KEY)))
+
+
+@router.put("/document-direct-upload", summary="Direkten Browser-Upload ein- oder ausschalten")
+async def put_direct_upload(
+    body: s.DocumentDirectUploadIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS),
+) -> s.DocumentDirectUploadOut:
+    """Default off. The CRM uploads through the API unless this switch is on; the object
+    storage endpoint must then be reachable from the browser and allow CORS for PUT
+    (runbook object storage). The API endpoints stay available either way."""
+    async with tenant_tx(request, principal) as session:
+        row = await _tenant_settings(session)
+        row.sources = {**(row.sources or {}), DIRECT_UPLOAD_KEY: body.enabled}
+        await _r()._event(
+            session,
+            principal,
+            "document.direct_upload_set",
+            principal.tenant_id,
+            enabled=body.enabled,
+        )
+        return s.DocumentDirectUploadOut(enabled=body.enabled)
 
 
 # Drive Changes API (M6-05) -----------------------------------------------------------------

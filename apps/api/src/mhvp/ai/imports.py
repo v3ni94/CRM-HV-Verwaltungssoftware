@@ -347,10 +347,70 @@ async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.U
         select(PartyMember.id).where(PartyMember.contact_id == entity_id).limit(1)
     ):
         return "Mitglied einer Vertragspartei"
+    if entity_type in HISTORY_ENTITY_TYPES:
+        return await _history_referenced(session, entity_type, entity_id)
     if entity_type == "invoice":
         invoice = await session.get(Invoice, entity_id)
         if invoice is not None and invoice.posting_status is not PostingStatus.UNPOSTED:
             return "Rechnung ist bereits gebucht"
+    if entity_type == "ledger":
+        from mhvp.accounting.models import JournalEntry
+
+        if await session.scalar(
+            select(JournalEntry.id).where(JournalEntry.ledger_id == entity_id).limit(1)
+        ):
+            return "Buchungskreis enthält Buchungen"
+    if entity_type == "ledger_account":
+        from mhvp.accounting.models import JournalLine
+
+        if await session.scalar(
+            select(JournalLine.id).where(JournalLine.account_id == entity_id).limit(1)
+        ):
+            return "Konto ist bebucht"
+    if entity_type == "property_bank_account":
+        from mhvp.banking.models import BankAccountAssignment
+
+        if await session.scalar(
+            select(BankAccountAssignment.id)
+            .where(BankAccountAssignment.property_bank_account_id == entity_id)
+            .limit(1)
+        ):
+            return "Zuordnung zu einem Objekt oder Rechtsträger vorhanden"
+    return None
+
+
+HISTORY_ENTITY_TYPES = frozenset(
+    {"ledger_account", "bank_transaction", "migrated_ticket", "migrated_open_item"}
+)
+
+
+async def _history_referenced(
+    session: AsyncSession, entity_type: str, entity_id: uuid.UUID
+) -> str | None:
+    """Q08: reasons to keep rows of the Immoware24 history reports (M8-03 to M8-07)."""
+    from mhvp.accounting.models import JournalLine, LedgerAccount
+    from mhvp.banking.models import BankTransaction, TransactionStatus
+    from mhvp.imports.migration_models import MigrationOpeningBalanceLine
+
+    if entity_type == "bank_transaction":
+        tx = await session.get(BankTransaction, entity_id)
+        if tx is not None and tx.status is not TransactionStatus.IGNORED:
+            return "Bankumsatz wurde nach dem Import bearbeitet"
+        return None
+    if entity_type == "ledger_account":
+        account = await session.get(LedgerAccount, entity_id)
+        if account is None:
+            return None
+        if account.review_status != "entwurf":
+            return "Konto wurde nach dem Import geprüft"
+        if await session.scalar(
+            select(JournalLine.id).where(JournalLine.account_id == entity_id).limit(1)
+        ) or await session.scalar(
+            select(MigrationOpeningBalanceLine.id)
+            .where(MigrationOpeningBalanceLine.account_id == entity_id)
+            .limit(1)
+        ):
+            return "Konto wird bereits verwendet"
     return None
 
 
@@ -417,6 +477,9 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
             await session.delete(payment)
             await session.flush()
         return
+    if entity_type in HISTORY_ENTITY_TYPES:
+        await _remove_history(session, entity_type, entity_id)
+        return
     if entity_type == "contact":
         contact = await session.get(Contact, entity_id)
         if contact is not None:
@@ -425,6 +488,29 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
             contact.deleted_at = datetime.now(UTC)  # soft delete, audit trail stays
             # ADR 0010: no learning example outlives its contact (same transaction).
             await delete_examples_for_contact(session, contact.id)
+        return
+    if entity_type == "ledger":
+        from mhvp.accounting.models import LedgerAccount
+
+        await session.execute(delete(LedgerAccount).where(LedgerAccount.ledger_id == entity_id))
+        ledger_row = await session.get(Ledger, entity_id)
+        if ledger_row is not None:
+            await session.delete(ledger_row)
+            await session.flush()
+        return
+    if entity_type in ("document_link", "ledger_account", "property_bank_account"):
+        from mhvp.accounting.models import LedgerAccount
+        from mhvp.properties.models import PropertyBankAccount
+
+        extra_model: Any = {
+            "document_link": DocumentLink,
+            "ledger_account": LedgerAccount,
+            "property_bank_account": PropertyBankAccount,
+        }[entity_type]
+        extra_row = await session.get(extra_model, entity_id)
+        if extra_row is not None:
+            await session.delete(extra_row)
+            await session.flush()
         return
     if entity_type == "party":
         await session.execute(delete(PartyMember).where(PartyMember.party_id == entity_id))
@@ -451,6 +537,29 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
         row: Any = await session.get(Property, entity_id)
     else:
         row = await session.get(model[entity_type], entity_id)
+    if row is not None:
+        await session.delete(row)
+    await session.flush()
+
+
+async def _remove_history(session: AsyncSession, entity_type: str, entity_id: uuid.UUID) -> None:
+    """Q08: remove a row of a history report. Nothing here touches the live ledger: bank rows
+    are historical (status ignored), open items and tickets are read only copies."""
+    from mhvp.accounting.models import LedgerAccount
+    from mhvp.banking.models import BankTransaction
+    from mhvp.imports.history_models import MigratedBankLink, MigratedOpenItem, MigratedTicket
+
+    if entity_type == "bank_transaction":
+        await session.execute(
+            delete(MigratedBankLink).where(MigratedBankLink.bank_transaction_id == entity_id)
+        )
+        row: Any = await session.get(BankTransaction, entity_id)
+    elif entity_type == "ledger_account":
+        row = await session.get(LedgerAccount, entity_id)
+    elif entity_type == "migrated_ticket":
+        row = await session.get(MigratedTicket, entity_id)
+    else:
+        row = await session.get(MigratedOpenItem, entity_id)
     if row is not None:
         await session.delete(row)
     await session.flush()
@@ -779,7 +888,302 @@ async def apply_property(
                 ),
             )
     await session.flush()
+    await _apply_onboarding_extras(session, run, principal, prop, units, choice, recorder, notes)
     return {"property_id": str(prop.id), "units": len(units), "notes": notes}
+
+
+async def _apply_onboarding_extras(
+    session: AsyncSession,
+    run: ImportRun,
+    principal: Any,
+    prop: Any,
+    units: dict[str, Unit],
+    choice: Any,
+    recorder: "Recorder",
+    notes: list[str],
+) -> None:
+    """Bank accounts, allocation keys of every kind, debtor accounts and document links of the
+    onboarding (10.2 step 5, R03). Every value was entered or confirmed by the reviewer; the
+    steps run in the transaction of the apply, so a refused step rolls everything back."""
+    await _apply_allocation_keys(session, principal, prop, units, choice, notes)
+    await _apply_bank_accounts(session, principal, prop, choice, recorder, notes)
+    if choice.create_debtor_accounts:
+        await _apply_debtor_accounts(session, principal, prop, recorder, notes)
+    await _link_documents(session, run, principal, prop, choice, recorder, notes)
+
+
+async def _apply_allocation_keys(
+    session: AsyncSession,
+    principal: Any,
+    prop: Any,
+    units: dict[str, Unit],
+    choice: Any,
+    notes: list[str],
+) -> None:
+    from mhvp.properties import services as property_services
+    from mhvp.properties.models import (
+        AllocationKey,
+        AllocationKind,
+        UnitAllocationValue,
+        ValueSource,
+    )
+
+    for item in choice.allocation_keys:
+        key = await session.scalar(
+            select(AllocationKey).where(
+                AllocationKey.property_id == prop.id, AllocationKey.code == item.code
+            )
+        )
+        if key is None:
+            if not (item.name and item.unit_of_measure and item.kind):
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=f"Schlüssel {item.code}: Name, Einheit und Art sind für einen neuen "
+                    "Schlüssel erforderlich.",
+                )
+            await property_services.check_catalog(session, "meter_type", item.meter_type_code)
+            key = AllocationKey(
+                tenant_id=principal.tenant_id,
+                property_id=prop.id,
+                code=item.code,
+                name=item.name,
+                unit_of_measure=item.unit_of_measure,
+                kind=AllocationKind(item.kind),
+                meter_type_code=item.meter_type_code,
+                expected_total=item.expected_total,
+                sort_order=100,
+            )
+            session.add(key)
+            await session.flush()
+        else:
+            if item.kind and AllocationKind(item.kind) is not key.kind:
+                notes.append(
+                    f"Schlüssel {item.code}: Art {item.kind} weicht vom vorhandenen Schlüssel "
+                    f"({key.kind.value}) ab, Art nicht geändert."
+                )
+            if item.expected_total is not None:
+                key.expected_total = item.expected_total
+        if item.values and key.kind is AllocationKind.CONSUMPTION:
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail=f"Schlüssel {item.code}: Verbrauchsschlüssel haben keine Einheitenwerte, "
+                "der Verbrauch kommt aus den Zählern.",
+            )
+        for number, value in item.values.items():
+            unit = units.get(number)
+            if unit is None:
+                notes.append(f"Schlüssel {item.code}: Einheit {number} unbekannt, Wert ignoriert.")
+                continue
+            if value < 0:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION,
+                    detail=f"Schlüssel {item.code}, Einheit {number}: Wert ist negativ.",
+                )
+            existing = await session.scalar(
+                select(UnitAllocationValue.id).where(
+                    UnitAllocationValue.unit_id == unit.id,
+                    UnitAllocationValue.allocation_key_id == key.id,
+                    UnitAllocationValue.valid_to.is_(None),
+                )
+            )
+            if existing is not None:
+                notes.append(
+                    f"Schlüssel {item.code}, Einheit {number}: Wert bereits vorhanden, "
+                    "nicht überschrieben."
+                )
+                continue
+            await property_services.add_allocation_value(
+                session,
+                principal.tenant_id,
+                unit.id,
+                key.id,
+                value,
+                choice.as_of,
+                None,
+                ValueSource.MANUAL,
+            )
+    await session.flush()
+
+
+async def _apply_bank_accounts(
+    session: AsyncSession,
+    principal: Any,
+    prop: Any,
+    choice: Any,
+    recorder: "Recorder",
+    notes: list[str],
+) -> None:
+    from mhvp.core import crypto
+    from mhvp.properties import services as property_services
+    from mhvp.properties.models import BankAccountKind, LegalEntity, PropertyBankAccount
+    from mhvp.properties.routers import _set_default_account
+
+    for item in choice.bank_accounts:
+        kind = BankAccountKind(item.kind)
+        if item.is_default and kind is BankAccountKind.DEPOSIT:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Ein Kautionskonto kann nicht Standardkonto sein."
+            )
+        entities = (
+            await session.scalars(
+                select(LegalEntity)
+                .where(
+                    LegalEntity.property_id == prop.id,
+                    LegalEntity.kind.in_(property_services.ACCOUNT_OWNERS[kind]),
+                )
+                .order_by(LegalEntity.created_at)
+            )
+        ).all()
+        if len(entities) != 1:
+            notes.append(
+                f"Bankkonto {item.holder} ({item.kind}): "
+                + (
+                    "kein passender Rechtsträger vorhanden"
+                    if not entities
+                    else "mehrere passende Rechtsträger, Zuordnung nötig"
+                )
+                + ", bitte am Objekt anlegen."
+            )
+            continue
+        fingerprint = crypto.fingerprint(item.iban)
+        duplicate = await session.scalar(
+            select(PropertyBankAccount.id).where(
+                PropertyBankAccount.property_id == prop.id,
+                PropertyBankAccount.iban_fingerprint == fingerprint,
+            )
+        )
+        if duplicate is not None:
+            notes.append(
+                f"Bankkonto {item.holder}: IBAN bereits am Objekt, nicht doppelt angelegt."
+            )
+            continue
+        account = PropertyBankAccount(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            property_id=prop.id,
+            legal_entity_id=entities[0].id,
+            kind=kind,
+            iban=item.iban,
+            iban_suffix=item.iban[-4:],
+            iban_fingerprint=fingerprint,
+            bic=item.bic,
+            bank_name=item.bank_name,
+            holder=item.holder,
+            segregated=kind is BankAccountKind.DEPOSIT,
+            valid_from=item.valid_from or choice.as_of,
+        )
+        session.add(account)
+        await session.flush()
+        recorder.add("property_bank_account", account.id)
+        if item.is_default:
+            await _set_default_account(session, account)
+    await session.flush()
+
+
+async def _apply_debtor_accounts(
+    session: AsyncSession, principal: Any, prop: Any, recorder: "Recorder", notes: list[str]
+) -> None:
+    """Debtor accounts of the contracts as ledger accounts (7.2, 6.9.2). An existing ledger of the
+    legal entity adopts the reserved numbers; without one the ledger is created from the draft
+    chart template A.1 (fiscal year as the API default). Nothing is posted: postings stay
+    behind the gate of productive bookkeeping (G1)."""
+    from mhvp.accounting import services as accounting_services
+    from mhvp.accounting.models import LedgerAccount
+    from mhvp.properties.models import LegalEntity
+
+    entity_ids = list(
+        await session.scalars(
+            select(DebtorAccountReservation.legal_entity_id)
+            .join(LegalEntity, LegalEntity.id == DebtorAccountReservation.legal_entity_id)
+            .where(LegalEntity.property_id == prop.id)
+            .distinct()
+        )
+    )
+    if not entity_ids:
+        notes.append("Debitorenkonten: keine Verträge, daher keine Konten zu übernehmen.")
+        return
+    template = None
+    for entity_id in entity_ids:
+        ledger = await session.scalar(select(Ledger).where(Ledger.legal_entity_id == entity_id))
+        if ledger is None:
+            if template is None:
+                template = await accounting_services.default_template(session, principal.tenant_id)
+            ledger = await accounting_services.create_ledger(
+                session,
+                tenant_id=principal.tenant_id,
+                user_id=principal.user_id,
+                legal_entity_id=entity_id,
+                template=template,
+                fiscal_year_start_month=1,
+                migration_cutoff=None,
+            )
+            recorder.add("ledger", ledger.id)
+            notes.append(
+                f"Buchungskreis {ledger.name} aus der Kontenvorlage (Entwurf) angelegt, "
+                "Debitorenkonten übernommen."
+            )
+            continue
+        before = set(
+            await session.scalars(
+                select(LedgerAccount.id).where(LedgerAccount.ledger_id == ledger.id)
+            )
+        )
+        await accounting_services.sync_debtor_accounts(session, ledger)
+        created = (
+            await session.scalars(
+                select(LedgerAccount.id).where(LedgerAccount.ledger_id == ledger.id)
+            )
+        ).all()
+        for account_id in created:
+            if account_id not in before:
+                recorder.add("ledger_account", account_id)
+
+
+async def _link_documents(
+    session: AsyncSession,
+    run: ImportRun,
+    principal: Any,
+    prop: Any,
+    choice: Any,
+    recorder: "Recorder",
+    notes: list[str],
+) -> None:
+    """Link the source documents and further chosen documents to the property (6.7, 11)."""
+    from mhvp.documents import services as document_services
+    from mhvp.documents.models import LinkRole
+
+    wanted: dict[uuid.UUID, LinkRole] = {}
+    if choice.link_source_documents:
+        for document_id in run.document_ids or []:
+            wanted[document_id] = LinkRole.ORIGINAL
+    for document_id in choice.document_ids:
+        wanted.setdefault(document_id, LinkRole.ATTACHMENT)
+    for document_id, role in wanted.items():
+        if await session.get(Document, document_id) is None:
+            if document_id in choice.document_ids:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Dokument nicht gefunden.")
+            continue
+        exists = await session.scalar(
+            select(DocumentLink.id).where(
+                DocumentLink.document_id == document_id,
+                DocumentLink.entity_type == "property",
+                DocumentLink.entity_id == prop.id,
+                DocumentLink.role == role,
+            )
+        )
+        if exists is not None:
+            continue
+        link = DocumentLink(
+            tenant_id=principal.tenant_id,
+            document_id=document_id,
+            entity_type="property",
+            entity_id=prop.id,
+            role=role,
+        )
+        session.add(link)
+        await session.flush()
+        recorder.add("document_link", link.id)
+        await document_services.mark_mirrors_dirty(session, document_id)
 
 
 # Invoice extraction (M14, 6.4) -------------------------------------------------------------

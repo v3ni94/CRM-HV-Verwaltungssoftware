@@ -32,4 +32,15 @@ describe("NotificationBell (M31)", () => {
     expect(popover).toHaveClass("fixed", "inset-x-4", "top-[calc(var(--mhvp-header-h)+0.5rem)]", "max-h-[70vh]", "overflow-auto", "sm:absolute", "sm:w-80");
     expect(screen.getByText("Neu").closest("button")).toHaveClass("min-h-11");
   });
+
+  it("mutes all notifications for a period with one call", async () => {
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse([])));
+    renderIntl(<NotificationBell />);
+    await userEvent.click(screen.getByRole("button", { name: "Benachrichtigungen" }));
+    await userEvent.click(screen.getByRole("button", { name: "24 Stunden" }));
+    const call = fetchMock.mock.calls.find(([u]) => String(u).endsWith("/notifications/mute"))!;
+    expect(call).toBeDefined();
+    const body = JSON.parse(String(call[1].body));
+    expect(new Date(body.muted_until).getTime()).toBeGreaterThan(Date.now() + 23 * 3_600_000);
+  });
 });

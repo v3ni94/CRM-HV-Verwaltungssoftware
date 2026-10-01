@@ -279,3 +279,7 @@ Rule `docs/rules/M13-05.md`, migration 0251.
   (S69-04). The live computation stays the source of truth.
 - `properties.routers.add_provider` calls `ledger_ops.ensure_creditor_for_relation` (M10-05).
 - Migration 0271. Rule: `docs/rules/Q01-approval-decisions-open-items.md`.
+
+## CRM-Oberflächen Welle 4 (R01)
+
+Keine API-Änderung. Neue CRM-Komponenten: `AdminFeeRun` (Honorarlauf mit Vorschau, `POST /accounting/admin-fees-run`), PDF-Ablage und Download der Honorarrechnung (`POST /accounting/admin-fee-invoices/{id}/document`, Datei über `/api/handover-files/documents/{id}/content`), `YearCarryoverPanel` (`GET` und `POST /accounting/ledgers/{id}/year-carryover`, nur Entwürfe), `RecurringPlanCreate`, Anlagenfeld in `InvoiceCreate`, Sammelrückmeldung der Lastschriften (`POST /accounting/direct-debits/{id}/bank-status` mit mehreren `order_ids`, Test `test_direct_debit_batch_feedback`).

@@ -15,6 +15,8 @@ export type ChangeRequestRow = {
   contact_id: string;
   created_at: string;
   decision_note: string | null;
+  /** Belegentwurf einer angenommenen Rechnungseinreichung (Belegeingang). */
+  receipt_draft_id?: string | null;
 };
 
 export type MandateProposalRow = {
@@ -163,6 +165,11 @@ export function PortalProposalsPanel({ contactId, canDecide }: { contactId: stri
                   {r.payload.document_id ? (
                     <a href={`/dokumente/${r.payload.document_id}`} className="text-xs underline">
                       {t("evidence")}
+                    </a>
+                  ) : null}
+                  {r.receipt_draft_id ? (
+                    <a href={`/rechnungen/belegeingang?entwurf=${r.receipt_draft_id}`} className="text-xs underline" data-testid="receipt-draft-link">
+                      {t("receiptDraft")}
                     </a>
                   ) : null}
                 </span>

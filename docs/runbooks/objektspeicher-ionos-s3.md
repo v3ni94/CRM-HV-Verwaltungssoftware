@@ -240,3 +240,40 @@ Für den lokalen Standard siehe Abschnitt 0.
 * Abschnitte 1 bis 3 nennen noch den zweiten IONOS-Bucket `mhvp-backup`; seit 26.09.2026 ist
   das Sicherungsziel Hetzner (Abschnitt 6). Die Tabelle in Abschnitt 1 wird beim nächsten
   Betreiberabgleich bereinigt.
+
+## 9. Direkter Browser-Upload und CORS (R02, Q03-01)
+
+Der direkte Upload (signierte PUT-URL, `POST /documents/uploads`) ist je Mandant abschaltbar
+(Einstellungen, DMS, Standard aus). Das CRM lädt sonst über die API hoch. Einschalten ist nur
+sinnvoll, wenn zwei Bedingungen erfüllt sind:
+
+1. Der Endpunkt aus `MHVP_S3_ENDPOINT_URL` ist vom Browser aus erreichbar. Im Compose-Stack
+   veröffentlicht `objectstore` keine Ports; dann braucht es einen eigenen öffentlichen
+   Endpunkt (Reverse Proxy mit TLS). Die signierten URLs enthalten diesen Host und gelten 300
+   Sekunden.
+2. Der Bucket erlaubt CORS für die CRM-Adresse. Beispiel (Platzhalter anpassen):
+
+```json
+{
+  "CORSRules": [
+    {
+      "AllowedOrigins": ["https://crm.example.de"],
+      "AllowedMethods": ["PUT"],
+      "AllowedHeaders": ["Content-Type"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 300
+    }
+  ]
+}
+```
+
+Setzen und prüfen mit der S3-API des eingesetzten Speichers (zum Beispiel
+`aws s3api put-bucket-cors --bucket <Bucket> --cors-configuration file://cors.json --endpoint-url <Endpunkt>`
+und `get-bucket-cors`). Ob der eingesetzte Objektspeicher CORS an dieser Stelle unterstützt,
+ist vor dem Einschalten zu prüfen (offen, `docs/OPEN_QUESTIONS.md` Q03-01).
+
+Prüfung nach dem Einschalten: Datei im CRM hochladen (Dokumente, Hochladen) und in den
+Entwicklerwerkzeugen des Browsers kontrollieren, dass der PUT an den Speicherhost mit Status 200
+endet. Schlägt der PUT fehl (CORS, Erreichbarkeit), fällt das CRM selbstständig auf den Upload
+über die API zurück; der Schalter kann dann wieder ausgeschaltet werden. Die Gegenstelle
+`complete` prüft Typ, Inhalt, Größe und Schadsoftware wie beim Upload über die API.

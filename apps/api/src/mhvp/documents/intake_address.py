@@ -29,6 +29,9 @@ class IntakeAddress:
     token: str
     allowed_senders: list[str] = field(default_factory=list)
     enabled: bool = True
+    # Shared mailbox (Q03-02): when set, messages to the plus address of another tenant of the
+    # same mailbox are handed over to that tenant (``distribution.py``) instead of skipped.
+    distribute: bool = False
 
     @property
     def address(self) -> str:
@@ -41,6 +44,7 @@ class IntakeAddress:
             "token": self.token,
             "allowed_senders": list(self.allowed_senders),
             "enabled": self.enabled,
+            "distribute": self.distribute,
         }
 
 
@@ -57,6 +61,7 @@ def load(sources: dict[str, Any] | None) -> IntakeAddress | None:
         token=str(raw["token"]),
         allowed_senders=[str(x) for x in raw.get("allowed_senders") or []],
         enabled=bool(raw.get("enabled", True)),
+        distribute=bool(raw.get("distribute", False)),
     )
 
 
@@ -73,6 +78,18 @@ def sender_allowed(config: IntakeAddress, sender: str | None) -> bool:
         entry == address or (entry.startswith("@") and entry == domain)
         for entry in config.allowed_senders
     )
+
+
+def token_of(config: IntakeAddress, recipients: list[str]) -> str | None:
+    """Token of the first plus address of the configured mailbox among ``recipients``."""
+    local, domain = config.mailbox_address.lower().split("@", 1)
+    for recipient in recipients:
+        address = recipient.strip().lower()
+        if "<" in address and address.endswith(">"):
+            address = address[address.rindex("<") + 1 : -1]
+        if address.endswith("@" + domain) and address.startswith(local + "+"):
+            return address[len(local) + 1 : -len(domain) - 1] or None
+    return None
 
 
 def classify(config: IntakeAddress | None, recipients: list[str]) -> str | None:

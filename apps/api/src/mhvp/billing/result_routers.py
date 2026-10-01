@@ -27,12 +27,17 @@ from mhvp.billing.models import (
 from mhvp.billing.routers import StatementSettingsIn, check_period
 from mhvp.billing.status import StatementStatus
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.workspace.services import local_date
 
-router = APIRouter(tags=["Abrechnung"])  # included by mhvp.billing.routers (prefix)
+# M2-02/S16-02: statements outside the membership's property assignment answer 404.
+STATEMENT_GUARD = property_column_guard({"statement_id": Statement.property_id})
+router = APIRouter(
+    tags=["Abrechnung"], dependencies=[Depends(STATEMENT_GUARD)]
+)  # included by mhvp.billing.routers (prefix)
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")

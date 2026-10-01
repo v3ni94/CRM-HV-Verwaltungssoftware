@@ -826,6 +826,11 @@ async def _open_item(
     return RowStatus.CREATED, "migrated_open_item", row.id, []
 
 
+# Entity types the history reports create; registered with the import run for undo (Q08).
+UNDOABLE_ENTITY_TYPES = frozenset(
+    {"ledger_account", "bank_transaction", "migrated_ticket", "migrated_open_item"}
+)
+
 HANDLERS: dict[ReportType, Any] = {
     ReportType.SEPA_OVERVIEW: _sepa,
     ReportType.CHART_OF_ACCOUNTS: _chart_account,
@@ -872,3 +877,138 @@ async def open_item_summary(session: AsyncSession, ledger_id: uuid.UUID) -> dict
         }
         for kind, count, original, paid, open_ in rows
     }
+
+
+# Q08-01: check of the single items against the opening balance --------------------------
+
+# Opening balance line kind and sign per single item group (assumption A-Q08-01). The balance
+# line amount is debit minus credit (debtor positive, creditor and reserve negative); single
+# items are stored without sign. ``sign`` turns the balance sum into the item sum.
+BALANCE_GROUPS: dict[str, dict[str, Any]] = {
+    "debtor": {"balance_kind": "debtor", "sign": 1, "item_kinds": ["receivable", "special_levy"]},
+    "creditor": {"balance_kind": "creditor", "sign": -1, "item_kinds": ["credit"]},
+    "reserve": {"balance_kind": "reserve", "sign": -1, "item_kinds": ["reserve"]},
+}
+NOT_COMPARABLE_KINDS = ("deposit", "loan")
+
+
+async def open_item_balance_check(
+    session: AsyncSession, ledger_id: uuid.UUID, balance_id: uuid.UUID | None
+) -> dict[str, Any] | None:
+    """Report only (never corrects, never posts): per group the sum of the open amounts of the
+    single items against the sum of the balance lines of the opening balance. Kinds without a
+    clear counterpart (deposit, loan) are listed as not comparable. None: no opening balance."""
+    from mhvp.imports.migration_models import (
+        MigrationOpeningBalance,
+        MigrationOpeningBalanceLine,
+    )
+
+    query = select(MigrationOpeningBalance).where(MigrationOpeningBalance.ledger_id == ledger_id)
+    if balance_id is not None:
+        query = query.where(MigrationOpeningBalance.id == balance_id)
+    balance = await session.scalar(query.order_by(MigrationOpeningBalance.cutoff_date.desc()))
+    if balance is None:
+        return None
+    line_rows = await session.execute(
+        select(
+            MigrationOpeningBalanceLine.kind,
+            func.coalesce(func.sum(MigrationOpeningBalanceLine.amount), 0),
+        )
+        .where(MigrationOpeningBalanceLine.opening_balance_id == balance.id)
+        .group_by(MigrationOpeningBalanceLine.kind)
+    )
+    line_sums = {kind: total for kind, total in line_rows.all()}  # noqa: C416 - typed Row unpack
+    item_sums = {
+        kind: (count, total)
+        for kind, count, total in (
+            await session.execute(
+                select(
+                    MigratedOpenItem.kind,
+                    func.count(),
+                    func.coalesce(func.sum(MigratedOpenItem.open_amount), 0),
+                )
+                .where(MigratedOpenItem.ledger_id == ledger_id)
+                .group_by(MigratedOpenItem.kind)
+            )
+        ).all()
+    }
+    groups: list[dict[str, Any]] = []
+    for name, spec in BALANCE_GROUPS.items():
+        items = sum((item_sums.get(k, (0, Decimal(0)))[1] for k in spec["item_kinds"]), Decimal(0))
+        count = sum(item_sums.get(k, (0, Decimal(0)))[0] for k in spec["item_kinds"])
+        balance_sum = Decimal(line_sums.get(spec["balance_kind"], 0)) * spec["sign"]
+        items, balance_sum = items.quantize(CENT), balance_sum.quantize(CENT)
+        if count == 0 and balance_sum == 0:
+            continue
+        difference = (items - balance_sum).quantize(CENT)
+        groups.append(
+            {
+                "group": name,
+                "item_kinds": spec["item_kinds"],
+                "item_count": count,
+                "items_open_sum": str(items),
+                "balance_sum": str(balance_sum),
+                "difference": str(difference),
+                "status": "match" if difference == 0 else "deviation",
+            }
+        )
+    not_comparable = [
+        {"kind": k, "item_count": item_sums[k][0], "items_open_sum": str(item_sums[k][1])}
+        for k in NOT_COMPARABLE_KINDS
+        if k in item_sums
+    ]
+    return {
+        "ledger_id": str(ledger_id),
+        "opening_balance_id": str(balance.id),
+        "cutoff_date": balance.cutoff_date.isoformat(),
+        "groups": groups,
+        "not_comparable": not_comparable,
+        "all_match": all(g["status"] == "match" for g in groups) and bool(groups),
+        "sign_rule": "A-Q08-01",
+        "note": "Prüfbericht ohne Korrektur: Abweichungen werden von einer Person geklärt.",
+    }
+
+
+async def journal_candidates(
+    session: AsyncSession, tx: BankTransaction, tolerance_days: int, limit: int
+) -> list[dict[str, Any]]:
+    """Q08-04: candidate list for the journal entry of a historical bank row, by booking date
+    (within the tolerance) and amount (entry debit total equals the absolute bank amount), in
+    the ledger of the bank account's legal entity. A proposal only, nothing is assigned."""
+    from datetime import timedelta
+
+    amount = abs(Decimal(tx.amount)).quantize(CENT)
+    rows = (
+        await session.scalars(
+            select(MigratedJournalEntry)
+            .join(Ledger, Ledger.id == MigratedJournalEntry.ledger_id)
+            .where(
+                Ledger.legal_entity_id == tx.legal_entity_id,
+                MigratedJournalEntry.booking_date
+                >= tx.booking_date - timedelta(days=tolerance_days),
+                MigratedJournalEntry.booking_date
+                <= tx.booking_date + timedelta(days=tolerance_days),
+                MigratedJournalEntry.debit_total == amount,
+                ~MigratedJournalEntry.id.in_(
+                    select(MigratedBankLink.journal_entry_id).where(
+                        MigratedBankLink.journal_entry_id.is_not(None),
+                        MigratedBankLink.bank_transaction_id != tx.id,
+                    )
+                ),
+            )
+        )
+    ).all()
+    ordered = sorted(
+        rows, key=lambda e: (abs((e.booking_date - tx.booking_date).days), e.source_entry_id)
+    )
+    return [
+        {
+            "journal_entry_id": str(e.id),
+            "source_entry_id": e.source_entry_id,
+            "booking_date": e.booking_date.isoformat(),
+            "day_difference": abs((e.booking_date - tx.booking_date).days),
+            "amount": str(e.debit_total),
+            "text": e.text,
+        }
+        for e in ordered[:limit]
+    ]

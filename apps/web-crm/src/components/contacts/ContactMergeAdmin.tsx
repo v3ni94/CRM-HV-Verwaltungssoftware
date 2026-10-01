@@ -137,7 +137,7 @@ export function ContactMergeAdmin({ canPropose, canApprove }: { canPropose: bool
             {t("propose.title")}
           </h2>
           <p className={ui.help}>{t("propose.intro")}</p>
-          <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => void propose(e)}>
+          <form className="grid gap-3 sm:grid-cols-2" onSubmit={(e) => void propose(e)} aria-label={t("proposeFormLabel")}>
             <ContactPicker label={t("propose.source")} value={source} onChange={setSource} />
             <ContactPicker label={t("propose.target")} value={target} onChange={setTarget} />
             <label className="flex flex-col gap-1 sm:col-span-2">

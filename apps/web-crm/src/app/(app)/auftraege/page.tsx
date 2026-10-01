@@ -34,7 +34,7 @@ export default async function WorkOrdersPage({ searchParams }: { searchParams: P
   return (
     <div className="flex flex-col gap-5">
       <PageHeader title={t("listTitle")} description={t("listDescription")} />
-      <form method="get" className="flex flex-wrap items-center gap-2">
+      <form method="get" className="flex flex-wrap items-center gap-2" aria-label={t("filterStatus")}>
         <label htmlFor="order-status" className="text-sm text-muted">{t("filterStatus")}</label>
         <select id="order-status" name="status" defaultValue={status} className={`${ui.input} w-auto`}>
           <option value="">{t("filterAll")}</option>

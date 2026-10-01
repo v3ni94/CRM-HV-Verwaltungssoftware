@@ -130,10 +130,11 @@ async def order_from_invoice(
             ErrorCodes.VALIDATION,
             detail="Vom getrennten Kautionskonto werden keine Rechnungen bezahlt.",
         )
+    # Row lock on the payable: two concurrent requests never create two orders (B08).
     item = await session.scalar(
-        select(OpenItem).where(
-            OpenItem.journal_entry_id == invoice.journal_entry_id, OpenItem.kind == "payable"
-        )
+        select(OpenItem)
+        .where(OpenItem.journal_entry_id == invoice.journal_entry_id, OpenItem.kind == "payable")
+        .with_for_update()
     )
     if item is None:
         raise ProblemError(ErrorCodes.CONFLICT, detail="Kein offener Posten zur Rechnung.")

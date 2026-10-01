@@ -46,16 +46,20 @@ export function DmsUpload() {
   const cameraRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Tenant switch (S12-06, default off): direct upload to object storage with a signed URL.
+  const [directUpload, setDirectUpload] = useState(false);
   const [done, setDone] = useState<{ id: string; filing: Filing | null } | null>(null);
 
   useEffect(() => {
     let active = true;
     void (async () => {
-      const [props, cats] = await Promise.all([
+      const [props, cats, direct] = await Promise.all([
         bff<{ items: PropertyItem[] }>("/api/bff/properties?page_size=200"),
         bff<CategoryItem[]>("/api/bff/document-categories"),
+        bff<{ enabled: boolean }>("/api/bff/document-direct-upload"),
       ]);
       if (!active) return;
+      if (direct.ok) setDirectUpload(direct.data.enabled === true);
       if (props.ok) setProperties(props.data.items);
       if (cats.ok) setCategories(cats.data);
     })();
@@ -102,6 +106,32 @@ export function DmsUpload() {
     if (res.ok) setContactHits(Array.isArray(res.data) ? res.data : (res.data.items ?? []));
   }
 
+  /** Signed URL upload; returns null when the intent or the PUT fails (CORS, unreachable
+   *  endpoint), so that the caller falls back to the upload through the API. */
+  async function uploadDirect(file: File, links: { entity_type: string; entity_id: string; role: string }[]) {
+    const intent = await bff<{ upload_id: string; url: string; headers: Record<string, string> }>("/api/bff/documents/uploads", {
+      method: "POST",
+      body: JSON.stringify({ filename: file.name, mime_type: file.type, size: file.size }),
+    });
+    if (!intent.ok) return null;
+    try {
+      const put = await fetch(intent.data.url, { method: "PUT", headers: intent.data.headers, body: file });
+      if (!put.ok) return null;
+    } catch {
+      return null;
+    }
+    return bff<{ id: string }>(`/api/bff/documents/uploads/${intent.data.upload_id}/complete`, {
+      method: "POST",
+      body: JSON.stringify({
+        filename: file.name,
+        mime_type: file.type,
+        title: title.trim() || null,
+        category_id: categoryId || null,
+        links,
+      }),
+    });
+  }
+
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     const file = fileRef.current?.files?.[0] ?? cameraRef.current?.files?.[0];
@@ -115,12 +145,18 @@ export function DmsUpload() {
     const links = [{ entity_type: unitId ? "unit" : "property", entity_id: unitId || propertyId, role: "original" }];
     if (contractId) links.push({ entity_type: "contract", entity_id: contractId, role: "original" });
     if (contact) links.push({ entity_type: "contact", entity_id: contact.id, role: "original" });
-    const body = new FormData();
-    body.set("file", file);
-    if (title.trim()) body.set("title", title.trim());
-    if (categoryId) body.set("category_id", categoryId);
-    body.set("links", JSON.stringify(links));
-    const res = await bff<{ id: string }>("/api/bff/documents", { method: "POST", body });
+    let res: Awaited<ReturnType<typeof bff<{ id: string }>>> | null = null;
+    if (directUpload && file.type) {
+      res = await uploadDirect(file, links);
+    }
+    if (res === null) {
+      const body = new FormData();
+      body.set("file", file);
+      if (title.trim()) body.set("title", title.trim());
+      if (categoryId) body.set("category_id", categoryId);
+      body.set("links", JSON.stringify(links));
+      res = await bff<{ id: string }>("/api/bff/documents", { method: "POST", body });
+    }
     if (!res.ok) {
       setBusy(false);
       setError(res.message);

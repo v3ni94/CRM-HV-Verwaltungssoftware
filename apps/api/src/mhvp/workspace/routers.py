@@ -73,6 +73,11 @@ async def member(request: Request) -> TenantPrincipal:
         tenant_id=principal.tenant_id,
         permissions=principal.permissions,
         roles=principal.roles,
+        is_platform_admin=principal.is_platform_admin,
+        platform_access_reason=principal.platform_access_reason,
+        # A37 and M2-02/S16-02: the scopes of the membership travel with the principal.
+        legal_entity_ids=principal.legal_entity_ids,
+        property_ids=principal.property_ids,
     )
 
 
@@ -261,6 +266,8 @@ class WorkspaceBulkIn(_In):
     # M9-04: target category (documents.set_category) and property (documents.link_property).
     category_id: uuid.UUID | None = None
     property_id: uuid.UUID | None = None
+    # maintenance.done: completion date (default today); with an interval the due date moves on.
+    done_on: date | None = None
 
 
 def _need(principal: TenantPrincipal, permission: str) -> None:
@@ -486,13 +493,14 @@ async def search(
     """Every hit type is guarded by its own read permission (contacts, properties incl.
     buildings and units, contracts, documents, tickets, postings); postings additionally
     respect the legal entity scope of the principal (ADR 0005)."""
-    from mhvp.accounting.models import JournalEntry, Ledger
+    from mhvp.accounting.models import Invoice, JournalEntry, Ledger
     from mhvp.contacts.models import Contact, PartyMember
     from mhvp.contacts.services import search_filter
-    from mhvp.contracts.models import Contract
-    from mhvp.core.auth.scope import allowed_legal_entity_ids
+    from mhvp.contracts.models import Contract, ContractKind
+    from mhvp.core.auth.scope import allowed_legal_entity_ids, allowed_property_ids
     from mhvp.documents.models import Document
-    from mhvp.properties.models import Building, Property, Unit
+    from mhvp.documents.routers import _property_scope_filter
+    from mhvp.properties.models import Building, Meter, Property, Unit
     from mhvp.tickets.models import Ticket
 
     like = f"%{q.strip()}%"
@@ -500,6 +508,12 @@ async def search(
     number_text = q.strip().upper().removeprefix("TNR").lstrip("#").strip()
     number = int(number_text) if number_text.isdigit() else None
     hits: list[Hit] = []
+    # M2-02/S16-02: property bound hits follow the membership's property assignment.
+    property_scope = allowed_property_ids(principal)
+
+    def assigned(column: Any) -> list[ColumnElement[bool]]:
+        return [] if property_scope is None else [column.in_(property_scope)]
+
     async with tenant_tx(request, principal) as session:
         if principal.has("contacts:read"):
             sim = func.similarity(Contact.search_text, q.lower())
@@ -526,7 +540,8 @@ async def search(
                     Property.name.ilike(like),
                     Property.street.ilike(like),
                     Property.city.ilike(like),
-                )
+                ),
+                *assigned(Property.id),
             )
             units = (
                 select(
@@ -544,7 +559,8 @@ async def search(
                         Unit.number.ilike(like),
                         Unit.label.ilike(like),
                         Property.street.ilike(like),
-                    )
+                    ),
+                    *assigned(Property.id),
                 )
             )
             buildings = (
@@ -558,9 +574,30 @@ async def search(
                     Building.name,
                 )
                 .join(Property, Property.id == Building.property_id)
-                .where(or_(Building.name.ilike(like), Building.street.ilike(like)))
+                .where(
+                    or_(Building.name.ilike(like), Building.street.ilike(like)),
+                    *assigned(Property.id),
+                )
             )
-            combined = union_all(props, units, buildings).subquery()
+            # Q04-02: meter and MaLo numbers lead to the property (type "meter" is mapped to
+            # "property" below), in the same statement.
+            meters = (
+                select(
+                    literal("meter"),
+                    Meter.property_id,
+                    func.concat("Zähler ", Meter.number),
+                    func.concat_ws(" ", Property.number, Property.name, Meter.location),
+                    no_parent,
+                    Property.number,
+                    Meter.number,
+                )
+                .join(Property, Property.id == Meter.property_id)
+                .where(
+                    or_(Meter.number.ilike(like), Meter.malo_id.ilike(like)),
+                    *assigned(Property.id),
+                )
+            )
+            combined = union_all(props, units, buildings, meters).subquery()
             rows = await session.execute(
                 select(combined)
                 .order_by(combined.c.kind, combined.c.sort1, combined.c.sort2)
@@ -573,7 +610,7 @@ async def search(
                     continue
                 hits.append(
                     Hit(
-                        entity_type=row.kind,
+                        entity_type="property" if row.kind == "meter" else row.kind,
                         id=row.id,
                         title=row.title,
                         subtitle=row.subtitle or None,
@@ -587,9 +624,21 @@ async def search(
                 .join(Contact, Contact.id == PartyMember.contact_id)
                 .where(Contact.search_text.ilike(like.lower()), Contact.deleted_at.is_(None))
             )
+            # Q04-02: a tenancy is also found by the address of its property.
+            address_hit = select(Property.id).where(
+                or_(Property.street.ilike(like), Property.city.ilike(like))
+            )
             contracts = await session.scalars(
                 select(Contract)
-                .where(or_(Contract.number.ilike(like), Contract.party_id.in_(party_hit)))
+                .where(
+                    or_(
+                        Contract.number.ilike(like),
+                        Contract.party_id.in_(party_hit),
+                        (Contract.kind == ContractKind.TENANCY)
+                        & Contract.property_id.in_(address_hit),
+                    ),
+                    *assigned(Contract.property_id),
+                )
                 .order_by(Contract.number)
                 .limit(limit)
             )
@@ -603,17 +652,17 @@ async def search(
                     )
                 )
         if principal.has("documents:read"):
-            docs = await session.scalars(
-                select(Document)
-                .where(
-                    or_(
-                        Document.search_vector.op("@@")(func.plainto_tsquery("german", q)),
-                        Document.title.ilike(like),
-                        Document.filename.ilike(like),
-                    )
+            doc_query = select(Document).where(
+                or_(
+                    Document.search_vector.op("@@")(func.plainto_tsquery("german", q)),
+                    Document.title.ilike(like),
+                    Document.filename.ilike(like),
                 )
-                .limit(limit)
             )
+            doc_scope = _property_scope_filter(session)
+            if doc_scope is not None:
+                doc_query = doc_query.where(Document.id.in_(doc_scope))
+            docs = await session.scalars(doc_query.limit(limit))
             for d in docs.all():
                 hits.append(
                     Hit(entity_type="document", id=d.id, title=d.title, subtitle=d.filename)
@@ -623,7 +672,10 @@ async def search(
             if number is not None:
                 conditions.append(Ticket.number == number)
             tickets = await session.scalars(
-                select(Ticket).where(or_(*conditions)).order_by(Ticket.number.desc()).limit(limit)
+                select(Ticket)
+                .where(or_(*conditions), *assigned(Ticket.property_id))
+                .order_by(Ticket.number.desc())
+                .limit(limit)
             )
             for t in tickets.all():
                 hits.append(
@@ -646,11 +698,34 @@ async def search(
             scope = allowed_legal_entity_ids(principal)
             if scope is not None:
                 query = query.where(Ledger.legal_entity_id.in_(scope))
+            query = query.where(*assigned(Ledger.property_id))
             entries = await session.scalars(
                 query.order_by(JournalEntry.booking_date.desc(), JournalEntry.number.desc()).limit(
                     limit
                 )
             )
+            # Q04-02: incoming invoices by the number of the creditor, same legal entity scope.
+            inv_query = (
+                select(Invoice)
+                .join(Ledger, Ledger.id == Invoice.ledger_id)
+                .where(Invoice.number.ilike(like))
+            )
+            if scope is not None:
+                inv_query = inv_query.where(Ledger.legal_entity_id.in_(scope))
+            inv_query = inv_query.where(*assigned(Ledger.property_id))
+            for inv in (
+                await session.scalars(
+                    inv_query.order_by(Invoice.invoice_date.desc(), Invoice.number).limit(limit)
+                )
+            ).all():
+                hits.append(
+                    Hit(
+                        entity_type="invoice",
+                        id=inv.id,
+                        title=f"Rechnung {inv.number}",
+                        subtitle=f"{inv.invoice_date.isoformat()} {inv.gross} EUR",
+                    )
+                )
             for e in entries.all():
                 title = f"Buchung {e.number}" if e.number is not None else "Buchung (Entwurf)"
                 hits.append(
@@ -1101,6 +1176,47 @@ async def save_notification_preferences(
             row.in_app, row.email, row.muted_until = item.in_app, item.email, item.muted_until
         await session.flush()
         return await _preferences_out(session, _own_user(principal))
+
+
+class NotificationMuteIn(_In):
+    # None lifts the mute; otherwise a moment in the future.
+    muted_until: datetime | None = None
+
+
+@router.post(
+    "/notifications/mute",
+    summary="Alle Benachrichtigungen stummschalten oder die Stummschaltung aufheben",
+)
+async def mute_notifications(
+    body: NotificationMuteIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(member),
+) -> NotificationPreferencesOut:
+    """Bulk action on the own user default (kind ``*``): silences every kind that is not
+    mandatory; mandatory kinds (SLA escalation, compliance reminders) ignore it."""
+    from mhvp.workspace import notification_prefs as prefs
+
+    user_id = _own_user(principal)
+    if body.muted_until is not None and body.muted_until <= datetime.now(UTC):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Die Stummschaltung braucht einen Zeitpunkt in der Zukunft.",
+        )
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(
+            select(NotificationPreference).where(
+                NotificationPreference.user_id == user_id,
+                NotificationPreference.kind == prefs.DEFAULT_KIND,
+            )
+        )
+        if row is None:
+            row = NotificationPreference(
+                tenant_id=principal.tenant_id, user_id=user_id, kind=prefs.DEFAULT_KIND
+            )
+            session.add(row)
+        row.muted_until = body.muted_until
+        await session.flush()
+        return await _preferences_out(session, user_id)
 
 
 # Calendar ------------------------------------------------------------------------------
@@ -1906,12 +2022,40 @@ async def bulk(
             ).all()
             if len(items) != len(ids):
                 raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Unbekannte Wartungen.")
-            now = datetime.now(UTC)
+            from mhvp.properties import services as property_services
+
+            # Same rule as the single completion (C2-01): with an interval the item stays open
+            # and the due date moves to done_on plus the interval, otherwise it is closed.
+            done_on = body.done_on or services.local_today()
             changed = 0
             for item in items:
-                if item.status != "done":
-                    item.status, item.done_at, item.updated_by = "done", now, principal.user_id
-                    changed += 1
+                if item.status == "done":
+                    continue
+                previous_due = item.due_date
+                item.done_at = property_services.done_at_for(done_on)
+                next_due = None
+                if item.interval_months:
+                    next_due = property_services.add_months(done_on, item.interval_months)
+                    item.due_date = next_due
+                else:
+                    item.status = "done"
+                item.updated_by = principal.user_id
+                changed += 1
+                await emit(
+                    session,
+                    tenant_id=principal.tenant_id,
+                    type="maintenance.done",
+                    entity_type="maintenance_item",
+                    entity_id=item.id,
+                    actor_user_id=principal.user_id,
+                    payload={
+                        "done_on": done_on.isoformat(),
+                        "previous_due_date": previous_due.isoformat() if previous_due else None,
+                        "next_due_date": next_due.isoformat() if next_due else None,
+                        "status": item.status,
+                        "bulk": True,
+                    },
+                )
         await emit(
             session,
             tenant_id=principal.tenant_id,

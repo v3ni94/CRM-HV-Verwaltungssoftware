@@ -69,7 +69,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "DELETE", pattern: new RegExp(`^mail/playbooks/${ID}$`) },
   { method: "GET", pattern: /^workspace\/(search|notifications|notification-preferences|calendar|filters|dashboard\/stats|ticket-analytics)$/ },
-  { method: "POST", pattern: /^workspace\/(notifications\/read|calendar|calendar\/refresh|bulk)$/ },
+  { method: "POST", pattern: /^workspace\/(notifications\/read|notifications\/mute|calendar|calendar\/refresh|bulk)$/ },
   { method: "PUT", pattern: /^workspace\/filters$/ },
   { method: "PUT", pattern: /^workspace\/notification-preferences$/ },
   // Tagesübersicht, Fristenliste und Schalter der Tagesjobs (A40, A41).
@@ -123,6 +123,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^deposit-interest-rates$/ },
   { method: "PUT", pattern: /^deposit-interest-rates\/[0-9]{4}$/ },
   { method: "DELETE", pattern: /^deposit-interest-rates\/[0-9]{4}$/ },
+  // B15: Zinssatzverlauf je Kautionskonto, Entwürfe der jährlichen Zinsgutschrift.
+  { method: "GET", pattern: new RegExp(`^deposits/${ID}/interest-(rates|drafts)$`) },
+  { method: "PUT", pattern: new RegExp(`^deposits/${ID}/interest-rates/[0-9]{4}-[0-9]{2}-[0-9]{2}$`) },
+  { method: "DELETE", pattern: new RegExp(`^deposits/${ID}/interest-rates/[0-9]{4}-[0-9]{2}-[0-9]{2}$`) },
+  { method: "POST", pattern: new RegExp(`^deposits/${ID}/interest-drafts$`) },
+  { method: "POST", pattern: new RegExp(`^deposit-interest-drafts/${ID}/(confirm|discard)$`) },
   { method: "GET", pattern: /^sepa-mandates$/ },
   { method: "DELETE", pattern: /^workspace\/(calendar|filters)\/[0-9a-f-]{36}$/ },
   // Google-Kalender-Termine (M23-02 bidirektional): ändern/löschen des verknüpften Google-Events
@@ -158,8 +164,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^properties/${ID}/(bank-accounts|service-providers)/${ID}$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/takeover-checklist$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/takeover-checklist$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/takeover-checklist/tickets$`) },
   { method: "PATCH", pattern: new RegExp(`^properties/${ID}/takeover-checklist/[a-z_]+$`) },
   { method: "POST", pattern: /^onboarding\/person-match$/ },
+  { method: "POST", pattern: /^onboarding\/person-match-batch$/ },
   { method: "GET", pattern: /^onboarding\/match-settings$/ },
   { method: "PUT", pattern: /^onboarding\/match-settings$/ },
   { method: "GET", pattern: new RegExp(`^units/${ID}/vat-options$`) },
@@ -306,6 +314,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: /^ai\/providers$/ },
   { method: "PUT", pattern: /^ai\/routing$/ },
   { method: "PUT", pattern: /^ai\/invoice-intake-auto$/ },
+  { method: "GET", pattern: /^ai\/automation$/ },
+  { method: "PUT", pattern: /^ai\/automation$/ },
+  { method: "GET", pattern: /^ai\/automation$/ },
+  { method: "PUT", pattern: /^ai\/automation$/ },
   { method: "PUT", pattern: /^ai\/providers\/(anthropic|openai)$/ },
   { method: "POST", pattern: /^ai\/providers\/(anthropic|openai)\/release$/ },
   // Verbindungstest je Stufe (Einstellungen, KI-Anbieter); erteilt keine Freigabe.
@@ -339,6 +351,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Vollimport mit Stichtag (M8-01, M8-02, V9): Vorprüfung, Trockenlauf, Übernahme, Abgleichbericht.
   { method: "GET", pattern: /^imports\/immoware24\/vollimport(\/exporttypen)?$/ },
   { method: "GET", pattern: /^imports\/immoware24\/history\/(tickets|open-items|open-items\/summary|bank-links)$/ },
+  { method: "GET", pattern: /^imports\/immoware24\/history\/open-items\/balance-check$/ },
+  { method: "GET", pattern: new RegExp(`^imports/immoware24/history/bank-links/${ID}/candidates$`) },
   { method: "POST", pattern: /^imports\/immoware24\/vollimport(\/vorpruefung)?$/ },
   { method: "GET", pattern: new RegExp(`^imports/immoware24/vollimport/${ID}(/pdf)?$`) },
   // Migration von Immoware24 ohne Parallelbetrieb (6.9.10, M8-03): Status, Journal, Salden,
@@ -798,6 +812,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^tickets/${ID}/mail-attachments/${ID}/content$`) },
   { method: "PATCH", pattern: new RegExp(`^tickets/${ID}/checklist/[a-zA-Z0-9_-]{1,64}$`) },
   { method: "POST", pattern: /^tickets\/bulk-status$/ },
+  { method: "POST", pattern: /^tickets\/bulk$/ },
   // Tickets zusammenführen (M36): Zielsuche über die Liste (q), Vorschau über das Detail.
   { method: "GET", pattern: /^tickets$/ },
   { method: "GET", pattern: new RegExp(`^tickets/${ID}$`) },
@@ -1024,6 +1039,16 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^receipts/drafts/${ID}/(confirm|reject)$`) },
   // Upload only (multipart); document reads stay outside the allowlist.
   { method: "POST", pattern: /^documents$/ },
+  // Dokumente (R02, Q03): geschwärzte Kopien, Eingangsadresse, direkter Upload (Mandantenschalter).
+  { method: "GET", pattern: new RegExp(`^documents/${ID}/redactions$`) },
+  { method: "POST", pattern: new RegExp(`^documents/${ID}/redactions$`) },
+  { method: "POST", pattern: new RegExp(`^documents/${ID}/redactions/${ID}/release$`) },
+  { method: "GET", pattern: /^document-intake-address$/ },
+  { method: "PUT", pattern: /^document-intake-address$/ },
+  { method: "GET", pattern: /^document-direct-upload$/ },
+  { method: "PUT", pattern: /^document-direct-upload$/ },
+  { method: "POST", pattern: /^documents\/uploads$/ },
+  { method: "POST", pattern: new RegExp(`^documents/uploads/${ID}/complete$`) },
   // Q03 (M6-01 to M6-09): ZIP bulk upload, letter templates, letters with preview, serial
   // letters (drafts filed, nothing sent), category tree.
   { method: "POST", pattern: /^documents\/zip-import$/ },
@@ -1087,6 +1112,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "PATCH", pattern: new RegExp(`^hoa/asset-reports/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/asset-reports/${ID}/(calculate|transition)$`) },
   { method: "GET", pattern: new RegExp(`^hoa/asset-reports/${ID}/pdf$`) },
+  // Gesamtabrechnung WEG als PDF (M24-03): nur nach interner Freigabe und bei offenem G4 (API).
+  { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/pdf$`) },
   { method: "PUT", pattern: new RegExp(`^hoa/statements/${ID}/loan-allocation$`) },
   { method: "POST", pattern: /^hoa\/audits$/ },
   { method: "GET", pattern: new RegExp(`^hoa/audits/${ID}/candidates$`) },

@@ -83,3 +83,10 @@ tenants, `docs/OPEN_QUESTIONS.md` H03). Rule `docs/rules/H03-verbrauchsinformati
 * Consumption information substitute process (D26): `GET /properties/{id}/consumption-info/
   {info_id}` (printable snapshot) and `PUT .../{info_id}/delivery` (post, e-mail, by hand with
   evidence); the month list counts `undelivered`.
+
+
+## Package R08 (01.10.2026): property assignment (M2-02/S16-02, Q13-01)
+
+All `/statements/{statement_id}` routers, `/billing/owner-statements/{statement_id}` and
+`/properties/{property_id}/consumption-info/{info_id}` answer 404 outside the membership
+assignment (`property_column_guard`); both statement lists are filtered.

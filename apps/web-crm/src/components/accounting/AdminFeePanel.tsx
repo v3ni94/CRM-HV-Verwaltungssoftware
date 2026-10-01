@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { AdminFeeRun } from "./AdminFeeRun";
+
 export type PropertyOption = { id: string; label: string };
 type Fee = {
   id: string;
@@ -54,6 +56,8 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  // Q15: abgelegte PDF-Rechnungen je Rechnung (Dokument-ID), Download über den Dateipfad der Sitzung.
+  const [pdfs, setPdfs] = useState<Record<string, string>>({});
   const [form, setForm] = useState({
     property_id: properties[0]?.id ?? "",
     start_date: today,
@@ -150,6 +154,15 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
   const store = (inv: Invoice) =>
     run(() => bff(`${base}/invoices/${inv.id}/xrechnung/document`, { method: "POST" }), t("stored"));
 
+  const makePdf = async (inv: Invoice) => {
+    setBusy(true);
+    setError(null);
+    const res = await bff<{ document_id: string }>(`${base}/admin-fee-invoices/${inv.id}/document`, { method: "POST" });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    setPdfs((p) => ({ ...p, [inv.id]: res.data.document_id }));
+  };
+
   return (
     <section className="flex flex-col gap-4">
       {error ? (
@@ -205,6 +218,8 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
           {t("create")}
         </button>
       </div>
+
+      <AdminFeeRun today={today} propertyLabel={label} onIssued={load} />
 
       <h2 className="text-sm font-semibold">{t("fees")}</h2>
       <div className={ui.tableCard}>
@@ -304,6 +319,15 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
                 <td className="num">{formatEur(inv.gross)}</td>
                 <td>{inv.cancelled_at ? t("statusCancelled") : t(`statuses.${inv.status}`)}</td>
                 <td className="flex flex-wrap gap-1">
+                  {pdfs[inv.id] ? (
+                    <a className={ui.buttonSm} href={`/api/handover-files/documents/${pdfs[inv.id]}/content`} download={`${inv.number}.pdf`}>
+                      {t("pdfDownload")}
+                    </a>
+                  ) : (
+                    <button type="button" className={ui.buttonSm} onClick={() => void makePdf(inv)} disabled={busy}>
+                      {t("pdf")}
+                    </button>
+                  )}
                   {inv.kind === "invoice" && !inv.cancelled_at ? (
                     <>
                       {inv.status === "issued" ? (

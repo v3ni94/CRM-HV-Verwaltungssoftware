@@ -48,8 +48,13 @@ Mit Auswahl ist es auf die gewählten Objekte beschränkt; Administratorrollen s
 eingeschränkt. Die Zuordnung wird protokolliert und wirkt auf Objekte, Einheiten, Verträge,
 Tickets, Dokumente und Eingangsrechnungen: Listen zeigen nur Einträge der zugeordneten
 Objekte, fremde Datensätze erscheinen als nicht gefunden. Tickets und Rechnungen ohne
-Objektbezug sieht ein eingeschränktes Mitglied nicht. Weitere Bereiche wie Banking und
-Berichte folgen (Regel M2-02). Eine Änderung wirkt ab der nächsten Anfrage.
+Objektbezug sieht ein eingeschränktes Mitglied nicht. Seit 01.10.2026 gilt die Zuordnung
+auch für Bankkonten, Bankumsätze und Zahlungsaufträge, Betriebskosten- und
+Eigentümerabrechnungen, die WEG-Bereiche (Versammlungen, Beschlüsse, Wirtschaftspläne,
+Hausgeldabrechnungen, Sonderumlagen, Darlehen, Maßnahmen, Einsichtsanfragen), die
+Auswertungen der Buchungskreise, Dienstleisterverträge, die globale Suche und die
+Nachschlagewerkzeuge des Assistenten. Kontakte, Kataloge und die Portalverwaltung bleiben
+mandantenweit (Regel M2-02). Eine Änderung wirkt ab der nächsten Anfrage.
 
 ## Gleichzeitiges Bearbeiten über die Schnittstelle
 
@@ -57,7 +62,12 @@ Verträge (Bemerkungen und Mahnsperre), Tickets, Dokumente und Eingangsrechnunge
 beim Lesen einen Änderungsstand (ETag). Sendet ein Programm diesen Stand beim Speichern mit
 (If-Match) und hat inzwischen jemand anderes gespeichert, wird die Änderung abgelehnt und
 muss nach dem Neuladen wiederholt werden. Ohne diesen Stand wird wie bisher gespeichert. Die
-Oberfläche nutzt den Abgleich bei diesen Datensätzen noch nicht.
+Oberfläche merkt sich seit 01.10.2026 den Stand beim Öffnen eines Vertrags, Tickets,
+Dokuments oder einer Rechnung und sendet ihn beim Speichern mit. Hat inzwischen jemand anderes
+gespeichert, erscheint die Meldung "Der Datensatz wurde zwischenzeitlich geändert. Bitte die
+Seite neu laden und die Änderung erneut vornehmen." Nach anderen Aktionen am Datensatz
+(Kommentar, Statuswechsel, Verknüpfung) speichert die Oberfläche bis zum nächsten Laden ohne
+Abgleich, damit kein falscher Konflikt entsteht.
 
 ## Passkeys
 
@@ -376,3 +386,26 @@ zugewiesen, Wartung fällig, Terminerinnerung, Tagesübersicht) wählen Sie, ob 
 E-Mail eintrifft. Die Zeile Alle anderen Arten gilt für nicht einzeln aufgeführte Arten. Stummschalten
 ist für 1, 8, 24 Stunden oder 7 Tage möglich. Verpflichtende Meldungen zu Fristen, SLA und
 Bankzustimmungen bleiben davon unberührt.
+
+### Schadenbearbeiter (`/einstellungen/schnittstellen/schadenbearbeiter`)
+
+Voraussetzung: Recht Mandanteneinstellungen lesen, zum Ändern Recht Mandanteneinstellungen ändern, für die Übernahme Recht Tickets anlegen. Regel INT-SDT-01. Die Seite bindet den externen Schadenbearbeiter an: Schadentickets werden übergeben, Status, Kommentare und Anhänge werden in beide Richtungen abgeglichen.
+
+* Verbindung: Basisadresse und Integrationstoken erzeugt der Schadenbearbeiter in seinem Adminbereich. Das HMAC-Geheimnis für ausgehende Anfragen ist optional. Das Webhook-Geheimnis muss beim Schadenbearbeiter identisch hinterlegt werden, die Webhook-Adresse zeigt die Seite an. Token und Geheimnisse werden verschlüsselt gespeichert und nie wieder angezeigt (nur die letzten vier Zeichen des Tokens).
+* Auftragsverarbeitung: Vor dem Aktivieren sind das Datum, ab dem der AVV vorliegt, und optional ein Vermerk einzutragen. Datum und bestätigendes Mitglied werden gespeichert. Der Eintrag ersetzt keine datenschutzrechtliche Prüfung. Ohne AVV lässt sich die Anbindung nicht aktivieren.
+* Anbindung aktiv: Standard aus. Ist der Schalter aus, ruft weder eine Nutzeraktion noch ein Job den Schadenbearbeiter auf.
+* Verbindung testen und Jetzt abgleichen: zeigen Ergebnis und Zeitpunkt des letzten Tests und Abgleichs. Meldet der Schadenbearbeiter einen ungültigen Token, hält die Warteschlange an, bis ein neuer Token hinterlegt ist.
+* Vorhandene Schadentickets übernehmen: Tickets des Schadenbearbeiters ohne Zuordnung stehen in einer Liste mit Vorschlägen für Objekt und Ticket. Die Vorschläge sind nur Vorschläge. Je Ticket wählt ein Mitglied Mit vorgeschlagenem Ticket verknüpfen, Neues Ticket anlegen oder Verwerfen.
+* Am Ticket: Das Feld Schadenbearbeiter übergibt das Ticket mit Objektnummer, Titel, öffentlicher Beschreibung und den erfassten Schadendaten. Kommentare und Dokumente verlassen die Plattform nur, wenn sie ausdrücklich gesendet werden. Interne Notizen werden nie übertragen. Der Status des Schadenbearbeiters wird angezeigt und ändert den lokalen Status nicht.
+
+## Benachrichtigungen in der Einstellungsübersicht
+
+Die Eigenen Benachrichtigungseinstellungen (`/einstellungen/benachrichtigungen`) sind jetzt als Kachel in der Einstellungsübersicht erreichbar, nicht mehr nur über die Suche. Der Hauptmenüpunkt Aufträge (`/auftraege`) steht in der Gruppe Verwaltung und erscheint mit dem Leserecht für Tickets.
+
+## Standardfrist für Einsichtspakete
+
+Unter Einstellungen, Mandant legt die Karte Standardfrist für Einsichtspakete fest, wie viele Tage ein Bereitstellungspaket einer Einsichtsanfrage abrufbar bleibt (1 bis 365). Leer bedeutet ohne Ablauf. Die Frist gilt nur für Pakete, die ohne eigene Frist erzeugt werden; bereits erzeugte Pakete behalten ihre Frist. Die Änderung erfordert das Recht Mandanteneinstellungen ändern und wird protokolliert.
+
+## Portal je Mandant
+
+Unter Einstellungen, Mandant legt die Karte Portal der Mandanten den Anzeigenamen sowie die https-Links zu Impressum und Datenschutzerklärung fest. Sie erscheinen im Portal unter der Domain des Mandanten zusammen mit Farben und Logo aus den Briefkopfdaten; leere Felder lassen das Portal neutral. Die Auswahl Anmeldestrenge steht standardmäßig auf Wahl je Konto. Mit der Option E-Mail-Code bei jeder Anmeldung per Link verlangt das Portal bei Anmeldungen per Link immer den Code; die Passwortanmeldung mit TOTP bleibt freiwillig.

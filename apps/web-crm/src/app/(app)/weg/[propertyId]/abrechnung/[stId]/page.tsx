@@ -4,6 +4,7 @@ import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
 import { LoanAllocationForm, type LoanAllocationRow } from "@/components/hoa/AssetReportForms";
 import { ReconciliationNotes } from "@/components/hoa/FinanceForms";
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
+import { StatementPdfButton } from "@/components/hoa/StatementPdfButton";
 import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
@@ -66,6 +67,9 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
         title={`${t("statement")} ${String(data.year)} · V${String(data.version)} · ${t(`status.${String(data.status)}`)}`}
       />
       <p className={ui.notice}>{t("statementNotice")}</p>
+      {data.snapshot_hash && data.status !== "draft" && data.status !== "calculated" ? (
+        <StatementPdfButton statementId={stId} year={Number(data.year)} version={Number(data.version)} />
+      ) : null}
       {blocking.length ? (
         <div className={ui.alert} data-testid="package-blocking">
           <p className="font-medium">{t("blocked")}</p>

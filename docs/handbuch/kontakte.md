@@ -214,3 +214,5 @@ des Mandanten mit der Zahl der Kontakte. Je Tag stehen Umbenennen, Zusammenführ
 Verfügung. Beim Zusammenführen behalten alle Kontakte den Zieltag, der Quelltag entfällt. Löschen
 entfernt den Tag bei allen betroffenen Kontakten und fragt vorher nach. Umbenennen und Zusammenführen
 setzen das Recht zum Ändern von Kontakten voraus, Löschen das Recht zum Löschen von Kontakten.
+
+Vorschläge aus dem Portal: Bei einer angenommenen Rechnungseinreichung eines Dienstleisters führt der Link "Belegentwurf im Belegeingang" zum Entwurf, der dort geprüft wird. Es wird nichts gebucht.

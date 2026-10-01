@@ -66,4 +66,22 @@ describe("DirectDebitReconciliation", () => {
     await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung und Abstimmung" }));
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
+
+  it("records one feedback for several selected direct debits (Q02)", async () => {
+    const two = [row(), row({ order_id: "o2", debtor_name: "Max Beispiel", end_to_end_id: "E2E-2" })];
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) =>
+      jsonResponse(rec(init?.method === "POST" ? two.map((r) => ({ ...r, bank_status: "rejected" })) : two)),
+    );
+    renderIntl(<DirectDebitReconciliation runId="r1" />);
+    await userEvent.click(screen.getByRole("button", { name: "Bankrückmeldung und Abstimmung" }));
+    await userEvent.click(await screen.findByLabelText("Alle Lastschriften auswählen"));
+    expect(screen.getByTestId("dd-selection")).toHaveTextContent("2 Lastschriften ausgewählt");
+    await userEvent.selectOptions(screen.getByLabelText("Bankstatus"), "rejected");
+    expect(screen.queryByLabelText("Eingezogener Betrag")).toBeNull();
+    await userEvent.click(screen.getByRole("button", { name: "Rückmeldung für 2 Lastschriften speichern" }));
+    await waitFor(() => expect(screen.queryByTestId("dd-feedback-form")).toBeNull());
+    const posts = fetchMock.mock.calls.filter(([, i]) => i?.method === "POST");
+    expect(posts).toHaveLength(1);
+    expect(JSON.parse(String(posts[0]?.[1]?.body))).toEqual({ status: "rejected", order_ids: ["o1", "o2"] });
+  });
 });

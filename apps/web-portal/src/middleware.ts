@@ -17,7 +17,7 @@ export const config = {
 };
 
 const PATH_HEADER = "x-mhvp-path";
-const PUBLIC = [/^\/$/, /^\/anmelden(\/|$)/, /^\/einladung(\/|$)/, /^\/api\/session\//];
+const PUBLIC = [/^\/$/, /^\/anmelden(\/|$)/, /^\/einladung(\/|$)/, /^\/api\/session\//, /^\/api\/branding-logo\//];
 
 function unauthenticated(request: NextRequest): NextResponse {
   if (request.nextUrl.pathname.startsWith("/api/")) {

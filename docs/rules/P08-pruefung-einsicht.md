@@ -46,3 +46,14 @@ Lückenliste 30.09.2026, Befunde M25-02, M25-03, M25-05, M25-07, M25-08.
 Benachrichtigung als eigenes Ereignis und Prüfung bei Eigentümerwechsel (M25-07), geschwärzte
 Belegkopien (M25-01), Navigation mit Vertrags- und Vorjahresdaten (M25-04), Portalsuche und
 Sammel-Download (M25-06): siehe `docs/OPEN_QUESTIONS.md` (P08-01 bis P08-03).
+
+## Nachtrag R05 (01.10.2026): Standardfrist der Einsichtspakete, Migration 0287
+
+* P08-06 Die Standardfrist der Bereitstellung ist eine Mandanteneinstellung
+  (`tenant_settings.inspection_package_default_days`, 1 bis 365 Tage, leer bedeutet ohne Ablauf).
+  Sie gilt nur, wenn beim Erzeugen eines Pakets weder `valid_days` noch `no_expiry` angegeben
+  ist. `valid_days` überschreibt die Standardfrist, `no_expiry=true` hebt sie für dieses eine Paket
+  auf. Bereits erzeugte Pakete behalten ihre Frist. Änderungen stehen im Ereignis
+  `tenant_settings.updated`. Der Vorschlag 14 Tage aus P08-02 ist nicht voreingestellt; die Frist
+  ist eine Produktleistung und keine Rechtsfrist (Quellenstatus wie oben, Prüfung durch
+  Rechtsanwalt offen). Abnahmefall: `tests/integration/test_r05_positive_paths.py`.

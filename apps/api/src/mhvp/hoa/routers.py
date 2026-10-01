@@ -27,8 +27,10 @@ from mhvp.hoa.models import (
     PlanItem,
     Resolution,
 )
+from mhvp.hoa.property_scope import HOA_GUARD
 
-router = APIRouter(prefix="/hoa", tags=["WEG"])
+# M2-02/S16-02: WEG records outside the property assignment answer 404.
+router = APIRouter(prefix="/hoa", tags=["WEG"], dependencies=[Depends(HOA_GUARD)])
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")
@@ -1097,6 +1099,18 @@ async def transition_statement(
         if body.target is StatementStatus.POSTED:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Buchung über den Buchungsendpunkt.")
         await _move(session, st, body, principal)
+        if body.target is StatementStatus.INTERNALLY_APPROVED:
+            # Q12 webhook statement.confirmed: a Hausgeldabrechnung counts as confirmed at the
+            # internal approval (A-R07-01, docs/ASSUMPTIONS.md); no legal effect, no resolution.
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="statement.confirmed",
+                entity_type="hoa_statement",
+                entity_id=st.id,
+                actor_user_id=principal.user_id,
+                payload={"kind": "hoa", "status": body.target.value},
+            )
         await session.flush()
         return _st_out(st)
 
@@ -1548,10 +1562,22 @@ async def costs_from_ledger(
             )
         ).all()
         created, skipped = [], []
+        # An entry and its reversal inside the statement year cancel out (B03): neither is
+        # taken, otherwise the reversed cost would count while its reversal is a net credit.
+        in_year = {entry.id for entry, _net in rows}
         for entry, net in rows:
             amount = Decimal(net)
             if entry.id in taken:
                 skipped.append({"journal_entry_id": entry.id, "reason": "already_taken"})
+                continue
+            if entry.reverses_id is not None and entry.reverses_id in taken:
+                # The taken cost was reversed later: the position must be removed by a person.
+                skipped.append({"journal_entry_id": entry.id, "reason": "reverses_taken_entry"})
+                continue
+            if (entry.reversed_by_id is not None and entry.reversed_by_id in in_year) or (
+                entry.reverses_id is not None and entry.reverses_id in in_year
+            ):
+                skipped.append({"journal_entry_id": entry.id, "reason": "reversed"})
                 continue
             if amount <= 0:
                 skipped.append({"journal_entry_id": entry.id, "reason": "net_credit"})

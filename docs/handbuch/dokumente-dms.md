@@ -164,3 +164,17 @@ Briefe werden abgelegt und verknüpft, nicht versandt.
 * Vorlagen verwalten: Kürzel, Bezeichnung, Betreffvorlage und Textvorlage mit den angezeigten
   Platzhaltern. Jedes Speichern erzeugt eine neue Version. Voraussetzung ist das Recht zum Ändern der
   Mandanteneinstellungen.
+
+## Löschvorschläge (Seite Dokumente, Löschvorschläge)
+
+Voraussetzung: Recht Dokumente lesen, für die Freigabe Dokumente freigeben, für die Ausführung Dokumente löschen. Regel M6-04. Der monatliche Lauf (oder Löschvorschlag jetzt erstellen) schlägt Dokumente mit abgelaufener, freigegebener Aufbewahrungsfrist vor. Der Lauf löscht nichts.
+
+* Freigeben oder Ablehnen (mit optionaler Begründung): nicht durch den Ersteller des Vorschlags.
+* Ausführen: nicht durch den Freigeber, nach Bestätigungsfrage. Jedes Dokument wird erneut auf Sperre, Frist und Profil geprüft. Gesperrte oder nicht fällige Dokumente bleiben erhalten und werden mit Grund protokolliert. Drive-Kopien werden gelöscht, Paperless-Dokumente mit dem Schlagwort gelöscht gekennzeichnet.
+* Je Lauf zeigt Dokumente anzeigen Titel, Unterlagenklasse, Frist bis, Status und Hash. Die Löschung bleibt bis zur fachlichen Freigabe der Aufbewahrungsprofile gesperrt.
+
+## Geschwärzte Kopien, Eingangsadresse und direkter Upload (R02)
+
+* Geschwärzte Kopie: Im Dokument (Seite Dokumente, Detailansicht des Originals) steht der Abschnitt Geschwärzte Kopien. Datei (bereits geschwärzt), Grund, Umfang und Bearbeitungsschritte (ein Schritt je Zeile) angeben und Kopie anlegen. Die Schwärzung selbst erfolgt außerhalb des Systems, das Original bleibt unverändert. Die Kopie ist zunächst intern. Eine zweite Person mit dem Recht Freigeben wählt die Portal-Sichtbarkeit und gibt frei; der Ersteller sieht den Hinweis auf die Freigabe durch eine zweite Person statt der Schaltfläche. Über Kopie öffnen gelangt man zum Dokument der Kopie.
+* Eingangsadresse: Einstellungen, DMS, Eingangsadresse für Weiterleitungen. Sammelpostfach und erlaubte Absender (Adresse oder @domain, eine je Zeile) eintragen; die Adresse hat die Form belege+token@domain. Neues Token erzeugen macht die alte Adresse unwirksam. Ruft ein Mandant das gemeinsame Postfach für mehrere Mandanten ab, schaltet er die Verteilung ein: Nachrichten mit dem Token eines anderen Mandanten desselben Postfachs werden diesem übergeben, sofern der Absender dort erlaubt ist.
+* Direkter Upload: Einstellungen, DMS, Schalter Direkter Upload im Browser (Standard aus). Voraussetzungen und CORS stehen im Runbook Objektspeicher, Abschnitt 9.

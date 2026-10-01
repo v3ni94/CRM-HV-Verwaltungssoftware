@@ -396,6 +396,58 @@ async def put_posting_enabled(
         )
 
 
+async def _automation_out(session: AsyncSession) -> s.AutomationOut:
+    from mhvp.ai import automation
+    from mhvp.platform.models import TenantSettings
+
+    row = await session.scalar(select(TenantSettings))
+    reason: str | None = None
+    try:
+        usable, reasons = await gateway.routes(session, AiTask.RENT_INCREASE_CHECK)
+        if not usable:
+            reason = "; ".join(reasons) or "Kein Anbieter freigegeben."
+    except gateway.GatewayBlockedError as exc:
+        reason = str(exc)
+    return s.AutomationOut(
+        **automation.read_switches(row), provider_released=reason is None, blocked_reason=reason
+    )
+
+
+@router.get("/ai/automation", summary="Schalter der automatischen KI-Läufe lesen")
+async def get_automation(
+    request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.AutomationOut:
+    async with tenant_tx(request, principal) as session:
+        return await _automation_out(session)
+
+
+@router.put("/ai/automation", summary="Schalter der automatischen KI-Läufe setzen")
+async def put_automation(
+    body: s.AutomationIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
+) -> s.AutomationOut:
+    """R09: automatic proposal for rent increase cases and the nightly mail classification
+    (default off). Neither switch opens the provider release; the gateway still checks it."""
+    from mhvp.ai import automation
+    from mhvp.platform.models import TenantSettings
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(TenantSettings).with_for_update())
+        if row is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        values = automation.write_switches(row, body.model_dump())
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ai_automation.updated",
+            entity_type="tenant_settings",
+            entity_id=row.id,
+            actor_user_id=principal.user_id,
+            payload=values,
+        )
+        await session.flush()
+        return await _automation_out(session)
+
+
 @router.get("/ai/usage", summary="KI-Kosten im laufenden Monat")
 async def usage(request: Request, principal: TenantPrincipal = Depends(READ)) -> s.UsageOut:
     now = datetime.now(UTC)
@@ -1063,10 +1115,27 @@ async def apply_proposal(
                 ErrorCodes.CONFLICT,
                 detail="Dieser Vorschlag enthält nur Hinweise und kann nicht übernommen werden.",
             )
-        missing = required[proposal.entity_type] - set(principal.permissions)
+        needed = set(required[proposal.entity_type])
+        missing = needed - set(principal.permissions)
         if missing:
             raise ProblemError(ErrorCodes.FORBIDDEN, developer_message=f"missing {sorted(missing)}")
         run_row = await _get(session, AiTaskRun, proposal.task_run_id)
+        if proposal.entity_type == "property" and body.property is not None:
+            # R03: extras of the onboarding need the permissions of their own endpoints.
+            extra: set[str] = set()
+            if body.property.bank_accounts or body.property.allocation_keys:
+                extra.add("properties:update")
+            if body.property.create_debtor_accounts:
+                extra.add("accounting:create")
+            if body.property.document_ids or (
+                body.property.link_source_documents and run_row.input_ref.get("document_ids")
+            ):
+                extra.add("documents:update")
+            if extra - set(principal.permissions):
+                raise ProblemError(
+                    ErrorCodes.FORBIDDEN,
+                    developer_message=f"missing {sorted(extra - set(principal.permissions))}",
+                )
         import_run = ImportRun(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,

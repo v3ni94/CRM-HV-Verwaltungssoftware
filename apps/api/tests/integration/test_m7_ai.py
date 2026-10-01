@@ -1257,6 +1257,7 @@ def test_d57_instruction_in_contacts_and_property_output_has_no_effect(
         "contact",
         "party",
         "contract",
+        "document_link",  # R03: the source document is linked to the property
     }
     contracts = _ok(
         client.get("/api/v1/contracts", params={"property_id": prop_id}, headers=admin), 200

@@ -5,6 +5,7 @@ import { getLocale, getTranslations } from "next-intl/server";
 
 import { PwaRegister } from "@/components/shell/PwaRegister";
 import { ThemeController } from "@/components/shell/ThemeToggle";
+import { brandingCssVars, fetchPortalBranding } from "@/lib/branding";
 import { PORTAL_THEME_SCRIPT } from "@/lib/theme";
 
 import "./globals.css";
@@ -37,10 +38,17 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const locale = await getLocale();
+  const [locale, branding] = await Promise.all([getLocale(), fetchPortalBranding()]);
+  // B26, M21-04: tenant colours replace the neutral primary and accent tokens, empty stays neutral.
+  const brandVars = brandingCssVars(branding);
   return (
     // data-theme is set by the inline script before the first paint, hence suppressHydrationWarning.
-    <html lang={locale} className={inter.variable} suppressHydrationWarning>
+    <html
+      lang={locale}
+      className={inter.variable}
+      style={brandVars as React.CSSProperties}
+      suppressHydrationWarning
+    >
       <head>
         <script dangerouslySetInnerHTML={{ __html: PORTAL_THEME_SCRIPT }} />
       </head>

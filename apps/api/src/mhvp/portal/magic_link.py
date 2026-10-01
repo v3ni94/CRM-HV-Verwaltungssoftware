@@ -181,7 +181,13 @@ async def consume_link(
         if account is None:  # pragma: no cover - FK guarantees this
             raise ProblemError(ErrorCodes.MAGIC_LINK_INVALID)
         user_id = account.user_id
-        if account.magic_link_2fa:
+        from mhvp.platform.models import TenantSettings
+
+        tenant_settings = await session.scalar(select(TenantSettings))
+        tenant_requires = (
+            tenant_settings is not None and tenant_settings.portal_second_factor == "required"
+        )
+        if account.magic_link_2fa or tenant_requires:
             code = _code()
             row.code_hash = _hash(code)
             row.code_expires_at = now + timedelta(minutes=CODE_TTL_MINUTES)

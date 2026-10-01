@@ -16,6 +16,7 @@ export default async function SettingsPage() {
   const tw = await getTranslations("Webhooks");
   const tm = await getTranslations("Metering");
   const tq = await getTranslations("SettingsQ05");
+  const tn = await getTranslations("NotificationSettings");
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
@@ -106,6 +107,7 @@ export default async function SettingsPage() {
     },
     { href: "/einstellungen/teams", title: tq("teams.title"), description: tq("teams.description"), show: can("tickets:read") },
     { href: "/einstellungen/kontakt-tags", title: tq("contactTags.title"), description: tq("contactTags.description"), show: can("contacts:read") },
+    { href: "/einstellungen/benachrichtigungen", title: tn("title"), description: tn("cardDescription"), show: true },
     { href: "/einstellungen/profil", title: t("profile.title"), description: t("profile.description"), show: true },
     { href: "/plattform", title: t("platform.title"), description: t("platform.description"), show: Boolean(me.data?.is_platform_admin) },
   ].filter((c) => c.show);

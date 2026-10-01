@@ -5,7 +5,7 @@ from datetime import date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from mhvp.ai.models import (
     AiKnowledgeKind,
@@ -18,6 +18,7 @@ from mhvp.ai.models import (
     RunStatus,
 )
 from mhvp.contacts.models import ContactRoleCode
+from mhvp.contacts.validation import InvalidValueError, normalise_iban
 
 
 class _In(BaseModel):
@@ -101,6 +102,20 @@ class FastTableImportIn(_In):
 
 class FastTableImportOut(BaseModel):
     enabled: bool
+
+
+class AutomationIn(_In):
+    """Tenant switches of the automatic AI runs (package R09); missing keys stay unchanged."""
+
+    rent_increase_check: bool | None = None
+    batch_mail_classification: bool | None = None
+
+
+class AutomationOut(BaseModel):
+    rent_increase_check: bool
+    batch_mail_classification: bool
+    provider_released: bool
+    blocked_reason: str | None = None
 
 
 class InvoiceIntakeAutoIn(_In):
@@ -300,6 +315,44 @@ class ContactChoice(_In):
     )
 
 
+class OnboardingBankAccountChoice(_In):
+    """Bank account entered by the reviewer in the onboarding dialog (R03, M7-02); the AI
+    proposal never carries bank data."""
+
+    kind: Literal["rent", "hoa", "reserve", "deposit", "hoa_fee", "other"]
+    iban: str = Field(min_length=15, max_length=40)
+    bic: str | None = Field(default=None, pattern=r"^[A-Z]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$")
+    bank_name: str | None = Field(default=None, max_length=200)
+    holder: str = Field(min_length=2, max_length=200)
+    is_default: bool = False
+    valid_from: date | None = Field(default=None, description="ohne Angabe: Gültig ab des Objekts")
+
+    @field_validator("iban")
+    @classmethod
+    def _iban(cls, value: str) -> str:
+        try:
+            return normalise_iban(value)
+        except InvalidValueError as exc:
+            raise ValueError(str(exc)) from None
+
+
+class OnboardingAllocationKeyChoice(_In):
+    """Allocation key of any kind with optional unit values (R03, M7-02). An existing code
+    (copied template key, MEA) only receives values; a new code creates the key."""
+
+    code: str = Field(pattern=r"^[A-Z0-9_]{1,32}$")
+    name: str | None = Field(default=None, min_length=2, max_length=200)
+    unit_of_measure: str | None = Field(default=None, min_length=1, max_length=16)
+    kind: Literal["static", "consumption", "fixed_amount", "fixed_share"] | None = None
+    meter_type_code: str | None = Field(default=None, max_length=63)
+    expected_total: Decimal | None = Field(default=None, ge=0)
+    values: dict[str, Decimal] = Field(
+        default_factory=dict,
+        max_length=2000,
+        description="Wert je Einheitennummer; nicht für Verbrauchsschlüssel (Zähler)",
+    )
+
+
 class PropertyChoice(_In):
     number: str | None = Field(default=None, pattern=r"^[0-9]{3}$")
     name: str | None = Field(default=None, max_length=200)
@@ -307,6 +360,23 @@ class PropertyChoice(_In):
     as_of: date = Field(description="Gültig ab für Miteigentumsanteile")
     vat_percent_by_payment_type: dict[str, Decimal] = Field(
         default_factory=dict, description="bestätigter Steuersatz je Zahlungsart"
+    )
+    bank_accounts: list[OnboardingBankAccountChoice] = Field(default_factory=list, max_length=20)
+    allocation_keys: list[OnboardingAllocationKeyChoice] = Field(
+        default_factory=list, max_length=50
+    )
+    create_debtor_accounts: bool = Field(
+        default=False,
+        description=(
+            "Debitorenkonten der Verträge ins Kontenbuch übernehmen; fehlt der Buchungskreis, "
+            "wird er aus der Kontenvorlage (Entwurf) angelegt. Es wird nichts gebucht."
+        ),
+    )
+    link_source_documents: bool = Field(
+        default=True, description="Quelldokumente des Vorschlags mit dem Objekt verknüpfen"
+    )
+    document_ids: list[uuid.UUID] = Field(
+        default_factory=list, max_length=100, description="weitere Dokumente (Ablage) zum Objekt"
     )
 
 

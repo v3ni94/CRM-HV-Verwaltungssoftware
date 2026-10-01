@@ -25,11 +25,17 @@ from mhvp.billing.owner_statement import (
     OwnerStatementStatus,
 )
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.documents import letters
 
-router = APIRouter(prefix="/billing/owner-statements", tags=["Abrechnung"])
+# M2-02/S16-02: owner statements outside the membership's property assignment answer 404.
+router = APIRouter(
+    prefix="/billing/owner-statements",
+    tags=["Abrechnung"],
+    dependencies=[Depends(property_column_guard({"statement_id": svc.OwnerStatement.property_id}))],
+)
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")
@@ -126,6 +132,9 @@ async def list_statements(
         )
         if ledger_id is not None:
             query = query.where(OwnerStatement.ledger_id == ledger_id)
+        allowed = session_allowed_property_ids(session)  # M2-02/S16-02
+        if allowed is not None:
+            query = query.where(OwnerStatement.property_id.in_(allowed))
         rows = (await session.scalars(query.limit(200))).all()
         return [_out(r, with_snapshot=False) for r in rows]
 

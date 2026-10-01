@@ -8,6 +8,7 @@ import { ContractAllocationValues } from "@/components/contracts/ContractAllocat
 import { ContractDebtorAccount } from "@/components/contracts/ContractDebtorAccount";
 import { ContractNotesSection } from "@/components/contracts/ContractNotesSection";
 import { ContractMandates } from "@/components/contracts/ContractMandates";
+import { DepositInterestPanel } from "@/components/contracts/DepositInterestPanel";
 import { DepositPanel } from "@/components/contracts/DepositPanel";
 import { OwnershipTransfer } from "@/components/contracts/OwnershipTransfer";
 import { RentInvoicePanel } from "@/components/contracts/RentInvoicePanel";
@@ -175,6 +176,9 @@ export default async function ContractDetailPage({ params, searchParams }: { par
       {contract.kind === "tenancy" ? (
         <DepositPanel deposits={deposits} settlements={settlements} rates={rates} contractEndDate={contract.end_date} canUpdate={canUpdate} contractId={contract.id} />
       ) : null}
+      {contract.kind === "tenancy"
+        ? deposits.map((deposit) => <DepositInterestPanel key={deposit.id} depositId={deposit.id} canUpdate={canUpdate} />)
+        : null}
       {contract.kind === "tenancy" ? <RentInvoicePanel contractId={contract.id} vatOption={contract.vat_option} canUpdate={canUpdate} /> : null}
       {permissions.includes("tickets:read") ? (
         <DeadlineCreatePanel sourceType="contract" sourceId={contract.id} canCreate={permissions.includes("tickets:create")} canUpdate={permissions.includes("tickets:update")} />

@@ -24,12 +24,17 @@ from mhvp.accounting.models import (
 )
 from mhvp.accounting.schemas import AccountOut
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.auth.scope import ensure_session_legal_entity_allowed
+from mhvp.core.auth.scope import ensure_session_legal_entity_allowed, property_column_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.workspace.services import local_today
 
-router = APIRouter(prefix="/accounting", tags=["Buchhaltung"])
+# M2-02/S16-02: reports of a ledger outside the property assignment answer 404.
+router = APIRouter(
+    prefix="/accounting",
+    tags=["Buchhaltung"],
+    dependencies=[Depends(property_column_guard({"ledger_id": Ledger.property_id}))],
+)
 READ = require_permission("accounting:read")
 EXPORT = require_permission("accounting:export")
 APPROVE = require_permission("accounting:approve")

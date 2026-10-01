@@ -106,4 +106,51 @@ describe("DmsUpload", () => {
     await screen.findByTestId("dms-upload-done");
     expect((bodies[0]?.get("file") as File).name).toBe("foto.jpg");
   });
+
+  it("uploads directly with a signed URL when the tenant switch is on and falls back on failure", async () => {
+    const calls: string[] = [];
+    const base = fetchFor([]);
+    const direct = vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      if (url === "/api/bff/document-direct-upload") return Promise.resolve(jsonResponse({ enabled: true }));
+      if (url === "/api/bff/documents/uploads")
+        return Promise.resolve(jsonResponse({ upload_id: "up1", url: "https://s3.example.org/tmp/up1", headers: { "Content-Type": "application/pdf" }, method: "PUT", expires_in: 300 }, 201));
+      if (url === "https://s3.example.org/tmp/up1") return Promise.resolve(new Response(null, { status: 200 }));
+      if (url === "/api/bff/documents/uploads/up1/complete") return Promise.resolve(jsonResponse({ id: DOC }, 201));
+      return base(input, init);
+    });
+    vi.stubGlobal("fetch", direct);
+    renderIntl(<DmsUpload />);
+    await screen.findByRole("option", { name: "523 Musterstraße 49" });
+    await userEvent.selectOptions(screen.getByLabelText("Objekt"), PROPERTY);
+    await userEvent.upload(screen.getByLabelText("Datei"), new File(["%PDF-1.4"], "rechnung.pdf", { type: "application/pdf" }));
+    await userEvent.click(screen.getByRole("button", { name: "Hochladen" }));
+    expect(await screen.findByTestId("dms-upload-done")).toBeInTheDocument();
+    expect(calls).toContain("PUT https://s3.example.org/tmp/up1");
+    expect(calls).not.toContain("POST /api/bff/documents");
+  });
+
+  it("falls back to the API upload when the signed PUT fails", async () => {
+    const bodies: FormData[] = [];
+    const base = fetchFor(bodies);
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === "/api/bff/document-direct-upload") return Promise.resolve(jsonResponse({ enabled: true }));
+        if (url === "/api/bff/documents/uploads")
+          return Promise.resolve(jsonResponse({ upload_id: "up1", url: "https://s3.example.org/tmp/up1", headers: {}, method: "PUT", expires_in: 300 }, 201));
+        if (url === "https://s3.example.org/tmp/up1") return Promise.reject(new TypeError("CORS"));
+        return base(input, init);
+      }),
+    );
+    renderIntl(<DmsUpload />);
+    await screen.findByRole("option", { name: "523 Musterstraße 49" });
+    await userEvent.selectOptions(screen.getByLabelText("Objekt"), PROPERTY);
+    await userEvent.upload(screen.getByLabelText("Datei"), new File(["%PDF-1.4"], "rechnung.pdf", { type: "application/pdf" }));
+    await userEvent.click(screen.getByRole("button", { name: "Hochladen" }));
+    expect(await screen.findByTestId("dms-upload-done")).toBeInTheDocument();
+    expect(bodies).toHaveLength(1);
+  });
 });

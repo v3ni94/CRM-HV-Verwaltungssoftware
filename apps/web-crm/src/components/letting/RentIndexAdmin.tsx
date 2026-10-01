@@ -125,7 +125,7 @@ export function RentIndexAdmin({ rows: initial, canEdit }: { rows: RentIndexRow[
       </div>
       {canEdit ? (
         <>
-          <form onSubmit={add} className={`${ui.card} grid gap-2 sm:grid-cols-3`} data-testid="rent-index-form">
+          <form onSubmit={add} className={`${ui.card} grid gap-2 sm:grid-cols-3`} data-testid="rent-index-form" aria-label={t("add")}>
             <h2 className={`${ui.h2} sm:col-span-3`}>{t("add")}</h2>
             <label className="flex flex-col gap-1"><span className={ui.label}>{t("municipality")}</span><input className={ui.input} required value={form.municipality} onChange={set("municipality")} /></label>
             <label className="flex flex-col gap-1"><span className={ui.label}>{t("name")}</span><input className={ui.input} required value={form.index_name} onChange={set("index_name")} /></label>

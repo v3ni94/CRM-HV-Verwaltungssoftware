@@ -925,6 +925,64 @@ async def calendar_sync(session: AsyncSession, tenant_id: uuid.UUID, today: date
     return counts
 
 
+async def sync_work_order_entry(session: AsyncSession, order: Any) -> None:
+    """Writes the internal calendar entry of one work order right when ``scheduled_at`` is set
+    (M19-06, in addition to the daily ``calendar_sync``, which stays the safety net). Same key
+    and wording as ``_read_work_order_appointments``, so the job finds the entry and changes
+    nothing. Internal only; nothing is sent to the provider or an external calendar."""
+    from mhvp.tickets.models import Ticket
+    from mhvp.workspace.services import _LOCAL
+
+    if order.scheduled_at is None:
+        return
+    number = property_id = None
+    if order.ticket_id is not None:
+        ticket = await session.get(Ticket, order.ticket_id)
+        if ticket is not None:
+            number, property_id = ticket.number, ticket.property_id
+    local = order.scheduled_at.astimezone(_LOCAL)
+    label = f"Auftragstermin {local:%H:%M} Uhr"
+    if number:
+        label += f" Ticket {number}"
+    cand = _candidate(
+        "work_order_appointment", "work_order", order.id, label, local.date(), property_id
+    )
+    if cand is None:
+        return
+    row = await session.scalar(
+        select(CalendarEntry).where(
+            CalendarEntry.owner_user_id.is_(None),
+            CalendarEntry.source_type == "work_order",
+            CalendarEntry.source_id == order.id,
+            CalendarEntry.category == "work_order_appointment",
+        )
+    )
+    wanted = {
+        "title": cand["reference"],
+        "starts_on": cand["due_on"],
+        "property_id": property_id,
+        "reminders": reminders_for("work_order_appointment", None),
+    }
+    if row is None:
+        session.add(
+            CalendarEntry(
+                tenant_id=order.tenant_id,
+                owner_user_id=None,
+                source_type="work_order",
+                source_id=order.id,
+                category="work_order_appointment",
+                all_day=True,
+                shared=True,
+                ends_on=None,
+                **wanted,
+            )
+        )
+    else:
+        for field, value in wanted.items():
+            setattr(row, field, value)
+    await session.flush()
+
+
 # Digest (A40) --------------------------------------------------------------------------
 
 

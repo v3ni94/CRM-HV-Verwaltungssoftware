@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, ValidationError, create_model
 
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
+from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.events import diff, emit
 from mhvp.core.problems import body_validation_error
 from mhvp.properties import schemas as s
@@ -21,7 +22,8 @@ from mhvp.properties import services as svc
 from mhvp.properties.models import Building, Property, Unit
 from mhvp.properties.routers import UPDATE, _check_version, _get, _property_out, _unique, _unit_out
 
-router = APIRouter(tags=["Objekte"])
+# M2-02/S16-02: path ids outside the property assignment answer 404.
+router = APIRouter(tags=["Objekte"], dependencies=[Depends(property_path_guard)])
 
 
 def _partial(name: str, base: type[BaseModel]) -> type[BaseModel]:

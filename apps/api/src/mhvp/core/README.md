@@ -94,6 +94,19 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
   `crypto.py` gained `ciphertext_scope`, `decrypt_with_master`, `encrypt_with_master`,
   `fingerprint_with_master` (S16-03, docs/runbooks/schluesselrotation.md).
 
+## Package R08 (01.10.2026): property assignment in further domains
+
+- `auth/scope.py` `property_column_guard(columns)`: router dependency factory mapping a path or
+  query parameter to the column holding the property of that row (`legal_entity_id` and
+  `ledger_id` columns resolve through the legal entity or the ledger); outside the membership
+  assignment 404, unknown ids pass through. Used by billing (statements, owner statements,
+  consumption info), hoa (`mhvp.hoa.property_scope`) and ledger reports.
+- `mhvp.banking.property_scope`: account visibility by home property or assignment,
+  `banking_path_guard` (transactions, accounts, payment orders, batches), list filters.
+- Further `property_path_guard` users: properties sub routers, tax profile, notices.
+- Global search and AI lookup tools filter by assignment; `workspace.routers.member` now keeps
+  the legal entity and property scope of the principal (it dropped both before).
+
 ## Package Q12 (30.09.2026): list parameters, bulk endpoints, job switches, events
 
 - `listparams.py` (S12-03): `list_params` dependency parses `filter[field]=value` (comma means
@@ -103,7 +116,12 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
   Anything not offered answers 422 (`MHVP-CORE-0004`), never silently ignored. Wired into
   `GET /contacts`, `/properties`, `/contracts`, `/tickets` (include `property`; the legacy
   `sort=urgency|created_desc` stays), `/documents` and `/invoices`. Tenant, soft delete and
-  property assignment filters stay in force.
+  property assignment filters stay in force. `embed` adds included relations (R07):
+  `/contacts?include=properties` (via contract party or property owner),
+  `/properties?include=legal_entities` (WEG entity and owners' entities),
+  `/contracts?include=party,property`, `/documents?include=properties` (links to property,
+  unit, contract, ticket), `/accounting/invoices?include=creditor` (provider contact).
+  Included properties respect the property assignment (`mhvp.properties.refs`).
 - `bulk.py` (S12-05): `run_bulk` with `BulkResultOut` and `BULK_MAX_ITEMS = 500`, used by
   `POST /contacts/bulk` (`add_tag`, `remove_tag`), `POST /properties/bulk`
   (`set_consumption_info`) and `POST /contracts/bulk` (`set_dunning_block`, reason

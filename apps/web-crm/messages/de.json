@@ -35,6 +35,7 @@
     "rememberDevice": "Dieses Gerät 90 Tage merken"
   },
   "Shell": {
+    "workOrders": "Aufträge",
     "palette": {
       "title": "Befehlspalette",
       "open": "Suche und Befehle öffnen",
@@ -350,6 +351,7 @@
       "confirmedAt": "Bestätigt am",
       "validFrom": "gültig ab",
       "evidence": "Nachweis",
+      "receiptDraft": "Belegentwurf im Belegeingang",
       "note": "Vermerk (optional)",
       "accept": "Übernehmen",
       "reject": "Ablehnen",
@@ -794,7 +796,8 @@
       "unhelpful": "Nicht hilfreich",
       "saved": "Danke, Rückmeldung gespeichert.",
       "hint": "Rückmeldung zur Antwort (zählt auf die verwendeten Wissenseinträge)"
-    }
+    },
+    "invalidExtras": "Weitere Angaben zum Objekt ungültig"
   },
   "Imports": {
     "title": "Importe",
@@ -1317,6 +1320,12 @@
     "notifications": "Benachrichtigungen",
     "noNotifications": "Keine neuen Benachrichtigungen.",
     "markAllRead": "Alle als gelesen markieren",
+    "muteAll": "Alle stummschalten",
+    "mute1h": "1 Stunde",
+    "mute1d": "24 Stunden",
+    "mute7d": "7 Tage",
+    "unmute": "Stummschaltung aufheben",
+    "mutedUntil": "Stumm bis {when}",
     "markRead": "Als gelesen markieren",
     "themeGroup": "Darstellung",
     "theme": {
@@ -4539,6 +4548,7 @@
     "onboardingLink": "Onboarding Drittmandanten und Export"
   },
   "Creditors": {
+    "loadError": "Die Buchungskreise konnten nicht geladen werden. Bitte Seite neu laden oder die Berechtigungen prüfen.",
     "sync": "Kreditorenkonten anlegen",
     "syncHint": "Legt für alle Dienstleisterverhältnisse des Buchungskreises fehlende Kreditorenkonten an und verknüpft vorhandene.",
     "syncDone": "{created} Konten angelegt, {linked} verknüpft.",
@@ -4563,6 +4573,26 @@
     "runningBalance": "Saldo"
   },
   "RecurringPlans": {
+    "createTitle": "Neuen Rechnungsplan anlegen",
+    "createFields": {
+      "provider_search": "Aussteller suchen",
+      "provider": "Aussteller",
+      "account": "Kostenkonto",
+      "text": "Leistung",
+      "gross": "Brutto je Rechnung",
+      "vat_percent": "Umsatzsteuer in Prozent",
+      "interval_months": "Rhythmus in Monaten (1 bis 12)",
+      "start_date": "Erste Fälligkeit",
+      "end_date": "Enddatum (optional)",
+      "order_reference": "Auftragsbezug (optional)",
+      "service_contract_id": "ID des Dienstleistervertrags (optional)"
+    },
+    "search": "Suchen",
+    "choose": "Bitte wählen",
+    "createHint": "Der Plan erzeugt nur ungeprüfte Rechnungsentwürfe. Der Stichtag richtet sich nach dem Tag der ersten Fälligkeit; in kürzeren Monaten gilt der letzte Tag.",
+    "createSubmit": "Rechnungsplan anlegen",
+    "createdDone": "Rechnungsplan angelegt.",
+    "loadError": "Die Buchungskreise konnten nicht geladen werden. Bitte Seite neu laden oder die Berechtigungen prüfen.",
     "edit": "Bearbeiten",
     "editTitle": "Rechnungsplan bearbeiten",
     "save": "Speichern",
@@ -4605,6 +4635,9 @@
   },
   "Invoices": {
     "extra": {
+      "attachment_document_ids": "Anlagen zum Beleg (Dokument-IDs)",
+      "attachment_hint": "{count} Anlage(n) verknüpft. Mehrere IDs mit Leerzeichen, Komma oder Zeilenumbruch trennen; das Dokument muss im DMS vorhanden sein.",
+      "attachment_invalid": "Mindestens eine Dokument-ID ist ungültig oder doppelt (höchstens 50).",
       "title": "Weitere Angaben zur Prüfung am Beleg",
       "hint": "Optional. Die Angaben dienen der rechnerischen und fachlichen Prüfung; steuerliche Bewertung (Gegenleistung, Bauabzugsteuer, Vorsteuer) erfolgt durch Fachpersonal oder Steuerberater.",
       "service_to": "Leistungszeitraum bis",
@@ -5175,7 +5208,12 @@
       "doneHintInterval": "Die Fälligkeit rückt um {months} Monate nach dem Erledigungsdatum vor; der Eintrag bleibt offen.",
       "doneHintOnce": "Der Eintrag wird mit dem Erledigungsdatum geschlossen.",
       "doneOn": "Erledigt am",
-      "confirmDone": "Erledigung erfassen"
+      "confirmDone": "Erledigung erfassen",
+      "selectRow": "Auswählen",
+      "bulkDone": "Ausgewählte erledigen",
+      "bulkDoneOn": "Erledigungsdatum der Sammelaktion",
+      "bulkNone": "Bitte mindestens eine offene Wartung auswählen.",
+      "bulkResult": "{changed} Wartungen erledigt."
     },
     "customFields": {
       "title": "Zusatzfelder",
@@ -6123,6 +6161,16 @@
     "retentionInvalid": "Bitte eine ganze Zahl zwischen 1 und 120 eingeben.",
     "retentionSave": "Aufbewahrung speichern"
   },
+  "InspectionPackageDefaultDays": {
+    "title": "Standardfrist für Einsichtspakete",
+    "description": "Gilt für Bereitstellungspakete der Einsichtsanfragen, die ohne eigene Frist erzeugt werden. Nach Ablauf ist das Paket nicht mehr abrufbar. Die Frist je Paket kann beim Erzeugen abweichen.",
+    "label": "Frist in Tagen (leer: ohne Ablauf)",
+    "hint": "Erlaubt 1 bis 365 Tage. Leer bedeutet ohne Ablauf. Bereits erzeugte Pakete behalten ihre Frist.",
+    "save": "Frist speichern",
+    "saved": "Gespeichert.",
+    "invalid": "Bitte eine ganze Zahl zwischen 1 und 365 eingeben oder das Feld leeren.",
+    "readOnly": "Die Änderung erfordert das Recht Mandanteneinstellungen ändern."
+  },
   "TicketReopenWindow": {
     "title": "Wiedereröffnung abgeschlossener Tickets per E-Mail",
     "description": "Geht zu einem erledigten, geschlossenen oder abgelehnten Ticket eine neue E-Mail ein, wird das Ticket nur wieder geöffnet, wenn der Abschluss höchstens so viele Kalendertage zurückliegt. Liegt er länger zurück, entsteht ein Folgeticket mit Verweis auf das alte Ticket; Objekt, Einheit und Kontakt werden übernommen. Automatische Antworten wie Abwesenheitsnotizen öffnen nie wieder.",
@@ -6938,6 +6986,7 @@
     "started": "Abruf gestartet: {connections} Verbindungen, {queued} Konten in der Warteschlange."
   },
   "BankConnections": {
+    "balanceColumn": "Saldo",
     "showDisconnected": "Getrennte anzeigen ({count})",
     "title": "Bankverbindungen",
     "intro": "Bankkonten per finAPI verbinden und dauerhaft mit einem Buchungskreis oder Objekt verknüpfen. Lesend: keine Überweisungen, keine automatische Verbuchung.",
@@ -8352,6 +8401,13 @@
     "accounting": "Buchhaltung",
     "noLedgers": "Kein Buchungskreis vorhanden. Ohne Buchungskreis kann keine Eigentümerabrechnung angelegt werden."
   },
+  "AiAutomation": {
+    "title": "Automatische KI-Läufe",
+    "rentIncrease": "Neue oder geänderte Mieterhöhungsfälle automatisch von der KI auf Stimmigkeit prüfen lassen",
+    "batchMail": "E-Mails ohne Vorschlag nachts von der KI einordnen lassen",
+    "hint": "Beide Schalter sind standardmäßig aus und umgehen weder die Anbieterfreigabe noch das Monatsbudget. Ergebnisse sind Vorschläge und Hinweise, keine Freigabe und keine Rechtsprüfung.",
+    "noProvider": "Derzeit ist kein KI-Anbieter nutzbar: {reason}"
+  },
   "InvoiceIntakeAuto": {
     "title": "Automatischer Belegeingang",
     "label": "Rechnungen aus neuen E-Mails automatisch erfassen",
@@ -9075,6 +9131,60 @@
     "next": "Weiter",
     "pageOf": "Seite {page} von {pages}, {total} Dokumente",
     "lettersLink": "Briefe und Vorlagen"
+  },
+  "DocumentRedactions": {
+    "title": "Geschwärzte Kopien",
+    "intro": "Geschwärzte Kopien dieses Dokuments mit Grund, Umfang und Bearbeitungsschritten. Das Original bleibt unverändert. Die Schwärzung erfolgt außerhalb des Systems, hochgeladen wird die bereits geschwärzte Datei. Eine Kopie ist erst nach Freigabe durch eine zweite Person im Portal sichtbar.",
+    "empty": "Keine geschwärzten Kopien vorhanden.",
+    "statusPending": "wartet auf Freigabe",
+    "statusReleased": "freigegeben",
+    "reason": "Grund",
+    "scope": "Umfang der Schwärzung",
+    "steps": "Bearbeitungsschritte",
+    "stepsHint": "Ein Schritt pro Zeile.",
+    "file": "Geschwärzte Datei",
+    "new": "Geschwärzte Kopie anlegen",
+    "create": "Kopie anlegen",
+    "created": "Die geschwärzte Kopie wurde angelegt und wartet auf die Freigabe.",
+    "released": "Die Kopie wurde freigegeben.",
+    "releasedAt": "Freigegeben am {at}",
+    "openCopy": "Kopie öffnen",
+    "release": "Freigeben",
+    "releaseConfirm": "Jetzt freigeben",
+    "cancel": "Abbrechen",
+    "fourEyes": "Die Freigabe erteilt eine zweite Person.",
+    "visibilityLegend": "Sichtbar im Portal für",
+    "visibility": {
+      "tenant": "Mieter",
+      "owner": "Eigentümer",
+      "provider": "Dienstleister",
+      "board": "Beirat"
+    },
+    "errors": {
+      "missing": "Datei, Grund (mindestens 5 Zeichen), Umfang und mindestens ein Bearbeitungsschritt sind anzugeben.",
+      "visibility": "Mindestens eine Sichtbarkeit auswählen."
+    }
+  },
+  "DocumentIntakeSettings": {
+    "title": "Eingangsadresse für Weiterleitungen",
+    "intro": "Belege können an eine Adresse des Mandanten weitergeleitet werden. Die Adresse entsteht aus dem Sammelpostfach und einem Token (belege+token@domain). Anhänge laufen in den Dokumenteingang und erscheinen dort als Vorschlag.",
+    "address": "Eingangsadresse",
+    "notConfigured": "Noch nicht eingerichtet.",
+    "mailbox": "Sammelpostfach",
+    "senders": "Erlaubte Absender",
+    "sendersHint": "Eine Adresse oder @domain pro Zeile. Ohne Eintrag werden alle Absender angenommen.",
+    "enabled": "Eingangsadresse aktiv",
+    "distribute": "Nachrichten anderer Mandanten dieses Postfachs verteilen",
+    "distributeHint": "Nur für den Mandanten, der das gemeinsame Postfach abruft. Nachrichten mit dem Token eines anderen Mandanten desselben Postfachs werden diesem Mandanten übergeben, wenn der Absender dort erlaubt ist. Ohne diesen Schalter werden sie übersprungen.",
+    "save": "Speichern",
+    "rotate": "Neues Token erzeugen",
+    "saved": "Einstellung gespeichert.",
+    "rotated": "Neues Token erzeugt. Weiterleitungen an die alte Adresse werden nicht mehr erkannt.",
+    "direct": {
+      "title": "Direkter Upload im Browser",
+      "label": "Dateien direkt in den Objektspeicher hochladen (signierte URL)",
+      "hint": "Standard: aus, das CRM lädt dann über die API hoch. Einschalten nur, wenn der Objektspeicher vom Browser aus erreichbar ist und CORS für PUT von der CRM-Adresse erlaubt (siehe Runbook Objektspeicher). Schlägt der direkte Upload fehl, nutzt das CRM automatisch den Upload über die API."
+    }
   },
   "DocumentDetail": {
     "area": "Dokumente",
@@ -9921,6 +10031,7 @@
     "modes": {
       "individual": "Zinsen je Jahr einzeln erfassen",
       "reference_rate": "Referenzzinssatz je Jahr (Einstellungen)",
+      "deposit_rates": "Zinssatz der Kaution (Verlauf je Kautionskonto)",
       "none": "keine Verzinsung"
     },
     "errors": {
@@ -12512,6 +12623,7 @@
     "readOnly": "Zum Pflegen ist das Recht tenant_settings:update erforderlich."
   },
   "NotificationSettings": {
+    "cardDescription": "Eigene Meldungen in der App und per E-Mail je Art einstellen.",
     "title": "Benachrichtigungen",
     "intro": "Legen Sie fest, welche Meldungen Sie in der App und per E-Mail erhalten. Die Einstellungen gelten nur für Ihr Konto.",
     "channels": "Kanäle je Art",
@@ -12632,7 +12744,11 @@
       "requested": "Angefordert",
       "received": "Erhalten",
       "not_applicable": "Nicht zutreffend"
-    }
+    },
+    "createTickets": "Aufgaben für fehlende Punkte anlegen",
+    "ticketsCreated": "{count} Aufgaben angelegt.",
+    "ticketsNone": "Keine neuen Aufgaben, alle fehlenden Punkte haben bereits eine.",
+    "ticketLink": "Aufgabe öffnen"
   },
   "ManagerChecklist": {
     "title": "Checkliste Verwalterwechsel",
@@ -12821,6 +12937,8 @@
     "recent": "Letzte Vorgänge",
     "reply": "Antwortvorschlag",
     "replySuggestion": "aus KI-Vorschlag",
+    "replyTone": "Tonfall: {tone}",
+    "replyUnknownPlaceholders": "Platzhalter ohne Wert: {list}",
     "replyPreparation": "aus Mail-Vorbereitung",
     "replyTemplate": "Vorlage",
     "quickSend": "Kurz senden",
@@ -12829,6 +12947,27 @@
     "showFull": "Vollständig anzeigen",
     "showLess": "Weniger anzeigen",
     "loading": "Kompaktansicht wird geladen …"
+  },
+  "HoaStatementPdf": {
+    "download": "Gesamtabrechnung als PDF",
+    "hint": "Entwurf auf dem Briefbogen; nur nach interner Freigabe und bei offener Freigabestufe G4. Alle Werte stammen aus dem gespeicherten Stand."
+  },
+  "YearCarryover": {
+    "title": "Jahresübernahme",
+    "hint": "Schlussbestände eines beendeten Geschäftsjahres als Anfangsbestand des Folgejahres übernehmen. Es entstehen nur Entwürfe, die wie jede Buchung geprüft und von einer zweiten Person freigegeben werden. Die Übernahme ist wiederholbar, ein vorhandener Entwurf wird nicht doppelt angelegt.",
+    "year": "Geschäftsjahr (Beginnjahr)",
+    "show": "Schlussbestände anzeigen",
+    "take": "Als Entwurf übernehmen",
+    "confirm": "Schlussbestand {year} und Anfangsbestand {next} jetzt als Buchungsentwürfe anlegen?",
+    "created": "{count, plural, one {# Entwurf} other {# Entwürfe}} angelegt, Prüfung und Freigabe im Journal.",
+    "period": "Geschäftsjahr {start} bis {end}, Anfangsbestand zum {target}",
+    "alreadyDrafted": "Die Übernahme wurde bereits als Entwurf oder Buchung angelegt.",
+    "carried": "Übernommene Konten",
+    "notCarried": "Nicht übernommene Konten",
+    "noneCarried": "Keine Schlussbestände zur Übernahme.",
+    "account": "Konto",
+    "category": "Kategorie",
+    "balance": "Saldo"
   },
   "Bookkeeping": {
     "actions": {
@@ -12976,6 +13115,27 @@
     }
   },
   "AdminFees": {
+    "pdf": "PDF erzeugen",
+    "pdfDownload": "PDF herunterladen",
+    "run": {
+      "title": "Honorarlauf",
+      "hint": "Zuerst die Vorschau prüfen, danach alle fälligen Honorare des Zeitraums gesammelt ausstellen. Je Objekt und Zeitraum entsteht höchstens eine Rechnung, bereits ausgestellte Zeiträume werden übersprungen. Nichts wird versendet.",
+      "periodDate": "Tag im abzurechnenden Zeitraum",
+      "invoiceDate": "Rechnungsdatum",
+      "preview": "Vorschau",
+      "issue": "{count} Rechnung(en) ausstellen",
+      "confirm": "{count} Rechnung(en) jetzt ausstellen? Die Rechnungsnummern werden fest vergeben.",
+      "previewCount": "Vorschau: {count} Rechnung(en) wären fällig.",
+      "issuedCount": "{count} Rechnung(en) ausgestellt.",
+      "rowStatus": {
+        "preview": "fällig",
+        "issued": "ausgestellt",
+        "already_issued": "bereits ausgestellt",
+        "skipped": "übersprungen",
+        "error": "Fehler"
+      }
+    },
+    "loadError": "Die Objektliste konnte nicht geladen werden. Bitte Seite neu laden oder die Berechtigungen prüfen.",
     "title": "Verwalterhonorar",
     "notice": "Honorar je Objekt einrichten, fällige Leistungszeiträume prüfen und je Zeitraum einmal ausstellen. Eine ausgestellte Rechnung wird nie geändert, Korrektur nur per Gutschrift. Nichts wird versendet; die Buchung des Honorars bleibt bis zur Freigabestufe G1 offen.",
     "newFee": "Honorar einrichten",
@@ -13176,6 +13336,10 @@
     "added": "Basiszinssatz erfasst."
   },
   "DirectDebitFeedback": {
+    "selectAll": "Alle Lastschriften auswählen",
+    "selectOrder": "Lastschrift von {name} auswählen",
+    "selection": "{count, plural, one {# Lastschrift ausgewählt} other {# Lastschriften ausgewählt}}. Die Rückmeldung gilt für alle ausgewählten Lastschriften gemeinsam; bei Fehlern wird nichts gespeichert.",
+    "saveSelection": "Rückmeldung für {count} Lastschriften speichern",
     "show": "Bankrückmeldung und Abstimmung",
     "summary": "Kontrollsumme {sum}, offene Befunde: {findings}",
     "debtor": "Schuldner",
@@ -13570,6 +13734,7 @@
     }
   },
   "ContactMerge": {
+    "proposeFormLabel": "Zusammenführung vorschlagen",
     "breadcrumb": "Kontakte",
     "title": "Kontakte zusammenführen",
     "intro": "Dubletten werden vorgeschlagen, geprüft und durch eine zweite Person ausgeführt. Alle Verweise der Quelle wandern zum Ziel. Die Quelle bleibt als zusammengeführt erhalten und wird nicht gelöscht.",
@@ -13640,6 +13805,7 @@
     "create": "Anlegen"
   },
   "LetterTemplates": {
+    "formLabel": "Briefvorlage bearbeiten",
     "breadcrumb": "Dokumente",
     "title": "Briefe und Vorlagen",
     "intro": "Brief aus einer Vorlage auf dem Briefbogen des Mandanten erzeugen, vorab als PDF ansehen oder als Serienbrief an mehrere Empfänger erstellen. Briefe werden abgelegt und verknüpft, nicht versandt.",
@@ -13706,5 +13872,106 @@
     "movementPurpose": "Zweck",
     "movementSubmit": "Erfassen",
     "movementHint": "Die Erfassung ist eine Information für die Abrechnung und bucht nichts. Belege werden an der Abrechnung verknüpft."
+  },
+  "OnboardingExtras": {
+    "title": "Weitere Angaben zum Objekt (optional)",
+    "hint": "Diese Angaben stammen nicht aus dem Vorschlag, sondern werden hier eingegeben und mit der Bestätigung gemeinsam angelegt. Bei Fehlern wird nichts angelegt.",
+    "banksTitle": "Bankkonten",
+    "bankKind": "Art",
+    "bankKinds": {
+      "hoa": "Gemeinschaftskonto",
+      "reserve": "Rücklagenkonto",
+      "hoa_fee": "Hausgeldkonto",
+      "rent": "Mietkonto",
+      "deposit": "Kautionskonto",
+      "other": "Sonstiges"
+    },
+    "iban": "IBAN",
+    "holder": "Kontoinhaber",
+    "bankName": "Bank",
+    "bankDefault": "Standardkonto des Rechtsträgers",
+    "bankAdd": "Bankkonto hinzufügen",
+    "remove": "Entfernen",
+    "keysTitle": "Umlageschlüssel",
+    "keysHint": "Ein vorhandener Schlüssel (zum Beispiel MEA oder WFL) erhält nur Werte, ein neuer Schlüssel braucht Name, Einheit und Art. Verbrauchsschlüssel erhalten keine Werte, der Verbrauch kommt aus den Zählern.",
+    "keyCode": "Kürzel",
+    "keyKind": "Art",
+    "keyKindExisting": "vorhandener Schlüssel",
+    "keyKinds": {
+      "static": "Statisch",
+      "consumption": "Verbrauch",
+      "fixed_amount": "Festbetrag",
+      "fixed_share": "Fester Anteil"
+    },
+    "keyName": "Name",
+    "keyUnit": "Einheit",
+    "keyValues": "Werte je Einheit",
+    "keyValuesPlaceholder": "01=70,5",
+    "keyAdd": "Umlageschlüssel hinzufügen",
+    "debtor": "Debitorenkonten ins Kontenbuch übernehmen",
+    "debtorHint": "Fehlt der Buchungskreis des Rechtsträgers, wird er aus der Kontenvorlage (Entwurf) angelegt. Es wird nichts gebucht.",
+    "linkDocuments": "Quelldokumente mit dem Objekt verknüpfen",
+    "linkDocumentsHint": "Die Originale der Übernahme werden dem Objekt als Original zugeordnet.",
+    "matchTitle": "Personenabgleich (Vorschau)",
+    "matchLoad": "Abgleich anzeigen",
+    "matchReload": "Abgleich aktualisieren",
+    "matchHint": "Zeigt, ob eine Person mit einem vorhandenen Kontakt verknüpft würde. Es wird nichts verknüpft oder angelegt.",
+    "colUnit": "Einheit",
+    "colRole": "Rolle",
+    "colName": "Name",
+    "colDecision": "Ergebnis",
+    "colCandidate": "Bester Treffer",
+    "roleOwner": "Eigentümer",
+    "roleTenant": "Mieter",
+    "noName": "ohne Namen",
+    "decision": {
+      "link": "Wird verknüpft",
+      "suggest": "Möglicher Treffer, neuer Kontakt",
+      "none": "Neuer Kontakt"
+    },
+    "noCandidate": "kein Treffer",
+    "thresholds": "Schwellwerte: Verknüpfen ab {link}, Vorschlag ab {suggest}."
+  },
+  "DepositInterest": {
+    "title": "Verzinsung und Zinsgutschrift",
+    "notice": "Der Zinssatz gilt je Kautionskonto ab dem genannten Datum. Die Zinsgutschrift wird jährlich als Entwurf berechnet, die Bestätigung erfasst nur eine Zinsbewegung auf dem Kautionskonto, es wird nichts gebucht und nichts gezahlt.",
+    "ratesTitle": "Zinssatzverlauf",
+    "ratesEmpty": "Kein Zinssatz hinterlegt. Ohne Zinssatz entsteht kein Entwurf.",
+    "validFrom": "Gültig ab",
+    "rate": "Zinssatz",
+    "ratePercent": "Zinssatz in Prozent",
+    "saveRate": "Zinssatz speichern",
+    "remove": "Entfernen",
+    "draftsTitle": "Zinsgutschrift je Jahr",
+    "draftsEmpty": "Noch kein Entwurf vorhanden.",
+    "year": "Jahr",
+    "amount": "Betrag",
+    "status": "Status",
+    "varying": "wechselnd",
+    "statuses": {
+      "draft": "Entwurf",
+      "confirmed": "bestätigt",
+      "discarded": "verworfen"
+    },
+    "confirm": "Bestätigen",
+    "discard": "Verwerfen",
+    "createDraft": "Entwurf berechnen"
+  },
+  "PortalSettings": {
+    "title": "Portal der Mandanten",
+    "description": "Name, Impressum und Datenschutz erscheinen im Portal unter der Domain des Mandanten, zusammen mit den Farben und dem Logo aus den Briefkopfdaten. Leere Felder lassen das Portal neutral.",
+    "name": "Anzeigename im Portal",
+    "imprint": "Link zum Impressum (https)",
+    "privacy": "Link zur Datenschutzerklärung (https)",
+    "secondFactor": "Anmeldestrenge im Portal",
+    "factor": {
+      "account_choice": "Zweiter Faktor wählt jedes Konto selbst (Standard)",
+      "required": "E-Mail Code bei jeder Anmeldung per Link verlangen"
+    },
+    "factorHint": "Standard ist die Wahl je Konto (Betreiberentscheidung 26.09.2026). Die Einstellung Pflicht gilt für die Anmeldung per Link, die Passwortanmeldung mit TOTP bleibt freiwillig.",
+    "invalid": "Links müssen mit https:// beginnen, der Name darf höchstens 80 Zeichen haben.",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "readOnly": "Keine Berechtigung zum Ändern."
   }
 }

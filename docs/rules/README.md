@@ -236,8 +236,30 @@ Index checked against the files in this folder on 27.09.2026: every rule file ha
 | [Q15](Q15-fee-documents-carryover.md) | Honorarrechnung als PDF, Gutschrift-XRechnung ablegen, Honorarlauf, USt-Übersicht je Objekt, Jahresübernahme mit Vier-Augen | M13, M18, M10 | implemented, not accepted (30.09.2026) |
 | [Q01](Q01-approval-decisions-open-items.md) | Zentrale Freigabeentscheidung mit Hash, Warnung bei möglicher Personengleichheit, offene Posten zum Stichtag als gepflegte Tabelle, Kreditorenkonto beim Dienstleisterverhältnis, Schalter Monatsvorschau | 6.9.9, 6.9.13, E09, E15, 7.2 | implemented, not accepted (Migration 0271) |
 | [Q11](Q11-workspace-w3.md) | Auftragstermin im Kalender, Benachrichtigungseinstellungen, Sammelaktionen Dokumente und Fristaufgaben, Regelaktionen Feld setzen und Entwurf an Dienstleister, Belegentwurf aus Rechnungseinreichung | 18 M9, 15.1, 15.2, 14 | implemented, not accepted (Migration 0280) |
+| [R06](R06-tickets-workspace-w4.md) | Link zum Belegentwurf, Stummschalten, Auftragstermin sofort im Kalender, Sammelaktion Wartung mit Intervall, Tickets Sammelaktion im Berichtsformat | 18 M9, 12, 14 | implemented, not accepted (keine Migration) |
 | [Q03](Q03-documents-w3.md) | Signierte Upload- und Download-URLs, Lebenszyklus tmp, ZIP-Massenupload als import_run, geschwärzte Kopie mit Protokoll, Sperrart und WEG-Dauerunterlage, Profil je Rechtsträgerart, Eingangsadresse, Drive-Änderungen | 11.2, 11.4, 12, 7.9.2, 7.11 | implemented, not accepted (Migration 0272) |
 | [M3-03](M3-03-kontakt-merge.md) | Kontakt zusammenführen: Vorschlag, Prüfung, Ausführung im Vier-Augen-Prinzip, Umhängen aller Verweise per Registry, Quelle bleibt als zusammengeführt erhalten | M3, 6.1 | implemented, not accepted (Migration 0273) |
 | [Q05](Q05-crm-oberflaechen.md) | CRM-Oberflächen: Parteien, Tag-Verwaltung, Teams, USt-Optionshistorie, Bildgalerie, Belegungsliste, Vollmachten im Portal, Portalstatus am Kontakt, Ticketfelder Gebäude, Beginn, Wiedervorlage, Sammelzuweisung | 6.1, 6.2, 6.6, M5, M9, M19, M21 | implemented, not accepted (keine Migration, Kettenglied 0274) |
 | [M8-06](M8-06-historische-importberichte.md) | Weitere Importberichte: SEPA-Übersicht (Zahlungsplan, Mandat mit Nachweis), Kontenplan je Objekt, historische Bankumsätze mit Journalzuordnung, DMS-Dokumentindex, historische Tickets, Einzelposten offener Posten, Guthaben, Kautionen, Rücklagen, Darlehen, Sonderumlagen | 13.1, 6.9.10 | implemented, not accepted (Migration 0277) |
 | [Q06](Q06-ai-w3.md) | KI Welle 3: Chat-Aktionen Objekt, Dokument, Portaleinladung, Brief mit Folgeschritten, Kaskade small zu large mit Kosten je Stufe, Budgetsperre mit Benachrichtigung, nächtlicher Sammellauf, KI-Prüfung Mieterhöhung, KI-Vorqualifizierung Portal-Chat, historische Bankzuordnungen als Beispiele | 9.1, 9.3, 10, 10.3, 6.3, 13.1, 14 | implemented, not accepted (Migration 0275) |
+
+## Indexnachtrag Version 1.49.0 (01.10.2026)
+
+Vollständigkeitsprüfung des Index gegen `docs/rules/*.md`: Regeldateien ohne Indexzeile bis zur Version 1.49.0, hier nachgetragen. Der Status ist aus den Regeldateien übernommen, eine Abnahme nach Anhang D.3 liegt nicht vor.
+
+| ID | Title | Master prompt section | Status |
+| --- | --- | --- | --- |
+| [M20-02](M20-02-draft-reply-schema.md) | Eigenes Schema des Antwortentwurfs mit pflegbaren Stilregeln | M20, 9.2 | implemented, not accepted |
+| [M20-04](M20-04.md) | Vier-Augen-Prinzip beim Mailversand: zweite Identität, Re-Authentifizierung, Vertretung | M20 | implemented, not accepted |
+| [M34-01](M34-01-ai-knowledge-release-workflow.md) | Freigabeworkflow und Versionierung für Wissenseinträge | M34 | implemented, not accepted |
+| [M35-04](M35-04.md) | objektakte-Übernahme: technische Vorbereitung offener Betreiberentscheidungen (Vorschaubilder, Umschlüsselung, lokales Modell als Vorschlag, Abgleichbericht, Drive-Kontingent) | M35 | implemented, not accepted |
+| [M5-08](M5-08-mieterhoehung-sperre-verknuepfung.md) | Verknüpfung von Mieterhöhungsfall, Vertragssperre und KI-Prüfung | M5, 6.3 | implemented, not accepted |
+| [M7-onboarding](M7-onboarding.md) | Objektübernahme und Personenabgleich | M7 | implemented, not accepted |
+| [M9-08](M9-08.md) | Wiederholungsplan für Regel-Webhooks | M9, 15.2 | implemented, not accepted |
+| [P12-02](P12-02-html-mail-anzeige.md) | HTML-Mails im Sandbox-Rahmen ohne externe Ressourcen | P12 | implemented, not accepted (Entscheidung des Eigentümers zu bestätigen) |
+| [PORTAL-Q10](PORTAL-Q10.md) | Portalsichtbarkeit Tickets und Belegsuche | Portal | implemented, not accepted |
+| [UI-R15](UI-R15-oberflaechenkonsistenz.md) | Konsistenz der Oberflächen der Wellen 2 und 3 | Produktschutz | implemented, not accepted |
+| [R09](R09.md) | Automatische KI-Läufe: Mieterhöhungsprüfung, nächtliche Mailklassifikation, Antwortentwurf | Produktschutz | implemented, not accepted |
+| [R02](R02.md) | CRM zu geschwärzten Kopien, Eingangsadresse, Verteilung nach Token, Schalter direkter Upload | Produktschutz | implemented, not accepted |
+| [R10](R10.md) | Kautionsverzinsung je Anlageform, Portal Branding je Mandant, zweiter Faktor im Portal je Mandant | Produktschutz | implemented, not accepted |
+| R03-onboarding-uebernahme | Aufgaben aus der Checkliste, Eigentümeransicht, Anlage von Bankkonten, Umlageschlüsseln, Debitorenkonten und Dokumentverknüpfung, Abgleichvorschau | Fachliche Umsetzung, Produktschutz | R03 |

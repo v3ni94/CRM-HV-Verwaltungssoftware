@@ -215,3 +215,9 @@ neuem Wert (Recht audit:read).
 Die Übersicht zeigt alle SEPA Mandate der Verträge mit Referenz, IBAN, Art und Folge, Unterschriftsdatum, Gültigkeit und letzter Verwendung. Filter: Status (aktiv, widerrufen, abgelaufen), Suche nach Referenz oder IBAN, "Noch nie verwendet" und "Läuft innerhalb von 90 Tagen ab". Die Erfassung ist reine Dokumentation, der Einzug bleibt bis zur Freigabe Zahlungsanstoß (G2) gesperrt.
 
 - Mieterhöhungssperre: Unter dem Feld stehen die Mieterhöhungsfälle des Vertrags. Wird ein offener Fall vor Ablauf der Sperre wirksam, erscheint ein Hinweis; die Freigabe des Falls bleibt gesperrt.
+
+## Verzinsung der Kaution und Zinsgutschrift
+
+Am Mietvertrag zeigt die Karte Verzinsung und Zinsgutschrift je Kaution den Zinssatzverlauf: Der Satz gilt ab dem genannten Datum, bis ein neuerer Eintrag folgt. Sätze trägt der Betreiber nach Bankbestätigung ein, das System ruft keinen Satz ab und belegt keinen vor. Für Versicherung, Bürgschaft und Patronatserklärung wird keine Verzinsung geführt.
+
+Mit Entwurf berechnen entsteht für ein abgeschlossenes Jahr die Zinsgutschrift als Entwurf (Berechnung taggenau, je Jahr auf den Cent gerundet). Bestätigen erfasst eine Zinsbewegung am 31.12. auf dem Kautionskonto, Verwerfen lässt den Entwurf ohne Wirkung. Es wird nichts gebucht und nichts gezahlt. In der Kautionsabrechnung rechnet die Zinsart Zinssatz der Kaution mit diesem Verlauf; die Abrechnung bleibt ein Entwurf.

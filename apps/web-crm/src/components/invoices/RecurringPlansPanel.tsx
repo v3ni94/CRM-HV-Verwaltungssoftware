@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { RecurringPlanCreate } from "./RecurringPlanCreate";
+
 type Option = { id: string; label: string };
 type Plan = {
   id: string; text: string; gross: string; vat_percent: string; interval_months: number; start_date: string;
@@ -91,6 +93,7 @@ export function RecurringPlansPanel({ ledgers }: { ledgers: Option[] }) {
           ))}
         </select>
       </label>
+      <RecurringPlanCreate ledger={ledger} onCreated={load} />
       {error ? <p className={ui.alert} role="alert">{error}</p> : null}
       {message ? <p className={ui.success} role="status">{message}</p> : null}
       {rows === null ? null : rows.length === 0 ? (

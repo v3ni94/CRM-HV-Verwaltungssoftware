@@ -253,7 +253,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           {t("declineAction")}
         </button>
       ) : null}
-      <form onSubmit={submitQuote} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submitQuote} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`} aria-label={t("quoteSubmit")}>
         <h2 className={ui.h2}>{t("quoteSubmit")}</h2>
         <p className={ui.help}>{tPortal("proposalNotice")}</p>
         <div>
@@ -280,7 +280,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
         </button>
       </form>
       {PROPOSAL_STATES.has(order.status) ? (
-        <form onSubmit={submitProposals} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+        <form onSubmit={submitProposals} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`} aria-label={t("proposalsTitle")}>
           <h2 className={ui.h2}>{t("proposalsTitle")}</h2>
           <p className={ui.help}>{t("proposalsHint")}</p>
           {slots.map((value, index) => (
@@ -324,7 +324,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           </ul>
         </div>
       ) : null}
-      <form onSubmit={submitAppointment} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submitAppointment} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`} aria-label={t("appointmentDirect")}>
         <h2 className={ui.h2}>{t("appointmentDirect")}</h2>
         <div>
           <label htmlFor="appointment-date" className={ui.label}>
@@ -343,7 +343,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           {t("appointmentSubmit")}
         </button>
       </form>
-      <form onSubmit={submitComplete} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submitComplete} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`} aria-label={t("completeSubmit")}>
         <h2 className={ui.h2}>{t("completeSubmit")}</h2>
         <div>
           <label htmlFor="report" className={ui.label}>
@@ -361,7 +361,7 @@ export function WorkOrderDetail({ order }: { order: WorkOrder }) {
           {t("completeSubmit")}
         </button>
       </form>
-      <form onSubmit={submitInvoice} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`}>
+      <form onSubmit={submitInvoice} noValidate aria-busy={busy} className={`${ui.card} flex flex-col gap-3`} aria-label={t("invoiceSubmit")}>
         <h2 className={ui.h2}>{t("invoiceSubmit")}</h2>
         <p className={ui.help}>{tPortal("proposalNotice")}</p>
         <div>

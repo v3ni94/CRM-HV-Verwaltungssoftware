@@ -26,7 +26,12 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.ai.lookup import LIMIT, Query, _date, _like, _link, _score, flat
-from mhvp.core.auth.scope import session_allowed_legal_entity_ids, session_principal
+from mhvp.core.auth.scope import (
+    property_allowed,
+    session_allowed_legal_entity_ids,
+    session_allowed_property_ids,
+    session_principal,
+)
 
 DEFAULT_DAYS = 7  # horizon of the calendar and deadline tools when no range is named
 FREE_SLOT_DAYS = 30  # how far the free slot search looks ahead
@@ -132,7 +137,15 @@ def _term_filter(columns: list[Any], terms: list[str]) -> Any:
 
 
 async def _focus_property_id(session: AsyncSession, query: Query) -> uuid.UUID | None:
-    """The property of the record open on the page, when it has one."""
+    """The property of the record open on the page, when it has one and it lies inside the
+    membership's property assignment (M2-02/S16-02)."""
+    property_id = await _focus_property_raw(session, query)
+    if property_id is not None and not property_allowed(session_principal(session), property_id):
+        return None
+    return property_id
+
+
+async def _focus_property_raw(session: AsyncSession, query: Query) -> uuid.UUID | None:
     if query.focus is None:
         return None
     kind, id_ = query.focus
@@ -159,7 +172,11 @@ async def _property_ids_of_terms(session: AsyncSession, query: Query) -> list[uu
     conditions = []
     for term in query.terms:
         conditions += [Property.number == term, Property.name.ilike(_like(term), escape="\\")]
-    return list((await session.scalars(select(Property.id).where(or_(*conditions)))).all())
+    stmt = select(Property.id).where(or_(*conditions))
+    allowed = session_allowed_property_ids(session)  # M2-02/S16-02
+    if allowed is not None:
+        stmt = stmt.where(Property.id.in_(allowed))
+    return list((await session.scalars(stmt)).all())
 
 
 # Calendar -----------------------------------------------------------------------------------
@@ -202,6 +219,15 @@ async def search_calendar(session: AsyncSession, query: Query) -> list[dict[str,
         )
     if query.terms:
         stmt = stmt.where(_term_filter([CalendarEntry.title, CalendarEntry.notes], query.terms))
+    allowed_props = session_allowed_property_ids(session)  # M2-02/S16-02
+    if allowed_props is not None:
+        # Generated entries follow the property assignment; own and shared appointments stay.
+        stmt = stmt.where(
+            or_(
+                CalendarEntry.owner_user_id.is_not(None),
+                CalendarEntry.property_id.in_(allowed_props),
+            )
+        )
     rows = (
         await session.scalars(stmt.order_by(CalendarEntry.starts_on, CalendarEntry.title))
     ).all()
@@ -289,6 +315,9 @@ async def search_deadlines(session: AsyncSession, query: Query) -> list[dict[str
         )
         if query.terms:
             stmt = stmt.where(_term_filter([ComplianceDeadline.reference], query.terms))
+        allowed_props = session_allowed_property_ids(session)  # M2-02/S16-02
+        if allowed_props is not None:
+            stmt = stmt.where(ComplianceDeadline.property_id.in_(allowed_props))
         rows = (
             await session.scalars(
                 stmt.order_by(ComplianceDeadline.due_on, ComplianceDeadline.reference).limit(LIMIT)
@@ -344,7 +373,7 @@ async def search_documents(session: AsyncSession, query: Query) -> list[dict[str
     """Title, category name and property (``GET /documents`` with ``q`` and the property
     link), under the legal entity scope of the document list."""
     from mhvp.documents.models import Document, DocumentCategory, DocumentLink
-    from mhvp.documents.routers import _scope_filter
+    from mhvp.documents.routers import _property_scope_filter, _scope_filter
 
     property_ids = await _property_ids_of_terms(session, query)
     focus_property = await _focus_property_id(session, query)
@@ -370,9 +399,9 @@ async def search_documents(session: AsyncSession, query: Query) -> list[dict[str
             )
         )
     stmt = stmt.where(or_(*conditions))
-    scoped = _scope_filter(session)
-    if scoped is not None:
-        stmt = stmt.where(Document.id.in_(scoped))
+    for scoped in (_scope_filter(session), _property_scope_filter(session)):  # A37, M2-02
+        if scoped is not None:
+            stmt = stmt.where(Document.id.in_(scoped))
     rows = (await session.execute(stmt.order_by(Document.created_at.desc()).limit(LIMIT * 4))).all()
     scored = [
         (_score(f"{d.title} {d.filename} {category or ''}", query.terms), (d, category))
@@ -408,6 +437,9 @@ async def _hoa_entities(session: AsyncSession, query: Query) -> list[tuple[uuid.
         stmt = stmt.where(LegalEntity.property_id == focus_property)
     elif named:
         stmt = stmt.where(LegalEntity.property_id.in_(named))
+    allowed = session_allowed_property_ids(session)  # M2-02/S16-02
+    if allowed is not None:
+        stmt = stmt.where(LegalEntity.property_id.in_(allowed))
     rows = (await session.execute(stmt)).all()
     return [(le, prop) for le, prop in rows if _scoped(session, le)]
 
@@ -565,6 +597,9 @@ async def search_rent_increases(session: AsyncSession, query: Query) -> list[dic
     allowed = session_allowed_legal_entity_ids(session)
     if allowed is not None:
         stmt = stmt.where(Contract.legal_entity_id.in_(list(allowed)))
+    allowed_props = session_allowed_property_ids(session)  # M2-02/S16-02
+    if allowed_props is not None:
+        stmt = stmt.where(Contract.property_id.in_(allowed_props))
     rows = (
         await session.execute(
             stmt.order_by(RentIncreaseCase.status, RentIncreaseCase.effective_date.desc()).limit(
@@ -615,6 +650,9 @@ async def search_work_orders(session: AsyncSession, query: Query) -> list[dict[s
         )
     else:
         stmt = stmt.where(WorkOrder.status.in_(OPEN_ORDER))
+    allowed_props = session_allowed_property_ids(session)  # M2-02/S16-02
+    if allowed_props is not None:
+        stmt = stmt.where(WorkOrder.property_id.in_(allowed_props))
     rows = (await session.execute(stmt.order_by(WorkOrder.created_at.desc()).limit(LIMIT))).all()
     return [
         _link(
@@ -645,6 +683,7 @@ async def search_bank_transactions(session: AsyncSession, query: Query) -> list[
     by counterparty name or purpose when a term is given, newest first. Amounts as strings;
     the IBAN never appears."""
     from mhvp.banking.models import BankTransaction
+    from mhvp.banking.property_scope import session_account_filter
 
     stmt = select(BankTransaction)
     if query.terms:
@@ -661,6 +700,9 @@ async def search_bank_transactions(session: AsyncSession, query: Query) -> list[
     allowed = session_allowed_legal_entity_ids(session)
     if allowed is not None:
         stmt = stmt.where(BankTransaction.legal_entity_id.in_(list(allowed)))
+    visible = session_account_filter(session)  # M2-02/S16-02
+    if visible is not None:
+        stmt = stmt.where(BankTransaction.property_bank_account_id.in_(visible))
     rows = (
         await session.scalars(
             stmt.order_by(BankTransaction.booking_date.desc(), BankTransaction.id.desc()).limit(
@@ -737,6 +779,9 @@ async def search_open_items(session: AsyncSession, query: Query) -> list[dict[st
     allowed = session_allowed_legal_entity_ids(session)
     if allowed is not None:
         stmt = stmt.where(Ledger.legal_entity_id.in_(list(allowed)))
+    allowed_props = session_allowed_property_ids(session)  # M2-02/S16-02
+    if allowed_props is not None:
+        stmt = stmt.where(Ledger.property_id.in_(allowed_props))
     rows = (await session.execute(stmt.order_by(func.sum(remaining).desc()).limit(LIMIT))).all()
     return [
         _link(

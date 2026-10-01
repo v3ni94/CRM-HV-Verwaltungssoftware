@@ -16,11 +16,14 @@ from mhvp.ai.models import AiProposal, AiTaskRun
 from mhvp.billing import ai_check
 from mhvp.billing.models import Statement
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
+from mhvp.core.auth.scope import property_column_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 
-router = APIRouter(tags=["Abrechnung"])
+# M2-02/S16-02: statements outside the membership's property assignment answer 404.
+STATEMENT_GUARD = property_column_guard({"statement_id": Statement.property_id})
+router = APIRouter(tags=["Abrechnung"], dependencies=[Depends(STATEMENT_GUARD)])
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 

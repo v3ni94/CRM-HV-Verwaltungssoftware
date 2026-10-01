@@ -150,7 +150,7 @@ export function CategoryTree({ categories: initial }: { categories: TreeCategory
           </li>
         ))}
       </ul>
-      <form onSubmit={create} className={`${ui.card} grid gap-2 sm:grid-cols-4`}>
+      <form onSubmit={create} className={`${ui.card} grid gap-2 sm:grid-cols-4`} aria-label={t("newTitle")}>
         <h2 className="text-sm font-semibold sm:col-span-4">{t("newTitle")}</h2>
         <label className={ui.label}>
           {t("code")}

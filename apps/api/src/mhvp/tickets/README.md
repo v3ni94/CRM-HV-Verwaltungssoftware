@@ -251,3 +251,5 @@ of `mhvp.workspace.jobs.DEADLINE_KINDS`, never a duration) and document kinds.
 * Regel: `docs/rules/P11-tickets-w2.md`. Paperless im Ticket: `documents/paperless_search.py` `list_by_ticket` und `list_by_correspondent`.
 
 * Paket Q05 (Welle 3): Formular für Gebäude, Beginn und Wiedervorlage (neu und bearbeiten), Team-Verwaltung (Einstellungen, Teams) und Sammelzuweisung in der Ticketliste (`POST /workspace/bulk`, `tickets.assign`). Regel: `docs/rules/Q05-crm-oberflaechen.md`.
+
+- Paket R06 (Welle 4): `POST /tickets/bulk` (Status, gemeinsame Erledigungsnotiz) im Berichtsformat von `core/bulk.py` mit Savepoint je Ticket, neben `bulk-status`. Der Schritt Termin (`order_step`) schreibt den Kalendereintrag sofort über `workspace.jobs.sync_work_order_entry`. Regel: `docs/rules/R06-tickets-workspace-w4.md`.

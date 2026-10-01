@@ -62,4 +62,21 @@ describe("PortalProposalsPanel", () => {
     expect(await screen.findByText("871-01-20260927-AB12")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Übernehmen" })).not.toBeInTheDocument();
   });
+
+  it("links an accepted invoice submission to its receipt draft", async () => {
+    const invoice = {
+      id: "cr2",
+      kind: "invoice_submission",
+      status: "accepted",
+      payload: { number: "RE-1", gross: "119.00" },
+      contact_id: CONTACT,
+      created_at: "2026-09-27T09:00:00Z",
+      decision_note: null,
+      receipt_draft_id: "dr1",
+    };
+    fetchMock.mockResolvedValueOnce(jsonResponse([invoice])).mockResolvedValueOnce(jsonResponse([]));
+    renderIntl(<PortalProposalsPanel contactId={CONTACT} canDecide />);
+    const link = await screen.findByTestId("receipt-draft-link");
+    expect(link).toHaveAttribute("href", "/rechnungen/belegeingang?entwurf=dr1");
+  });
 });

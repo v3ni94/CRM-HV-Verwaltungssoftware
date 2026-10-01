@@ -13,12 +13,14 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
+from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.properties.models import TAKEOVER_CATEGORIES, Property, PropertyTakeoverItem
 from mhvp.properties.routers import READ, UPDATE, _get
 
-router = APIRouter(tags=["Objekte"])
+# M2-02/S16-02: path ids outside the property assignment answer 404.
+router = APIRouter(tags=["Objekte"], dependencies=[Depends(property_path_guard)])
 
 LABELS = {
     "legitimation": "Legitimationsunterlagen",
@@ -41,6 +43,7 @@ class TakeoverItemOut(BaseModel):
     note: str | None
     due_date: date | None
     document_id: uuid.UUID | None
+    ticket_id: uuid.UUID | None = None
 
 
 class TakeoverChecklistOut(BaseModel):
@@ -48,6 +51,29 @@ class TakeoverChecklistOut(BaseModel):
     items: list[TakeoverItemOut]
     open_count: int
     complete: bool
+
+
+class TakeoverTicketsIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    categories: list[str] | None = Field(
+        default=None,
+        max_length=len(TAKEOVER_CATEGORIES),
+        description="nur diese Punkte; ohne Angabe alle fehlenden Punkte",
+    )
+
+
+class TakeoverTicketOut(BaseModel):
+    category: str
+    label: str
+    ticket_id: uuid.UUID
+    ticket_number: int
+
+
+class TakeoverTicketsOut(BaseModel):
+    created: list[TakeoverTicketOut]
+    skipped: list[str]
+    checklist: TakeoverChecklistOut
 
 
 class TakeoverItemPatch(BaseModel):
@@ -68,6 +94,7 @@ def _out(row: PropertyTakeoverItem) -> TakeoverItemOut:
         note=row.note,
         due_date=row.due_date,
         document_id=row.document_id,
+        ticket_id=row.ticket_id,
     )
 
 
@@ -169,3 +196,83 @@ async def patch_item(
             payload={"category": category, "fields": sorted(data)},
         )
         return _out(row)
+
+
+@router.post(
+    "/properties/{property_id}/takeover-checklist/tickets",
+    status_code=201,
+    summary="Aufgaben (Tickets) für fehlende Punkte der Checkliste anlegen (idempotent)",
+)
+async def create_tickets(
+    property_id: uuid.UUID,
+    body: TakeoverTicketsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> TakeoverTicketsOut:
+    """One ticket per open or requested point that has none yet (M7-01, R03). Points that are
+    received or not applicable, and points that already carry a ticket, are skipped, so a
+    second call creates nothing. The tickets are internal (not released for portal users)."""
+    from mhvp.tickets.routers import TicketIn, create_ticket_in_session
+
+    if "tickets:create" not in principal.permissions:
+        raise ProblemError(ErrorCodes.FORBIDDEN, developer_message="missing ['tickets:create']")
+    unknown = set(body.categories or []) - set(TAKEOVER_CATEGORIES)
+    if unknown:
+        raise ProblemError(
+            ErrorCodes.VALIDATION, detail=f"Unbekannte Kategorie: {sorted(unknown)[0]}."
+        )
+    async with tenant_tx(request, principal) as session:
+        prop = await _get(session, Property, property_id)
+        rows = (
+            await session.scalars(
+                select(PropertyTakeoverItem)
+                .where(PropertyTakeoverItem.property_id == property_id)
+                .with_for_update()
+            )
+        ).all()
+        order = {c: i for i, c in enumerate(TAKEOVER_CATEGORIES)}
+        created: list[TakeoverTicketOut] = []
+        skipped: list[str] = []
+        for row in sorted(rows, key=lambda r: order[r.category]):
+            if body.categories is not None and row.category not in body.categories:
+                continue
+            if row.status not in ("open", "requested") or row.ticket_id is not None:
+                skipped.append(row.category)
+                continue
+            label = LABELS[row.category]
+            lines = [f"Punkt der Checkliste Objektübernahme: {label} (Status {row.status})."]
+            if row.note:
+                lines.append(f"Notiz: {row.note}")
+            ticket = await create_ticket_in_session(
+                session,
+                TicketIn(
+                    title=f"Objektübernahme {prop.number}: {label}"[:300],
+                    property_id=property_id,
+                    internal_description="\n".join(lines),
+                    due_on=row.due_date,
+                ),
+                principal,
+            )
+            row.ticket_id = ticket["id"]
+            row.updated_by = principal.user_id
+            await session.flush()
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="property_takeover_item.ticket_created",
+                entity_type="property_takeover_item",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                payload={"category": row.category, "ticket_id": str(ticket["id"])},
+            )
+            created.append(
+                TakeoverTicketOut(
+                    category=row.category,
+                    label=label,
+                    ticket_id=ticket["id"],
+                    ticket_number=ticket["number"],
+                )
+            )
+        return TakeoverTicketsOut(
+            created=created, skipped=skipped, checklist=await _checklist(session, property_id)
+        )

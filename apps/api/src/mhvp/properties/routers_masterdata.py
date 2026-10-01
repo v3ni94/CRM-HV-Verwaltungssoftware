@@ -17,6 +17,7 @@ from sqlalchemy import select
 
 from mhvp.contacts.models import Contact
 from mhvp.core.auth.principal import TenantPrincipal, tenant_tx
+from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.events import diff, emit
 from mhvp.core.problems import ErrorCodes, ProblemError, body_validation_error
 from mhvp.properties import schemas as s
@@ -30,7 +31,8 @@ from mhvp.properties.models import (
 )
 from mhvp.properties.routers import UPDATE, _get, _nf, maintenance_out
 
-router = APIRouter(tags=["Objekte"])
+# M2-02/S16-02: path ids outside the property assignment answer 404.
+router = APIRouter(tags=["Objekte"], dependencies=[Depends(property_path_guard)])
 
 
 async def contact_out(session: Any, row: PropertyContact) -> s.PropertyContactOut:

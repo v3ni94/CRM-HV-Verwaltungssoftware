@@ -21,6 +21,7 @@ filtered. The check is a second axis next to tenant RLS, never a replacement for
 
 import uuid
 from collections.abc import Awaitable, Callable
+from typing import Any
 
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -157,6 +158,60 @@ async def property_path_guard(request: Request) -> None:
     ensure_property_allowed(await get_principal(request), property_id)
 
 
+def _property_of(column: Any, value: uuid.UUID) -> Any:
+    """Select of the property id of the row ``value`` of ``column``'s table."""
+    from sqlalchemy import select
+
+    from mhvp.accounting.models import Ledger
+    from mhvp.properties.models import LegalEntity
+
+    owner = column.class_
+    if column.key == "legal_entity_id":
+        return (
+            select(LegalEntity.property_id)
+            .join(owner, column == LegalEntity.id)
+            .where(owner.id == value)
+        )
+    if column.key == "ledger_id":
+        return select(Ledger.property_id).join(owner, column == Ledger.id).where(owner.id == value)
+    return select(column).where(owner.id == value)
+
+
+def property_column_guard(
+    columns: dict[str, Any],
+) -> Callable[[Request], Awaitable[None]]:
+    """Router dependency factory (M2-02/S16-02, Q13-01): ``columns`` maps a path or query
+    parameter (``statement_id``) to the ORM column holding the property of that row
+    (``Statement.property_id``); a ``legal_entity_id`` or ``ledger_id`` column resolves the
+    property through the legal entity or the ledger. A row outside the membership's property
+    assignment answers 404 before the endpoint runs; unknown ids and unparsable values pass
+    through, so the endpoint keeps its own 404 or 422. Unrestricted members cost no query."""
+
+    async def dependency(request: Request) -> None:
+        params = {**request.query_params, **request.path_params}
+        names = [name for name in columns if name in params]
+        if not names:
+            return
+        principal = await get_principal(request)
+        if principal.tenant_id is None or allowed_property_ids(principal) is None:
+            return
+        from mhvp.core.auth.principal import tenant_tx
+
+        async with tenant_tx(request, principal) as session:
+            for name in names:
+                try:
+                    value = uuid.UUID(str(params[name]))
+                except ValueError:
+                    continue
+                column = columns[name]
+                found = (await session.execute(_property_of(column, value))).first()
+                if found is None:
+                    continue
+                ensure_property_allowed(principal, found[0])
+
+    return dependency
+
+
 __all__ = [
     "PROPERTY_UNSCOPED_ROLES",
     "SCOPED_ROLES",
@@ -172,6 +227,7 @@ __all__ = [
     "legal_entity_allowed",
     "legal_entity_scope",
     "property_allowed",
+    "property_column_guard",
     "property_path_guard",
     "session_allowed_legal_entity_ids",
     "session_allowed_property_ids",

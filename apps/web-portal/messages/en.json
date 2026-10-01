@@ -972,7 +972,11 @@
     "allocationsTitle": "Allocation properties",
     "unit": "Unit",
     "noValue": "no value on file",
-    "incomeTitle": "Rental income per property (agreed rent)"
+    "incomeTitle": "Rental income per property (agreed rent)",
+    "takeoverTitle": "Property takeover",
+    "takeoverComplete": "all points done",
+    "takeoverOpen": "{count} points open",
+    "takeoverDue": "due {date}"
   },
   "SupportConsent": {
     "title": "Access by the management",
@@ -990,5 +994,10 @@
     "row": "Individual statement {year}, unit {unit}",
     "version": "Version {version}",
     "download": "Download PDF"
+  },
+  "Branding": {
+    "logoAlt": "Logo {name}",
+    "imprint": "Legal notice",
+    "privacy": "Privacy policy"
   }
 }

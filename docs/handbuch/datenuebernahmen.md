@@ -75,3 +75,7 @@ zusätzlich im CRM verfügbar gemacht.
   letzte Abholungslauf (WebDAV/CardDAV/CalDAV) liegt vor der Änderung; unter Einstellungen,
   Immoware24-Anbindung zunächst Jetzt abrufen ausführen, danach die Lernphase erneut
   starten.
+
+## Prüfbericht und Journalvorschlag (Historie)
+
+Unter den Altdaten gibt es einen Prüfbericht, der die Einzelposten je Gruppe mit der Eröffnungsbilanz vergleicht, sowie je historischem Bankumsatz eine Kandidatenliste möglicher Journalbuchungen nach Datum und Betrag. Beide zeigen nur an: Es wird nichts korrigiert und nichts automatisch zugeordnet. Die Rücknahme eines Imports entfernt auch die übernommenen Historienzeilen, soweit sie nicht nachträglich bearbeitet wurden. Die globale Suche findet zusätzlich Zählernummern, Rechnungsnummern und Mieter über die Objektadresse.

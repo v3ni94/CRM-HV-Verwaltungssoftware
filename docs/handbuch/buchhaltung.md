@@ -312,3 +312,7 @@ Im Mahnlauf öffnet der Aufklapper "Prüfhinweise, Zins, Zustellnachweise und Sp
 - Beim Anlegen eines Dienstleisterverhältnisses entsteht das Kreditorenkonto automatisch.
 - Einstellungen, Sollstellungsagent: Schalter für die monatliche Vorschau der Sollstellungen
   (nur Entwürfe, Standard aus).
+
+## Jahresübernahme und Honorarlauf
+
+Auf der Seite eines Buchungskreises zeigt "Jahresübernahme" nach Eingabe des Geschäftsjahres die Schlussbestände. "Als Entwurf übernehmen" legt Schlussbestand und Anfangsbestand als Buchungsentwürfe an; diese werden wie jede Buchung geprüft und von einer zweiten Person freigegeben. Unter "Verwalterhonorar" stellt der "Honorarlauf" alle fälligen Honorare eines Zeitraums gesammelt aus: zuerst "Vorschau", dann "Rechnung(en) ausstellen" nach Bestätigung (die Rechnungsnummern werden fest vergeben). Zu jeder Honorarrechnung erzeugt "PDF erzeugen" das Rechnungsdokument auf dem Briefbogen und bietet es danach zum Herunterladen an. Nichts wird versendet.

@@ -66,6 +66,14 @@ export type OwnerRentalIncome = {
   units: { unit_number: string; gross: string; components: { payment_type_code: string; gross: string }[] }[];
 };
 
+export type OwnerTakeoverProperty = {
+  property_id: string;
+  property_name: string;
+  open_count: number;
+  complete: boolean;
+  points: { category: string; label: string; status: string; status_label: string; due_date: string | null }[];
+};
+
 export type OwnerTicket = { id: string; number: number; title: string; status: string; created_at: string };
 
 export function isProvider(me: Me): boolean {
