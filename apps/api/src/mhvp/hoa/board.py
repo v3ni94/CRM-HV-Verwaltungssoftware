@@ -18,7 +18,9 @@ from sqlalchemy.orm.attributes import flag_modified
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import (
     ensure_session_legal_entity_allowed,
+    ensure_session_property_allowed,
     session_allowed_legal_entity_ids,
+    session_allowed_property_ids,
 )
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -34,6 +36,7 @@ from mhvp.portal.board import (
     note_out,
 )
 from mhvp.portal.models import AccessGrant, PortalAccount
+from mhvp.properties.models import LegalEntity
 from mhvp.workspace.services import local_today
 
 # M2-02/S16-02: WEG records outside the property assignment answer 404.
@@ -79,6 +82,13 @@ async def _engagement(session: AsyncSession, engagement_id: uuid.UUID) -> AuditE
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     # Legal entity scope of the membership (A37): a foreign community answers 404.
     ensure_session_legal_entity_allowed(session, eng.legal_entity_id)
+    # Property assignment of the membership (M2-02, R08-01): audit reports by id reach the
+    # property through engagement and community; outside the assignment 404.
+    if session_allowed_property_ids(session) is not None:
+        prop = await session.scalar(
+            select(LegalEntity.property_id).where(LegalEntity.id == eng.legal_entity_id)
+        )
+        ensure_session_property_allowed(session, prop)
     return eng
 
 

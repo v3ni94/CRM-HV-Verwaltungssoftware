@@ -16,6 +16,7 @@ from sqlalchemy.orm import Mapped, mapped_column
 from mhvp.core.context import get_correlation_id
 from mhvp.core.db.base import Base
 from mhvp.core.db.columns import IdMixin, TenantMixin
+from mhvp.core.redaction import redact
 
 
 class DomainEvent(IdMixin, TenantMixin, Base):
@@ -81,7 +82,7 @@ async def emit(
         type=type,
         entity_type=entity_type,
         entity_id=entity_id,
-        payload=payload or {},
+        payload=redact(payload or {}),
         actor_user_id=actor_user_id,
         correlation_id=get_correlation_id(),
     )
@@ -94,7 +95,7 @@ async def emit(
                 event_id=event.id,
                 entity_type=entity_type,
                 entity_id=entity_id,
-                changes=changes,
+                changes=redact(changes),
                 actor_user_id=actor_user_id,
             )
         )

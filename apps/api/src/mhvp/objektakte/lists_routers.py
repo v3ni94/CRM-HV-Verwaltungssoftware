@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import schemas as document_schemas
@@ -36,7 +37,9 @@ from mhvp.documents.routers import _out as document_out
 from mhvp.objektakte import lists
 from mhvp.properties.models import ManagementType, Property
 
-router = APIRouter(prefix="/objektakte", tags=["objektakte-lists"])
+router = APIRouter(
+    prefix="/objektakte", tags=["objektakte-lists"], dependencies=[Depends(property_path_guard)]
+)  # M2-02, R08-01
 READ = require_permission("objektakte:read")
 DOCUMENTS_CREATE = require_permission("documents:create")
 CSV_MEDIA_TYPE = "text/csv; charset=utf-8"

@@ -282,6 +282,16 @@ class ErrorCodes:
             "approval by a third person is required before posting (M14-03)."
         ),
     )
+    ACC_ADMIN_FEE_POSTING_NOT_CONFIGURED = ErrorCode(
+        "MHVP-ACC-0007",
+        409,
+        "Honorarbuchung nicht eingerichtet",
+        (
+            "The admin fee revenue posting needs a tenant posting configuration (manager "
+            "ledger and accounts, payer account numbers) and a debtor ledger; without it no "
+            "draft is created (M13-07, E01)."
+        ),
+    )
     AI_POSTING_NOT_RELEASED = ErrorCode(
         "MHVP-AI-0001",
         403,

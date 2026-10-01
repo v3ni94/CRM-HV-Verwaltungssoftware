@@ -13,17 +13,19 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import Response
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing import owner_statement as svc
 from mhvp.billing import owner_statement_pdf as owner_pdf
+from mhvp.billing import statement_lifecycle as lifecycle
 from mhvp.billing.owner_statement import (
     OwnerStatement,
     OwnerStatementKind,
     OwnerStatementStatus,
 )
+from mhvp.billing.status import StatementStatus, TransitionError, check_transition
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -46,6 +48,16 @@ class OwnerStatementIn(BaseModel):
     ledger_id: uuid.UUID
     period_from: date
     period_to: date
+
+
+class OwnerStatementTransitionIn(BaseModel):
+    """S69-01: status change after the internal approval (6.9.3)."""
+
+    model_config = ConfigDict(extra="forbid")
+    target: OwnerStatementStatus
+    # Only for ``posted``: the entries posted in the statement's ledger that settle it.
+    entry_ids: list[uuid.UUID] = Field(default_factory=list, max_length=200)
+    note: str | None = Field(default=None, max_length=2000)
 
 
 async def _statement(session: AsyncSession, statement_id: uuid.UUID) -> OwnerStatement:
@@ -71,6 +83,8 @@ def _out(st: OwnerStatement, *, with_snapshot: bool = True) -> dict[str, Any]:
         "approved_at": st.approved_at,
         "approved_by": st.approved_by,
         "created_by": st.created_by,
+        "status_log": list(st.status_log or []),
+        "posted_entry_ids": list(st.posted_entry_ids or []),
     }
     if with_snapshot:
         snap = st.snapshot or {}
@@ -153,7 +167,7 @@ async def calculate(
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         st = await _statement(session, statement_id)
-        if st.status is OwnerStatementStatus.INTERNALLY_APPROVED:
+        if StatementStatus(st.status.value) not in lifecycle.RECALCULABLE:
             raise ProblemError(
                 ErrorCodes.CONFLICT,
                 detail="Nach der internen Freigabe wird nicht neu berechnet; neue Abrechnung "
@@ -174,18 +188,79 @@ async def approve(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Nur eine berechnete Abrechnung wird freigegeben."
             )
-        if principal.user_id in (st.created_by, st.calculated_by):
-            raise ProblemError(
-                ErrorCodes.GATE_FOUR_EYES,
-                detail="Die interne Freigabe muss eine andere Person erteilen.",
-            )
-        if any(f["level"] == "error" for f in (st.snapshot or {}).get("findings", [])):
-            raise ProblemError(
-                ErrorCodes.CONFLICT, detail="Summenprüfung mit Fehlern; keine Freigabe."
-            )
-        st.status = OwnerStatementStatus.INTERNALLY_APPROVED
-        st.approved_at = datetime.now(tz=UTC)
-        st.approved_by = principal.user_id
+        _approve(st, principal, None)
+        await session.flush()
+        return _out(st)
+
+
+def _approve(st: OwnerStatement, principal: TenantPrincipal, note: str | None) -> None:
+    if lifecycle.four_eyes_violated(principal.user_id, st.created_by, st.calculated_by):
+        raise ProblemError(
+            ErrorCodes.GATE_FOUR_EYES,
+            detail="Die interne Freigabe muss eine andere Person erteilen.",
+        )
+    if any(f["level"] == "error" for f in (st.snapshot or {}).get("findings", [])):
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Summenprüfung mit Fehlern; keine Freigabe.")
+    st.status_log = [
+        *(st.status_log or []),
+        lifecycle.log_entry(
+            StatementStatus(st.status.value),
+            StatementStatus.INTERNALLY_APPROVED,
+            principal.user_id,
+            note,
+        ),
+    ]
+    st.status = OwnerStatementStatus.INTERNALLY_APPROVED
+    st.approved_at = datetime.now(tz=UTC)
+    st.approved_by = principal.user_id
+
+
+@router.post("/{statement_id}/transition", summary="Statuswechsel (6.9.3, S69-01)")
+async def transition(
+    statement_id: uuid.UUID,
+    body: OwnerStatementTransitionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> dict[str, Any]:
+    """Uniform status model (6.9.3): internally_approved (four eyes), board_reviewed, issued,
+    due, posted, locked. ``resolved`` is refused (WEG only). issued, due and posted make the
+    statement relevant towards the owner or the ledger and need release gate G3 (rental
+    statements, 18.0); ``posted`` only records entries already posted in the ledger."""
+    target = StatementStatus(body.target.value)
+    if target in lifecycle.GATED_TARGETS:
+        await ensure_release_gate_open(
+            ReleaseGate.G3, principal.tenant_id, request.app.state.release_gate_resolver
+        )
+    if target in (StatementStatus.DRAFT, StatementStatus.CALCULATED):
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Berechnung über den Berechnungsendpunkt.")
+    if target is not StatementStatus.POSTED and body.entry_ids:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Buchungen nur beim Status gebucht.")
+    async with tenant_tx(request, principal) as session:
+        st = await _statement(session, statement_id)
+        current = StatementStatus(st.status.value)
+        try:
+            check_transition(current, target, is_hoa=False)
+        except TransitionError as exc:
+            raise ProblemError(ErrorCodes.CONFLICT, detail=str(exc)) from None
+        if target is StatementStatus.INTERNALLY_APPROVED:
+            _approve(st, principal, body.note)
+        else:
+            if target is StatementStatus.POSTED:
+                entries = await lifecycle.posted_entries_of_ledger(
+                    session, st.ledger_id, body.entry_ids
+                )
+                if entries is None:
+                    raise ProblemError(
+                        ErrorCodes.CONFLICT,
+                        detail="Gebucht nur mit gebuchten Buchungen dieses Buchungskreises.",
+                    )
+                st.posted_entry_ids = entries
+            st.status_log = [
+                *(st.status_log or []),
+                lifecycle.log_entry(current, target, principal.user_id, body.note),
+            ]
+            st.status = OwnerStatementStatus(target.value)
+        st.updated_by = principal.user_id
         await session.flush()
         return _out(st)
 
@@ -278,7 +353,7 @@ async def pdf(
     )
     async with tenant_tx(request, principal) as session:
         st = await _statement(session, statement_id)
-        if st.status is not OwnerStatementStatus.INTERNALLY_APPROVED:
+        if StatementStatus(st.status.value) not in lifecycle.APPROVED_OR_LATER:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Ausgabe nur nach interner Freigabe.")
         return Response(
             content=await render_letter_pdf(session, request, st),

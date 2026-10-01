@@ -94,4 +94,23 @@ describe("AdminFeePanel", () => {
     expect(link).toHaveAttribute("href", "/api/handover-files/documents/0192abcd-0000-7000-8000-00000000d001/content");
     expect(fetchMock.mock.calls[3]?.[0]).toBe(`/api/bff/accounting/admin-fee-invoices/${INV}/document`);
   });
+
+  it("creates posting drafts for a released invoice and filters by status (M13-07)", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch");
+    const released = { ...invoice, status: "released", released_at: "2026-04-03T08:00:00Z", payer_entry_id: null };
+    mockLoad(fetchMock, [], [released]);
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ invoice_id: INV, payer_entry_id: "e1", manager_entry_id: "e2", created: true }, 201),
+    );
+    mockLoad(fetchMock, [], [{ ...released, payer_entry_id: "e1" }]);
+    renderIntl(<AdminFeePanel properties={[]} today="2026-02-15" />);
+    await userEvent.click(await screen.findByRole("button", { name: "Buchungsentwurf" }));
+    expect(fetchMock.mock.calls[3]?.[0]).toBe(`/api/bff/accounting/admin-fee-invoices/${INV}/posting-drafts`);
+    expect(await screen.findByText("Entwurf angelegt")).toBeInTheDocument();
+    mockLoad(fetchMock, [], []);
+    await userEvent.selectOptions(screen.getByTestId("fee-status-filter"), "cancelled");
+    await waitFor(() =>
+      expect(fetchMock.mock.calls.some((c) => String(c[0]).endsWith("/admin-fee-invoices?status=cancelled"))).toBe(true),
+    );
+  });
 });

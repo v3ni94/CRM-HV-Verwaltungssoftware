@@ -56,7 +56,7 @@ describe("OwnerStatementPanel", () => {
     await userEvent.click(screen.getByText("Berechnen"));
     await waitFor(() => expect(screen.getByText("693,00 EUR")).toBeInTheDocument());
     expect(screen.getByText("FEE-NOT-CONFIGURED")).toBeInTheDocument();
-    expect(screen.getByText(/Freigabestufe G3/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Freigabestufe G3/).length).toBeGreaterThan(0);
   });
 
   it("shows the problem message of a refused request", async () => {

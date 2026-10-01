@@ -35,7 +35,7 @@ describe("DunningCaseDetails", () => {
   });
 
   it("records a delivery proof via the API", async () => {
-    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async (url) => {
       if (String(url).endsWith("/delivery-proofs"))
         return jsonResponse({ id: "p2", kind: "email_receipt", proof_date: "2026-03-05", reference: null, note: null }, 201);
       return jsonResponse([]);

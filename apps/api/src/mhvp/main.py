@@ -13,6 +13,7 @@ from fastapi import FastAPI
 from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 
+from mhvp.accounting.admin_fee_posting import router as accounting_admin_fee_posting_router
 from mhvp.accounting.admin_fees import router as accounting_admin_fee_router
 from mhvp.accounting.audit_export_routers import router as accounting_audit_export_router
 from mhvp.accounting.chart_release_routers import router as chart_release_router
@@ -74,6 +75,7 @@ from mhvp.core.ratelimit import RateLimitMiddleware
 from mhvp.core.release_gates import ClosedReleaseGateResolver, ReleaseGateResolver
 from mhvp.core.security_headers import SecurityHeadersMiddleware
 from mhvp.core.storage import create_s3_client
+from mhvp.core.telemetry import instrument_app, instrument_engine, setup_tracing
 from mhvp.core.versioning import ApiVersionMiddleware, mark_deprecated_routes
 from mhvp.dataquality.routers import router as data_quality_router
 from mhvp.documents.intake_routers import router as documents_intake_router
@@ -92,6 +94,8 @@ from mhvp.hoa.majority import router as hoa_majority_router
 from mhvp.hoa.meeting_rules import router as hoa_meeting_rules_router
 from mhvp.hoa.meetings import router as hoa_meetings_router
 from mhvp.hoa.package import router as hoa_package_router
+from mhvp.hoa.reserve_statement import router as hoa_reserve_statement_router
+from mhvp.hoa.reserves import router as hoa_reserves_router
 from mhvp.hoa.routers import router as hoa_router
 from mhvp.immoware.routers import router as immoware_router
 from mhvp.imports.list_import_routers import router as list_imports_router
@@ -122,6 +126,7 @@ from mhvp.objektakte.routers import router as objektakte_router
 from mhvp.objektakte.routers import sync_router as objektakte_sync_router
 from mhvp.objektakte.rules_routers import router as objektakte_rules_router
 from mhvp.objektakte.webhook import router as objektakte_webhook_router
+from mhvp.platform.export_routers import router as tenant_export_job_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.licensing import router as licensing_router
 from mhvp.platform.market_readiness import router as market_readiness_router
@@ -225,6 +230,7 @@ def create_app(
             s3=create_s3_client(settings) if settings.s3_configured else None,
         )
         app.state.resources = resources
+        instrument_engine(engine, app.state.tracer_provider)
         app.state.readiness_checks = checks_factory(settings, resources)
         if release_gate_resolver is None:
             app.state.release_gate_resolver = DbReleaseGateResolver(resources.session_factory)
@@ -299,7 +305,9 @@ def create_app(
     app.include_router(accounting_intake_router, prefix=API_PREFIX)
     app.include_router(accounting_xrechnung_router, prefix=API_PREFIX)
     app.include_router(accounting_admin_fee_router, prefix=API_PREFIX)
+    app.include_router(accounting_admin_fee_posting_router, prefix=API_PREFIX)
     app.include_router(accounting_audit_export_router, prefix=API_PREFIX)
+    app.include_router(tenant_export_job_router, prefix=API_PREFIX)
     app.include_router(accounting_report_router, prefix=API_PREFIX)
     app.include_router(accounting_tax_router, prefix=API_PREFIX)
     app.include_router(rent_invoice_router, prefix=API_PREFIX)
@@ -334,6 +342,8 @@ def create_app(
     app.include_router(hoa_finance_router, prefix=API_PREFIX)
     app.include_router(hoa_inspection_router, prefix=API_PREFIX)
     app.include_router(hoa_assets_router, prefix=API_PREFIX)
+    app.include_router(hoa_reserve_statement_router, prefix=API_PREFIX)
+    app.include_router(hoa_reserves_router, prefix=API_PREFIX)
     app.include_router(rentindex_router, prefix=API_PREFIX)
     app.include_router(letting_router, prefix=API_PREFIX)
     app.include_router(rentlaw_router, prefix=API_PREFIX)
@@ -402,6 +412,8 @@ def create_app(
     app.add_middleware(RateLimitMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
     app.add_middleware(CorrelationIdMiddleware)
+    app.state.tracer_provider = setup_tracing(settings)
+    instrument_app(app, app.state.tracer_provider)
     return app
 
 

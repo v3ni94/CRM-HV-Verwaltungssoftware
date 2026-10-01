@@ -106,7 +106,11 @@ async def _credit_note(
         raise ProblemError(
             ErrorCodes.XRECHNUNG_NOT_ISSUED, detail="Nur Gutschriften mit Ursprungsbezug."
         )
-    if row.status not in (AdminFeeInvoiceStatus.ISSUED, AdminFeeInvoiceStatus.RELEASED):
+    if row.status not in (
+        AdminFeeInvoiceStatus.ISSUED,
+        AdminFeeInvoiceStatus.RELEASED,
+        AdminFeeInvoiceStatus.CANCELLED,
+    ):
         raise ProblemError(ErrorCodes.XRECHNUNG_NOT_ISSUED)
     original = await session.get(AdminFeeInvoice, row.corrects_invoice_id)
     if original is None:  # pragma: no cover - FK

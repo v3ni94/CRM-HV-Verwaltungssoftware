@@ -85,7 +85,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
           </div>
         }
       />
-      <form method="get" action="/kontakte" role="search" className="flex flex-wrap items-end gap-2">
+      <form method="get" action="/kontakte" role="search" aria-label={t("search")} className="flex flex-wrap items-end gap-2">
         <div className="min-w-64 flex-1">
           <label htmlFor="q" className={ui.label}>
             {t("search")}
@@ -173,7 +173,7 @@ export default async function ContactsPage({ searchParams }: { searchParams: Pro
               </li>
             ))}
           </ul>
-          <form id="contacts-bulk" className="hidden flex-col gap-2 sm:flex">
+          <form id="contacts-bulk" aria-label={t("title")} className="hidden flex-col gap-2 sm:flex">
             <BulkTagBar formId="contacts-bulk" />
             <div className={ui.tableCard}>
               <table className="mhvp-table">

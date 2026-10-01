@@ -114,15 +114,15 @@ async def list_accounts(
     q: str | None = None,
     limit: int = MAX_ACCOUNTS,
     with_money: bool = True,
+    account_filter: Any | None = None,
 ) -> list[AccountListItem]:
     """Accounts visible in the tenant, optionally filtered by property (home property or
     assignment) and by owning legal entity. ``with_money=False`` leaves balance and recent
     transactions empty (for callers without accounting rights)."""
-    accounts = (
-        await session.scalars(
-            _base_query(property_id=property_id, legal_entity_id=legal_entity_id, q=q).limit(limit)
-        )
-    ).all()
+    base = _base_query(property_id=property_id, legal_entity_id=legal_entity_id, q=q)
+    if account_filter is not None:  # visible account ids (M2-02), applied before the limit
+        base = base.where(PropertyBankAccount.id.in_(account_filter))
+    accounts = (await session.scalars(base.limit(limit))).all()
     if not accounts:
         return []
     ids = [a.id for a in accounts]

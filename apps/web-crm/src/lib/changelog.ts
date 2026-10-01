@@ -17,9 +17,61 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.51.0",
+    date: "01.10.2026",
+    title:
+      "Welle 5 der Lückenliste: Export, Tracing, Banking, Honorar, Rechnungsprüfung, Heizkosten, Rücklagen, Statusmodell, Rechte",
+    changes: [
+      "Übersicht: Welle 5 der Lückenliste vom 30.09.2026 mit 16 Paketen (verbliebene offene und teilweise Befunde ohne Entscheidungsbedarf), Migrationen 0289 bis 0297. Schwerpunkte: Mandantenexport als Hintergrundjob, OpenTelemetry-Tracing, Bankrohdaten-Ablage und finAPI-Zustimmungsablauf, Honorarrechnungen mit Storno und Buchungsentwürfen, sachliche Rechnungsprüfung, Heizkostenimport, Benachrichtigungen per E-Mail, Rücklagen je Position und Rücklagenabrechnung, Import-Berichtsarten, einheitliches Statusmodell der Eigentümerabrechnung, KI-Antwortentwurf als eigene Aufgabe, Abnahmefälle PÜ12, W13 und PÜ13, Objektzuordnung in den Restbereichen, Prüfbericht Geheimnisverschlüsselung, Portal-Logo und Barrierefreiheit. Reste und Entscheidungen stehen in docs/OPEN_QUESTIONS.md (T01-01 bis T14-01, S69-01-01, S16-03-01).",
+      "Mandant: Vollständiger Mandantenexport als Hintergrundjob für den Mandantenadministrator (Einstellungen, Mandant) mit JSON je Tabelle und Dokumentdateien als ZIP, Protokoll im Audit.",
+      "Mandant: Exportumfang um offene Posten, Ausgleiche, Bankkonten und Bankumsätze erweitert.",
+      "Beobachtbarkeit: Optionales OpenTelemetry-Tracing (MHVP_OTEL_ENDPOINT, Standard aus) für API, SQLAlchemy, Celery und httpx mit traceparent im Antwort-Header und trace_id im Log.",
+      "Betrieb: Compose-Profil otel mit Collector-Beispielkonfiguration und Runbook beobachtung.md.",
+      "Banking: Rohdaten von Kontoauszugsdateien und finAPI-Abrufen werden unveraendert unter bank/<mandant>/<konto>/<datum>.<ext> abgelegt und mit dem Aufbewahrungsprofil 10 Jahre (Entwurf) indiziert.",
+      "Banking: Das Ablaufdatum der finAPI-Zustimmung wird beim Pruefen der Verbindung aus der Anbieterantwort gelesen, die Erinnerung 10 Tage vorher legt zusaetzlich eine Aufgabe an.",
+      "CRM: Bankverbindungen zeigen dauerhaft das Ablaufdatum der Zustimmung oder einen Hinweis, wenn keines vorliegt.",
+      "Buchhaltung: Honorarrechnungen haben den Status storniert, die Liste ist nach Status filterbar, auch die Gutschrift kann freigegeben werden.",
+      "Buchhaltung: Freigegebene Honorarrechnungen und Gutschriften erzeugen hinter Freigabestufe G1 je einen Buchungsentwurf im Buchungskreis des Zahlers und des Verwalters, Konten nur aus der neuen Kontenzuordnung je Mandant ohne Vorgabe.",
+      "CRM: Seite Verwalterhonorar mit Statusfilter und Aktion Buchungsentwurf.",
+      "Rechnungsprüfung: Sachliche Prüfung als Befunde gegen verknüpften Auftrag (Angebot, Kostengrenze, Status), Dienstleistervertrag, WEG Beschluss, Wirtschaftsplanposition und Rechnungsplan (Betrag, Rhythmus) mit Mengenabgleich je Position und Zuständigkeitsvorschlag Objektverwalter, ohne automatische Freigabe.",
+      "Rechnungsprüfung: Toleranzen für Preis- und Mengenabgleich je Mandant (Standard 0 %) über /accounting/invoice-check-settings.",
+      "CRM Rechnungen: Abschnitt Sachliche Prüfung (Befunde) in der Rechnungsansicht.",
+      "Abrechnung: Heizkostenabrechnungen des Messdiensts werden als eigener Import mit Originaldokument, Zeitraum, Belegsumme, Nutzerzuordnung und Kostenbestandteilen je Einheit erfasst (M17-09).",
+      "Abrechnung: Der Heizkostenimport prüft Summen gegen die Belegsumme, die CO2-Aufteilung nach der hinterlegten Stufentabelle und mögliche Doppelerfassungen im Rechnungsbuch und wird erst nach Prüfung in die Betriebskostenabrechnung übernommen.",
+      "Abrechnung: CSV-Import der Messdienstwerte mit frei wählbarer Spaltenzuordnung ohne Formatannahmen.",
+      "Workspace: Benachrichtigungseinstellungen haben je Art die Zustellung sofort oder täglich, die Mails werden je Benutzer als Sammelmail gesendet (Migration 0293, Beat täglich 07:30).",
+      "CRM: Die Einstellungsseite Benachrichtigungen bietet die Auswahl Zustellung je Art.",
+      "WEG: Zweckgebundene Rücklagen führen Bankkonto des Rechtsträgers, Anfangsbestand und Anfangsjahr (Migration 0294).",
+      "WEG: Neue Entwicklung je Rücklage und Jahr mit Anfang, Zuführung, Entnahme, Steuern, Gebühren, Zinsen und Ende, auch in Abrechnungssnapshot und Vermögensbericht.",
+      "WEG: Erfasste Mittelverwendung je Abrechnung ist abrufbar und im Entwurf entfernbar.",
+      "CRM: Rücklagenseite mit Ändern, Entwicklung je Jahr und Liste der Mittelverwendung mit Belegstatus.",
+      "Import: Neue Berichtsarten Kautionen, Umlageschlüssel mit Einheitenwerten, Zähler, Energieausweise, Dienstleisterverhältnisse und Portalnutzer (nur Status) mit Vorprüfung, Übernahme und Rücknahme (Migration 0297 für die Enum-Werte).",
+      "Abrechnung: Die Eigentümerabrechnung durchläuft jetzt das einheitliche Statusmodell (Beiratsprüfung, ausgeben, fällig, gebucht, gesperrt) mit Vier-Augen bei der internen Freigabe und Statusverlauf; ausgeben, fällig und gebucht nur mit Freigabestufe G3.",
+      "WEG: Neue Rücklagenabrechnung je Jahr als eigenes Abrechnungsobjekt, erzeugt aus den Rücklagendaten der Hausgeldabrechnung, mit gleichem Statusmodell; ausgeben, fällig und gebucht nur mit Freigabestufe G4.",
+      "CRM: Statusanzeige und Statusaktionen in der Eigentümerabrechnung und ein Bereich Rücklagenabrechnung auf der Seite WEG, Rücklagen.",
+      "KI: Neue Aufgabe reply_draft (Migration 0296) erzeugt Antwortentwürfe mit eigenem Anbieterschema, Tonfall und Platzhaltern nach den Stilvorgaben des Postfachs; der Entwurf gilt erst nach ausdrücklicher Freigabe und wird nie automatisch versendet.",
+      "Kommunikation: Kompaktansicht mit Button Antwortentwurf (KI) und Freigabe, Kurz senden bleibt bis zur Freigabe gesperrt, neue Endpunkte POST /mail/messages/{id}/reply-ai und /reply-ai/approve.",
+      "Automatisierung: Neue Aktion Feld setzen für Aufträge (Status angefragt oder in Arbeit, Termin, Zuständiger des Tickets) und Dokumente (Kategorie, Objektverknüpfung) aus einer geschlossenen Feldliste mit Testlauf.",
+      "Tests: Abnahmefälle PÜ12, W13 und PÜ13 (SD-05 bis SD-07) als Integrationstests ergänzt und mit Protokoll vom 01.10.2026 dokumentiert.",
+      "Rechte: Die Portalverwaltung zeigt eingeschränkten Mitgliedern nur Zugänge von Kontakten mit Vertrag auf einem zugeordneten Objekt, Einladungen und Zugangsaktionen außerhalb antworten 404.",
+      "Objektakte: Vollständigkeit, Listen und Abgabeexporte je Objekt folgen der Objektzuordnung, die Gesamtliste fehlender Unterlagen ist gefiltert.",
+      "Importe: Migrationsimporte (Objekt, Buchungskreis, Eröffnungssalden, Wechselanträge, Abgleichberichte, Abnahmeprotokolle) und Altdaten (historische Tickets, Einzelposten) folgen der Objektzuordnung.",
+      "WEG: Prüfberichte des Beirats per Id prüfen die Objektzuordnung über Prüfauftrag und Gemeinschaft.",
+      "Banking: Bankregeln, Regelvorschläge, Sync-Protokoll und Klärungsliste folgen der Objektzuordnung; ein Konto lässt sich nur zugeordneten Objekten zuordnen; die Kontoliste filtert vor dem Limit.",
+      "Sicherheit: Prüfbericht docs/reviews/SECRETS-2026-10-01.md zur Feldverschlüsselung aller Geheimnisklassen (S16-03).",
+      "Kern: Zentrale Maskierung von Geheimnissen (Passwörter, PINs, Tokens, API-Schlüssel, Secrets) in allen Logzeilen, Domain Events und im Audit-Log.",
+      "Kern: Zugriffslog maskiert Tokens im Pfad von Selbstauskunft-Links und Kalender-Abo.",
+      "Vermietung: Selbstauskunft-Link-Token wird nur noch als SHA-256 gespeichert, nicht mehr im Klartext.",
+      "Einstellungen: Das Portal-Logo lässt sich in den Mandanteneinstellungen als PNG oder JPEG hochladen und wird über die Dokument-ID im Branding gesetzt.",
+      "Barrierefreiheit: Formulare in Vertrag, Mandantenverwaltung, Benutzerverwaltung, Profil, Buchungsstorno, FinTS, Belegungsliste, Kontakt- und Objektsuche sowie im Portal (Dokumente, Beirat) tragen einen aria-label.",
+      "Tests: Playwright-Spec für die Detailseite des Wirtschaftsplans (Plan anlegen, Position, Berechnung, Rücksprung).",
+    ],
+  },
+  {
     version: "1.50.0",
     date: "01.10.2026",
-    title: "Welle 4 der Lückenliste: Rechnungen, Dokumente, Übernahme, Import, Rechte, Kautionen, Portal, Prüfungen",
+    title:
+      "Welle 4 der Lückenliste: Rechnungen, Dokumente, Übernahme, Import, Rechte, Kautionen, Portal, Prüfungen",
     changes: [
       "Übersicht: Welle 4 der Lückenliste vom 30.09.2026 mit 16 Paketen (Reste aus Welle 3 und Prüfungen), Migrationen 0284 bis 0288. Schwerpunkte: Belegmaske mit Anlagen, Rechnungsplan-Erfassung, Sammelrückmeldung Lastschriften, Honorarlauf mit PDF, Jahresübernahme, geschwärzte Kopien und Eingangsadresse je Mandant, Tickets aus der Übernahme-Checkliste, Onboarding-Anlage von Konten und Schlüsseln, Prüfbericht und Rücknahme des Altdatenimports, Einsichtspaket-Frist, Stummschalten, Wartungs-Sammelaktion, include-Parameter und Webhook statement.confirmed, Objektzuordnung in Banking, Abrechnung, WEG, Suche und Assistent, If-Match im CRM, KI-Automatik-Schalter, Kautionszinsverlauf, Portal-Branding und Anmeldestrenge, Leistungs- und Playwright-Tests, Sicherheits- und Geldflussprüfung (docs/reviews), Navigation, Hilfeindex und Handbuch. Reste und Entscheidungen stehen in docs/OPEN_QUESTIONS.md (R02 bis R09).",
       "Migrationen: Die Rücknahme der Migrationen 0257 und 0278 entfernt Einsichtsereignisse jetzt mit aufgehobener Zeilensicherheit, vorher scheiterte der Rücklauf auf Datenbanken mit Ereigniszeilen.",
@@ -99,7 +151,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.49.0",
     date: "01.10.2026",
-    title: "Welle 3 der Lückenliste: Oberflächen, Dokumente, Datenschutz, Assistent, Import, WEG, Portal, API",
+    title:
+      "Welle 3 der Lückenliste: Oberflächen, Dokumente, Datenschutz, Assistent, Import, WEG, Portal, API",
     changes: [
       "Übersicht: Welle 3 der Lückenliste vom 30.09.2026 mit 17 Paketen (Reste aus Welle 2), Migrationen 0271 bis 0283. Schwerpunkte: Freigabeentscheidungen mit Snapshot-Hash und gepflegte Offene-Posten-Tabelle, CRM-Oberflächen für Mahnwesen, Zahllauf, Rechnungspläne, Stammdaten, Vollmachten und Teams, Dokumentablage mit Ablagezone, ZIP-Import, Eingangsadresse, Drive-Abgleich und Schwärzungskopien, Kontakt-Zusammenführung und Datenschutzoberfläche, Chat-Aktionen und Modellkaskade des Assistenten, Objektübernahme-Checkliste und Personenabgleich, weitere Immoware24-Berichtsarten, WEG-Rücklagenbindung und Gesamtabrechnung, Portal-Belegsuche und Eigentümerabrechnung, Benachrichtigungseinstellungen und Sammelaktionen, generische Listenparameter und Massenendpunkte, Objektzuordnung je Mitgliedschaft mit ETag und Schlüsselrotation, Mietspiegel und Exposé, Honorar-PDF und Jahresübernahme, Mahnlauf-Fehlerstatus und gespeicherte Filter. Reste und Entscheidungen stehen in docs/OPEN_QUESTIONS.md (Q01 bis Q16).",
       "Buchhaltung: Zentrale Freigabeentscheidung mit Hash des Vorgangs für Zahlungs- und Rechnungsfreigaben, Änderungen setzen sie dauerhaft auf ungültig (S69-02).",
@@ -193,7 +246,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.48.0",
     date: "01.10.2026",
-    title: "Welle 2 der Lückenliste: Buchhaltung, Bank, Zahlläufe, Mahnwesen, Abrechnung, WEG, Postfach, Portal, Sicherheit, Datenschutz",
+    title:
+      "Welle 2 der Lückenliste: Buchhaltung, Bank, Zahlläufe, Mahnwesen, Abrechnung, WEG, Postfach, Portal, Sicherheit, Datenschutz",
     changes: [
       "Übersicht: Welle 2 der Lückenliste vom 30.09.2026 mit 22 Paketen und 20 parallelen Agenten, Migrationen 0250 bis 0270. Umgesetzt sind Betreiberentscheidungen 2 bis 13 nach Alternative a (Zahlungsrückmeldungen pain.002 und camt.054, Mahnsperren und Zinsentwurf, KI-Kontierung Stufe 2, IMAP-Abruf, Portal-Chat und Vertreterrolle, Mietspiegel-Datenmodell, Passwortregeln und WebAuthn-Vorbereitung, Datenschutzmodul, Steuerauswertungen, Vorschau-Zeitpläne, Preismodell), die Kompaktansicht für Mail und Ticket, die Fehlerbehebungen HTML-Mails und Ticket-Dokumente sowie die Betreiberwünsche Rechtsträger-Zeile und getrennte Banken ausgeblendet. Reste stehen in docs/plans/LUECKENLISTE-2026-09-30.md und docs/OPEN_QUESTIONS.md (P01 bis P21).",
       "Buchhaltung: Verteilung eines Kostenkontos auf Umlageschlüssel per API und im Kontenblatt, Summe muss genau 100 % ergeben.",
@@ -357,7 +411,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.47.0",
     date: "30.09.2026",
-    title: "Belegkette B05 Sperre, Gmail Latenz, KI Einstellungen, Lückenliste 30.09.2026",
+    title:
+      "Belegkette B05 Sperre, Gmail Latenz, KI Einstellungen, Lückenliste 30.09.2026",
     changes: [
       "Buchhaltung, Belegkette B05: neuer Klärungsstatus Beleg angefordert (Migration 0248); Bankbewegung durch eine Person als unbelegt melden (POST /banking/transactions/{id}/clarification mit Begründung und optionaler Zuständigkeit, Ticket wird angelegt); Buchung aus der Bankzeile mit offener Klärung ist gesperrt (Fehlercode MHVP-BANK-0027 Beleg fehlt), Freigabe durch verknüpften Beleg oder begründetes Kennzeichen kein Beleg erforderlich; Liste Buchungen ohne Beleg zeigt das Alter in Tagen, Knopf Beleg anfordern im CRM; Regel docs/rules/B05.md, Handbuch Bank.",
       "Postfach, Gmail Rückkanal: Abruf alle 60 Sekunden statt 300, Redis Sperre verhindert überlappende Läufe; Beruhigungsfrist Standard 180 Sekunden statt 600 (Migration 0249 setzt Mandanten, die noch auf 600 standen, auf 180; abweichend gesetzte Werte bleiben), Empfehlung im CRM; Latenz von der Archivierung in Gmail bis erledigt im CRM sinkt von bis zu 15 auf rund 4 Minuten.",
@@ -369,7 +424,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.46.0",
     date: "29.09.2026",
-    title: "G1 Öffnungspaket, Automatik und Belegkette, Datenübernahme, Offline Erfassung, Schreiben und Objektakte",
+    title:
+      "G1 Öffnungspaket, Automatik und Belegkette, Datenübernahme, Offline Erfassung, Schreiben und Objektakte",
     changes: [
       "Buchhaltung, G1 Öffnung: Neue Seite Einstellungen, Buchhaltung, G1 Öffnung mit Checkliste zur Öffnung der Freigabestufe G1 (Kontenrahmen, abgenommene Anhang D Fälle, manuelle Prüfpunkte, Automatikstufen, Freigabestand), Ergebnis je Prüfpunkt mit Datum und Name, Antrag auf G1 über den bestehenden Vier Augen Pfad; die Seite öffnet die Stufe nie selbst (Migration 0242, Tabelle g1_acceptance). Betreiberunterlagen: Kontenrahmen Prüfung nach Anhang A.1 mit offenen Fragen, Abnahmeprotokoll Anhang D mit Rechenweg und Prüfort je Fall, Verfahrensdokumentation Kapitel 7 Automatik der Buchhaltung.",
       "Buchhaltung, Automatik: Automatikbuchungen ohne abgeschlossene Nachkontrolle werden aus Mahnlauf, Tilgungsvorschlag und Lastschriftlauf ausgenommen (Regel M12-05, Fehlercode MHVP-BANK-0026); Rücklastschriften zu automatisch gebuchten Zahlungen erzeugen ein Nachkontrolle Item der Art Rückläufer und zählen einen Widerspruch an der Bankregel; Fälligkeiten berücksichtigen bundesweite und nordrhein westfälische Feiertage (Migration 0243).",
@@ -406,7 +462,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.45.0",
     date: "29.09.2026",
-    title: "Handy und Tablet, Bankeinrichtung und Automatik, Lexware Office im Ticket, Verbrauchsinformation",
+    title:
+      "Handy und Tablet, Bankeinrichtung und Automatik, Lexware Office im Ticket, Verbrauchsinformation",
     changes: [
       "CRM auf Handy und Tablet, Hülle: Das CRM lässt sich als App auf dem Startbildschirm ablegen (Manifest, Icons, Eintrag Als App installieren im Benutzermenü, Hinweis für iPadOS); der Service Worker hält nur die Offline Seite und die Icons vor, nie Daten, Seiten oder Dokumente (Betreiberentscheidung M30-08, ADR 0017, Annahme A-084).",
       "CRM auf Handy und Tablet, Datenseiten: Alle Tabellen laufen in einem Scrollrahmen, Einheiten und Dokumente erscheinen unterhalb der Tabletbreite als Kartenliste, Stammdaten als gestapelte Listen; Kalender mit zweizeiliger Werkzeugleiste, Schaltfläche Heute, umbrechenden Monatszeilen und Dialogen als Sheets; Kontaktseite mit Reitern, Anruf und Mail als 44 Pixel Ziele; Ticketdetail mit Abschnittsleiste, Sammelleiste am unteren Rand, Kameraaufnahme und Dokumentöffnung im selben Tab.",
@@ -440,7 +497,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.44.0",
     date: "29.09.2026",
-    title: "Lückenpakete, Gmail-Abgleich, Buchhaltungsgedächtnis, Lexware Office, Prozessflows, Handy und Tablet",
+    title:
+      "Lückenpakete, Gmail-Abgleich, Buchhaltungsgedächtnis, Lexware Office, Prozessflows, Handy und Tablet",
     changes: [
       "Postfach, Rückkanal Gmail: Was in Gmail archiviert, mit Label versehen, in den Papierkorb verschoben oder wiederhergestellt wird, wird in der Plattform nachvollzogen; das Sammelpostfach entscheidet über die Erledigung, Erledigt gilt für jede Kopie einer Mail, Tickets werden nach Betreibervorgabe geschlossen; Vorschau je Postfach unter Einstellungen, Postfächer, Standard aus (Migration 0224).",
       "Kontakte, Bankverbindung: An einem bestehenden Kontakt lassen sich Bankverbindungen hinzufügen, als neue Version ändern und beenden, jeweils mit Vier-Augen-Freigabe; neue Systemrolle Freigabe mit dem Recht contacts:approve; ein Überschreiben per Schnittstelle wird abgewiesen, solange eine Änderung zur Freigabe offen ist (Migration 0225).",
@@ -471,7 +529,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: "KI-Assistent mit Datenzugriff",
     changes: [
       "KI-Assistent beantwortet Fragen zu Kontakten, Objekten, Einheiten, Verträgen und Tickets aus den eigenen Daten, jeweils nur im Rahmen der eigenen Berechtigungen und des Mandanten; Antworten enthalten Links zu den gefundenen Datensätzen, findet die Plattform nichts, sagt der Assistent das ausdrücklich.",
-      "Fragen wie \"Wo finde ich ...\" verweisen auf die passende Seite und den Handbuchabschnitt.",
+      'Fragen wie "Wo finde ich ..." verweisen auf die passende Seite und den Handbuchabschnitt.',
       "Vorschläge im Chat passend zur Seite und zum geöffneten Datensatz (Kontakt, Objekt, WEG, Einheit, Vertrag, Ticket, Übergabeprotokoll, Postfach); der Chat führt ein Gespräch mit Rückfragen und bezieht Seite, Datensatz und bisherigen Verlauf ein.",
       "Ohne freigegebenen KI-Anbieter oder bei erreichtem Budget zeigt der Chat die Treffer der Plattformsuche mit Hinweis.",
       "Änderungen über den Chat (Kontaktdaten, Notiz, Ticket) entstehen nur als Vorschlag mit Bestätigung; Bankverbindungen nie über den Chat. Telefonnummern, E-Mail-Adressen und Bankverbindungen verlassen die Plattform nur maskiert (Migration 0223).",
@@ -578,7 +636,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: "Umbuchungen, Portalformulare, Kalenderfehler und Release-Skript",
     changes: [
       "Umbuchungen zwischen eigenen Bankkonten werden nur einmal gebucht: Nach der Buchung einer Seite gilt die Partnerseite als erledigt, ein weiterer Buchungsversuch wird mit MHVP-BANK-0019 abgelehnt; nach einem Storno ist das Paar genau einmal neu buchbar (Abnahmefall D04, Regel B08). Ein Umbuchungspaar kann nur noch gegen das Bankkonto der Partnerseite gebucht werden.",
-      "Kalender: Fehler des Google Kalenders führen nicht mehr zu \"Interner Fehler\"; eine abgelaufene oder widerrufene Google-Verbindung meldet MHVP-COMM-0004 mit dem Hinweis, das Postfach unter Einstellungen, Postfächer neu zu verbinden, eine vorübergehende Störung meldet MHVP-COMM-0005 mit der Bitte um einen erneuten Versuch; interne Termine und Fristen werden weiter angezeigt.",
+      'Kalender: Fehler des Google Kalenders führen nicht mehr zu "Interner Fehler"; eine abgelaufene oder widerrufene Google-Verbindung meldet MHVP-COMM-0004 mit dem Hinweis, das Postfach unter Einstellungen, Postfächer neu zu verbinden, eine vorübergehende Störung meldet MHVP-COMM-0005 mit der Bitte um einen erneuten Versuch; interne Termine und Fristen werden weiter angezeigt.',
       "Anmeldeseite: Logo, Favicon und die übrigen Dateien aus dem öffentlichen Verzeichnis werden ohne Sitzung ausgeliefert und nicht mehr auf die Anmeldung umgeleitet; Seiten und Schnittstellen bleiben geschützt.",
       "Portalformulare: Die Einreichungen lassen sich im CRM nach dem Status des zugehörigen Tickets filtern (Alle, Offen oder ein einzelner Status).",
       "Dokumente: Hochgeladene HEIC- und HEIF-Dateien werden nur noch mit gültiger Dateisignatur angenommen, umbenannte Programme oder Videos werden abgelehnt.",
@@ -593,7 +651,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: "Lern-Workflow, Folgevorgänge und durchgängiges Design",
     changes: [
       "Abnahmefälle Anhang D: Rückverfolgbarkeit aller 58 Fälle in docs/acceptance/D-cases.md mit zugeordnetem Test und Stand der Automatisierung; neue Tests für D04, D05, D07 und D24 über den Bankimport mit geschlossenen Freigabestufen; keine Abnahme erteilt, die Abnahme durch den Betreiber steht für alle Fälle aus.",
-      "Postfach: \"Antworten\" und \"Vorschlag übernehmen\" zeigen bei Nutzern mit eingeschaltetem zweiten Faktor (TOTP) keinen \"Interner Fehler\" mehr; die Signatur liest nur noch den Anzeigenamen des Nutzers. Dasselbe gilt für Einreichen, Ticketantwort und Signaturvorschau.",
+      'Postfach: "Antworten" und "Vorschlag übernehmen" zeigen bei Nutzern mit eingeschaltetem zweiten Faktor (TOTP) keinen "Interner Fehler" mehr; die Signatur liest nur noch den Anzeigenamen des Nutzers. Dasselbe gilt für Einreichen, Ticketantwort und Signaturvorschau.',
       "Leere Einträge in gespeicherten Empfängerlisten führen nicht mehr zum Abbruch beim Antworten, und Kopien im Sammelpostfach antworten an die Reply-To-Adresse.",
       "Lern-Workflow: Nach fünf gleichen manuellen Zuordnungen für denselben Absender ohne Widerspruch schlägt die Plattform eine Regel vor; aktiv wird sie erst nach ausdrücklicher Annahme.",
       "Neue Seite Regelvorschläge unter Einstellungen mit Annehmen, Ablehnen mit Grund und einstellbarer Schwelle sowie Hinweis im Mailbereich.",
@@ -610,34 +668,35 @@ export const CHANGELOG: ChangelogEntry[] = [
     title: "Darstellung Tag und Abend",
     changes: [
       "Objekt, Reiter Einheiten: Eigentümer und Mieter sind jetzt anklickbar und führen direkt zum Kontakt; bei mehreren Personen ist jede einzeln verlinkt, ohne hinterlegte Person führt der Name zum Vertrag.",
-      "Darstellung (Betreiberentscheidung 27.09.2026): Tagmodus \"Klar und ruhig\" (helles, ruhiges Layout, Orange nur für Handlungsbedarf und aktive Navigation) und Abendmodus \"Dunkel und präzise\" (dunkle Oberfläche, feine Linien statt Schatten, Gold als Akzent); Umschalter \"Tag\", \"Abend\" und \"Automatisch\" im Benutzermenü und unter Einstellungen, Profil; automatisch wechselt von 19 bis 7 Uhr in den Abendmodus und wird jede Minute neu geprüft.",
+      'Darstellung (Betreiberentscheidung 27.09.2026): Tagmodus "Klar und ruhig" (helles, ruhiges Layout, Orange nur für Handlungsbedarf und aktive Navigation) und Abendmodus "Dunkel und präzise" (dunkle Oberfläche, feine Linien statt Schatten, Gold als Akzent); Umschalter "Tag", "Abend" und "Automatisch" im Benutzermenü und unter Einstellungen, Profil; automatisch wechselt von 19 bis 7 Uhr in den Abendmodus und wird jede Minute neu geprüft.',
       "Die Wahl wird je Benutzerkonto gespeichert (PATCH /api/v1/auth/me/preferences, Feld theme: day, evening oder auto, serverseitig geprüft) und zusätzlich lokal im Browser gehalten, damit die Seite ohne Aufblitzen der falschen Darstellung startet; ein unerwarteter oder veralteter gespeicherter Wert wird verworfen statt die Seite abstürzen zu lassen (Lehre aus 1.35.1).",
       "Farb- und Gestaltungswerte beider Modi zentral in den Darstellungsbausteinen hinterlegt (weiche Karten mit 10 bis 14 px Radius und sehr weichem Schatten am Tag, 6 px Radius ohne Schatten am Abend); die Bearbeitungsmarkierung im Postfach nutzt jetzt eine eigene Farbe je Modus statt der Mittel-Priorität-Farbe.",
       "Kontrast in beiden Modi nach WCAG AA geprüft, Fokusringe in beiden Modi sichtbar.",
       "Mailansicht und Ticket-Mailverlauf zeigen Von, An und Kopie je auf einer eigenen Zeile und kennzeichnen das eigene Postfach dezent.",
       "Antworten aus Mail und Ticket geht jetzt standardmäßig an alle: an den Absender oder die Reply-To-Adresse, alle übrigen ursprünglichen Empfänger in Kopie, ohne eigene Postfachadressen und ohne Dubletten (Migration 0217).",
-      "Zuordnungsprüfung: ist der Kontakt einer Mail oder eines Tickets sicher (automatisch oder durch ein Ja bestätigt) und hat er genau einen aktiven Mietvertrag oder genau eine aktive Eigentümerschaft einer Einheit, werden Einheit und Objekt jetzt automatisch mit übernommen, begründet mit \"eindeutiger Vertrag\" beziehungsweise \"eindeutiges Eigentum\", nur in ein noch leeres Feld; mehrere Verträge oder Einheiten bleiben wie gewohnt eine Rückfrage mit diesen Kandidaten, Hinweise im Text ordnen sie dort nur um; ein unsicherer Kontakt leitet weiterhin nichts ab (Betreiberauftrag 27.09.2026, Regel A80-01, Annahme A-068).",
+      'Zuordnungsprüfung: ist der Kontakt einer Mail oder eines Tickets sicher (automatisch oder durch ein Ja bestätigt) und hat er genau einen aktiven Mietvertrag oder genau eine aktive Eigentümerschaft einer Einheit, werden Einheit und Objekt jetzt automatisch mit übernommen, begründet mit "eindeutiger Vertrag" beziehungsweise "eindeutiges Eigentum", nur in ein noch leeres Feld; mehrere Verträge oder Einheiten bleiben wie gewohnt eine Rückfrage mit diesen Kandidaten, Hinweise im Text ordnen sie dort nur um; ein unsicherer Kontakt leitet weiterhin nichts ab (Betreiberauftrag 27.09.2026, Regel A80-01, Annahme A-068).',
       "Mail- und Ticketansicht zeigen jetzt die Rolle des zugeordneten Kontakts (Mieter, Eigentümer, Beirat, Dienstleister, auch mehrere zugleich) mit Verweis auf Kontakt, Einheit und Objekt.",
     ],
   },
   {
     version: "1.36.0",
     date: "27.09.2026",
-    title: "Postfach: Antworten mit Anhängen, Bearbeitungsmarkierung, Duplikate, Signatur je Nutzer, Zuordnungsrückfrage",
+    title:
+      "Postfach: Antworten mit Anhängen, Bearbeitungsmarkierung, Duplikate, Signatur je Nutzer, Zuordnungsrückfrage",
     changes: [
-      "Mail: \"Antworten\" öffnet den Antwortentwurf direkt unter der Nachricht (ein Entwurf je Eingangsmail, Vorbereiten und Antworten nutzen denselben); Empfänger, Kopie, Betreff und Text frei bearbeitbar; Anhänge am Entwurf aus dem DMS verknüpfen, vom lokalen Rechner hochladen oder entfernen, Versand mit allen Anhängen; verständliche Fehlermeldungen zu Postfach, Empfängern und Freigabe (Betreibermeldung 27.09.2026, Ursache: der neue Entwurf wurde still im Reiter Entwürfe abgelegt, Migration 0214 No-op).",
+      'Mail: "Antworten" öffnet den Antwortentwurf direkt unter der Nachricht (ein Entwurf je Eingangsmail, Vorbereiten und Antworten nutzen denselben); Empfänger, Kopie, Betreff und Text frei bearbeitbar; Anhänge am Entwurf aus dem DMS verknüpfen, vom lokalen Rechner hochladen oder entfernen, Versand mit allen Anhängen; verständliche Fehlermeldungen zu Postfach, Empfängern und Freigabe (Betreibermeldung 27.09.2026, Ursache: der neue Entwurf wurde still im Reiter Entwürfe abgelegt, Migration 0214 No-op).',
       "E-Mail-Signatur je angemeldetem Nutzer: Position (Dropdown mit Standardkatalog Geschäftsführer, Prokurist, Assistenz, Objektbetreuung, Immobilienkaufmann, Buchhaltung, Leitung Buchhaltung, Asset Management, sowie manuell anlegen) und Durchwahl im Profil und in der Benutzerverwaltung, Signaturvorlage je Mandant mit Platzhaltern unter Einstellungen, Vorschau Text und HTML nach HVM-CI bzw. als Wortmarke für das Einzelunternehmen; die Signatur wird in den gespeicherten Entwurfstext eingefügt, bei Antworten, übernommenem Vorschlag, Playbook und Ticketantwort sofort, sonst spätestens beim Einreichen, sodass die Freigabe genau den versendeten Text zeigt; der Versand hängt nichts mehr an (Migration 0215).",
       "Postfach: neueste Nachrichten oben in allen Ansichten; Mails in Bearbeitung (Antwort eingereicht, interner Kommentar oder Bearbeiter) werden gelb hinterlegt und tragen den Namen des Bearbeiters unter Datum und Uhrzeit; dieselbe Mail an Sammel- und persönliches Postfach erscheint nur einmal beim persönlichen Postfach, die Kopie wird verknüpft und teilt das Ticket (Kennzeichen Sammelpostfach je Postfach, Wartungsendpunkt für vorhandene Mails, Migration 0213).",
-      "Zuordnungsprüfung mit Rückfrage: jede eingehende Mail und jedes Ticket wird auf Kontakt, Verwaltungsobjekt und Einheit geprüft; sichere Treffer werden begründet übernommen, unsichere als Frage \"Handelt es sich um ...?\" mit Ja und Nein (und Suche bei Nein) in Mail- und Ticketansicht angezeigt, Entscheidungen werden protokolliert (Migration 0216, Annahme A-068 zu Schwellenwerten).",
+      'Zuordnungsprüfung mit Rückfrage: jede eingehende Mail und jedes Ticket wird auf Kontakt, Verwaltungsobjekt und Einheit geprüft; sichere Treffer werden begründet übernommen, unsichere als Frage "Handelt es sich um ...?" mit Ja und Nein (und Suche bei Nein) in Mail- und Ticketansicht angezeigt, Entscheidungen werden protokolliert (Migration 0216, Annahme A-068 zu Schwellenwerten).',
       "Energieausweis am Gebäude: nach einer Inline-Änderung des Gebäudes speicherte das Formular mit veralteter Version und scheiterte (412); die Version wird jetzt nachgeführt.",
-      "Bank: ohne FinTS-Produktregistrierung zeigt die Bankseite einen klaren Hinweis statt des Verbindungsknopfs (neuer Endpunkt GET /banking/fints/config), Einstellungen, Bank verlinkt auf die Einrichtung; Menüknöpfe eindeutig benannt (\"Menü einklappen\", \"Alle Bereiche einklappen\"); Rechnungsprüfung und Abrechnungswerkbank sperren Knöpfe bis zum Abschluss der Aktualisierung.",
+      'Bank: ohne FinTS-Produktregistrierung zeigt die Bankseite einen klaren Hinweis statt des Verbindungsknopfs (neuer Endpunkt GET /banking/fints/config), Einstellungen, Bank verlinkt auf die Einrichtung; Menüknöpfe eindeutig benannt ("Menü einklappen", "Alle Bereiche einklappen"); Rechnungsprüfung und Abrechnungswerkbank sperren Knöpfe bis zum Abschluss der Aktualisierung.',
       "Einstellungen: Suchfeld über der Kartenübersicht ergänzt, findet Seiten sowie einzelne Abschnitte bis zur dritten Ebene (z. B. Buchhaltung, Steuern, Reverse Charge), unscharf gegenüber Umlauten und Groß-/Kleinschreibung, rechtegefiltert; zusätzlich in der Befehlspalette (Strg+K) verfügbar.",
-      "Duplikate: Migration 0213 kennzeichnet auch bestehende Postfächer wie info@ als Sammelpostfach (die Nachbefüllung blieb wegen der Zeilensicherheit wirkungslos); gleichzeitige Abrufe zweier eigener Postfächer legen dieselbe Mail nur einmal als führende Mail an; eine Mail mit bekannter Message-ID, aber anderem Absender, Betreff, Text oder Anhang wird als eigene Mail gespeichert; die Wartung \"Duplikate verknüpfen\" lässt Kopien mit einem anderen Ticket unverändert und zählt sie als Ticketkonflikt.",
-      "Rechnungsweiterleitung: eine Rechnung mit gleicher Message-ID wird weder automatisch noch über \"Weiterleiten\" ein zweites Mal an die Buchhaltung gegeben (Status \"duplicate\" bzw. Meldung mit Betreff, Datum und Postfach der bereits weitergeleiteten Mail), auch bei gleichzeitigem Klick und Abruf; ohne verbundenes Gmail-Postfach wird die Weiterleitung als \"nicht gesendet\" mit Grund markiert statt als gesendet und sperrt eine spätere Weiterleitung nicht.",
+      'Duplikate: Migration 0213 kennzeichnet auch bestehende Postfächer wie info@ als Sammelpostfach (die Nachbefüllung blieb wegen der Zeilensicherheit wirkungslos); gleichzeitige Abrufe zweier eigener Postfächer legen dieselbe Mail nur einmal als führende Mail an; eine Mail mit bekannter Message-ID, aber anderem Absender, Betreff, Text oder Anhang wird als eigene Mail gespeichert; die Wartung "Duplikate verknüpfen" lässt Kopien mit einem anderen Ticket unverändert und zählt sie als Ticketkonflikt.',
+      'Rechnungsweiterleitung: eine Rechnung mit gleicher Message-ID wird weder automatisch noch über "Weiterleiten" ein zweites Mal an die Buchhaltung gegeben (Status "duplicate" bzw. Meldung mit Betreff, Datum und Postfach der bereits weitergeleiteten Mail), auch bei gleichzeitigem Klick und Abruf; ohne verbundenes Gmail-Postfach wird die Weiterleitung als "nicht gesendet" mit Grund markiert statt als gesendet und sperrt eine spätere Weiterleitung nicht.',
       "Signatur: keine doppelte Signatur mehr bei bearbeitetem Signaturblock, gelöschter Trennzeile oder seit dem Anlegen geänderter Position, Durchwahl, Vorlage oder Postfach; die Platzhalterzeilen [Name] und [Firma] der Antwortvorlagen entfallen; die E-Mail-Zeile zeigt die Adresse des sendenden Postfachs; die Mobilnummer der SMS-Bereitschaft erscheint nicht mehr; eine geänderte Durchwahl wird gespeichert.",
       "Signaturvorlage: unbekannte Platzhalter werden beim Speichern mit Namen abgelehnt und blockieren in bestehenden Vorlagen weder Entwurf noch Versand; Vorschau und Vorlage weisen darauf hin, dass Mails derzeit als Klartext mit Textsignatur versendet werden, HTML-Vorlage und Logo dienen nur der Vorschau.",
       "Antworten öffnet nur noch den eigenen offenen Entwurf zu genau dieser Mail im freigegebenen Postfach, nie den Entwurf von Kollegen oder zu älteren Mails des Verlaufs; Vorschlag übernehmen und Vorbereiten zeigen den neuen Text sofort, bei ungespeicherten Änderungen fragt der Editor, welcher Text gelten soll.",
-      "Zuordnung: Kontakte werden nur automatisch zugeordnet, wenn die Absenderadresse genau einem aktiven Kontakt gehört, sonst Rückfrage (auch bei geteilten Adressen und gelöschten Dubletten); eine Einheit wird nur zusammen mit einem Vertrag des Kontakts automatisch zugeordnet; \"Nr.\" allein gilt nicht mehr als Einheitenangabe; Anreden, Anredewörter, Nachnamen eigener Mitarbeiter und zitierte frühere Mails zählen nicht als Absendername.",
+      'Zuordnung: Kontakte werden nur automatisch zugeordnet, wenn die Absenderadresse genau einem aktiven Kontakt gehört, sonst Rückfrage (auch bei geteilten Adressen und gelöschten Dubletten); eine Einheit wird nur zusammen mit einem Vertrag des Kontakts automatisch zugeordnet; "Nr." allein gilt nicht mehr als Einheitenangabe; Anreden, Anredewörter, Nachnamen eigener Mitarbeiter und zitierte frühere Mails zählen nicht als Absendername.',
       "Zuordnung: das Öffnen einer Mail oder eines Tickets ändert nichts mehr; eine Entscheidung sendet den gesehenen Feldwert und bei Ja den bestätigten Kandidaten, wurde das Feld inzwischen anders gesetzt oder hat ein anderes Mitglied bereits mit Ja entschieden, antwortet die API mit Konflikt (409, neuer Fehlercode MHVP-COMM-0003) und speichert nichts, die Rückfragekarte lädt dann neu; jede automatische Zuordnung wird protokolliert und erscheint im Ticketverlauf; die Liste offener Rückfragen zeigt nur Mails aus sichtbaren Postfächern (Migration 0216 um die Spalte basis_id ergänzt).",
       "Rechnungsprüfung und Betriebskostenabrechnung: nach dem Erfassen eines Prüfschritts, einer Kostenposition oder dem Berechnen blieb die Seite gelegentlich mit gesperrten Knöpfen auf dem alten Stand; die Ansicht wird jetzt zuverlässig aktualisiert und die Knöpfe werden freigegeben, sobald der neue Stand angezeigt wird.",
       "CI und Tests: Formatierung der Migration 0195, eindeutige Schemanamen (AssignmentDecideIn), Dublettenerkennung ohne Message-ID nur noch für Mails ohne Kopfzeile, damit getrennte Anrufnotizen nicht zusammengeführt werden; neue Tests zu Migration 0213, parallelen Abrufen, Deadlock im Abruf, Signaturversand und Zuordnungskonflikten.",
@@ -646,10 +705,11 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.35.2",
     date: "27.09.2026",
-    title: "Tickets, Kalender und gesperrte Funktionen im CRM wieder erreichbar",
+    title:
+      "Tickets, Kalender und gesperrte Funktionen im CRM wieder erreichbar",
     changes: [
-      "Tickets: Beim Setzen von Erledigt, Geschlossen oder Abgelehnt, auch für mehrere Tickets gleichzeitig, erschien \"Erledigungsarten konnten nicht geladen werden\", weil der CRM-Proxy den Abruf der Erledigungsarten nicht weiterleitete (Betreibermeldung 27.09.2026); die Einstellungsseite der Erledigungsarten war ebenso betroffen.",
-      "CRM-Proxy: 73 weitere Aufrufe freigeschaltet, die vorhandene Oberflächen nutzen, bisher aber mit \"Nicht gefunden\" scheiterten, u. a. Beiratsbeteiligung an Tickets, SLA-Freigabe, Übermittlungen im Messwesen, Vermögensbericht und Belegprüfung der WEG, Absage und Selbstauskunft für Interessenten, Kontenrahmen-Freigabe, DATEV-Selbstprüfung mit Download und Testdatei, Steuereinstellungen, Vertreterbeziehungen bei Kontakten sowie Preisliste, G5-Nachweise, Onboarding und Mandantenexport für Plattformadministratoren; die Berechtigungen prüft weiterhin die API.",
+      'Tickets: Beim Setzen von Erledigt, Geschlossen oder Abgelehnt, auch für mehrere Tickets gleichzeitig, erschien "Erledigungsarten konnten nicht geladen werden", weil der CRM-Proxy den Abruf der Erledigungsarten nicht weiterleitete (Betreibermeldung 27.09.2026); die Einstellungsseite der Erledigungsarten war ebenso betroffen.',
+      'CRM-Proxy: 73 weitere Aufrufe freigeschaltet, die vorhandene Oberflächen nutzen, bisher aber mit "Nicht gefunden" scheiterten, u. a. Beiratsbeteiligung an Tickets, SLA-Freigabe, Übermittlungen im Messwesen, Vermögensbericht und Belegprüfung der WEG, Absage und Selbstauskunft für Interessenten, Kontenrahmen-Freigabe, DATEV-Selbstprüfung mit Download und Testdatei, Steuereinstellungen, Vertreterbeziehungen bei Kontakten sowie Preisliste, G5-Nachweise, Onboarding und Mandantenexport für Plattformadministratoren; die Berechtigungen prüft weiterhin die API.',
       "Postfach: Vertretungen im Vier-Augen-Verfahren riefen einen falschen Pfad auf und ließen sich weder anlegen noch löschen; korrigiert.",
       "Kalender: Scheitert der Google-Abruf eines Postfachs, etwa bei abgelaufener oder widerrufener Freigabe, zeigt der Kalender die übrigen Termine und Fristen weiter an und nennt den Grund mit Link zu den Postfach-Einstellungen, statt mit einem Serverfehler abzubrechen; Anlegen, Ändern und Löschen von Google-Terminen melden den Grund ebenfalls.",
       "Sicherheit: Falsche Passwörter oder TOTP-Codes bei der Re-Authentifizierung vor einer Mailfreigabe zählen jetzt wie beim Login zur Kontosperre, ein gesperrtes Konto kann sich nicht erneut bestätigen (Regel M20-04).",
@@ -665,13 +725,14 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "27.09.2026",
     title: "Startfehler nach dem Update behoben",
     changes: [
-      "Startfehler behoben (Betreibermeldung 27.09.2026): Nach dem Update auf 1.35.0 zeigte jeder Browser, der das CRM vorher genutzt hatte, nur \"Application error\", weil der Menüzustand aus 1.34.x in einem anderen Format im Browser gespeichert war; das Hauptmenü liest den alten Wert jetzt fehlertolerant und startet dann eingeklappt.",
+      'Startfehler behoben (Betreibermeldung 27.09.2026): Nach dem Update auf 1.35.0 zeigte jeder Browser, der das CRM vorher genutzt hatte, nur "Application error", weil der Menüzustand aus 1.34.x in einem anderen Format im Browser gespeichert war; das Hauptmenü liest den alten Wert jetzt fehlertolerant und startet dann eingeklappt.',
     ],
   },
   {
     version: "1.35.0",
     date: "27.09.2026",
-    title: "Bankanbindung FinTS, Heizkosten, Steuern, Aufbewahrung, WEG-Einladung, Vollimport Verträge und 40 weitere Module",
+    title:
+      "Bankanbindung FinTS, Heizkosten, Steuern, Aufbewahrung, WEG-Einladung, Vollimport Verträge und 40 weitere Module",
     changes: [
       "Betrieb: Restore-Übung (infra/scripts/restore-drill.sh) mit Protokoll unter docs/reviews, SSH-Härtungsvorschlag (infra/hardening), GoBD-Verfahrensdokumentation als Entwurf und Parallelbetriebsplan Immoware24 (Migration 0179 No-op).",
       "Dashboard: Ticketstatistik und Diagramme wieder auf der Startseite (nur Administratoren), Spalte Meine Tickets auf vier Einträge begrenzt mit Fallback auf die dringendsten offenen Tickets des Mandanten.",
@@ -717,7 +778,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Portal: digitales SEPA-Lastschriftmandat als Vorschlag mit Mandatstext, IBAN-Prüfung, Bestätigung mit Zeitstempel, IP und PDF-Nachweis, Freigabe in der Kontaktakte (kein aktives Einzugsmandat, G2); Adressänderung mit Gültigkeitsdatum und Nachweis als Vorschlag mit Übernahme in den Kontakt; Freigabeflag je Dokument (intern, Eigentümer, Mieter, Dienstleister, Beirat) (M3-02, M21-02, M21-03, Migration 0174).",
       "Mail-Vertretungen über eigene Endpunkte und CRM-Formular pflegbar; Mandanten-Standard für die Zahlweise, den ein neuer Vertrag ohne eigene Angabe übernimmt (M20-04a, M13-01a, Migration 0208 No-op).",
       "Rechnungseingang Steuern (M14-02/03/04): Steuersatz und Vorsteuer getrennt erfasst, Vorsteuerabzug nur als Vorschlag bei optierten Objekten nach Umsatzschlüssel, Kennzeichen Reverse Charge und Bauleistung mit Freistellungsbescheinigung und Einbehaltsvorschlag (15 Prozent Entwurfswert, keine automatische Kürzung), Paragraf 35a Lohn- und Materialanteil je Position mit Ausweis je Mietvertrag als PDF-Entwurf, Freigabegrenzen je Rolle mit zweiter Freigabe durch dritte Person; Einstellungen unter Buchhaltung, Steuern, alle Schalter Standard aus (Migration 0185).",
-      "WEG-Versammlung (M25-03, V13): Einladungsfrist je Mandant in Wochen mit spätestem Versanddatum, Kalendereintrag \"Einladung spätestens\", Warnung und Pflichtgrund bei Unterschreitung mit Protokollvermerk; virtuelle Versammlung nur mit Schalter je Mandant (Standard aus) und zulassendem Beschluss mit Gültigkeitsende; Einwahldaten verschlüsselt und nur für Eigentümer der Gemeinschaft im Portal; Teilnahmenachweis mit Kanal Präsenz, online, Vollmacht (Migration 0187).",
+      'WEG-Versammlung (M25-03, V13): Einladungsfrist je Mandant in Wochen mit spätestem Versanddatum, Kalendereintrag "Einladung spätestens", Warnung und Pflichtgrund bei Unterschreitung mit Protokollvermerk; virtuelle Versammlung nur mit Schalter je Mandant (Standard aus) und zulassendem Beschluss mit Gültigkeitsende; Einwahldaten verschlüsselt und nur für Eigentümer der Gemeinschaft im Portal; Teilnahmenachweis mit Kanal Präsenz, online, Vollmacht (Migration 0187).',
       "Aufbewahrungsmatrix (M6-04, V17): Zuordnung Dokumentkategorie zu Aufbewahrungsprofil mit automatischer Fristberechnung nach Startregel, Löschungssperre je Vorgang, monatlicher Löschvorschlagslauf mit Vier-Augen-Freigabe, getrennter Ausführung, Löschprotokoll und Spiegellöschung; CRM-Seiten Einstellungen Aufbewahrung und Dokumente Löschvorschläge (Migration 0175).",
       "Makler-Bereich (M28-01, M26-02): BrokerProvider-Adapterinterface für FLOWFACT, Propstack und onOffice (mangels belegter Dokumentation vorerst gesperrt, 501 MHVP-BRKR-0002), OpenImmo-Datei-Import mit Vorschau, Freigabe und Dublettenschutz, Interessentenverwaltung mit Besichtigungsterminen, Absage-Textbausteinen und Selbstauskunft-Link (Migration 0195).",
       "Mietrechnung und Dauermietrechnung mit Umsatzsteuerausweis für Gewerbemietverträge mit Option (M13-04a): PDF-Entwurf aus den Sollstellungsposten auf dem Briefbogen des Mandanten, Nummernkreis je Rechtsträger und Jahr, Ablage am Vertrag und Kontakt, Storno nur durch Gutschrift, Sperre ohne Steuernummer oder USt-IdNr., Wasserzeichen solange G1 geschlossen (Migration 0210, CRM Vertragsseite).",
@@ -731,7 +792,8 @@ export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "1.34.3",
     date: "27.09.2026",
-    title: "Gmail-Abruf NUL-Bytes, Immoware-Abholung ohne offene Transaktion, Ticketfilter eingeklappt",
+    title:
+      "Gmail-Abruf NUL-Bytes, Immoware-Abholung ohne offene Transaktion, Ticketfilter eingeklappt",
     changes: [
       'Tickets: Filter sind standardmäßig eingeklappt, sichtbar bleibt nur die Suchleiste; "Weitere Filter" (mit Anzahl aktiver Filter) klappt alle Filter aus (Betreiberwunsch 27.09.2026).',
       "Immoware24: Abholung (WebDAV, CardDAV, CalDAV) hält während der HTTP-Aufrufe keine Datenbanktransaktion mehr offen, Laufzeile wird sofort gespeichert, Ergebnisse in Batches zu 50 übernommen, Fehler setzen den Lauf auf fehlgeschlagen; Doppelläufe je Mandant und Art sind gesperrt (409 MHVP-IMW-0005), verwaiste Läufe werden nach 2 Stunden geschlossen (Produktionsbefund 27.09.2026, blockierte Migration 0156).",

@@ -28,7 +28,12 @@ finding exists. Draft entries in the period are named (`DRAFT-ENTRIES`) and neve
 
 ## Status model and locks
 
-`draft` -> `calculated` (recalculation allowed) -> `internally_approved` (second person,
-MHVP-GATE-0002). The PDF (`GET .../pdf`) checks release gate G3 before anything else and
-answers 403 MHVP-GATE-0001 while the gate is closed. Nothing is posted; no receivable, payout
-or fee arises from the statement.
+Uniform status model of all statement objects (6.9.3, E03, S69-01, rule
+[S69-01](S69-01-statement-status-model.md), migration 0295): `draft` -> `calculated`
+(recalculation allowed) -> `internally_approved` (second person, MHVP-GATE-0002, no error
+finding) -> optional `board_reviewed` -> `issued` -> `due` -> `posted` -> `locked`. `resolved` is
+refused (WEG only). `POST .../transition` changes the status; `issued`, `due` and `posted` check
+release gate G3 before anything else (403 MHVP-GATE-0001). `posted` only records entries already
+posted in the statement's ledger (`posted_entry_ids`); the statement itself posts nothing. Every
+change is written to `status_log`. The PDF (`GET .../pdf`) checks G3 first and is available from
+`internally_approved` on. No receivable, payout or fee arises from the statement.

@@ -29,7 +29,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Date, DateTime, Enum, Index, String, func, or_, select
+from sqlalchemy import Date, DateTime, Enum, Index, String, func, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -58,6 +58,14 @@ class OwnerStatementStatus(StrEnum):
     DRAFT = "draft"
     CALCULATED = "calculated"
     INTERNALLY_APPROVED = "internally_approved"
+    # S69-01 (6.9.3, E03): the shared status model of all statement objects. ``resolved`` is
+    # part of the enum for the uniform model but refused for owner statements (WEG only).
+    BOARD_REVIEWED = "board_reviewed"
+    RESOLVED = "resolved"
+    ISSUED = "issued"
+    DUE = "due"
+    POSTED = "posted"
+    LOCKED = "locked"
 
 
 class OwnerStatement(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -101,6 +109,14 @@ class OwnerStatement(IdMixin, TimestampMixin, TenantMixin, Base):
     calculated_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    # S69-01: status log [{from, to, by, at, note}] and the posted entries recorded at
+    # ``posted`` (references only, nothing is posted by the statement, migration 0295).
+    status_log: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    posted_entry_ids: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 # Pure calculation ---------------------------------------------------------------------------

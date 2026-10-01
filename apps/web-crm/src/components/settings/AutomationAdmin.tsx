@@ -29,6 +29,7 @@ export type ActionType =
   | "assign_record"
   // S15-06: Stammdatenfeld (Notizen) setzen und Entwurf an einen Dienstleister.
   | "set_field"
+  | "set_record_field"
   | "notify_provider";
 export type Action = Record<string, unknown> & { type: ActionType };
 export type TriggerKind = "event" | "schedule";
@@ -166,10 +167,16 @@ const ACTION_TYPES: ActionType[] = [
   "letter_draft",
   "ai_task",
   "set_field",
+  "set_record_field",
   "notify_provider",
 ];
 /** Aktionen, die ein Ticket brauchen und daher auf einem Zeitplan nicht angeboten werden. */
 const TICKET_ONLY: ActionType[] = ["set_ticket_field", "mail_draft", "notify_provider"];
+/** Erlaubte Felder je Ziel von "Feld setzen (Auftrag, Dokument)" (wie im Backend, RECORD_FIELDS). */
+const RECORD_FIELDS: Record<string, string[]> = {
+  work_order: ["status", "scheduled_at", "assignee_user_id"],
+  document: ["category_id", "property_id"],
+};
 /** Erlaubte Notizfelder je Zielobjekt von "Feld setzen" (Liste wie im Backend, SETTABLE_FIELDS). */
 const MASTER_FIELDS: Record<string, string[]> = {
   property: ["notes", "renovation_notes", "garden_notes"],
@@ -265,6 +272,8 @@ export function defaultAction(type: ActionType, pickers: Pickers): Action {
       return { type, target: "message", dimension: "property", value: "" };
     case "set_field":
       return { type, target: "property", field: "notes", value: "", mode: "append" };
+    case "set_record_field":
+      return { type, target: "work_order", field: "status", value: "requested" };
     case "notify_provider":
       return { type, contact_id: null, contract_type_code: "", subject: "", body: "" };
   }
@@ -317,6 +326,12 @@ export function summariseAction(a: Action, t: T, pickers: Pickers): string {
     return t("summary.setMasterField", {
       target: t(`setFieldTargets.${String(a.target)}`),
       field: String(a.field ?? ""),
+    });
+  if (a.type === "set_record_field")
+    return t("summary.setRecordField", {
+      target: t(`recordTargets.${String(a.target)}`),
+      field: t(`recordFields.${String(a.field)}`),
+      value: String(a.value ?? ""),
     });
   if (a.type === "notify_provider")
     return t("summary.notifyProvider", { subject: String(a.subject ?? "") });
@@ -1099,6 +1114,50 @@ function ActionEditor({
             <textarea className={ui.input} rows={2} maxLength={2000} value={String(action.value ?? "")} onChange={(e) => set({ value: e.target.value })} />
           </label>
           <p className={ui.help}>{t("setFieldHelp")}</p>
+        </div>
+      ) : null}
+      {action.type === "set_record_field" ? (
+        <div className="flex flex-col gap-2" data-testid="action-set-record-field">
+          <div className="flex flex-wrap gap-2">
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("recordTarget")}</span>
+              <select
+                className={ui.input}
+                value={String(action.target ?? "work_order")}
+                onChange={(e) =>
+                  set({ target: e.target.value, field: RECORD_FIELDS[e.target.value]?.[0] ?? "status", value: "" })
+                }
+              >
+                {Object.keys(RECORD_FIELDS).map((target) => (
+                  <option key={target} value={target}>
+                    {t(`recordTargets.${target}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className={ui.label}>{t("recordField")}</span>
+              <select className={ui.input} value={String(action.field ?? "")} onChange={(e) => set({ field: e.target.value, value: "" })}>
+                {(RECORD_FIELDS[String(action.target ?? "work_order")] ?? []).map((field) => (
+                  <option key={field} value={field}>
+                    {t(`recordFields.${field}`)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{t("recordValue")}</span>
+            {action.field === "status" ? (
+              <select className={ui.input} value={String(action.value ?? "requested")} onChange={(e) => set({ value: e.target.value })}>
+                <option value="requested">requested</option>
+                <option value="in_progress">in_progress</option>
+              </select>
+            ) : (
+              <input className={ui.input} maxLength={200} value={String(action.value ?? "")} onChange={(e) => set({ value: e.target.value })} />
+            )}
+          </label>
+          <p className={ui.help}>{t("recordHelp")}</p>
         </div>
       ) : null}
       {action.type === "notify_provider" ? (

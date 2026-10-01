@@ -23,9 +23,10 @@ export type CompactData = {
     recent: { id: string; direction: string; subject: string | null; at: string }[];
   };
   reply: {
-    source: "suggestion" | "preparation" | "template";
+    source: "suggestion" | "preparation" | "template" | "reply_task";
     text: string;
-    draft?: { tone: string | null; style_tone: string | null; placeholders: string[]; unknown_placeholders: string[] };
+    approved?: boolean;
+    draft?: { tone: string | null; style_tone: string | null; placeholders: string[]; unknown_placeholders: string[]; open_questions?: string[] };
   };
   can_reply: boolean;
   body_long: boolean;
@@ -53,9 +54,10 @@ export function CompactView({
   const [info, setInfo] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const [reload, setReload] = useState(0);
   useEffect(() => {
     let cancelled = false;
-    setData(null);
+    if (reload === 0) setData(null);
     void bff<CompactData>(`/api/bff/mail/messages/${messageId}/compact`).then((res) => {
       if (cancelled) return;
       if (res.ok && res.data && typeof res.data === "object" && "summary" in res.data) {
@@ -66,7 +68,7 @@ export function CompactView({
     return () => {
       cancelled = true;
     };
-  }, [messageId]);
+  }, [messageId, reload]);
 
   const summarize = async () => {
     setBusy(true);
@@ -108,7 +110,18 @@ export function CompactView({
   if (!data) return <p className="text-sm text-muted">{t("loading")}</p>;
   const { crm } = data;
   const hasCrm = crm.contact || crm.property || (crm.open_tickets?.count ?? 0) > 0 || (crm.open_items?.count ?? 0) > 0 || crm.recent.length > 0;
-  const replySource = { suggestion: t("replySuggestion"), preparation: t("replyPreparation"), template: t("replyTemplate") }[data.reply.source];
+  const replySource = { suggestion: t("replySuggestion"), preparation: t("replyPreparation"), template: t("replyTemplate"), reply_task: t("replyTask") }[data.reply.source];
+  const needsApproval = data.reply.source === "reply_task" && !data.reply.approved;
+  const aiDraft = async (path: "reply-ai" | "reply-ai/approve") => {
+    setBusy(true);
+    setError(null);
+    setInfo(null);
+    const res = await bff<{ status?: string; reason?: string }>(`/api/bff/mail/messages/${messageId}/${path}`, { method: "POST" });
+    setBusy(false);
+    if (!res.ok) return setError(res.message);
+    if (res.data?.status === "skipped" || res.data?.status === "failed") return setInfo(res.data.reason ?? t("aiDraftSkipped"));
+    setReload((n) => n + 1);
+  };
 
   return (
     <section className={`${ui.card} flex min-w-0 flex-col gap-3`} data-testid="mail-compact" aria-label={t("title")}>
@@ -178,15 +191,26 @@ export function CompactView({
               {data.reply.draft.unknown_placeholders.length > 0
                 ? ` · ${t("replyUnknownPlaceholders", { list: data.reply.draft.unknown_placeholders.join(", ") })}`
                 : ""}
+              {(data.reply.draft.open_questions?.length ?? 0) > 0
+                ? ` · ${t("aiDraftOpenQuestions", { list: (data.reply.draft.open_questions ?? []).join("; ") })}`
+                : ""}
             </p>
           ) : null}
           <textarea className={ui.input} rows={5} value={reply} onChange={(e) => setReply(e.target.value)} aria-label={t("reply")} disabled={!canUpdate} />
           {canUpdate ? (
             <div className="flex flex-wrap items-center gap-2">
-              <button type="button" className={ui.primary} disabled={busy || !reply.trim()} onClick={() => void quickSend()}>
+              <button type="button" className={ui.primary} disabled={busy || !reply.trim() || needsApproval} onClick={() => void quickSend()}>
                 {t("quickSend")}
               </button>
-              <span className="text-xs text-muted">{t("quickSendHint")}</span>
+              <button type="button" className={ui.secondary} disabled={busy} onClick={() => void aiDraft("reply-ai")}>
+                {t("aiDraft")}
+              </button>
+              {needsApproval ? (
+                <button type="button" className={ui.secondary} disabled={busy} onClick={() => void aiDraft("reply-ai/approve")}>
+                  {t("aiDraftApprove")}
+                </button>
+              ) : null}
+              <span className="text-xs text-muted">{needsApproval ? t("aiDraftNeedsApproval") : t("quickSendHint")}</span>
             </div>
           ) : null}
         </div>

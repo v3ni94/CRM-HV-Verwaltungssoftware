@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     app_version: str = __version__
     log_level: LogLevel = "INFO"
     log_format: LogFormat = LogFormat.JSON
+    # OpenTelemetry tracing (M9-02, section 16): off unless an OTLP/HTTP endpoint is set.
+    otel_endpoint: str | None = None
+    otel_service_name: str = "mhvp-api"
 
     # Runtime role (mhvp_app): never superuser, never table owner (ADR 0002).
     database_url: SecretStr

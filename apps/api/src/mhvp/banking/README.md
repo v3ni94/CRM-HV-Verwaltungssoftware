@@ -297,3 +297,12 @@ one of its `bank_account_assignment` properties is assigned. `GET /banking/accou
 `/banking/transactions` and `/banking/payment-orders` are filtered; `banking_path_guard` answers
 404 for `tx_id`, `transaction_id`, `bank_account_id`, `account_id`, `order_id` and `batch_id`
 paths outside the assignment. Rule docs/rules/M2-02-objektzuordnung.md.
+
+## T03 (01.10.2026): Rohdatenablage und Zustimmungserneuerung (M11-07, M11-08)
+
+* `raw_archive.py`: `raw_object_key` bildet `bank/<mandant>/<konto>/<datum>.<ext>`, `archive_raw` legt die unveränderten Bytes dort ab und indiziert sie mit dem Profil `accounting_records` (10 Jahre, Entwurf). Angebunden an den Dateiimport (`/imports`) und den finAPI-Abruf (`FinApiClient.list_transactions(raw_sink=...)`). Regel `docs/rules/M11-07-bankrohdaten-ablage.md`.
+* `finapi.parse_consent_valid_until` liest das Ablaufdatum defensiv (Annahme A-M11-08-01) in `complete_connection`, `consent_status` und den Prüfendpunkt. `tasks.remind_consent_expiry` legt zusätzlich eine Aufgabe (Ticket task) an. Regel `docs/rules/M11-08-consent-erneuerung.md`.
+
+## Objektzuordnung (T14, R08-01)
+
+Bankregeln und Regelvorschläge (eigenes Objekt, sonst Objekt des Rechtsträgers), Sync-Protokoll (`GET /banking/runs`) und Klärungsliste (über das Bankkonto des Umsatzes) folgen `Membership.property_ids` (`property_scope.rule_property_filter`, `ensure_rule_visible`, `transaction_account_filter`); fremde Regeln per Id 404. `PUT/DELETE /banking/accounts/{id}/assignments` verlangen ein zugeordnetes Zielobjekt. `account_selection.list_accounts(account_filter=...)` filtert vor dem Limit. Test: `tests/integration/test_t14_property_scope_rest.py`.

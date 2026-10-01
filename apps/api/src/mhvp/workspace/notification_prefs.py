@@ -3,7 +3,8 @@
 Defaults without a row: in app on, mail off, not muted. The kinds of the catalogue can be
 switched; ``MANDATORY_KINDS`` (legal or money relevant reminders and the SLA escalation) ignore
 every switch and mute (Produktschutz, never claimed as a legal duty). Mail is only requested
-here (``Notification.email_pending``); sending is done by the job ``send_pending_mails``.
+here (``Notification.email_pending``); sending is done by the job ``send_pending_mails`` as one
+collective mail per user, immediately (every run) or daily per ``email_mode``.
 """
 
 import uuid
@@ -37,6 +38,9 @@ CATALOGUE: tuple[str, ...] = (
     "banking.consent_expiring",
 )
 MAIL_BATCH = 100
+EMAIL_MODE_IMMEDIATE = "immediate"
+EMAIL_MODE_DAILY = "daily"
+EMAIL_MODES = (EMAIL_MODE_IMMEDIATE, EMAIL_MODE_DAILY)
 
 
 @dataclass(frozen=True)
@@ -74,12 +78,24 @@ async def channels_for(session: AsyncSession, user_id: uuid.UUID, kind: str) -> 
     return resolve(list(rows), kind)
 
 
+def mail_mode(rows: list[NotificationPreference], kind: str) -> str:
+    """Delivery of the mail for ``kind``: own row, else the user default, else immediate."""
+    by_kind = {r.kind: r for r in rows}
+    chosen = by_kind.get(kind) or by_kind.get(DEFAULT_KIND)
+    return chosen.email_mode if chosen is not None else EMAIL_MODE_IMMEDIATE
+
+
 async def send_pending_mails(
-    session: AsyncSession, settings: object, tenant_id: uuid.UUID
+    session: AsyncSession, settings: object, tenant_id: uuid.UUID, *, daily: bool = False
 ) -> dict[str, int]:
-    """Sends the requested mails of one tenant (system mail, no approval process like the
-    digest). A failed send stays pending for the next run; an address-less user is skipped
-    and marked as sent without a mail so that the job does not retry forever."""
+    """Sends the requested mails of one tenant as one collective mail per user and run
+    (system mail through the default mailbox of the tenant, no approval process like the
+    digest). Preference ``immediate`` is sent by every run, ``daily`` only by the daily run
+    (``daily=True``). The mute is respected when the notification is created
+    (``notify``), so a mail requested before a later mute is still sent. A failed send stays
+    pending for the next run; an
+    address-less user is closed without a mail so that the job does not retry forever.
+    ``sent``, ``failed`` and ``skipped`` count notifications, ``mails`` the mails sent."""
     from mhvp.platform.models import User
     from mhvp.sla.channels import send_email
 
@@ -92,26 +108,54 @@ async def send_pending_mails(
             .limit(MAIL_BATCH)
         )
     ).all()
-    counts = {"sent": 0, "failed": 0, "skipped": 0}
+    counts = {"sent": 0, "failed": 0, "skipped": 0, "mails": 0}
+    by_user: dict[uuid.UUID, list[tuple[Notification, str | None]]] = {}
     for notification, address in rows:
-        if not address:
-            notification.email_sent_at = datetime.now(UTC)
-            counts["skipped"] += 1
+        by_user.setdefault(notification.user_id, []).append((notification, address))
+    now = datetime.now(UTC)
+    for user_id, entries in by_user.items():
+        prefs = list(
+            (
+                await session.scalars(
+                    select(NotificationPreference).where(
+                        NotificationPreference.user_id == user_id,
+                    )
+                )
+            ).all()
+        )
+        due: list[Notification] = []
+        for notification, address in entries:
+            if not address:
+                notification.email_sent_at = now
+                counts["skipped"] += 1
+            elif mail_mode(prefs, notification.kind) == EMAIL_MODE_DAILY and not daily:
+                continue
+            else:
+                due.append(notification)
+        if not due:
             continue
+        address = entries[0][1] or ""
+        if len(due) == 1:
+            subject = due[0].title
+            text = due[0].body or due[0].title
+        else:
+            subject = f"{len(due)} neue Benachrichtigungen"
+            text = "\n\n".join(f"{n.title}" + (f"\n{n.body}" if n.body else "") for n in due)
         error = await send_email(
             session,
             settings,  # type: ignore[arg-type]
             tenant_id,
             address,
-            notification.title,
-            (notification.body or notification.title)
-            + "\n\nAutomatische Systemmail der Verwaltungsplattform. "
+            subject,
+            text + "\n\nAutomatische Systemmail der Verwaltungsplattform. "
             "Die Einstellungen finden Sie unter Einstellungen, Benachrichtigungen.",
         )
         if error is None:
-            notification.email_sent_at = datetime.now(UTC)
-            counts["sent"] += 1
+            for n in due:
+                n.email_sent_at = now
+            counts["sent"] += len(due)
+            counts["mails"] += 1
         else:
-            counts["failed"] += 1
+            counts["failed"] += len(due)
     await session.flush()
     return counts

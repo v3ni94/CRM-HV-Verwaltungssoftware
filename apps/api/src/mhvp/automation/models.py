@@ -39,6 +39,7 @@ ACTION_TYPES: tuple[str, ...] = (
     "assign_record",
     "set_field",
     "notify_provider",
+    "set_record_field",
 )
 # S15-06: closed list of the master data text fields a rule may set (``set_field``): notes
 # only, never a payee, IBAN, amount, date, status, resolution, fee or tax field (rule 0.1.6).
@@ -48,6 +49,16 @@ SETTABLE_FIELDS: dict[str, tuple[str, ...]] = {
     "contract": ("notes",),
 }
 SET_FIELD_MAX_LENGTH = 2000
+# T12 (S15-06 Rest): closed list of the fields a rule may set on a work order or a document
+# (``set_record_field``). Work order: status only to ``requested`` or ``in_progress`` along the
+# existing flow (never approval, invoicing, acceptance, cancellation), the assignee of the
+# order's ticket and the appointment. Document: category and the link to a property. Never an
+# amount, payee, IBAN, retention hold, fee or tax field (rule 0.1.6).
+RECORD_FIELDS: dict[str, tuple[str, ...]] = {
+    "work_order": ("status", "assignee_user_id", "scheduled_at"),
+    "document": ("category_id", "property_id"),
+}
+RECORD_ORDER_STATUS: tuple[str, ...] = ("requested", "in_progress")
 # Trigger kinds: a domain event type or a schedule (stage 2, A39).
 TRIGGER_KINDS: tuple[str, ...] = ("event", "schedule")
 TRIGGER_EVENT = "event"

@@ -23,7 +23,11 @@ from mhvp.accounting.models import Ledger, LedgerAccount
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.auth.scope import (
     ensure_session_legal_entity_allowed,
+    property_allowed,
+    property_column_guard,
     session_allowed_legal_entity_ids,
+    session_allowed_property_ids,
+    session_principal,
 )
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -47,7 +51,23 @@ from mhvp.imports.models import ImportSourceFile
 from mhvp.platform.models import Tenant
 from mhvp.properties.models import LegalEntity, Property
 
-router = APIRouter(prefix="/imports/migration", tags=["Migration Immoware24"])
+# M2-02, R08-01: target property of the import (path ids resolve to the property; ledgers
+# through the ledger, opening balances and switch requests through their ledger).
+MIGRATION_GUARD = property_column_guard(
+    {
+        "property_id": Property.id,
+        "ledger_id": Ledger.property_id,
+        "balance_id": MigrationOpeningBalance.ledger_id,
+        "request_id": MigrationSwitchRequest.ledger_id,
+        "report_id": MigrationReconciliationReport.property_id,
+        "acceptance_id": MigrationAcceptance.property_id,
+    }
+)
+router = APIRouter(
+    prefix="/imports/migration",
+    tags=["Migration Immoware24"],
+    dependencies=[Depends(MIGRATION_GUARD)],
+)
 READ = require_permission("accounting:read")
 CREATE = require_permission("accounting:create")
 UPDATE = require_permission("accounting:update")
@@ -346,7 +366,11 @@ async def status(
     request: Request, principal: TenantPrincipal = Depends(READ)
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
-        return await mig.migration_status(session, session_allowed_legal_entity_ids(session))
+        items = await mig.migration_status(session, session_allowed_legal_entity_ids(session))
+        prop_allowed = session_allowed_property_ids(session)  # M2-02, R08-01
+        if prop_allowed is None:
+            return items
+        return [i for i in items if uuid.UUID(i["property_id"]) in prop_allowed]
 
 
 # Journal ---------------------------------------------------------------------------------
@@ -819,7 +843,8 @@ async def list_switch_requests(
         return [
             _switch_out(item)
             for item, ledger in rows
-            if allowed is None or ledger.legal_entity_id in allowed
+            if (allowed is None or ledger.legal_entity_id in allowed)
+            and property_allowed(session_principal(session), ledger.property_id)
         ]
 
 

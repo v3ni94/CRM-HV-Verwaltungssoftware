@@ -46,4 +46,16 @@ describe("NotificationPreferences", () => {
     expect(body.items.find((i) => i.kind === "*")!.muted_until).not.toBeNull();
     expect(await screen.findByText("Einstellungen gespeichert.")).toBeInTheDocument();
   });
+
+  it("sends the delivery mode and only enables it with the mail channel", async () => {
+    renderIntl(<NotificationPreferences />);
+    await screen.findByText("Ticket zugewiesen");
+    expect(screen.getByTestId("pref-mode-ticket_assigned")).toBeDisabled();
+    await userEvent.click(screen.getByTestId("pref-email-ticket_assigned"));
+    await userEvent.selectOptions(screen.getByTestId("pref-mode-ticket_assigned"), "daily");
+    await userEvent.click(screen.getByTestId("pref-save"));
+    await waitFor(() => expect(calls.some((c) => c.method === "PUT")).toBe(true));
+    const body = JSON.parse(calls.find((c) => c.method === "PUT")!.body!) as { items: { kind: string; email_mode: string }[] };
+    expect(body.items.find((i) => i.kind === "ticket_assigned")!.email_mode).toBe("daily");
+  });
 });

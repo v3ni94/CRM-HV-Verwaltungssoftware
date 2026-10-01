@@ -408,3 +408,9 @@ In der Lastschriftliste zeigt "Bankrückmeldung und Abstimmung" je Lastschrift B
 ## Lastschriften: Sammelrückmeldung
 
 In der Abstimmung eines Lastschriftlaufs lassen sich mehrere Lastschriften per Auswahlfeld markieren ("Alle Lastschriften auswählen" markiert alle). Eine Rückmeldung (angenommen, abgelehnt, eingezogen, zurückgegeben) gilt dann für alle markierten Lastschriften in einem Schritt; tritt bei einer ein Fehler auf, wird nichts gespeichert. Betrag und Bankumsatz werden nur bei einer einzelnen Lastschrift erfasst. Es wird nichts gebucht.
+
+## Zustimmung der Bank und Rohdatenablage (T03)
+
+Unter Bank, Bankverbindungen zeigt jede finAPI-Verbindung dauerhaft, bis wann die Zustimmung gilt. Liefert der Anbieter kein Datum, steht dort ein Hinweis; ein manuell gepflegtes Datum bleibt erhalten. Zehn Tage vor Ablauf erhalten die Buchhaltungsnutzer eine Benachrichtigung und eine Aufgabe zur Erneuerung. Über "Zustimmung erneuern" öffnet sich das WebForm der Bank; danach die Verbindung prüfen.
+
+Jeder Kontoauszug und jeder finAPI-Abruf wird zusätzlich unverändert abgelegt (Schlüssel bank/Mandant/Konto/Datum) und mit dem Aufbewahrungsprofil 10 Jahre versehen. Die Freigabe des Profils durch die Steuerberatung ist offen (T03-01).

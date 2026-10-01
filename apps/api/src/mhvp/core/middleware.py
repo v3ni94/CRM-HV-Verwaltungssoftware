@@ -15,6 +15,7 @@ from mhvp.core.context import reset_correlation_id, set_correlation_id
 from mhvp.core.ids import uuid7
 from mhvp.core.logging import get_logger
 from mhvp.core.problems import ErrorCodes, problem_response
+from mhvp.core.telemetry import current_traceparent
 
 CORRELATION_HEADER = "X-Correlation-ID"
 _log = get_logger("mhvp.access")
@@ -51,7 +52,11 @@ class CorrelationIdMiddleware:
             if message["type"] == "http.response.start":
                 response_started = True
                 status_code = message["status"]
-                MutableHeaders(scope=message)[CORRELATION_HEADER] = correlation_id
+                headers = MutableHeaders(scope=message)
+                headers[CORRELATION_HEADER] = correlation_id
+                traceparent = current_traceparent()
+                if traceparent is not None:
+                    headers["traceparent"] = traceparent
             await send(message)
 
         try:

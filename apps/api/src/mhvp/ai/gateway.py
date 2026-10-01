@@ -79,6 +79,7 @@ MASKED_TASKS: frozenset[AiTask] = frozenset(
         AiTask.CLASSIFY_EMAIL,
         AiTask.CLASSIFY_DOCUMENT,
         AiTask.DRAFT_REPLY,
+        AiTask.REPLY_DRAFT,
         AiTask.CALL_SUMMARY,
         AiTask.RENT_INCREASE_CHECK,
     }

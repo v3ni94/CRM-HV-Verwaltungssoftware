@@ -96,3 +96,14 @@ in der Zuordnung markiert; eine Zeile mit Fehler wird nicht übernommen und im B
 - Eine Rücknahme über den Import ist für diese Berichte nicht vorgesehen, weil sie nur Historie
   ablegen; Korrekturen erfolgen durch einen neuen Lauf mit geänderter Datei nach Klärung des
   Konflikts.
+
+## Weitere Berichtsarten (Welle 5)
+
+Im Importassistenten stehen zusätzlich Kautionen, Umlageschlüssel (mit Einheitenwerten), Zähler,
+Energieausweise, Dienstleisterverhältnisse und Portalnutzer (nur Status) bereit. Ablauf wie bei
+den anderen Berichten: Datei hochladen, Spalten zuordnen und als Vorlage speichern, Prüfung,
+Testlauf, Übernahme. Vorhandene Daten werden nie überschrieben (gleich: unverändert, abweichend:
+Konflikt). Kautionen entstehen ohne Bewegung und ohne Buchung, Portalnutzer werden nur mit dem
+Portalkonto verglichen, es geht keine Einladung hinaus. Die Rücknahme eines Laufs entfernt
+übernommene Datensätze, sofern sie nach dem Import nicht verwendet oder bearbeitet wurden.
+Regel: `docs/rules/M8-01-w5-importberichte.md`.

@@ -48,7 +48,7 @@ function PasswordForm() {
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3 sm:max-w-sm`}>
+    <form aria-label={t("passwordTitle")} onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3 sm:max-w-sm`}>
       <h2 className="text-sm font-semibold">{t("passwordTitle")}</h2>
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("currentPassword")}</span>
@@ -145,7 +145,7 @@ function SecondFactor({ initialEnabled }: { initialEnabled: boolean }) {
       {error ? <p role="alert" className={ui.alert}>{error}</p> : null}
       {message ? <p role="status" className="text-xs text-success-fg">{message}</p> : null}
       {enabled ? (
-        <form onSubmit={(e) => void disable(e)} className="flex flex-col gap-3 sm:max-w-sm">
+        <form aria-label={t("totpDisable")} onSubmit={(e) => void disable(e)} className="flex flex-col gap-3 sm:max-w-sm">
           <p className="text-xs text-muted">{t("totpDisableHint")}</p>
           <label className="flex flex-col gap-1">
             <span className={ui.label}>{t("currentPassword")}</span>
@@ -163,7 +163,7 @@ function SecondFactor({ initialEnabled }: { initialEnabled: boolean }) {
           </button>
         </form>
       ) : setup ? (
-        <form onSubmit={(e) => void confirm(e)} className="flex flex-col gap-3 sm:max-w-sm">
+        <form aria-label={t("totpTitle")} onSubmit={(e) => void confirm(e)} className="flex flex-col gap-3 sm:max-w-sm">
           <p className="text-xs text-muted">{t("totpSetupHint")}</p>
           {/* eslint-disable-next-line @next/next/no-img-element -- server generated data URL */}
           <img src={setup.qr} alt={t("totpQrAlt")} width={220} height={220} className="rounded bg-paper p-1" />

@@ -315,3 +315,7 @@ Bei einem ausgeführten Auftrag kann eine XRechnung (XML) eingelesen werden. Rec
 ## Beirat: Kontext einer Prüfposition
 
 Bei jeder Position zeigt Kontext anzeigen Buchung, Rechnung, Auftrag, Zahlung, Umlageschlüssel und Vorjahr sowie Hinweise auf fehlende Unterlagen. Nur lesend.
+
+## Portal-Logo hochladen (Einstellungen, Mandant)
+
+Unter Einstellungen, Mandant, Abschnitt "Portal der Mandanten" laden Sie das Logo als PNG oder JPEG hoch. Das Logo wird als Dokument abgelegt, seine Kennung wird erst mit "Speichern" in das Branding übernommen. "Logo entfernen" und Speichern lässt das Portal wieder neutral.

@@ -35,7 +35,17 @@ export function FinApiConsentBanner({
   const days = consentValidUntil ? daysUntil(consentValidUntil, today) : null;
   const expired = status === "consent_expired" || (days !== null && days < 0);
   const expiring = !expired && days !== null && days <= CONSENT_WARN_DAYS;
-  if (!expired && !expiring) return null;
+  if (!expired && !expiring) {
+    // M11-08: permanent status line, so the operator sees the consent state at all times.
+    if (status === "web_form_pending" || status === "disabled") return null;
+    return (
+      <p className="mt-1 text-xs text-muted" data-testid="consent-status">
+        {consentValidUntil
+          ? t("consentValidUntil", { date: formatDate(consentValidUntil) })
+          : t("consentUnknown")}
+      </p>
+    );
+  }
   const date = consentValidUntil ? formatDate(consentValidUntil) : null;
   return (
     <div

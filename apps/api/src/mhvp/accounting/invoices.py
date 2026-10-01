@@ -162,7 +162,7 @@ async def evaluate(session: AsyncSession, invoice: Invoice) -> None:
             findings.append(
                 "IBAN weicht von den freigegebenen Stammdaten ab: gesonderte Bestätigung nötig"
             )
-    if not invoice.order_reference:
+    if not (invoice.order_reference or invoice.work_order_id):
         findings.append("Auftrags- oder Vertragsbezug nicht angegeben (sachliche Prüfung)")
     if invoice.recipient_name:
         from mhvp.properties.models import LegalEntity

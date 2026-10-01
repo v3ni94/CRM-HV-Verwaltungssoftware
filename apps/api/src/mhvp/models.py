@@ -24,6 +24,7 @@ from mhvp.documents import models as document_models
 from mhvp.handover import models as handover_models
 from mhvp.hoa import inspection as hoa_inspection_models
 from mhvp.hoa import models as hoa_models
+from mhvp.hoa import reserve_statement as hoa_reserve_statement
 from mhvp.immoware import models as immoware_models
 from mhvp.imports import history_models as import_history_models
 from mhvp.imports import migration_models as import_migration_models
@@ -74,6 +75,7 @@ __all__ = [
     "handover_models",
     "hoa_inspection_models",
     "hoa_models",
+    "hoa_reserve_statement",
     "immoware_models",
     "import_history_models",
     "import_migration_models",

@@ -229,3 +229,7 @@ Einstellungen: `MHVP_OBJEKTAKTE_PREVIEWS_DIR` (Standard `/data/previews`), `MHVP
   Nachforderungsschreiben on the tenant letterhead with dispatch record and ticket link
   (`mhvp.documents.letter_records`). Tests: `tests/integration/test_m12_letters_plan_export.py`.
 
+
+## Objektzuordnung (T14, R08-01)
+
+`export_routers`, `completeness_routers` und `lists_routers` tragen `property_path_guard` (fremdes `{property_id}` 404); die Gesamtliste fehlender Unterlagen filtert nach `Membership.property_ids`.

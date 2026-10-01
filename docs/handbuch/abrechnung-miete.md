@@ -140,3 +140,28 @@ bestehen.
   die in der Buchhaltung geprüft und gebucht werden.
 - Verbrauchsinformation ohne Portal: in der Monatsliste zeigt "nicht zugestellt" die offenen
   Einheiten; die Zustellung per Post, E-Mail oder Übergabe wird mit Nachweis erfasst.
+
+## Heizkostenabrechnung des Messdiensts übernehmen (M17-09)
+
+Die Heizkostenabrechnung eines Messdiensts wird als eigener Import erfasst und erst nach
+erfolgreicher Prüfung in die Betriebskostenabrechnung übernommen. Die Bedienung erfolgt derzeit
+über die API (`/api/v1/billing/heating-cost-imports`); eine Maske im CRM folgt.
+
+1. Import anlegen: Objekt, Messdienst, Abrechnungszeitraum, Belegsumme und das hochgeladene
+   Originaldokument angeben, bei Bedarf CO2-Angaben (Gebäudeart, CO2-Kosten, Emissionen, Fläche).
+2. Kostenzeilen erfassen: manuell oder als CSV. Bei der CSV ordnen Sie jede Spalte selbst zu
+   (Nutzernummer, Heizung Grund- und Verbrauchskosten, Warmwasser Grund- und Verbrauchskosten,
+   CO2-Anteil Vermieter und Mieter) und legen Trennzeichen und Dezimalkomma fest. Das System
+   rät keine Spalten.
+3. Nutzernummern zuordnen: je Nutzernummer Einheit und Mietvertrag; ohne Vertrag gilt der
+   Leerstand der Einheit.
+4. Prüfen: Summen gegen die Belegsumme, CO2-Aufteilung nach der hinterlegten Stufentabelle,
+   Zuordnung und mögliche Doppelerfassung im Rechnungsbuch. Eine Doppelerfassung bestätigen Sie
+   nur mit Begründung. Jede spätere Änderung setzt den Import wieder auf Entwurf.
+5. Übernehmen: nur ein geprüfter Import, nur in eine Abrechnung im Entwurf mit gleichem Objekt und
+   Zeitraum. Je Nutzer wird die Kostensumme abzüglich des CO2-Vermieteranteils übernommen.
+   Danach ist der Import gesperrt.
+
+## Statuswechsel der Eigentümerabrechnung
+
+Nach der Berechnung zeigt die Eigentümerabrechnung die möglichen nächsten Schritte: intern freigeben (nur eine zweite Person), Prüfung durch den Beirat erfassen, ausgeben, fällig stellen, als gebucht erfassen und sperren. Ausgeben, fällig stellen und als gebucht erfassen setzen die Freigabestufe G3 voraus; ist sie nicht erteilt, lehnt das System den Schritt mit Begründung ab. Als gebucht erfassen verlangt die IDs bereits gebuchter Buchungen dieses Buchungskreises und bucht selbst nichts. Jeder Schritt erscheint mit Datum und Notiz im Statusverlauf.

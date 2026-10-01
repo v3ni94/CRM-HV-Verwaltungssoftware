@@ -80,3 +80,6 @@ Checked against the folder contents on 26.09.2026, the following files were not 
   /platform/tenants/{id}/usage/history`, täglicher Job `platform-usage-daily`.
 * Exportjob: `mhvp.platform.export_job`, `POST .../export-requests/{id}/run`, Regel
   `M27-01-EXPORT`.
+* Mandantenexport durch den Mandantenadministrator (T01, M2-01): `mhvp.platform.export_routers`
+  (`/tenant/export-jobs`), Tabelle `tenant_export_job`, Job `mhvp.platform.tenant_export_job`,
+  Regel `P14-06`. Der Vier-Augen-Weg der Plattformverwaltung bleibt daneben bestehen.

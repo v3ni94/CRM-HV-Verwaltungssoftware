@@ -377,3 +377,7 @@ zugeordnet wurde. Zusatzrechte: `properties:update` (Konten, Schlüssel), `accou
 (Debitorenkonten), `documents:update` (Verknüpfungen). `POST /onboarding/person-match-batch`
 liefert den Abgleich für bis zu 500 Personen als Vorschau (Tabelle im Import-Dialog).
 Regel: `docs/rules/R03-onboarding-uebernahme.md`.
+
+### Aufgabe reply_draft (T12, M20-02)
+
+`AiTask.REPLY_DRAFT` (Migration 0296) mit Schema `tasks.ReplyDraftResult` und Prompt `prompts/reply_draft/v1.md`; `draft_reply` bleibt der Playbook-Entwurf. Aufruf und Freigabe in `mhvp.communication` (`suggest.reply_task_for_message`, `POST /mail/messages/{id}/reply-ai`); maskiert (`MASKED_TASKS`), nur Vorschlag. Regel: `docs/rules/T12.md`.

@@ -175,3 +175,18 @@ Q08-01: `GET .../history/open-items/balance-check` (Prüfbericht Einzelposten ge
 je Gruppe, Vorzeichenregel A-Q08-01, keine Korrektur). Q08-04: `GET .../history/bank-links/{id}/candidates`
 (Kandidatenliste Journal nach Datum und Betrag, keine automatische Zuordnung). Regel `docs/rules/M8-06-historische-importberichte.md`, Test
 `tests/integration/test_q08_import_history.py`.
+
+## Weitere Berichtsarten (Welle 5, M8-01)
+
+`w5_reports.py` ergänzt `ReportType` um `deposit`, `allocation_key`, `meter`,
+`energy_certificate`, `service_provider` und `portal_user` (Migration 0297, nur Enum-Werte).
+Zielfelder stehen in `W5_FIELDS`, die Spalten werden wie bei allen Berichten frei zugeordnet
+(keine belegten Immoware24-Spalten). Weitere Entitäten einer Zeile (zum Beispiel der Schlüssel zu
+einem Wert) meldet der Handler über `ctx["extra_created"]`; `services.run` trägt sie vor der
+Hauptentität in den Recorder ein. Rücknahme: `w5_reports.referenced` und `w5_reports.remove`, aufgerufen aus
+`mhvp.ai.imports`. Regel: `docs/rules/M8-01-w5-importberichte.md`. Test:
+`tests/integration/test_w5_t10_import_reports.py`.
+
+## Objektzuordnung (T14, R08-01)
+
+`migration_routers` prüft per `property_column_guard` Objekt, Buchungskreis, Eröffnungssalden, Wechselanträge, Abgleichberichte und Abnahmeprotokolle (fremd 404); Status und Wechselanträge sind gefiltert. `w3_routers` prüft `property_id`/`ledger_id` und filtert historische Tickets und Einzelposten. Datei- und Vollimporte ohne Zielobjekt bleiben mandantenweit.

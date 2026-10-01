@@ -38,6 +38,8 @@ type Invoice = {
   status: string;
   gross: string;
   cancelled_at: string | null;
+  released_at?: string | null;
+  payer_entry_id?: string | null;
   xrechnung_url: string | null;
 };
 type Check = { structure_ok: boolean; findings: { code: string; message: string }[] };
@@ -46,13 +48,15 @@ const base = "/api/bff/accounting";
 
 /** Verwalterhonorar (18 M13): set up, change or end a fee, preview the due service periods,
  *  issue once per period (gapless number), release, cancel by credit note, XRechnung download,
- *  structural check and filing. Nothing is sent; the revenue posting stays open until G1. */
+ *  structural check and filing. Nothing is sent; revenue posting drafts only for released invoices, behind G1. */
 export function AdminFeePanel({ properties, today }: { properties: PropertyOption[]; today: string }) {
   const t = useTranslations("AdminFees");
   const [fees, setFees] = useState<Fee[]>([]);
   const [periods, setPeriods] = useState<PeriodRow[]>([]);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [periodDate, setPeriodDate] = useState(today);
+  // M13-05: Filter der Rechnungsliste nach Status (issued, released, cancelled).
+  const [statusFilter, setStatusFilter] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -73,14 +77,14 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
     const [f, p, i] = await Promise.all([
       bff<Fee[]>(`${base}/admin-fees`),
       bff<{ rows: PeriodRow[] }>(`${base}/admin-fees-periods?period_date=${periodDate}`),
-      bff<Invoice[]>(`${base}/admin-fee-invoices`),
+      bff<Invoice[]>(`${base}/admin-fee-invoices${statusFilter ? `?status=${statusFilter}` : ""}`),
     ]);
     if (f.ok) setFees(f.data ?? []);
     if (p.ok) setPeriods(p.data?.rows ?? []);
     if (i.ok) setInvoices(i.data ?? []);
     const failed = [f, p, i].find((r) => !r.ok);
     setError(failed && !failed.ok ? failed.message : null);
-  }, [periodDate]);
+  }, [periodDate, statusFilter]);
 
   useEffect(() => {
     void load();
@@ -137,6 +141,9 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
   };
   const release = (inv: Invoice) =>
     run(() => bff(`${base}/admin-fee-invoices/${inv.id}/release`, { method: "POST" }), t("released"));
+  // M13-07: Buchungsentwürfe (Zahler und Verwalter) nur für freigegebene Rechnungen, serverseitig hinter G1.
+  const postingDrafts = (inv: Invoice) =>
+    run(() => bff(`${base}/admin-fee-invoices/${inv.id}/posting-drafts`, { method: "POST" }), t("postingDraftsDone"));
   const cancel = (inv: Invoice) => {
     const reason = window.prompt(t("cancelPrompt"));
     if (!reason) return;
@@ -295,6 +302,17 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
       </div>
 
       <h2 className="text-sm font-semibold">{t("invoices")}</h2>
+      <label className="flex items-center gap-2 text-sm">
+        <span className={ui.label}>{t("statusFilter")}</span>
+        <select className={ui.input} value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} data-testid="fee-status-filter">
+          <option value="">{t("allStatuses")}</option>
+          {(["issued", "released", "cancelled"] as const).map((s) => (
+            <option key={s} value={s}>
+              {t(`statuses.${s}`)}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className={ui.tableCard}>
         <table className="mhvp-table" data-testid="fee-invoices">
           <thead>
@@ -328,6 +346,18 @@ export function AdminFeePanel({ properties, today }: { properties: PropertyOptio
                       {t("pdf")}
                     </button>
                   )}
+                  {inv.payer_entry_id ? (
+                    <span className="text-xs">{t("postingDraftsExist")}</span>
+                  ) : inv.released_at ? (
+                    <button type="button" className={ui.buttonSm} onClick={() => postingDrafts(inv)} disabled={busy}>
+                      {t("postingDrafts")}
+                    </button>
+                  ) : null}
+                  {inv.kind === "credit_note" && inv.status === "issued" ? (
+                    <button type="button" className={ui.buttonSm} onClick={() => release(inv)} disabled={busy}>
+                      {t("release")}
+                    </button>
+                  ) : null}
                   {inv.kind === "invoice" && !inv.cancelled_at ? (
                     <>
                       {inv.status === "issued" ? (

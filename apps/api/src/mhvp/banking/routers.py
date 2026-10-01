@@ -47,12 +47,18 @@ from mhvp.banking.models import (
 )
 from mhvp.banking.property_scope import (
     banking_path_guard,
+    ensure_rule_visible,
+    rule_property_filter,
     session_account_filter,
-    visible_account_ids,
+    transaction_account_filter,
 )
 from mhvp.core.auth.permissions import ACCOUNTING_REVIEW
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
-from mhvp.core.auth.scope import ensure_legal_entity_allowed
+from mhvp.core.auth.scope import (
+    ensure_legal_entity_allowed,
+    ensure_session_property_allowed,
+    session_allowed_property_ids,
+)
 from mhvp.core.db.tenancy import after_commit
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -261,6 +267,7 @@ async def import_statement(
             raise ProblemError(
                 ErrorCodes.CONFLICT, detail="Der Auszug wird gerade parallel importiert."
             ) from None
+        await _archive_import_original(session, request, principal, run, document, data)
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -272,6 +279,37 @@ async def import_statement(
         )
         _queue_proposals(session, request, principal.tenant_id, run.id)
         return SyncRunOut.model_validate(run)
+
+
+async def _archive_import_original(
+    session: Any, request: Request, principal: TenantPrincipal, run: Any, document: Any, data: bytes
+) -> None:
+    """M11-07: the unchanged statement file is also kept under ``bank/<tenant>/<account>/
+    <date>.<ext>`` with the 10 year profile; a storage problem is logged, not raised."""
+    import logging
+
+    from mhvp.banking.raw_archive import ALLOWED_EXTENSIONS, archive_raw
+    from mhvp.workspace.services import local_today
+
+    if run.property_bank_account_id is None:
+        return
+    ext = document.filename.rsplit(".", 1)[-1].lower() if "." in document.filename else ""
+    if ext not in ALLOWED_EXTENSIONS:
+        ext = "xml" if data.lstrip()[:5] == b"<?xml" else "txt"
+    try:
+        await archive_raw(
+            session,
+            BlobStore(request.app.state.settings),
+            tenant_id=principal.tenant_id,
+            account_id=run.property_bank_account_id,
+            data=data,
+            ext=ext,
+            day=local_today(),
+            created_by=principal.user_id,
+            label="Kontoauszug Rohdatei",
+        )
+    except ProblemError:
+        logging.getLogger(__name__).warning("bank.raw_archive_failed", exc_info=True)
 
 
 def _queue_proposals(
@@ -313,9 +351,11 @@ async def runs(
     principal: TenantPrincipal = Depends(READ),
 ) -> list[SyncRunOut]:
     async with tenant_tx(request, principal) as session:
-        rows = await session.scalars(
-            select(BankSyncRun).order_by(BankSyncRun.created_at.desc()).limit(limit)
-        )
+        run_query = select(BankSyncRun)
+        run_visible = session_account_filter(session)  # M2-02, R08-01: through the account
+        if run_visible is not None:
+            run_query = run_query.where(BankSyncRun.property_bank_account_id.in_(run_visible))
+        rows = await session.scalars(run_query.order_by(BankSyncRun.created_at.desc()).limit(limit))
         return [SyncRunOut.model_validate(r) for r in rows.all()]
 
 
@@ -1043,9 +1083,11 @@ async def _rule_event(
 @router.get("/rules", summary="Bankregeln")
 async def list_rules(request: Request, principal: TenantPrincipal = Depends(READ)) -> list[RuleOut]:
     async with tenant_tx(request, principal) as session:
-        rows = await session.scalars(
-            select(BankRule).order_by(BankRule.priority, BankRule.created_at)
-        )
+        rule_query = select(BankRule)
+        rule_allowed = session_allowed_property_ids(session)  # M2-02, R08-01
+        if rule_allowed is not None:
+            rule_query = rule_query.where(rule_property_filter(rule_allowed, BankRule))
+        rows = await session.scalars(rule_query.order_by(BankRule.priority, BankRule.created_at))
         return [RuleOut.model_validate(r) for r in rows.all()]
 
 
@@ -1053,6 +1095,7 @@ async def _rule(session: Any, rule_id: uuid.UUID) -> BankRule:
     rule = await session.get(BankRule, rule_id, with_for_update=True)
     if rule is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+    await ensure_rule_visible(session, rule)  # M2-02, R08-01
     return rule  # type: ignore[no-any-return]
 
 
@@ -1673,6 +1716,9 @@ async def list_rule_proposals(
         query = select(BankRuleProposal).order_by(BankRuleProposal.created_at.desc()).limit(200)
         if status:
             query = query.where(BankRuleProposal.status == status)
+        proposal_allowed = session_allowed_property_ids(session)  # M2-02, R08-01
+        if proposal_allowed is not None:
+            query = query.where(rule_property_filter(proposal_allowed, BankRuleProposal))
         rows = [
             r for r in await session.scalars(query) if _entity_allowed(principal, r.legal_entity_id)
         ]
@@ -1701,6 +1747,7 @@ async def accept_rule_proposal(
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        await ensure_rule_visible(session, row)  # M2-02, R08-01
         rule = await learning_svc.accept(
             session,
             proposal_id=proposal_id,
@@ -1730,6 +1777,7 @@ async def reject_rule_proposal(
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         ensure_legal_entity_allowed(principal, row.legal_entity_id)
+        await ensure_rule_visible(session, row)  # M2-02, R08-01
         row = await learning_svc.reject(
             session,
             proposal_id=proposal_id,
@@ -1837,11 +1885,22 @@ async def list_clarifications(
             until=until,
             open_only=open_only,
         )
-        return [
-            await clarification_svc.row_out(session, r)
-            for r in rows
-            if _entity_allowed(principal, r.legal_entity_id)
-        ]
+        rows = [r for r in rows if _entity_allowed(principal, r.legal_entity_id)]
+        clar_allowed = session_allowed_property_ids(session)  # M2-02, R08-01: via the account
+        if clar_allowed is not None and rows:
+            tx_ids = [r.bank_transaction_id for r in rows]
+            visible_tx = set(
+                (
+                    await session.scalars(
+                        select(BankTransaction.id).where(
+                            BankTransaction.id.in_(tx_ids),
+                            transaction_account_filter(clar_allowed, BankTransaction.id),
+                        )
+                    )
+                ).all()
+            )
+            rows = [r for r in rows if r.bank_transaction_id in visible_tx]
+        return [await clarification_svc.row_out(session, r) for r in rows]
 
 
 @router.post("/clarifications/{row_id}", summary="Klärungsstatus setzen (accounting:update)")
@@ -1856,6 +1915,16 @@ async def decide_clarification(
         if current is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         ensure_legal_entity_allowed(principal, current.legal_entity_id)
+        clar_allowed = session_allowed_property_ids(session)  # M2-02, R08-01
+        if clar_allowed is not None:
+            hit = await session.scalar(
+                select(BankTransaction.id).where(
+                    BankTransaction.id == current.bank_transaction_id,
+                    transaction_account_filter(clar_allowed, BankTransaction.id),
+                )
+            )
+            if hit is None:
+                raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         row = await clarification_svc.decide(
             session,
             row_id=row_id,
@@ -2829,6 +2898,10 @@ async def check_finapi_connection(
             details = client.get_bank_connection(fa.finapi_bank_connection_id)
             fa.last_update_status = str(details.get("status") or fa.last_update_status)
             fa.last_error = details.get("errorMessage")
+            from mhvp.banking.finapi import parse_consent_valid_until
+
+            # M11-08: a date delivered by finAPI wins; none delivered keeps a manual date.
+            fa.consent_valid_until = parse_consent_valid_until(details) or fa.consent_valid_until
             conn.status = ConnectionStatus.ACTIVE if not fa.last_error else ConnectionStatus.ERROR
             conn.error_message = fa.last_error
             accounts = client.list_accounts(bank_connection_id=fa.finapi_bank_connection_id)
@@ -3398,11 +3471,16 @@ async def list_bank_accounts(
     principal: TenantPrincipal = Depends(READ),
 ) -> list[BankAccountListOut]:
     async with tenant_tx(request, principal) as session:
+        # M2-02, R08-01: the property filter applies before the limit.
         items = await account_selection.list_accounts(
-            session, property_id=property_id, legal_entity_id=legal_entity_id, q=q, limit=limit
+            session,
+            property_id=property_id,
+            legal_entity_id=legal_entity_id,
+            q=q,
+            limit=limit,
+            account_filter=session_account_filter(session),
         )
-        visible = await visible_account_ids(session, [i.id for i in items])
-        return [account_list_out(i) for i in items if visible is None or i.id in visible]
+        return [account_list_out(i) for i in items]
 
 
 @router.put(
@@ -3416,6 +3494,8 @@ async def assign_bank_account(
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> BankAccountListOut:
     async with tenant_tx(request, principal) as session:
+        # M2-02, R08-01: the target property must lie inside the member's assignment.
+        ensure_session_property_allowed(session, body.property_id)
         await account_selection.assign_to_property(
             session,
             tenant_id=principal.tenant_id,
@@ -3440,6 +3520,7 @@ async def unassign_bank_account(
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> None:
     async with tenant_tx(request, principal) as session:
+        ensure_session_property_allowed(session, property_id)  # M2-02, R08-01
         await account_selection.unassign_from_property(
             session,
             tenant_id=principal.tenant_id,

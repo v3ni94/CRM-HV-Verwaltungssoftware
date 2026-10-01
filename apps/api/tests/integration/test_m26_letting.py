@@ -1751,7 +1751,7 @@ def _prospect_unit(client: TestClient, h: dict[str, str], number: str) -> tuple[
 
 
 def test_prospect_viewings_rejection_templates_and_self_disclosure(
-    clients: tuple[TestClient, TestClient], world: World
+    clients: tuple[TestClient, TestClient], world: World, database: Database
 ) -> None:
     client, _ = clients
     h = bearer(login(client, world, "m26admin"))
@@ -1814,6 +1814,26 @@ def test_prospect_viewings_rejection_templates_and_self_disclosure(
     )
     assert "selbstauskunft" in link["portal_url"]
     token = link["portal_url"].rsplit("/", 1)[-1]
+    assert "token" not in link
+    # S16-03: the link token rests only as sha256 digest, never in plain text.
+    import hashlib
+
+    import sqlalchemy as sa
+
+    engine = sa.create_engine(database.migrator_url)
+    with engine.begin() as conn:
+        conn.execute(
+            sa.text("SELECT set_config('app.tenant_id', :t, true)"),
+            {"t": str(world.tenant_a)},
+        )
+        stored = conn.execute(
+            sa.text("SELECT token FROM self_disclosure_link WHERE prospect_id = :p"),
+            {"p": prospect["id"]},
+        ).scalar_one()
+    engine.dispose()
+    assert stored == "sha256:" + hashlib.sha256(token.encode()).hexdigest()
+    assert token not in stored
+    assert client.get(f"{L}/self-disclosure/{stored}").status_code == 404
 
     read = _ok(client.get(f"{L}/self-disclosure/{token}"))
     assert read["submitted_at"] is None

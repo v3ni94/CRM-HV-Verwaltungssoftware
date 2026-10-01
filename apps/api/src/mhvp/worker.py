@@ -14,6 +14,7 @@ from kombu import Queue
 
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.logging import configure_logging
+from mhvp.core.telemetry import instrument_celery
 
 QUEUES: tuple[str, ...] = ("default", "io", "ocr", "ai", "bank", "mail", "beat")
 
@@ -300,6 +301,11 @@ def create_celery(settings: Settings | None = None) -> Celery:
                 "task": "mhvp.workspace.notification_mails",
                 "schedule": 300.0,
             },
+            # Tagessammelmail zu Benachrichtigungen mit Einstellung "täglich" (M23-04), 07:30.
+            "workspace-notification-mails-daily": {
+                "task": "mhvp.workspace.notification_mails_daily",
+                "schedule": crontab(hour=7, minute=30),
+            },
             # Daily digest per user 07:00 (A40, 15.1 tasks.digest): in-app notification, mail
             # only with the tenant switch (default off); idempotent per user and day.
             "workspace-digest": {
@@ -391,6 +397,13 @@ def get_celery() -> Celery:
 @signals.setup_logging.connect
 def _configure_worker_logging(**_: Any) -> None:
     configure_logging(get_settings())
+
+
+@signals.worker_process_init.connect
+def _configure_worker_tracing(**_: Any) -> None:
+    # After the fork, so the batch exporter thread lives in the child process; no-op unless
+    # MHVP_OTEL_ENDPOINT is set (M9-02).
+    instrument_celery(get_settings())
 
 
 def __getattr__(name: str) -> Celery:

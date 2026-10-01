@@ -303,3 +303,50 @@ class ConsumptionInfo(IdMixin, TimestampMixin, TenantMixin, Base):
     delivered_on: Mapped[date | None] = mapped_column(Date)
     delivery_evidence: Mapped[str | None] = mapped_column(Text)
     delivery_recorded_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
+class HeatingCostImport(IdMixin, TimestampMixin, TenantMixin, Base):
+    """External heating cost statement of the metering service (M17-09, 6.5
+    ``heating_cost_import``, rule H01): original document, provider, period, user mapping
+    (user number of the provider to unit and contract), cost components per user number,
+    sum check against the document total, CO2 split per unit and the duplicate check against
+    the invoice book. Status ``draft`` -> ``checked`` -> ``applied``; only a checked import is
+    fed into an operating cost statement (as one external heating cost item). Nothing here
+    posts or issues anything; issuing the statement stays behind G3."""
+
+    __tablename__ = "heating_cost_import"
+    __table_args__ = (
+        CheckConstraint("status IN ('draft', 'checked', 'applied')", name="status"),
+        CheckConstraint("period_from <= period_to", name="period"),
+        Index("ix_heating_cost_import_property_period", "tenant_id", "property_id", "period_from"),
+    )
+
+    property_id: Mapped[uuid.UUID] = _fk("property.id")
+    statement_id: Mapped[uuid.UUID | None] = _fk("statement.id", nullable=True, ondelete="SET NULL")
+    document_id: Mapped[uuid.UUID | None] = _fk("document.id", nullable=True)
+    provider_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id", nullable=True)
+    provider_name: Mapped[str] = mapped_column(String(200), nullable=False)
+    period_from: Mapped[date] = mapped_column(Date, nullable=False)
+    period_to: Mapped[date] = mapped_column(Date, nullable=False)
+    document_total: Mapped[Decimal] = mapped_column(MONEY, nullable=False)
+    co2: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    user_mapping: Mapped[dict[str, Any]] = mapped_column(
+        JSONB, nullable=False, default=dict, server_default=text("'{}'::jsonb")
+    )
+    rows: Mapped[list[dict[str, Any]]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    csv_meta: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="draft", server_default=text("'draft'")
+    )
+    check_result: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    duplicate_ack_reason: Mapped[str | None] = mapped_column(Text)
+    checked_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    checked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    applied_item_id: Mapped[uuid.UUID | None] = _fk(
+        "statement_cost_item.id", nullable=True, ondelete="SET NULL"
+    )
+    applied_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

@@ -73,6 +73,10 @@ class HoaReserveIn(HoaBaseIn):
     purpose: str | None = Field(default=None, max_length=2000)
     account_id: uuid.UUID | None = None
     resolution_id: uuid.UUID | None = None
+    # M24-01 (0294): bank investment of the ledger's legal entity, opening balance and year.
+    bank_account_id: uuid.UUID | None = None
+    opening_balance: Decimal = Field(default=Decimal("0.00"), decimal_places=2)
+    opening_year: int | None = Field(default=None, ge=1990, le=2100)
 
 
 class HoaReserveMovementIn(HoaBaseIn):
@@ -966,6 +970,9 @@ async def calculate_statement(
                     for k, v in result["reserve"]["contributions_paid_by_reserve"].items()
                 },
             )
+            from mhvp.hoa.reserves import add_opening_closing
+
+            await add_opening_closing(session, reserves, result["reserve"]["positions"], st.year)
         # M24-03: loans shown per unit only when the manager entered a loan with key and
         # basis; the shares are information and never change the result.
         if st.loan_allocation:
@@ -1441,15 +1448,9 @@ async def get_hoa_statement(
 
 
 def _reserve_out(r: HoaReserve) -> dict[str, Any]:
-    return {
-        "id": r.id,
-        "ledger_id": r.ledger_id,
-        "name": r.name,
-        "purpose": r.purpose,
-        "account_id": r.account_id,
-        "resolution_id": r.resolution_id,
-        "active": r.active,
-    }
+    from mhvp.hoa.reserves import reserve_out
+
+    return reserve_out(r)
 
 
 @router.post("/reserves", status_code=201, summary="Zweckgebundene Rücklage anlegen (W08)")
@@ -1457,7 +1458,12 @@ async def create_reserve(
     body: HoaReserveIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
-        await _hoa_ledger(session, body.ledger_id)
+        from mhvp.hoa.reserves import check_reserve_refs
+
+        ledger = await _hoa_ledger(session, body.ledger_id)
+        await check_reserve_refs(
+            session, ledger, account_id=body.account_id, bank_account_id=body.bank_account_id
+        )
         row = HoaReserve(
             tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
         )

@@ -169,3 +169,7 @@ rule never removes a process code and never changes the status.
 
 - `set_field`: Notizfelder von Objekt, Kontakt, Vertrag aus der geschlossenen Liste `models.SETTABLE_FIELDS`; Ziel ist das Ereignisobjekt oder, bei Ticketereignissen, Objekt oder Kontakt des Tickets; Modus `append` (Standard) oder `replace`. Das Änderungsereignis trägt die Automatisierungsmarke.
 - `notify_provider`: E-Mail-Entwurf (Status draft) an den Dienstleister, nie versendet; nur für Ticketereignisse (`TICKET_ONLY_ACTIONS`).
+
+### Aktion set_record_field (T12, S15-06)
+
+Geschlossene Liste `models.RECORD_FIELDS`: Auftrag (`status` nur `requested` oder `in_progress` entlang `ORDER_FLOW` mit `WorkOrderEvent`, `scheduled_at` mit Zeitzone, `assignee_user_id` als Zuständiger des Auftragstickets) und Dokument (`category_id` mit Aufbewahrungsprofil, verweigert bei Sperre oder Dauerunterlage, `property_id` als Verknüpfung). Ziel ist das Ereignisobjekt; Änderungsereignisse tragen die Automatisierungsmarke. Regel: `docs/rules/T12.md`.

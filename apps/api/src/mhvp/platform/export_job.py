@@ -43,11 +43,19 @@ def export_key(tenant_id: uuid.UUID, request_id: uuid.UUID) -> str:
 
 
 def _entities() -> list[tuple[str, Any]]:
-    from mhvp.accounting.models import Invoice, InvoiceLine, JournalEntry, JournalLine
+    from mhvp.accounting.models import (
+        Invoice,
+        InvoiceLine,
+        JournalEntry,
+        JournalLine,
+        OpenItem,
+        OpenItemSettlement,
+    )
+    from mhvp.banking.models import BankTransaction
     from mhvp.contacts.models import Contact
     from mhvp.contracts.models import Contract
     from mhvp.documents.models import Document
-    from mhvp.properties.models import LegalEntity, Property, Unit
+    from mhvp.properties.models import LegalEntity, Property, PropertyBankAccount, Unit
     from mhvp.tickets.models import Ticket, TicketComment
 
     return [
@@ -60,6 +68,10 @@ def _entities() -> list[tuple[str, Any]]:
         ("journal_lines", JournalLine),
         ("invoices", Invoice),
         ("invoice_lines", InvoiceLine),
+        ("open_items", OpenItem),
+        ("open_item_settlements", OpenItemSettlement),
+        ("bank_accounts", PropertyBankAccount),
+        ("bank_transactions", BankTransaction),
         ("tickets", Ticket),
         ("ticket_comments", TicketComment),
         ("documents", Document),
@@ -248,3 +260,91 @@ def tenant_export_job(request_id: str, tenant_id: str) -> str:
     import asyncio
 
     return asyncio.run(run_export_job(get_settings(), uuid.UUID(request_id), uuid.UUID(tenant_id)))
+
+
+# ---------------------------------------------------------------------------------------
+# Tenant administrator export (M2-01): own job table, no four eyes request
+# ---------------------------------------------------------------------------------------
+
+
+def tenant_export_key(tenant_id: uuid.UUID, job_id: uuid.UUID) -> str:
+    return f"tenants/{tenant_id}/exports/job-{job_id}.zip"
+
+
+async def run_tenant_export_job(settings: Settings, job_id: uuid.UUID, tenant_id: uuid.UUID) -> str:
+    from mhvp.core.events import emit
+    from mhvp.core.storage import create_s3_client
+    from mhvp.platform.models import TenantExportJob
+
+    engine = create_async_engine(
+        settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
+    )
+    factory = create_session_factory(engine)
+    try:
+        async with tenant_transaction(factory, tenant_id) as session:
+            row = await session.get(TenantExportJob, job_id)
+            if row is None or row.tenant_id != tenant_id or row.status != JOB_QUEUED:
+                return "skipped"
+            row.status = JOB_RUNNING
+            row.error = None
+            row.started_at = datetime.now(UTC)
+        workdir = Path(tempfile.mkdtemp(prefix="mhvp-export-"))
+        try:
+            target = workdir / "export.zip"
+            client = create_s3_client(settings)
+            manifest = await build_full_export(
+                factory, tenant_id, "full", target, client, settings.s3_bucket
+            )
+            digest = sha256()
+            with target.open("rb") as handle:
+                for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            key = tenant_export_key(tenant_id, job_id)
+            client.upload_file(str(target), settings.s3_bucket, key)
+            size = target.stat().st_size
+        finally:
+            shutil.rmtree(workdir, ignore_errors=True)
+        async with tenant_transaction(factory, tenant_id) as session:
+            row = await session.get(TenantExportJob, job_id)
+            if row is not None:
+                row.status = JOB_READY
+                row.object_key = key
+                row.size = size
+                row.sha256 = digest.hexdigest()
+                row.manifest = manifest
+                row.finished_at = datetime.now(UTC)
+                await emit(
+                    session,
+                    tenant_id=tenant_id,
+                    type="tenant_export.finished",
+                    entity_type="tenant_export_job",
+                    entity_id=job_id,
+                    actor_user_id=row.requested_by,
+                    payload={"size": size, "sha256": row.sha256},
+                )
+        return JOB_READY
+    except Exception as exc:
+        log.error("tenant export job failed: %s", type(exc).__name__)
+        async with tenant_transaction(factory, tenant_id) as session:
+            row = await session.get(TenantExportJob, job_id)
+            if row is not None:
+                row.status = JOB_FAILED
+                row.error = f"{type(exc).__name__}: {exc}"[:2000]
+                row.finished_at = datetime.now(UTC)
+        raise
+    finally:
+        await engine.dispose()
+
+
+def dispatch_tenant_export_job(job_id: str, tenant_id: str) -> None:
+    """Module level so that tests replace it."""
+    tenant_export_admin_job.delay(job_id, tenant_id)
+
+
+@shared_task(name="mhvp.platform.tenant_export_job")
+def tenant_export_admin_job(job_id: str, tenant_id: str) -> str:
+    import asyncio
+
+    return asyncio.run(
+        run_tenant_export_job(get_settings(), uuid.UUID(job_id), uuid.UUID(tenant_id))
+    )

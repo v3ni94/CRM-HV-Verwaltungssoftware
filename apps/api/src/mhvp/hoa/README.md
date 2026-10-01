@@ -127,3 +127,22 @@ meeting, resolution, levy, loan, measure, claim, engagement, audit, asset report
 ledger) resolve to the property; outside the membership assignment 404. Inspection requests
 are guarded in `inspection.py` and their list is filtered. Audit reports of the board carry no
 legal entity and are not guarded by id.
+
+## Addendum 01.10.2026 (T09, M24-01 reserve per position)
+
+* `hoa/reserves.py`: `GET/PATCH /hoa/reserves/{id}` (bank account of the ledger's legal
+  entity, opening balance and year, legal entity in the output), `GET /hoa/reserves/{id}/development?year=`
+  (opening, contribution, withdrawals, taxes, fees, interest, closing per year, chained),
+  `GET /hoa/statements/{id}/reserve-movements`, `DELETE .../reserve-movements/{mid}` (draft only).
+* Statement snapshot positions carry `opening`, `closing_planned`, `closing_paid`; the asset
+  report reserve block carries `positions`. Migration 0294. Nothing posts (rule M24-W5).
+
+* Property assignment (T14, R08-01): `board._engagement` also resolves the property of the community, so audit reports by id (`/hoa/audit-reports/{report_id}/...`) and all engagement paths answer 404 outside `Membership.property_ids`.
+
+## Reserve statement (S69-01, wave 5)
+
+`reserve_statement.py`: own statement object per ledger and year (`/hoa/reserve-statements`,
+table `reserve_statement`, migration 0295) with the shared status model; created from the
+reserve block of the calculated Hausgeldabrechnung and the reserve master data (migration
+0294); issued, due and posted behind G4. Rule: `docs/rules/S69-01-statement-status-model.md`.
+

@@ -6,18 +6,33 @@ logs by default (section 16, pseudonymisation in logs).
 
 import logging
 import sys
+from typing import Any
 
 import structlog
-from structlog.types import Processor
+from opentelemetry import trace
+from structlog.types import EventDict, Processor
 
 from mhvp.core.config import LogFormat, Settings
+from mhvp.core.redaction import redact_event
+
+
+def add_trace_context(_logger: Any, _method: str, event_dict: EventDict) -> EventDict:
+    """Add ``trace_id`` and ``span_id`` of the active OpenTelemetry span (no-op without one)."""
+    ctx = trace.get_current_span().get_span_context()
+    if ctx.is_valid:
+        event_dict["trace_id"] = format(ctx.trace_id, "032x")
+        event_dict["span_id"] = format(ctx.span_id, "016x")
+    return event_dict
+
 
 _SHARED_PROCESSORS: list[Processor] = [
     structlog.contextvars.merge_contextvars,
+    add_trace_context,
     structlog.stdlib.add_logger_name,
     structlog.stdlib.add_log_level,
     structlog.processors.TimeStamper(fmt="iso", utc=True),
     structlog.processors.StackInfoRenderer(),
+    redact_event,  # S16-03: no secrets in logs
 ]
 
 

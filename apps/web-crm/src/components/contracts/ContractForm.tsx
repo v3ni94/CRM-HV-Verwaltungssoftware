@@ -594,7 +594,7 @@ export function ContractCreateForm({ properties, initialPropertyId, initialUnitI
   const depositAmount = parseAmount(deposit.amount);
 
   return (
-    <form onSubmit={submit} className={`${ui.card} ${ui.sectionGap}`} data-testid="contract-form" noValidate>
+    <form aria-label={t("sections.base")} onSubmit={submit} className={`${ui.card} ${ui.sectionGap}`} data-testid="contract-form" noValidate>
       <p className={ui.notice}>{t("hint")}</p>
 
       <fieldset className={ui.sectionGap}>
@@ -1031,7 +1031,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
         </dl>
       </section>
 
-      <form onSubmit={submitVersion} className={`${ui.card} ${ui.sectionGap}`} data-testid="contract-version-form" noValidate>
+      <form aria-label={t("edit.versionTitle")} onSubmit={submitVersion} className={`${ui.card} ${ui.sectionGap}`} data-testid="contract-version-form" noValidate>
         <h2 className={ui.h2}>{t("edit.versionTitle")}</h2>
         <p className={ui.help}>{t("edit.versionHelp")}</p>
         <div className="grid gap-3 sm:grid-cols-2">
@@ -1099,7 +1099,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
         </div>
       </form>
 
-      <form onSubmit={submitSchedule} className={`${ui.card} ${ui.sectionGap}`} data-testid="contract-schedule-form" noValidate>
+      <form aria-label={t("sections.schedule")} onSubmit={submitSchedule} className={`${ui.card} ${ui.sectionGap}`} data-testid="contract-schedule-form" noValidate>
         <h2 className={ui.h2}>{t("sections.schedule")}</h2>
         {scheduleDone.length > 0 ? (
           <ul className="text-sm" aria-label={t("schedule.existing")}>
@@ -1128,7 +1128,7 @@ export function ContractEditForm({ contract, partyName, unitLabel, propertyLabel
       </form>
 
       {contract.kind === "tenancy" ? (
-        <form onSubmit={submitTermination} className={`${ui.card} ${ui.sectionGap}`} data-testid="contract-termination-form" noValidate>
+        <form aria-label={t("termination.title")} onSubmit={submitTermination} className={`${ui.card} ${ui.sectionGap}`} data-testid="contract-termination-form" noValidate>
           <h2 className={ui.h2}>{t("termination.title")}</h2>
           <p className={ui.notice}>{t("termination.approval")}</p>
           {ended ? <p className={ui.help}>{t("termination.alreadyEnded", { date: formatDate(contract.end_date) })}</p> : null}

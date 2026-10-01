@@ -2,6 +2,8 @@ import { getTranslations } from "next-intl/server";
 
 import { ReserveDevelopment, type ReserveBlock } from "@/components/hoa/ReserveDevelopment";
 import { ReserveCreateForm, ReserveMovementForm } from "@/components/hoa/ReserveForms";
+import { ReserveStatementPanel } from "@/components/hoa/ReserveStatementPanel";
+import { ReserveMovementList, ReservePosition, type ReserveRow } from "@/components/hoa/ReservePositions";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { redirectIfUnauthenticated } from "@/lib/api-server";
 import { hoaContext } from "@/lib/hoa";
@@ -23,7 +25,8 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
     ctx.api.GET("/api/v1/hoa/reserves", { params: { query: { ledger_id: ctx.ledger.id } } }),
     ctx.api.GET("/api/v1/hoa/statements", { params: { query: { ledger_id: ctx.ledger.id } } }),
   ]);
-  const list = (reserves.data ?? []) as { id: string; name: string; purpose: string | null }[];
+  const list = (reserves.data ?? []) as unknown as ReserveRow[];
+  const year = (((statements.data ?? []) as unknown as Statement[])[0]?.year ?? new Date().getFullYear()) as number;
   // The list carries no snapshot: the newest versions are read until one has a reserve block.
   const candidates = ((statements.data ?? []) as unknown as Statement[]).slice(0, 5);
   let latest: Statement | null = null;
@@ -44,10 +47,7 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
         {list.length === 0 ? <p className="text-sm text-muted">{t("none")}</p> : null}
         <ul className="flex flex-col gap-1 text-sm" data-testid="reserve-list">
           {list.map((r) => (
-            <li key={r.id}>
-              <span className="font-medium">{r.name}</span>
-              {r.purpose ? <span className="text-muted"> · {r.purpose}</span> : null}
-            </li>
+            <ReservePosition key={r.id} reserve={r} year={year} />
           ))}
         </ul>
         <ReserveCreateForm ledgerId={ctx.ledger.id} />
@@ -57,10 +57,12 @@ export default async function ReservesPage({ params }: { params: Promise<{ prope
           <p className="text-sm text-muted">{t("basedOn", { year: latest.year, version: latest.version })}</p>
           <ReserveDevelopment block={latest.snapshot.reserve} />
           {list.length ? <ReserveMovementForm statementId={latest.id} reserves={list.map((r) => ({ id: r.id, name: r.name }))} /> : null}
+          <ReserveMovementList statementId={latest.id} reserves={list} editable={latest.status === "draft"} />
         </>
       ) : (
         <p className="text-sm text-muted">{t("noStatement")}</p>
       )}
+      <ReserveStatementPanel ledgerId={ctx.ledger.id} hoaStatementId={latest?.id ?? null} />
     </div>
   );
 }

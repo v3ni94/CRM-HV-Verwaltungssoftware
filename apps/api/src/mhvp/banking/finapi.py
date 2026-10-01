@@ -311,6 +311,7 @@ class FinApiClient:
         per_page: int = 500,
         min_booking_date: date | None = None,
         max_booking_date: date | None = None,
+        raw_sink: list[Any] | None = None,
     ) -> tuple[list[FinApiTransaction], bool]:
         """GET /transactions (verified, docs section 2). Pagination field names and the
         distinction between booked and pending transactions are marked "zu prüfen"; this
@@ -338,6 +339,8 @@ class FinApiClient:
             )
         _raise_for_status(response, "Umsatzabruf")
         body = response.json()
+        if raw_sink is not None:
+            raw_sink.append(body)  # unchanged provider answer for the archive (M11-07)
         raw = body.get("transactions", body if isinstance(body, list) else [])
         items = [_transaction_from_json(t) for t in raw]
         paging = body.get("paging") if isinstance(body, dict) else None
@@ -441,6 +444,47 @@ def _raise_for_status(response: httpx.Response, action: str) -> None:
     )
 
 
+# Assumption A-M11-08-01 (docs/ASSUMPTIONS.md): the finAPI documentation fetched on 25.09.2026
+# names no verified consent expiry field (M11-41). These candidate keys are read from the
+# bank connection and its interfaces; the first valid ISO date wins per object and the
+# earliest date over all objects is used (conservative for a reminder). A key that finAPI does
+# not deliver is simply absent: nothing is estimated (rule 0.1.3).
+CONSENT_EXPIRY_KEYS: tuple[str, ...] = (
+    "consentExpiresAt",
+    "consentValidUntil",
+    "consentExpiryDate",
+    "consentExpirationDate",
+)
+
+
+def _iso_date(value: object) -> date | None:
+    if not isinstance(value, str) or len(value) < 10:
+        return None
+    try:
+        return date.fromisoformat(value[:10])
+    except ValueError:
+        return None
+
+
+def parse_consent_valid_until(details: dict[str, Any]) -> date | None:
+    """Consent expiry from a ``GET /bankConnections/{id}`` body, or ``None`` when finAPI
+    delivered none of `CONSENT_EXPIRY_KEYS` (on the connection or in ``interfaces``)."""
+    objects: list[Any] = [details]
+    interfaces = details.get("interfaces")
+    if isinstance(interfaces, list):
+        objects.extend(interfaces)
+    found: list[date] = []
+    for obj in objects:
+        if not isinstance(obj, dict):
+            continue
+        for key in CONSENT_EXPIRY_KEYS:
+            parsed = _iso_date(obj.get(key))
+            if parsed is not None:
+                found.append(parsed)
+                break
+    return min(found) if found else None
+
+
 def _finapi_transaction_to_raw(t: FinApiTransaction) -> RawTransaction:
     """Shared mapping finAPI -> `RawTransaction` (6.9.7): the finAPI transaction id becomes the
     ``bank_reference`` prefixed with ``finapi:`` so dedup (`mhvp.banking.services`, D05) works
@@ -502,7 +546,7 @@ class FinApiConnector:
         return ConnectionResult(
             status=str(details.get("status") or web_form.status),
             connection_ref=web_form.finapi_bank_connection_id,
-            consent_valid_until=None,  # not verified: no consent-expiry field confirmed yet
+            consent_valid_until=parse_consent_valid_until(details),
             error_message=error,
         )
 
@@ -569,12 +613,12 @@ class FinApiConnector:
 
     def consent_status(self, connection_ref: str) -> ConsentInfo:
         """Status of the bank connection (GET /bankConnections/{id}, verified). The consent
-        expiry is not read: no expiry field is verified yet (OPEN_QUESTIONS M11-41), so
-        ``valid_until`` stays ``None`` and the reminder uses the manually kept date."""
+        expiry is read defensively by `parse_consent_valid_until` (assumption A-M11-08-01,
+        field names to be confirmed, M11-41); without a delivered date it stays ``None``."""
         details = self._client.get_bank_connection(connection_ref)
         return ConsentInfo(
             status=str(details.get("status") or "unknown"),
-            valid_until=None,
+            valid_until=parse_consent_valid_until(details),
             error_message=details.get("errorMessage"),
         )
 

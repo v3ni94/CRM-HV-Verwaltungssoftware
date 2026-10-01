@@ -48,6 +48,13 @@ class ReportType(StrEnum):
     DOCUMENT_INDEX = "document_index"  # DMS-Dokumente mit Objekt- und Vertragsbezug
     TICKET_HISTORY = "ticket_history"  # historische Tickets, nur lesend
     OPEN_ITEMS = "open_items"  # offene Posten, Guthaben, Kautionen, Rücklagen, Darlehen
+    # Welle 5 (M8-01): further reports (``mhvp.imports.w5_reports``), migration 0297.
+    DEPOSIT = "deposit"  # Kautionen
+    ALLOCATION_KEY = "allocation_key"  # Umlageschlüssel mit Einheitenwerten
+    METER = "meter"  # Zähler
+    ENERGY_CERTIFICATE = "energy_certificate"  # Energieausweise
+    SERVICE_PROVIDER = "service_provider"  # Dienstleisterverhältnisse
+    PORTAL_USER = "portal_user"  # Portalnutzer (nur Status)
 
 
 class FileStatus(StrEnum):

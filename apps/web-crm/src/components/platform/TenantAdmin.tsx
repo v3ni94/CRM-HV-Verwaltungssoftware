@@ -38,7 +38,7 @@ function CreateTenantForm({ onCreated }: { onCreated: (tenant: Tenant) => void }
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3 sm:max-w-md`}>
+    <form aria-label={t("createTenantTitle")} onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3 sm:max-w-md`}>
       <h2 className="text-sm font-semibold">{t("createTenantTitle")}</h2>
       <label className="flex flex-col gap-1">
         <span className={ui.label}>{t("slug")}</span>
@@ -98,7 +98,7 @@ function AssignAdminForm({ tenants }: { tenants: Tenant[] }) {
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3 sm:max-w-md`}>
+    <form aria-label={t("assignAdminTitle")} onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3 sm:max-w-md`}>
       <h2 className="text-sm font-semibold">{t("assignAdminTitle")}</h2>
       <p className="text-xs text-muted">{t("assignAdminHint")}</p>
       <label className="flex flex-col gap-1">

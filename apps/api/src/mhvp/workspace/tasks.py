@@ -105,7 +105,7 @@ def compliance_deadlines() -> dict[str, int]:
     return asyncio.run(deadlines_once(get_settings()))
 
 
-async def notification_mails_once(settings: Settings) -> dict[str, int]:
+async def notification_mails_once(settings: Settings, *, daily: bool = False) -> dict[str, int]:
     """Sends the mails that users asked for in their notification preferences (M23-04)."""
     from mhvp.workspace.notification_prefs import send_pending_mails
 
@@ -113,12 +113,12 @@ async def notification_mails_once(settings: Settings) -> dict[str, int]:
         settings.database_url.get_secret_value(), poolclass=NullPool, hide_parameters=True
     )
     factory = create_session_factory(engine)
-    totals = {"tenants": 0, "sent": 0, "failed": 0, "skipped": 0}
+    totals = {"tenants": 0, "sent": 0, "failed": 0, "skipped": 0, "mails": 0}
     try:
         for tenant_id in await _active_tenants(factory):
             async with tenant_transaction(factory, tenant_id) as session:
                 totals["tenants"] += 1
-                counts = await send_pending_mails(session, settings, tenant_id)
+                counts = await send_pending_mails(session, settings, tenant_id, daily=daily)
             for key, value in counts.items():
                 totals[key] += value
     finally:
@@ -129,3 +129,8 @@ async def notification_mails_once(settings: Settings) -> dict[str, int]:
 @shared_task(name="mhvp.workspace.notification_mails")
 def notification_mails() -> dict[str, int]:
     return asyncio.run(notification_mails_once(get_settings()))
+
+
+@shared_task(name="mhvp.workspace.notification_mails_daily")
+def notification_mails_daily() -> dict[str, int]:
+    return asyncio.run(notification_mails_once(get_settings(), daily=True))

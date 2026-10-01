@@ -2612,6 +2612,57 @@ async def recompute_suggestion(
         return _out(row)
 
 
+@router.post("/messages/{message_id}/reply-ai", summary="Antwortentwurf (KI) erzeugen")
+async def create_reply_draft(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Own AI task ``reply_draft`` (T12, 9.2): tone, placeholders and mailbox style as input.
+    Without a released provider nothing is stored (status skipped). The result lands under
+    ``suggestion.reply_ai`` unapproved; it is usable only after ``/reply-ai/approve`` and
+    is never sent by this path (rule 0.1.6)."""
+    from mhvp.communication import suggest
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id, principal)
+        if row.direction != "in":
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Nur für eingehende Mails.")
+        result = await suggest.reply_task_for_message(session, request.app.state.settings, row)
+        if result["status"] == "ready":
+            suggestion = dict(row.suggestion or {})
+            suggestion["reply_ai"] = {k: v for k, v in result.items() if k != "status"}
+            row.suggestion = suggestion
+            await session.flush()
+        return result
+
+
+@router.post("/messages/{message_id}/reply-ai/approve", summary="Antwortentwurf freigeben")
+async def approve_reply_draft(
+    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> dict[str, Any]:
+    """Human approval of the stored reply draft (four eyes with the later send path stay
+    untouched). Records user and time; a new draft resets the approval."""
+    from datetime import UTC, datetime
+
+    async with tenant_tx(request, principal) as session:
+        row = await _message(session, message_id, principal)
+        suggestion = dict(row.suggestion or {})
+        draft = suggestion.get("reply_ai")
+        if not isinstance(draft, dict):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Kein Antwortentwurf.")
+        if draft.get("approved"):
+            return dict(draft)
+        draft = {
+            **draft,
+            "approved": True,
+            "approved_at": datetime.now(UTC).isoformat(),
+            "approved_by": str(principal.user_id),
+        }
+        suggestion["reply_ai"] = draft
+        row.suggestion = suggestion
+        await session.flush()
+        return draft
+
+
 async def _compact_thread(
     session: AsyncSession, principal: TenantPrincipal, row: Message
 ) -> list[Message]:

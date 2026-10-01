@@ -29,10 +29,15 @@ from mhvp.portal.models import (
     PortalSupportAccess,
     PortalSupportConsent,
 )
+from mhvp.portal.property_scope import portal_admin_guard
 from mhvp.portal.routers import Portal, portal_user
 from mhvp.workspace.services import local_today
 
-admin = APIRouter(prefix="/portal-admin", tags=["Portal Verwaltung"])
+admin = APIRouter(
+    prefix="/portal-admin",
+    tags=["Portal Verwaltung"],
+    dependencies=[Depends(portal_admin_guard)],  # M2-02, R08-01
+)
 router = APIRouter(prefix="/portal", tags=["Portal"])
 READ = require_permission("tickets:read")
 MANAGE = require_permission("tenant_settings:update")

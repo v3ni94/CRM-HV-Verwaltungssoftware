@@ -109,6 +109,53 @@ async def _consent_already_notified(
     return existing is not None
 
 
+async def _create_consent_task(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    conn: BankConnection,
+    title: str,
+    body: str,
+    valid_until: date,
+    assignee: uuid.UUID | None,
+) -> uuid.UUID | None:
+    """M11-08: the reminder also creates one internal task (ticket category ``task``) for
+    the renewal, once per expiry date (the caller checked `_consent_already_notified`). It
+    only reminds; the renewal itself is a person's action in the finAPI WebForm."""
+    from mhvp.core.numbering import next_number
+    from mhvp.sla.service import start_clock
+    from mhvp.tickets.models import Priority, Ticket, TicketEvent, TicketSource
+    from mhvp.tickets.routers import SLA_HOURS
+
+    priority = Priority.NORMAL
+    now = datetime.now(UTC)
+    due = datetime.combine(valid_until, datetime.min.time(), tzinfo=UTC)
+    ticket = Ticket(
+        tenant_id=tenant_id,
+        created_by=None,
+        number=await next_number(session, tenant_id, "ticket"),
+        category="task",
+        title=title,
+        internal_description=body,
+        priority=priority,
+        assignee_user_id=assignee,
+        source=TicketSource.MANUAL,
+        sla_due_at=due if due > now else now + timedelta(hours=SLA_HOURS[priority]),
+    )
+    session.add(ticket)
+    await session.flush()
+    await start_clock(session, tenant_id, ticket.id, ticket.priority)
+    session.add(
+        TicketEvent(
+            tenant_id=tenant_id,
+            ticket_id=ticket.id,
+            kind="created",
+            user_id=None,
+            data={"routing": "banking.consent_expiring", "bank_connection_id": str(conn.id)},
+        )
+    )
+    return ticket.id
+
+
 async def remind_consent_expiry(
     session: AsyncSession, tenant_id: uuid.UUID, conn: BankConnection, today: date
 ) -> int:
@@ -157,6 +204,9 @@ async def remind_consent_expiry(
         "Die Zustimmung zum Kontozugriff muss über Bank, Bankverbindungen, Zustimmung erneuern "
         "(WebForm der Bank) verlängert werden. Bis dahin werden keine Umsätze abgerufen."
     )
+    ticket_id = await _create_consent_task(
+        session, tenant_id, conn, title, body, valid_until, recipients[0] if recipients else None
+    )
     created = 0
     for user_id in recipients:
         row = await notify(
@@ -183,6 +233,7 @@ async def remind_consent_expiry(
             "bank_name": conn.bank_name,
             "recipients": len(recipients),
             "days_left": (valid_until - today).days,
+            "ticket_id": str(ticket_id) if ticket_id else None,
         },
     )
     return created
@@ -446,12 +497,14 @@ async def _finapi_fetch_once(
                     {"new": 0, "duplicates": 0, "possible_duplicates": 0, "transfers": 0},
                 )
                 newest: tuple[_date, str] | None = None
+                raw_pages: list[Any] = []
                 while True:
                     items, has_more = client.list_transactions(
                         account_ids=[link.finapi_account_id],
                         page=page,
                         min_booking_date=since_date,
                         max_booking_date=until_date,
+                        raw_sink=raw_pages,
                     )
                     raw = [
                         finapi_client._finapi_transaction_to_raw(t)
@@ -481,6 +534,7 @@ async def _finapi_fetch_once(
                         break
                     page += 1
                 link.last_transactions_fetch_at = datetime.now(UTC)
+                await _archive_raw_pages(settings, session, tenant_id, account, raw_pages)
                 if newest is not None and (
                     link.last_synced_booking_date is None
                     or newest[0] >= link.last_synced_booking_date
@@ -508,6 +562,40 @@ async def _finapi_fetch_once(
         return counts
     finally:
         await engine.dispose()
+
+
+async def _archive_raw_pages(
+    settings: Settings,
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    account: Any,
+    raw_pages: list[Any],
+) -> None:
+    """M11-07: keeps the unchanged provider answers of one fetch under
+    ``bank/<tenant>/<account>/<date>.json`` with the 10 year profile. A storage problem is
+    logged and never aborts the import (the transactions carry their own provider id)."""
+    if not raw_pages:
+        return
+    import json
+
+    from mhvp.banking.raw_archive import archive_raw
+    from mhvp.documents.blobs import BlobStore
+
+    try:
+        await archive_raw(
+            session,
+            BlobStore(settings),
+            tenant_id=tenant_id,
+            account_id=account.id,
+            data=json.dumps(raw_pages, ensure_ascii=False, sort_keys=True).encode("utf-8"),
+            ext="json",
+            day=local_today(),
+            created_by=None,
+            legal_entity_id=account.legal_entity_id,
+            label="finAPI Rohdaten",
+        )
+    except ProblemError:
+        log.warning("bank.raw_archive_failed", exc_info=True)
 
 
 SYNC_MAX_RETRIES = 3

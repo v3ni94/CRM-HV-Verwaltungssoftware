@@ -446,7 +446,7 @@ function ReportCard({ report, engagementId }: { report: BoardReport; engagementI
           </p>
         ) : null}
         {editing ? (
-          <form onSubmit={submit} noValidate aria-busy={busy} className="flex flex-col gap-2">
+          <form onSubmit={submit} noValidate aria-busy={busy} aria-label={t("reports.statement")} className="flex flex-col gap-2">
             <label htmlFor={textId} className={ui.label}>
               {t("reports.statementLabel")}
             </label>

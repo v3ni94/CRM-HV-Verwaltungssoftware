@@ -1408,6 +1408,9 @@ class InvoiceLineIn(BaseModel):
     section_35a_amount: Decimal | None = None
     unit_id: uuid.UUID | None = None
     text: str | None = Field(default=None, max_length=500)
+    # M14-02: quantity and unit price for the price and quantity comparison (findings only).
+    quantity: Decimal | None = Field(default=None, gt=0)
+    unit_price: Decimal | None = None
 
 
 class InvoiceIn(BaseModel):
@@ -1448,6 +1451,15 @@ class InvoiceIn(BaseModel):
     reverse_charge: bool = False
     construction_withholding: bool = False
     input_tax_deductible: bool | None = None
+    # M14-02 (migration 0291): structured links of the factual review.
+    work_order_id: uuid.UUID | None = Field(default=None, description="Auftrag (Arbeitsauftrag)")
+    resolution_id: uuid.UUID | None = Field(default=None, description="WEG Beschluss")
+    plan_item_id: uuid.UUID | None = Field(
+        default=None, description="Wirtschaftsplanposition (Budget)"
+    )
+    recurring_plan_id: uuid.UUID | None = Field(
+        default=None, description="Rechnungsplan (Wiederkehr-Prüfung); leer lässt ihn unverändert"
+    )
 
 
 class InvoiceReviewedItemIn(BaseModel):
@@ -1482,6 +1494,8 @@ def _invoice_payload(body: InvoiceIn) -> dict[str, Any]:
         )
     data = body.model_dump(exclude={"lines", "payee_iban"})
     data["attachment_document_ids"] = [str(d) for d in body.attachment_document_ids]
+    if data.get("recurring_plan_id") is None:
+        data.pop("recurring_plan_id", None)  # keeps the link of a generated invoice (M14-02)
     return data
 
 
@@ -1518,6 +1532,9 @@ def _invoice_out(
         "service_to": inv.service_to,
         "order_reference": inv.order_reference,
         "service_contract_id": inv.service_contract_id,
+        "work_order_id": inv.work_order_id,
+        "resolution_id": inv.resolution_id,
+        "plan_item_id": inv.plan_item_id,
         "recurring_plan_id": inv.recurring_plan_id,
         "reference_invoice_id": inv.reference_invoice_id,
         "service_place": inv.service_place,
@@ -1543,6 +1560,8 @@ def _invoice_out(
                 "vat_percent": ln.vat_percent,
                 "vat": ln.vat,
                 "text": ln.text,
+                "quantity": ln.quantity,
+                "unit_price": ln.unit_price,
             }
             for ln in lines
         ],
@@ -1609,12 +1628,143 @@ async def _ensure_invoice_property_allowed(session: AsyncSession, inv: Invoice) 
     ensure_session_property_allowed(session, ledger.property_id if ledger else None)
 
 
+async def _check_factual_links(session: AsyncSession, body: InvoiceIn) -> None:
+    """M14-02: linked work order, resolution and plan item must exist in this tenant (RLS)."""
+    from mhvp.hoa.models import PlanItem, Resolution
+    from mhvp.tickets.models import WorkOrder
+
+    for value, model, label in (
+        (body.work_order_id, WorkOrder, "Auftrag"),
+        (body.resolution_id, Resolution, "Beschluss"),
+        (body.plan_item_id, PlanItem, "Wirtschaftsplanposition"),
+        (body.recurring_plan_id, RecurringInvoicePlan, "Rechnungsplan"),
+    ):
+        if value is not None and await session.get(model, value) is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=f"{label} nicht gefunden.")
+
+
+class InvoiceFactualFindingOut(BaseModel):
+    area: str
+    code: str
+    message: str
+
+
+class InvoiceFactualCheckOut(BaseModel):
+    invoice_id: uuid.UUID
+    version: int
+    findings: list[InvoiceFactualFindingOut]
+    suggested_reviewer_user_id: uuid.UUID | None
+    property_id: uuid.UUID | None
+    price_tolerance_percent: Decimal
+    quantity_tolerance_percent: Decimal
+    automatic_release: bool = False
+
+
+class InvoiceCheckSettingIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    price_tolerance_percent: Decimal = Field(ge=0, le=100, decimal_places=4)
+    quantity_tolerance_percent: Decimal = Field(ge=0, le=100, decimal_places=4)
+
+
+class InvoiceCheckSettingOut(BaseModel):
+    price_tolerance_percent: Decimal
+    quantity_tolerance_percent: Decimal
+
+
+SETTINGS_UPDATE = require_permission("tenant_settings:update")
+
+
+@router.get(
+    "/invoices/{invoice_id}/factual-check",
+    summary="Sachliche Prüfung als Befunde (Auftrag, Vertrag, Beschluss, Budget, Wiederkehr)",
+    response_model=InvoiceFactualCheckOut,
+)
+async def invoice_factual_check(
+    invoice_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """M14-02 (PÜ02): findings and the proposed responsible reviewer; never a release."""
+    from mhvp.accounting import invoice_factual
+
+    async with tenant_tx(request, principal) as session:
+        inv = await session.get(Invoice, invoice_id)
+        if inv is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        await _ensure_invoice_property_allowed(session, inv)
+        tol = await invoice_factual.load_tolerances(session)
+        result = await invoice_factual.factual_check(session, inv)
+        contract = await invoice_checks.contract_findings(session, inv)
+        payload = invoice_factual.result_payload(result, tol)
+        payload["findings"] = [
+            *({"area": "contract", "code": "contract", "message": m} for m in contract),
+            *payload["findings"],
+        ]
+        return {"invoice_id": inv.id, "version": inv.version, **payload}
+
+
+@router.get(
+    "/invoice-check-settings",
+    summary="Toleranzen der sachlichen Rechnungsprüfung",
+    response_model=InvoiceCheckSettingOut,
+)
+async def get_invoice_check_settings(
+    request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    from mhvp.accounting import invoice_factual
+
+    async with tenant_tx(request, principal) as session:
+        tol = await invoice_factual.load_tolerances(session)
+        return {
+            "price_tolerance_percent": tol.price_percent,
+            "quantity_tolerance_percent": tol.quantity_percent,
+        }
+
+
+@router.put(
+    "/invoice-check-settings",
+    summary="Toleranzen der sachlichen Rechnungsprüfung setzen",
+    response_model=InvoiceCheckSettingOut,
+)
+async def put_invoice_check_settings(
+    body: InvoiceCheckSettingIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(SETTINGS_UPDATE),
+) -> dict[str, Any]:
+    from mhvp.accounting.models import InvoiceCheckSetting
+
+    async with tenant_tx(request, principal) as session:
+        row = await session.scalar(select(InvoiceCheckSetting).with_for_update())
+        if row is None:
+            row = InvoiceCheckSetting(tenant_id=principal.tenant_id, created_by=principal.user_id)
+            session.add(row)
+        row.price_tolerance_percent = body.price_tolerance_percent
+        row.quantity_tolerance_percent = body.quantity_tolerance_percent
+        row.updated_by = principal.user_id
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="invoice_check_setting.updated",
+            entity_type="tenant_settings",
+            entity_id=principal.tenant_id,
+            actor_user_id=principal.user_id,
+            payload={
+                "price_tolerance_percent": str(body.price_tolerance_percent),
+                "quantity_tolerance_percent": str(body.quantity_tolerance_percent),
+            },
+        )
+        await session.flush()
+        return {
+            "price_tolerance_percent": row.price_tolerance_percent,
+            "quantity_tolerance_percent": row.quantity_tolerance_percent,
+        }
+
+
 @router.post("/invoices", status_code=201, summary="Eingangsrechnung erfassen")
 async def create_invoice(
     body: InvoiceIn, request: Request, principal: TenantPrincipal = Depends(CREATE)
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         await _ledger(session, body.ledger_id)
+        await _check_factual_links(session, body)
         inv = Invoice(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -1652,6 +1802,7 @@ async def update_invoice(
                 detail="Gebuchte Rechnungen werden per Storno korrigiert.",
             )
         before_iban = inv.payee_iban_fingerprint
+        await _check_factual_links(session, body)
         for key, value in _invoice_payload(body).items():
             setattr(inv, key, value)
         inv.version += 1

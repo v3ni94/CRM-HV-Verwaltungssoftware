@@ -53,8 +53,14 @@ auch für Bankkonten, Bankumsätze und Zahlungsaufträge, Betriebskosten- und
 Eigentümerabrechnungen, die WEG-Bereiche (Versammlungen, Beschlüsse, Wirtschaftspläne,
 Hausgeldabrechnungen, Sonderumlagen, Darlehen, Maßnahmen, Einsichtsanfragen), die
 Auswertungen der Buchungskreise, Dienstleisterverträge, die globale Suche und die
-Nachschlagewerkzeuge des Assistenten. Kontakte, Kataloge und die Portalverwaltung bleiben
-mandantenweit (Regel M2-02). Eine Änderung wirkt ab der nächsten Anfrage.
+Nachschlagewerkzeuge des Assistenten. Zusätzlich gilt sie für die Portalverwaltung
+(Portalzugänge und Einladungen nur für Kontakte mit einem Vertrag auf einem zugeordneten
+Objekt), die Objektakte je Objekt (Vollständigkeit, Listen, Abgabeexporte), die
+Migrationsimporte und Altdaten (Abgleichberichte, Abnahmeprotokolle, Buchungskreise,
+historische Tickets und Einzelposten), die Prüfberichte des Beirats, die Bankregeln und
+Regelvorschläge, das Sync-Protokoll, die Klärungsliste und die Zuordnung eines Bankkontos zu
+einem Objekt (nur zugeordnete Ziele). Kontakte und Kataloge bleiben mandantenweit (Regel
+M2-02). Eine Änderung wirkt ab der nächsten Anfrage.
 
 ## Gleichzeitiges Bearbeiten über die Schnittstelle
 
@@ -409,3 +415,11 @@ Unter Einstellungen, Mandant legt die Karte Standardfrist für Einsichtspakete f
 ## Portal je Mandant
 
 Unter Einstellungen, Mandant legt die Karte Portal der Mandanten den Anzeigenamen sowie die https-Links zu Impressum und Datenschutzerklärung fest. Sie erscheinen im Portal unter der Domain des Mandanten zusammen mit Farben und Logo aus den Briefkopfdaten; leere Felder lassen das Portal neutral. Die Auswahl Anmeldestrenge steht standardmäßig auf Wahl je Konto. Mit der Option E-Mail-Code bei jeder Anmeldung per Link verlangt das Portal bei Anmeldungen per Link immer den Code; die Passwortanmeldung mit TOTP bleibt freiwillig.
+
+## Benachrichtigungen: Zustellung der E-Mail
+
+Unter Einstellungen, Benachrichtigungen wählen Sie je Art, ob die E-Mail sofort (Sammelmail im 5-Minuten-Takt) oder täglich gegen 07:30 Uhr als eine Sammelmail kommt. Die Auswahl ist nur mit gesetztem Kanal E-Mail möglich. Der Versand setzt ein eingerichtetes Standardpostfach voraus.
+
+## Vollständiger Mandantenexport
+
+Unter Einstellungen, Mandant starten Sie als Mandantenadministrator mit Export starten einen Gesamtexport aller Mandantendaten (JSON je Tabelle plus Dokumentdateien als ZIP). Der Export läuft im Hintergrund, mit Aktualisieren sehen Sie den Status. Ist er fertig, laden Sie das ZIP herunter. Start und Abruf werden protokolliert. Das Archiv enthält personenbezogene Daten und ist sicher aufzubewahren, siehe docs/rules/P14-06.md.

@@ -26,4 +26,27 @@ describe("PortalSettings", () => {
     fireEvent.change(screen.getByLabelText(/Link zum Impressum/), { target: { value: "http://x.test" } });
     expect(screen.getByRole("button", { name: "Speichern" })).toBeDisabled();
   });
+
+  it("uploads a logo through the document upload and saves its id", async () => {
+    bff.mockResolvedValueOnce({ ok: true, data: { id: "doc-1" }, status: 201, etag: null });
+    bff.mockResolvedValueOnce({ ok: true, data: {}, status: 200, etag: null });
+    renderIntl(<PortalSettings branding={{ primary_color: "#112233" }} secondFactor="account_choice" canUpdate />);
+    const file = new File(["x"], "logo.png", { type: "image/png" });
+    fireEvent.change(screen.getByLabelText(/Logo für das Portal/), { target: { files: [file] } });
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(1));
+    expect(bff.mock.calls[0]![0]).toBe("/api/bff/documents");
+    await screen.findByText(/Logo gesetzt/);
+    fireEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(bff).toHaveBeenCalledTimes(2));
+    const body = JSON.parse((bff.mock.calls[1]![1] as RequestInit).body as string);
+    expect(body.branding).toMatchObject({ primary_color: "#112233", logo_light_document_id: "doc-1" });
+  });
+
+  it("rejects non image files", async () => {
+    renderIntl(<PortalSettings branding={{}} secondFactor="account_choice" canUpdate />);
+    const file = new File(["x"], "a.pdf", { type: "application/pdf" });
+    fireEvent.change(screen.getByLabelText(/Logo für das Portal/), { target: { files: [file] } });
+    await screen.findByText(/Nur PNG oder JPEG/);
+    expect(bff).not.toHaveBeenCalled();
+  });
 });

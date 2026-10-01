@@ -76,6 +76,10 @@ class AiTask(StrEnum):
     # KI-Plausibilität eines Mieterhöhungsfalls (M26-01, 6.3 ai_check_id): nur Hinweise mit
     # Schweregrad, nie Freigabe, nie Rechtsprüfung; Ablauf in mhvp.ai.rent_increase_check.
     RENT_INCREASE_CHECK = "rent_increase_check"
+    # Antwortentwurf zu einer Mail mit eigenem Anbieterschema (T12, 9.2 draft_reply, R09-02):
+    # Tonfall, Platzhalter, Stil aus den Mandanten-Stilvorgaben; nur Vorschlag mit Freigabe
+    # durch einen Menschen, nie Versand. ``draft_reply`` bleibt der Playbook-Entwurf.
+    REPLY_DRAFT = "reply_draft"
 
 
 class RunStatus(StrEnum):

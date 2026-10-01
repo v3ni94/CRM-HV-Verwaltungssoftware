@@ -5,6 +5,7 @@ on values entered with their source; it never states that an increase is lawful.
 demand is a legally relevant statement and needs G3 plus a documented legal review (M26-01)."""
 
 import copy
+import hashlib
 import html
 import io
 import re
@@ -2748,6 +2749,17 @@ def _self_disclosure_out(link: SelfDisclosureLink, *, portal_url: str | None) ->
     }
 
 
+def _self_disclosure_token_digest(token: str) -> str:
+    """S16-03: the link token is stored only as sha256 digest (it is the sole credential of
+    the portal form). Legacy rows written before 1.50.x hold the plain token and still match
+    through ``_self_disclosure_token_match``."""
+    return "sha256:" + hashlib.sha256(token.encode()).hexdigest()
+
+
+def _self_disclosure_token_match(token: str) -> Any:
+    return SelfDisclosureLink.token.in_([_self_disclosure_token_digest(token), token])
+
+
 def _self_disclosure_portal_url(request: Request, token: str) -> str:
     base = str(request.base_url).rstrip("/")
     return f"{base}/portal/selbstauskunft/{token}"
@@ -2773,7 +2785,7 @@ async def create_self_disclosure_link(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
             prospect_id=prospect_id,
-            token=token,
+            token=_self_disclosure_token_digest(token),
             expires_at=datetime.now(UTC) + timedelta(days=body.valid_days),
         )
         session.add(link)
@@ -2811,7 +2823,7 @@ async def read_self_disclosure(token: str, request: Request) -> dict[str, Any]:
 
     async with tenant_transaction(sessions(request), tenant_id) as session:
         link = await session.scalar(
-            select(SelfDisclosureLink).where(SelfDisclosureLink.token == token)
+            select(SelfDisclosureLink).where(_self_disclosure_token_match(token))
         )
         if link is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
@@ -2843,7 +2855,7 @@ async def submit_self_disclosure(
 
     async with tenant_transaction(sessions(request), tenant_id) as session:
         link = await session.scalar(
-            select(SelfDisclosureLink).where(SelfDisclosureLink.token == token)
+            select(SelfDisclosureLink).where(_self_disclosure_token_match(token))
         )
         if link is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)

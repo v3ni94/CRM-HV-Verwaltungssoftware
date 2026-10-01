@@ -283,3 +283,27 @@ Rule `docs/rules/M13-05.md`, migration 0251.
 ## CRM-Oberflächen Welle 4 (R01)
 
 Keine API-Änderung. Neue CRM-Komponenten: `AdminFeeRun` (Honorarlauf mit Vorschau, `POST /accounting/admin-fees-run`), PDF-Ablage und Download der Honorarrechnung (`POST /accounting/admin-fee-invoices/{id}/document`, Datei über `/api/handover-files/documents/{id}/content`), `YearCarryoverPanel` (`GET` und `POST /accounting/ledgers/{id}/year-carryover`, nur Entwürfe), `RecurringPlanCreate`, Anlagenfeld in `InvoiceCreate`, Sammelrückmeldung der Lastschriften (`POST /accounting/direct-debits/{id}/bank-status` mit mehreren `order_ids`, Test `test_direct_debit_batch_feedback`).
+
+## Verwalterhonorar: status cancelled and revenue posting drafts (T04, wave 5)
+
+* `admin_fee_invoice.status` gains `cancelled` (migration 0290), set by `.../cancel` together
+  with `cancelled_at`; `GET /accounting/admin-fee-invoices?status=` filters by it.
+* `admin_fee_posting.py`: `GET/PUT /accounting/admin-fee-posting-config` (one row per tenant,
+  manager ledger of a `manager` legal entity with receivable, revenue and optional VAT
+  account; payer account numbers resolved per debtor ledger). No default accounts.
+* `POST /accounting/admin-fee-invoices/{id}/posting-drafts` (accounting:approve, G1, invoice
+  released): two journal drafts, one in the payer ledger and one in the manager ledger (E01),
+  linked via `payer_entry_id` and `manager_entry_id`; idempotent. Credit notes mirror the
+  sides. Posting uses the regular path. Rule `docs/rules/M13-07.md`, error `MHVP-ACC-0007`.
+
+### Factual invoice review (M14-02, PÜ02, migration 0291)
+
+* `invoice_factual.factual_check`: findings against work order (`invoice.work_order_id`, fallback
+  `work_order.invoice_id`), resolution, economic plan item (budget), recurring plan (amount,
+  rhythm, same month) and line arithmetic (`invoice_line.quantity`, `unit_price`), plus the
+  proposed reviewer (`property.manager_user_id`). Messages also land in `invoice.findings`
+  (except the responsibility proposal and the free text order hint).
+* `GET /accounting/invoices/{id}/factual-check` (accounting:read), `GET/PUT
+  /accounting/invoice-check-settings` (read: accounting:read, write: tenant_settings:update);
+  tolerances in percent, default 0. Never changes a review status. Rule
+  `docs/rules/PU02-sachliche-pruefung.md`.

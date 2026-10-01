@@ -3,8 +3,9 @@
 Settings can be listed, changed and ended; a setting with issued invoices is never deleted
 (evidence), only ended by ``end_date``. Invoices carry a service period (calendar aligned
 per interval, docs/ASSUMPTIONS.md) and exist once per setting and period while they are not
-cancelled. An issued invoice is never changed: a correction is a credit note with its own
-gapless number that cancels the invoice (rule 0.1.7). The revenue posting stays open (G1).
+cancelled (status ``cancelled``). An issued invoice is never changed: a correction is a
+credit note with its own gapless number that cancels the invoice (rule 0.1.7). Revenue
+posting drafts: ``admin_fee_posting`` (M13-07, behind G1).
 """
 
 import calendar
@@ -126,6 +127,8 @@ class AdminFeeInvoiceOut(BaseModel):
     cancelled_at: datetime | None
     cancel_reason: str | None
     xrechnung_url: str | None
+    payer_entry_id: uuid.UUID | None = None
+    manager_entry_id: uuid.UUID | None = None
 
 
 class AdminFeeCancelIn(BaseModel):
@@ -177,6 +180,8 @@ def invoice_out(row: AdminFeeInvoice, corrected_by: uuid.UUID | None = None) -> 
         released_at=row.released_at,
         cancelled_at=row.cancelled_at,
         cancel_reason=row.cancel_reason,
+        payer_entry_id=row.payer_entry_id,
+        manager_entry_id=row.manager_entry_id,
         xrechnung_url=(
             f"/api/v1/accounting/invoices/{row.id}/xrechnung.xml"
             if row.kind == KIND_INVOICE
@@ -374,6 +379,7 @@ async def list_invoices(
     fee_setting_id: uuid.UUID | None = None,
     property_id: uuid.UUID | None = None,
     year: int | None = Query(default=None, ge=2000, le=2100),
+    status: AdminFeeInvoiceStatus | None = None,
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=100, ge=1, le=500),
     principal: TenantPrincipal = Depends(READ),
@@ -384,6 +390,8 @@ async def list_invoices(
             query = query.where(AdminFeeInvoice.fee_setting_id == fee_setting_id)
         if property_id is not None:
             query = query.where(AdminFeeInvoice.property_id == property_id)
+        if status is not None:
+            query = query.where(AdminFeeInvoice.status == status)
         if year is not None:
             query = query.where(
                 AdminFeeInvoice.invoice_date >= date(year, 1, 1),
@@ -499,6 +507,7 @@ async def cancel_invoice(
         session.add(credit)
         row.cancelled_at, row.cancelled_by = datetime.now(UTC), principal.user_id
         row.cancel_reason = body.reason
+        row.status = AdminFeeInvoiceStatus.CANCELLED
         row.updated_by = principal.user_id
         await session.flush()
         await emit(

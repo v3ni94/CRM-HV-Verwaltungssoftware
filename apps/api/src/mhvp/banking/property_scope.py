@@ -118,3 +118,44 @@ async def visible_account_ids(
         )
     )
     return frozenset(rows.all())
+
+
+# R08-01 (Welle 5): bank rules, rule proposals, sync logs and the clarification list.
+
+
+def rule_property_filter(allowed: frozenset[uuid.UUID], rule_cls: Any) -> Any:
+    """Where clause: a rule (or rule proposal) is visible when its own property, or else the
+    property of its legal entity, lies in ``allowed``. Rules without either stay hidden."""
+    from mhvp.properties.models import LegalEntity
+
+    entity_property = (
+        select(LegalEntity.property_id)
+        .where(LegalEntity.id == rule_cls.legal_entity_id)
+        .scalar_subquery()
+    )
+    own = getattr(rule_cls, "property_id", None)
+    if own is None:
+        return entity_property.in_(allowed)
+    return or_(own.in_(allowed), (own.is_(None)) & entity_property.in_(allowed))
+
+
+async def ensure_rule_visible(session: AsyncSession, rule: Any) -> None:
+    """404 when ``rule`` (BankRule or BankRuleProposal) lies outside the assignment."""
+    allowed = session_allowed_property_ids(session)
+    if allowed is None:
+        return
+    cls = type(rule)
+    hit = await session.scalar(
+        select(cls.id).where(cls.id == rule.id, rule_property_filter(allowed, cls))
+    )
+    if hit is None:
+        raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+
+
+def transaction_account_filter(allowed: frozenset[uuid.UUID], transaction_id_column: Any) -> Any:
+    """Where clause on a column naming a bank transaction: visible through the account."""
+    return transaction_id_column.in_(
+        select(BankTransaction.id).where(
+            BankTransaction.property_bank_account_id.in_(allowed_account_ids_query(allowed))
+        )
+    )

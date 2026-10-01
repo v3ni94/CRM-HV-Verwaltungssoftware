@@ -1870,6 +1870,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Heizkostenabrechnung des Messdiensts übernehmen (M17-09)",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Die Heizkostenabrechnung eines Messdiensts wird als eigener Import erfasst und erst nach erfolgreicher Prüfung in die Betriebskostenabrechnung übernommen. Die Bedienung erfolgt derzeit über die API (/api/v1/billing/heating-cost-imports); eine Maske im CRM folgt. 1. Import anlegen",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Statuswechsel der Eigentümerabrechnung",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Nach der Berechnung zeigt die Eigentümerabrechnung die möglichen nächsten Schritte: intern freigeben (nur eine zweite Person), Prüfung durch den Beirat erfassen, ausgeben, fällig stellen, als gebucht erfassen und sperren. Ausgeben, fällig stellen und als gebucht erfassen setzen d",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Handlungsanweisung: Bankverbindung neu anlegen oder ändern",
   "href": "/kontakte",
@@ -3310,6 +3330,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Zustimmung der Bank und Rohdatenablage (T03)",
+  "source": "Handbuch: Banking",
+  "href": "/bank",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Bank, Bankverbindungen zeigt jede finAPI-Verbindung dauerhaft, bis wann die Zustimmung gilt. Liefert der Anbieter kein Datum, steht dort ein Hinweis; ein manuell gepflegtes Datum bleibt erhalten. Zehn Tage vor Ablauf erhalten die Buchhaltungsnutzer eine Benachrichtigung und",
+  "file": "docs/handbuch/banking.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Barrierefreiheit (Accessibility)",
   "href": null,
@@ -4460,6 +4490,26 @@
  },
  {
   "kind": "handbook",
+  "title": "Benachrichtigungen: Zustellung der E-Mail",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Benachrichtigungen wählen Sie je Art, ob die E-Mail sofort (Sammelmail im 5-Minuten-Takt) oder täglich gegen 07:30 Uhr als eine Sammelmail kommt. Die Auswahl ist nur mit gesetztem Kanal E-Mail möglich. Der Versand setzt ein eingerichtetes Standardpostfach vor",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vollständiger Mandantenexport",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Mandant starten Sie als Mandantenadministrator mit Export starten einen Gesamtexport aller Mandantendaten (JSON je Tabelle plus Dokumentdateien als ZIP). Der Export läuft im Hintergrund, mit Aktualisieren sehen Sie den Status. Ist er fertig, laden Sie das ZIP",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Grundsatz: Hinweis statt Sperre",
   "source": "Handbuch: Erfassungsstandards",
   "href": null,
@@ -4886,6 +4936,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter /importe/immoware24 stehen sechs weitere Berichtsarten zur Wahl: Kontenplan je Objekt, SEPA-Übersicht, Bankumsätze (Historie), Offene Posten und Verwandtes, DMS-Dokumente und historische Tickets. Der Ablauf ist wie bei den anderen Berichten: Datei hochladen, Spalten zuordne",
+  "file": "docs/handbuch/importe.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Weitere Berichtsarten (Welle 5)",
+  "source": "Handbuch: Importe (Imports)",
+  "href": "/importe",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Importassistenten stehen zusätzlich Kautionen, Umlageschlüssel (mit Einheitenwerten), Zähler, Energieausweise, Dienstleisterverhältnisse und Portalnutzer (nur Status) bereit. Ablauf wie bei den anderen Berichten: Datei hochladen, Spalten zuordnen und als Vorlage speichern, Prü",
   "file": "docs/handbuch/importe.md"
  },
  {
@@ -5536,6 +5596,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Einstellungen, KI stehen zwei Schalter, beide standardmäßig aus: Neue oder geänderte Mieterhöhungsfälle werden automatisch von der KI auf Stimmigkeit geprüft (Hinweise, keine Freigabe, keine Rechtsprüfung), und E-Mails ohne Vorschlag werden nachts von der KI eingeordnet (hö",
+  "file": "docs/handbuch/mail.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Antwortentwurf mit KI",
+  "source": "Handbuch: Mail",
+  "href": "/mail",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Kompaktansicht erzeugt \"Antwortentwurf (KI)\" einen Entwurf nach dem Tonfall und den Regeln des Postfachs. Der Entwurf erscheint mit Hinweisen zu Tonfall, Platzhaltern und offenen Fragen und gilt erst nach \"Entwurf freigeben\" als geprüft. Ohne freigegebenen KI-Anbieter ents",
   "file": "docs/handbuch/mail.md"
  },
  {
@@ -6230,6 +6300,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Portal-Logo hochladen (Einstellungen, Mandant)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Mandant, Abschnitt \"Portal der Mandanten\" laden Sie das Logo als PNG oder JPEG hoch. Das Logo wird als Dokument abgelegt, seine Kennung wird erst mit \"Speichern\" in das Branding übernommen. \"Logo entfernen\" und Speichern lässt das Portal wieder neutral.",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Rechnungen (Invoices)",
   "href": "/rechnungen",
@@ -6336,6 +6416,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Beim Erfassen einer Rechnung können unter \"Weitere Angaben zur Prüfung am Beleg\" die Dokument-IDs der Anlagen und Seiten des Originals eingetragen werden (mehrere IDs mit Leerzeichen, Komma oder Zeilenumbruch trennen, höchstens 50). Ungültige oder doppelte IDs sperren das Speiche",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Verwalterhonorar: Status und Buchungsentwurf (01.10.2026)",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Die Liste der Honorarrechnungen lässt sich nach Status filtern (ausgestellt, freigegeben, storniert). Eine stornierte Rechnung bleibt mit ihren Dokumenten erhalten; die Korrektur ist die Gutschrift mit eigener Nummer, die ebenfalls freigegeben werden kann. - Für eine freigegebe",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Sachliche Prüfung als Befunde (01.10.2026)",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- In der Rechnungsansicht zeigt der Abschnitt \"Sachliche Prüfung (Befunde)\" den Abgleich gegen den verknüpften Auftrag (Angebotsbetrag, Kostengrenze, Status, Dienstleister, Objekt), den Dienstleistervertrag, den WEG Beschluss, die Wirtschaftsplanposition (Planansatz), den Rechnun",
   "file": "docs/handbuch/rechnungen.md"
  },
  {
@@ -7116,6 +7216,26 @@
   "keywords": [],
   "permission": null,
   "excerpt": "In der Abrechnung einer WEG lädt \"Gesamtabrechnung als PDF\" die Gesamtabrechnung auf dem Briefbogen herunter. Das PDF ist ein Entwurf und steht erst nach interner Freigabe der Abrechnung und bei offener Freigabestufe G4 zur Verfügung; andernfalls erscheint eine Meldung.",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklagen je Position: Anfangsbestand und Entwicklung je Jahr (Stand 01.10.2026)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Seite Rücklagen der Gemeinschaft hat jede Rücklage die Schaltflächen Ändern und Entwicklung anzeigen. Ändern: Bezeichnung, erfasster Anfangsbestand und das Jahr, ab dem er gilt. Ein Bankkonto kann über die Schnittstelle hinterlegt werden; zulässig ist nur ein Konto des Re",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Rücklagenabrechnung",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Auf der Seite WEG, Rücklagen legt der Bearbeiter je Jahr eine Rücklagenabrechnung aus der jüngsten Hausgeldabrechnung an und erzeugt sie aus deren Rücklagendaten (Anfangsbestand, Zuführung, Entnahmen, Zinsen, Endbestand, Bankbestand und die Stammdaten je Rücklage). Die Statusschr",
   "file": "docs/handbuch/weg.md"
  }
 ]

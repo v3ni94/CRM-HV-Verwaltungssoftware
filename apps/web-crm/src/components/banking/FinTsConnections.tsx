@@ -414,6 +414,7 @@ export function FinTsConnectDialog({ onClose, onChanged }: { onClose: () => void
           ) : null}
           {step === 2 && institute ? (
             <form
+              aria-label={t("connectTitle")}
               className="flex flex-col gap-2"
               onSubmit={(e) => {
                 e.preventDefault();

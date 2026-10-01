@@ -18,6 +18,7 @@ def test_masked_tasks_are_exactly_the_ones_that_do_not_need_raw_pii() -> None:
         AiTask.CLASSIFY_EMAIL,
         AiTask.CLASSIFY_DOCUMENT,
         AiTask.DRAFT_REPLY,
+        AiTask.REPLY_DRAFT,
         AiTask.CALL_SUMMARY,
         AiTask.RENT_INCREASE_CHECK,
     }

@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
@@ -57,7 +58,10 @@ class NotificationPreference(IdMixin, TimestampMixin, TenantMixin, Base):
     that moment. Kinds in ``notification_prefs.MANDATORY_KINDS`` ignore every switch."""
 
     __tablename__ = "notification_preference"
-    __table_args__ = (UniqueConstraint("tenant_id", "user_id", "kind"),)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "user_id", "kind"),
+        CheckConstraint("email_mode IN ('immediate', 'daily')", name="email_mode"),
+    )
 
     user_id: Mapped[uuid.UUID] = _user_fk()
     kind: Mapped[str] = mapped_column(String(64), nullable=False)
@@ -68,6 +72,11 @@ class NotificationPreference(IdMixin, TimestampMixin, TenantMixin, Base):
         Boolean, nullable=False, default=False, server_default=text("false")
     )
     muted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # Migration 0293: "immediate" (collective mail of the next job run) or "daily" (one mail
+    # per day with everything collected).
+    email_mode: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="immediate", server_default=text("'immediate'")
+    )
 
 
 class CalendarEntry(IdMixin, TimestampMixin, TenantMixin, Base):

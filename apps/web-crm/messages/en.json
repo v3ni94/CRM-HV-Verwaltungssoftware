@@ -1213,7 +1213,13 @@
       "bank_history": "Bank transactions (history)",
       "open_items": "Open items, credits, deposits, reserves, loans, special levies",
       "document_index": "DMS documents with property and contract reference",
-      "ticket_history": "Historical tickets (read only)"
+      "ticket_history": "Historical tickets (read only)",
+      "deposit": "Deposits",
+      "allocation_key": "Allocation keys with unit values",
+      "meter": "Meters",
+      "energy_certificate": "Energy certificates",
+      "service_provider": "Service providers",
+      "portal_user": "Portal users (status only)"
     },
     "stagedOnlyBadge": "staging only",
     "stagedOnlyHint": "Journal and bank transactions are only staged until accounting is available. No postings are created.",
@@ -3872,7 +3878,8 @@
       "ai_task": "Start AI task",
       "assign_record": "Assign (learned rule)",
       "set_field": "Set field (notes of property, contact, contract)",
-      "notify_provider": "Draft to service provider"
+      "notify_provider": "Draft to service provider",
+      "set_record_field": "Set field (work order, document)"
     },
     "actionValue": "Action value",
     "ticketField": "Ticket field",
@@ -3934,7 +3941,8 @@
       "aiTask": "AI task {task}",
       "assignRecord": "Assign: {dimension} {value}",
       "setMasterField": "Set field: {target} {field}",
-      "notifyProvider": "Draft to service provider {subject}"
+      "notifyProvider": "Draft to service provider {subject}",
+      "setRecordField": "Set field: {target} {field} {value}"
     },
     "log": "Log",
     "filterRule": "Filter rule",
@@ -4064,6 +4072,12 @@
     "setFieldMode": "Kind of change",
     "setFieldValue": "Text",
     "setFieldHelp": "Note fields only. Append adds a line with date and rule name and keeps the existing text. No payment, bank, amount or tax field can be set.",
+    "recordTarget": "Target",
+    "recordField": "Field",
+    "recordValue": "Value",
+    "recordHelp": "Work order: status only requested or in progress, appointment with time zone, assignee of the ticket. Document: category or property (UUID or placeholder). Approval, amounts and holds cannot be set.",
+    "recordTargets": {"work_order": "Work order", "document": "Document"},
+    "recordFields": {"status": "Status", "scheduled_at": "Appointment", "assignee_user_id": "Assignee", "category_id": "Category", "property_id": "Property"},
     "setFieldTargets": {
       "property": "Property",
       "contact": "Contact",
@@ -7022,6 +7036,8 @@
     "consentExpiring": "The consent for account access expires on {date} (in {days} days). Renew it in time, otherwise no transactions will be fetched.",
     "consentExpiredOn": "Consent expired on {date}. No transactions are fetched until the consent is renewed.",
     "consentExpired": "Consent expired. No transactions are fetched until the consent is renewed.",
+    "consentValidUntil": "Consent valid until {date}.",
+    "consentUnknown": "Consent expiry date not available (not delivered by the provider).",
     "renewConsent": "Renew consent",
     "wizardStep3": "3. Assign accounts to a ledger/property"
   },
@@ -7943,6 +7959,25 @@
       }
     }
   },
+  "InvoiceFactual": {
+    "title": "Factual review (findings)",
+    "loading": "Loading factual review.",
+    "none": "No findings on order, contract, resolution, budget and recurrence.",
+    "hint": "Hints only: release and review steps stay manual.",
+    "reviewer": "Proposed responsibility: property manager",
+    "noReviewer": "No responsibility proposal",
+    "tolerance": "Tolerance price {price} %, quantity {quantity} %",
+    "areas": {
+      "order": "Order",
+      "contract": "Contract",
+      "resolution": "Resolution",
+      "budget": "Budget",
+      "recurring": "Recurrence",
+      "price": "Price",
+      "quantity": "Quantity",
+      "responsibility": "Responsibility"
+    }
+  },
   "InvoiceMatch": {
     "title": "Bank reconciliation",
     "match": "Match with bank transactions",
@@ -8357,7 +8392,13 @@
     "status": {
       "draft": "draft",
       "calculated": "calculated",
-      "internally_approved": "internally approved"
+      "internally_approved": "internally approved",
+      "board_reviewed": "board reviewed",
+      "resolved": "resolved",
+      "issued": "issued",
+      "due": "due",
+      "posted": "posted",
+      "locked": "locked"
     },
     "blocks": {
       "income": "Income",
@@ -12642,7 +12683,14 @@
     "column": {
       "kind": "Kind",
       "inApp": "In the app",
-      "email": "By e-mail"
+      "email": "By e-mail",
+      "delivery": "Delivery"
+    },
+    "deliveryFor": "{kind}: mail delivery",
+    "deliveryHelp": "Mails are collected into one mail per user, either every 5 minutes or daily around 07:30.",
+    "delivery": {
+      "immediate": "Immediately (collective mail per run)",
+      "daily": "Daily (one collective mail)"
     },
     "inAppFor": "{kind} in the app",
     "emailFor": "{kind} by e-mail",
@@ -12939,6 +12987,12 @@
     "replySuggestion": "from AI proposal",
     "replyTone": "Tone: {tone}",
     "replyUnknownPlaceholders": "Placeholders without value: {list}",
+    "replyTask": "AI reply draft",
+    "aiDraft": "Reply draft (AI)",
+    "aiDraftApprove": "Approve draft",
+    "aiDraftSkipped": "No AI draft created.",
+    "aiDraftNeedsApproval": "Approve the AI draft before sending.",
+    "aiDraftOpenQuestions": "Open questions: {list}",
     "replyPreparation": "from mail preparation",
     "replyTemplate": "template",
     "quickSend": "Quick send",
@@ -13164,9 +13218,15 @@
     "date": "Date",
     "creditNote": "Credit note",
     "statusCancelled": "cancelled",
+    "postingDrafts": "Posting draft",
+    "postingDraftsDone": "Posting drafts created for payer and manager. Posting happens only through the journal after release gate G1.",
+    "postingDraftsExist": "Draft created",
+    "statusFilter": "Status",
+    "allStatuses": "all",
     "statuses": {
       "issued": "issued",
-      "released": "released"
+      "released": "released",
+      "cancelled": "cancelled"
     },
     "release": "Release",
     "released": "Invoice released.",
@@ -13871,7 +13931,32 @@
     "amount": "Amount",
     "movementPurpose": "Purpose",
     "movementSubmit": "Record",
-    "movementHint": "Recording is information for the statement and posts nothing. Receipts are linked on the statement."
+    "movementHint": "Recording is information for the statement and posts nothing. Receipts are linked on the statement.",
+    "openingBalance": "Opening balance (entered)",
+    "openingYear": "From year",
+    "bankAccount": "Reserve bank account",
+    "edit": "Edit",
+    "save": "Save",
+    "cancel": "Cancel",
+    "active": "active",
+    "inactive": "inactive",
+    "yearTitle": "Development per year",
+    "year": "Year",
+    "contribution": "Contribution",
+    "basis": "Basis",
+    "basisPaid": "paid",
+    "basisPlanned": "planned",
+    "sourceStatement": "Statement",
+    "sourcePlan": "Economic plan",
+    "sourceNone": "no data",
+    "loadDevelopment": "Show development",
+    "movementsTitle": "Recorded uses of funds",
+    "noMovements": "No entries.",
+    "remove": "Remove",
+    "receipt": "Receipt",
+    "receiptMissing": "Receipt missing",
+    "showMovements": "Show entries",
+      "developmentHint": "Opening equals the prior year's closing, in the first year the entered opening balance. Information for statement and asset report, no posting."
   },
   "OnboardingExtras": {
     "title": "Further property details (optional)",
@@ -13972,6 +14057,76 @@
     "invalid": "Links must start with https://, the name may have at most 80 characters.",
     "save": "Save",
     "saved": "Saved.",
-    "readOnly": "No permission to change."
+    "readOnly": "No permission to change.",
+    "logo": "Portal logo (PNG or JPEG)",
+    "logoSet": "Logo set: {name}. Save to apply.",
+    "logoNone": "No logo set, the portal stays neutral.",
+    "logoRemove": "Remove logo",
+    "logoUploaded": "Logo uploaded, please save.",
+    "logoType": "Only PNG or JPEG are allowed."
+  },
+  "TenantExportJobs": {
+    "title": "Full tenant export",
+    "description": "Exports all tenant data (legal entities, properties, units, contacts, contracts, postings, open items, bank accounts and transactions, tickets, documents with metadata) as JSON per table together with the document files as a ZIP. The export runs in the background. Only the tenant administrator can start and download it, every start and download is logged. The archive contains personal data and must be handled with care.",
+    "start": "Start export",
+    "started": "Export started.",
+    "refresh": "Refresh",
+    "empty": "No export yet.",
+    "status": "Status",
+    "created": "Started",
+    "size": "Size",
+    "statusQueued": "Queued",
+    "statusRunning": "Running",
+    "statusReady": "Ready",
+    "statusFailed": "Failed",
+    "download": "Download",
+    "documentsFailed": "{count} document files could not be packed, see manifest.json.",
+    "readOnly": "The export requires the tenant administrator role."
+  },
+  "StatementStatus": {
+    "note": "Note on the status change",
+    "resolutionId": "Resolution (ID)",
+    "entryIds": "Posted entries (IDs, comma separated)",
+    "gateHint": "Issuing, setting due and recording as posted need release gate {gate}; a second person grants the internal approval. Recording as posted only records entries already posted in this ledger, nothing is posted.",
+    "log": "Status history",
+    "arrow": "to",
+    "status": {
+      "draft": "Draft",
+      "calculated": "calculated",
+      "internally_approved": "internally approved",
+      "board_reviewed": "board reviewed",
+      "resolved": "resolved",
+      "issued": "issued",
+      "due": "due",
+      "posted": "posted",
+      "locked": "locked"
+    },
+    "to": {
+      "internally_approved": "Approve internally (second person)",
+      "board_reviewed": "Record board review",
+      "resolved": "Record resolution",
+      "issued": "Issue",
+      "due": "Set due",
+      "posted": "Record as posted",
+      "locked": "Lock"
+    }
+  },
+  "HoaReserveStatement": {
+    "title": "Reserve statement",
+    "hint": "Own statement object per year with the uniform status model. The figures come from the calculated statement of the same year; after a recalculation the reserve statement has to be created again.",
+    "create": "Create from the latest statement",
+    "calculate": "Create from the reserve data",
+    "none": "No reserve statement yet.",
+    "detail": "Reserve statement {year}",
+    "notCalculated": "Not created yet.",
+    "amounts": {
+      "opening": "Opening balance",
+      "contributions_resolved": "Resolved contributions",
+      "contributions_paid": "Paid contributions",
+      "withdrawals": "Withdrawals",
+      "interest": "Interest",
+      "closing": "Closing balance",
+      "bank_balance": "Bank balance of the reserve accounts"
+    }
   }
 }

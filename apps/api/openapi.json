@@ -1416,6 +1416,18 @@
             "title": "Lines",
             "type": "array"
           },
+          "manager_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Entry Id"
+          },
           "net": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
             "title": "Net",
@@ -1424,6 +1436,18 @@
           "number": {
             "title": "Number",
             "type": "string"
+          },
+          "payer_entry_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payer Entry Id"
           },
           "pdf_document_id": {
             "anyOf": [
@@ -1542,6 +1566,178 @@
           "xrechnung_url"
         ],
         "title": "AdminFeeInvoiceOut",
+        "type": "object"
+      },
+      "AdminFeeInvoiceStatus": {
+        "enum": [
+          "issued",
+          "released",
+          "cancelled"
+        ],
+        "title": "AdminFeeInvoiceStatus",
+        "type": "string"
+      },
+      "AdminFeePostingConfigIn": {
+        "additionalProperties": false,
+        "properties": {
+          "manager_ledger_id": {
+            "format": "uuid",
+            "title": "Manager Ledger Id",
+            "type": "string"
+          },
+          "manager_receivable_account_id": {
+            "format": "uuid",
+            "title": "Manager Receivable Account Id",
+            "type": "string"
+          },
+          "manager_revenue_account_id": {
+            "format": "uuid",
+            "title": "Manager Revenue Account Id",
+            "type": "string"
+          },
+          "manager_vat_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Vat Account Id"
+          },
+          "payer_expense_account_number": {
+            "pattern": "^[0-9]{6}$",
+            "title": "Payer Expense Account Number",
+            "type": "string"
+          },
+          "payer_payable_account_number": {
+            "pattern": "^[0-9]{6}$",
+            "title": "Payer Payable Account Number",
+            "type": "string"
+          },
+          "payer_vat_account_number": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payer Vat Account Number"
+          }
+        },
+        "required": [
+          "manager_ledger_id",
+          "manager_receivable_account_id",
+          "manager_revenue_account_id",
+          "payer_expense_account_number",
+          "payer_payable_account_number"
+        ],
+        "title": "AdminFeePostingConfigIn",
+        "type": "object"
+      },
+      "AdminFeePostingConfigOut": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "manager_ledger_id": {
+            "format": "uuid",
+            "title": "Manager Ledger Id",
+            "type": "string"
+          },
+          "manager_receivable_account_id": {
+            "format": "uuid",
+            "title": "Manager Receivable Account Id",
+            "type": "string"
+          },
+          "manager_revenue_account_id": {
+            "format": "uuid",
+            "title": "Manager Revenue Account Id",
+            "type": "string"
+          },
+          "manager_vat_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Vat Account Id"
+          },
+          "payer_expense_account_number": {
+            "pattern": "^[0-9]{6}$",
+            "title": "Payer Expense Account Number",
+            "type": "string"
+          },
+          "payer_payable_account_number": {
+            "pattern": "^[0-9]{6}$",
+            "title": "Payer Payable Account Number",
+            "type": "string"
+          },
+          "payer_vat_account_number": {
+            "anyOf": [
+              {
+                "pattern": "^[0-9]{6}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payer Vat Account Number"
+          }
+        },
+        "required": [
+          "manager_ledger_id",
+          "manager_receivable_account_id",
+          "manager_revenue_account_id",
+          "payer_expense_account_number",
+          "payer_payable_account_number",
+          "id"
+        ],
+        "title": "AdminFeePostingConfigOut",
+        "type": "object"
+      },
+      "AdminFeePostingDraftsOut": {
+        "properties": {
+          "created": {
+            "title": "Created",
+            "type": "boolean"
+          },
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "manager_entry_id": {
+            "format": "uuid",
+            "title": "Manager Entry Id",
+            "type": "string"
+          },
+          "payer_entry_id": {
+            "format": "uuid",
+            "title": "Payer Entry Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "invoice_id",
+          "payer_entry_id",
+          "manager_entry_id",
+          "created"
+        ],
+        "title": "AdminFeePostingDraftsOut",
         "type": "object"
       },
       "AdminFeeSettingOut": {
@@ -1970,7 +2166,8 @@
           "ticket_resolution",
           "call_summary",
           "embed",
-          "rent_increase_check"
+          "rent_increase_check",
+          "reply_draft"
         ],
         "title": "AiTask",
         "type": "string"
@@ -26397,6 +26594,242 @@
         "title": "HealthReport",
         "type": "object"
       },
+      "HeatingImportApplyIn": {
+        "additionalProperties": false,
+        "properties": {
+          "statement_id": {
+            "format": "uuid",
+            "title": "Statement Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "statement_id"
+        ],
+        "title": "HeatingImportApplyIn",
+        "type": "object"
+      },
+      "HeatingImportCheckIn": {
+        "additionalProperties": false,
+        "properties": {
+          "duplicate_ack_reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "minLength": 10,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duplicate Ack Reason"
+          }
+        },
+        "title": "HeatingImportCheckIn",
+        "type": "object"
+      },
+      "HeatingImportCo2In": {
+        "additionalProperties": false,
+        "properties": {
+          "building_kind": {
+            "default": "unknown",
+            "pattern": "^(residential|non_residential|mixed|self_supply|unknown)$",
+            "title": "Building Kind",
+            "type": "string"
+          },
+          "costs": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Costs"
+          },
+          "emissions_kg": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Emissions Kg"
+          },
+          "mode": {
+            "default": "apply",
+            "pattern": "^(apply|not_applicable)$",
+            "title": "Mode",
+            "type": "string"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "reference_area_m2": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reference Area M2"
+          }
+        },
+        "title": "HeatingImportCo2In",
+        "type": "object"
+      },
+      "HeatingImportCsvIn": {
+        "additionalProperties": false,
+        "properties": {
+          "column_map": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "title": "Column Map",
+            "type": "object"
+          },
+          "content": {
+            "maxLength": 2000000,
+            "minLength": 1,
+            "title": "Content",
+            "type": "string"
+          },
+          "decimal_comma": {
+            "default": true,
+            "title": "Decimal Comma",
+            "type": "boolean"
+          },
+          "delimiter": {
+            "default": ";",
+            "pattern": "^(;|,|\t)$",
+            "title": "Delimiter",
+            "type": "string"
+          },
+          "file_name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "File Name"
+          }
+        },
+        "required": [
+          "content",
+          "column_map"
+        ],
+        "title": "HeatingImportCsvIn",
+        "type": "object"
+      },
+      "HeatingImportHeaderIn": {
+        "additionalProperties": false,
+        "properties": {
+          "co2": {
+            "$ref": "#/components/schemas/HeatingImportCo2In"
+          },
+          "document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Id"
+          },
+          "document_total": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*(?:\\d{0,12}|(?=[\\d.]{1,15}0*$)\\d{0,12}\\.\\d{0,2}0*$)",
+                "type": "string"
+              }
+            ],
+            "title": "Document Total"
+          },
+          "period_from": {
+            "format": "date",
+            "title": "Period From",
+            "type": "string"
+          },
+          "period_to": {
+            "format": "date",
+            "title": "Period To",
+            "type": "string"
+          },
+          "property_id": {
+            "format": "uuid",
+            "title": "Property Id",
+            "type": "string"
+          },
+          "provider_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Contact Id"
+          },
+          "provider_name": {
+            "maxLength": 200,
+            "minLength": 2,
+            "title": "Provider Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "property_id",
+          "provider_name",
+          "period_from",
+          "period_to",
+          "document_total"
+        ],
+        "title": "HeatingImportHeaderIn",
+        "type": "object"
+      },
       "HeatingImportIn": {
         "additionalProperties": false,
         "properties": {
@@ -26416,6 +26849,169 @@
           }
         },
         "title": "HeatingImportIn",
+        "type": "object"
+      },
+      "HeatingImportMappingEntryIn": {
+        "additionalProperties": false,
+        "properties": {
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
+          "unit_id": {
+            "format": "uuid",
+            "title": "Unit Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "unit_id"
+        ],
+        "title": "HeatingImportMappingEntryIn",
+        "type": "object"
+      },
+      "HeatingImportMappingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "mapping": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/HeatingImportMappingEntryIn"
+            },
+            "maxProperties": 5000,
+            "title": "Mapping",
+            "type": "object"
+          }
+        },
+        "required": [
+          "mapping"
+        ],
+        "title": "HeatingImportMappingIn",
+        "type": "object"
+      },
+      "HeatingImportRowIn": {
+        "additionalProperties": false,
+        "properties": {
+          "co2_landlord": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Co2 Landlord"
+          },
+          "co2_tenant": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "default": "0",
+            "title": "Co2 Tenant"
+          },
+          "heating_base": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Heating Base"
+          },
+          "heating_consumption": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Heating Consumption"
+          },
+          "hot_water_base": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hot Water Base"
+          },
+          "hot_water_consumption": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hot Water Consumption"
+          },
+          "user_number": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "User Number",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_number",
+          "heating_base",
+          "heating_consumption",
+          "hot_water_base",
+          "hot_water_consumption"
+        ],
+        "title": "HeatingImportRowIn",
+        "type": "object"
+      },
+      "HeatingImportRowsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "rows": {
+            "items": {
+              "$ref": "#/components/schemas/HeatingImportRowIn"
+            },
+            "maxItems": 5000,
+            "title": "Rows",
+            "type": "array"
+          }
+        },
+        "required": [
+          "rows"
+        ],
+        "title": "HeatingImportRowsIn",
         "type": "object"
       },
       "HeatingIn": {
@@ -27685,6 +28281,18 @@
             ],
             "title": "Account Id"
           },
+          "bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Id"
+          },
           "ledger_id": {
             "format": "uuid",
             "title": "Ledger Id",
@@ -27695,6 +28303,32 @@
             "minLength": 2,
             "title": "Name",
             "type": "string"
+          },
+          "opening_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "default": "0.00",
+            "title": "Opening Balance"
+          },
+          "opening_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1990.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Year"
           },
           "purpose": {
             "anyOf": [
@@ -27804,6 +28438,175 @@
           "purpose"
         ],
         "title": "HoaReserveMovementIn",
+        "type": "object"
+      },
+      "HoaReservePatchIn": {
+        "additionalProperties": false,
+        "description": "Changes of an earmarked reserve (M24-01). Omitted fields stay unchanged.",
+        "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
+          "active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Active"
+          },
+          "bank_account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bank Account Id"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 200,
+                "minLength": 2,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "opening_balance": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Balance"
+          },
+          "opening_year": {
+            "anyOf": [
+              {
+                "maximum": 2100.0,
+                "minimum": 1990.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Year"
+          },
+          "purpose": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Purpose"
+          },
+          "resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Id"
+          }
+        },
+        "title": "HoaReservePatchIn",
+        "type": "object"
+      },
+      "HoaReserveStatementIn": {
+        "additionalProperties": false,
+        "properties": {
+          "hoa_statement_id": {
+            "format": "uuid",
+            "title": "Hoa Statement Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "hoa_statement_id"
+        ],
+        "title": "HoaReserveStatementIn",
+        "type": "object"
+      },
+      "HoaReserveStatementTransitionIn": {
+        "additionalProperties": false,
+        "properties": {
+          "entry_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Entry Ids",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resolution Id"
+          },
+          "target": {
+            "$ref": "#/components/schemas/StatementStatus"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "HoaReserveStatementTransitionIn",
         "type": "object"
       },
       "HoaResolutionIn": {
@@ -29676,6 +30479,158 @@
         "title": "InvoiceApplyLineIn",
         "type": "object"
       },
+      "InvoiceCheckSettingIn": {
+        "additionalProperties": false,
+        "properties": {
+          "price_tolerance_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,4}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Price Tolerance Percent"
+          },
+          "quantity_tolerance_percent": {
+            "anyOf": [
+              {
+                "maximum": 100.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,4}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Quantity Tolerance Percent"
+          }
+        },
+        "required": [
+          "price_tolerance_percent",
+          "quantity_tolerance_percent"
+        ],
+        "title": "InvoiceCheckSettingIn",
+        "type": "object"
+      },
+      "InvoiceCheckSettingOut": {
+        "properties": {
+          "price_tolerance_percent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price Tolerance Percent",
+            "type": "string"
+          },
+          "quantity_tolerance_percent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity Tolerance Percent",
+            "type": "string"
+          }
+        },
+        "required": [
+          "price_tolerance_percent",
+          "quantity_tolerance_percent"
+        ],
+        "title": "InvoiceCheckSettingOut",
+        "type": "object"
+      },
+      "InvoiceFactualCheckOut": {
+        "properties": {
+          "automatic_release": {
+            "default": false,
+            "title": "Automatic Release",
+            "type": "boolean"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/InvoiceFactualFindingOut"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "invoice_id": {
+            "format": "uuid",
+            "title": "Invoice Id",
+            "type": "string"
+          },
+          "price_tolerance_percent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Price Tolerance Percent",
+            "type": "string"
+          },
+          "property_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Property Id"
+          },
+          "quantity_tolerance_percent": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+            "title": "Quantity Tolerance Percent",
+            "type": "string"
+          },
+          "suggested_reviewer_user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Suggested Reviewer User Id"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "invoice_id",
+          "version",
+          "findings",
+          "suggested_reviewer_user_id",
+          "property_id",
+          "price_tolerance_percent",
+          "quantity_tolerance_percent"
+        ],
+        "title": "InvoiceFactualCheckOut",
+        "type": "object"
+      },
+      "InvoiceFactualFindingOut": {
+        "properties": {
+          "area": {
+            "title": "Area",
+            "type": "string"
+          },
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          }
+        },
+        "required": [
+          "area",
+          "code",
+          "message"
+        ],
+        "title": "InvoiceFactualFindingOut",
+        "type": "object"
+      },
       "InvoiceForwardSettingsIn": {
         "additionalProperties": false,
         "properties": {
@@ -29921,6 +30876,19 @@
             ],
             "title": "Payee Iban"
           },
+          "plan_item_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Wirtschaftsplanposition (Budget)",
+            "title": "Plan Item Id"
+          },
           "prepaid_amount": {
             "anyOf": [
               {
@@ -29954,6 +30922,19 @@
             ],
             "title": "Recipient Name"
           },
+          "recurring_plan_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rechnungsplan (Wiederkehr-Prüfung); leer lässt ihn unverändert",
+            "title": "Recurring Plan Id"
+          },
           "reference_invoice_id": {
             "anyOf": [
               {
@@ -29966,6 +30947,19 @@
             ],
             "description": "Pflicht bei kind=credit_note: Ursprungsrechnung",
             "title": "Reference Invoice Id"
+          },
+          "resolution_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "WEG Beschluss",
+            "title": "Resolution Id"
           },
           "retention_amount": {
             "anyOf": [
@@ -30059,6 +31053,19 @@
               }
             ],
             "title": "Vat"
+          },
+          "work_order_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Auftrag (Arbeitsauftrag)",
+            "title": "Work Order Id"
           }
         },
         "required": [
@@ -30144,6 +31151,22 @@
             ],
             "title": "Net"
           },
+          "quantity": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          },
           "section_35a_amount": {
             "anyOf": [
               {
@@ -30182,6 +31205,21 @@
               }
             ],
             "title": "Unit Id"
+          },
+          "unit_price": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Price"
           },
           "vat": {
             "anyOf": [
@@ -41888,6 +42926,15 @@
             "title": "Email",
             "type": "boolean"
           },
+          "email_mode": {
+            "default": "immediate",
+            "enum": [
+              "immediate",
+              "daily"
+            ],
+            "title": "Email Mode",
+            "type": "string"
+          },
           "in_app": {
             "default": true,
             "title": "In App",
@@ -41923,6 +42970,11 @@
           "email": {
             "title": "Email",
             "type": "boolean"
+          },
+          "email_mode": {
+            "default": "immediate",
+            "title": "Email Mode",
+            "type": "string"
           },
           "in_app": {
             "title": "In App",
@@ -44079,6 +45131,56 @@
           "period_to"
         ],
         "title": "OwnerStatementIn",
+        "type": "object"
+      },
+      "OwnerStatementStatus": {
+        "enum": [
+          "draft",
+          "calculated",
+          "internally_approved",
+          "board_reviewed",
+          "resolved",
+          "issued",
+          "due",
+          "posted",
+          "locked"
+        ],
+        "title": "OwnerStatementStatus",
+        "type": "string"
+      },
+      "OwnerStatementTransitionIn": {
+        "additionalProperties": false,
+        "description": "S69-01: status change after the internal approval (6.9.3).",
+        "properties": {
+          "entry_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 200,
+            "title": "Entry Ids",
+            "type": "array"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "target": {
+            "$ref": "#/components/schemas/OwnerStatementStatus"
+          }
+        },
+        "required": [
+          "target"
+        ],
+        "title": "OwnerStatementTransitionIn",
         "type": "object"
       },
       "OwnershipTransferIn": {
@@ -55204,7 +56306,13 @@
           "bank_history",
           "document_index",
           "ticket_history",
-          "open_items"
+          "open_items",
+          "deposit",
+          "allocation_key",
+          "meter",
+          "energy_certificate",
+          "service_provider",
+          "portal_user"
         ],
         "title": "ReportType",
         "type": "string"
@@ -68830,6 +69938,22 @@
           },
           {
             "in": "query",
+            "name": "status",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "$ref": "#/components/schemas/AdminFeeInvoiceStatus"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "in": "query",
             "name": "page",
             "required": false,
             "schema": {
@@ -69048,6 +70172,49 @@
         ]
       }
     },
+    "/api/v1/accounting/admin-fee-invoices/{invoice_id}/posting-drafts": {
+      "post": {
+        "operationId": "create_posting_drafts_api_v1_accounting_admin_fee_invoices__invoice_id__posting_drafts_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminFeePostingDraftsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Honorarrechnung: Buchungsentwürfe beim Zahler und beim Verwalter anlegen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/admin-fee-invoices/{invoice_id}/release": {
       "post": {
         "description": "Issued to released (for sending by the operator; nothing is sent here). Idempotent.",
@@ -69220,6 +70387,74 @@
         "summary": "Gutschrift-XRechnung als Dokument ablegen",
         "tags": [
           "Buchhaltung",
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/admin-fee-posting-config": {
+      "get": {
+        "operationId": "get_posting_config_api_v1_accounting_admin_fee_posting_config_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/AdminFeePostingConfigOut"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Posting Config Api V1 Accounting Admin Fee Posting Config Get"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Honorarbuchung: Kontenzuordnung",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "put": {
+        "operationId": "put_posting_config_api_v1_accounting_admin_fee_posting_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AdminFeePostingConfigIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminFeePostingConfigOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Honorarbuchung: Kontenzuordnung festlegen",
+        "tags": [
           "Buchhaltung"
         ]
       }
@@ -72589,6 +73824,66 @@
         ]
       }
     },
+    "/api/v1/accounting/invoice-check-settings": {
+      "get": {
+        "operationId": "get_invoice_check_settings_api_v1_accounting_invoice_check_settings_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceCheckSettingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Toleranzen der sachlichen Rechnungsprüfung",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "put": {
+        "operationId": "put_invoice_check_settings_api_v1_accounting_invoice_check_settings_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InvoiceCheckSettingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceCheckSettingOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Toleranzen der sachlichen Rechnungsprüfung setzen",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
     "/api/v1/accounting/invoices": {
       "get": {
         "description": "Allgemeine Listenparameter (Abschnitt 12): `filter[feld]=wert` (mehrere Werte mit Komma), `sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. Nicht angebotene Felder werden mit 422 abgelehnt. include: creditor (Kreditor, Kontakt des Rechnungsstellers).",
@@ -72977,6 +74272,50 @@
           }
         },
         "summary": "Skonto zum Zahltag",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/invoices/{invoice_id}/factual-check": {
+      "get": {
+        "description": "M14-02 (PÜ02): findings and the proposed responsible reviewer; never a release.",
+        "operationId": "invoice_factual_check_api_v1_accounting_invoices__invoice_id__factual_check_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "invoice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invoice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InvoiceFactualCheckOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sachliche Prüfung als Befunde (Auftrag, Vertrag, Beschluss, Budget, Wiederkehr)",
         "tags": [
           "Buchhaltung"
         ]
@@ -87556,6 +88895,484 @@
         ]
       }
     },
+    "/api/v1/billing/heating-cost-imports": {
+      "get": {
+        "operationId": "list_heating_cost_imports_api_v1_billing_heating_cost_imports_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "property_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Property Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Heating Cost Imports Api V1 Billing Heating Cost Imports Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messdienstimporte Heizkosten",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      },
+      "post": {
+        "operationId": "create_heating_cost_import_api_v1_billing_heating_cost_imports_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatingImportHeaderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Heating Cost Import Api V1 Billing Heating Cost Imports Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messdienstimport Heizkosten anlegen (Entwurf)",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/heating-cost-imports/{import_id}": {
+      "get": {
+        "operationId": "get_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Heating Cost Import Api V1 Billing Heating Cost Imports  Import Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messdienstimport Heizkosten",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      },
+      "put": {
+        "operationId": "update_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatingImportHeaderIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Update Heating Cost Import Api V1 Billing Heating Cost Imports  Import Id  Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messdienstimport: Kopfdaten ändern",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/heating-cost-imports/{import_id}/apply": {
+      "post": {
+        "operationId": "apply_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__apply_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatingImportApplyIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Apply Heating Cost Import Api V1 Billing Heating Cost Imports  Import Id  Apply Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Geprüften Messdienstimport übernehmen",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/heating-cost-imports/{import_id}/check": {
+      "post": {
+        "operationId": "check_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__check_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatingImportCheckIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Check Heating Cost Import Api V1 Billing Heating Cost Imports  Import Id  Check Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messdienstimport prüfen (Summen, CO2, Dubletten)",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/heating-cost-imports/{import_id}/csv": {
+      "post": {
+        "operationId": "import_heating_cost_csv_api_v1_billing_heating_cost_imports__import_id__csv_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatingImportCsvIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Import Heating Cost Csv Api V1 Billing Heating Cost Imports  Import Id  Csv Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messdienstimport: CSV mit Spaltenzuordnung",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/heating-cost-imports/{import_id}/mapping": {
+      "put": {
+        "operationId": "put_heating_cost_import_mapping_api_v1_billing_heating_cost_imports__import_id__mapping_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatingImportMappingIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Heating Cost Import Mapping Api V1 Billing Heating Cost Imports  Import Id  Mapping Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messdienstimport: Nutzernummern zuordnen",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/heating-cost-imports/{import_id}/rows": {
+      "put": {
+        "operationId": "put_heating_cost_import_rows_api_v1_billing_heating_cost_imports__import_id__rows_put",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "import_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Import Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HeatingImportRowsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Put Heating Cost Import Rows Api V1 Billing Heating Cost Imports  Import Id  Rows Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Messdienstimport: Kostenzeilen manuell erfassen",
+        "tags": [
+          "Abrechnung",
+          "Abrechnung"
+        ]
+      }
+    },
     "/api/v1/billing/heating-rule-tables": {
       "get": {
         "operationId": "list_rule_tables_api_v1_billing_heating_rule_tables_get",
@@ -88016,6 +89833,62 @@
           }
         },
         "summary": "Ausgabe als PDF (nur mit Freigabestufe G3)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/owner-statements/{statement_id}/transition": {
+      "post": {
+        "description": "Uniform status model (6.9.3): internally_approved (four eyes), board_reviewed, issued,\ndue, posted, locked. ``resolved`` is refused (WEG only). issued, due and posted make the\nstatement relevant towards the owner or the ledger and need release gate G3 (rental\nstatements, 18.0); ``posted`` only records entries already posted in the ledger.",
+        "operationId": "transition_api_v1_billing_owner_statements__statement_id__transition_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerStatementTransitionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Transition Api V1 Billing Owner Statements  Statement Id  Transition Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Statuswechsel (6.9.3, S69-01)",
         "tags": [
           "Abrechnung"
         ]
@@ -103456,6 +105329,248 @@
         ]
       }
     },
+    "/api/v1/hoa/reserve-statements": {
+      "get": {
+        "operationId": "list_statements_api_v1_hoa_reserve_statements_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "ledger_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Ledger Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Statements Api V1 Hoa Reserve Statements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rücklagenabrechnungen",
+        "tags": [
+          "WEG"
+        ]
+      },
+      "post": {
+        "operationId": "create_api_v1_hoa_reserve_statements_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaReserveStatementIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Api V1 Hoa Reserve Statements Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rücklagenabrechnung anlegen (Entwurf)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/reserve-statements/{reserve_statement_id}": {
+      "get": {
+        "operationId": "get_api_v1_hoa_reserve_statements__reserve_statement_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reserve_statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reserve Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Api V1 Hoa Reserve Statements  Reserve Statement Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Rücklagenabrechnung",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/reserve-statements/{reserve_statement_id}/calculate": {
+      "post": {
+        "operationId": "calculate_api_v1_hoa_reserve_statements__reserve_statement_id__calculate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reserve_statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reserve Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Calculate Api V1 Hoa Reserve Statements  Reserve Statement Id  Calculate Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Aus den Rücklagendaten der Hausgeldabrechnung erzeugen",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/reserve-statements/{reserve_statement_id}/transition": {
+      "post": {
+        "description": "Same rules as the Hausgeldabrechnung: four eyes on the internal approval, resolved only\nwith a binding resolution on this or the source snapshot (D14), issued only after resolved\n(W06), posted only from due with a binding resolution (D13) and posted entries of the\nledger. issued, due and posted need release gate G4.",
+        "operationId": "transition_api_v1_hoa_reserve_statements__reserve_statement_id__transition_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reserve_statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reserve Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaReserveStatementTransitionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Transition Api V1 Hoa Reserve Statements  Reserve Statement Id  Transition Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Statuswechsel (6.9.3, S69-01)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
     "/api/v1/hoa/reserves": {
       "get": {
         "operationId": "list_reserves_api_v1_hoa_reserves_get",
@@ -103540,6 +105655,158 @@
           }
         },
         "summary": "Zweckgebundene Rücklage anlegen (W08)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/reserves/{reserve_id}": {
+      "get": {
+        "operationId": "get_reserve_api_v1_hoa_reserves__reserve_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reserve_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reserve Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Reserve Api V1 Hoa Reserves  Reserve Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zweckgebundene Rücklage mit Rechtsträger",
+        "tags": [
+          "WEG"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_reserve_api_v1_hoa_reserves__reserve_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reserve_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reserve Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HoaReservePatchIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Reserve Api V1 Hoa Reserves  Reserve Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Zweckgebundene Rücklage ändern (M24-01)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/reserves/{reserve_id}/development": {
+      "get": {
+        "operationId": "get_reserve_development_api_v1_hoa_reserves__reserve_id__development_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "reserve_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Reserve Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "year",
+            "required": true,
+            "schema": {
+              "title": "Year",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Reserve Development Api V1 Hoa Reserves  Reserve Id  Development Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Entwicklung einer Rücklage je Jahr (Anfang, Zuführung, Entnahme, Zinsen, Ende)",
         "tags": [
           "WEG"
         ]
@@ -104841,6 +107108,52 @@
       }
     },
     "/api/v1/hoa/statements/{statement_id}/reserve-movements": {
+      "get": {
+        "operationId": "list_reserve_movements_api_v1_hoa_statements__statement_id__reserve_movements_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Reserve Movements Api V1 Hoa Statements  Statement Id  Reserve Movements Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mittelverwendung je Rücklage einer Abrechnung",
+        "tags": [
+          "WEG"
+        ]
+      },
       "post": {
         "operationId": "add_reserve_movement_api_v1_hoa_statements__statement_id__reserve_movements_post",
         "parameters": [
@@ -104890,6 +107203,53 @@
           }
         },
         "summary": "Mittelverwendung, Steuern, Gebühren oder Zinsen je Rücklage",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/statements/{statement_id}/reserve-movements/{movement_id}": {
+      "delete": {
+        "description": "Only while the statement is a draft: the entry is draft information, never a posting;\nafter the calculation a change needs a new version.",
+        "operationId": "delete_reserve_movement_api_v1_hoa_statements__statement_id__reserve_movements__movement_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "movement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Movement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Erfasste Mittelverwendung im Entwurf entfernen",
         "tags": [
           "WEG"
         ]
@@ -117455,6 +119815,98 @@
           }
         },
         "summary": "Entwurf zurückweisen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/reply-ai": {
+      "post": {
+        "description": "Own AI task ``reply_draft`` (T12, 9.2): tone, placeholders and mailbox style as input.\nWithout a released provider nothing is stored (status skipped). The result lands under\n``suggestion.reply_ai`` unapproved; it is usable only after ``/reply-ai/approve`` and\nis never sent by this path (rule 0.1.6).",
+        "operationId": "create_reply_draft_api_v1_mail_messages__message_id__reply_ai_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Reply Draft Api V1 Mail Messages  Message Id  Reply Ai Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Antwortentwurf (KI) erzeugen",
+        "tags": [
+          "Postfach"
+        ]
+      }
+    },
+    "/api/v1/mail/messages/{message_id}/reply-ai/approve": {
+      "post": {
+        "description": "Human approval of the stored reply draft (four eyes with the later send path stay\nuntouched). Records user and time; a new draft resets the approval.",
+        "operationId": "approve_reply_draft_api_v1_mail_messages__message_id__reply_ai_approve_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "message_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Message Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Approve Reply Draft Api V1 Mail Messages  Message Id  Reply Ai Approve Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Antwortentwurf freigeben",
         "tags": [
           "Postfach"
         ]
@@ -139961,6 +142413,92 @@
           }
         },
         "summary": "Domänenereignisse",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/export-jobs": {
+      "get": {
+        "operationId": "list_export_jobs_api_v1_tenant_export_jobs_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Export Jobs Api V1 Tenant Export Jobs Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Mandantenexporte auflisten",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "post": {
+        "operationId": "create_export_job_api_v1_tenant_export_jobs_post",
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Create Export Job Api V1 Tenant Export Jobs Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vollständigen Mandantenexport starten",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/export-jobs/{job_id}/download": {
+      "get": {
+        "operationId": "download_export_job_api_v1_tenant_export_jobs__job_id__download_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "job_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Job Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/zip": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mandantenexport herunterladen (Ereignis je Abruf)",
         "tags": [
           "Mandant"
         ]

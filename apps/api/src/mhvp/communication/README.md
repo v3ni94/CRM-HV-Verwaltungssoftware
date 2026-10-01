@@ -484,3 +484,7 @@ Postfachsichtbarkeit. Namen werden bei Mails nur aus dem Text ohne Zitat gelesen
 * M20-02: `suggest.MailDraftReply` und `draft_reply_payload`, Ergebnisfeld `draft_reply` im Mailvorschlag; Stilregeln im CRM pflegbar.
 * P12-02: CRM zeigt HTML-Mails im sandboxed iframe mit CSP, externe Bilder erst auf Klick (`MailHtmlFrame`).
 * R09: `compact.reply_block` carries `draft` (tone, placeholders, unknown placeholders) of the `draft_reply` result object; `batch_classify.py` classifies inbound mails without a suggestion in the nightly run `mhvp.ai.batch_nightly` (switch `ai_automation.batch_mail_classification`).
+
+### Antwortentwurf als eigene KI-Aufgabe (T12)
+
+`POST /mail/messages/{id}/reply-ai` und `/reply-ai/approve`: Ergebnis unter `suggestion.reply_ai` (ungeprüft bis zur Freigabe, Freigabe hält Benutzer und Zeit fest), Kompaktansicht `reply.source = reply_task`. Nie ein Versand. Regel: `docs/rules/T12.md`.

@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -22,7 +23,9 @@ from mhvp.objektakte.export import PERSONAL_DATA_NOTE
 from mhvp.objektakte.models import ObjektakteExport, ObjektakteExportStatus
 from mhvp.properties.models import Property, PropertyStatus, PropertyTermination
 
-router = APIRouter(prefix="/properties", tags=["Objekte"])
+router = APIRouter(
+    prefix="/properties", tags=["Objekte"], dependencies=[Depends(property_path_guard)]
+)  # M2-02, R08-01
 UPDATE = require_permission("properties:update")
 READ = require_permission("properties:read")
 

@@ -47,7 +47,7 @@ export default async function PropertiesPage({ searchParams }: { searchParams: P
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <PageHeader eyebrow={t("area")} title={t(`scopeTitle.${scope}`)} />
-        <form className="flex gap-2" role="search">
+        <form className="flex gap-2" role="search" aria-label={t("search")}>
           {scope !== "all" ? <input type="hidden" name="art" value={scope} /> : null}
           {showTerminated ? <input type="hidden" name="deaktivierte" value="1" /> : null}
           <input className={ui.input} name="q" defaultValue={q ?? ""} placeholder={t("searchPlaceholder")} aria-label={t("search")} />

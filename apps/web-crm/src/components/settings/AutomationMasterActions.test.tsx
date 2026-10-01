@@ -16,3 +16,12 @@ describe("rule actions set_field and notify_provider (S15-06)", () => {
     expect(summariseAction({ type: "notify_provider", subject: "Störung" }, t, pickers)).toBe("summary.notifyProvider:Störung");
   });
 });
+
+describe("rule action set_record_field (T12)", () => {
+  it("offers a default that matches the backend schema and summarises it", () => {
+    expect(defaultAction("set_record_field", pickers)).toEqual({ type: "set_record_field", target: "work_order", field: "status", value: "requested" });
+    expect(summariseAction({ type: "set_record_field", target: "document", field: "category_id", value: "abc" }, t, pickers)).toBe(
+      "summary.setRecordField:recordTargets.document:|recordFields.category_id:|abc",
+    );
+  });
+});

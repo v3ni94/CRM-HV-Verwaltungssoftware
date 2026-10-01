@@ -683,6 +683,11 @@ class Invoice(IdMixin, TimestampMixin, TenantMixin, Base):
         Boolean, nullable=False, default=False, server_default=text("false")
     )
     input_tax_deductible: Mapped[bool | None] = mapped_column(Boolean)
+    # M14-02 (migration 0291, rule PU02-SACHLICH): structured links of the factual review
+    # (work order, resolution, economic plan item); the free text order_reference stays.
+    work_order_id: Mapped[uuid.UUID | None] = _fk("work_order.id", nullable=True)
+    resolution_id: Mapped[uuid.UUID | None] = _fk("resolution.id", nullable=True)
+    plan_item_id: Mapped[uuid.UUID | None] = _fk("economic_plan_item.id", nullable=True)
 
 
 class InvoiceLine(IdMixin, TenantMixin, Base):
@@ -698,6 +703,24 @@ class InvoiceLine(IdMixin, TenantMixin, Base):
     section_35a_amount: Mapped[Decimal | None] = mapped_column(MONEY)
     unit_id: Mapped[uuid.UUID | None] = _fk("unit.id", nullable=True)
     text: Mapped[str | None] = mapped_column(String(500))
+    # M14-02 (migration 0291): quantity and unit price for the price and quantity comparison.
+    quantity: Mapped[Decimal | None] = mapped_column(RATE)
+    unit_price: Mapped[Decimal | None] = mapped_column(RATE)
+
+
+class InvoiceCheckSetting(IdMixin, TimestampMixin, TenantMixin, Base):
+    """M14-02 (migration 0291): tolerances of the factual review per tenant, in percent;
+    default 0 means exact match. Findings only, never a release."""
+
+    __tablename__ = "invoice_check_setting"
+    __table_args__ = (UniqueConstraint("tenant_id"),)
+
+    price_tolerance_percent: Mapped[Decimal] = mapped_column(
+        RATE, nullable=False, default=Decimal(0), server_default="0"
+    )
+    quantity_tolerance_percent: Mapped[Decimal] = mapped_column(
+        RATE, nullable=False, default=Decimal(0), server_default="0"
+    )
 
 
 class InvoiceReview(IdMixin, TenantMixin, Base):
@@ -982,6 +1005,8 @@ class ExportRun(IdMixin, TimestampMixin, TenantMixin, Base):
 class AdminFeeInvoiceStatus(StrEnum):
     ISSUED = "issued"
     RELEASED = "released"
+    # M13-05 (migration 0290): set together with ``cancelled_at`` by the credit note.
+    CANCELLED = "cancelled"
 
 
 class AdminFeeInvoice(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -1055,6 +1080,43 @@ class AdminFeeInvoice(IdMixin, TimestampMixin, TenantMixin, Base):
     cancelled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     cancelled_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     cancel_reason: Mapped[str | None] = mapped_column(Text)
+    # M13-07 (migration 0290): revenue posting drafts of the fee, one per ledger (E01): the
+    # payer side in the debtor ledger, the revenue side in the ledger of the manager. Only
+    # drafts are written here (behind G1); posting uses the regular path (B03 to B09).
+    payer_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+    manager_entry_id: Mapped[uuid.UUID | None] = _fk("journal_entry.id", nullable=True)
+
+
+class AdminFeePostingConfig(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Account assignment of the fee revenue posting per tenant (M13-07, migration 0290).
+
+    No default exists: without this row (or without a ledger of the debtor) no draft is
+    created. The manager side names concrete accounts of the manager ledger; the payer side
+    names account numbers, resolved in each debtor ledger (one ledger per legal entity, E01).
+    The VAT accounts are optional; with VAT on the invoice and no VAT account on a side the
+    gross amount stays on the expense or revenue account of that side as configured by the
+    operator (tax treatment open, docs/OPEN_QUESTIONS.md T04-01).
+    """
+
+    __tablename__ = "admin_fee_posting_config"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", name="uq_admin_fee_posting_config_tenant_id"),
+        CheckConstraint(
+            "payer_expense_account_number ~ '^[0-9]{6}$' "
+            "AND payer_payable_account_number ~ '^[0-9]{6}$' "
+            "AND (payer_vat_account_number IS NULL "
+            "OR payer_vat_account_number ~ '^[0-9]{6}$')",
+            name="payer_numbers_six_digits",
+        ),
+    )
+
+    manager_ledger_id: Mapped[uuid.UUID] = _fk("ledger.id")
+    manager_receivable_account_id: Mapped[uuid.UUID] = _fk("ledger_account.id")
+    manager_revenue_account_id: Mapped[uuid.UUID] = _fk("ledger_account.id")
+    manager_vat_account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id", nullable=True)
+    payer_expense_account_number: Mapped[str] = mapped_column(String(6), nullable=False)
+    payer_payable_account_number: Mapped[str] = mapped_column(String(6), nullable=False)
+    payer_vat_account_number: Mapped[str | None] = mapped_column(String(6))
 
 
 class DatevAccountMapping(IdMixin, TimestampMixin, TenantMixin, Base):

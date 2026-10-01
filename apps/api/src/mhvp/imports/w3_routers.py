@@ -11,12 +11,25 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import func, select
 
+from mhvp.accounting.models import Ledger
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_column_guard, session_allowed_property_ids
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.imports import w3_reports
 from mhvp.imports.history_models import MigratedBankLink, MigratedOpenItem, MigratedTicket
+from mhvp.properties.models import Property
 
-router = APIRouter(prefix="/imports/immoware24/history", tags=["Import Immoware24"])
+# M2-02, R08-01: property and ledger query parameters outside the assignment answer 404.
+HISTORY_GUARD = property_column_guard({"property_id": Property.id, "ledger_id": Ledger.property_id})
+router = APIRouter(
+    prefix="/imports/immoware24/history",
+    tags=["Import Immoware24"],
+    dependencies=[
+        Depends(
+            property_column_guard({"property_id": Property.id, "ledger_id": Ledger.property_id})
+        )
+    ],
+)
 READ_TICKETS = require_permission("tickets:read")
 READ_ACCOUNTING = require_permission("accounting:read")
 
@@ -72,6 +85,9 @@ async def history_tickets(
         query = select(MigratedTicket)
         if property_id:
             query = query.where(MigratedTicket.property_id == property_id)
+        allowed = session_allowed_property_ids(session)  # M2-02, R08-01
+        if allowed is not None:
+            query = query.where(MigratedTicket.property_id.in_(allowed))
         rows = await session.scalars(
             query.order_by(MigratedTicket.created_on.desc(), MigratedTicket.source_ticket_id)
             .offset(offset)
@@ -95,6 +111,9 @@ async def history_open_items(
         query = select(MigratedOpenItem)
         if ledger_id:
             query = query.where(MigratedOpenItem.ledger_id == ledger_id)
+        allowed = session_allowed_property_ids(session)  # M2-02, R08-01
+        if allowed is not None:
+            query = query.where(MigratedOpenItem.property_id.in_(allowed))
         if kind:
             query = query.where(MigratedOpenItem.kind == kind)
         rows = await session.scalars(

@@ -815,3 +815,99 @@ def test_invoice_submission_becomes_receipt_draft(
     assert out["fields"]["supplier_name"].startswith("Dachdecker")
     assert out["order"] == "invoiced"
     assert out["events"] == ["invoiced"]
+
+
+def test_notification_mail_modes_collective(
+    client: TestClient, world: World, database: Database, redis_url: str
+) -> None:
+    """M23-04: email_mode validation and persistence; one collective mail per user, daily
+    entries only wait for the daily run."""
+    from mhvp.workspace import notification_prefs
+    from mhvp.workspace.models import Notification
+    from mhvp.workspace.services import notify
+
+    settings = _settings(database, redis_url)
+    admin = bearer(login(client, world, "q11admin"))
+    care = bearer(login(client, world, "q11care"))
+    url = f"{W}/notification-preferences"
+    # The preferences test above leaves a two hour mute on the admin; lift it first.
+    _ok(client.put(url, json={"items": [{"kind": "*", "muted_until": None}]}, headers=admin))
+    assert (
+        client.put(
+            url, json={"items": [{"kind": "automation", "email_mode": "weekly"}]}, headers=admin
+        ).status_code
+        == 422
+    )
+    saved = _ok(
+        client.put(
+            url,
+            json={
+                "items": [
+                    {"kind": "ticket_assigned", "email": True, "email_mode": "immediate"},
+                    {"kind": "automation", "email": True, "email_mode": "daily"},
+                ]
+            },
+            headers=admin,
+        )
+    )
+    modes = {i["kind"]: i["email_mode"] for i in saved["items"]}
+    assert modes["automation"] == "daily"
+    assert modes["ticket_assigned"] == "immediate"
+    other = {i["kind"]: i for i in _ok(client.get(url, headers=care))["items"]}
+    assert other["automation"]["email_mode"] == "immediate"
+    admin_id = world.users["q11admin"]
+
+    async def seed(session: Any) -> None:
+        for kind, title in (
+            ("ticket_assigned", "Eins"),
+            ("ticket_assigned", "Zwei"),
+            ("automation", "Taeglich"),
+        ):
+            await notify(
+                session,
+                tenant_id=world.tenant_a,
+                user_id=admin_id,
+                kind=kind,
+                title=title,
+                entity_type="ticket",
+                entity_id=uuid.uuid4(),
+            )
+
+    asyncio.run(_with_session(settings, world.tenant_a, seed))
+    calls: list[tuple[str, str]] = []
+
+    async def send(session: Any, daily: bool) -> dict[str, int]:
+        import mhvp.sla.channels as channels
+
+        async def fake(_s: Any, _c: Any, _t: Any, to: str, subject: str, body: str) -> None:
+            calls.append((subject, body))
+
+        original = channels.send_email
+        channels.send_email = fake  # type: ignore[assignment]
+        try:
+            return await notification_prefs.send_pending_mails(
+                session, settings, world.tenant_a, daily=daily
+            )
+        finally:
+            channels.send_email = original  # type: ignore[assignment]
+
+    first = asyncio.run(_with_session(settings, world.tenant_a, lambda s: send(s, False)))
+    assert first["mails"] == 1
+    assert first["sent"] == 2
+    assert calls[0][0] == "2 neue Benachrichtigungen"
+    assert "Eins" in calls[0][1]
+    assert "Zwei" in calls[0][1]
+    assert "Taeglich" not in calls[0][1]
+    second = asyncio.run(_with_session(settings, world.tenant_a, lambda s: send(s, True)))
+    assert second["mails"] == 1
+    assert calls[1][0] == "Taeglich"
+
+    async def open_mails(session: Any) -> int:
+        rows = await session.scalars(
+            select(Notification).where(
+                Notification.email_pending.is_(True), Notification.email_sent_at.is_(None)
+            )
+        )
+        return len(rows.all())
+
+    assert asyncio.run(_with_session(settings, world.tenant_a, open_mails)) == 0

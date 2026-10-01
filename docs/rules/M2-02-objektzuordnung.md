@@ -66,3 +66,18 @@
   - Nicht angeschlossen: Portalverwaltung (Zugänge und Vorschläge sind kontaktbezogen),
     Objektakte, Importe, Kataloge (mandantenweit ohne Objektbezug), Prüfberichte des Beirats
     (`audit_report` ohne Rechtsträger; der Prüfauftrag selbst ist geschützt).
+- Stand 01.10.2026 (Paket T14, Welle 5, R08-01): angeschlossen sind jetzt auch
+  Portalverwaltung (Zugang sichtbar, wenn der Kontakt über seine Partei einen Vertrag auf
+  einem zugeordneten Objekt hat; Einladung sonst 404; Pfade mit `account_id` 404), Objektakte
+  je Objekt (Vollständigkeit, Listen, Abgabeexport; Gesamtliste gefiltert), Migrationsimporte
+  (Objekt, Buchungskreis, Eröffnungssalden, Wechselanträge, Abgleichberichte,
+  Abnahmeprotokolle; Status und Wechselanträge gefiltert), Altdaten (historische Tickets und
+  Einzelposten), Prüfberichte des Beirats per Id (über Prüfauftrag und Gemeinschaft zum
+  Objekt), Bankregeln und Regelvorschläge (eigenes Objekt, sonst Objekt des Rechtsträgers),
+  Sync-Protokoll und Klärungsliste (über das Bankkonto), Kontozuordnung (Ziel und gelöstes
+  Objekt müssen zugeordnet sein). Die Kontoliste filtert vor dem Limit.
+  - Weiterhin nicht angeschlossen: Immoware24 Datei- und Vollimporte ohne Zielobjekt
+    (mandantenweite Stammdaten), Abgleichberichte über alle Objekte, historische
+    Bankverknüpfungen ohne Objekt, Änderungsvorschläge, Vollmachten und Mandatsvorschläge der
+    Portalverwaltung; Sync-Läufe ohne Kontobezug sind für eingeschränkte Mitglieder
+    unsichtbar. Abnahmefall: tests/integration/test_t14_property_scope_rest.py.

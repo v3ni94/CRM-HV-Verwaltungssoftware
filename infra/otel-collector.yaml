@@ -1,0 +1,19 @@
+# Beispielkonfiguration des OpenTelemetry Collectors (M9-02), Profil otel in infra/compose.yaml.
+# Ohne Backend werden Spans nur im Collector-Log ausgegeben. Ein Tracing-Backend (z. B. Tempo
+# oder Jaeger) wird als weiterer Exporter ergänzt.
+receivers:
+  otlp:
+    protocols:
+      http:
+        endpoint: 0.0.0.0:4318
+processors:
+  batch: {}
+exporters:
+  debug:
+    verbosity: basic
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

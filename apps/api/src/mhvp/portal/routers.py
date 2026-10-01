@@ -29,6 +29,7 @@ from mhvp.core.auth.principal import (
     sessions,
     tenant_tx,
 )
+from mhvp.core.auth.scope import allowed_property_ids
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.escaping import content_disposition
@@ -36,12 +37,21 @@ from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access, magic_link, read_receipts
 from mhvp.portal.models import ChangeRequest, PortalAccount
+from mhvp.portal.property_scope import (
+    contact_visible,
+    ensure_contact_visible,
+    portal_admin_guard,
+)
 from mhvp.workspace.models import Notification
 from mhvp.workspace.routers import NotificationOut, notification_out
 from mhvp.workspace.services import local_today
 
 router = APIRouter(prefix="/portal", tags=["Portal"])
-admin = APIRouter(prefix="/portal-admin", tags=["Portal Verwaltung"])
+admin = APIRouter(
+    prefix="/portal-admin",
+    tags=["Portal Verwaltung"],
+    dependencies=[Depends(portal_admin_guard)],  # M2-02, R08-01
+)
 MANAGE = require_permission("contacts:update")
 INVITE_DAYS = 14
 # M21-01: the QR invitation code printed on the letter is valid longer than the e-mail
@@ -285,6 +295,8 @@ async def list_accounts(
     from mhvp.platform.models import User
 
     async with tenant_tx(request, principal) as session:
+        if not await contact_visible(session, contact_id):  # M2-02, R08-01
+            return []
         rows = (
             await session.execute(
                 select(PortalAccount, User)
@@ -317,6 +329,9 @@ async def list_accounts(
 async def invite(
     body: PortalInviteIn, request: Request, principal: TenantPrincipal = Depends(MANAGE)
 ) -> dict[str, Any]:
+    if allowed_property_ids(principal) is not None:  # M2-02, R08-01: contract of the contact
+        async with tenant_tx(request, principal) as session:
+            await ensure_contact_visible(session, body.contact_id)
     return await provision_account(
         request,
         principal,

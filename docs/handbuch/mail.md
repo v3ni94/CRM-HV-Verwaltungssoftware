@@ -253,3 +253,7 @@ Zu einer Mail zeigt die Kompaktansicht eine Zusammenfassung (KI-Zusammenfassung,
 ## Automatische KI-Läufe (Einstellungen, KI)
 
 Unter Einstellungen, KI stehen zwei Schalter, beide standardmäßig aus: Neue oder geänderte Mieterhöhungsfälle werden automatisch von der KI auf Stimmigkeit geprüft (Hinweise, keine Freigabe, keine Rechtsprüfung), und E-Mails ohne Vorschlag werden nachts von der KI eingeordnet (höchstens 100 je Nacht). Beide Schalter ersetzen weder die Anbieterfreigabe noch das Monatsbudget. In der Kompaktansicht zeigt der Antwortvorschlag eine Hinweiszeile mit Tonfall und Platzhaltern ohne Wert.
+
+## Antwortentwurf mit KI
+
+In der Kompaktansicht erzeugt "Antwortentwurf (KI)" einen Entwurf nach dem Tonfall und den Regeln des Postfachs. Der Entwurf erscheint mit Hinweisen zu Tonfall, Platzhaltern und offenen Fragen und gilt erst nach "Entwurf freigeben" als geprüft. Ohne freigegebenen KI-Anbieter entsteht kein Entwurf. Versendet wird nichts automatisch; die Mail geht wie bisher über den Entwurf und die Freigabe im Postfach.

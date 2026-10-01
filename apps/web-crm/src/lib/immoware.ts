@@ -21,6 +21,16 @@ const WAVE3_REPORT_TYPES = [
   "ticket_history",
 ] as unknown as ReportType[];
 
+/** Report types added in Welle 5 (M8-01); typed separately until the API client is regenerated. */
+const WAVE5_REPORT_TYPES = [
+  "deposit",
+  "allocation_key",
+  "meter",
+  "energy_certificate",
+  "service_provider",
+  "portal_user",
+] as unknown as ReportType[];
+
 export const REPORT_TYPES: ReportType[] = [
   "properties",
   "units",
@@ -31,6 +41,7 @@ export const REPORT_TYPES: ReportType[] = [
   "journal",
   "bank_transactions",
   ...WAVE3_REPORT_TYPES,
+  ...WAVE5_REPORT_TYPES,
 ];
 
 /** Reports without target fields: rows are only staged until the ledger exists (18, M8). */

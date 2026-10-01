@@ -66,8 +66,10 @@ from mhvp.automation.schemas import (
     NotifyAction,
     NotifyProviderAction,
     SetFieldAction,
+    SetRecordFieldAction,
     SetTicketFieldAction,
     WebhookAction,
+    check_record_value,
     parse_actions,
 )
 from mhvp.core import crypto
@@ -1369,6 +1371,221 @@ async def _set_field(
     return preview | {"ok": True, "detail": "Feld gesetzt (Anhängen, kein Überschreiben)."}
 
 
+async def _set_record_field(
+    session: AsyncSession,
+    *,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event_id: uuid.UUID,
+    action: SetRecordFieldAction,
+    context: dict[str, Any],
+    dry_run: bool,
+) -> dict[str, Any]:
+    """T12 (S15-06): set a field of a work order or document from the closed list
+    ``RECORD_FIELDS``; the target is the event's own entity. Order status follows the existing
+    ``ORDER_FLOW`` and leaves an order event; a document with a retention hold or permanent
+    record keeps its category."""
+    raw = (render(action.value, context) or "").strip()
+    preview: dict[str, Any] = {
+        "type": "set_record_field",
+        "target": action.target,
+        "field": action.field,
+        "value": raw,
+    }
+    try:
+        value = check_record_value(action.field, raw)
+    except ValueError as exc:
+        raise ActionError(str(exc)) from exc
+    if context.get("entity_type") != action.target or not context.get("entity_id"):
+        if dry_run:
+            return preview | {"ok": True, "detail": "Testlauf: Feld würde gesetzt."}
+        raise ActionError(f"Feld setzen ({action.target}) braucht ein passendes Ereignis.")
+    target_id = uuid.UUID(str(context["entity_id"]))
+    preview["entity_type"], preview["entity_id"] = action.target, str(target_id)
+    if action.target == "work_order":
+        detail = await _set_order_field(
+            session, tenant_id, rule, event_id, target_id, action.field, value, dry_run
+        )
+    else:
+        detail = await _set_document_field(
+            session, tenant_id, rule, event_id, target_id, action.field, value, dry_run
+        )
+    return preview | {"ok": True, "detail": detail}
+
+
+async def _set_order_field(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event_id: uuid.UUID,
+    order_id: uuid.UUID,
+    field: str,
+    value: Any,
+    dry_run: bool,
+) -> str:
+    from mhvp.tickets.models import OrderStatus, WorkOrder, WorkOrderEvent
+    from mhvp.tickets.routers import ORDER_FLOW
+
+    order = await session.get(WorkOrder, order_id, with_for_update=not dry_run)
+    if order is None:
+        raise ActionError("Auftrag nicht gefunden.")
+    if field == "status":
+        target = OrderStatus(value)
+        if order.status is target:
+            return "Status bereits gesetzt."
+        if target not in ORDER_FLOW[order.status]:
+            raise ActionError(f"Schritt {order.status.value} nach {target.value} nicht zulässig.")
+        if dry_run:
+            return "Testlauf: Status würde gesetzt."
+        session.add(
+            WorkOrderEvent(
+                tenant_id=tenant_id,
+                work_order_id=order.id,
+                from_status=order.status.value,
+                to_status=target.value,
+                user_id=None,
+                note=f"Regel {rule.name}",
+            )
+        )
+        order.status = target
+        order.updated_by = None
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type=f"work_order.{target.value}",
+            entity_type="work_order",
+            entity_id=order.id,
+            actor_user_id=None,
+            payload={"via": "automation", **automation_marker(rule.id, event_id)},
+        )
+        return "Status gesetzt."
+    if field == "scheduled_at":
+        if order.status in (OrderStatus.DONE, OrderStatus.INVOICED, OrderStatus.ACCEPTED) or (
+            order.status in (OrderStatus.REJECTED, OrderStatus.CANCELLED)
+        ):
+            raise ActionError("Termin bei abgeschlossenem Auftrag nicht änderbar.")
+        if order.scheduled_at == value:
+            return "Termin bereits gesetzt."
+        if dry_run:
+            return "Testlauf: Termin würde gesetzt."
+        order.scheduled_at = value
+        order.updated_by = None
+        await session.flush()
+        from mhvp.workspace.jobs import sync_work_order_entry
+
+        await sync_work_order_entry(session, order)
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type="work_order.updated",
+            entity_type="work_order",
+            entity_id=order.id,
+            actor_user_id=None,
+            payload={
+                "fields": ["scheduled_at"],
+                "via": "automation",
+                **automation_marker(rule.id, event_id),
+            },
+        )
+        return "Termin gesetzt."
+    # assignee_user_id: the order has no assignee of its own, the clerk is the ticket's.
+    if order.ticket_id is None:
+        raise ActionError("Der Auftrag hat kein Ticket; Zuständiger nicht setzbar.")
+    await _assert_member(session, tenant_id, value)
+    ticket = await session.get(Ticket, order.ticket_id, with_for_update=not dry_run)
+    if ticket is None:
+        raise ActionError("Ticket nicht gefunden.")
+    if ticket.merged_into_ticket_id is not None:
+        raise ActionError("Ticket ist zusammengeführt; keine Änderung.")
+    if ticket.assignee_user_id == value:
+        return "Zuständiger bereits gesetzt."
+    if dry_run:
+        return "Testlauf: Zuständiger würde gesetzt."
+    ticket.assignee_user_id = value
+    ticket.updated_by = None
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="ticket.updated",
+        entity_type="ticket",
+        entity_id=ticket.id,
+        actor_user_id=None,
+        payload={
+            "fields": ["assignee_user_id"],
+            "via": "automation",
+            **automation_marker(rule.id, event_id),
+        },
+    )
+    return "Zuständiger des Tickets gesetzt."
+
+
+async def _set_document_field(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    rule: AutomationRule,
+    event_id: uuid.UUID,
+    document_id: uuid.UUID,
+    field: str,
+    value: Any,
+    dry_run: bool,
+) -> str:
+    from mhvp.documents import retention
+    from mhvp.documents.models import Document, DocumentCategory, DocumentLink, LinkRole
+    from mhvp.properties.models import Property
+
+    document = await session.get(Document, document_id, with_for_update=not dry_run)
+    if document is None:
+        raise ActionError("Dokument nicht gefunden.")
+    if field == "property_id":
+        if await session.get(Property, value) is None:
+            raise ActionError("Objekt nicht gefunden.")
+        existing = await session.scalar(
+            select(DocumentLink.id).where(
+                DocumentLink.document_id == document.id,
+                DocumentLink.entity_type == "property",
+                DocumentLink.entity_id == value,
+            )
+        )
+        if existing is not None:
+            return "Verknüpfung besteht bereits."
+        if dry_run:
+            return "Testlauf: Objekt würde verknüpft."
+        session.add(
+            DocumentLink(
+                tenant_id=tenant_id,
+                document_id=document.id,
+                entity_type="property",
+                entity_id=value,
+                role=LinkRole.ATTACHMENT,
+            )
+        )
+        detail = "Objekt verknüpft."
+    else:
+        if await session.get(DocumentCategory, value) is None:
+            raise ActionError("Kategorie nicht gefunden.")
+        if document.retention_hold_reason or document.permanent_record:
+            raise ActionError("Dokument mit Aufbewahrungssperre: Kategorie nicht änderbar.")
+        if document.category_id == value:
+            return "Kategorie bereits gesetzt."
+        if dry_run:
+            return "Testlauf: Kategorie würde gesetzt."
+        document.category_id = value
+        profile = await retention.profile_for_category(session, value)
+        if profile is not None:
+            await retention.assign_profile(session, document, profile)
+        detail = "Kategorie gesetzt."
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="document.updated",
+        entity_type="document",
+        entity_id=document.id,
+        actor_user_id=None,
+        payload={"fields": [field], "via": "automation", **automation_marker(rule.id, event_id)},
+    )
+    return detail
+
+
 PROVIDER_DRY_RUN = "Testlauf: Entwurf an Dienstleister würde angelegt."
 
 
@@ -1786,6 +2003,16 @@ async def _execute_one(
         )
     if isinstance(action, SetFieldAction):
         return await _set_field(
+            session,
+            tenant_id=tenant_id,
+            rule=rule,
+            event_id=event_id,
+            action=action,
+            context=context,
+            dry_run=dry_run,
+        )
+    if isinstance(action, SetRecordFieldAction):
+        return await _set_record_field(
             session,
             tenant_id=tenant_id,
             rule=rule,

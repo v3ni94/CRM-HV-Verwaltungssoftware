@@ -73,4 +73,11 @@ describe("OccupancyList", () => {
     renderIntl(<OccupancyList propertyId={PID} />);
     expect(await screen.findByRole("alert")).toBeInTheDocument();
   });
+
+  it("names the stichtag form", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(jsonResponse(ROWS));
+    renderIntl(<OccupancyList propertyId={PID} />);
+    await screen.findAllByTestId("occupancy-row");
+    expect(screen.getAllByRole("form").length).toBeGreaterThan(0);
+  });
 });

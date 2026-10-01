@@ -7,7 +7,7 @@ import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
-type Item = { kind: string; in_app: boolean; email: boolean; muted_until: string | null; mandatory: boolean };
+type Item = { kind: string; in_app: boolean; email: boolean; muted_until: string | null; mandatory: boolean; email_mode?: "immediate" | "daily" };
 
 /** Dauer der Stummschaltung in Stunden; "0" hebt sie auf. */
 /** Message key of a kind: dots are not allowed in next-intl keys. */
@@ -50,6 +50,7 @@ export function NotificationPreferences() {
         kind: i.kind,
         in_app: i.in_app,
         email: i.email,
+        email_mode: i.email_mode ?? "immediate",
         muted_until:
           i.kind === "*" ? (hours > 0 ? new Date(Date.now() + hours * 3600_000).toISOString() : null) : i.muted_until && new Date(i.muted_until) > new Date() ? i.muted_until : null,
       }));
@@ -102,6 +103,7 @@ export function NotificationPreferences() {
         ) : null}
       </div>
       <p className={ui.help}>{t("muteHelp")}</p>
+      <p className={ui.help}>{t("deliveryHelp")}</p>
       <div className="overflow-x-auto">
         <table className={ui.table}>
           <thead>
@@ -109,6 +111,7 @@ export function NotificationPreferences() {
               <th scope="col">{t("column.kind")}</th>
               <th scope="col">{t("column.inApp")}</th>
               <th scope="col">{t("column.email")}</th>
+              <th scope="col">{t("column.delivery")}</th>
             </tr>
           </thead>
           <tbody>
@@ -137,6 +140,19 @@ export function NotificationPreferences() {
                     aria-label={t("emailFor", { kind: i.kind === "*" ? t("defaultRow") : t.has(`kind.${kindKey(i.kind)}`) ? t(`kind.${kindKey(i.kind)}`) : i.kind })}
                     data-testid={`pref-email-${i.kind}`}
                   />
+                </td>
+                <td>
+                  <select
+                    value={i.email_mode ?? "immediate"}
+                    disabled={i.mandatory || !i.email}
+                    onChange={(e) => update(i.kind, { email_mode: e.target.value as "immediate" | "daily" })}
+                    aria-label={t("deliveryFor", { kind: i.kind === "*" ? t("defaultRow") : t.has(`kind.${kindKey(i.kind)}`) ? t(`kind.${kindKey(i.kind)}`) : i.kind })}
+                    className={ui.input}
+                    data-testid={`pref-mode-${i.kind}`}
+                  >
+                    <option value="immediate">{t("delivery.immediate")}</option>
+                    <option value="daily">{t("delivery.daily")}</option>
+                  </select>
                 </td>
               </tr>
             ))}

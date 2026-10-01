@@ -123,3 +123,7 @@ Rule `docs/rules/P13-portal-w2.md`, migration 0262.
 - R10 (B20, B26): Mandanteneinstellung `portal_second_factor` (`account_choice` Standard, `required`) steuert den E-Mail-Code der Magic-Link-Anmeldung (`magic_link.consume_link`). Das öffentliche Branding liefert `platform` (`GET /tenant/branding`, `/tenant/branding/logo/{variant}`, Header `X-Portal-Host`); das Portal wendet es über `apps/web-portal/src/lib/branding.ts` an. Regel: `docs/rules/R10.md`.
 
 - `GET /portal/owner/takeover-checklist` (R03, M7-01): Stand der Objektübernahme der eigenen Objekte (Bezeichnung, Status, Fälligkeit), lesend, ohne Notizen, Dokumente und Tickets; Mieter und Dienstleister erhalten 403. Anzeige auf der Seite Eigentum.
+
+## Objektzuordnung der Portalverwaltung (T14, R08-01)
+
+`portal/property_scope.py`: ein Kontakt ist für ein eingeschränktes Mitglied sichtbar, wenn eine seiner Parteien einen Vertrag auf einem zugeordneten Objekt hat. `GET /portal-admin/accounts` liefert sonst eine leere Liste, `POST /portal-admin/accounts` 404, Pfade mit `{account_id}` (Router-Abhängigkeit `portal_admin_guard` an beiden `admin` Routern) 404. Nicht angeschlossen: Änderungsvorschläge, Vollmachten, Mandatsvorschläge.

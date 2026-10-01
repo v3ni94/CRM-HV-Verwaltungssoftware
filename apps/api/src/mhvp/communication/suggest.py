@@ -264,6 +264,67 @@ def reply_style_text(style: dict[str, Any] | None) -> str:
     return f"Stilvorgaben des Postfachs: Tonfall {tone}." + (f" Regeln: {rules}" if rules else "")
 
 
+def reply_task_payload(
+    output: dict[str, Any], style: dict[str, Any] | None, *, model: str | None
+) -> dict[str, Any] | None:
+    """Result of the own ``reply_draft`` task (T12) as stored under ``suggestion.reply_ai``:
+    checked body, tone, used and unknown placeholders, mailbox style, open questions. Always
+    ``approved: false``; the clerk approves it explicitly. ``None`` without a body."""
+    body = output.get("body")
+    if not isinstance(body, str) or not body.strip():
+        return None
+    base = draft_reply_payload(
+        {"reply_draft": body.strip(), "reply_tone": output.get("tone")}, style
+    )
+    if base is None:  # pragma: no cover - body is non-empty
+        return None
+    questions = [str(q)[:300] for q in output.get("open_questions") or [] if str(q).strip()]
+    return {
+        **base,
+        "open_questions": questions[:10],
+        "model": model,
+        "approved": False,
+        "approved_at": None,
+        "approved_by": None,
+    }
+
+
+async def reply_task_for_message(
+    session: AsyncSession, settings: Settings, message: Message
+) -> dict[str, Any]:
+    """Own AI task ``reply_draft`` (T12, 9.2): tone, placeholders and style from the mailbox
+    style as input, own provider schema. Goes through the gateway (release switches, DPA,
+    provider approval, masking). Returns ``status`` ready, skipped or failed plus the payload;
+    the caller stores it under ``suggestion.reply_ai``. Never sent and not usable before the
+    explicit approval."""
+    from mhvp.objektakte.masking import mask_ibans
+    from mhvp.tickets.models import Ticket
+
+    style = await _reply_style(session, message)
+    ticket = await session.get(Ticket, message.ticket_id) if message.ticket_id else None
+    prompt_text = (
+        f"Betreff: {mask_ibans(message.subject)}\n"
+        f"Text (Auszug):\n{mask_ibans((message.body or '')[:MAX_EXCERPT])}\n"
+        f"Ticketnummer vorhanden: {'ja' if ticket is not None else 'nein'}\n"
+        f"{reply_style_text(style)}"
+    )
+    context = {"context_type": "message", "context_id": str(message.id)}
+    try:
+        run = await _run_gateway_task(
+            settings, message.tenant_id, AiTask.REPLY_DRAFT, prompt_text, context
+        )
+    except Exception as exc:
+        return {"status": "failed", "reason": str(exc)[:500]}
+    if run.status is RunStatus.SUCCEEDED and run.output:
+        payload = reply_task_payload(run.output, style, model=run.model)
+        if payload is not None:
+            return {"status": "ready", **payload}
+        return {"status": "failed", "reason": "Der Antwortentwurf ist leer."}
+    if run.status is RunStatus.BLOCKED:
+        return {"status": "skipped", "reason": run.error or "Kein freigegebener KI-Anbieter."}
+    return {"status": "failed", "reason": run.error or "KI-Lauf fehlgeschlagen."}
+
+
 def playbook_fields(output: dict[str, Any], ticket_title: str) -> dict[str, Any]:
     """Playbook draft fields from a ``PlaybookDraft`` answer: title cut to 200 characters (the
     ticket title when empty), at most ten keywords of 64 characters, steps as text, template

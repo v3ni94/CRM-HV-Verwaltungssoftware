@@ -97,6 +97,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/admin-fee-invoices/{invoice_id}/posting-drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Honorarrechnung: Buchungsentwürfe beim Zahler und beim Verwalter anlegen */
+        post: operations["create_posting_drafts_api_v1_accounting_admin_fee_invoices__invoice_id__posting_drafts_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/admin-fee-invoices/{invoice_id}/release": {
         parameters: {
             query?: never;
@@ -162,6 +179,24 @@ export interface paths {
         put?: never;
         /** Gutschrift-XRechnung als Dokument ablegen */
         post: operations["store_credit_note_xml_api_v1_accounting_admin_fee_invoices__invoice_id__xrechnung_credit_note_document_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/admin-fee-posting-config": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Honorarbuchung: Kontenzuordnung */
+        get: operations["get_posting_config_api_v1_accounting_admin_fee_posting_config_get"];
+        /** Honorarbuchung: Kontenzuordnung festlegen */
+        put: operations["put_posting_config_api_v1_accounting_admin_fee_posting_config_put"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1173,6 +1208,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/accounting/invoice-check-settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Toleranzen der sachlichen Rechnungsprüfung */
+        get: operations["get_invoice_check_settings_api_v1_accounting_invoice_check_settings_get"];
+        /** Toleranzen der sachlichen Rechnungsprüfung setzen */
+        put: operations["put_invoice_check_settings_api_v1_accounting_invoice_check_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/accounting/invoices": {
         parameters: {
             query?: never;
@@ -1241,6 +1294,26 @@ export interface paths {
         };
         /** Skonto zum Zahltag */
         get: operations["invoice_discount_api_v1_accounting_invoices__invoice_id__discount_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/accounting/invoices/{invoice_id}/factual-check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Sachliche Prüfung als Befunde (Auftrag, Vertrag, Beschluss, Budget, Wiederkehr)
+         * @description M14-02 (PÜ02): findings and the proposed responsible reviewer; never a release.
+         */
+        get: operations["invoice_factual_check_api_v1_accounting_invoices__invoice_id__factual_check_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -5822,6 +5895,127 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/billing/heating-cost-imports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Messdienstimporte Heizkosten */
+        get: operations["list_heating_cost_imports_api_v1_billing_heating_cost_imports_get"];
+        put?: never;
+        /** Messdienstimport Heizkosten anlegen (Entwurf) */
+        post: operations["create_heating_cost_import_api_v1_billing_heating_cost_imports_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/heating-cost-imports/{import_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Messdienstimport Heizkosten */
+        get: operations["get_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__get"];
+        /** Messdienstimport: Kopfdaten ändern */
+        put: operations["update_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/heating-cost-imports/{import_id}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Geprüften Messdienstimport übernehmen */
+        post: operations["apply_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__apply_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/heating-cost-imports/{import_id}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Messdienstimport prüfen (Summen, CO2, Dubletten) */
+        post: operations["check_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__check_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/heating-cost-imports/{import_id}/csv": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Messdienstimport: CSV mit Spaltenzuordnung */
+        post: operations["import_heating_cost_csv_api_v1_billing_heating_cost_imports__import_id__csv_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/heating-cost-imports/{import_id}/mapping": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Messdienstimport: Nutzernummern zuordnen */
+        put: operations["put_heating_cost_import_mapping_api_v1_billing_heating_cost_imports__import_id__mapping_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/heating-cost-imports/{import_id}/rows": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /** Messdienstimport: Kostenzeilen manuell erfassen */
+        put: operations["put_heating_cost_import_rows_api_v1_billing_heating_cost_imports__import_id__rows_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/billing/heating-rule-tables": {
         parameters: {
             query?: never;
@@ -5971,6 +6165,29 @@ export interface paths {
         get: operations["pdf_api_v1_billing_owner_statements__statement_id__pdf_get"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/billing/owner-statements/{statement_id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Statuswechsel (6.9.3, S69-01)
+         * @description Uniform status model (6.9.3): internally_approved (four eyes), board_reviewed, issued,
+         *     due, posted, locked. ``resolved`` is refused (WEG only). issued, due and posted make the
+         *     statement relevant towards the owner or the ledger and need release gate G3 (rental
+         *     statements, 18.0); ``posted`` only records entries already posted in the ledger.
+         */
+        post: operations["transition_api_v1_billing_owner_statements__statement_id__transition_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -10270,6 +10487,81 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hoa/reserve-statements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rücklagenabrechnungen */
+        get: operations["list_statements_api_v1_hoa_reserve_statements_get"];
+        put?: never;
+        /** Rücklagenabrechnung anlegen (Entwurf) */
+        post: operations["create_api_v1_hoa_reserve_statements_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/reserve-statements/{reserve_statement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Rücklagenabrechnung */
+        get: operations["get_api_v1_hoa_reserve_statements__reserve_statement_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/reserve-statements/{reserve_statement_id}/calculate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Aus den Rücklagendaten der Hausgeldabrechnung erzeugen */
+        post: operations["calculate_api_v1_hoa_reserve_statements__reserve_statement_id__calculate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/reserve-statements/{reserve_statement_id}/transition": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Statuswechsel (6.9.3, S69-01)
+         * @description Same rules as the Hausgeldabrechnung: four eyes on the internal approval, resolved only
+         *     with a binding resolution on this or the source snapshot (D14), issued only after resolved
+         *     (W06), posted only from due with a binding resolution (D13) and posted entries of the
+         *     ledger. issued, due and posted need release gate G4.
+         */
+        post: operations["transition_api_v1_hoa_reserve_statements__reserve_statement_id__transition_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hoa/reserves": {
         parameters: {
             query?: never;
@@ -10282,6 +10574,41 @@ export interface paths {
         put?: never;
         /** Zweckgebundene Rücklage anlegen (W08) */
         post: operations["create_reserve_api_v1_hoa_reserves_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/reserves/{reserve_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Zweckgebundene Rücklage mit Rechtsträger */
+        get: operations["get_reserve_api_v1_hoa_reserves__reserve_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /** Zweckgebundene Rücklage ändern (M24-01) */
+        patch: operations["patch_reserve_api_v1_hoa_reserves__reserve_id__patch"];
+        trace?: never;
+    };
+    "/api/v1/hoa/reserves/{reserve_id}/development": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Entwicklung einer Rücklage je Jahr (Anfang, Zuführung, Entnahme, Zinsen, Ende) */
+        get: operations["get_reserve_development_api_v1_hoa_reserves__reserve_id__development_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -10731,11 +11058,33 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Mittelverwendung je Rücklage einer Abrechnung */
+        get: operations["list_reserve_movements_api_v1_hoa_statements__statement_id__reserve_movements_get"];
         put?: never;
         /** Mittelverwendung, Steuern, Gebühren oder Zinsen je Rücklage */
         post: operations["add_reserve_movement_api_v1_hoa_statements__statement_id__reserve_movements_post"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hoa/statements/{statement_id}/reserve-movements/{movement_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Erfasste Mittelverwendung im Entwurf entfernen
+         * @description Only while the statement is a draft: the entry is draft information, never a posting;
+         *     after the calculation a change needs a new version.
+         */
+        delete: operations["delete_reserve_movement_api_v1_hoa_statements__statement_id__reserve_movements__movement_id__delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -14807,6 +15156,50 @@ export interface paths {
         put?: never;
         /** Entwurf zurückweisen */
         post: operations["reject_api_v1_mail_messages__message_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/reply-ai": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Antwortentwurf (KI) erzeugen
+         * @description Own AI task ``reply_draft`` (T12, 9.2): tone, placeholders and mailbox style as input.
+         *     Without a released provider nothing is stored (status skipped). The result lands under
+         *     ``suggestion.reply_ai`` unapproved; it is usable only after ``/reply-ai/approve`` and
+         *     is never sent by this path (rule 0.1.6).
+         */
+        post: operations["create_reply_draft_api_v1_mail_messages__message_id__reply_ai_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/mail/messages/{message_id}/reply-ai/approve": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Antwortentwurf freigeben
+         * @description Human approval of the stored reply draft (four eyes with the later send path stay
+         *     untouched). Records user and time; a new draft resets the approval.
+         */
+        post: operations["approve_reply_draft_api_v1_mail_messages__message_id__reply_ai_approve_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -21642,6 +22035,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tenant/export-jobs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mandantenexporte auflisten */
+        get: operations["list_export_jobs_api_v1_tenant_export_jobs_get"];
+        put?: never;
+        /** Vollständigen Mandantenexport starten */
+        post: operations["create_export_job_api_v1_tenant_export_jobs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tenant/export-jobs/{job_id}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Mandantenexport herunterladen (Ereignis je Abruf) */
+        get: operations["download_export_job_api_v1_tenant_export_jobs__job_id__download_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tenant/legal-entities": {
         parameters: {
             query?: never;
@@ -24298,10 +24726,14 @@ export interface components {
             lines: {
                 [key: string]: unknown;
             }[];
+            /** Manager Entry Id */
+            manager_entry_id?: string | null;
             /** Net */
             net: string;
             /** Number */
             number: string;
+            /** Payer Entry Id */
+            payer_entry_id?: string | null;
             /** Pdf Document Id */
             pdf_document_id?: string | null;
             /** Period End */
@@ -24325,6 +24757,88 @@ export interface components {
             xml_document_id: string | null;
             /** Xrechnung Url */
             xrechnung_url: string | null;
+        };
+        /**
+         * AdminFeeInvoiceStatus
+         * @enum {string}
+         */
+        AdminFeeInvoiceStatus: "issued" | "released" | "cancelled";
+        /** AdminFeePostingConfigIn */
+        AdminFeePostingConfigIn: {
+            /**
+             * Manager Ledger Id
+             * Format: uuid
+             */
+            manager_ledger_id: string;
+            /**
+             * Manager Receivable Account Id
+             * Format: uuid
+             */
+            manager_receivable_account_id: string;
+            /**
+             * Manager Revenue Account Id
+             * Format: uuid
+             */
+            manager_revenue_account_id: string;
+            /** Manager Vat Account Id */
+            manager_vat_account_id?: string | null;
+            /** Payer Expense Account Number */
+            payer_expense_account_number: string;
+            /** Payer Payable Account Number */
+            payer_payable_account_number: string;
+            /** Payer Vat Account Number */
+            payer_vat_account_number?: string | null;
+        };
+        /** AdminFeePostingConfigOut */
+        AdminFeePostingConfigOut: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /**
+             * Manager Ledger Id
+             * Format: uuid
+             */
+            manager_ledger_id: string;
+            /**
+             * Manager Receivable Account Id
+             * Format: uuid
+             */
+            manager_receivable_account_id: string;
+            /**
+             * Manager Revenue Account Id
+             * Format: uuid
+             */
+            manager_revenue_account_id: string;
+            /** Manager Vat Account Id */
+            manager_vat_account_id?: string | null;
+            /** Payer Expense Account Number */
+            payer_expense_account_number: string;
+            /** Payer Payable Account Number */
+            payer_payable_account_number: string;
+            /** Payer Vat Account Number */
+            payer_vat_account_number?: string | null;
+        };
+        /** AdminFeePostingDraftsOut */
+        AdminFeePostingDraftsOut: {
+            /** Created */
+            created: boolean;
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            /**
+             * Manager Entry Id
+             * Format: uuid
+             */
+            manager_entry_id: string;
+            /**
+             * Payer Entry Id
+             * Format: uuid
+             */
+            payer_entry_id: string;
         };
         /** AdminFeeSettingOut */
         AdminFeeSettingOut: {
@@ -24450,7 +24964,7 @@ export interface components {
          * AiTask
          * @enum {string}
          */
-        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change" | "ticket_resolution" | "call_summary" | "embed" | "rent_increase_check";
+        AiTask: "extract_contacts" | "extract_property" | "map_columns" | "classify_email" | "propose_posting" | "extract_invoice" | "draft_reply" | "check_statement" | "answer_question" | "summarize" | "classify_document" | "contact_master_data_change" | "ticket_resolution" | "call_summary" | "embed" | "rent_increase_check" | "reply_draft";
         /**
          * AlertChannel
          * @enum {string}
@@ -32286,12 +32800,139 @@ export interface components {
             /** Version */
             version: string;
         };
+        /** HeatingImportApplyIn */
+        HeatingImportApplyIn: {
+            /**
+             * Statement Id
+             * Format: uuid
+             */
+            statement_id: string;
+        };
+        /** HeatingImportCheckIn */
+        HeatingImportCheckIn: {
+            /** Duplicate Ack Reason */
+            duplicate_ack_reason?: string | null;
+        };
+        /** HeatingImportCo2In */
+        HeatingImportCo2In: {
+            /**
+             * Building Kind
+             * @default unknown
+             */
+            building_kind: string;
+            /** Costs */
+            costs?: number | string | null;
+            /** Emissions Kg */
+            emissions_kg?: number | string | null;
+            /**
+             * Mode
+             * @default apply
+             */
+            mode: string;
+            /** Reason */
+            reason?: string | null;
+            /** Reference Area M2 */
+            reference_area_m2?: number | string | null;
+        };
+        /** HeatingImportCsvIn */
+        HeatingImportCsvIn: {
+            /** Column Map */
+            column_map: {
+                [key: string]: string;
+            };
+            /** Content */
+            content: string;
+            /**
+             * Decimal Comma
+             * @default true
+             */
+            decimal_comma: boolean;
+            /**
+             * Delimiter
+             * @default ;
+             */
+            delimiter: string;
+            /** File Name */
+            file_name?: string | null;
+        };
+        /** HeatingImportHeaderIn */
+        HeatingImportHeaderIn: {
+            co2?: components["schemas"]["HeatingImportCo2In"];
+            /** Document Id */
+            document_id?: string | null;
+            /** Document Total */
+            document_total: number | string;
+            /**
+             * Period From
+             * Format: date
+             */
+            period_from: string;
+            /**
+             * Period To
+             * Format: date
+             */
+            period_to: string;
+            /**
+             * Property Id
+             * Format: uuid
+             */
+            property_id: string;
+            /** Provider Contact Id */
+            provider_contact_id?: string | null;
+            /** Provider Name */
+            provider_name: string;
+        };
         /** HeatingImportIn */
         HeatingImportIn: {
             /** Heating Kinds */
             heating_kinds?: string[];
             /** Hot Water Kinds */
             hot_water_kinds?: string[];
+        };
+        /** HeatingImportMappingEntryIn */
+        HeatingImportMappingEntryIn: {
+            /** Contract Id */
+            contract_id?: string | null;
+            /**
+             * Unit Id
+             * Format: uuid
+             */
+            unit_id: string;
+        };
+        /** HeatingImportMappingIn */
+        HeatingImportMappingIn: {
+            /** Mapping */
+            mapping: {
+                [key: string]: components["schemas"]["HeatingImportMappingEntryIn"];
+            };
+        };
+        /** HeatingImportRowIn */
+        HeatingImportRowIn: {
+            /**
+             * Co2 Landlord
+             * @default 0
+             */
+            co2_landlord: number | string;
+            /**
+             * Co2 Tenant
+             * @default 0
+             */
+            co2_tenant: number | string;
+            /** Heating Base */
+            heating_base: number | string;
+            /** Heating Consumption */
+            heating_consumption: number | string;
+            /** Hot Water Base */
+            hot_water_base: number | string;
+            /** Hot Water Consumption */
+            hot_water_consumption: number | string;
+            /** User Number */
+            user_number: string;
+        };
+        /** HeatingImportRowsIn */
+        HeatingImportRowsIn: {
+            /** Rows */
+            rows: components["schemas"]["HeatingImportRowIn"][];
         };
         /** HeatingIn */
         HeatingIn: {
@@ -32683,6 +33324,8 @@ export interface components {
         HoaReserveIn: {
             /** Account Id */
             account_id?: string | null;
+            /** Bank Account Id */
+            bank_account_id?: string | null;
             /**
              * Ledger Id
              * Format: uuid
@@ -32690,6 +33333,13 @@ export interface components {
             ledger_id: string;
             /** Name */
             name: string;
+            /**
+             * Opening Balance
+             * @default 0.00
+             */
+            opening_balance: number | string;
+            /** Opening Year */
+            opening_year?: number | null;
             /** Purpose */
             purpose?: string | null;
             /** Resolution Id */
@@ -32714,6 +33364,46 @@ export interface components {
             reserve_id: string;
             /** Resolution Id */
             resolution_id?: string | null;
+        };
+        /**
+         * HoaReservePatchIn
+         * @description Changes of an earmarked reserve (M24-01). Omitted fields stay unchanged.
+         */
+        HoaReservePatchIn: {
+            /** Account Id */
+            account_id?: string | null;
+            /** Active */
+            active?: boolean | null;
+            /** Bank Account Id */
+            bank_account_id?: string | null;
+            /** Name */
+            name?: string | null;
+            /** Opening Balance */
+            opening_balance?: number | string | null;
+            /** Opening Year */
+            opening_year?: number | null;
+            /** Purpose */
+            purpose?: string | null;
+            /** Resolution Id */
+            resolution_id?: string | null;
+        };
+        /** HoaReserveStatementIn */
+        HoaReserveStatementIn: {
+            /**
+             * Hoa Statement Id
+             * Format: uuid
+             */
+            hoa_statement_id: string;
+        };
+        /** HoaReserveStatementTransitionIn */
+        HoaReserveStatementTransitionIn: {
+            /** Entry Ids */
+            entry_ids?: string[];
+            /** Note */
+            note?: string | null;
+            /** Resolution Id */
+            resolution_id?: string | null;
+            target: components["schemas"]["StatementStatus"];
         };
         /** HoaResolutionIn */
         HoaResolutionIn: {
@@ -33315,6 +34005,54 @@ export interface components {
              */
             vat_percent: number | string;
         };
+        /** InvoiceCheckSettingIn */
+        InvoiceCheckSettingIn: {
+            /** Price Tolerance Percent */
+            price_tolerance_percent: number | string;
+            /** Quantity Tolerance Percent */
+            quantity_tolerance_percent: number | string;
+        };
+        /** InvoiceCheckSettingOut */
+        InvoiceCheckSettingOut: {
+            /** Price Tolerance Percent */
+            price_tolerance_percent: string;
+            /** Quantity Tolerance Percent */
+            quantity_tolerance_percent: string;
+        };
+        /** InvoiceFactualCheckOut */
+        InvoiceFactualCheckOut: {
+            /**
+             * Automatic Release
+             * @default false
+             */
+            automatic_release: boolean;
+            /** Findings */
+            findings: components["schemas"]["InvoiceFactualFindingOut"][];
+            /**
+             * Invoice Id
+             * Format: uuid
+             */
+            invoice_id: string;
+            /** Price Tolerance Percent */
+            price_tolerance_percent: string;
+            /** Property Id */
+            property_id: string | null;
+            /** Quantity Tolerance Percent */
+            quantity_tolerance_percent: string;
+            /** Suggested Reviewer User Id */
+            suggested_reviewer_user_id: string | null;
+            /** Version */
+            version: number;
+        };
+        /** InvoiceFactualFindingOut */
+        InvoiceFactualFindingOut: {
+            /** Area */
+            area: string;
+            /** Code */
+            code: string;
+            /** Message */
+            message: string;
+        };
         /** InvoiceForwardSettingsIn */
         InvoiceForwardSettingsIn: {
             /**
@@ -33385,6 +34123,11 @@ export interface components {
             order_reference?: string | null;
             /** Payee Iban */
             payee_iban?: string | null;
+            /**
+             * Plan Item Id
+             * @description Wirtschaftsplanposition (Budget)
+             */
+            plan_item_id?: string | null;
             /** Prepaid Amount */
             prepaid_amount?: number | string | null;
             /**
@@ -33395,10 +34138,20 @@ export interface components {
             /** Recipient Name */
             recipient_name?: string | null;
             /**
+             * Recurring Plan Id
+             * @description Rechnungsplan (Wiederkehr-Prüfung); leer lässt ihn unverändert
+             */
+            recurring_plan_id?: string | null;
+            /**
              * Reference Invoice Id
              * @description Pflicht bei kind=credit_note: Ursprungsrechnung
              */
             reference_invoice_id?: string | null;
+            /**
+             * Resolution Id
+             * @description WEG Beschluss
+             */
+            resolution_id?: string | null;
             /** Retention Amount */
             retention_amount?: number | string | null;
             /**
@@ -33418,6 +34171,11 @@ export interface components {
             supersedes_id?: string | null;
             /** Vat */
             vat: number | string;
+            /**
+             * Work Order Id
+             * @description Auftrag (Arbeitsauftrag)
+             */
+            work_order_id?: string | null;
         };
         /** InvoiceIntakeAutoIn */
         InvoiceIntakeAutoIn: {
@@ -33445,12 +34203,16 @@ export interface components {
             accrual_date?: string | null;
             /** Net */
             net: number | string;
+            /** Quantity */
+            quantity?: number | string | null;
             /** Section 35A Amount */
             section_35a_amount?: number | string | null;
             /** Text */
             text?: string | null;
             /** Unit Id */
             unit_id?: string | null;
+            /** Unit Price */
+            unit_price?: number | string | null;
             /**
              * Vat
              * @default 0
@@ -37223,6 +37985,12 @@ export interface components {
              */
             email: boolean;
             /**
+             * Email Mode
+             * @default immediate
+             * @enum {string}
+             */
+            email_mode: "immediate" | "daily";
+            /**
              * In App
              * @default true
              */
@@ -37236,6 +38004,11 @@ export interface components {
         NotificationPreferenceItem: {
             /** Email */
             email: boolean;
+            /**
+             * Email Mode
+             * @default immediate
+             */
+            email_mode: string;
             /** In App */
             in_app: boolean;
             /** Kind */
@@ -37952,6 +38725,22 @@ export interface components {
              * Format: date
              */
             period_to: string;
+        };
+        /**
+         * OwnerStatementStatus
+         * @enum {string}
+         */
+        OwnerStatementStatus: "draft" | "calculated" | "internally_approved" | "board_reviewed" | "resolved" | "issued" | "due" | "posted" | "locked";
+        /**
+         * OwnerStatementTransitionIn
+         * @description S69-01: status change after the internal approval (6.9.3).
+         */
+        OwnerStatementTransitionIn: {
+            /** Entry Ids */
+            entry_ids?: string[];
+            /** Note */
+            note?: string | null;
+            target: components["schemas"]["OwnerStatementStatus"];
         };
         /**
          * OwnershipTransferIn
@@ -41580,7 +42369,7 @@ export interface components {
          * ReportType
          * @enum {string}
          */
-        ReportType: "properties" | "units" | "contacts" | "tenancies" | "ownerships" | "payments" | "journal" | "bank_transactions" | "sepa_overview" | "chart_of_accounts" | "bank_history" | "document_index" | "ticket_history" | "open_items";
+        ReportType: "properties" | "units" | "contacts" | "tenancies" | "ownerships" | "payments" | "journal" | "bank_transactions" | "sepa_overview" | "chart_of_accounts" | "bank_history" | "document_index" | "ticket_history" | "open_items" | "deposit" | "allocation_key" | "meter" | "energy_certificate" | "service_provider" | "portal_user";
         /** RequestIn */
         RequestIn: {
             /**
@@ -45879,6 +46668,7 @@ export interface operations {
                 fee_setting_id?: string | null;
                 property_id?: string | null;
                 year?: number | null;
+                status?: components["schemas"]["AdminFeeInvoiceStatus"] | null;
                 page?: number;
                 page_size?: number;
             };
@@ -46013,6 +46803,37 @@ export interface operations {
             };
         };
     };
+    create_posting_drafts_api_v1_accounting_admin_fee_invoices__invoice_id__posting_drafts_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFeePostingDraftsOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     release_invoice_api_v1_accounting_admin_fee_invoices__invoice_id__release_post: {
         parameters: {
             query?: never;
@@ -46128,6 +46949,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_posting_config_api_v1_accounting_admin_fee_posting_config_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFeePostingConfigOut"] | null;
+                };
+            };
+        };
+    };
+    put_posting_config_api_v1_accounting_admin_fee_posting_config_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AdminFeePostingConfigIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminFeePostingConfigOut"];
                 };
             };
             /** @description Validation Error */
@@ -48436,6 +49310,59 @@ export interface operations {
             };
         };
     };
+    get_invoice_check_settings_api_v1_accounting_invoice_check_settings_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceCheckSettingOut"];
+                };
+            };
+        };
+    };
+    put_invoice_check_settings_api_v1_accounting_invoice_check_settings_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["InvoiceCheckSettingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceCheckSettingOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_invoices_api_v1_accounting_invoices_get: {
         parameters: {
             query?: {
@@ -48643,6 +49570,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    invoice_factual_check_api_v1_accounting_invoices__invoice_id__factual_check_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                invoice_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["InvoiceFactualCheckOut"];
                 };
             };
             /** @description Validation Error */
@@ -58078,6 +59036,329 @@ export interface operations {
             };
         };
     };
+    list_heating_cost_imports_api_v1_billing_heating_cost_imports_get: {
+        parameters: {
+            query?: {
+                property_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_heating_cost_import_api_v1_billing_heating_cost_imports_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeatingImportHeaderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    update_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeatingImportHeaderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    apply_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__apply_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeatingImportApplyIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    check_heating_cost_import_api_v1_billing_heating_cost_imports__import_id__check_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeatingImportCheckIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    import_heating_cost_csv_api_v1_billing_heating_cost_imports__import_id__csv_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeatingImportCsvIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_heating_cost_import_mapping_api_v1_billing_heating_cost_imports__import_id__mapping_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeatingImportMappingIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    put_heating_cost_import_rows_api_v1_billing_heating_cost_imports__import_id__rows_put: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                import_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HeatingImportRowsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_rule_tables_api_v1_billing_heating_rule_tables_get: {
         parameters: {
             query?: never;
@@ -58412,6 +59693,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transition_api_v1_billing_owner_statements__statement_id__transition_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OwnerStatementTransitionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Validation Error */
@@ -68078,6 +69396,177 @@ export interface operations {
             };
         };
     };
+    list_statements_api_v1_hoa_reserve_statements_get: {
+        parameters: {
+            query?: {
+                ledger_id?: string | null;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_api_v1_hoa_reserve_statements_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaReserveStatementIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_api_v1_hoa_reserve_statements__reserve_statement_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reserve_statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    calculate_api_v1_hoa_reserve_statements__reserve_statement_id__calculate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reserve_statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    transition_api_v1_hoa_reserve_statements__reserve_statement_id__transition_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reserve_statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaReserveStatementTransitionIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     list_reserves_api_v1_hoa_reserves_get: {
         parameters: {
             query: {
@@ -68126,6 +69615,111 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reserve_api_v1_hoa_reserves__reserve_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reserve_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    patch_reserve_api_v1_hoa_reserves__reserve_id__patch: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                reserve_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HoaReservePatchIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_reserve_development_api_v1_hoa_reserves__reserve_id__development_get: {
+        parameters: {
+            query: {
+                year: number;
+            };
+            header?: never;
+            path: {
+                reserve_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -69071,6 +70665,39 @@ export interface operations {
             };
         };
     };
+    list_reserve_movements_api_v1_hoa_statements__statement_id__reserve_movements_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     add_reserve_movement_api_v1_hoa_statements__statement_id__reserve_movements_post: {
         parameters: {
             query?: never;
@@ -69096,6 +70723,36 @@ export interface operations {
                         [key: string]: unknown;
                     };
                 };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    delete_reserve_movement_api_v1_hoa_statements__statement_id__reserve_movements__movement_id__delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                statement_id: string;
+                movement_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Validation Error */
             422: {
@@ -77453,6 +79110,72 @@ export interface operations {
                 "application/json": components["schemas"]["MailRejectIn"];
             };
         };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_reply_draft_api_v1_mail_messages__message_id__reply_ai_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    approve_reply_draft_api_v1_mail_messages__message_id__reply_ai_approve_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                message_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
         responses: {
             /** @description Successful Response */
             200: {
@@ -92437,6 +94160,81 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EventOut"][];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_export_jobs_api_v1_tenant_export_jobs_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    }[];
+                };
+            };
+        };
+    };
+    create_export_job_api_v1_tenant_export_jobs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+        };
+    };
+    download_export_job_api_v1_tenant_export_jobs__job_id__download_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": unknown;
                 };
             };
             /** @description Validation Error */

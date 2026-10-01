@@ -26,7 +26,7 @@ from mhvp.contracts import services as contract_services
 from mhvp.contracts.models import Contract, ContractKind, ContractPayment, PaymentReason
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.imports import w3_reports
+from mhvp.imports import w3_reports, w5_reports
 from mhvp.imports.fields import FIELDS, convert
 from mhvp.imports.models import ImportSourceFile, ReportType, RowStatus, StagingRow
 from mhvp.properties import services as property_services
@@ -463,6 +463,8 @@ async def apply_row(
 ) -> Result:
     if w3_reports.handles(report_type):
         return await w3_reports.apply_row(session, principal, report_type, values, ctx or {})
+    if w5_reports.handles(report_type):
+        return await w5_reports.apply_row(session, principal, report_type, values, ctx or {})
     if report_type is ReportType.PROPERTIES:
         return await _apply_property(session, principal, values, rec)
     if report_type is ReportType.UNITS:
@@ -534,6 +536,7 @@ async def run(
         "gross"
         if source.report_type is ReportType.PAYMENTS
         else w3_reports.AMOUNT_FIELD.get(source.report_type)
+        or w5_reports.AMOUNT_FIELD.get(source.report_type)
     )
     for row in rows:
         assert row.values is not None  # noqa: S101 - validated rows carry values
@@ -542,10 +545,15 @@ async def run(
             session, principal, source.report_type, row.values, rec, ctx
         )
         counts[status.value] += 1
+        # M8-01: further entities of the same row (for example the allocation key of a value)
+        # are recorded before the main entity, so undo (reverse order) removes values first.
+        for extra_type, extra_id in ctx.pop("extra_created", []):
+            if rec is not None:
+                rec.add(extra_type, extra_id)
         if (
             rec is not None
             and status is RowStatus.CREATED
-            and entity_type in w3_reports.UNDOABLE_ENTITY_TYPES
+            and entity_type in (w3_reports.UNDOABLE_ENTITY_TYPES | w5_reports.UNDOABLE_ENTITY_TYPES)
             and entity_id is not None
         ):
             rec.add(entity_type, entity_id)  # Q08: history rows are undone like other imports

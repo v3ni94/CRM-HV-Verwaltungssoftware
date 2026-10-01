@@ -5,7 +5,7 @@ import json
 import logging
 import uuid
 from datetime import UTC, date, datetime, timedelta
-from typing import Any
+from typing import Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, Query, Request
@@ -1061,6 +1061,7 @@ class NotificationPreferenceItem(BaseModel):
     in_app: bool
     email: bool
     muted_until: datetime | None = None
+    email_mode: str = "immediate"
     # Mandatory kinds (legal or money relevant reminders, SLA escalation) ignore every switch.
     mandatory: bool = False
 
@@ -1074,6 +1075,7 @@ class NotificationPreferenceIn(_In):
     in_app: bool = True
     email: bool = False
     muted_until: datetime | None = None
+    email_mode: Literal["immediate", "daily"] = "immediate"
 
 
 class NotificationPreferencesIn(_In):
@@ -1109,6 +1111,7 @@ async def _preferences_out(session: AsyncSession, user_id: uuid.UUID) -> Notific
                 in_app=True if mandatory else (row.in_app if row else True),
                 email=False if mandatory else (row.email if row else False),
                 muted_until=None if mandatory or row is None else row.muted_until,
+                email_mode="immediate" if row is None else row.email_mode,
                 mandatory=mandatory,
             )
         )
@@ -1174,6 +1177,7 @@ async def save_notification_preferences(
                 session.add(row)
                 rows[item.kind] = row
             row.in_app, row.email, row.muted_until = item.in_app, item.email, item.muted_until
+            row.email_mode = item.email_mode
         await session.flush()
         return await _preferences_out(session, _own_user(principal))
 

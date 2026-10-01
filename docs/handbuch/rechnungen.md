@@ -142,3 +142,29 @@ Rechnungspläne lassen sich unter "Bearbeiten" ändern (Leistung, Betrag, Rhythm
 ## Anlagen am Beleg und neuen Rechnungsplan anlegen
 
 Beim Erfassen einer Rechnung können unter "Weitere Angaben zur Prüfung am Beleg" die Dokument-IDs der Anlagen und Seiten des Originals eingetragen werden (mehrere IDs mit Leerzeichen, Komma oder Zeilenumbruch trennen, höchstens 50). Ungültige oder doppelte IDs sperren das Speichern. Unter "Rechnungspläne" legt "Neuen Rechnungsplan anlegen" einen Plan an (Aussteller, Kostenkonto, Leistung, Brutto, Umsatzsteuer, Rhythmus, erste Fälligkeit, optional Enddatum, Auftragsbezug, Dienstleistervertrag). Der Plan erzeugt nur ungeprüfte Rechnungsentwürfe.
+
+## Verwalterhonorar: Status und Buchungsentwurf (01.10.2026)
+
+- Die Liste der Honorarrechnungen lässt sich nach Status filtern (ausgestellt, freigegeben,
+  storniert). Eine stornierte Rechnung bleibt mit ihren Dokumenten erhalten; die Korrektur ist
+  die Gutschrift mit eigener Nummer, die ebenfalls freigegeben werden kann.
+- Für eine freigegebene Rechnung oder Gutschrift legt die Schaltfläche Buchungsentwurf je einen
+  Entwurf im Buchungskreis des Zahlers und im Buchungskreis des Verwalters an. Das funktioniert
+  nur bei geöffneter Freigabestufe G1 und nach Hinterlegung der Kontenzuordnung
+  (Schnittstelle `/accounting/admin-fee-posting-config`). Ohne Kontenzuordnung entsteht kein
+  Entwurf. Gebucht wird erst im Journal.
+
+## Sachliche Prüfung als Befunde (01.10.2026)
+
+- In der Rechnungsansicht zeigt der Abschnitt "Sachliche Prüfung (Befunde)" den Abgleich gegen
+  den verknüpften Auftrag (Angebotsbetrag, Kostengrenze, Status, Dienstleister, Objekt), den
+  Dienstleistervertrag, den WEG Beschluss, die Wirtschaftsplanposition (Planansatz), den
+  Rechnungsplan (Betrag, Rhythmus) sowie Menge mal Einzelpreis je Position.
+- Darunter steht der Zuständigkeitsvorschlag: der am Objekt hinterlegte Objektverwalter.
+- Die Befunde sind Hinweise. Der Prüfschritt "sachlich" wird weiterhin von einer Person
+  erfasst; nichts wird automatisch freigegeben.
+- Auftrag, Beschluss, Planposition und Rechnungsplan werden beim Erfassen über die Schnittstelle
+  verknüpft (`work_order_id`, `resolution_id`, `plan_item_id`, `recurring_plan_id`); der
+  Freitext Auftragsbezug bleibt möglich.
+- Die Toleranzen (Preis, Menge in Prozent) setzt die Verwaltung je Mandant über
+  `/accounting/invoice-check-settings`; Standard ist 0, also exakter Abgleich.

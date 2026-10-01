@@ -57,4 +57,16 @@ describe("FinApiConsentBanner", () => {
     expect(screen.getByRole("alert")).toHaveTextContent("abgelaufen");
     expect(screen.getByRole("button", { name: "Zustimmung erneuern" })).toBeDisabled();
   });
+
+  it("shows a permanent status line with the date or a note when none is known", () => {
+    const { unmount } = renderIntl(
+      <FinApiConsentBanner status="active" consentValidUntil="2026-12-24" busy={false} onRenew={() => {}} today={TODAY} />,
+    );
+    expect(screen.getByTestId("consent-status")).toHaveTextContent("24.12.2026");
+    unmount();
+    renderIntl(
+      <FinApiConsentBanner status="active" consentValidUntil={null} busy={false} onRenew={() => {}} today={TODAY} />,
+    );
+    expect(screen.getByTestId("consent-status")).toBeInTheDocument();
+  });
 });

@@ -83,6 +83,7 @@ export function EntryActions({
       </span>
       {reversing ? (
         <form
+          aria-label={t("actions.reverse")}
           className="flex flex-col gap-1"
           onSubmit={(e) => {
             e.preventDefault();

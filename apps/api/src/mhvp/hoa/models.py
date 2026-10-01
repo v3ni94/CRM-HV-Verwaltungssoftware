@@ -133,6 +133,14 @@ class HoaReserve(IdMixin, TimestampMixin, TenantMixin, Base):
     active: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
     )
+    # M24-01 (migration 0294): bank investment of the reserve (account of the ledger's legal
+    # entity) and the entered opening balance at the start of ``opening_year`` (takeover or
+    # first year); later openings chain from the prior year's development.
+    bank_account_id: Mapped[uuid.UUID | None] = _fk("property_bank_account.id", ondelete="SET NULL")
+    opening_balance: Mapped[Decimal] = mapped_column(
+        MONEY, nullable=False, default=Decimal(0), server_default=text("0")
+    )
+    opening_year: Mapped[int | None] = mapped_column(Integer)
 
 
 class HoaReserveMovement(IdMixin, TenantMixin, Base):

@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.auth.scope import property_path_guard
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letter_records
 from mhvp.documents import services as doc_services
@@ -30,7 +31,11 @@ from mhvp.objektakte.models import ObjektakteRequiredDocument
 from mhvp.properties.models import ManagementType, Property
 from mhvp.workspace.services import local_today
 
-router = APIRouter(prefix="/objektakte", tags=["objektakte-completeness"])
+router = APIRouter(
+    prefix="/objektakte",
+    tags=["objektakte-completeness"],
+    dependencies=[Depends(property_path_guard)],
+)  # M2-02, R08-01
 READ = require_permission("objektakte:read")
 MANAGE = require_permission("objektakte:approve")
 DELETE = require_permission("objektakte:delete")

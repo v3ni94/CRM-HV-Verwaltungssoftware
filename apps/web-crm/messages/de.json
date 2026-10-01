@@ -1213,7 +1213,13 @@
       "bank_history": "Bankumsätze (Historie)",
       "open_items": "Offene Posten, Guthaben, Kautionen, Rücklagen, Darlehen, Sonderumlagen",
       "document_index": "DMS-Dokumente mit Objekt- und Vertragsbezug",
-      "ticket_history": "Historische Tickets (nur lesend)"
+      "ticket_history": "Historische Tickets (nur lesend)",
+      "deposit": "Kautionen",
+      "allocation_key": "Umlageschlüssel mit Einheitenwerten",
+      "meter": "Zähler",
+      "energy_certificate": "Energieausweise",
+      "service_provider": "Dienstleisterverhältnisse",
+      "portal_user": "Portalnutzer (nur Status)"
     },
     "stagedOnlyBadge": "nur Zwischenablage",
     "stagedOnlyHint": "Journal und Bankumsätze werden nur zwischengespeichert, bis die Buchhaltung verfügbar ist. Es entstehen keine Buchungen.",
@@ -3872,7 +3878,8 @@
       "ai_task": "KI-Aufgabe starten",
       "assign_record": "Zuordnen (Lernregel)",
       "set_field": "Feld setzen (Notizen von Objekt, Kontakt, Vertrag)",
-      "notify_provider": "Entwurf an Dienstleister"
+      "notify_provider": "Entwurf an Dienstleister",
+      "set_record_field": "Feld setzen (Auftrag, Dokument)"
     },
     "actionValue": "Wert der Aktion",
     "ticketField": "Ticketfeld",
@@ -3934,7 +3941,8 @@
       "aiTask": "KI-Aufgabe {task}",
       "assignRecord": "Zuordnen: {dimension} {value}",
       "setMasterField": "Feld setzen: {target} {field}",
-      "notifyProvider": "Entwurf an Dienstleister {subject}"
+      "notifyProvider": "Entwurf an Dienstleister {subject}",
+      "setRecordField": "Feld setzen: {target} {field} {value}"
     },
     "log": "Protokoll",
     "filterRule": "Regel filtern",
@@ -4064,6 +4072,12 @@
     "setFieldMode": "Art der Änderung",
     "setFieldValue": "Text",
     "setFieldHelp": "Nur Notizfelder. Anhängen fügt eine Zeile mit Datum und Regelname hinzu und erhält den bisherigen Text. Kein Zahlungs-, Bank-, Betrags- oder Steuerfeld kann gesetzt werden.",
+    "recordTarget": "Ziel",
+    "recordField": "Feld",
+    "recordValue": "Wert",
+    "recordHelp": "Auftrag: Status nur angefragt oder in Arbeit, Termin mit Zeitzone, Zuständiger des Tickets. Dokument: Kategorie oder Objekt (UUID oder Platzhalter). Freigabe, Beträge und Sperren sind nicht wählbar.",
+    "recordTargets": {"work_order": "Auftrag", "document": "Dokument"},
+    "recordFields": {"status": "Status", "scheduled_at": "Termin", "assignee_user_id": "Zuständiger", "category_id": "Kategorie", "property_id": "Objekt"},
     "setFieldTargets": {
       "property": "Objekt",
       "contact": "Kontakt",
@@ -7022,6 +7036,8 @@
     "consentExpiring": "Die Zustimmung zum Kontozugriff läuft am {date} ab (in {days} Tagen). Bitte rechtzeitig erneuern, sonst werden keine Umsätze mehr abgerufen.",
     "consentExpiredOn": "Zustimmung abgelaufen am {date}. Es werden keine Umsätze abgerufen, bis die Zustimmung erneuert ist.",
     "consentExpired": "Zustimmung abgelaufen. Es werden keine Umsätze abgerufen, bis die Zustimmung erneuert ist.",
+    "consentValidUntil": "Zustimmung gültig bis {date}.",
+    "consentUnknown": "Ablaufdatum der Zustimmung liegt nicht vor (vom Anbieter nicht geliefert).",
     "renewConsent": "Zustimmung erneuern",
     "wizardStep3": "3. Konten einem Buchungskreis/Objekt zuordnen"
   },
@@ -7943,6 +7959,25 @@
       }
     }
   },
+  "InvoiceFactual": {
+    "title": "Sachliche Prüfung (Befunde)",
+    "loading": "Sachliche Prüfung wird geladen.",
+    "none": "Keine Befunde zu Auftrag, Vertrag, Beschluss, Budget und Wiederkehr.",
+    "hint": "Nur Hinweise: Freigabe und Prüfschritte bleiben manuell.",
+    "reviewer": "Vorschlag Zuständigkeit: Objektverwalter",
+    "noReviewer": "Kein Zuständigkeitsvorschlag",
+    "tolerance": "Toleranz Preis {price} %, Menge {quantity} %",
+    "areas": {
+      "order": "Auftrag",
+      "contract": "Vertrag",
+      "resolution": "Beschluss",
+      "budget": "Budget",
+      "recurring": "Wiederkehr",
+      "price": "Preis",
+      "quantity": "Menge",
+      "responsibility": "Zuständigkeit"
+    }
+  },
   "InvoiceMatch": {
     "title": "Bankabgleich",
     "match": "Mit Bankumsätzen abgleichen",
@@ -8345,7 +8380,7 @@
     "statusLabel": "Status",
     "detail": "Eigentümerabrechnung",
     "notCalculated": "Noch nicht berechnet.",
-    "gateNotice": "Ausgabe als PDF und Versand erst mit Freigabestufe G3; die interne Freigabe erteilt eine zweite Person über die API.",
+    "gateNotice": "Ausgabe als PDF und Versand erst mit Freigabestufe G3; die interne Freigabe erteilt eine zweite Person.",
     "total": "Summe",
     "operatingResult": "Einnahmen minus Ausgaben minus Honorar",
     "findings": "Prüfhinweise",
@@ -8357,7 +8392,13 @@
     "status": {
       "draft": "Entwurf",
       "calculated": "berechnet",
-      "internally_approved": "intern freigegeben"
+      "internally_approved": "intern freigegeben",
+      "board_reviewed": "Beirat geprüft",
+      "resolved": "beschlossen",
+      "issued": "ausgegeben",
+      "due": "fällig",
+      "posted": "gebucht",
+      "locked": "gesperrt"
     },
     "blocks": {
       "income": "Einnahmen",
@@ -12642,7 +12683,14 @@
     "column": {
       "kind": "Art",
       "inApp": "In der App",
-      "email": "Per E-Mail"
+      "email": "Per E-Mail",
+      "delivery": "Zustellung"
+    },
+    "deliveryFor": "{kind}: Zustellung der E-Mail",
+    "deliveryHelp": "Die Mails werden je Benutzer zu einer Sammelmail zusammengefasst, sofort alle 5 Minuten oder täglich gegen 07:30 Uhr.",
+    "delivery": {
+      "immediate": "Sofort (Sammelmail je Lauf)",
+      "daily": "Täglich (eine Sammelmail)"
     },
     "inAppFor": "{kind} in der App",
     "emailFor": "{kind} per E-Mail",
@@ -12939,6 +12987,12 @@
     "replySuggestion": "aus KI-Vorschlag",
     "replyTone": "Tonfall: {tone}",
     "replyUnknownPlaceholders": "Platzhalter ohne Wert: {list}",
+    "replyTask": "KI-Antwortentwurf",
+    "aiDraft": "Antwortentwurf (KI)",
+    "aiDraftApprove": "Entwurf freigeben",
+    "aiDraftSkipped": "Kein KI-Entwurf erzeugt.",
+    "aiDraftNeedsApproval": "Der KI-Entwurf ist vor dem Senden freizugeben.",
+    "aiDraftOpenQuestions": "Offene Fragen: {list}",
     "replyPreparation": "aus Mail-Vorbereitung",
     "replyTemplate": "Vorlage",
     "quickSend": "Kurz senden",
@@ -13164,9 +13218,15 @@
     "date": "Datum",
     "creditNote": "Gutschrift",
     "statusCancelled": "storniert",
+    "postingDrafts": "Buchungsentwurf",
+    "postingDraftsDone": "Buchungsentwürfe beim Zahler und beim Verwalter angelegt. Gebucht wird erst über das Journal nach Freigabestufe G1.",
+    "postingDraftsExist": "Entwurf angelegt",
+    "statusFilter": "Status",
+    "allStatuses": "alle",
     "statuses": {
       "issued": "ausgestellt",
-      "released": "freigegeben"
+      "released": "freigegeben",
+      "cancelled": "storniert"
     },
     "release": "Freigeben",
     "released": "Rechnung freigegeben.",
@@ -13871,7 +13931,32 @@
     "amount": "Betrag",
     "movementPurpose": "Zweck",
     "movementSubmit": "Erfassen",
-    "movementHint": "Die Erfassung ist eine Information für die Abrechnung und bucht nichts. Belege werden an der Abrechnung verknüpft."
+    "movementHint": "Die Erfassung ist eine Information für die Abrechnung und bucht nichts. Belege werden an der Abrechnung verknüpft.",
+    "openingBalance": "Anfangsbestand (erfasst)",
+    "openingYear": "Ab Jahr",
+    "bankAccount": "Bankkonto der Rücklage",
+    "edit": "Ändern",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "active": "aktiv",
+    "inactive": "inaktiv",
+    "yearTitle": "Entwicklung je Jahr",
+    "year": "Jahr",
+    "contribution": "Zuführung",
+    "basis": "Grundlage",
+    "basisPaid": "gezahlt",
+    "basisPlanned": "Soll",
+    "sourceStatement": "Abrechnung",
+    "sourcePlan": "Wirtschaftsplan",
+    "sourceNone": "keine Daten",
+    "loadDevelopment": "Entwicklung anzeigen",
+    "movementsTitle": "Erfasste Mittelverwendung",
+    "noMovements": "Keine Einträge.",
+    "remove": "Entfernen",
+    "receipt": "Beleg",
+    "receiptMissing": "Beleg fehlt",
+    "showMovements": "Einträge anzeigen",
+      "developmentHint": "Anfang gleich Ende des Vorjahres, im ersten Jahr der erfasste Anfangsbestand. Information für Abrechnung und Vermögensbericht, keine Buchung."
   },
   "OnboardingExtras": {
     "title": "Weitere Angaben zum Objekt (optional)",
@@ -13972,6 +14057,76 @@
     "invalid": "Links müssen mit https:// beginnen, der Name darf höchstens 80 Zeichen haben.",
     "save": "Speichern",
     "saved": "Gespeichert.",
-    "readOnly": "Keine Berechtigung zum Ändern."
+    "readOnly": "Keine Berechtigung zum Ändern.",
+    "logo": "Logo für das Portal (PNG oder JPEG)",
+    "logoSet": "Logo gesetzt: {name}. Mit Speichern übernehmen.",
+    "logoNone": "Kein Logo gesetzt, das Portal bleibt neutral.",
+    "logoRemove": "Logo entfernen",
+    "logoUploaded": "Logo hochgeladen, bitte speichern.",
+    "logoType": "Nur PNG oder JPEG sind erlaubt."
+  },
+  "TenantExportJobs": {
+    "title": "Vollständiger Mandantenexport",
+    "description": "Exportiert alle Daten des Mandanten (Rechtsträger, Objekte, Einheiten, Kontakte, Verträge, Buchungen, offene Posten, Bankkonten und Umsätze, Tickets, Dokumente mit Metadaten) als JSON je Tabelle zusammen mit den Dokumentdateien als ZIP. Der Export läuft im Hintergrund. Nur der Mandantenadministrator kann ihn starten und herunterladen, jeder Start und Abruf wird protokolliert. Das Archiv enthält personenbezogene Daten und ist sorgfältig zu behandeln.",
+    "start": "Export starten",
+    "started": "Export gestartet.",
+    "refresh": "Aktualisieren",
+    "empty": "Noch kein Export vorhanden.",
+    "status": "Status",
+    "created": "Gestartet",
+    "size": "Größe",
+    "statusQueued": "In Warteschlange",
+    "statusRunning": "Läuft",
+    "statusReady": "Fertig",
+    "statusFailed": "Fehlgeschlagen",
+    "download": "Herunterladen",
+    "documentsFailed": "{count} Dokumentdateien konnten nicht gepackt werden, siehe manifest.json.",
+    "readOnly": "Der Export erfordert die Rolle Mandantenadministrator."
+  },
+  "StatementStatus": {
+    "note": "Notiz zum Statuswechsel",
+    "resolutionId": "Beschluss (ID)",
+    "entryIds": "Gebuchte Buchungen (IDs, durch Komma getrennt)",
+    "gateHint": "Ausgeben, fällig stellen und gebucht erfassen setzen die Freigabestufe {gate} voraus; die interne Freigabe erteilt eine zweite Person. Gebucht erfasst nur bereits gebuchte Buchungen dieses Buchungskreises, es wird nichts gebucht.",
+    "log": "Statusverlauf",
+    "arrow": "nach",
+    "status": {
+      "draft": "Entwurf",
+      "calculated": "berechnet",
+      "internally_approved": "intern freigegeben",
+      "board_reviewed": "Beirat geprüft",
+      "resolved": "beschlossen",
+      "issued": "ausgegeben",
+      "due": "fällig",
+      "posted": "gebucht",
+      "locked": "gesperrt"
+    },
+    "to": {
+      "internally_approved": "Intern freigeben (zweite Person)",
+      "board_reviewed": "Prüfung durch den Beirat erfassen",
+      "resolved": "Beschluss erfassen",
+      "issued": "Ausgeben",
+      "due": "Fällig stellen",
+      "posted": "Als gebucht erfassen",
+      "locked": "Sperren"
+    }
+  },
+  "HoaReserveStatement": {
+    "title": "Rücklagenabrechnung",
+    "hint": "Eigenes Abrechnungsobjekt je Jahr mit dem einheitlichen Statusmodell. Die Werte stammen aus der berechneten Hausgeldabrechnung desselben Jahres; wird diese neu berechnet, ist die Rücklagenabrechnung neu zu erzeugen.",
+    "create": "Aus der jüngsten Hausgeldabrechnung anlegen",
+    "calculate": "Aus den Rücklagendaten erzeugen",
+    "none": "Noch keine Rücklagenabrechnung.",
+    "detail": "Rücklagenabrechnung {year}",
+    "notCalculated": "Noch nicht erzeugt.",
+    "amounts": {
+      "opening": "Anfangsbestand",
+      "contributions_resolved": "Beschlossene Zuführung",
+      "contributions_paid": "Gezahlte Zuführung",
+      "withdrawals": "Entnahmen",
+      "interest": "Zinsen",
+      "closing": "Endbestand",
+      "bank_balance": "Bankbestand der Rücklagenkonten"
+    }
   }
 }

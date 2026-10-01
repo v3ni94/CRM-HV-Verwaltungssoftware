@@ -59,6 +59,36 @@ describe("CompactView", () => {
     expect(screen.getByRole("status")).toHaveTextContent("Antwort zur Freigabe eingereicht.");
   });
 
+  it("AI reply draft needs approval before Kurz senden (T12)", async () => {
+    const calls: string[] = [];
+    let approved = false;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const url = String(input);
+      calls.push(`${init?.method ?? "GET"} ${url}`);
+      if (url.endsWith("/compact")) {
+        return jsonResponse(
+          calls.length > 1
+            ? { ...DATA, reply: { source: "reply_task", text: "KI Text", approved, draft: { tone: "sachlich", style_tone: "sachlich", placeholders: [], unknown_placeholders: [], open_questions: ["Termin"] } } }
+            : DATA,
+          200,
+        );
+      }
+      if (url.endsWith("/reply-ai")) return jsonResponse({ status: "ready" }, 200);
+      if (url.endsWith("/reply-ai/approve")) {
+        approved = true;
+        return jsonResponse({ approved: true }, 200);
+      }
+      return jsonResponse({}, 404);
+    });
+    renderIntl(<CompactView messageId="m1" canUpdate />);
+    await userEvent.click(await screen.findByRole("button", { name: "Antwortentwurf (KI)" }));
+    expect(await screen.findByRole("button", { name: "Entwurf freigeben" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Kurz senden" })).toBeDisabled();
+    expect(screen.getByTestId("reply-draft-meta")).toHaveTextContent("Termin");
+    await userEvent.click(screen.getByRole("button", { name: "Entwurf freigeben" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Kurz senden" })).toBeEnabled());
+  });
+
   it("keeps the excerpt when no AI provider is released", async () => {
     vi.spyOn(globalThis, "fetch").mockImplementation(async (input) =>
       String(input).endsWith("/compact/summary") ? jsonResponse({ status: "skipped" }, 200) : jsonResponse(DATA, 200),

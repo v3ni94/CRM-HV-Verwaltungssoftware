@@ -14,6 +14,7 @@ import { MeteringModuleSwitch } from "@/components/settings/MeteringModuleSwitch
 import { GMAIL_DONE_SYNC_DEFAULTS, GmailDoneSync, type GmailDoneSyncSettings } from "@/components/settings/GmailDoneSync";
 import { InspectionPackageDefaultDays } from "@/components/settings/InspectionPackageDefaultDays";
 import { PortalSettings, type PortalSecondFactor } from "@/components/settings/PortalSettings";
+import { TenantExportJobs } from "@/components/settings/TenantExportJobs";
 import { TicketReopenWindow } from "@/components/settings/TicketReopenWindow";
 import { TicketReplyApprovalAll } from "@/components/settings/TicketReplyApprovalAll";
 import { redirectIfUnauthenticated, serverApi, serverFetch } from "@/lib/api-server";
@@ -90,6 +91,7 @@ export default async function CompanySettingsPage() {
         }}
         canUpdate={can("tenant_settings:update")}
       />
+      <TenantExportJobs canStart={Boolean(me.data?.roles?.includes("tenant_admin"))} />
       <CircularLowerMajoritySwitch initial={circularData?.enabled ?? false} canUpdate={can("tenant_settings:update")} />
       <section className="flex flex-col gap-2">
         <h2 id="billing-settings-title" className="text-lg font-semibold">{tb("title")}</h2>

@@ -60,6 +60,7 @@ export function OccupancyList({ propertyId }: { propertyId: string }) {
         {t("title")}
       </h2>
       <form
+        aria-label={t("title")}
         className="flex flex-wrap items-end gap-3"
         onSubmit={(e) => {
           e.preventDefault();

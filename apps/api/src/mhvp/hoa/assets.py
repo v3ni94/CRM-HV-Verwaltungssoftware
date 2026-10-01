@@ -200,7 +200,27 @@ async def _reserve(session: AsyncSession, report: HoaAssetReport, ledger: Any) -
     soll = report.reserve_opening + due_total - report.reserve_withdrawals + report.reserve_interest
     ist = report.reserve_opening + paid_total - report.reserve_withdrawals + report.reserve_interest
     bank = await calc.reserve_bank_balance(session, ledger, report.as_of)
+    # M24-01: development per earmarked reserve up to the year of the report (information).
+    from mhvp.hoa.models import HoaReserve
+    from mhvp.hoa.reserves import reserve_development
+
+    positions = []
+    for r in (
+        await session.scalars(
+            select(HoaReserve).where(HoaReserve.ledger_id == ledger.id).order_by(HoaReserve.name)
+        )
+    ).all():
+        rows = await reserve_development(session, r, report.as_of.year)
+        positions.append(
+            {
+                "reserve_id": str(r.id),
+                "name": r.name,
+                "bank_account_id": str(r.bank_account_id) if r.bank_account_id else None,
+                "year": rows[-1],
+            }
+        )
     return {
+        "positions": positions,
         "opening": str(report.reserve_opening),
         "contributions_resolved": str(due_total),
         "contributions_paid": str(paid_total),

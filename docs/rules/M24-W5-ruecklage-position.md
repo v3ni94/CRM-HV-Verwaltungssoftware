@@ -1,0 +1,14 @@
+# M24-W5 Rücklage je zweckgebundener Position: Stammdaten, Mittelverwendung und Entwicklung je Jahr (Lückenliste 30.09.2026, Paket T09)
+
+Status: umgesetzt am 01.10.2026 als Stammdaten, Entwurf und Ausweis. Es wird nichts gebucht und
+keine Forderung angelegt. Die Abrechnung bleibt hinter G4, Buchungen bleiben hinter G1.
+
+| Feld | Inhalt |
+| --- | --- |
+| ID | M24-W5 (Befund M24-01 der Lückenliste 30.09.2026, Rest aus Q09) |
+| Titel | Zweckgebundene Rücklage mit Bankanlage des Rechtsträgers, erfasstem Anfangsbestand und Entwicklung je Jahr (Anfang, Zuführung, Entnahme, Steuern, Gebühren, Zinsen, Ende) in Abrechnung und Vermögensbericht |
+| Geltung | WEG-Modul (M24), `hoa_reserve` (Migration 0294: `bank_account_id`, `opening_balance`, `opening_year`), `hoa_reserve_movement`. Alle Mandanten, nur Gemeinschaften (Rechtsträgerart GdWE) |
+| Quellenstatus | Fachliche Umsetzung (7.8 W08, 6.5 reserve) und Produktschutz (E01: Rücklage und Bankanlage gehören dem Rechtsträger der Gemeinschaft, nie der Verwaltung). Keine neue Rechtsregel: Ob eine Entnahme zulässig ist, folgt aus dem Beschluss; die Erfassung hält Beleg und Beschluss nur fest. Steuern auf Zinsen werden nur ausgewiesen, keine steuerliche Einordnung |
+| Abnahmefall | Anhang D D19 bleibt unverändert. Erwartete Werte von Hand: Rücklage "Dach" mit Anfangsbestand 10.000,00 EUR zu Beginn 2024, 2024 ohne Plan und Abrechnung: Ende 10.000,00. Entwurf 2025 mit Entnahme 1.500,00, Gebühr 5,00 und Zinsen 20,00: Anfang 10.000,00, Ende 8.515,00; nach Entfernen der Gebühr 8.520,00. Formel 10.000,00 + 2.400,00 - 1.500,00 - 5,28 - 12,00 + 21,10 = 10.903,82. Tests `apps/api/tests/integration/test_t09_hoa_reserves.py`, `apps/api/tests/unit/test_t09_reserve_develop.py` |
+| Umsetzung | (1) Stammdaten: Name, Zweck, Buchungskonto des Buchungskreises, Bankkonto nur des Rechtsträgers des Buchungskreises (sonst 422), Beschluss, aktiv, Anfangsbestand ab Jahr. Der Rechtsträger ergibt sich aus dem Buchungskreis (genau ein Buchungskreis je Rechtsträger, 6.9.1) und wird ausgegeben, nicht doppelt gespeichert. (2) Entwicklung je Jahr: Ende gleich Anfang plus Zuführung minus Entnahmen, Steuern und Gebühren plus Zinsen; Anfang gleich Ende des Vorjahres, im ersten Jahr der erfasste Anfangsbestand. Zuführung aus der jüngsten berechneten Abrechnung (gezahlt, wenn die Sollstellung an die Rücklage gebunden ist, sonst Soll), ohne Abrechnung aus dem beschlossenen Plan (Soll) mit den im Entwurf erfassten Bewegungen. (3) Abrechnungssnapshot: je Position zusätzlich `opening`, `closing_planned`, `closing_paid`. (4) Vermögensbericht: Block `reserve.positions` mit der Entwicklung bis zum Jahr des Stichtags. (5) Mittelverwendung: Liste je Abrechnung mit Belegstatus, Entfernen nur im Entwurf. Die Rücklagenbindung aus 0278 bleibt unverändert |
+| Änderungsgrund | Lückenliste 30.09.2026, Befund M24-01: Bankkonto, Anfangsbestand und die Entwicklung je Jahr und Position fehlten |

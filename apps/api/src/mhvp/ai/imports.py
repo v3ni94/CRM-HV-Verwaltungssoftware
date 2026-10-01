@@ -349,6 +349,10 @@ async def _referenced(session: AsyncSession, entity_type: str, entity_id: uuid.U
         return "Mitglied einer Vertragspartei"
     if entity_type in HISTORY_ENTITY_TYPES:
         return await _history_referenced(session, entity_type, entity_id)
+    from mhvp.imports import w5_reports
+
+    if entity_type in w5_reports.UNDOABLE_ENTITY_TYPES:
+        return await w5_reports.referenced(session, entity_type, entity_id)
     if entity_type == "invoice":
         invoice = await session.get(Invoice, entity_id)
         if invoice is not None and invoice.posting_status is not PostingStatus.UNPOSTED:
@@ -479,6 +483,11 @@ async def _remove(session: AsyncSession, entity_type: str, entity_id: uuid.UUID)
         return
     if entity_type in HISTORY_ENTITY_TYPES:
         await _remove_history(session, entity_type, entity_id)
+        return
+    from mhvp.imports import w5_reports
+
+    if entity_type in w5_reports.UNDOABLE_ENTITY_TYPES:
+        await w5_reports.remove(session, entity_type, entity_id)
         return
     if entity_type == "contact":
         contact = await session.get(Contact, entity_id)

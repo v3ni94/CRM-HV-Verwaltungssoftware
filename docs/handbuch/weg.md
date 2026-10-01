@@ -374,3 +374,17 @@ zeigt die Seite einen Hinweis.
 ## Gesamtabrechnung als PDF
 
 In der Abrechnung einer WEG lädt "Gesamtabrechnung als PDF" die Gesamtabrechnung auf dem Briefbogen herunter. Das PDF ist ein Entwurf und steht erst nach interner Freigabe der Abrechnung und bei offener Freigabestufe G4 zur Verfügung; andernfalls erscheint eine Meldung.
+
+## Rücklagen je Position: Anfangsbestand und Entwicklung je Jahr (Stand 01.10.2026)
+
+Auf der Seite Rücklagen der Gemeinschaft hat jede Rücklage die Schaltflächen Ändern und Entwicklung anzeigen.
+
+* Ändern: Bezeichnung, erfasster Anfangsbestand und das Jahr, ab dem er gilt. Ein Bankkonto kann über die Schnittstelle hinterlegt werden; zulässig ist nur ein Konto des Rechtsträgers der Gemeinschaft.
+* Entwicklung anzeigen: je Jahr Anfang, Zuführung, Entnahmen, Steuern, Gebühren, Zinsen und Ende. Der Anfang ist das Ende des Vorjahres, im ersten Jahr der erfasste Anfangsbestand. Die Spalte Grundlage zeigt, ob die Werte aus einer Abrechnung (gezahlt oder Soll) oder aus dem beschlossenen Wirtschaftsplan stammen.
+* Erfasste Mittelverwendung: Einträge anzeigen listet die Bewegungen der Abrechnung mit Belegstatus. Entfernen ist nur im Entwurf möglich.
+
+Die Angaben sind Information für Abrechnung und Vermögensbericht. Es wird nichts gebucht.
+
+## Rücklagenabrechnung
+
+Auf der Seite WEG, Rücklagen legt der Bearbeiter je Jahr eine Rücklagenabrechnung aus der jüngsten Hausgeldabrechnung an und erzeugt sie aus deren Rücklagendaten (Anfangsbestand, Zuführung, Entnahmen, Zinsen, Endbestand, Bankbestand und die Stammdaten je Rücklage). Die Statusschritte entsprechen der Hausgeldabrechnung: interne Freigabe durch eine zweite Person, Beiratsprüfung, Beschluss, ausgeben, fällig, gebucht, gesperrt. Ausgeben ist erst nach dem Beschluss möglich; ausgeben, fällig und gebucht setzen die Freigabestufe G4 voraus. Wird die Hausgeldabrechnung neu berechnet, ist die Rücklagenabrechnung neu zu erzeugen, bevor sie freigegeben wird.

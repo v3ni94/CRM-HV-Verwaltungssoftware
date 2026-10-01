@@ -134,3 +134,17 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
   `dunning_case.sent`, `work_order.created`, `work_order.completed` (next to
   `work_order.done`), `document.shared` (new portal role in `visibility`),
   `ai_proposal.decided`.
+- M9-02 `telemetry.py`: optional OpenTelemetry tracing, off unless `MHVP_OTEL_ENDPOINT` is set
+  (OTLP/HTTP). FastAPI (path only, no query string, health probes excluded), SQLAlchemy engine,
+  Celery (`worker_process_init`), httpx. `CorrelationIdMiddleware` returns `traceparent` next to
+  `X-Correlation-ID`; `logging.add_trace_context` adds `trace_id` and `span_id` to log lines.
+  Tests use `setup_tracing(..., span_processor=SimpleSpanProcessor(InMemorySpanExporter()))`.
+  Runbook: `docs/runbooks/beobachtung.md`.
+
+## Maskierung von Geheimnissen (S16-03)
+
+`redaction.py` entscheidet zentral, welche Schlüsselnamen als Geheimnis gelten (`password`, `pin`,
+`token`, `api_key`, `*_secret`, `*_password`, `*_token` usw.). Angewendet als structlog-Prozessor
+auf jede Logzeile, auf `payload` und `changes` in `events.emit` (Domain Events, Audit-Log) und auf
+geloggte Pfade mit Token (`/self-disclosure/…`, `/calendar-feed/…`). Prüfbericht:
+`docs/reviews/SECRETS-2026-10-01.md`.

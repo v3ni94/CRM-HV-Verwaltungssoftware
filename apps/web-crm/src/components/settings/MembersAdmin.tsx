@@ -546,7 +546,7 @@ function AddMemberForm({
   }
 
   return (
-    <form onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3`}>
+    <form aria-label={t("addTitle")} onSubmit={(e) => void submit(e)} className={`${ui.card} flex flex-col gap-3`}>
       <h2 className="text-sm font-semibold">{t("addTitle")}</h2>
       <p className="text-xs text-muted">{t("addContactHint")}</p>
       <label className="flex flex-col gap-1">

@@ -45,7 +45,7 @@ export default async function DocumentsPage({
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
-      <form method="get" className="flex flex-wrap items-end gap-3" role="search">
+      <form method="get" className="flex flex-wrap items-end gap-3" role="search" aria-label={t("search")}>
         <label className="flex flex-col gap-1 text-sm">
           {t("search")}
           <input name="q" type="search" defaultValue={q} placeholder={t("searchPlaceholder")} className={ui.input} maxLength={100} />

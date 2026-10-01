@@ -10,6 +10,8 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator, model_valida
 
 from mhvp.automation.models import (
     ACTION_TYPES,
+    RECORD_FIELDS,
+    RECORD_ORDER_STATUS,
     SET_FIELD_MAX_LENGTH,
     SETTABLE_FIELDS,
     SETTABLE_TICKET_FIELDS,
@@ -140,6 +142,49 @@ class SetFieldAction(_In):
             allowed = ", ".join(SETTABLE_FIELDS[self.target])
             raise ValueError(f"Feld nicht erlaubt: {self.field} (erlaubt: {allowed})")
         return self
+
+
+class SetRecordFieldAction(_In):
+    """T12 (S15-06): sets one field of a work order (status, assignee of the order's ticket,
+    appointment) or of a document (category, property link) from the closed list
+    ``RECORD_FIELDS``. The target is the entity of the event. A literal value is checked on
+    save; a value with ``{placeholders}`` is checked when the rule runs."""
+
+    type: Literal["set_record_field"]
+    target: Literal["work_order", "document"]
+    field: str
+    value: str = Field(min_length=1, max_length=200)
+
+    @model_validator(mode="after")
+    def _field(self) -> "SetRecordFieldAction":
+        if self.field not in RECORD_FIELDS[self.target]:
+            allowed = ", ".join(RECORD_FIELDS[self.target])
+            raise ValueError(f"Feld nicht erlaubt: {self.field} (erlaubt: {allowed})")
+        if "{" not in self.value:
+            check_record_value(self.field, self.value.strip())
+        return self
+
+
+def check_record_value(field: str, value: str) -> Any:
+    """Parsed value of a ``set_record_field`` action or ``ValueError`` with a German reason."""
+    if field == "status":
+        if value not in RECORD_ORDER_STATUS:
+            raise ValueError(f"Status nur {', '.join(RECORD_ORDER_STATUS)} erlaubt.")
+        return value
+    if field in ("assignee_user_id", "category_id", "property_id"):
+        try:
+            return uuid.UUID(value)
+        except ValueError as exc:
+            raise ValueError(f"{field} muss eine UUID sein.") from exc
+    if field == "scheduled_at":
+        try:
+            parsed = datetime.fromisoformat(value)
+        except ValueError as exc:
+            raise ValueError("Termin muss ein Datum mit Uhrzeit nach ISO 8601 sein.") from exc
+        if parsed.tzinfo is None:
+            raise ValueError("Termin braucht eine Zeitzone (zum Beispiel +02:00).")
+        return parsed
+    raise ValueError(f"Feld nicht erlaubt: {field}")
 
 
 class NotifyProviderAction(_In):
@@ -275,6 +320,7 @@ Action = (
     | AssignRecordAction
     | SetFieldAction
     | NotifyProviderAction
+    | SetRecordFieldAction
 )
 _ACTION_MODELS: dict[str, type[Action]] = {
     "create_ticket": CreateTicketAction,
@@ -288,6 +334,7 @@ _ACTION_MODELS: dict[str, type[Action]] = {
     "assign_record": AssignRecordAction,
     "set_field": SetFieldAction,
     "notify_provider": NotifyProviderAction,
+    "set_record_field": SetRecordFieldAction,
 }
 
 

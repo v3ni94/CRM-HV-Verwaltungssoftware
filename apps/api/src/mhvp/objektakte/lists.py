@@ -46,6 +46,7 @@ from mhvp.contacts.models import (
     PartyRole,
 )
 from mhvp.contracts.models import Contract, ContractKind
+from mhvp.core.auth.scope import session_allowed_property_ids
 from mhvp.core.escaping import csv_safe_cell
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import (
@@ -127,6 +128,9 @@ async def missing_documents_overview(
     """Anforderungsliste across all properties of the tenant (RLS limits the rows), ordered by
     property number. `only_incomplete` drops properties without missing classes."""
     stmt = select(Property).order_by(Property.number)
+    allowed = session_allowed_property_ids(session)  # M2-02, R08-01
+    if allowed is not None:
+        stmt = stmt.where(Property.id.in_(allowed))
     if management_type is not None:
         stmt = stmt.where(Property.management_type == management_type)
     properties = (await session.execute(stmt)).scalars().all()

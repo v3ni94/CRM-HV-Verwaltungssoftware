@@ -1,5 +1,6 @@
 import { getTranslations } from "next-intl/server";
 
+import { InvoiceFactualPanel } from "@/components/invoices/InvoiceFactualPanel";
 import { InvoiceActions } from "@/components/invoices/InvoiceForms";
 import { InvoiceMatchPanel } from "@/components/invoices/InvoiceMatchPanel";
 import { PageHeader } from "@/components/ui/PageHeader";
@@ -64,6 +65,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ invoic
           </tbody>
         </table>
       </div>
+      <InvoiceFactualPanel invoiceId={invoiceId} />
       <section className="flex flex-col gap-1">
         <h2 className={ui.h2}>{t("reviews")}</h2>
         {reviews.length === 0 ? <p className={ui.help}>{t("noReviews")}</p> : null}

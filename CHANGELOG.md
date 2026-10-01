@@ -5,6 +5,52 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.51.0 (01.10.2026) Welle 5 der Lückenliste: Export, Tracing, Banking, Honorar, Rechnungsprüfung, Heizkosten, Rücklagen, Statusmodell, Rechte
+
+- Übersicht: Welle 5 der Lückenliste vom 30.09.2026 mit 16 Paketen (verbliebene offene und teilweise Befunde ohne Entscheidungsbedarf), Migrationen 0289 bis 0297. Schwerpunkte: Mandantenexport als Hintergrundjob, OpenTelemetry-Tracing, Bankrohdaten-Ablage und finAPI-Zustimmungsablauf, Honorarrechnungen mit Storno und Buchungsentwürfen, sachliche Rechnungsprüfung, Heizkostenimport, Benachrichtigungen per E-Mail, Rücklagen je Position und Rücklagenabrechnung, Import-Berichtsarten, einheitliches Statusmodell der Eigentümerabrechnung, KI-Antwortentwurf als eigene Aufgabe, Abnahmefälle PÜ12, W13 und PÜ13, Objektzuordnung in den Restbereichen, Prüfbericht Geheimnisverschlüsselung, Portal-Logo und Barrierefreiheit. Reste und Entscheidungen stehen in docs/OPEN_QUESTIONS.md (T01-01 bis T14-01, S69-01-01, S16-03-01).
+- Mandant: Vollständiger Mandantenexport als Hintergrundjob für den Mandantenadministrator (Einstellungen, Mandant) mit JSON je Tabelle und Dokumentdateien als ZIP, Protokoll im Audit.
+- Mandant: Exportumfang um offene Posten, Ausgleiche, Bankkonten und Bankumsätze erweitert.
+- Beobachtbarkeit: Optionales OpenTelemetry-Tracing (MHVP_OTEL_ENDPOINT, Standard aus) für API, SQLAlchemy, Celery und httpx mit traceparent im Antwort-Header und trace_id im Log.
+- Betrieb: Compose-Profil otel mit Collector-Beispielkonfiguration und Runbook beobachtung.md.
+- Banking: Rohdaten von Kontoauszugsdateien und finAPI-Abrufen werden unveraendert unter bank/<mandant>/<konto>/<datum>.<ext> abgelegt und mit dem Aufbewahrungsprofil 10 Jahre (Entwurf) indiziert.
+- Banking: Das Ablaufdatum der finAPI-Zustimmung wird beim Pruefen der Verbindung aus der Anbieterantwort gelesen, die Erinnerung 10 Tage vorher legt zusaetzlich eine Aufgabe an.
+- CRM: Bankverbindungen zeigen dauerhaft das Ablaufdatum der Zustimmung oder einen Hinweis, wenn keines vorliegt.
+- Buchhaltung: Honorarrechnungen haben den Status storniert, die Liste ist nach Status filterbar, auch die Gutschrift kann freigegeben werden.
+- Buchhaltung: Freigegebene Honorarrechnungen und Gutschriften erzeugen hinter Freigabestufe G1 je einen Buchungsentwurf im Buchungskreis des Zahlers und des Verwalters, Konten nur aus der neuen Kontenzuordnung je Mandant ohne Vorgabe.
+- CRM: Seite Verwalterhonorar mit Statusfilter und Aktion Buchungsentwurf.
+- Rechnungsprüfung: Sachliche Prüfung als Befunde gegen verknüpften Auftrag (Angebot, Kostengrenze, Status), Dienstleistervertrag, WEG Beschluss, Wirtschaftsplanposition und Rechnungsplan (Betrag, Rhythmus) mit Mengenabgleich je Position und Zuständigkeitsvorschlag Objektverwalter, ohne automatische Freigabe.
+- Rechnungsprüfung: Toleranzen für Preis- und Mengenabgleich je Mandant (Standard 0 %) über /accounting/invoice-check-settings.
+- CRM Rechnungen: Abschnitt Sachliche Prüfung (Befunde) in der Rechnungsansicht.
+- Abrechnung: Heizkostenabrechnungen des Messdiensts werden als eigener Import mit Originaldokument, Zeitraum, Belegsumme, Nutzerzuordnung und Kostenbestandteilen je Einheit erfasst (M17-09).
+- Abrechnung: Der Heizkostenimport prüft Summen gegen die Belegsumme, die CO2-Aufteilung nach der hinterlegten Stufentabelle und mögliche Doppelerfassungen im Rechnungsbuch und wird erst nach Prüfung in die Betriebskostenabrechnung übernommen.
+- Abrechnung: CSV-Import der Messdienstwerte mit frei wählbarer Spaltenzuordnung ohne Formatannahmen.
+- Workspace: Benachrichtigungseinstellungen haben je Art die Zustellung sofort oder täglich, die Mails werden je Benutzer als Sammelmail gesendet (Migration 0293, Beat täglich 07:30).
+- CRM: Die Einstellungsseite Benachrichtigungen bietet die Auswahl Zustellung je Art.
+- WEG: Zweckgebundene Rücklagen führen Bankkonto des Rechtsträgers, Anfangsbestand und Anfangsjahr (Migration 0294).
+- WEG: Neue Entwicklung je Rücklage und Jahr mit Anfang, Zuführung, Entnahme, Steuern, Gebühren, Zinsen und Ende, auch in Abrechnungssnapshot und Vermögensbericht.
+- WEG: Erfasste Mittelverwendung je Abrechnung ist abrufbar und im Entwurf entfernbar.
+- CRM: Rücklagenseite mit Ändern, Entwicklung je Jahr und Liste der Mittelverwendung mit Belegstatus.
+- Import: Neue Berichtsarten Kautionen, Umlageschlüssel mit Einheitenwerten, Zähler, Energieausweise, Dienstleisterverhältnisse und Portalnutzer (nur Status) mit Vorprüfung, Übernahme und Rücknahme (Migration 0297 für die Enum-Werte).
+- Abrechnung: Die Eigentümerabrechnung durchläuft jetzt das einheitliche Statusmodell (Beiratsprüfung, ausgeben, fällig, gebucht, gesperrt) mit Vier-Augen bei der internen Freigabe und Statusverlauf; ausgeben, fällig und gebucht nur mit Freigabestufe G3.
+- WEG: Neue Rücklagenabrechnung je Jahr als eigenes Abrechnungsobjekt, erzeugt aus den Rücklagendaten der Hausgeldabrechnung, mit gleichem Statusmodell; ausgeben, fällig und gebucht nur mit Freigabestufe G4.
+- CRM: Statusanzeige und Statusaktionen in der Eigentümerabrechnung und ein Bereich Rücklagenabrechnung auf der Seite WEG, Rücklagen.
+- KI: Neue Aufgabe reply_draft (Migration 0296) erzeugt Antwortentwürfe mit eigenem Anbieterschema, Tonfall und Platzhaltern nach den Stilvorgaben des Postfachs; der Entwurf gilt erst nach ausdrücklicher Freigabe und wird nie automatisch versendet.
+- Kommunikation: Kompaktansicht mit Button Antwortentwurf (KI) und Freigabe, Kurz senden bleibt bis zur Freigabe gesperrt, neue Endpunkte POST /mail/messages/{id}/reply-ai und /reply-ai/approve.
+- Automatisierung: Neue Aktion Feld setzen für Aufträge (Status angefragt oder in Arbeit, Termin, Zuständiger des Tickets) und Dokumente (Kategorie, Objektverknüpfung) aus einer geschlossenen Feldliste mit Testlauf.
+- Tests: Abnahmefälle PÜ12, W13 und PÜ13 (SD-05 bis SD-07) als Integrationstests ergänzt und mit Protokoll vom 01.10.2026 dokumentiert.
+- Rechte: Die Portalverwaltung zeigt eingeschränkten Mitgliedern nur Zugänge von Kontakten mit Vertrag auf einem zugeordneten Objekt, Einladungen und Zugangsaktionen außerhalb antworten 404.
+- Objektakte: Vollständigkeit, Listen und Abgabeexporte je Objekt folgen der Objektzuordnung, die Gesamtliste fehlender Unterlagen ist gefiltert.
+- Importe: Migrationsimporte (Objekt, Buchungskreis, Eröffnungssalden, Wechselanträge, Abgleichberichte, Abnahmeprotokolle) und Altdaten (historische Tickets, Einzelposten) folgen der Objektzuordnung.
+- WEG: Prüfberichte des Beirats per Id prüfen die Objektzuordnung über Prüfauftrag und Gemeinschaft.
+- Banking: Bankregeln, Regelvorschläge, Sync-Protokoll und Klärungsliste folgen der Objektzuordnung; ein Konto lässt sich nur zugeordneten Objekten zuordnen; die Kontoliste filtert vor dem Limit.
+- Sicherheit: Prüfbericht docs/reviews/SECRETS-2026-10-01.md zur Feldverschlüsselung aller Geheimnisklassen (S16-03).
+- Kern: Zentrale Maskierung von Geheimnissen (Passwörter, PINs, Tokens, API-Schlüssel, Secrets) in allen Logzeilen, Domain Events und im Audit-Log.
+- Kern: Zugriffslog maskiert Tokens im Pfad von Selbstauskunft-Links und Kalender-Abo.
+- Vermietung: Selbstauskunft-Link-Token wird nur noch als SHA-256 gespeichert, nicht mehr im Klartext.
+- Einstellungen: Das Portal-Logo lässt sich in den Mandanteneinstellungen als PNG oder JPEG hochladen und wird über die Dokument-ID im Branding gesetzt.
+- Barrierefreiheit: Formulare in Vertrag, Mandantenverwaltung, Benutzerverwaltung, Profil, Buchungsstorno, FinTS, Belegungsliste, Kontakt- und Objektsuche sowie im Portal (Dokumente, Beirat) tragen einen aria-label.
+- Tests: Playwright-Spec für die Detailseite des Wirtschaftsplans (Plan anlegen, Position, Berechnung, Rücksprung).
+
 ## 1.50.0 (01.10.2026) Welle 4 der Lückenliste: Rechnungen, Dokumente, Übernahme, Import, Rechte, Kautionen, Portal, Prüfungen
 
 - Übersicht: Welle 4 der Lückenliste vom 30.09.2026 mit 16 Paketen (Reste aus Welle 3 und Prüfungen), Migrationen 0284 bis 0288. Schwerpunkte: Belegmaske mit Anlagen, Rechnungsplan-Erfassung, Sammelrückmeldung Lastschriften, Honorarlauf mit PDF, Jahresübernahme, geschwärzte Kopien und Eingangsadresse je Mandant, Tickets aus der Übernahme-Checkliste, Onboarding-Anlage von Konten und Schlüsseln, Prüfbericht und Rücknahme des Altdatenimports, Einsichtspaket-Frist, Stummschalten, Wartungs-Sammelaktion, include-Parameter und Webhook statement.confirmed, Objektzuordnung in Banking, Abrechnung, WEG, Suche und Assistent, If-Match im CRM, KI-Automatik-Schalter, Kautionszinsverlauf, Portal-Branding und Anmeldestrenge, Leistungs- und Playwright-Tests, Sicherheits- und Geldflussprüfung (docs/reviews), Navigation, Hilfeindex und Handbuch. Reste und Entscheidungen stehen in docs/OPEN_QUESTIONS.md (R02 bis R09).

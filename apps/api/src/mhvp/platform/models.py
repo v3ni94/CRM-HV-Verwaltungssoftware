@@ -738,3 +738,31 @@ class ReleaseGateRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     four_eyes: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
     )
+
+
+class TenantExportJob(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Full tenant export started by the tenant administrator (M2-01, 5.3). The archive is built
+    by the Celery job ``mhvp.platform.tenant_export_job`` and kept in the object store."""
+
+    __tablename__ = "tenant_export_job"
+    __table_args__ = (
+        CheckConstraint(
+            "status IN ('queued', 'running', 'ready', 'failed')",
+            name="tenant_export_job_status",
+        ),
+        Index("ix_tenant_export_job_tenant", "tenant_id", "created_at"),
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="queued", server_default="queued"
+    )
+    requested_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    object_key: Mapped[str | None] = mapped_column(String(512))
+    size: Mapped[int | None] = mapped_column(BigInteger)
+    sha256: Mapped[str | None] = mapped_column(String(64))
+    manifest: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
+    error: Mapped[str | None] = mapped_column(Text)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    downloads: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    last_downloaded_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))

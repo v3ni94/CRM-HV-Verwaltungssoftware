@@ -45,6 +45,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M13-03](M13-03.md) | Umsatzsteuer auf Sollstellungen bei gewerblicher Vermietung mit Option | M13, 7.5, 7.7 | implemented, not accepted (Entwurf, Feature-Flag je Mandant, G1) |
 | [M13-04](M13-04.md) | XRechnung für Verwalterhonorar-Rechnungen nur aus eingetragenen Mandantendaten | M13, 13.5 | implemented, not accepted |
 | [M13-05](M13-05.md) | Nachweis und Differenzposten der Sollstellung, Lauflisten, Honorarzeiträume und Gutschrift | M13, 7.5, 18 | implemented, not accepted (30.09.2026) |
+| [M13-07](M13-07.md) | Buchungsentwurf des Verwalterhonorars beim Zahler und beim Verwalter hinter G1 | M13, 6.9.1, E01, 7.1 | implemented, not accepted (01.10.2026) |
 | [M16-01](M16-01.md) | Mahngebühr nur mit hinterlegtem Betrag, Rechnung an Gemeinschaft nur mit vertraglicher Grundlage | M16 | implemented, not accepted |
 | [M16-02](M16-02.md) | Mahnstufen je Objekt erben vom Mandanten, Mahnschreiben nur als Entwurf | M16 | implemented, not accepted |
 | [M16-03](M16-03.md) | Fälligkeit und Verzug getrennt: Verzugsbeginn je Modus nur aus erfassten Tatsachen, Zinsen nur als Entwurf, Verbraucherkennzeichen am Kontakt | M16, 7.5, R10 | implemented, not accepted, zu prüfen durch Rechtsanwalt |
@@ -53,6 +54,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M17-01](M17-01-betrkv-katalog.md) | Umlagefähigkeit je Kostenposition: Systemkatalog der Betriebskostenarten nach BetrKV, Kontenzuordnung, Prüfhinweis in der Vorschau | M17, 7.6 A02/A03 | implemented, not accepted (Entwurf, Freigabe Rechtsberatung offen) |
 | [M17-03](M17-03-vorschussregel.md) | Vorschussregel: Vorjahresergebnis geteilt durch zwölf, optional Sicherheitsaufschlag, Vorschlag mit Bestätigung und Textbaustein | M17, 7.6 A04/A07 | implemented, not accepted (Offene Entscheidung Betreiber) |
 | [M17-05](M17-05-eigentuemerabrechnung-ausgabe.md) | Eigentümerabrechnung Miete und SEV als PDF-Entwurf je Objekt mit Auszahlungsbetrag über die Briefbausteine | M17, 7.6 A06 | implemented, not accepted (Ausgabe hinter G3) |
+| [M17-09](M17-09-heizkostenimport.md) | Heizkostenimport des Messdiensts: Originaldokument, Nutzermapping, Kostenbestandteile, Summen-, CO2- und Dublettenprüfung, Übernahme nur nach Prüfung | M17, 7.10 H01, 6.5 | implemented, not accepted (Messdienstformat und CO2-Vermieteranteil offen, Ausgabe hinter G3) |
 | [M15-01](M15-01-pain-versions.md) | Zahlungsdatei pain.001 in der je Bank konfigurierten Version (03/09), XSD-Prüfung im Test, Prüfsumme, Download-Protokoll, Einreichung nur manuell bestätigt | M15, 7.5, Kapitel 8 Zahlläufe | implemented, not accepted (Bankbestätigung offen) |
 | [M15-02](M15-02-pain008.md) | SEPA-Basislastschrift pain.008: Mandatsprüfung, Sequenz, Vier-Augen, Datei nur hinter G2 | M15, 7.5 SEPA | implemented, not accepted |
 | [M15-03](M15-03-payment-run-feedback.md) | Zahllauf-Vorschau, Sammelaufträge, Auszahlung ohne Rechnung, Banklimits, Rückmeldung je Lastschrift, Import pain.002/camt.054, Fristen je Verfahren, Wochenvorschau | M15, 7.5, 15.1 | implemented, not accepted (Bankvereinbarung zu verifizieren) |
@@ -86,6 +88,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | [M10-03](M10-03-tilgungsfolge-vorschlag.md) | Ausgleich offener Posten nach gesetzlicher Reihenfolge, nur Vorschlag mit Bestätigung (Tilgungsfolge, D39) | M10, 7.4 Nr. 5 | implemented, not accepted |
 | [M11-06](M11-06-payment-proposal-only-until-g2.md) | Zahlung nur Vorschlag bis G2 (Rechnungsabgleich) | M11, 18.0 | implemented, not accepted |
 | [M14-02](M14-02.md) | Vorsteuer: getrennte Erfassung, Abzug nur als Vorschlag bei optierten Objekten nach Umsatzschlüssel, Schalter Standard aus | M14, 7.2, PÜ03 | implemented, not accepted (zu prüfen durch Steuerberater) |
+| [PU02-SACHLICH](PU02-sachliche-pruefung.md) | Sachliche Rechnungsprüfung als Befunde: Auftrag, Vertrag, Beschluss, Budget, Wiederkehr, Preis und Menge, Zuständigkeitsvorschlag; Toleranz je Mandant Standard 0 | M14-02, 7.9.1 PÜ02 | implemented, not accepted |
 | [M14-03](M14-03.md) | Freigabegrenzen je Rolle: zweite Freigabe durch dritte Person über der Grenze (Produktschutz) | M14, 6.9.9 | implemented, not accepted |
 | [M14-04](M14-04.md) | Reverse Charge, Bauabzugsteuer (Warnung, Einbehalt nur Vorschlag), § 35a Kennzeichen je Position und Ausweis als PDF-Entwurf | M14, M17, PÜ03 | implemented, not accepted (zu prüfen durch Steuerberater) |
 | [M3-02](M3-02-sepa-mandate.md) | SEPA-Mandat auf der Bankverbindung des Kontakts; Portalstufe: digitales Mandat als Vorschlag mit Textform-Nachweis | M3, 6.1, 14 | implemented, not accepted |
@@ -125,6 +128,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | A04 | Vorauszahlungen und Fristen | 7.6 | implemented, not accepted (M17, advances and deadline orientation; D23: access day checked at issue, never the calculation day) |
 | A05 | Nutzerwechsel, Leerstand, Heizkosten | 7.6 | implemented, not accepted (M17, vacancy share to owner, heating external only) |
 | [A06](A06-owner-statement.md) | Eigentümerabrechnung Miete/SEV | 7.6 | implemented, not accepted (M17 task A25, `mhvp.billing.owner_statement`, `test_m17_owner_statement.py`; PDF behind G3) |
+| [S69-01](S69-01-statement-status-model.md) | Einheitliches Statusmodell der Abrechnungsobjekte (Eigentümer- und Rücklagenabrechnung) | 6.9.3, E03 | implemented, not accepted (Welle 5 Paket T11, Migration 0295; issued, due, posted hinter G3 bzw. G4) |
 | A07 | Bedienung | 7.6 | specified, not implemented |
 | W01 | Eigene Gemeinschaft | 7.8 | implemented (M24), ledger check |
 | [W02](W02-wirtschaftsplan.md) | Wirtschaftsplan | 7.8 | implemented (M24; takeover into the payment plans with preview and second person 29.09.2026, `mhvp.hoa.routers.apply_plan`); statements behind G4, receivable posting behind G1 |
@@ -140,7 +144,7 @@ Status values: `specified, not implemented`, `implemented, not accepted`, `accep
 | W12 | Abrechnungspaket | 7.8 | implemented, not accepted (package and blocking checks, `test_w09_special_levy.py::test_w12_package_blocks_release`) |
 | W13 | Beirat und Versammlung | 7.8 | implemented, not accepted (M25); majority rules per subject kind since 26.09.2026, see [M25-01](M25-01-mehrheitsregeln.md); minutes draft A62 |
 | PÜ01 | Vollständigkeit | 7.9.1 | implemented, not accepted (M14 findings; recipient and reference hints, `test_pue_invoice_checks.py`) |
-| PÜ02 | Sachliche Prüfung | 7.9.1 | partly implemented (factual review step M14, missing reference hint); order/budget match open |
+| PÜ02 | Sachliche Prüfung | 7.9.1 | implemented, not accepted (factual review step M14; order, contract, resolution, budget, recurring and quantity findings, [PU02-SACHLICH](PU02-sachliche-pruefung.md)) |
 | PÜ03 | Rechnerische/steuerliche Prüfung | 7.9.1 | implemented, not accepted (M14 arithmetic findings and review step) |
 | PÜ04 | Dubletten/Betrugsrisiko | 7.9.1 | implemented, not accepted (number, amount and day, same document, IBAN confirmation) |
 | PÜ05 | Prüfentscheidungen | 7.9.1 | implemented, not accepted (M14 review steps per version, four eyes release) |
@@ -263,3 +267,8 @@ Vollständigkeitsprüfung des Index gegen `docs/rules/*.md`: Regeldateien ohne I
 | [R02](R02.md) | CRM zu geschwärzten Kopien, Eingangsadresse, Verteilung nach Token, Schalter direkter Upload | Produktschutz | implemented, not accepted |
 | [R10](R10.md) | Kautionsverzinsung je Anlageform, Portal Branding je Mandant, zweiter Faktor im Portal je Mandant | Produktschutz | implemented, not accepted |
 | R03-onboarding-uebernahme | Aufgaben aus der Checkliste, Eigentümeransicht, Anlage von Bankkonten, Umlageschlüsseln, Debitorenkonten und Dokumentverknüpfung, Abgleichvorschau | Fachliche Umsetzung, Produktschutz | R03 |
+- T08: Benachrichtigungsmails (Einstellung Zustellung: sofort oder täglich) siehe docs/rules/T08.md.
+| [P14-06](P14-06.md) | Vollständiger Mandantenexport als Job durch den Mandantenadministrator | Fachliche Umsetzung, Produktschutz | T01 |
+| [T12](T12.md) | Antwortentwurf als eigene KI-Aufgabe mit Freigabe (reply_draft), Aktion Feld setzen für Aufträge und Dokumente (set_record_field) | Fachliche Umsetzung, Produktschutz | T12 |
+| [M24-W5](M24-W5-ruecklage-position.md) | Rücklage je zweckgebundener Position: Bankanlage des Rechtsträgers, Anfangsbestand, Entwicklung je Jahr in Abrechnung und Vermögensbericht | Fachliche Umsetzung, Produktschutz | T09 |
+| [M8-01-W5](M8-01-w5-importberichte.md) | Importberichte Kaution, Umlageschlüssel, Zähler, Energieausweis, Dienstleister, Portalstatus mit Vorprüfung, Übernahme und Rücknahme | Fachliche Umsetzung | T10 |

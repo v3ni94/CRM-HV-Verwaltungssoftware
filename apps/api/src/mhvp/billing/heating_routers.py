@@ -365,3 +365,9 @@ async def put_rule_table(
             row.updated_by = principal.user_id
         await session.flush()
         return {"id": row.id, "kind": row.kind, "valid_from": row.valid_from}
+
+
+# M17-09: metering service import endpoints share this router (no extra registration).
+from mhvp.billing.heating_import_routers import router as _import_router  # noqa: E402
+
+router.include_router(_import_router)

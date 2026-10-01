@@ -165,4 +165,9 @@ describe("MembersAdmin", () => {
     renderIntl(<MembersAdmin initialMembers={[member]} roles={roles} competenceCatalogue={competenceCatalogue} canCreate canUpdate />);
     expect(screen.queryByTestId("reply-approval-toggle")).not.toBeInTheDocument();
   });
+
+  it("names the add member form", () => {
+    renderIntl(<MembersAdmin initialMembers={[member]} roles={roles} competenceCatalogue={competenceCatalogue} canCreate canUpdate />);
+    expect(screen.getByRole("form", { name: /hinzufügen|anlegen|einladen/i })).toBeInTheDocument();
+  });
 });

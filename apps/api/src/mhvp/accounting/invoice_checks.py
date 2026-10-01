@@ -42,7 +42,11 @@ def mandatory_checklist(invoice: Invoice) -> list[dict[str, Any]]:
         (
             "order",
             "Bezug zu Auftrag oder Vertrag",
-            bool(invoice.order_reference or invoice.service_contract_id),
+            bool(
+                invoice.order_reference
+                or invoice.service_contract_id
+                or getattr(invoice, "work_order_id", None)
+            ),
         ),
     ]
     return [{"item": k, "label": label, "present": ok} for k, label, ok in items]
@@ -312,4 +316,23 @@ async def all_findings(session: AsyncSession, invoice: Invoice) -> list[str]:
         *await conflict_findings(session, invoice),
         *await reference_findings(session, invoice),
         *await duplicate_findings(session, invoice),
+        *await factual_findings(session, invoice),
     ]
+
+
+async def factual_findings(session: AsyncSession, invoice: Invoice) -> list[str]:
+    """M14-02: order, resolution, budget, recurring plan and line comparison (PÜ02). The
+    responsibility proposal is returned by the factual check endpoint, not as a finding."""
+    from mhvp.accounting import invoice_factual
+
+    result = await invoice_factual.factual_check(session, invoice)
+    return [
+        f["message"]
+        for f in result.findings
+        if f["area"] != "responsibility" and f["code"] not in INFO_ONLY_CODES
+    ]
+
+
+# Shown by the factual check endpoint only, not stored at the invoice (no new warning for an
+# invoice that keeps the free text order reference, M14-02).
+INFO_ONLY_CODES = {"order_free_text"}

@@ -247,6 +247,24 @@ async def open_items_for_contact(
 def reply_block(message: Message, salutation: str, ticket_number: int | None) -> dict[str, Any]:
     suggestion = message.suggestion or {}
     prep = suggestion.get("preparation") or {}
+    task = suggestion.get("reply_ai")
+    if isinstance(task, dict) and task.get("body"):
+        # Own task ``reply_draft`` (T12): shown with its approval state; the clerk approves
+        # before use, sending stays on the existing draft and send path.
+        return {
+            "source": "reply_task",
+            "text": str(task["body"]),
+            "approved": bool(task.get("approved")),
+            "draft": {
+                "tone": task.get("tone"),
+                "style_tone": task.get("style_tone"),
+                "placeholders": [str(p) for p in task.get("placeholders") or []][:20],
+                "unknown_placeholders": [str(p) for p in task.get("unknown_placeholders") or []][
+                    :20
+                ],
+                "open_questions": [str(q) for q in task.get("open_questions") or []][:10],
+            },
+        }
     if suggestion.get("reply_draft"):
         block: dict[str, Any] = {"source": "suggestion", "text": str(suggestion["reply_draft"])}
         # Own schema of the draft (``suggest.MailDraftReply``, R09): tone, used and unknown

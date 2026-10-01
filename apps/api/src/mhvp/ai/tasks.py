@@ -339,6 +339,21 @@ class MailSuggestion(_Out):
     )
 
 
+class ReplyDraftResult(_Out):
+    """Antwortentwurf zu einer eingehenden Mail (T12, 9.2 draft_reply): Text, Tonfall und die
+    verwendeten Platzhalter. Nur Vorschlag; Freigabe und Versand bleiben beim Sachbearbeiter."""
+
+    body: str = Field(max_length=6000, description="Antworttext auf Deutsch ohne Betreffzeile")
+    tone: Literal["formell", "sachlich", "freundlich"] = Field(description="gewählter Tonfall")
+    placeholders: list[str] = Field(
+        default_factory=list,
+        description="im Text verwendete Platzhalter aus {anrede}, {ticket}, {objekt}",
+    )
+    open_questions: list[str] = Field(
+        default_factory=list, description="Angaben, die der Sachbearbeiter vor dem Versand klärt"
+    )
+
+
 class PlaybookDraft(_Out):
     """Entwurf eines Playbooks aus einem abgeschlossenen Ticket."""
 
@@ -516,6 +531,7 @@ SCHEMAS: dict[AiTask, type[_Out]] = {
     AiTask.SUMMARIZE: SummaryResult,
     AiTask.CLASSIFY_EMAIL: MailSuggestion,
     AiTask.DRAFT_REPLY: PlaybookDraft,
+    AiTask.REPLY_DRAFT: ReplyDraftResult,
     AiTask.MAP_COLUMNS: ColumnMappingResult,
     AiTask.CLASSIFY_DOCUMENT: ClassifyDocumentResult,
     AiTask.CONTACT_MASTER_DATA_CHANGE: ContactChangeResult,
@@ -532,6 +548,7 @@ DEFAULT_TIERS: dict[AiTask, str] = {
     AiTask.SUMMARIZE: "small",
     AiTask.CLASSIFY_EMAIL: "small",
     AiTask.DRAFT_REPLY: "small",
+    AiTask.REPLY_DRAFT: "small",
     AiTask.MAP_COLUMNS: "small",
     AiTask.CLASSIFY_DOCUMENT: "small",
     AiTask.CONTACT_MASTER_DATA_CHANGE: "small",

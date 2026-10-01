@@ -18,6 +18,8 @@ export function PortalSettings({ branding, secondFactor, canUpdate }: { branding
   const [name, setName] = useState(branding.portal_name ?? "");
   const [imprint, setImprint] = useState(branding.imprint_url ?? "");
   const [privacy, setPrivacy] = useState(branding.privacy_url ?? "");
+  const [logoId, setLogoId] = useState<string>(typeof branding.logo_light_document_id === "string" ? branding.logo_light_document_id : "");
+  const [logoName, setLogoName] = useState<string | null>(null);
   const [factor, setFactor] = useState<PortalSecondFactor>(secondFactor);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -26,6 +28,28 @@ export function PortalSettings({ branding, secondFactor, canUpdate }: { branding
   const linkOk = (value: string) => value.trim() === "" || /^https:\/\/\S+$/.test(value.trim());
   const valid = linkOk(imprint) && linkOk(privacy) && name.trim().length <= 80;
 
+  /** Logo: uses the existing document upload and only stores the returned document id. */
+  async function uploadLogo(file: File) {
+    setBusy(true);
+    setMessage(null);
+    setError(null);
+    if (!["image/png", "image/jpeg"].includes(file.type)) {
+      setBusy(false);
+      setError(t("logoType"));
+      return;
+    }
+    const form = new FormData();
+    form.append("file", file);
+    form.append("title", `Portal-Logo ${file.name}`);
+    const res = await bff<{ id: string }>("/api/bff/documents", { method: "POST", body: form });
+    setBusy(false);
+    if (res.ok) {
+      setLogoId(res.data.id);
+      setLogoName(file.name);
+      setMessage(t("logoUploaded"));
+    } else setError(res.message);
+  }
+
   async function save() {
     setBusy(true);
     setMessage(null);
@@ -33,7 +57,7 @@ export function PortalSettings({ branding, secondFactor, canUpdate }: { branding
     const res = await bff("/api/bff/tenant/settings", {
       method: "PATCH",
       body: JSON.stringify({
-        branding: { ...branding, portal_name: name.trim() || null, imprint_url: imprint.trim() || null, privacy_url: privacy.trim() || null },
+        branding: { ...branding, portal_name: name.trim() || null, imprint_url: imprint.trim() || null, privacy_url: privacy.trim() || null, logo_light_document_id: logoId || null },
         portal_second_factor: factor,
       }),
     });
@@ -61,6 +85,27 @@ export function PortalSettings({ branding, secondFactor, canUpdate }: { branding
             <input className={ui.input} value={privacy} placeholder="https://" disabled={!canUpdate || busy} onChange={(e) => setPrivacy(e.target.value)} />
           </label>
         </div>
+        <label className="flex flex-col gap-1 text-sm sm:max-w-md">
+          <span className={ui.label}>{t("logo")}</span>
+          <input
+            type="file"
+            accept="image/png,image/jpeg"
+            className={ui.input}
+            disabled={!canUpdate || busy}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) void uploadLogo(file);
+            }}
+          />
+        </label>
+        <p className={ui.help}>
+          {logoId ? t("logoSet", { name: logoName ?? logoId }) : t("logoNone")}
+          {logoId && canUpdate ? (
+            <button type="button" className="ml-2 underline" disabled={busy} onClick={() => { setLogoId(""); setLogoName(null); }}>
+              {t("logoRemove")}
+            </button>
+          ) : null}
+        </p>
         <label className="flex flex-col gap-1 text-sm sm:max-w-md">
           <span className={ui.label}>{t("secondFactor")}</span>
           <select className={ui.input} value={factor} disabled={!canUpdate || busy} onChange={(e) => setFactor(e.target.value as PortalSecondFactor)}>

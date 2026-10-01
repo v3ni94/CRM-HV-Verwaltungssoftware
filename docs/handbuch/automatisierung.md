@@ -143,3 +143,7 @@ Hinweise zur Verarbeitung:
   Vertragsart am Objekt des Tickets an. Die Freigabe und der Versand erfolgen manuell im Postfach. Die
   Aktion gibt es nur bei Ticket-Ereignissen; fehlt ein Dienstleister oder dessen E-Mail-Adresse, meldet
   der Testlauf den Fehler.
+
+### Feld setzen für Aufträge und Dokumente
+
+Die Aktion "Feld setzen (Auftrag, Dokument)" wirkt auf das Objekt des auslösenden Ereignisses. Beim Auftrag sind wählbar: Status (nur "angefragt" oder "in Arbeit", entlang des normalen Ablaufs), Termin (mit Zeitzone, zum Beispiel 2026-10-05T09:00:00+02:00) und Zuständiger (gesetzt wird der Zuständige des zugehörigen Tickets). Beim Dokument sind wählbar: Kategorie und Verknüpfung mit einem Objekt. Freigabe, Rechnung, Abnahme, Beträge und Aufbewahrungssperren sind nicht wählbar; ein Dokument mit Sperre behält seine Kategorie. Der Testlauf zeigt, was geändert würde. Die Information externer Dienstleister bleibt der Entwurf an den Dienstleister, der nie automatisch versendet wird.

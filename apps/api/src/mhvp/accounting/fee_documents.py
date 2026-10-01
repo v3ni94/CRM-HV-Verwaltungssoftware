@@ -135,7 +135,11 @@ async def _invoice(
     row = await session.scalar(query)
     if row is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-    if row.status not in (AdminFeeInvoiceStatus.ISSUED, AdminFeeInvoiceStatus.RELEASED):
+    if row.status not in (
+        AdminFeeInvoiceStatus.ISSUED,
+        AdminFeeInvoiceStatus.RELEASED,
+        AdminFeeInvoiceStatus.CANCELLED,
+    ):
         raise ProblemError(ErrorCodes.XRECHNUNG_NOT_ISSUED)
     return row
 

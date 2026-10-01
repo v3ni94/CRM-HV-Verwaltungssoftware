@@ -11,6 +11,8 @@ x-app-env: &app-env
   MHVP_ENV: ${MHVP_ENV:-dev}
   MHVP_LOG_LEVEL: ${MHVP_LOG_LEVEL:-INFO}
   MHVP_LOG_FORMAT: ${MHVP_LOG_FORMAT:-json}
+  # Tracing (M9-02) stays off while empty; example: http://otel-collector:4318 (profile otel).
+  MHVP_OTEL_ENDPOINT: ${MHVP_OTEL_ENDPOINT:-}
   MHVP_APP_VERSION: ${MHVP_APP_VERSION:-0.1.0}
   MHVP_BUILD: ${MHVP_BUILD:-}
   # Runtime role mhvp_app (ADR 0002). Passwords must be URL safe.
@@ -177,6 +179,18 @@ services:
       objectstore:
         condition: service_healthy
     restart: "no"
+
+  otel-collector:
+    # Optional OpenTelemetry collector (M9-02), only started with --profile otel. Receives OTLP
+    # over HTTP (4318) from api and worker, logs spans to its own output (debug exporter);
+    # point the exporters in infra/otel-collector.yaml to the tracing backend of choice.
+    <<: *hardening
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    profiles:
+      - otel
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
 
   api:
     <<: *python-app

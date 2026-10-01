@@ -93,4 +93,9 @@ describe("ProfileSettings signature", () => {
     render({ signatureProfile: null, signaturePreview: null });
     expect(screen.queryByText("E-Mail-Signatur")).not.toBeInTheDocument();
   });
+
+  it("names the password form for assistive technology", () => {
+    render();
+    expect(screen.getByRole("form", { name: "Passwort ändern" })).toBeInTheDocument();
+  });
 });

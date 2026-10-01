@@ -756,7 +756,11 @@ async def _issued(session: AsyncSession, invoice_id: uuid.UUID) -> AdminFeeInvoi
                 detail="Nur ausgestellte Honorarrechnungen werden als XRechnung erzeugt.",
             )
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-    if row.status not in (AdminFeeInvoiceStatus.ISSUED, AdminFeeInvoiceStatus.RELEASED):
+    if row.status not in (
+        AdminFeeInvoiceStatus.ISSUED,
+        AdminFeeInvoiceStatus.RELEASED,
+        AdminFeeInvoiceStatus.CANCELLED,
+    ):
         raise ProblemError(ErrorCodes.XRECHNUNG_NOT_ISSUED)
     if row.kind != "invoice":
         # M13-05: a credit note needs its own document type (UBL CreditNote or type code 381);

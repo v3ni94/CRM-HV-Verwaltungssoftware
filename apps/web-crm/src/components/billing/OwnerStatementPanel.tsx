@@ -7,6 +7,8 @@ import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { StatementStatusActions, type StatementStatusValue, type StatusLogEntry } from "./StatementStatusActions";
+
 type Line = { account_number?: string; account_name?: string; amount: string };
 type Finding = { code: string; level: string; message: string };
 type Results = {
@@ -37,8 +39,9 @@ export type OwnerStatement = {
   ledger_id: string;
   period_from: string;
   period_to: string;
-  status: "draft" | "calculated" | "internally_approved";
+  status: StatementStatusValue;
   snapshot_hash: string | null;
+  status_log?: StatusLogEntry[];
   results?: Results | null;
   findings?: Finding[];
 };
@@ -168,12 +171,25 @@ export function OwnerStatementPanel({ ledgers }: { ledgers: { id: string; name: 
             </h2>
             <span className={ui.badge}>{t(`status.${selected.status}`)}</span>
           </div>
-          {selected.status !== "internally_approved" ? (
+          {selected.status === "draft" || selected.status === "calculated" ? (
             <button type="button" className={`${ui.secondary} mt-3`} onClick={calculate} disabled={busy}>
               {t("calculate")}
             </button>
           ) : null}
           {selected.results ? <Blocks results={selected.results} findings={selected.findings ?? []} /> : <p className={`${ui.help} mt-3`}>{t("notCalculated")}</p>}
+          {selected.status !== "draft" ? (
+            <StatementStatusActions<OwnerStatement>
+              url={`${BASE}/${selected.id}`}
+              status={selected.status}
+              hoa={false}
+              gate="G3"
+              log={selected.status_log ?? []}
+              onChanged={(data) => {
+                setSelected(data);
+                void load();
+              }}
+            />
+          ) : null}
           <p className={`${ui.notice} mt-4`}>{t("gateNotice")}</p>
         </section>
       ) : null}

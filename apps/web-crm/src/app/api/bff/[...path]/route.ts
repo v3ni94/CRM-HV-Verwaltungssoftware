@@ -25,6 +25,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/thread$`) },
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/compact$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/compact/summary$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/reply-ai$`) },
+  { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/reply-ai/approve$`) },
   // Zuordnungsprüfung mit Rückfrage (Betreiber 27.09.2026): Kontakt, Objekt, Einheit je Mail und Ticket.
   { method: "GET", pattern: new RegExp(`^mail/messages/${ID}/assignment-review$`) },
   { method: "POST", pattern: new RegExp(`^mail/messages/${ID}/assignment-review/decide$`) },
@@ -216,6 +218,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: /^tenant\/members$/ },
   // Ereignisprotokoll je Datensatz mit CSV-Export (P1 AP6).
   { method: "GET", pattern: /^tenant\/audit-log(\/export)?$/ },
+  // Vollständiger Mandantenexport als Job (M2-01), nur Mandantenadministrator.
+  { method: "GET", pattern: /^tenant\/export-jobs$/ },
+  { method: "POST", pattern: /^tenant\/export-jobs$/ },
+  { method: "GET", pattern: new RegExp(`^tenant/export-jobs/${ID}/download$`) },
   { method: "PATCH", pattern: new RegExp(`^tenant/members/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^tenant/members/${ID}/reset-password$`) },
   { method: "PUT", pattern: new RegExp(`^tenant/members/${ID}/roles$`) },
@@ -416,7 +422,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/admin-fees/${ID}/invoice-issue$`) },
   { method: "GET", pattern: /^accounting\/admin-fee-invoices$/ },
   { method: "GET", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}$`) },
-  { method: "POST", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}/(release|cancel)$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}/(release|cancel|posting-drafts)$`) },
+  { method: "GET", pattern: /^accounting\/admin-fee-posting-config$/ },
+  { method: "PUT", pattern: /^accounting\/admin-fee-posting-config$/ },
   { method: "POST", pattern: new RegExp(`^accounting/admin-fee-invoices/${ID}/(document|xrechnung-credit-note/document)$`) },
   { method: "POST", pattern: /^accounting\/admin-fees-run$/ },
   { method: "GET", pattern: new RegExp(`^accounting/invoices/${ID}/xrechnung(\\.xml|/check)$`) },
@@ -622,6 +630,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^statements/${ID}/heating(/consumption-info)?$`) },
   { method: "PUT", pattern: new RegExp(`^statements/${ID}/heating(/consumptions)?$`) },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/heating/(import-consumptions|calculate|apply)$`) },
+  // Metering service heating cost import (M17-09).
+  { method: "GET", pattern: new RegExp(`^billing/heating-cost-imports(/${ID})?$`) },
+  { method: "POST", pattern: /^billing\/heating-cost-imports$/ },
+  { method: "PUT", pattern: new RegExp(`^billing/heating-cost-imports/${ID}(/(mapping|rows))?$`) },
+  { method: "POST", pattern: new RegExp(`^billing/heating-cost-imports/${ID}/(csv|check|apply)$`) },
   // Umlagefähigkeit (M17-01) und Vorschussregel (M17-03): Katalog, Zuordnung, Vorschläge mit Bestätigung.
   { method: "GET", pattern: new RegExp(`^statements/${ID}/allocability-check$`) },
   { method: "GET", pattern: new RegExp(`^statements/${ID}/advance-proposals$`) },
@@ -640,6 +653,12 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^billing/owner-statements/${ID}$`) },
   { method: "POST", pattern: /^billing\/owner-statements$/ },
   { method: "POST", pattern: new RegExp(`^billing/owner-statements/${ID}/(calculate|approve)$`) },
+  // S69-01: status model of owner and reserve statements.
+  { method: "POST", pattern: new RegExp(`^billing/owner-statements/${ID}/transition$`) },
+  { method: "GET", pattern: /^hoa\/reserve-statements$/ },
+  { method: "GET", pattern: new RegExp(`^hoa/reserve-statements/${ID}$`) },
+  { method: "POST", pattern: /^hoa\/reserve-statements$/ },
+  { method: "POST", pattern: new RegExp(`^hoa/reserve-statements/${ID}/(calculate|transition)$`) },
   // HOA (M24, M25): drafts, calculation, resolution bound to the snapshot, meeting steps.
   // Issuing, due and posting of statements need G4 (checked by the API).
   { method: "POST", pattern: /^hoa\/(plans|statements|meetings|resolutions|special-levies)$/ },
@@ -667,6 +686,11 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // W2 P07 (M24-01, M24-02): reserves, reserve movements, costs from the ledger.
   { method: "POST", pattern: /^hoa\/reserves$/ },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(reserve-movements|costs/from-ledger)$`) },
+  // T09 (M24-01): reserve detail, change, development per year, movements of a statement.
+  { method: "GET", pattern: new RegExp(`^hoa/reserves/${ID}(/development)?$`) },
+  { method: "PATCH", pattern: new RegExp(`^hoa/reserves/${ID}$`) },
+  { method: "GET", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements$`) },
+  { method: "DELETE", pattern: new RegExp(`^hoa/statements/${ID}/reserve-movements/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/(agenda|invite|attendance)$`) },
   // Protokollentwurf der Versammlung als PDF (A62); Download über /api/handover-files.
   { method: "POST", pattern: new RegExp(`^hoa/meetings/${ID}/protocol-draft$`) },
@@ -971,6 +995,10 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // Incoming invoices (M14): capture, review steps, IBAN confirmation, release, posting.
   { method: "POST", pattern: /^accounting\/invoices$/ },
   { method: "POST", pattern: new RegExp(`^accounting/invoices/${ID}/(reviews|confirm-iban|release|post)$`) },
+  // M14-02 (Welle 5 T05): sachliche Prüfung als Befunde und Toleranzen je Mandant.
+  { method: "GET", pattern: new RegExp(`^accounting/invoices/${ID}/factual-check$`) },
+  { method: "GET", pattern: /^accounting\/invoice-check-settings$/ },
+  { method: "PUT", pattern: /^accounting\/invoice-check-settings$/ },
   // M14-01, M14-08 (Welle 2 P03): Kreditoren mit Saldo, offenen Posten und Kontoauszug;
   // Rechnungspläne lesen, ändern, beenden, löschen; Gutschrift als XRechnung (S711-02).
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/creditors$`) },
