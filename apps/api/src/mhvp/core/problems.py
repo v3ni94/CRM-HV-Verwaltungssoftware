@@ -1419,6 +1419,11 @@ async def _handle_problem(request: Request, exc: Exception) -> JSONResponse:
         developer_message=exc.developer_message,
         errors=exc.errors,
         extensions=exc.extensions,
+        headers=(
+            {"Retry-After": str(exc.extensions["retry_after"])}
+            if "retry_after" in exc.extensions
+            else None
+        ),
     )
 
 

@@ -5,6 +5,12 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.55.0 (01.10.2026) Welle 9 der Lückenliste: Passkey-Mengenbegrenzung und Einstellungsseite Übernahme-Tickets
+
+- Übersicht: Welle 9 der Lückenliste vom 30.09.2026 mit 2 Paketen, keine Migration: Mengenbegrenzung der Passkey-Endpunkte und Einstellungsseite für die Übernahme-Tickets.
+- Auth: Passkey-Optionen (Anmeldung und Registrierung) sind je Client-Adresse und je Benutzer mengenbegrenzt (429 mit Retry-After).
+- Einstellungen: Neue Seite Übernahme-Tickets zur Auswahl von Standardteam und Zuständigem für Tickets aus der Übernahme-Checkliste, mit Hinweis auf fehlende Leserechte und Suchtreffer in den Einstellungen.
+
 ## 1.54.0 (01.10.2026) Welle 8 der Lückenliste: Passkey-Prüfung, Ticket-Ereignisse, Oberflächenreste, Messung, Abnahmeprotokoll, Entscheidungsliste
 
 - Übersicht: Welle 8 der Lückenliste vom 30.09.2026 mit 6 Paketen, keine Migration. Schwerpunkte: Sicherheitsprüfung der Passkey-Implementierung mit sieben Behebungen (docs/reviews/WEBAUTHN-2026-10-01.md, Freigabe bleibt Betreiberentscheidung), Ticket-Ereignisse bei Einzel- und Sammelaktionen, Dokumentauswahl beim Protokollabschluss und Beschlussauswahl bei der Aufbewahrung, Messung der Portal-Belegsuche, Kontoartprüfung der Honorar-Kontenzuordnung und Standardzuweisung der Übernahme-Tickets, Abnahmeprotokoll der Wellen 4 bis 7 (docs/acceptance) und Entscheidungsliste für den Vorstand (docs/plans/ENTSCHEIDUNGEN-2026-10-01.md, 44 Fragen mit Empfehlung und Alternativen).

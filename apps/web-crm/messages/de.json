@@ -5918,6 +5918,10 @@
       "title": "Wissensdatenbank",
       "description": "Gelernte Playbooks und Lernbeispiele aus Erledigungen ansehen."
     },
+    "takeoverDefaults": {
+      "title": "Übernahme-Tickets",
+      "description": "Standardteam und Zuständiger für Tickets aus der Übernahme-Checkliste."
+    },
     "depositRates": {
       "title": "Kautionszinsen",
       "description": "Referenzzinssatz je Jahr für die Kautionsabrechnung."
@@ -10268,6 +10272,18 @@
       "payoutAmount": "Auszahlungsbetrag",
       "createDocument": "Abrechnung als PDF erzeugen und ablegen"
     }
+  },
+  "TakeoverTicketDefaults": {
+    "title": "Übernahme-Tickets",
+    "intro": "Legt fest, welchem Team und welchem Benutzer Tickets aus der Übernahme-Checkliste eines Objekts zugewiesen werden. Leer bedeutet: keine Zuweisung. Die Änderung gilt für Tickets, die danach angelegt werden, bestehende Tickets bleiben unverändert.",
+    "settings": "Einstellungen",
+    "team": "Standardteam",
+    "assignee": "Zuständiger",
+    "none": "Keine Zuweisung",
+    "save": "Speichern",
+    "saved": "Gespeichert.",
+    "readonly": "Sie dürfen die Werte ansehen, aber nicht ändern.",
+    "unavailable": "Teams oder Benutzer konnten nicht vollständig geladen werden. Gespeicherte Werte bleiben erhalten."
   },
   "DepositInterestRates": {
     "title": "Kautionszinsen: Referenzzinssatz je Jahr",

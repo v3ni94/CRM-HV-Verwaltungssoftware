@@ -534,6 +534,16 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["properties:read"],
   },
 
+  // --- Übernahme-Tickets (V06-01) ----------------------------------------------------------
+  {
+    id: "uebernahme-tickets",
+    title: "Übernahme-Tickets, Standardteam und Zuständiger",
+    breadcrumb: [ROOT, "Übernahme-Tickets"],
+    href: "/einstellungen/uebernahme-tickets",
+    keywords: ["übernahme", "checkliste", "standardteam", "zuständiger", "objektübernahme"],
+    permission: ["tenant_settings:read"],
+  },
+
   // --- Kautionszinsen ----------------------------------------------------------------------
   {
     id: "kautionszinsen",

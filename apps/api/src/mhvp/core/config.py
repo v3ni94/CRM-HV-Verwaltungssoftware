@@ -140,6 +140,11 @@ class Settings(BaseSettings):
     rate_limit_per_minute_anonymous: int = Field(default=120, ge=1)
     # Only behind a proxy that overwrites X-Forwarded-For (Traefik); otherwise spoofable.
     rate_limit_trust_forwarded_for: bool = False
+    # WebAuthn option endpoints (W01-01): each call stores a challenge in Redis, so they get a
+    # tighter limit per client address and per user inside a fixed window.
+    webauthn_options_limit_per_ip: int = Field(default=60, ge=1)
+    webauthn_options_limit_per_user: int = Field(default=20, ge=1)
+    webauthn_options_window_seconds: int = Field(default=300, ge=1)
 
     # Handover photos (M30-04): longest edge after scaling, metadata is always stripped.
     handover_image_max_edge: int = Field(default=2000, ge=100, le=20000)

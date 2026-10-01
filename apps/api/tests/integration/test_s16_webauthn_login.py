@@ -235,3 +235,49 @@ def test_w01_review_negative_paths(client: TestClient, world: World) -> None:
     good = fake.get(opts["public_key"]) | {"challenge_id": opts["challenge_id"]}
     locked = client.post(f"{A}/login/webauthn/verify", json=good)
     assert locked.status_code != 200
+
+
+def test_webauthn_options_rate_limit(database: Database, redis_url: str, world: World) -> None:
+    """W01-01: option endpoints are limited per client address and per user; the window resets."""
+    import time
+
+    cfg = _settings(
+        database,
+        redis_url,
+        webauthn_enabled=True,
+        webauthn_rp_id=RP,
+        webauthn_origins=[ORIGIN],
+        webauthn_options_limit_per_ip=1000,
+        webauthn_options_limit_per_user=3,
+        webauthn_options_window_seconds=2,
+    )
+    with TestClient(create_app(cfg)) as c:
+        h = bearer(login_password_only(c, world, "s16two"))
+        time.sleep(2.1 - time.time() % 2)  # start of a fresh window
+        codes = [c.post(f"{A}/webauthn/register/options", json={}, headers=h) for _ in range(4)]
+        assert [r.status_code for r in codes[:3]] == [200, 200, 200]
+        assert codes[3].status_code == 429
+        assert codes[3].json()["code"] == "MHVP-CORE-0006"
+        assert int(codes[3].headers["Retry-After"]) >= 1
+        time.sleep(2.1)
+        assert c.post(f"{A}/webauthn/register/options", json={}, headers=h).status_code == 200
+
+
+def test_webauthn_login_options_ip_limit(database: Database, redis_url: str) -> None:
+    import time
+
+    cfg = _settings(
+        database,
+        redis_url,
+        webauthn_enabled=True,
+        webauthn_rp_id=RP,
+        webauthn_origins=[ORIGIN],
+        webauthn_options_limit_per_ip=2,
+        webauthn_options_window_seconds=2,
+    )
+    with TestClient(create_app(cfg)) as c:
+        time.sleep(2.1 - time.time() % 2)
+        res = [c.post(f"{A}/login/webauthn/options", json={}).status_code for _ in range(3)]
+        assert res == [200, 200, 429]
+        time.sleep(2.1)
+        assert c.post(f"{A}/login/webauthn/options", json={}).status_code == 200

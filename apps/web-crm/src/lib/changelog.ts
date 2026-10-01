@@ -17,6 +17,17 @@ export type ChangelogEntry = {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "1.55.0",
+    date: "01.10.2026",
+    title:
+      "Welle 9 der Lückenliste: Passkey-Mengenbegrenzung und Einstellungsseite Übernahme-Tickets",
+    changes: [
+      "Übersicht: Welle 9 der Lückenliste vom 30.09.2026 mit 2 Paketen, keine Migration: Mengenbegrenzung der Passkey-Endpunkte und Einstellungsseite für die Übernahme-Tickets.",
+      "Auth: Passkey-Optionen (Anmeldung und Registrierung) sind je Client-Adresse und je Benutzer mengenbegrenzt (429 mit Retry-After).",
+      "Einstellungen: Neue Seite Übernahme-Tickets zur Auswahl von Standardteam und Zuständigem für Tickets aus der Übernahme-Checkliste, mit Hinweis auf fehlende Leserechte und Suchtreffer in den Einstellungen.",
+    ],
+  },
+  {
     version: "1.54.0",
     date: "01.10.2026",
     title:

@@ -442,3 +442,9 @@ Nach dem Update ruft ein Plattform-Administrator einmal `POST /api/v1/platform/m
 Für die Aufgaben, die aus der Checkliste der Objektübernahme entstehen, kann der Mandant ein Standardteam und einen Zuständigen festlegen (Schnittstelle `/onboarding/takeover-ticket-defaults`, Recht Mandanteneinstellungen). Beide Angaben sind optional, ohne Angabe werden die Aufgaben nicht zugewiesen. Die Einstellung gilt für Aufgaben, die danach angelegt werden. Ob bei Mietobjekten mit mehreren Eigentümern ein Sammelkonto je Eigentümer angelegt wird, ist noch nicht entschieden, es wird kein Sammelkonto angelegt.
 
 Die Kontenzuordnung der Honorarbuchung prüft die Kontoart: Forderungskonto Aktiv, Erlöskonto Ertrag, Umsatzsteuerkonto Passiv. Andere Konten werden abgelehnt.
+
+## Übernahme-Tickets (Standardteam und Zuständiger)
+
+Unter Einstellungen, Übernahme-Tickets legen Sie fest, welchem Team und welchem Benutzer die Tickets aus der Übernahme-Checkliste eines Objekts zugewiesen werden. Beide Felder sind Auswahllisten aus den Teams und aktiven Benutzern des Mandanten. Die Auswahl "Keine Zuweisung" bedeutet, dass die Tickets ohne Team und ohne Zuständigen angelegt werden.
+
+Die Änderung gilt nur für Tickets, die nach dem Speichern aus der Checkliste angelegt werden, bestehende Tickets bleiben unverändert. Ansehen dürfen Sie die Werte mit dem Recht Mandanteneinstellungen lesen, ändern nur mit dem Recht Mandanteneinstellungen ändern. Fehlt Ihnen das Leserecht für Teams oder Benutzer, zeigt die Auswahl nur den gespeicherten Wert, und ein Hinweis weist darauf hin.

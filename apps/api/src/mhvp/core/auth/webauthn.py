@@ -30,6 +30,7 @@ import logging
 import re
 import secrets
 import struct
+import time
 import uuid
 from dataclasses import dataclass
 from typing import Any
@@ -37,6 +38,7 @@ from typing import Any
 from cryptography.exceptions import InvalidSignature
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import ec, ed25519, padding, rsa
+from redis.exceptions import RedisError
 
 from mhvp.core.config import Settings
 from mhvp.core.problems import ErrorCodes, ProblemError
@@ -430,6 +432,39 @@ def verify_assertion(
 
 def _challenge_key(challenge_id: str) -> str:
     return f"webauthn:challenge:{challenge_id}"
+
+
+async def enforce_options_limit(
+    redis: Any, settings: Any, *, scope: str, ip: str, user_id: str | None
+) -> None:
+    """Fixed window counter per client address and per user for the option endpoints (W01-01).
+
+    ``scope`` separates ``login`` from ``register``. Exceeding a limit raises 429
+    (``MHVP-CORE-0006``) with ``Retry-After`` in the extensions. Fails open if Redis is
+    unavailable, like the global middleware; the challenge store would fail anyway.
+    """
+    window = int(settings.webauthn_options_window_seconds)
+    now = int(time.time())
+    start = now - now % window
+    reset = start + window - now
+    checks = [(f"ip:{ip}", int(settings.webauthn_options_limit_per_ip))]
+    if user_id is not None:
+        checks.append((f"user:{user_id}", int(settings.webauthn_options_limit_per_user)))
+    for subject, limit in checks:
+        key = f"webauthn:opts:{scope}:{subject}:{start}"
+        try:
+            async with redis.pipeline(transaction=True) as pipe:
+                pipe.incr(key)
+                pipe.expire(key, window * 2)
+                count = int((await pipe.execute())[0])
+        except (RedisError, OSError):
+            return
+        if count > limit:
+            raise ProblemError(
+                ErrorCodes.RATE_LIMITED,
+                detail=f"Zu viele Anfragen. Bitte in {reset} Sekunden erneut versuchen.",
+                extensions={"retry_after": reset},
+            )
 
 
 async def issue_challenge(redis: Any, *, purpose: str, **context: Any) -> tuple[str, bytes]:

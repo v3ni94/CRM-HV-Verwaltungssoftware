@@ -13,6 +13,7 @@ from mhvp.core.auth.principal import Principal, get_principal, sessions
 from mhvp.core.config import Settings
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
 from mhvp.core.problems import ErrorCodes, ProblemError
+from mhvp.core.request_identity import client_ip
 from mhvp.platform.models import (
     Membership,
     MembershipRole,
@@ -650,6 +651,13 @@ async def webauthn_register_options(
         raise ProblemError(ErrorCodes.FORBIDDEN)
     settings = request.app.state.settings
     webauthn.ensure_available(settings)
+    await webauthn.enforce_options_limit(
+        _redis(request),
+        settings,
+        scope="register",
+        ip=client_ip(request.scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for),
+        user_id=str(principal.user_id),
+    )
     passwordless = bool(body and body.passwordless)
     if passwordless:
         await _refuse_passwordless_for_portal(request, principal.user_id)
@@ -768,6 +776,14 @@ async def webauthn_login_options(
     user_id: uuid.UUID | None = None
     if body.mfa_token is not None:
         user_id = _mfa_user(settings, body.mfa_token)
+    await webauthn.enforce_options_limit(
+        _redis(request),
+        settings,
+        scope="login",
+        ip=client_ip(request.scope, trust_forwarded_for=settings.rate_limit_trust_forwarded_for),
+        user_id=str(user_id) if user_id else None,
+    )
+    if user_id is not None:
         async with platform_transaction(sessions(request)) as session:
             rows = (await session.scalars(_webauthn_active(user_id))).all()
         allow = [

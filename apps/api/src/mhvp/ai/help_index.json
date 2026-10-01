@@ -1247,6 +1247,23 @@
  },
  {
   "kind": "page",
+  "title": "Übernahme-Tickets, Standardteam und Zuständiger",
+  "source": "Einstellungen",
+  "href": "/einstellungen/uebernahme-tickets",
+  "keywords": [
+   "übernahme",
+   "checkliste",
+   "standardteam",
+   "zuständiger",
+   "objektübernahme"
+  ],
+  "permission": [
+   "tenant_settings:read"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Kautionszinsen, Referenzzinssatz je Jahr",
   "source": "Einstellungen",
   "href": "/einstellungen/kautionszinsen",
@@ -4610,6 +4627,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Für die Aufgaben, die aus der Checkliste der Objektübernahme entstehen, kann der Mandant ein Standardteam und einen Zuständigen festlegen (Schnittstelle /onboarding/takeover-ticket-defaults, Recht Mandanteneinstellungen). Beide Angaben sind optional, ohne Angabe werden die Aufgab",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Übernahme-Tickets (Standardteam und Zuständiger)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Übernahme-Tickets legen Sie fest, welchem Team und welchem Benutzer die Tickets aus der Übernahme-Checkliste eines Objekts zugewiesen werden. Beide Felder sind Auswahllisten aus den Teams und aktiven Benutzern des Mandanten. Die Auswahl \"Keine Zuweisung\" bede",
   "file": "docs/handbuch/einstellungen.md"
  },
  {

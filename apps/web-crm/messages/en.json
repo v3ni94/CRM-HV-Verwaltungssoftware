@@ -5918,6 +5918,10 @@
       "title": "Knowledge base",
       "description": "View learned playbooks and learning examples from resolutions."
     },
+    "takeoverDefaults": {
+      "title": "Takeover tickets",
+      "description": "Default team and assignee for tickets from the takeover checklist."
+    },
     "depositRates": {
       "title": "Deposit interest",
       "description": "Reference interest rate per year for the deposit statement."
@@ -10268,6 +10272,18 @@
       "payoutAmount": "Payout amount",
       "createDocument": "Create and file settlement as PDF"
     }
+  },
+  "TakeoverTicketDefaults": {
+    "title": "Takeover tickets",
+    "intro": "Defines which team and which user tickets from a property's takeover checklist are assigned to. Empty means no assignment. The change applies to tickets created afterwards, existing tickets stay unchanged.",
+    "settings": "Settings",
+    "team": "Default team",
+    "assignee": "Assignee",
+    "none": "No assignment",
+    "save": "Save",
+    "saved": "Saved.",
+    "readonly": "You may view the values but not change them.",
+    "unavailable": "Teams or users could not be loaded completely. Stored values are kept."
   },
   "DepositInterestRates": {
     "title": "Deposit interest: reference rate per year",
