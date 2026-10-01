@@ -199,6 +199,15 @@ async def _outs(session: Any, contracts: Sequence[Contract]) -> list[s.ContractO
     return out
 
 
+CONTRACT_EVENT_ALIASES: dict[str, str] = {
+    "contract.updated": "contract.changed",
+    "contract.versioned": "contract.changed",
+    "contract.schedule_updated": "contract.changed",
+    "contract.payment_added": "contract_payment.changed",
+    "contract.payment_updated": "contract_payment.changed",
+}
+
+
 async def _event(
     session: Any,
     principal: TenantPrincipal,
@@ -218,6 +227,18 @@ async def _event(
         payload={k: str(v) if v is not None else None for k, v in payload.items()},
         changes=changes,
     )
+    # Spec names of section 12 in addition to the detailed types (assumption A-GA04-03).
+    alias = CONTRACT_EVENT_ALIASES.get(type_)
+    if alias is not None:
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type=alias,
+            entity_type="contract",
+            entity_id=entity_id,
+            actor_user_id=principal.user_id,
+            payload={"source_type": type_, "contract_id": str(entity_id)},
+        )
 
 
 def _plain(values: dict[str, Any]) -> dict[str, Any]:

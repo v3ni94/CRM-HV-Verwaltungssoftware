@@ -110,3 +110,17 @@ four eyes on the internal approval, the status log and the check of the posted e
 issued, due, posted, locked; resolved refused; issued, due, posted behind G3; migration 0295).
 Rule: `docs/rules/S69-01-statement-status-model.md`.
 
+
+## AA12 Regelversion im Snapshot (01.10.2026)
+
+`services.py` hält den zum Beginn des Abrechnungszeitraums wirksamen Registereintrag (`M17-betrkv-statement`) unter `inputs.rule_register` fest, sofern vorhanden. Die Berechnung bleibt an die Codetabelle `RULE_VERSIONS` gebunden.
+
+## AA11 Ausgaben und Fristausnahme (01.10.2026)
+
+- `info_sheet.py`, `POST /statements/{id}/info-sheet/preview`: Informationsblatt aus dem
+  Snapshot; `letters/preview` mit `include_info_sheet` hängt es an jedes Anschreiben (GA06-02).
+- `Statement.deadline_exception_document_id`, `_set_by`, `_set_at` (Migration 0313): a late
+  claim needs reason and evidence document (`deadline_exception_effective`, GA06-04).
+- Owner statement: `results.receipts` (posted cost entries with receipt reference),
+  `results.section_35a` (WEG labour shares of the SEV owner's units, information only),
+  `attach_receipts` with `PATCH /billing/owner-statements/{id}/options` (GA03-08, GA06-03).

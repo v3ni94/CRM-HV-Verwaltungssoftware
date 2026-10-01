@@ -1213,6 +1213,19 @@ def test_a07_tenant_letters_from_snapshot(
     assert "Nachzahlung zu Ihren Lasten in Höhe von 600,00 EUR" in bundle_text
     assert bundle_text.index(f"Guthaben{RUN}") < bundle_text.index(f"Nachzahler{RUN}")
 
+    # GA06-02: Informationsblatt as its own output and appended to each letter on request.
+    sheet = client.post(f"{S}/{st['id']}/info-sheet/preview", headers=h)
+    assert sheet.status_code == 200, sheet.text
+    sheet_text = "\n".join(p.extract_text() for p in PdfReader(io.BytesIO(sheet.content)).pages)
+    assert "Informationsblatt" in sheet_text
+    assert "1.200,00 EUR" in sheet_text
+    assert "nicht freigegeben" in sheet_text  # texts pending operator release (AA11-01)
+    with_sheet = client.post(
+        f"{S}/{st['id']}/letters/preview", json={"include_info_sheet": True}, headers=h
+    )
+    assert with_sheet.status_code == 200, with_sheet.text
+    assert len(PdfReader(io.BytesIO(with_sheet.content)).pages) > len(pages)
+
     # Filing: one draft document per tenant, linked to the contract; status unchanged.
     stored = _ok(client.post(f"{S}/{st['id']}/letters", headers=h), 201)
     assert stored["status"] == "calculated"
@@ -1316,6 +1329,7 @@ def test_a07_tenant_letters_from_snapshot(
     other = bearer(login(client, world, "m17other"))
     assert client.post(f"{S}/{st['id']}/letters/preview", headers=other).status_code == 404
     assert client.post(f"{S}/{st['id']}/letters", headers=other).status_code == 404
+    assert client.post(f"{S}/{st['id']}/info-sheet/preview", headers=other).status_code == 404
     assert (
         client.get(f"/api/v1/documents/{stored['letters'][0]['document_id']}", headers=other)
     ).status_code == 404

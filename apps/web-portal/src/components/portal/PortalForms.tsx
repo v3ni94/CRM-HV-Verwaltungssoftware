@@ -14,6 +14,10 @@ type Files = Record<string, File[]>;
 /** Ein Formular der Verwaltung (A56): Felder aus der Vorlage, Pflichtfelder werden vor dem
  *  Senden geprüft, Dateien werden zuerst hochgeladen (nur eigene Uploads) und dann mit der
  *  Einreichung verknüpft. Die Einreichung wird ein Vorgang bei der Verwaltung (Ticket). */
+/** Display only elements carry no value (heading, info, divider). */
+const DISPLAY: string[] = ["heading", "info", "divider"];
+const isCheck = (type: string) => type === "checkbox" || type === "consent";
+
 function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
   const t = useTranslations("Forms");
   const [values, setValues] = useState<Values>({});
@@ -35,14 +39,14 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
     event.preventDefault();
     setError(null);
     for (const field of form.fields) {
-      if (field.type === "heading" || field.type === "info") continue;
+      if (DISPLAY.includes(field.type)) continue;
       const raw = values[field.key];
       const filled =
         field.type === "file"
           ? (files[field.key]?.length ?? 0) > 0
           : field.type === "multiselect"
             ? Array.isArray(raw) && raw.length > 0
-            : field.type === "checkbox"
+            : isCheck(field.type)
               ? raw === "true"
               : typeof raw === "string" && raw.trim().length > 0;
       if (field.required && !filled) {
@@ -53,7 +57,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
     setBusy(true);
     const payload: Record<string, string | string[]> = {};
     for (const field of form.fields) {
-      if (field.type === "heading" || field.type === "info") continue;
+      if (DISPLAY.includes(field.type)) continue;
       if (field.type === "file") {
         const ids: string[] = [];
         for (const file of files[field.key] ?? []) {
@@ -71,7 +75,7 @@ function FormCard({ form, onDone }: { form: PortalForm; onDone: () => void }) {
       } else if (field.type === "multiselect") {
         const chosen = values[field.key];
         if (Array.isArray(chosen) && chosen.length > 0) payload[field.key] = chosen;
-      } else if (field.type === "checkbox") {
+      } else if (isCheck(field.type)) {
         payload[field.key] = values[field.key] === "true" ? "true" : "false";
       } else {
         const raw = values[field.key];
@@ -149,6 +153,7 @@ function FormElement({
   const t = useTranslations("Forms");
   const text = typeof value === "string" ? value : "";
   const required = field.required || undefined;
+  if (field.type === "divider") return <hr className="border-border" />;
   if (field.type === "heading") return <h3 className="text-base font-semibold">{field.label}</h3>;
   if (field.type === "info") {
     return (
@@ -159,7 +164,7 @@ function FormElement({
     );
   }
   const help = field.help ? <p className={ui.help}>{field.help}</p> : null;
-  if (field.type === "checkbox") {
+  if (isCheck(field.type)) {
     return (
       <div>
         <label htmlFor={id} className="flex items-start gap-2 text-sm">
@@ -227,7 +232,7 @@ function FormElement({
           className={ui.input}
           onChange={(e) => onFiles(Array.from(e.target.files ?? []))}
         />
-      ) : field.type === "textarea" ? (
+      ) : field.type === "textarea" || field.type === "address" ? (
         <textarea id={id} rows={4} aria-required={required} className={ui.input} value={text} onChange={(e) => onChange(e.target.value)} />
       ) : (
         <input
@@ -246,6 +251,8 @@ function FormElement({
                       : "text"
           }
           step={field.type === "number" ? "any" : undefined}
+          inputMode={field.type === "amount" ? "decimal" : undefined}
+          autoComplete={field.type === "signature" ? "name" : undefined}
           aria-required={required}
           className={ui.input}
           value={text}

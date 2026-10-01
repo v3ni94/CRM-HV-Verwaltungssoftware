@@ -51,6 +51,35 @@ async def _world(settings: Any) -> World:
         await engine.dispose()
 
 
+async def _evidence_document(settings: Any, tenant: Any) -> str:
+    """Document row as evidence of the deadline exception (no object storage needed)."""
+    from mhvp.core.db.engine import create_app_engine, create_session_factory
+    from mhvp.core.db.tenancy import tenant_transaction
+    from mhvp.documents.models import Document, DocumentSource, StorageKind, TextStatus
+
+    engine = create_app_engine(settings)
+    try:
+        async with tenant_transaction(create_session_factory(engine), tenant) as session:
+            doc = Document(
+                tenant_id=tenant,
+                title="Nachweis Messdienst",
+                filename="nachweis.pdf",
+                mime_type="application/pdf",
+                size=10,
+                sha256="e" * 64,
+                storage=StorageKind.MINIO,
+                storage_ref="ref-deadline",
+                text_status=TextStatus.NONE,
+                source=DocumentSource.UPLOAD,
+                visibility=[],
+            )
+            session.add(doc)
+            await session.flush()
+            return str(doc.id)
+    finally:
+        await engine.dispose()
+
+
 @pytest.fixture(scope="module")
 def world(database: Database, redis_url: str) -> World:
     return asyncio.run(_world(_settings(database, redis_url)))
@@ -270,7 +299,7 @@ def test_m17_02_03_05_06_results_access_diff_inspection(
 
 
 def test_m17_01_result_entries_are_drafts_behind_g3(
-    clients: tuple[TestClient, TestClient], world: World
+    clients: tuple[TestClient, TestClient], world: World, database: Database, redis_url: str
 ) -> None:
     client, gated = clients
     h = bearer(login(client, world, "m17radmin"))
@@ -300,7 +329,22 @@ def test_m17_01_result_entries_are_drafts_behind_g3(
     st = _statement(client, h, ledger)
     # A recorded exception keeps the test independent of the day it runs (A04 lock).
     exception = "Verzögerung durch Messdienst, Nachweis Schreiben vom 10.12.2026"
-    _ok(client.patch(f"{S}/{st['id']}", json={"deadline_exception": exception}, headers=h))
+    text_only = _ok(
+        client.patch(f"{S}/{st['id']}", json={"deadline_exception": exception}, headers=h)
+    )
+    # GA06-04: the reason alone does not release a late claim; evidence document required.
+    assert text_only["deadline_exception_effective"] is False
+    assert text_only["deadline_exception_set_by"] is not None
+    unknown = {"deadline_exception_document_id": "00000000-0000-7000-8000-000000000000"}
+    assert client.patch(f"{S}/{st['id']}", json=unknown, headers=h).status_code == 422
+    evidence = asyncio.run(_evidence_document(_settings(database, redis_url), world.tenant_a))
+    with_doc = _ok(
+        client.patch(
+            f"{S}/{st['id']}", json={"deadline_exception_document_id": evidence}, headers=h
+        )
+    )
+    assert with_doc["deadline_exception_effective"] is True
+    assert with_doc["deadline_exception_document_id"] == evidence
     _ok(client.post(f"{S}/{st['id']}/cost-items", json=_item(w), headers=h), 201)
     _ok(client.post(f"{S}/{st['id']}/calculate", headers=h))
     _ok(

@@ -163,7 +163,7 @@ rule never removes a process code and never changes the status.
 ## Welle 2 (P21)
 
 - Testmodus: `automation_rule.test_mode`; im Beat-Lauf nur Run mit Status `dry_run`, keine Aktion.
-- Jobzeitpläne je Mandant: `tenant_job_schedule`, `GET/PUT /automation/job-schedules`, Prüfung über `job_schedule.job_allowed`; die Domänenjobs rufen sie noch nicht auf (docs/OPEN_QUESTIONS.md P21-01).
+- Jobzeitpläne je Mandant: `tenant_job_schedule`, `GET/PUT /automation/job-schedules`, Prüfung über `job_schedule.job_allowed`; seit AA15 rufen alle Mandantenjobs sie auf (siehe Abschnitt Welle 12, AA15).
 
 ### Aktionen Feld setzen und Dienstleister informieren (S15-06, Paket Q11)
 
@@ -173,3 +173,9 @@ rule never removes a process code and never changes the status.
 ### Aktion set_record_field (T12, S15-06)
 
 Geschlossene Liste `models.RECORD_FIELDS`: Auftrag (`status` nur `requested` oder `in_progress` entlang `ORDER_FLOW` mit `WorkOrderEvent`, `scheduled_at` mit Zeitzone, `assignee_user_id` als Zuständiger des Auftragstickets) und Dokument (`category_id` mit Aufbewahrungsprofil, verweigert bei Sperre oder Dauerunterlage, `property_id` als Verknüpfung). Ziel ist das Ereignisobjekt; Änderungsereignisse tragen die Automatisierungsmarke. Regel: `docs/rules/T12.md`.
+
+## Welle 12 (AA15, GA12)
+
+- GA12-01: `job_allowed` wird jetzt auch in `documents.process_inbox` (Schlüssel `documents-process-inbox`), im geplanten Abstimmungsbericht (`imports-reconciliation-report`, nur Auslöser `beat`, ein manueller Lauf bleibt möglich) und im Zahllauf (`payments-payment-run-preview`, neu im `JOB_CATALOG`, nur Vorschau) geprüft. `ops-backup-verify` ist plattformweit und nicht mehr im Katalog.
+- GA12-06: `in_window` löst die Startzeit auf einen echten Zeitpunkt (erste Entsprechung, UTC) auf; am 25.10.2026 öffnet das Fenster einmal, nicht in beiden Stunden 02:00, am 29.03.2026 verschiebt sich eine Startzeit in der fehlenden Stunde auf den ersten gültigen Zeitpunkt. `lock_job` (Advisory Lock je Mandant und Job) serialisiert planmäßigen und manuellen Lauf; Mahnlauf und Zahllauf Vorschau legen je Mandant und Tag nur einen geplanten Lauf an. Tests: `tests/integration/test_ga12_jobs.py`.
+- GA12-02, GA12-03: CRM `/einstellungen/automatisierung` zeigt unter den Regeln die Tabelle der Standardjobs (Schalter, Uhrzeit HH:MM, `JobSchedulesAdmin`), im Regelformular den Schalter Testmodus (nur Protokoll), in der Regelliste die Kennzeichnung und im Protokoll den Ergebnisfilter (Testlauf).

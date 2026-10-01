@@ -184,6 +184,17 @@ class PropertyTerminationOut(_Out):
     reactivated_by_user_id: uuid.UUID | None
 
 
+def _document_ids(value: list[str]) -> list[str]:
+    """Document references (DMS ids): valid UUIDs, no duplicates (GA02-04)."""
+    try:
+        ids = [str(uuid.UUID(v)) for v in value]
+    except ValueError:
+        raise ValueError("Dokumente müssen Dokument-IDs sein") from None
+    if len(set(ids)) != len(ids):
+        raise ValueError("Ein Dokument ist mehrfach eingetragen")
+    return ids
+
+
 class BuildingIn(_In):
     name: str = Field(min_length=1, max_length=200)
     street: str | None = None
@@ -221,6 +232,9 @@ class BuildingIn(_In):
     energy_certificate_construction_year: int | None = Field(default=None, ge=1500, le=2100)
     energy_certificate_issued_on: date | None = None
     energy_certificate_valid_until: date | None = None
+    energy_certificate_document_id: uuid.UUID | None = Field(
+        default=None, description="Energieausweis als Dokument (DMS), GA02-03"
+    )
     notes: str | None = None
     custom_fields: dict[str, Any] = Field(default_factory=dict)
 
@@ -564,6 +578,12 @@ class ProviderPatch(_In):
     customer_number: str | None = Field(default=None, max_length=50)
     creditor_account_id: uuid.UUID | None = None
     categories: list[str] | None = None
+    documents: list[str] | None = Field(default=None, max_length=50)
+
+    @field_validator("documents")
+    @classmethod
+    def _documents(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _document_ids(value)
 
 
 class VatOptionHistoryOut(_Out):
@@ -592,6 +612,15 @@ class BillingPeriodOut(BillingPeriodIn):
     model_config = ConfigDict(from_attributes=True, extra="ignore")
     id: uuid.UUID
     property_id: uuid.UUID
+    status: str = "open"
+    locked_at: datetime | None = None
+
+
+class BillingPeriodTransitionIn(_In):
+    """Status change of a billing period (GA02-01): one step forward or one step back, never
+    out of ``closed``."""
+
+    status: Literal["open", "results_created", "confirmed", "closed"]
 
 
 class SubCommunityIn(_In):
@@ -748,6 +777,14 @@ class ProviderIn(_Period):
     )
     exemption_cert_valid_until: date | None = None
     creditor_account_id: uuid.UUID | None = Field(default=None, description="Kreditorenkonto")
+    documents: list[str] = Field(
+        default_factory=list, max_length=50, description="Dokumentverweise (DMS), GA02-04"
+    )
+
+    @field_validator("documents")
+    @classmethod
+    def _documents(cls, value: list[str]) -> list[str]:
+        return _document_ids(value)
 
     @model_validator(mode="after")
     def _exemption(self) -> Self:
@@ -771,6 +808,14 @@ class MaintenanceIn(_In):
     remind_before: str | None = Field(default=None, pattern=r"^(14d|1m|3m|6m)$")
     interval_months: int | None = Field(default=None, ge=1, le=240)
     provider_relation_id: uuid.UUID | None = None
+    documents: list[str] = Field(
+        default_factory=list, max_length=50, description="Dokumentverweise (DMS), GA02-04"
+    )
+
+    @field_validator("documents")
+    @classmethod
+    def _documents(cls, value: list[str]) -> list[str]:
+        return _document_ids(value)
 
 
 class MaintenanceOut(MaintenanceIn):
@@ -792,6 +837,12 @@ class MaintenancePatch(_In):
     remind_before: str | None = Field(default=None, pattern=r"^(14d|1m|3m|6m)$")
     interval_months: int | None = Field(default=None, ge=1, le=240)
     provider_relation_id: uuid.UUID | None = None
+    documents: list[str] | None = Field(default=None, max_length=50)
+
+    @field_validator("documents")
+    @classmethod
+    def _documents(cls, value: list[str] | None) -> list[str] | None:
+        return None if value is None else _document_ids(value)
 
 
 class MaintenanceDoneIn(_In):

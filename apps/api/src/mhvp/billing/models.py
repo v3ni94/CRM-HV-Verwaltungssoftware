@@ -73,6 +73,14 @@ class Statement(IdMixin, TimestampMixin, TenantMixin, Base):
     snapshot_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     delivered_at: Mapped[date | None] = mapped_column(Date)
     deadline_exception: Mapped[str | None] = mapped_column(Text)
+    # GA06-04 (7.6 A04): evidence document of the exception and who recorded it; a late claim
+    # is only released with reason and evidence document (``deadline_exception_effective``).
+    deadline_exception_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("document.id", ondelete="RESTRICT", name="fk_statement_deadline_exc_document"),
+    )
+    deadline_exception_set_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    deadline_exception_set_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # 6.5 operating_cost_statement (M17-04): interim statement with purpose, heating switch and
     # letter settings (texts for Guthaben/Nachzahlung, format, bundled output).
     interim: Mapped[bool] = mapped_column(
@@ -90,6 +98,12 @@ class Statement(IdMixin, TimestampMixin, TenantMixin, Base):
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
     )
     locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+    @property
+    def deadline_exception_effective(self) -> bool:
+        """GA06-04: an exception to the statement deadline counts only with reason and
+        evidence document; the legal assessment stays with the operator (A04)."""
+        return bool(self.deadline_exception) and self.deadline_exception_document_id is not None
 
 
 DELIVERY_METHODS = ("post", "registered_mail", "hand_delivery", "email", "portal")

@@ -24,6 +24,7 @@ from datetime import UTC, date, datetime
 from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication.models import Dispatch
@@ -33,7 +34,13 @@ from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents import letters
 from mhvp.documents import services as docs
 from mhvp.documents.blobs import BlobStore
-from mhvp.documents.models import Document, DocumentLink, DocumentSource, LinkRole
+from mhvp.documents.models import (
+    Document,
+    DocumentLink,
+    DocumentSource,
+    GeneratedDocument,
+    LinkRole,
+)
 
 CHANNELS = ("post", "email", "portal")
 EVIDENCE = ("registered_mail", "courier", "hand_delivery", "email_log", "portal_read", "other")
@@ -88,9 +95,44 @@ async def store_letter(
     filename: str,
     links: list[tuple[str, uuid.UUID]],
     category_id: uuid.UUID | None = None,
+    origin: str | None = None,
+    recipient_contact_id: uuid.UUID | None = None,
 ) -> Document:
-    """Render the letter on the letterhead and file it as a generated document."""
+    """Render the letter on the letterhead and file it as a generated document. The
+    provenance row (``generated_document``, GA04-11) names the built-in letter (``origin``,
+    default ``letter``), the first linked entity as context and the recipient; without an
+    explicit recipient the first contact link is taken."""
     pdf = letters.render_pdf(head, letter)
+    document = await _store(session, blobs, principal, pdf, title, filename, links, category_id)
+    contact = recipient_contact_id or next((i for t, i in links if t == "contact"), None)
+    context = next(((t, i) for t, i in links if t != "contact"), None) or (
+        ("contact", contact) if contact else (None, None)
+    )
+    session.add(
+        GeneratedDocument(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            document_id=document.id,
+            template_code=(origin or "letter")[:63],
+            context_type=context[0],
+            context_id=context[1],
+            recipient_contact_id=contact,
+        )
+    )
+    await session.flush()
+    return document
+
+
+async def _store(
+    session: AsyncSession,
+    blobs: BlobStore,
+    principal: TenantPrincipal,
+    pdf: bytes,
+    title: str,
+    filename: str,
+    links: list[tuple[str, uuid.UUID]],
+    category_id: uuid.UUID | None,
+) -> Document:
     return await docs.store_document(
         session,
         blobs,
@@ -165,6 +207,12 @@ async def record_dispatch(
     )
     row.evidence_kind = record.evidence_kind
     row.evidence_ref = record.evidence_ref
+    # GA04-11: the provenance row of the document points to its dispatch record.
+    generated = await session.scalar(
+        select(GeneratedDocument).where(GeneratedDocument.document_id == document.id)
+    )
+    if generated is not None:
+        generated.dispatch_id = row.id
     if record.channel == "post" and record.sent_on is not None:
         row.status = "sent"
         row.sent_at = datetime.combine(record.sent_on, datetime.min.time(), tzinfo=UTC)

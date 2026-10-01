@@ -1,7 +1,7 @@
 """Portal forms (14, M21-01, A56): configurable form templates per tenant and their submissions.
 
 A template names the form, its ticket category, the audience (tenant, owner, all) and the
-fields (14 element types, see INPUT_TYPES and DISPLAY_TYPES; required or optional). A
+fields (20 element types, see INPUT_TYPES and DISPLAY_TYPES; required or optional). A
 submission from the portal is a Vorgang: it creates a ticket in the template's category, the
 values become structured text in the public description, uploaded files become document
 links (attachments). The raw values stay on the submission row so the ticket text can be
@@ -37,10 +37,20 @@ INPUT_TYPES = (
     "email",
     "phone",
     "file",
+    # GA11-02: six further types derived from the portal functions of section 14 (address
+    # change, damage location, SEPA/signature, consents, invoice submission); see ASSUMPTIONS.
+    "address",
+    "location",
+    "signature",
+    "consent",
+    "amount",
 )
-DISPLAY_TYPES = ("heading", "info")
+DISPLAY_TYPES = ("heading", "info", "divider")
 FIELD_TYPES = INPUT_TYPES + DISPLAY_TYPES
 CHOICE_TYPES = ("select", "radio", "multiselect")
+CHECK_TYPES = ("checkbox", "consent")
+_AMOUNT = re.compile(r"^\d{1,12}([.,]\d{1,2})?$")
+MIN_SIGNATURE = 2
 DELIVERIES = ("ticket", "email")
 MAX_HELP = 1000
 MAX_FIELDS = 40
@@ -184,7 +194,7 @@ def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dic
         key, ftype, required = f["key"], f["type"], bool(f.get("required"))
         raw = values.get(key)
         loc = f"values.{key}"
-        if ftype == "checkbox":
+        if ftype in CHECK_TYPES:
             checked = raw is True or (isinstance(raw, str) and raw.strip().lower() == "true")
             unchecked = (
                 raw is None
@@ -230,6 +240,10 @@ def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dic
             errors.append(_fe(loc, "Text zu lang."))
         elif ftype == "number" and not _NUMBER.match(text):
             errors.append(_fe(loc, "Keine gültige Zahl."))
+        elif ftype == "amount" and not _AMOUNT.match(text):
+            errors.append(_fe(loc, "Kein gültiger Betrag (höchstens zwei Nachkommastellen)."))
+        elif ftype == "signature" and len(text) < MIN_SIGNATURE:
+            errors.append(_fe(loc, "Unterschrift (Name) fehlt."))
         elif ftype == "date":
             try:
                 date.fromisoformat(text)
@@ -244,7 +258,7 @@ def validate_values(fields: list[dict[str, Any]], values: dict[str, Any]) -> dic
         elif ftype in ("select", "radio") and text not in (f.get("options") or []):
             errors.append(_fe(loc, "Keine zulässige Auswahl."))
         if not any(e.field == loc for e in errors):
-            out[key] = text
+            out[key] = text.replace(",", ".") if ftype == "amount" else text
     if errors:
         raise ProblemError(ErrorCodes.VALIDATION, errors=errors)
     return out
@@ -259,7 +273,7 @@ def render_values(
         if f["type"] in DISPLAY_TYPES:
             continue
         raw = values.get(f["key"])
-        if f["type"] == "checkbox":
+        if f["type"] in CHECK_TYPES:
             lines.append(f"{f['label']}: {'ja' if raw == 'true' else 'nein'}")
             continue
         if raw is None or raw == "" or raw == []:
@@ -274,6 +288,9 @@ def render_values(
             shown = f"{d:%d.%m.%Y}"
         elif f["type"] == "number":
             shown = str(raw).replace(".", ",")
+        elif f["type"] == "amount":
+            whole, _, cents = str(raw).partition(".")
+            shown = f"{int(whole):,}".replace(",", ".") + "," + (cents + "00")[:2] + " EUR"
         else:
             shown = str(raw)
         lines.append(f"{f['label']}: {shown}")

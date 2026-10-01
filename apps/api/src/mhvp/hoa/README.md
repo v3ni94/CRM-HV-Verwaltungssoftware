@@ -171,3 +171,35 @@ scope guard (A37): a `legal_entity_id` parameter or the id of a WEG record with 
 outside `Membership.legal_entity_ids` answers 404. The reserve opening lock covers statements from
 the earlier opening year on; the minutes document of the closing is scope checked and must not
 belong to another community. See `docs/reviews/REVIEW-W79-2026-10-01.md`.
+
+## Vermögensbericht im Portal und Sondererwerb (AA07, 01.10.2026)
+
+* GA07-02: `portal/owner_assets.py` (`/portal/owner/asset-reports`, PDF hinter G4) schreibt je Abruf eine Zeile pro Eigentumsvertrag nach `hoa_asset_report_provision` (Migration 0309); `GET /hoa/asset-reports/{id}/provisions` zeigt das Protokoll. Das PDF rendert `assets.render_report_pdf`.
+* GA07-03: `acquisition.py` erzeugt im Abrechnungspaket den Befund `acquisition_unreleased` für Sondererwerbe; Antrag und Freigabe durch eine zweite Person (`hoa_acquisition_release`, MHVP-HOA-0020). Zuordnungsvorschlag nur als Text, Regel offen (AA07-01).
+
+## Meeting kinds, agenda results, vote channel, Beschluss-Sammlung (AA06, 01.10.2026)
+
+Migration 0308. Rules: `docs/rules/AA06-versammlung-beschluss-sammlung.md`.
+
+* `owners_meeting.kind` also accepts `repeat`, `continuation` (both need `origin_meeting_id`,
+  an earlier meeting of the same community), `partial` and `circular_resolution`. New fields
+  `ends_at` (after `scheduled_at`), `invitation_template_id`, `proxy_template_id`,
+  `ballot_template_id` (`document_template`, SET NULL), `public_description` (owner portal)
+  and `internal_description` (CRM only). `PATCH /hoa/meetings/{id}` edits them.
+* Agenda item: `majority` `all_owners` (tally checks yes votes of all owners entitled to vote
+  on the meeting day, not only those present), `voting_principle` with
+  `voting_principle_basis` (precedence over the meeting), `result` (`accepted`/`rejected` set
+  by the announcement, `deferred`/`no_vote` via `PATCH /hoa/agenda/{id}`, which blocks votes
+  and announcement) and `minutes_text` (protocol draft).
+* `meeting_vote.channel`: `online` or `presence` from the attendance; `circular` only in a
+  meeting of kind `circular_resolution` (owner of the community, no attendance needed). Tally
+  returns `channels`, members list `vote_channels`.
+* `resolution`: `location`, `court_notes`, `entered_at` (time of entry, backfilled from
+  `created_at`). Status also `deleted` and `irrelevant` (notes, no physical deletion); `void`
+  remains accepted until the operator decides (AA06-01). `PATCH /hoa/resolutions/{id}` takes
+  `status`, `court_notes`, `location` (each change emits an event).
+* GA07-01: `meeting_rules.basis_term_notice`: validity end of the enabling resolution later
+  than decision date plus three years gives `virtual_basis_term_notice` on creation; lock
+  `MHVP-HOA-0030` only with `tenant_settings.hoa_virtual_basis_term_lock_enabled` (default
+  off, `PUT /hoa/meeting-settings` field `virtual_basis_term_lock_enabled`). Transition rule
+  § 48 Abs. 6 WEG not implemented (AA06-02).

@@ -194,7 +194,16 @@ async def debtor_account(
 
 
 async def contract_number(session: AsyncSession, tenant_id: uuid.UUID) -> str:
-    return f"{await next_number(session, tenant_id, 'contract'):06d}"
+    from mhvp.core.number_format import SOURCES_KEY, effective_formats, format_number
+    from mhvp.platform.models import TenantSettings
+
+    sources = await session.scalar(select(TenantSettings.sources))
+    if not (sources or {}).get(SOURCES_KEY, {}).get("contract"):
+        return f"{await next_number(session, tenant_id, 'contract'):06d}"
+    # GA01-07: tenant specific format; the start value applies to a circle not yet in use.
+    fmt = effective_formats(sources)["contract"]
+    value = await next_number(session, tenant_id, "contract", start=fmt.start)
+    return format_number(fmt, value)
 
 
 async def check_mandate(

@@ -108,9 +108,39 @@ def require_release_gate(gate: ReleaseGate) -> Callable[[Request], Awaitable[Non
 P = ParamSpec("P")
 R = TypeVar("R")
 
-# Resolver for jobs (Celery, imports, bulk). Replaced by the persistent resolver in M2;
-# the default keeps every gate closed.
+# Resolver for jobs (Celery, imports, bulk). The worker installs the persistent resolver at
+# start (``install_job_release_gate_resolver``, GA14-01); without it every gate stays closed.
 job_release_gate_resolver: ReleaseGateResolver = ClosedReleaseGateResolver()
+
+
+class JobDbReleaseGateResolver:
+    """Persistent resolver for jobs. Celery tasks run their own event loop per call
+    (``asyncio.run``), so every check opens a short lived engine without pool on the runtime
+    role; RLS and the approval state of ``release_gate_request`` decide (ADR 0003)."""
+
+    def __init__(self, database_url: str) -> None:
+        self.database_url = database_url
+
+    async def is_open(self, tenant_id: UUID, gate: ReleaseGate) -> bool:
+        from sqlalchemy.ext.asyncio import create_async_engine
+        from sqlalchemy.pool import NullPool
+
+        from mhvp.core.db.engine import create_session_factory
+        from mhvp.platform.gates import DbReleaseGateResolver
+
+        engine = create_async_engine(self.database_url, poolclass=NullPool, hide_parameters=True)
+        try:
+            return await DbReleaseGateResolver(create_session_factory(engine)).is_open(
+                tenant_id, gate
+            )
+        finally:
+            await engine.dispose()
+
+
+def install_job_release_gate_resolver(resolver: ReleaseGateResolver) -> None:
+    """Set the resolver used by :func:`release_gated` and job gate checks (worker start)."""
+    global job_release_gate_resolver
+    job_release_gate_resolver = resolver
 
 
 def release_gated(gate: ReleaseGate) -> Callable[[Callable[P, R]], Callable[P, R]]:

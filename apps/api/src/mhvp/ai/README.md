@@ -393,3 +393,5 @@ CRM: `EntityDecisions` in `OnboardingExtras.tsx`, eingebunden in `PropertyPropos
 ### V06-01 (W05): Standardteam und Zuständiger der Übernahme-Tickets
 
 `mhvp.ai.takeover_defaults` liest und schreibt `team_id` und `assignee_user_id` unter dem Schlüssel `takeover_tickets` im JSON-Dokument `TenantSettings.objektakte_classification` (keine Migration). `GET/PUT /onboarding/takeover-ticket-defaults` (Rechte `tenant_settings:read` und `tenant_settings:update`); Team und Zuständiger müssen zum Mandanten gehören (422), leer bedeutet ohne Zuweisung. `POST /properties/{id}/takeover-checklist/tickets` setzt Team und Zuständigen (über `assign_ticket`) bei neu angelegten Tickets. Ein Sammelkonto je Eigentümer wird nicht angelegt (Entscheidungspunkt V06-02).
+
+* AA05 (GA04-12): learning examples are embedded by the index job (`EmbeddingSourceKind.AI_EXAMPLE`, masked text of task, features and result; `embeddings.status` counts `examples_*`). `gateway.similar_examples` orders the few shot examples by cosine distance to the input via `embeddings.rank_examples`; without embeddings, route, budget or hit it keeps the recency order. Distance limit AA05-03.

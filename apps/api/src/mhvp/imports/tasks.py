@@ -16,6 +16,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
+from mhvp.automation.job_schedule import job_allowed
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -42,6 +43,12 @@ async def report_tenant_once(
     try:
         factory = create_session_factory(engine)
         async with tenant_transaction(factory, tenant_id) as session:
+            # GA12-01: the scheduled run honours the per tenant job setting; manual runs do not.
+            if trigger == "beat" and not await job_allowed(
+                session, tenant_id, "imports-reconciliation-report"
+            ):
+                counts["skipped"] += 1
+                return counts
             if not await rec.latest_sources(session):
                 counts["skipped"] += 1
                 return counts

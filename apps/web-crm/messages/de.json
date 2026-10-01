@@ -385,6 +385,7 @@
         "invited": "Eingeladen, Passwort noch nicht gesetzt",
         "active": "Zugang aktiv",
         "locked": "gesperrt",
+        "expired": "Einladung abgelaufen",
         "exists": "Portalzugang besteht bereits",
         "loadError": "Status nicht abrufbar"
       },
@@ -676,6 +677,17 @@
     "questions": "Rückfragen",
     "openQuestions": "Offene Rückfragen",
     "toImport": "Zum Importlauf",
+    "rowRoleFor": "Rolle für {name}",
+    "rowRoleNone": "Rolle des Laufs",
+    "mergeFields": "Leere Felder des Kontakts ergänzen",
+    "contactRole": {
+      "eigentuemer": "Eigentümer",
+      "mieter": "Mieter",
+      "verwalter": "Verwalter",
+      "dienstleister": "Dienstleister",
+      "bank": "Bank",
+      "sonstiges": "Sonstiges"
+    },
     "contactPreviewTitle": "Vorschau der Kontakte",
     "contactLegend": "Ampel: grün neu, gelb vorhanden (mögliche Dublette), orange unvollständig, rot ungültig.",
     "colStatus": "Status",
@@ -1703,6 +1715,9 @@
       "unanimous": "allstimmig",
       "simple": "einfache Mehrheit"
     },
+    "location": "Ort",
+    "courtNotes": "Gerichtliche Vermerke",
+    "enteredAt": "Eingetragen am",
     "noResolutions": "Noch keine Beschlüsse erfasst.",
     "number": "Nr.",
     "decidedOn": "Datum",
@@ -1716,7 +1731,9 @@
       "contested": "angefochten",
       "annulled": "für ungültig erklärt",
       "legally_binding": "rechtskräftig",
-      "void": "nichtig"
+      "void": "nichtig",
+      "deleted": "gelöscht (Vermerk)",
+      "irrelevant": "gegenstandslos"
     },
     "kinds": {
       "meeting": "Versammlung",
@@ -2732,7 +2749,9 @@
         "hand_delivery": "Übergabe",
         "email": "E-Mail",
         "portal": "Portal"
-      }
+      },
+      "previewWithSheet": "Vorschau mit Informationsblatt",
+      "infoSheet": "Informationsblatt (PDF)"
     },
     "title": "Betriebskostenabrechnung",
     "notice": "Kostenpositionen nur mit Grundlage. Heizkosten kommen aus der Messdienstabrechnung. Interne Freigabe durch eine zweite Person; die Ausgabe an Mieter ist bis zur Freigabestufe G3 gesperrt.",
@@ -2892,6 +2911,18 @@
       "vacancyShare": "Leerstandsanteil zu Lasten des Eigentümers: {amount}",
       "trace": "Rechenweg {hash}",
       "loading": "Heizkosten werden geladen."
+    },
+    "deadlineException": {
+      "title": "Ausnahme von der Abrechnungsfrist",
+      "hint": "Nachforderungen nach Ablauf der Fristorientierung bleiben gesperrt, bis Ausnahmegrund und Nachweisdokument hinterlegt sind. Die rechtliche Prüfung erfolgt durch den Betreiber.",
+      "effective": "Ausnahme mit Nachweis hinterlegt",
+      "locked": "Keine wirksame Ausnahme: Nachforderung nach Fristablauf gesperrt",
+      "setAt": "Erfasst am {date}",
+      "reason": "Ausnahmegrund",
+      "document": "Nachweisdokument (Dokument-ID)",
+      "documentInvalid": "Bitte eine gültige Dokument-ID angeben.",
+      "save": "Ausnahme speichern",
+      "readOnly": "Änderung nur im Entwurf, sonst über eine neue Version."
     }
   },
   "HoaWork": {
@@ -3209,6 +3240,48 @@
     },
     "subjectKind": "Beschlussgegenstand",
     "subjectKindNone": "nicht angegeben",
+    "meetingDetails": {
+      "title": "Art, Dauer, Vorlagen und Beschreibung",
+      "kind": "Art der Versammlung",
+      "kinds": {
+        "ordinary": "ordentlich",
+        "extraordinary": "außerordentlich",
+        "repeat": "Wiederholungsversammlung",
+        "continuation": "Fortsetzung",
+        "partial": "Teilversammlung",
+        "circular_resolution": "Umlaufverfahren"
+      },
+      "origin": "Ursprungsversammlung",
+      "endsAt": "Ende",
+      "publicDescription": "Öffentliche Beschreibung (Eigentümerportal)",
+      "internalDescription": "Interne Beschreibung (nur Verwaltung)",
+      "invitationTemplate": "Vorlage Einladung (ID)",
+      "proxyTemplate": "Vorlage Vollmacht (ID)",
+      "ballotTemplate": "Vorlage Stimmzettel (ID)",
+      "save": "Angaben speichern",
+      "saved": "Angaben gespeichert.",
+      "endBeforeStart": "Das Ende muss nach dem Beginn liegen.",
+      "termNotice": "Hinweis zur Geltungsdauer des zulassenden Beschlusses"
+    },
+    "agendaResult": {
+      "result": "Ergebnis",
+      "results": {
+        "accepted": "angenommen",
+        "rejected": "abgelehnt",
+        "deferred": "vertagt",
+        "no_vote": "ohne Abstimmung"
+      },
+      "none": "noch offen",
+      "minutesText": "Protokolltext zum TOP",
+      "setResult": "Ergebnis setzen",
+      "clearResult": "Vertagung aufheben",
+      "saveMinutes": "Protokolltext speichern",
+      "saved": "Gespeichert.",
+      "allOwners": "Zustimmung aller Eigentümer",
+      "majority": "Beschlussregel",
+      "simple": "einfache Mehrheit",
+      "channel": "Kanal"
+    },
     "meetingForm": {
       "title": "Versammlungsform und Einladung",
       "mode": "Form",
@@ -3250,6 +3323,8 @@
       "weeks": "Einladungsfrist in Wochen",
       "weeksInvalid": "Bitte 1 bis 12 Wochen eintragen.",
       "virtual": "Virtuelle Versammlungen zulassen (V13)",
+      "termLock": "Sperre bei Geltungsdauer über drei Jahre (Grundlagenbeschluss virtuelle Versammlung)",
+      "termLockHint": "Standard aus: dann nur Hinweis. Höchstdauer und Übergangsregel sind rechtlich zu prüfen (offene Frage AA06-02).",
       "virtualHint": "Standard aus. Freischaltung nur nach Entscheidung des Betreibers mit Rechtsberatung; jede virtuelle Versammlung braucht zusätzlich den zulassenden Beschluss der Eigentümer mit Gültigkeitsende.",
       "save": "Einstellung speichern",
       "saved": "Einstellung gespeichert."
@@ -3925,6 +4000,19 @@
       }
     }
   },
+  "AutomationJobs": {
+    "title": "Standardjobs je Mandant",
+    "description": "Aktivierung und Uhrzeit der automatischen Läufe (Europe/Berlin). Ohne Eintrag läuft der Job wie geplant. Das Abschalten oder Verschieben öffnet keine Sperre und kein Gate.",
+    "job": "Job",
+    "enabled": "Aktiv",
+    "runAt": "Uhrzeit (HH:MM)",
+    "runAtHelp": "Leer: läuft im Standardfenster. Mit Uhrzeit läuft der Job nur in der Stunde ab dieser Zeit.",
+    "save": "Speichern",
+    "saved": "Gespeichert",
+    "configured": "angepasst",
+    "default": "Standard",
+    "empty": "Keine Jobs verfügbar."
+  },
   "Automation": {
     "title": "Automatisierung",
     "pageDescription": "Regel-Engine: Auslöser (Ereignis oder Zeitplan), Bedingungen und Aktionen. Regeln lösen keine Buchungen, Zahlungen, Freigaben oder Versand aus.",
@@ -4034,6 +4122,11 @@
       "setRecordField": "Feld setzen: {target} {field} {value}"
     },
     "log": "Protokoll",
+    "testMode": "Testmodus (nur Protokoll)",
+    "testModeHelp": "Im Testmodus wertet die Regel Auslöser und Bedingungen aus und schreibt nur einen Protokolleintrag mit dem Ergebnis Testlauf. Es entsteht keine Wirkung.",
+    "testModeBadge": "Testmodus",
+    "filterStatus": "Ergebnis filtern",
+    "allStatuses": "Alle Ergebnisse",
     "filterRule": "Regel filtern",
     "allRules": "Alle Regeln",
     "refresh": "Aktualisieren",
@@ -5163,6 +5256,19 @@
       "to": "Bis",
       "boardOnlineAudit": "Online-Belegprüfung durch den Beirat",
       "notes": "Bemerkung",
+      "status": "Status",
+      "lockedAt": "gesperrt am {date}",
+      "statuses": {
+        "open": "Offen",
+        "results_created": "Ergebnisse erstellt",
+        "confirmed": "Bestätigt",
+        "closed": "Abgeschlossen"
+      },
+      "advance": {
+        "results_created": "Ergebnisse erstellt",
+        "confirmed": "Bestätigen",
+        "closed": "Abschließen und sperren"
+      },
       "kinds": {
         "hoa": "Hausgeldabrechnung",
         "operating_costs": "Betriebskostenabrechnung",
@@ -5789,6 +5895,8 @@
       "full": "Vollimport",
       "migration": "Migration Immoware24",
       "learning": "Lernphase",
+      "domains": "Kundendomains",
+      "oidcClients": "OIDC-Clients",
       "gateG5": "Freigabe G5",
       "rentLaw": "Mietrecht",
       "onboarding": "Onboarding",
@@ -7236,6 +7344,8 @@
     "disconnected": "Verbindung getrennt."
   },
   "DmsSettings": {
+    "folderScheme": "Ordnerschema der Ablage",
+    "folderSchemeHint": "Pfadvorlage mit den Platzhaltern '{objekt}', '{jahr}' und '{kategorie}', Ebenen getrennt durch /. Leer bedeutet '{objekt}'/'{jahr}'.",
     "title": "DMS-Anbindung",
     "intro": "Verbindung des CRM zum Dokumentenmanagement. Immoware24 bleibt Master der Stammdaten.",
     "paperlessTitle": "Paperless",
@@ -8404,6 +8514,22 @@
         "xrechnung": "E-Rechnung: XRechnung (XML)",
         "zugferd": "E-Rechnung: ZUGFeRD/Factur-X (PDF mit XML)"
       },
+      "einvoiceValidation": {
+        "title": "E-Rechnung: Prüfergebnis",
+        "profile": "Profil",
+        "validator": "Prüfer",
+        "version": "Version",
+        "kind": "Art",
+        "result": "Ergebnis",
+        "results": {
+          "ok": "ohne Befund",
+          "findings": "mit Befunden"
+        },
+        "official": "amtlicher Validator",
+        "formal": "interne formale Prüfung, kein amtlicher Validator",
+        "unknown": "nicht erkannt",
+        "none": "Noch kein Prüfergebnis gespeichert."
+      },
       "einvoiceHint": "Der strukturierte Teil wurde ohne KI gelesen. Formale Gültigkeit belegt keine erbrachte Leistung; sachliche, rechnerische und steuerliche Prüfung bleiben Pflicht.",
       "conflicts": "Widersprüche zwischen XML und PDF",
       "conflictLine": "{field}: XML {xml}, {source} {other}.",
@@ -8523,7 +8649,9 @@
       "deposits": "Kautionen (Fremdgeld)",
       "liquidity": "Freie Liquidität",
       "result": "Ergebnis",
-      "sev": "Überleitung WEG-Einzelabrechnung"
+      "sev": "Überleitung WEG-Einzelabrechnung",
+      "s35a": "Belegte Lohnanteile § 35a EStG (Information)",
+      "receipts": "Belegmappe"
     },
     "income": {
       "rent": "Mieten",
@@ -8554,7 +8682,13 @@
       "ownerBurden": "Eigentümerbelastung"
     },
     "accounting": "Buchhaltung",
-    "noLedgers": "Kein Buchungskreis vorhanden. Ohne Buchungskreis kann keine Eigentümerabrechnung angelegt werden."
+    "noLedgers": "Kein Buchungskreis vorhanden. Ohne Buchungskreis kann keine Eigentümerabrechnung angelegt werden.",
+    "attachReceipts": "Belege der gebuchten Ausgaben an die PDF-Ausgabe anfügen",
+    "unit": "Einheit",
+    "receipts": {
+      "linked": "Buchungen mit Beleg",
+      "missing": "Buchungen ohne Beleg"
+    }
   },
   "AiAutomation": {
     "title": "Automatische KI-Läufe",
@@ -8691,8 +8825,14 @@
       "email": "E-Mail",
       "phone": "Telefon",
       "file": "Datei",
+      "address": "Anschrift",
+      "location": "Standort",
+      "signature": "Unterschrift (Name)",
+      "consent": "Einwilligung",
+      "amount": "Betrag in EUR",
       "heading": "Überschrift",
-      "info": "Hinweistext"
+      "info": "Hinweistext",
+      "divider": "Trennlinie"
     },
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -9007,6 +9147,39 @@
       "noDismiss": "Verwerfen nur mit Recht communication:update."
     },
     "maskedHelp": "Vollständige Rufnummer nur mit Recht contacts:read."
+  },
+  "HoaAcquisition": {
+    "title": "Sondererwerb im Abrechnungsjahr",
+    "intro": "Erwerbsart ungleich Kauf oder Sondernachfolgehaftung: Das Abrechnungspaket bleibt gesperrt, bis eine zweite Person den Fall freigegeben hat.",
+    "unit": "Einheit {unit}",
+    "kind": "Erwerbsart: {kind}",
+    "succession": "Sondernachfolgehaftung gekennzeichnet",
+    "proposal": "Zuordnungsvorschlag",
+    "status": {
+      "open": "Freigabe nicht beantragt",
+      "requested": "Beantragt, Freigabe durch zweite Person offen",
+      "released": "Freigegeben"
+    },
+    "kinds": {
+      "first_acquisition": "Ersterwerb",
+      "inheritance": "Erbfall",
+      "foreclosure": "Zwangsversteigerung",
+      "gift": "Schenkung",
+      "other": "Sonstiger Erwerb"
+    },
+    "requestNote": "Anmerkung zum Antrag",
+    "releaseNote": "Begründung der Freigabe",
+    "request": "Freigabe beantragen",
+    "release": "Freigeben",
+    "sameUser": "Die Freigabe muss durch eine andere Person als die antragstellende erfolgen."
+  },
+  "HoaProvision": {
+    "title": "Bereitstellungsprotokoll je Eigentümer",
+    "unit": "Einheit",
+    "firstRetrieved": "Erster Abruf",
+    "lastRetrieved": "Letzter Abruf",
+    "retrievals": "Abrufe",
+    "notRetrieved": "Noch nicht abgerufen"
   },
   "HoaFinance": {
     "loans": "Darlehen",
@@ -9416,7 +9589,7 @@
   },
   "Notices": {
     "title": "Schwarzes Brett",
-    "intro": "Aushänge der Verwaltung mit Gültigkeit und Zielgruppe, sichtbar im Portal für Mieter und Eigentümer des Objekts.",
+    "intro": "Aushänge der Verwaltung mit Gültigkeit, Hinweisstufe und Zielgruppen, sichtbar im Portal für Mieter, Eigentümer und Dienstleister des Objekts.",
     "create": "Aushang anlegen",
     "edit": "Bearbeiten",
     "end": "Beenden",
@@ -9427,20 +9600,31 @@
     "empty": "Keine Aushänge vorhanden.",
     "openEnd": "auf Weiteres",
     "withDocument": "mit Anlage",
+    "withDocuments": "{count, plural, one {# Anlage} other {# Anlagen}}",
+    "readQuota": "gelesen {read} von {total}",
+    "noCategory": "ohne Kategorie",
     "validity": "Gültig {from} bis {to}",
     "fields": {
       "title": "Titel",
       "body": "Text",
       "validFrom": "Gültig ab",
       "validTo": "Gültig bis",
-      "audience": "Zielgruppe",
-      "document": "Dokument-ID (optional)",
-      "documentHint": "ID eines Dokuments des Objekts, das als Anlage angezeigt wird."
+      "audience": "Zielgruppen",
+      "type": "Hinweisstufe",
+      "category": "Kategorie",
+      "document": "Dokument-IDs (optional)",
+      "documentHint": "IDs von Dokumenten des Objekts, durch Komma getrennt, werden als Anlagen angezeigt."
     },
     "audience": {
-      "all": "Mieter und Eigentümer",
       "tenant": "Mieter",
-      "owner": "Eigentümer"
+      "owner": "Eigentümer",
+      "provider": "Dienstleister"
+    },
+    "types": {
+      "neutral": "neutral",
+      "info": "Info",
+      "warning": "Warnung",
+      "danger": "Gefahr"
     },
     "status": {
       "current": "sichtbar",
@@ -9452,7 +9636,8 @@
       "body": "Bitte einen Text eingeben.",
       "validFrom": "Bitte ein Gültigkeitsdatum eingeben.",
       "validTo": "Das Enddatum liegt vor dem Beginn.",
-      "document": "Die Dokument-ID ist ungültig."
+      "audiences": "Bitte mindestens eine Zielgruppe wählen.",
+      "document": "Eine Dokument-ID ist ungültig."
     },
     "endConfirm": "Aushang \"{title}\" beenden? Er ist danach im Portal nicht mehr sichtbar.",
     "saved": "Aushang gespeichert.",
@@ -13202,6 +13387,18 @@
     "balance": "Saldo"
   },
   "Bookkeeping": {
+    "notes": {
+      "toggle": "Vermerke",
+      "empty": "Keine Vermerke vorhanden.",
+      "version": "Version {version} vom {at}",
+      "superseded": "ersetzt",
+      "newVersion": "Neue Version",
+      "form": "Vermerk erfassen",
+      "label": "Neuer Vermerk",
+      "labelVersion": "Neue Version des Vermerks",
+      "save": "Vermerk speichern",
+      "hint": "Vermerke ändern den Buchungsinhalt nicht. Jede Änderung wird als neue Version gespeichert, frühere Versionen bleiben sichtbar."
+    },
     "actions": {
       "title": "Aktionen",
       "post": "Buchen",
@@ -14156,7 +14353,7 @@
     "receipt": "Beleg",
     "receiptMissing": "Beleg fehlt",
     "showMovements": "Einträge anzeigen",
-      "developmentHint": "Anfang gleich Ende des Vorjahres, im ersten Jahr der erfasste Anfangsbestand. Information für Abrechnung und Vermögensbericht, keine Buchung."
+    "developmentHint": "Anfang gleich Ende des Vorjahres, im ersten Jahr der erfasste Anfangsbestand. Information für Abrechnung und Vermögensbericht, keine Buchung."
   },
   "OnboardingExtras": {
     "decisionTitle": "Rechtsträger auswählen",
@@ -14405,5 +14602,82 @@
     "noEntity": "Für diesen Buchungskreis ist kein Rechtsträger bekannt, Beschlüsse können nicht geladen werden.",
     "planFirst": "Zuerst einen Wirtschaftsplan wählen.",
     "loadFailed": "Liste konnte nicht geladen werden: {reason}"
+  },
+  "AA17": {
+    "cardTitle": "Zustellweg und Nummernkreise",
+    "cardDescription": "Standard-Zustellweg und Nummernkreise des Mandanten festlegen.",
+    "domainsLink": "Kundendomains",
+    "oidcLink": "OIDC-Clients",
+    "forbidden": "Dieser Bereich steht nur Plattformadministratoren offen.",
+    "delivery": {
+      "title": "Standard-Zustellweg",
+      "intro": "Gilt für Versand und Serienbrief, wenn der Kontakt keinen eigenen Zustellweg hinterlegt hat.",
+      "post": "Post",
+      "email": "E-Mail",
+      "portal": "Portal",
+      "save": "Speichern",
+      "saved": "Gespeichert."
+    },
+    "numbers": {
+      "title": "Nummernkreise",
+      "intro": "Ohne Änderung bleiben die bisherigen Formate bestehen. Die Vorschau zeigt die nächsten drei Nummern.",
+      "scope": "Nummernkreis",
+      "prefix": "Präfix",
+      "digits": "Stellen",
+      "start": "Startwert",
+      "yearBased": "Jahr einfügen",
+      "preview": "Vorschau",
+      "locked": "gesperrt",
+      "lockedHint": "Der Rechnungsnummernkreis betrifft umsatzsteuerliche Pflichtangaben und bleibt bis zur Freigabe durch den Steuerberater gesperrt.",
+      "startHint": "Der Startwert gilt nur für einen Nummernkreis, der noch nicht verwendet wurde.",
+      "save": "Nummernkreise speichern",
+      "saved": "Gespeichert.",
+      "scopes": {
+        "property": "Objekt",
+        "contract": "Vertrag",
+        "document": "Beleg",
+        "ticket": "Ticket",
+        "invoice": "Rechnung"
+      }
+    },
+    "domains": {
+      "title": "Kundendomains",
+      "intro": "Hostnamen, die einem Mandanten zugeordnet sind. Der Kunde richtet einen CNAME-Eintrag auf den Plattformhost ein.",
+      "tenant": "Mandant",
+      "host": "Hostname",
+      "purpose": "Zweck",
+      "add": "Domain hinzufügen",
+      "remove": "Entfernen",
+      "none": "Keine Domain hinterlegt.",
+      "cname": "DNS-Hinweis",
+      "status": "Mandantenstatus",
+      "active": "aktiv",
+      "suspended": "gesperrt",
+      "suspend": "Mandant sperren",
+      "activate": "Mandant entsperren",
+      "confirmSuspend": "Mandanten wirklich sperren?",
+      "purposes": {
+        "portal": "Portal",
+        "crm": "CRM",
+        "api": "API"
+      }
+    },
+    "oidc": {
+      "title": "OIDC-Clients",
+      "intro": "Bestandstools melden sich per Authorization Code mit PKCE an. Das Secret wird nur einmal angezeigt.",
+      "clientId": "Client-ID",
+      "name": "Bezeichnung",
+      "redirectUris": "Redirect-URIs (eine je Zeile, https)",
+      "public": "Öffentlicher Client (nur PKCE, kein Secret)",
+      "create": "Client anlegen",
+      "rotate": "Secret erneuern",
+      "activate": "Aktivieren",
+      "deactivate": "Deaktivieren",
+      "active": "aktiv",
+      "inactive": "inaktiv",
+      "secretOnce": "Client-Secret (nur jetzt sichtbar, bitte sofort im Zielsystem hinterlegen):",
+      "none": "Keine Clients angelegt.",
+      "confirmRotate": "Secret erneuern? Das bisherige Secret wird sofort ungültig."
+    }
   }
 }

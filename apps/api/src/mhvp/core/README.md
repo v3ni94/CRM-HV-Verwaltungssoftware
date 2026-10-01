@@ -120,6 +120,14 @@ effect after the TTL at the latest. Details: ADR 0002, addendum 26.09.2026.
 
 ## Package Q12 (30.09.2026): list parameters, bulk endpoints, job switches, events
 
+- `listparams.ListSpec` (GA04-05): declarative allowed filters, sorts, includes and optional
+  `valid_from`/`valid_to` for `as_of`. `Depends(spec.dependency)` rejects with 422 every query
+  parameter the route neither declares nor offers (also `as_of` on lists without validity);
+  `spec.apply(query, params, default_order, request)` narrows and orders. Wired into
+  `GET /banking/transactions`, `/hoa/resolutions`, `/accounting/dunning-runs` and
+  `/mail/messages` (filters only, own order kept). ETag/If-Match (GA04-06) added to
+  `PATCH /hoa/resolutions/{id}` and `GET`/`PATCH /mail/messages/{id}`; If-Match stays optional
+  (ADR 0012) until AA04-01 is decided.
 - `listparams.py` (S12-03): `list_params` dependency parses `filter[field]=value` (comma means
   `IN`, `null` means `IS NULL`), `sort=field,-field`, `fields=a,b` and `include=x`.
   `apply_filters` and `apply_sort` accept only the columns a list declares, `check_include`

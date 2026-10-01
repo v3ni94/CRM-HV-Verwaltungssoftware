@@ -87,6 +87,8 @@ export type ReceiptDraft = {
   questions: string[];
   masked_excerpt: string | null;
   e_invoice_format?: "none" | "xrechnung" | "zugferd";
+  e_invoice_profile?: string | null;
+  validation?: EInvoiceValidation | null;
   xml_lines?: XmlLine[];
   xml_payment?: {
     means_code: string | null;
@@ -103,6 +105,18 @@ export type ReceiptDraft = {
   error: string | null;
   invoice_id: string | null;
   created_at: string;
+};
+
+type EInvoiceValidation = {
+  validator?: string;
+  validator_version?: string;
+  official?: boolean;
+  variant?: string | null;
+  syntax?: string | null;
+  result?: string;
+  messages?: string[];
+  recorded_at?: string | null;
+  formal?: EInvoiceValidation | null;
 };
 
 type Option = { id: string; label: string };
@@ -141,6 +155,72 @@ function formFromDraft(draft: ReceiptDraft): Form {
 
 /** Lowest field confidence of a draft (the weakest value decides how much review it needs);
  *  null while nothing has been extracted yet. */
+
+function EInvoiceBlock({
+  profile,
+  validation,
+}: {
+  profile: string | null;
+  validation: EInvoiceValidation | null;
+}) {
+  const t = useTranslations("Receipts");
+  const rows: [string, string][] = [
+    [
+      "profile",
+      validation?.variant ?? profile ?? t("review.einvoiceValidation.unknown"),
+    ],
+  ];
+  if (validation) {
+    rows.push(
+      ["validator", validation.validator ?? "-"],
+      ["version", validation.validator_version ?? "-"],
+      [
+        "kind",
+        validation.official
+          ? t("review.einvoiceValidation.official")
+          : t("review.einvoiceValidation.formal"),
+      ],
+      [
+        "result",
+        validation.result === "ok" || validation.result === "findings"
+          ? t(`review.einvoiceValidation.results.${validation.result}`)
+          : (validation.result ?? "-"),
+      ],
+    );
+  }
+  const messages = validation?.messages ?? [];
+  return (
+    <section
+      className="flex flex-col gap-1 rounded-md border border-border p-2 text-sm"
+      data-testid="receipt-einvoice-validation"
+    >
+      <span className="font-medium">
+        {t("review.einvoiceValidation.title")}
+      </span>
+      <dl className="grid grid-cols-[max-content_1fr] gap-x-3 gap-y-0.5">
+        {rows.map(([key, value]) => (
+          <div key={key} className="contents">
+            <dt className="text-muted">
+              {t(`review.einvoiceValidation.${key}`)}
+            </dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
+      {validation ? null : (
+        <p className="text-muted">{t("review.einvoiceValidation.none")}</p>
+      )}
+      {messages.length > 0 ? (
+        <ul className="list-disc pl-5" data-testid="receipt-einvoice-messages">
+          {messages.map((m) => (
+            <li key={m}>{m}</li>
+          ))}
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
 export function minConfidence(draft: ReceiptDraft): number | null {
   const values = Object.values(draft.fields).map((f) => f.confidence);
   return values.length === 0 ? null : Math.min(...values);
@@ -615,6 +695,12 @@ export function ReceiptIntake({
               {t("review.einvoiceHint")}
             </p>
           ) : null}
+          {selected.e_invoice_format && selected.e_invoice_format !== "none" ? (
+            <EInvoiceBlock
+              profile={selected.e_invoice_profile ?? null}
+              validation={selected.validation ?? null}
+            />
+          ) : null}
 
           {(selected.conflicts ?? []).length > 0 ? (
             <div
@@ -1056,7 +1142,9 @@ export function ReceiptIntake({
                         <td className="num">
                           {[ln.quantity, ln.unit].filter(Boolean).join(" ")}
                         </td>
-                        <td className="num">{ln.net ? formatEur(ln.net) : ""}</td>
+                        <td className="num">
+                          {ln.net ? formatEur(ln.net) : ""}
+                        </td>
                         <td className="num">
                           {ln.vat_percent ? `${ln.vat_percent} %` : ""}
                         </td>

@@ -910,6 +910,105 @@
         "title": "AccountingCreditorSyncOut",
         "type": "object"
       },
+      "AccountingEntryNoteIn": {
+        "additionalProperties": false,
+        "properties": {
+          "body": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Body",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          }
+        },
+        "required": [
+          "body"
+        ],
+        "title": "AccountingEntryNoteIn",
+        "type": "object"
+      },
+      "AccountingEntryNoteOut": {
+        "properties": {
+          "body": {
+            "title": "Body",
+            "type": "string"
+          },
+          "created_at": {
+            "title": "Created At"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_current": {
+            "default": true,
+            "title": "Is Current",
+            "type": "boolean"
+          },
+          "journal_entry_id": {
+            "format": "uuid",
+            "title": "Journal Entry Id",
+            "type": "string"
+          },
+          "note_key": {
+            "format": "uuid",
+            "title": "Note Key",
+            "type": "string"
+          },
+          "supersedes_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Supersedes Id"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "id",
+          "journal_entry_id",
+          "note_key",
+          "version",
+          "supersedes_id",
+          "body",
+          "created_at",
+          "created_by"
+        ],
+        "title": "AccountingEntryNoteOut",
+        "type": "object"
+      },
       "AccountingInterestIn": {
         "additionalProperties": false,
         "properties": {
@@ -1041,6 +1140,41 @@
         ],
         "title": "AcquisitionKind",
         "type": "string"
+      },
+      "AcquisitionReleaseIn": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "maxLength": 2000,
+            "minLength": 3,
+            "title": "Note",
+            "type": "string"
+          }
+        },
+        "required": [
+          "note"
+        ],
+        "title": "AcquisitionReleaseIn",
+        "type": "object"
+      },
+      "AcquisitionRequestIn": {
+        "additionalProperties": false,
+        "properties": {
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 2000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          }
+        },
+        "title": "AcquisitionRequestIn",
+        "type": "object"
       },
       "ActivateIn": {
         "additionalProperties": false,
@@ -1742,6 +1876,18 @@
       },
       "AdminFeeSettingOut": {
         "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
           "amounts_per_unit_type": {
             "additionalProperties": {
               "type": "string"
@@ -1760,6 +1906,28 @@
               }
             ],
             "title": "Contract Document Id"
+          },
+          "due_day": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Day"
+          },
+          "due_day_rule": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Day Rule"
           },
           "end_date": {
             "anyOf": [
@@ -1799,6 +1967,18 @@
             ],
             "title": "Invoice Debtor Party Id"
           },
+          "manager_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Contact Id"
+          },
           "max_amount": {
             "anyOf": [
               {
@@ -1828,10 +2008,34 @@
             "title": "Property Id",
             "type": "string"
           },
+          "sev_fee_amount": {
+            "anyOf": [
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sev Fee Amount"
+          },
           "start_date": {
             "format": "date",
             "title": "Start Date",
             "type": "string"
+          },
+          "termination_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termination Date"
           },
           "vat_percent": {
             "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
@@ -1858,6 +2062,18 @@
       "AdminFeeSettingPatch": {
         "additionalProperties": false,
         "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
           "amounts_per_unit_type": {
             "anyOf": [
               {
@@ -1892,6 +2108,31 @@
             ],
             "title": "Contract Document Id"
           },
+          "due_day": {
+            "anyOf": [
+              {
+                "maximum": 31.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Day"
+          },
+          "due_day_rule": {
+            "anyOf": [
+              {
+                "pattern": "^(day|last_day|day_next_month)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Day Rule"
+          },
           "end_date": {
             "anyOf": [
               {
@@ -1915,6 +2156,18 @@
               }
             ],
             "title": "Interval"
+          },
+          "manager_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Contact Id"
           },
           "max_amount": {
             "anyOf": [
@@ -1947,6 +2200,34 @@
               }
             ],
             "title": "Min Amount"
+          },
+          "sev_fee_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sev Fee Amount"
+          },
+          "termination_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termination Date"
           },
           "vat_percent": {
             "anyOf": [
@@ -2017,9 +2298,21 @@
         "properties": {
           "majority": {
             "default": "simple",
-            "pattern": "^(simple|qualified|unanimous|rule)$",
+            "pattern": "^(simple|qualified|unanimous|all_owners|rule)$",
             "title": "Majority",
             "type": "string"
+          },
+          "minutes_text": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes Text"
           },
           "proposal": {
             "anyOf": [
@@ -2074,12 +2367,68 @@
             "minLength": 3,
             "title": "Title",
             "type": "string"
+          },
+          "voting_principle": {
+            "anyOf": [
+              {
+                "pattern": "^(head|mea|unit)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voting Principle"
+          },
+          "voting_principle_basis": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Voting Principle Basis"
           }
         },
         "required": [
           "title"
         ],
         "title": "AgendaIn",
+        "type": "object"
+      },
+      "AgendaPatch": {
+        "additionalProperties": false,
+        "description": "GA03-02: result deferred or no_vote (accepted and rejected only by the announcement)\nand minutes text; ``result: null`` clears a recorded deferral.",
+        "properties": {
+          "minutes_text": {
+            "anyOf": [
+              {
+                "maxLength": 50000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minutes Text"
+          },
+          "result": {
+            "anyOf": [
+              {
+                "pattern": "^(deferred|no_vote)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result"
+          }
+        },
+        "title": "AgendaPatch",
         "type": "object"
       },
       "AiAutomationIn": {
@@ -6544,6 +6893,18 @@
           "kind": {
             "$ref": "#/components/schemas/BillingPeriodKind"
           },
+          "locked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locked At"
+          },
           "notes": {
             "anyOf": [
               {
@@ -6558,6 +6919,11 @@
           "property_id": {
             "format": "uuid",
             "title": "Property Id",
+            "type": "string"
+          },
+          "status": {
+            "default": "open",
+            "title": "Status",
             "type": "string"
           },
           "valid_from": {
@@ -6579,6 +6945,27 @@
           "property_id"
         ],
         "title": "BillingPeriodOut",
+        "type": "object"
+      },
+      "BillingPeriodTransitionIn": {
+        "additionalProperties": false,
+        "description": "Status change of a billing period (GA02-01): one step forward or one step back, never\nout of ``closed``.",
+        "properties": {
+          "status": {
+            "enum": [
+              "open",
+              "results_created",
+              "confirmed",
+              "closed"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "BillingPeriodTransitionIn",
         "type": "object"
       },
       "BillingResultOut": {
@@ -8016,6 +8403,19 @@
             ],
             "title": "Energy Certificate Construction Year"
           },
+          "energy_certificate_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Energieausweis als Dokument (DMS), GA02-03",
+            "title": "Energy Certificate Document Id"
+          },
           "energy_certificate_issued_on": {
             "anyOf": [
               {
@@ -8457,6 +8857,19 @@
             ],
             "title": "Energy Certificate Construction Year"
           },
+          "energy_certificate_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Energieausweis als Dokument (DMS), GA02-03",
+            "title": "Energy Certificate Document Id"
+          },
           "energy_certificate_issued_on": {
             "anyOf": [
               {
@@ -8884,6 +9297,18 @@
               }
             ],
             "title": "Energy Certificate Construction Year"
+          },
+          "energy_certificate_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Energy Certificate Document Id"
           },
           "energy_certificate_issued_on": {
             "anyOf": [
@@ -13924,6 +14349,38 @@
             "minimum": 0.0,
             "title": "Index",
             "type": "integer"
+          },
+          "merge_fields": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "bei link: leere Felder des vorhandenen Kontakts aus der Zeile ergänzen (Standard aus)",
+            "title": "Merge Fields"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "enum": [
+                  "eigentuemer",
+                  "mieter",
+                  "verwalter",
+                  "dienstleister",
+                  "bank",
+                  "sonstiges"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Rolle dieser Zeile (ContactRoleCode); ersetzt die Rolle des Laufs nicht, sie kommt hinzu (10.1 Schritt 4, GA10-05)",
+            "title": "Role"
           }
         },
         "required": [
@@ -19688,6 +20145,43 @@
         "title": "DeletionProposalStatus",
         "type": "string"
       },
+      "DeliveryDefaultIn": {
+        "additionalProperties": false,
+        "properties": {
+          "default_delivery_channel": {
+            "enum": [
+              "post",
+              "email",
+              "portal"
+            ],
+            "title": "Default Delivery Channel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "default_delivery_channel"
+        ],
+        "title": "DeliveryDefaultIn",
+        "type": "object"
+      },
+      "DeliveryDefaultOut": {
+        "properties": {
+          "default_delivery_channel": {
+            "enum": [
+              "post",
+              "email",
+              "portal"
+            ],
+            "title": "Default Delivery Channel",
+            "type": "string"
+          }
+        },
+        "required": [
+          "default_delivery_channel"
+        ],
+        "title": "DeliveryDefaultOut",
+        "type": "object"
+      },
       "DeliveryMode": {
         "description": "Delivery rule of an authorised representative (relation kind ``representative``,\noperator decision 26.09.2026): who receives mails, letters and WEG invitations addressed\nto the represented contact.",
         "enum": [
@@ -21771,6 +22265,108 @@
           "sent"
         ],
         "title": "DocumentChoiceOut",
+        "type": "object"
+      },
+      "DocumentClassGrantIn": {
+        "additionalProperties": false,
+        "properties": {
+          "document_class": {
+            "maxLength": 63,
+            "minLength": 1,
+            "title": "Document Class",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "role": {
+            "pattern": "^(tenant|owner|board|provider)$",
+            "title": "Role",
+            "type": "string"
+          },
+          "valid_from": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid From"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "legal_entity_id",
+          "document_class",
+          "role"
+        ],
+        "title": "DocumentClassGrantIn",
+        "type": "object"
+      },
+      "DocumentClassGrantOut": {
+        "additionalProperties": false,
+        "properties": {
+          "document_class": {
+            "title": "Document Class",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "legal_entity_id": {
+            "format": "uuid",
+            "title": "Legal Entity Id",
+            "type": "string"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "valid_from": {
+            "format": "date",
+            "title": "Valid From",
+            "type": "string"
+          },
+          "valid_to": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Valid To"
+          }
+        },
+        "required": [
+          "id",
+          "legal_entity_id",
+          "document_class",
+          "role",
+          "valid_from",
+          "valid_to"
+        ],
+        "title": "DocumentClassGrantOut",
         "type": "object"
       },
       "DocumentDeletionOut": {
@@ -24328,6 +24924,18 @@
       "FeeIn": {
         "additionalProperties": false,
         "properties": {
+          "account_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Account Id"
+          },
           "amounts_per_unit_type": {
             "additionalProperties": {
               "anyOf": [
@@ -24355,6 +24963,35 @@
             ],
             "title": "Contract Document Id"
           },
+          "due_day": {
+            "anyOf": [
+              {
+                "maximum": 31.0,
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Day"
+          },
+          "due_day_rule": {
+            "anyOf": [
+              {
+                "enum": [
+                  "day",
+                  "last_day",
+                  "day_next_month"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Due Day Rule"
+          },
           "end_date": {
             "anyOf": [
               {
@@ -24378,6 +25015,18 @@
               }
             ],
             "title": "Invoice Debtor Party Id"
+          },
+          "manager_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Manager Contact Id"
           },
           "max_amount": {
             "anyOf": [
@@ -24414,10 +25063,38 @@
             "title": "Property Id",
             "type": "string"
           },
+          "sev_fee_amount": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d*$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sev Fee Amount"
+          },
           "start_date": {
             "format": "date",
             "title": "Start Date",
             "type": "string"
+          },
+          "termination_date": {
+            "anyOf": [
+              {
+                "format": "date",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Termination Date"
           },
           "vat_percent": {
             "anyOf": [
@@ -26520,6 +27197,63 @@
         "title": "G5EvidenceIn",
         "type": "object"
       },
+      "GateChecklistItemOut": {
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "label"
+        ],
+        "title": "GateChecklistItemOut",
+        "type": "object"
+      },
+      "GateChecklistOut": {
+        "properties": {
+          "evidence_document_required": {
+            "title": "Evidence Document Required",
+            "type": "boolean"
+          },
+          "functions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Functions",
+            "type": "array"
+          },
+          "gate": {
+            "title": "Gate",
+            "type": "string"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/GateChecklistItemOut"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "label": {
+            "title": "Label",
+            "type": "string"
+          }
+        },
+        "required": [
+          "gate",
+          "label",
+          "items",
+          "functions",
+          "evidence_document_required"
+        ],
+        "title": "GateChecklistOut",
+        "type": "object"
+      },
       "GateDecision": {
         "properties": {
           "comment": {
@@ -26540,12 +27274,39 @@
       },
       "GateRequestCreate": {
         "properties": {
+          "checklist": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "maxProperties": 30,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist"
+          },
           "evidence": {
             "description": "Verweis auf Prüfnachweis",
             "maxLength": 2000,
             "minLength": 5,
             "title": "Evidence",
             "type": "string"
+          },
+          "evidence_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Document Id"
           },
           "gate": {
             "pattern": "^G[1-5]$",
@@ -26558,6 +27319,53 @@
             "minLength": 10,
             "title": "Scope",
             "type": "string"
+          },
+          "scope_functions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Functions"
+          },
+          "scope_legal_entity_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Legal Entity Ids"
+          },
+          "scope_property_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 500,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Property Ids"
           }
         },
         "required": [
@@ -26570,6 +27378,20 @@
       },
       "GateRequestOut": {
         "properties": {
+          "checklist": {
+            "anyOf": [
+              {
+                "additionalProperties": {
+                  "type": "string"
+                },
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checklist"
+          },
           "decided_at": {
             "anyOf": [
               {
@@ -26609,6 +27431,18 @@
             "title": "Evidence",
             "type": "string"
           },
+          "evidence_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Document Id"
+          },
           "four_eyes": {
             "default": true,
             "title": "Four Eyes",
@@ -26623,14 +27457,117 @@
             "title": "Id",
             "type": "string"
           },
+          "opened_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened At"
+          },
+          "opened_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opened By"
+          },
           "requested_by": {
             "format": "uuid",
             "title": "Requested By",
             "type": "string"
           },
+          "revoke_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoke Comment"
+          },
+          "revoked_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked At"
+          },
+          "revoked_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revoked By"
+          },
           "scope": {
             "title": "Scope",
             "type": "string"
+          },
+          "scope_functions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Functions"
+          },
+          "scope_legal_entity_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Legal Entity Ids"
+          },
+          "scope_property_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scope Property Ids"
           },
           "status": {
             "title": "Status",
@@ -26700,6 +27637,11 @@
             "title": "Open",
             "type": "boolean"
           },
+          "partially_open": {
+            "default": false,
+            "title": "Partially Open",
+            "type": "boolean"
+          },
           "scopes": {
             "items": {
               "type": "string"
@@ -26715,6 +27657,177 @@
           "scopes"
         ],
         "title": "GateStateOut",
+        "type": "object"
+      },
+      "GeneratedDocumentOut": {
+        "description": "Provenance of a produced document (GA04-11): template and version, context, recipient\nand the dispatch record with channel and evidence.",
+        "properties": {
+          "context_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Id"
+          },
+          "context_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Context Type"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "delivered_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivered At"
+          },
+          "delivery_channel": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Channel"
+          },
+          "delivery_evidence_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Evidence Kind"
+          },
+          "delivery_evidence_ref": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Evidence Ref"
+          },
+          "delivery_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Delivery Status"
+          },
+          "dispatch_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dispatch Id"
+          },
+          "document_id": {
+            "format": "uuid",
+            "title": "Document Id",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "recipient_contact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Recipient Contact Id"
+          },
+          "template_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Code"
+          },
+          "template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Id"
+          },
+          "template_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Template Version"
+          }
+        },
+        "required": [
+          "id",
+          "document_id",
+          "template_id",
+          "template_code",
+          "template_version",
+          "context_type",
+          "context_id",
+          "recipient_contact_id",
+          "dispatch_id",
+          "created_at"
+        ],
+        "title": "GeneratedDocumentOut",
         "type": "object"
       },
       "GmailSpikeConfirmIn": {
@@ -28992,6 +30105,18 @@
       "HoaResolutionIn": {
         "additionalProperties": false,
         "properties": {
+          "court_notes": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Notes"
+          },
           "decided_on": {
             "format": "date",
             "title": "Decided On",
@@ -29007,6 +30132,18 @@
             "format": "uuid",
             "title": "Legal Entity Id",
             "type": "string"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
           },
           "majority_basis": {
             "anyOf": [
@@ -29033,7 +30170,7 @@
             "title": "Snapshot Hash"
           },
           "status": {
-            "pattern": "^(positive|negative|final|contested|annulled|legally_binding|void)$",
+            "pattern": "^(positive|negative|final|contested|annulled|legally_binding|deleted|irrelevant|void)$",
             "title": "Status",
             "type": "string"
           },
@@ -29109,15 +30246,43 @@
       "HoaResolutionPatch": {
         "additionalProperties": false,
         "properties": {
+          "court_notes": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Court Notes"
+          },
+          "location": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location"
+          },
           "status": {
-            "pattern": "^(positive|negative|final|contested|annulled|legally_binding|void)$",
-            "title": "Status",
-            "type": "string"
+            "anyOf": [
+              {
+                "pattern": "^(positive|negative|final|contested|annulled|legally_binding|deleted|irrelevant|void)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
           }
         },
-        "required": [
-          "status"
-        ],
         "title": "HoaResolutionPatch",
         "type": "object"
       },
@@ -30369,6 +31534,18 @@
             ],
             "title": "Contact Id"
           },
+          "contract_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Contract Id"
+          },
           "property_id": {
             "anyOf": [
               {
@@ -30381,6 +31558,18 @@
             ],
             "title": "Property Id"
           },
+          "unit_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Unit Id"
+          },
           "use_proposed": {
             "default": true,
             "description": "false: nur die hier angegebenen Werte übernehmen",
@@ -30389,6 +31578,26 @@
           }
         },
         "title": "IntakeAcceptIn",
+        "type": "object"
+      },
+      "IntakeFollowupConfirmIn": {
+        "additionalProperties": false,
+        "properties": {
+          "target_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Ticket oder Vertrag, falls der Vorschlag keines nennt",
+            "title": "Target Id"
+          }
+        },
+        "title": "IntakeFollowupConfirmIn",
         "type": "object"
       },
       "IntakeProposalOut": {
@@ -33619,6 +34828,11 @@
               }
             ],
             "title": "Contract Id"
+          },
+          "include_info_sheet": {
+            "default": false,
+            "title": "Include Info Sheet",
+            "type": "boolean"
           },
           "letter_date": {
             "anyOf": [
@@ -38842,6 +40056,15 @@
       "MaintenanceIn": {
         "additionalProperties": false,
         "properties": {
+          "documents": {
+            "description": "Dokumentverweise (DMS), GA02-04",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Documents",
+            "type": "array"
+          },
           "due_date": {
             "anyOf": [
               {
@@ -38932,6 +40155,15 @@
       },
       "MaintenanceOut": {
         "properties": {
+          "documents": {
+            "description": "Dokumentverweise (DMS), GA02-04",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Documents",
+            "type": "array"
+          },
           "done_at": {
             "anyOf": [
               {
@@ -39049,6 +40281,21 @@
         "additionalProperties": false,
         "description": "Partial update of a maintenance item (C2); status and completion only via ``/done``.",
         "properties": {
+          "documents": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documents"
+          },
           "due_date": {
             "anyOf": [
               {
@@ -40246,9 +41493,57 @@
       "MeetingIn": {
         "additionalProperties": false,
         "properties": {
+          "ballot_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ballot Template Id"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "internal_description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Description"
+          },
+          "invitation_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitation Template Id"
+          },
           "kind": {
             "default": "ordinary",
-            "pattern": "^(ordinary|extraordinary)$",
+            "pattern": "^(ordinary|extraordinary|repeat|continuation|partial|circular_resolution)$",
             "title": "Kind",
             "type": "string"
           },
@@ -40274,6 +41569,42 @@
             "pattern": "^(presence|hybrid|virtual)$",
             "title": "Mode",
             "type": "string"
+          },
+          "origin_meeting_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Meeting Id"
+          },
+          "proxy_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Template Id"
+          },
+          "public_description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Description"
           },
           "resolution_deadline_at": {
             "anyOf": [
@@ -40356,8 +41687,80 @@
       },
       "MeetingPatch": {
         "additionalProperties": false,
-        "description": "Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields.",
+        "description": "Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields.\nGA03-01: end, templates and descriptions; omitted fields stay unchanged.",
         "properties": {
+          "ballot_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ballot Template Id"
+          },
+          "ends_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ends At"
+          },
+          "internal_description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Internal Description"
+          },
+          "invitation_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Invitation Template Id"
+          },
+          "proxy_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Proxy Template Id"
+          },
+          "public_description": {
+            "anyOf": [
+              {
+                "maxLength": 20000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Description"
+          },
           "resolution_deadline_at": {
             "anyOf": [
               {
@@ -40394,6 +41797,17 @@
             "minimum": 1.0,
             "title": "Invitation Weeks",
             "type": "integer"
+          },
+          "virtual_basis_term_lock_enabled": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Virtual Basis Term Lock Enabled"
           },
           "virtual_meetings_enabled": {
             "title": "Virtual Meetings Enabled",
@@ -43014,16 +44428,59 @@
         "additionalProperties": false,
         "properties": {
           "audience": {
-            "default": "all",
-            "pattern": "^(tenant|owner|all)$",
-            "title": "Audience",
-            "type": "string"
+            "anyOf": [
+              {
+                "enum": [
+                  "tenant",
+                  "owner",
+                  "all"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audience"
+          },
+          "audiences": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "tenant",
+                    "owner",
+                    "provider"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audiences"
           },
           "body": {
             "maxLength": 20000,
             "minLength": 1,
             "title": "Body",
             "type": "string"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
           },
           "document_id": {
             "anyOf": [
@@ -43037,10 +44494,30 @@
             ],
             "title": "Document Id"
           },
+          "document_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "maxItems": 20,
+            "title": "Document Ids",
+            "type": "array"
+          },
           "title": {
             "maxLength": 300,
             "minLength": 1,
             "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "default": "neutral",
+            "enum": [
+              "neutral",
+              "info",
+              "warning",
+              "danger"
+            ],
+            "title": "Type",
             "type": "string"
           },
           "valid_from": {
@@ -43075,7 +44552,11 @@
           "audience": {
             "anyOf": [
               {
-                "pattern": "^(tenant|owner|all)$",
+                "enum": [
+                  "tenant",
+                  "owner",
+                  "all"
+                ],
                 "type": "string"
               },
               {
@@ -43083,6 +44564,27 @@
               }
             ],
             "title": "Audience"
+          },
+          "audiences": {
+            "anyOf": [
+              {
+                "items": {
+                  "enum": [
+                    "tenant",
+                    "owner",
+                    "provider"
+                  ],
+                  "type": "string"
+                },
+                "maxItems": 3,
+                "minItems": 1,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Audiences"
           },
           "body": {
             "anyOf": [
@@ -43096,6 +44598,23 @@
               }
             ],
             "title": "Body"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "clear_category": {
+            "default": false,
+            "title": "Clear Category",
+            "type": "boolean"
           },
           "clear_document": {
             "default": false,
@@ -43119,6 +44638,22 @@
             ],
             "title": "Document Id"
           },
+          "document_ids": {
+            "anyOf": [
+              {
+                "items": {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                "maxItems": 20,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Document Ids"
+          },
           "title": {
             "anyOf": [
               {
@@ -43131,6 +44666,23 @@
               }
             ],
             "title": "Title"
+          },
+          "type": {
+            "anyOf": [
+              {
+                "enum": [
+                  "neutral",
+                  "info",
+                  "warning",
+                  "danger"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Type"
           },
           "valid_from": {
             "anyOf": [
@@ -43487,6 +45039,165 @@
           "items"
         ],
         "title": "NotificationPreferencesOut",
+        "type": "object"
+      },
+      "NumberFormat": {
+        "additionalProperties": false,
+        "description": "Prefix, digits, start value and year reference of one number circle.",
+        "properties": {
+          "digits": {
+            "default": 6,
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Digits",
+            "type": "integer"
+          },
+          "prefix": {
+            "default": "",
+            "maxLength": 10,
+            "pattern": "^[A-Z0-9]*$",
+            "title": "Prefix",
+            "type": "string"
+          },
+          "start": {
+            "default": 1,
+            "maximum": 999999999.0,
+            "minimum": 1.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "year_based": {
+            "default": false,
+            "title": "Year Based",
+            "type": "boolean"
+          }
+        },
+        "title": "NumberFormat",
+        "type": "object"
+      },
+      "NumberFormatEntryOut": {
+        "properties": {
+          "digits": {
+            "title": "Digits",
+            "type": "integer"
+          },
+          "is_default": {
+            "title": "Is Default",
+            "type": "boolean"
+          },
+          "locked": {
+            "title": "Locked",
+            "type": "boolean"
+          },
+          "prefix": {
+            "title": "Prefix",
+            "type": "string"
+          },
+          "preview": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Preview",
+            "type": "array"
+          },
+          "scope": {
+            "title": "Scope",
+            "type": "string"
+          },
+          "start": {
+            "title": "Start",
+            "type": "integer"
+          },
+          "year_based": {
+            "title": "Year Based",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "scope",
+          "prefix",
+          "digits",
+          "start",
+          "year_based",
+          "locked",
+          "is_default",
+          "preview"
+        ],
+        "title": "NumberFormatEntryOut",
+        "type": "object"
+      },
+      "NumberFormatPreviewIn": {
+        "additionalProperties": false,
+        "properties": {
+          "digits": {
+            "default": 6,
+            "maximum": 12.0,
+            "minimum": 1.0,
+            "title": "Digits",
+            "type": "integer"
+          },
+          "prefix": {
+            "default": "",
+            "maxLength": 10,
+            "pattern": "^[A-Z0-9]*$",
+            "title": "Prefix",
+            "type": "string"
+          },
+          "scope": {
+            "pattern": "^(property|contract|document|ticket|invoice)$",
+            "title": "Scope",
+            "type": "string"
+          },
+          "start": {
+            "default": 1,
+            "maximum": 999999999.0,
+            "minimum": 1.0,
+            "title": "Start",
+            "type": "integer"
+          },
+          "year_based": {
+            "default": false,
+            "title": "Year Based",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "scope"
+        ],
+        "title": "NumberFormatPreviewIn",
+        "type": "object"
+      },
+      "NumberFormatsIn": {
+        "additionalProperties": false,
+        "properties": {
+          "formats": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/NumberFormat"
+            },
+            "title": "Formats",
+            "type": "object"
+          }
+        },
+        "required": [
+          "formats"
+        ],
+        "title": "NumberFormatsIn",
+        "type": "object"
+      },
+      "NumberFormatsOut": {
+        "properties": {
+          "formats": {
+            "items": {
+              "$ref": "#/components/schemas/NumberFormatEntryOut"
+            },
+            "title": "Formats",
+            "type": "array"
+          }
+        },
+        "required": [
+          "formats"
+        ],
+        "title": "NumberFormatsOut",
         "type": "object"
       },
       "OAuthClientIn": {
@@ -43897,6 +45608,129 @@
           "end_date"
         ],
         "title": "OccupantOut",
+        "type": "object"
+      },
+      "OidcClientCreate": {
+        "additionalProperties": false,
+        "properties": {
+          "client_id": {
+            "maxLength": 100,
+            "minLength": 2,
+            "title": "Client Id",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "public": {
+            "default": false,
+            "title": "Public",
+            "type": "boolean"
+          },
+          "redirect_uris": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Redirect Uris",
+            "type": "array"
+          }
+        },
+        "required": [
+          "client_id",
+          "name",
+          "redirect_uris"
+        ],
+        "title": "OidcClientCreate",
+        "type": "object"
+      },
+      "OidcClientOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "public": {
+            "title": "Public",
+            "type": "boolean"
+          },
+          "redirect_uris": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Redirect Uris",
+            "type": "array"
+          }
+        },
+        "required": [
+          "client_id",
+          "name",
+          "redirect_uris",
+          "public",
+          "active"
+        ],
+        "title": "OidcClientOut",
+        "type": "object"
+      },
+      "OidcClientSecretOut": {
+        "properties": {
+          "active": {
+            "title": "Active",
+            "type": "boolean"
+          },
+          "client_id": {
+            "title": "Client Id",
+            "type": "string"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "wird nur einmal angezeigt",
+            "title": "Client Secret"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "public": {
+            "title": "Public",
+            "type": "boolean"
+          },
+          "redirect_uris": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Redirect Uris",
+            "type": "array"
+          }
+        },
+        "required": [
+          "client_id",
+          "name",
+          "redirect_uris",
+          "public",
+          "active",
+          "client_secret"
+        ],
+        "title": "OidcClientSecretOut",
         "type": "object"
       },
       "OidcTokenResponse": {
@@ -45702,6 +47536,11 @@
       "OwnerStatementIn": {
         "additionalProperties": false,
         "properties": {
+          "attach_receipts": {
+            "default": false,
+            "title": "Attach Receipts",
+            "type": "boolean"
+          },
           "ledger_id": {
             "format": "uuid",
             "title": "Ledger Id",
@@ -45724,6 +47563,21 @@
           "period_to"
         ],
         "title": "OwnerStatementIn",
+        "type": "object"
+      },
+      "OwnerStatementOptionsIn": {
+        "additionalProperties": false,
+        "description": "GA03-08: output options of the statement (no effect on the calculation).",
+        "properties": {
+          "attach_receipts": {
+            "title": "Attach Receipts",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "attach_receipts"
+        ],
+        "title": "OwnerStatementOptionsIn",
         "type": "object"
       },
       "OwnerStatementStatus": {
@@ -47245,6 +49099,11 @@
             "title": "Account Id",
             "type": "string"
           },
+          "auto_post": {
+            "default": false,
+            "title": "Auto Post",
+            "type": "boolean"
+          },
           "end_date": {
             "anyOf": [
               {
@@ -47686,6 +49545,13 @@
             "title": "Magic Link 2Fa",
             "type": "boolean"
           },
+          "roles": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Roles",
+            "type": "array"
+          },
           "status": {
             "title": "Status",
             "type": "string"
@@ -47696,6 +49562,7 @@
           "contact_id",
           "email",
           "status",
+          "roles",
           "locked",
           "invited_at",
           "invitation_expires_at",
@@ -53456,6 +55323,51 @@
         "title": "ProtocolPatch",
         "type": "object"
       },
+      "ProviderAvailabilityIn": {
+        "additionalProperties": false,
+        "properties": {
+          "ends_at": {
+            "format": "date-time",
+            "title": "Ends At",
+            "type": "string"
+          },
+          "kind": {
+            "default": "available",
+            "pattern": "^(available|unavailable)$",
+            "title": "Kind",
+            "type": "string"
+          },
+          "note": {
+            "anyOf": [
+              {
+                "maxLength": 300,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Note"
+          },
+          "provider_contact_id": {
+            "format": "uuid",
+            "title": "Provider Contact Id",
+            "type": "string"
+          },
+          "starts_at": {
+            "format": "date-time",
+            "title": "Starts At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "provider_contact_id",
+          "starts_at",
+          "ends_at"
+        ],
+        "title": "ProviderAvailabilityIn",
+        "type": "object"
+      },
       "ProviderChangeIn": {
         "additionalProperties": false,
         "properties": {
@@ -53611,6 +55523,21 @@
               }
             ],
             "title": "Customer Number"
+          },
+          "documents": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "maxItems": 50,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Documents"
           },
           "notes": {
             "anyOf": [
@@ -55074,6 +57001,11 @@
             ],
             "title": "Anchor Day"
           },
+          "auto_post": {
+            "default": false,
+            "title": "Auto Post",
+            "type": "boolean"
+          },
           "end_date": {
             "anyOf": [
               {
@@ -55199,6 +57131,17 @@
               }
             ],
             "title": "Account Id"
+          },
+          "auto_post": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Auto Post"
           },
           "end_date": {
             "anyOf": [
@@ -61352,6 +63295,18 @@
             ],
             "title": "Deadline Exception"
           },
+          "deadline_exception_document_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deadline Exception Document Id"
+          },
           "include_heating": {
             "anyOf": [
               {
@@ -63274,6 +65229,26 @@
             "title": "Code",
             "type": "string"
           },
+          "context_types": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 7,
+            "title": "Context Types",
+            "type": "array"
+          },
+          "master_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Master Template Id"
+          },
           "name": {
             "maxLength": 200,
             "minLength": 1,
@@ -63325,16 +65300,43 @@
             "title": "Code",
             "type": "string"
           },
+          "context_types": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 7,
+            "title": "Context Types",
+            "type": "array"
+          },
           "id": {
             "format": "uuid",
             "title": "Id",
             "type": "string"
+          },
+          "master_template_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Master Template Id"
           },
           "name": {
             "maxLength": 200,
             "minLength": 1,
             "title": "Name",
             "type": "string"
+          },
+          "placeholders_used": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Placeholders Used",
+            "type": "array"
           },
           "subject": {
             "maxLength": 2000,
@@ -63683,6 +65685,61 @@
           "name"
         ],
         "title": "TenantCreate",
+        "type": "object"
+      },
+      "TenantDomainIn": {
+        "additionalProperties": false,
+        "properties": {
+          "host": {
+            "maxLength": 253,
+            "minLength": 4,
+            "title": "Host",
+            "type": "string"
+          },
+          "purpose": {
+            "default": "portal",
+            "enum": [
+              "portal",
+              "crm",
+              "api"
+            ],
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "host"
+        ],
+        "title": "TenantDomainIn",
+        "type": "object"
+      },
+      "TenantDomainOut": {
+        "properties": {
+          "cname_hint": {
+            "title": "Cname Hint",
+            "type": "string"
+          },
+          "host": {
+            "title": "Host",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "purpose": {
+            "title": "Purpose",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "host",
+          "purpose",
+          "cname_hint"
+        ],
+        "title": "TenantDomainOut",
         "type": "object"
       },
       "TenantFigures": {
@@ -64369,6 +66426,24 @@
           }
         },
         "title": "TenantSettingsPatch",
+        "type": "object"
+      },
+      "TenantStatusPatch": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "active",
+              "suspended"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "title": "TenantStatusPatch",
         "type": "object"
       },
       "TerminatedBy": {
@@ -68796,6 +70871,18 @@
       "VoteIn": {
         "additionalProperties": false,
         "properties": {
+          "channel": {
+            "anyOf": [
+              {
+                "pattern": "^(presence|online|circular)$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Channel"
+          },
           "choice": {
             "pattern": "^(yes|no|abstain)$",
             "title": "Choice",
@@ -69192,6 +71279,18 @@
       "WorkOrderIn": {
         "additionalProperties": false,
         "properties": {
+          "approval_workflow_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Approval Workflow Id"
+          },
           "budget_limit": {
             "anyOf": [
               {
@@ -70391,6 +72490,15 @@
             ],
             "title": "Customer Number"
           },
+          "documents": {
+            "description": "Dokumentverweise (DMS), GA02-04",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Documents",
+            "type": "array"
+          },
           "exemption_cert_status": {
             "anyOf": [
               {
@@ -70526,6 +72634,15 @@
               }
             ],
             "title": "Customer Number"
+          },
+          "documents": {
+            "description": "Dokumentverweise (DMS), GA02-04",
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 50,
+            "title": "Documents",
+            "type": "array"
           },
           "exemption_cert_status": {
             "anyOf": [
@@ -75949,6 +78066,7 @@
     },
     "/api/v1/accounting/ledgers/{ledger_id}/checks": {
       "get": {
+        "description": "``findings`` are hard violations (B02, B04 numbering, B07, B09); ``subledger`` lists\nper debtor and creditor account the open items against the ledger balance as of\n``as_of`` (GA05-03). A difference there is shown for review, it does not set ``ok``.",
         "operationId": "checks_api_v1_accounting_ledgers__ledger_id__checks_get",
         "parameters": [
           {
@@ -75959,6 +78077,23 @@
               "format": "uuid",
               "title": "Ledger Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "as_of",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "As Of"
             }
           }
         ],
@@ -76760,6 +78895,125 @@
           }
         },
         "summary": "Anfangsbestand prüfen (zweite Person)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/ledgers/{ledger_id}/entries/{entry_id}/notes": {
+      "get": {
+        "operationId": "list_entry_notes_api_v1_accounting_ledgers__ledger_id__entries__entry_id__notes_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AccountingEntryNoteOut"
+                  },
+                  "title": "Response List Entry Notes Api V1 Accounting Ledgers  Ledger Id  Entries  Entry Id  Notes Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vermerke zum Buchungssatz (alle Versionen)",
+        "tags": [
+          "Buchhaltung"
+        ]
+      },
+      "post": {
+        "description": "Notes never change the financial content of the entry (B03); every change is a new\nversion, earlier versions stay readable (GA05-02). No release gate: a note is no posting.",
+        "operationId": "add_entry_note_api_v1_accounting_ledgers__ledger_id__entries__entry_id__notes_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "ledger_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Ledger Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "entry_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Entry Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccountingEntryNoteIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AccountingEntryNoteOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vermerk ergänzen oder als neue Version fortschreiben",
         "tags": [
           "Buchhaltung"
         ]
@@ -80480,6 +82734,32 @@
           }
         },
         "summary": "Wirksame Regelversion zu einem Datum",
+        "tags": [
+          "Buchhaltung"
+        ]
+      }
+    },
+    "/api/v1/accounting/rule-versions/seed-checkpoints": {
+      "post": {
+        "description": "GA08-02/03: HeizkostenV §§ 5 und 12 and CO2KostAufG §§ 5a to 5d as draft entries with a\nnote and no legal consequence (7.10 H03, H05). Existing entries are kept.",
+        "operationId": "seed_rule_checkpoints_api_v1_accounting_rule_versions_seed_checkpoints_post",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RuleVersionOut"
+                  },
+                  "title": "Response Seed Rule Checkpoints Api V1 Accounting Rule Versions Seed Checkpoints Post",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Datierte Prüfpunkte als Entwurf anlegen",
         "tags": [
           "Buchhaltung"
         ]
@@ -88911,11 +91191,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "$ref": "#/components/schemas/TransactionOut"
-                  },
-                  "title": "Response Transactions Api V1 Banking Transactions Get",
-                  "type": "array"
+                  "title": "Response Transactions Api V1 Banking Transactions Get"
                 }
               }
             },
@@ -90809,6 +93085,61 @@
           }
         },
         "summary": "Berechnen (Snapshot aus dem Ledger)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
+    "/api/v1/billing/owner-statements/{statement_id}/options": {
+      "patch": {
+        "operationId": "options_api_v1_billing_owner_statements__statement_id__options_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OwnerStatementOptionsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Options Api V1 Billing Owner Statements  Statement Id  Options Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ausgabeoptionen der Eigentümerabrechnung (Belege anfügen)",
         "tags": [
           "Abrechnung"
         ]
@@ -98312,6 +100643,26 @@
     "/api/v1/document-templates": {
       "get": {
         "operationId": "list_templates_api_v1_document_templates_get",
+        "parameters": [
+          {
+            "description": "Nur Vorlagen, die für diesen Kontext erlaubt sind (leer: alle)",
+            "in": "query",
+            "name": "context_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Nur Vorlagen, die für diesen Kontext erlaubt sind (leer: alle)",
+              "title": "Context Type"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "content": {
@@ -98326,6 +100677,16 @@
               }
             },
             "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
           }
         },
         "summary": "Vorlagen",
@@ -98843,6 +101204,76 @@
         ]
       }
     },
+    "/api/v1/documents/intake-proposals/{proposal_id}/followups/{kind}/confirm": {
+      "post": {
+        "description": "Second human step after the filing (11.4). Ticket and contract file become a document\nlink; invoice and meeting are only marked as handed over, the receipt and meeting\nworkflows (with their own approvals) take it from there.",
+        "operationId": "confirm_intake_followup_api_v1_documents_intake_proposals__proposal_id__followups__kind__confirm_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "kind",
+            "required": true,
+            "schema": {
+              "title": "Kind",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/IntakeFollowupConfirmIn"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Body"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Folgevorschlag bestätigen (nur Verknüpfung, keine Buchung)",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
     "/api/v1/documents/intake-proposals/{proposal_id}/reject": {
       "post": {
         "operationId": "reject_intake_proposal_api_v1_documents_intake_proposals__proposal_id__reject_post",
@@ -98898,6 +101329,50 @@
           }
         },
         "summary": "Vorschlag ablehnen",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/documents/intake-proposals/{proposal_id}/revert-auto": {
+      "post": {
+        "description": "GA10-03: undo a direct filing; the link is removed (unless it existed before) and the\nproposal returns to the review list.",
+        "operationId": "revert_auto_filed_api_v1_documents_intake_proposals__proposal_id__revert_auto_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "proposal_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Proposal Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IntakeProposalOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Automatische Ablage zurücknehmen",
         "tags": [
           "Dokumente"
         ]
@@ -99888,6 +102363,135 @@
           }
         },
         "summary": "Aufbewahrungs- und Sperrstatus",
+        "tags": [
+          "Dokumente"
+        ]
+      }
+    },
+    "/api/v1/generated-documents": {
+      "get": {
+        "description": "Provenance of produced letters: template and version, context entity, recipient and\nthe dispatch record (channel, status, evidence). Only documents the caller may see.",
+        "operationId": "list_generated_documents_api_v1_generated_documents_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "document_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Document Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "context_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "maxLength": 32,
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Context Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "context_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Context Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "recipient_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Recipient Contact Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GeneratedDocumentOut"
+                  },
+                  "title": "Response List Generated Documents Api V1 Generated Documents Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Erzeugte Dokumente mit Herkunft und Zustellung",
         "tags": [
           "Dokumente"
         ]
@@ -102113,6 +104717,61 @@
         ]
       }
     },
+    "/api/v1/hoa/agenda/{item_id}": {
+      "patch": {
+        "operationId": "patch_agenda_api_v1_hoa_agenda__item_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "item_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Item Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgendaPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Patch Agenda Api V1 Hoa Agenda  Item Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ergebnis vertagt/ohne Abstimmung, Protokolltext",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
     "/api/v1/hoa/agenda/{item_id}/announce": {
       "post": {
         "operationId": "announce_api_v1_hoa_agenda__item_id__announce_post",
@@ -102561,6 +105220,52 @@
           }
         },
         "summary": "Vermögensbericht als PDF (Entwurf bis G4)",
+        "tags": [
+          "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/asset-reports/{report_id}/provisions": {
+      "get": {
+        "description": "Per ownership contract of the reporting date: first and last retrieval in the portal.\nIndication only; a missing retrieval is no proof of non delivery, a retrieval no delivery.",
+        "operationId": "asset_report_provisions_api_v1_hoa_asset_reports__report_id__provisions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Asset Report Provisions Api V1 Hoa Asset Reports  Report Id  Provisions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Bereitstellungsprotokoll je Eigentümer (GA07-02)",
         "tags": [
           "WEG"
         ]
@@ -107051,12 +109756,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response List Resolutions Api V1 Hoa Resolutions Get",
-                  "type": "array"
+                  "title": "Response List Resolutions Api V1 Hoa Resolutions Get"
                 }
               }
             },
@@ -107132,6 +109832,22 @@
               "format": "uuid",
               "title": "Resolution Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -107733,6 +110449,181 @@
         "summary": "Hausgeldabrechnung mit Kostenpositionen",
         "tags": [
           "WEG"
+        ]
+      }
+    },
+    "/api/v1/hoa/statements/{statement_id}/acquisitions": {
+      "get": {
+        "operationId": "list_acquisitions_api_v1_hoa_statements__statement_id__acquisitions_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Acquisitions Api V1 Hoa Statements  Statement Id  Acquisitions Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sondererwerbe der Abrechnung (W07)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/statements/{statement_id}/acquisitions/{contract_id}/release": {
+      "post": {
+        "operationId": "release_api_v1_hoa_statements__statement_id__acquisitions__contract_id__release_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcquisitionReleaseIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Release Api V1 Hoa Statements  Statement Id  Acquisitions  Contract Id  Release Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Sondererwerb freigeben (zweite Person)",
+        "tags": [
+          "hoa"
+        ]
+      }
+    },
+    "/api/v1/hoa/statements/{statement_id}/acquisitions/{contract_id}/request": {
+      "post": {
+        "operationId": "request_release_api_v1_hoa_statements__statement_id__acquisitions__contract_id__request_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "contract_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Contract Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcquisitionRequestIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Request Release Api V1 Hoa Statements  Statement Id  Acquisitions  Contract Id  Request Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Freigabe eines Sondererwerbs beantragen (erste Person)",
+        "tags": [
+          "hoa"
         ]
       }
     },
@@ -119617,12 +122508,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "items": {
-                    "additionalProperties": true,
-                    "type": "object"
-                  },
-                  "title": "Response Messages Api V1 Mail Messages Get",
-                  "type": "array"
+                  "title": "Response Messages Api V1 Mail Messages Get"
                 }
               }
             },
@@ -119902,6 +122788,22 @@
               "format": "uuid",
               "title": "Message Id",
               "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "if-match",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "If-Match"
             }
           }
         ],
@@ -124522,6 +127424,52 @@
         ]
       }
     },
+    "/api/v1/notices/{notice_id}/reads": {
+      "get": {
+        "description": "Read quota and confirmations (6.2 notice_board_read). An indication only: no delivery,\nno legally assessed receipt, no deadline.",
+        "operationId": "notice_reads_api_v1_notices__notice_id__reads_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Notice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Notice Reads Api V1 Notices  Notice Id  Reads Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Lesebestätigungen eines Aushangs",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
     "/api/v1/objektakte/ai-calls/summary": {
       "get": {
         "description": "Aggregates `objektakte_ai_call` of the tenant: cost in EUR, tokens and number of calls\nper property (`by_property`, calls without a resolved property in one row with\n`property_id=null`) and per calendar month of `requested_at` (`by_month`, `YYYY-MM`, UTC).\n`from`/`to` are inclusive calendar days; `property_id` narrows both groupings. Cost sums\nkeep six decimals as decimal strings (the UI formats `1.234,56 EUR`), tokens are integers.",
@@ -127255,6 +130203,167 @@
         ]
       }
     },
+    "/api/v1/platform/oidc-clients": {
+      "get": {
+        "operationId": "list_oidc_clients_api_v1_platform_oidc_clients_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/OidcClientOut"
+                  },
+                  "title": "Response List Oidc Clients Api V1 Platform Oidc Clients Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "OIDC-Clients auflisten",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "post": {
+        "operationId": "create_oidc_client_api_v1_platform_oidc_clients_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OidcClientCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcClientSecretOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "OIDC-Client anlegen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/platform/oidc-clients/{client_id}/rotate-secret": {
+      "post": {
+        "operationId": "rotate_oidc_client_secret_api_v1_platform_oidc_clients__client_id__rotate_secret_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcClientSecretOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "OIDC-Client-Secret erneuern",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/platform/oidc-clients/{client_id}/{action}": {
+      "post": {
+        "operationId": "set_oidc_client_active_api_v1_platform_oidc_clients__client_id___action__post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "client_id",
+            "required": true,
+            "schema": {
+              "title": "Client Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "action",
+            "required": true,
+            "schema": {
+              "enum": [
+                "activate",
+                "deactivate"
+              ],
+              "title": "Action",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OidcClientOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "OIDC-Client (de)aktivieren",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/platform/onboarding": {
       "post": {
         "description": "Creates tenant, settings (company, CI), system roles, legal entities and the first\nadministrator; feature flags stay off and no gate is opened. The welcome mail is a draft.",
@@ -128195,6 +131304,63 @@
         ]
       }
     },
+    "/api/v1/platform/tenants/{tenant_id}": {
+      "patch": {
+        "operationId": "patch_tenant_status_api_v1_platform_tenants__tenant_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantStatusPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Patch Tenant Status Api V1 Platform Tenants  Tenant Id  Patch",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Mandantenstatus ändern (sperren)",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/platform/tenants/{tenant_id}/billing-preview": {
       "get": {
         "description": "Decided 24.09.2026 (M27-01): price per unit, module and month, optional minimum. Net\nonly; VAT and invoicing of licence fees are open (M27-01). Units from the usage counter.\nSince M27-04 one structure: an agreed licence price wins, otherwise the tier (core) or\nthe module add-on of the pricing structure; trial months are not charged.",
@@ -128248,6 +131414,150 @@
         "summary": "Lizenzentgelt je Monat (Vorschau)",
         "tags": [
           "platform"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenant_id}/domains": {
+      "get": {
+        "operationId": "list_tenant_domains_api_v1_platform_tenants__tenant_id__domains_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TenantDomainOut"
+                  },
+                  "title": "Response List Tenant Domains Api V1 Platform Tenants  Tenant Id  Domains Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kundendomains des Mandanten",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "post": {
+        "operationId": "add_tenant_domain_api_v1_platform_tenants__tenant_id__domains_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TenantDomainIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TenantDomainOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kundendomain hinzufügen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/platform/tenants/{tenant_id}/domains/{domain_id}": {
+      "delete": {
+        "operationId": "delete_tenant_domain_api_v1_platform_tenants__tenant_id__domains__domain_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "tenant_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Tenant Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "domain_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Domain Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Kundendomain entfernen",
+        "tags": [
+          "Mandant"
         ]
       }
     },
@@ -129273,6 +132583,105 @@
         ]
       }
     },
+    "/api/v1/portal-admin/accounts/{account_id}/document-class-grants": {
+      "get": {
+        "operationId": "list_document_class_grants_api_v1_portal_admin_accounts__account_id__document_class_grants_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentClassGrantOut"
+                  },
+                  "title": "Response List Document Class Grants Api V1 Portal Admin Accounts  Account Id  Document Class Grants Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Freigaben je Unterlagenklasse",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      },
+      "post": {
+        "description": "GA03-05: releases the documents of one class of a legal entity (e.g. statement vouchers\nfor the advisory board). The class must exist as a retention profile class.",
+        "operationId": "add_document_class_grant_api_v1_portal_admin_accounts__account_id__document_class_grants_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "account_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Account Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DocumentClassGrantIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentClassGrantOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Unterlagenklasse freigeben (6.9.6)",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
     "/api/v1/portal-admin/accounts/{account_id}/invitation-letter": {
       "post": {
         "description": "Letter on the tenant letterhead (M6 renderer) with a QR invitation code, for contacts\nreached by post. POST, not GET: issuing the letter rotates the invitation code (a prefetch\nmust not invalidate a code already handed out); the code is valid 90 days (``QR_INVITE_DAYS``,\nlonger than the e-mail invitation) because a letter reaches the recipient with a delay.",
@@ -129927,6 +133336,138 @@
           }
         },
         "summary": "Einreichungen einer Formularvorlage",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
+    "/api/v1/portal-admin/provider-availability": {
+      "get": {
+        "operationId": "list_availability_api_v1_portal_admin_provider_availability_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "provider_contact_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Provider Contact Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response List Availability Api V1 Portal Admin Provider Availability Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verfügbarkeit der Dienstleister",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      },
+      "post": {
+        "operationId": "add_availability_api_v1_portal_admin_provider_availability_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProviderAvailabilityIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Add Availability Api V1 Portal Admin Provider Availability Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Verfügbarkeit erfassen",
+        "tags": [
+          "Portal Verwaltung"
+        ]
+      }
+    },
+    "/api/v1/portal-admin/provider-availability/{availability_id}": {
+      "delete": {
+        "operationId": "delete_availability_api_v1_portal_admin_provider_availability__availability_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "availability_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Availability Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Availability",
         "tags": [
           "Portal Verwaltung"
         ]
@@ -132504,7 +136045,7 @@
     },
     "/api/v1/portal/notices/{notice_id}/document": {
       "get": {
-        "description": "The attachment is visible exactly like the notice (same property, audience and day).\nNo read receipt is written: a notice is information of the management, not a delivery.",
+        "description": "The attachment is visible exactly like the notice (same property, audience and day).\nNo document read receipt is written: a notice is information of the management.",
         "operationId": "portal_notice_document_api_v1_portal_notices__notice_id__document_get",
         "parameters": [
           {
@@ -132536,7 +136077,102 @@
             "description": "Validation Error"
           }
         },
+        "summary": "Erste Anlage eines Aushangs herunterladen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/notices/{notice_id}/documents/{document_id}": {
+      "get": {
+        "operationId": "portal_notice_attachment_api_v1_portal_notices__notice_id__documents__document_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Notice Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "document_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Document Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/octet-stream": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
         "summary": "Anlage eines Aushangs herunterladen",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/notices/{notice_id}/read": {
+      "post": {
+        "description": "Idempotent read confirmation of a visible notice (6.2 notice_board_read). An indication\nonly, no delivery and no legally assessed receipt.",
+        "operationId": "portal_notice_read_api_v1_portal_notices__notice_id__read_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "notice_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Notice Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Portal Notice Read Api V1 Portal Notices  Notice Id  Read Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Aushang als gelesen bestätigen (Lesebestätigung)",
         "tags": [
           "Portal"
         ]
@@ -132653,6 +136289,70 @@
           }
         },
         "summary": "Umlageeigenschaften der eigenen Einheiten",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/owner/asset-reports": {
+      "get": {
+        "operationId": "owner_asset_reports_api_v1_portal_owner_asset_reports_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Owner Asset Reports Api V1 Portal Owner Asset Reports Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Vermögensberichte der Gemeinschaft (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/owner/asset-reports/{report_id}/pdf": {
+      "get": {
+        "operationId": "owner_asset_report_pdf_api_v1_portal_owner_asset_reports__report_id__pdf_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "report_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Report Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vermögensbericht als PDF (Eigentümer)",
         "tags": [
           "Portal"
         ]
@@ -132920,6 +136620,59 @@
           }
         },
         "summary": "Ansprechpartner des Objekts (Eigentümer)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/provider/availability": {
+      "get": {
+        "operationId": "own_availability_api_v1_portal_provider_availability_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Own Availability Api V1 Portal Provider Availability Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigener Verfügbarkeitskalender (Dienstleister)",
+        "tags": [
+          "Portal"
+        ]
+      }
+    },
+    "/api/v1/portal/provider/framework-contracts": {
+      "get": {
+        "description": "Only the own contracts; internal notes and the notice calculation stay with the\nmanagement.",
+        "operationId": "framework_contracts_api_v1_portal_provider_framework_contracts_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "additionalProperties": true,
+                    "type": "object"
+                  },
+                  "title": "Response Framework Contracts Api V1 Portal Provider Framework Contracts Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Eigene Rahmenverträge (Dienstleister)",
         "tags": [
           "Portal"
         ]
@@ -136111,6 +139864,70 @@
           }
         },
         "summary": "Abrechnungszeitraum löschen",
+        "tags": [
+          "Objekte"
+        ]
+      }
+    },
+    "/api/v1/properties/{property_id}/billing-periods/{period_id}/status": {
+      "post": {
+        "description": "Moves a period one step along open, results_created, confirmed, closed (or one step\nback). ``closed`` sets ``locked_at`` and is final; reopening a closed period needs a\ndecision of the operator (docs/OPEN_QUESTIONS.md, AA08-01). For operating cost periods\nthe step to ``results_created`` needs a statement of the property inside the period that\nleft the draft state, and ``closed`` needs that no draft statement is left in it. The\nstatus is a master data flag; it posts nothing and releases no gate.",
+        "operationId": "transition_billing_period_api_v1_properties__property_id__billing_periods__period_id__status_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "property_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Property Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "period_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Period Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BillingPeriodTransitionIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BillingPeriodOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Status eines Abrechnungszeitraums ändern",
         "tags": [
           "Objekte"
         ]
@@ -142391,6 +146208,45 @@
         ]
       }
     },
+    "/api/v1/statements/{statement_id}/info-sheet/preview": {
+      "post": {
+        "operationId": "info_sheet_preview_api_v1_statements__statement_id__info_sheet_preview_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "statement_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Statement Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/pdf": {}
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Informationsblatt zur Abrechnung als PDF-Entwurf (eigene Ausgabe, kein Versand)",
+        "tags": [
+          "Abrechnung"
+        ]
+      }
+    },
     "/api/v1/statements/{statement_id}/inspections": {
       "get": {
         "operationId": "list_inspections_api_v1_statements__statement_id__inspections_get",
@@ -143678,6 +147534,66 @@
         ]
       }
     },
+    "/api/v1/tenant/delivery-default": {
+      "get": {
+        "operationId": "get_delivery_default_api_v1_tenant_delivery_default_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryDefaultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Standard-Zustellweg",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "put": {
+        "operationId": "put_delivery_default_api_v1_tenant_delivery_default_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeliveryDefaultIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeliveryDefaultOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Standard-Zustellweg setzen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/events": {
       "get": {
         "operationId": "list_events_api_v1_tenant_events_get",
@@ -144404,6 +148320,114 @@
         ]
       }
     },
+    "/api/v1/tenant/number-formats": {
+      "get": {
+        "operationId": "get_number_formats_api_v1_tenant_number_formats_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumberFormatsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Nummernkreise des Mandanten",
+        "tags": [
+          "Mandant"
+        ]
+      },
+      "put": {
+        "operationId": "put_number_formats_api_v1_tenant_number_formats_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NumberFormatsIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumberFormatsOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Nummernkreise des Mandanten setzen",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/number-formats/preview": {
+      "post": {
+        "operationId": "preview_number_format_api_v1_tenant_number_formats_preview_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NumberFormatPreviewIn"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "items": {
+                      "type": "string"
+                    },
+                    "type": "array"
+                  },
+                  "title": "Response Preview Number Format Api V1 Tenant Number Formats Preview Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Vorschau eines Nummernkreises",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
     "/api/v1/tenant/portal-role-permissions": {
       "get": {
         "operationId": "get_portal_role_permissions_api_v1_tenant_portal_role_permissions_get",
@@ -144547,6 +148571,31 @@
           }
         },
         "summary": "Stand der Freigabestufen G1 bis G5",
+        "tags": [
+          "Mandant"
+        ]
+      }
+    },
+    "/api/v1/tenant/release-gates/checklists": {
+      "get": {
+        "operationId": "gate_checklists_api_v1_tenant_release_gates_checklists_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/GateChecklistOut"
+                  },
+                  "title": "Response Gate Checklists Api V1 Tenant Release Gates Checklists Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Voraussetzungen der Freigabestufen (18.0)",
         "tags": [
           "Mandant"
         ]

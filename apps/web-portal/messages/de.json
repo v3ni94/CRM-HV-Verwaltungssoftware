@@ -49,6 +49,9 @@
     "title": "Portal",
     "handover": "Übergabeprotokolle",
     "logout": "Abmelden",
+    "language": {
+      "label": "Sprache"
+    },
     "theme": {
       "group": "Darstellung",
       "day": "Hell",
@@ -67,6 +70,7 @@
       "data": "Datenänderung",
       "mandate": "Lastschrift",
       "orders": "Aufträge",
+      "framework": "Rahmenverträge",
       "audit": "Prüfungsraum",
       "resolutions": "Beschlüsse",
       "meetings": "Versammlungen",
@@ -755,7 +759,16 @@
     "new": "Neu",
     "validUntil": "Gültig bis {date}",
     "validFrom": "Seit {date}",
-    "download": "Anlage herunterladen"
+    "download": "Anlage herunterladen",
+    "downloadNamed": "Anlage herunterladen: {name}",
+    "confirmRead": "Als gelesen bestätigen",
+    "readDone": "Als gelesen bestätigt. Dies ist ein Hinweis auf die Kenntnisnahme, keine Zustellung.",
+    "levels": {
+      "neutral": "Hinweis",
+      "info": "Info",
+      "warning": "Warnung",
+      "danger": "Gefahr"
+    }
   },
   "BoardSubmissions": {
     "title": "Vorlagen an den Verwaltungsbeirat",
@@ -1027,11 +1040,29 @@
     "empty": "Es liegt noch keine freigegebene Einzelabrechnung vor.",
     "row": "Einzelabrechnung {year}, Einheit {unit}",
     "version": "Version {version}",
-    "download": "PDF herunterladen"
+    "download": "PDF herunterladen",
+    "assetTitle": "Vermögensbericht der Gemeinschaft",
+    "assetEmpty": "Es liegt noch kein freigegebener Vermögensbericht vor.",
+    "assetRow": "Vermögensbericht zum {date}"
   },
   "Branding": {
     "logoAlt": "Logo {name}",
     "imprint": "Impressum",
     "privacy": "Datenschutz"
+  },
+  "ProviderInfo": {
+    "title": "Rahmenverträge und Verfügbarkeit",
+    "contracts": "Rahmenverträge",
+    "noContracts": "Keine Rahmenverträge hinterlegt.",
+    "open": "unbefristet",
+    "active": "Aktiv",
+    "inactive": "Beendet",
+    "availability": "Verfügbarkeitskalender",
+    "availabilityHelp": "Die Zeitfenster pflegt die Hausverwaltung. Änderungswünsche teilen Sie bitte der Verwaltung mit.",
+    "noWindows": "Keine Zeitfenster eingetragen.",
+    "kind": {
+      "available": "Verfügbar",
+      "unavailable": "Nicht verfügbar"
+    }
   }
 }

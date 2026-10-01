@@ -7,9 +7,14 @@ import { bff } from "@/lib/bff";
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
 
+import { loadCatalogOptions } from "./ContactPersonsPicker";
+
 /** Schwarzes Brett je Objekt (M21-01, A54): notices of the management with validity period and
  *  audience, shown in the portal to tenants and owners of the property. "Beenden" removes a
  *  notice from the portal at once; the record stays. */
+export type NoticeType = "neutral" | "info" | "warning" | "danger";
+export type NoticeAudience = "tenant" | "owner" | "provider";
+
 export type PropertyNotice = {
   id: string;
   property_id: string;
@@ -17,8 +22,16 @@ export type PropertyNotice = {
   body: string;
   valid_from: string;
   valid_to: string | null;
-  audience: "tenant" | "owner" | "all";
-  document_id: string | null;
+  category: string | null;
+  type: NoticeType;
+  audiences: NoticeAudience[];
+  /** Legacy single value, kept for older clients. */
+  audience?: string;
+  document_ids: string[];
+  document_id?: string | null;
+  /** Read quota (notice_board_read): confirmations of the addressed portal accounts. */
+  read_count?: number;
+  recipient_count?: number;
   ended_at: string | null;
   is_current: boolean;
   created_at: string;
@@ -29,11 +42,14 @@ type Draft = {
   body: string;
   valid_from: string;
   valid_to: string;
-  audience: PropertyNotice["audience"];
-  document_id: string;
+  audiences: NoticeAudience[];
+  category: string;
+  type: NoticeType;
+  document_ids: string;
 };
 
-const AUDIENCES: PropertyNotice["audience"][] = ["all", "tenant", "owner"];
+const AUDIENCES: NoticeAudience[] = ["tenant", "owner", "provider"];
+const TYPES: NoticeType[] = ["neutral", "info", "warning", "danger"];
 const UUID = /^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$/;
 
 function today(): string {
@@ -41,7 +57,7 @@ function today(): string {
 }
 
 function emptyDraft(): Draft {
-  return { title: "", body: "", valid_from: today(), valid_to: "", audience: "all", document_id: "" };
+  return { title: "", body: "", valid_from: today(), valid_to: "", audiences: ["tenant", "owner"], category: "", type: "neutral", document_ids: "" };
 }
 
 function toDraft(n: PropertyNotice): Draft {
@@ -50,8 +66,10 @@ function toDraft(n: PropertyNotice): Draft {
     body: n.body,
     valid_from: n.valid_from,
     valid_to: n.valid_to ?? "",
-    audience: n.audience,
-    document_id: n.document_id ?? "",
+    audiences: n.audiences,
+    category: n.category ?? "",
+    type: n.type,
+    document_ids: n.document_ids.join(", "),
   };
 }
 
@@ -64,6 +82,7 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
   const [formError, setFormError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [categories, setCategories] = useState<{ code: string; label: string }[]>([]);
 
   const load = useCallback(async () => {
     const res = await bff<PropertyNotice[]>(`/api/bff/properties/${propertyId}/notices`);
@@ -79,6 +98,10 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
   useEffect(() => {
     void load();
   }, [load]);
+
+  useEffect(() => {
+    if (editing !== null && categories.length === 0) void loadCatalogOptions("notice_category").then(setCategories);
+  }, [editing, categories.length]);
 
   function startNew() {
     setDraft(emptyDraft());
@@ -100,7 +123,12 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
     if (!draft.body.trim()) return setFormError(t("errors.body"));
     if (!draft.valid_from) return setFormError(t("errors.validFrom"));
     if (draft.valid_to && draft.valid_to < draft.valid_from) return setFormError(t("errors.validTo"));
-    if (draft.document_id && !UUID.test(draft.document_id.trim())) return setFormError(t("errors.document"));
+    if (draft.audiences.length === 0) return setFormError(t("errors.audiences"));
+    const documentIds = draft.document_ids
+      .split(/[,\s]+/)
+      .map((d) => d.trim())
+      .filter(Boolean);
+    if (documentIds.some((d) => !UUID.test(d))) return setFormError(t("errors.document"));
     setBusy(true);
     setFormError(null);
     const isNew = editing === "new";
@@ -110,16 +138,20 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
           body: draft.body.trim(),
           valid_from: draft.valid_from,
           valid_to: draft.valid_to || null,
-          audience: draft.audience,
-          document_id: draft.document_id.trim() || null,
+          audiences: draft.audiences,
+          type: draft.type,
+          category: draft.category || null,
+          document_ids: documentIds,
         }
       : {
           title: draft.title.trim(),
           body: draft.body.trim(),
           valid_from: draft.valid_from,
           ...(draft.valid_to ? { valid_to: draft.valid_to } : { clear_valid_to: true }),
-          audience: draft.audience,
-          ...(draft.document_id.trim() ? { document_id: draft.document_id.trim() } : { clear_document: true }),
+          audiences: draft.audiences,
+          type: draft.type,
+          ...(draft.category ? { category: draft.category } : { clear_category: true }),
+          document_ids: documentIds,
         };
     const res = isNew
       ? await bff<PropertyNotice>(`/api/bff/properties/${propertyId}/notices`, { method: "POST", body: JSON.stringify(payload) })
@@ -141,6 +173,12 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
     setMessage(t("ended"));
     await load();
   }
+
+  const toggleAudience = (a: NoticeAudience) =>
+    setDraft((d) => ({
+      ...d,
+      audiences: d.audiences.includes(a) ? d.audiences.filter((x) => x !== a) : [...d.audiences, a],
+    }));
 
   const field = (key: keyof Draft) => (event: { target: { value: string } }) =>
     setDraft((d) => ({ ...d, [key]: event.target.value }));
@@ -194,14 +232,40 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
               </label>
               <input id="notice-to" type="date" className={ui.input} value={draft.valid_to} onChange={field("valid_to")} />
             </div>
-            <div>
-              <label htmlFor="notice-audience" className={ui.label}>
-                {t("fields.audience")}
-              </label>
-              <select id="notice-audience" className={ui.input} value={draft.audience} onChange={field("audience")}>
+            <fieldset>
+              <legend className={ui.label}>{t("fields.audience")}</legend>
+              <div className="flex flex-wrap gap-3">
                 {AUDIENCES.map((a) => (
-                  <option key={a} value={a}>
+                  <label key={a} className="flex items-center gap-1 text-sm">
+                    <input type="checkbox" checked={draft.audiences.includes(a)} onChange={() => toggleAudience(a)} />
                     {t(`audience.${a}`)}
+                  </label>
+                ))}
+              </div>
+            </fieldset>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <label htmlFor="notice-type" className={ui.label}>
+                {t("fields.type")}
+              </label>
+              <select id="notice-type" className={ui.input} value={draft.type} onChange={field("type")}>
+                {TYPES.map((x) => (
+                  <option key={x} value={x}>
+                    {t(`types.${x}`)}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label htmlFor="notice-category" className={ui.label}>
+                {t("fields.category")}
+              </label>
+              <select id="notice-category" className={ui.input} value={draft.category} onChange={field("category")}>
+                <option value="">{t("noCategory")}</option>
+                {categories.map((c) => (
+                  <option key={c.code} value={c.code}>
+                    {c.label}
                   </option>
                 ))}
               </select>
@@ -211,7 +275,7 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
             <label htmlFor="notice-document" className={ui.label}>
               {t("fields.document")}
             </label>
-            <input id="notice-document" className={ui.input} value={draft.document_id} onChange={field("document_id")} placeholder={t("fields.documentHint")} />
+            <input id="notice-document" className={ui.input} value={draft.document_ids} onChange={field("document_ids")} placeholder={t("fields.documentHint")} />
           </div>
           {formError ? (
             <p role="alert" className={ui.alert}>
@@ -243,8 +307,11 @@ export function PropertyNotices({ propertyId }: { propertyId: string }) {
                   <span className="text-xs text-muted">
                     {t("validity", { from: formatDate(n.valid_from), to: n.valid_to ? formatDate(n.valid_to) : t("openEnd") })}
                     {" · "}
-                    {t(`audience.${n.audience}`)}
-                    {n.document_id ? ` · ${t("withDocument")}` : ""}
+                    {n.audiences.map((a) => t(`audience.${a}`)).join(", ")}
+                    {" · "}
+                    {t(`types.${n.type}`)}
+                    {n.document_ids.length > 0 ? ` · ${t("withDocuments", { count: n.document_ids.length })}` : ""}
+                    {n.recipient_count !== undefined ? ` · ${t("readQuota", { read: n.read_count ?? 0, total: n.recipient_count })}` : ""}
                   </span>
                 </div>
                 <span className={n.ended_at ? ui.badge : n.is_current ? ui.badgeSuccess : ui.badgeWarning}>

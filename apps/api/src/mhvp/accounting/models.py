@@ -408,6 +408,36 @@ class JournalEntry(IdMixin, TimestampMixin, TenantMixin, Base):
     approved_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
 
 
+class JournalEntryNote(IdMixin, TenantMixin, Base):
+    """Supplementary note on a posted entry, kept apart from the financial content and
+    versioned (B03 sentence 3, GA05-02). Append only (trigger ``forbid_mutation``, migration
+    0303): a new version references its predecessor, the chain shares ``note_key``."""
+
+    __tablename__ = "journal_entry_note"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "note_key", "version"),
+        UniqueConstraint("supersedes_id"),
+        CheckConstraint("version >= 1", name="version_positive"),
+        CheckConstraint(
+            "(version = 1 AND supersedes_id IS NULL) OR (version > 1 AND supersedes_id IS NOT "
+            "NULL)",
+            name="version_chain",
+        ),
+        CheckConstraint("length(body) BETWEEN 1 AND 4000", name="body_length"),
+        Index("ix_journal_entry_note_tenant_id_journal_entry_id", "tenant_id", "journal_entry_id"),
+    )
+
+    journal_entry_id: Mapped[uuid.UUID] = _fk("journal_entry.id")
+    note_key: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
+    supersedes_id: Mapped[uuid.UUID | None] = _fk("journal_entry_note.id", nullable=True)
+    body: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=text("now()"), nullable=False
+    )
+    created_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+
+
 class JournalLine(IdMixin, TenantMixin, Base):
     __tablename__ = "journal_line"
     __table_args__ = (
@@ -588,6 +618,14 @@ class AdminFeeSetting(IdMixin, TimestampMixin, TenantMixin, Base):
     amounts_per_unit_type: Mapped[dict[str, str]] = mapped_column(
         JSONB, nullable=False, default=dict
     )
+    # GA03-06 (migration 0312): manager contact, termination, due rule, revenue account and a
+    # separate net fee per SE unit (replaces ``amounts_per_unit_type`` for an SE fee).
+    manager_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id", nullable=True)
+    termination_date: Mapped[date | None] = mapped_column(Date)
+    due_day_rule: Mapped[str | None] = mapped_column(String(16))
+    due_day: Mapped[int | None] = mapped_column(Integer)
+    account_id: Mapped[uuid.UUID | None] = _fk("ledger_account.id", nullable=True)
+    sev_fee_amount: Mapped[Decimal | None] = mapped_column(MONEY)
 
 
 class InvoiceKind(StrEnum):
@@ -771,6 +809,12 @@ class RecurringInvoicePlan(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     anchor_day: Mapped[int | None] = mapped_column(Integer)
     ended_at: Mapped[date | None] = mapped_column(Date)
+    # GA03-07 (migration 0312): request for automatic posting. Default off; effective only with
+    # ``tenant_settings.auto_posting_enabled``, released G1 and an active 7.4 rule. Generation
+    # still creates drafts only (OPEN_QUESTIONS AA10-01).
+    auto_post: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
 
 class DunningSettings(IdMixin, TimestampMixin, TenantMixin, Base):

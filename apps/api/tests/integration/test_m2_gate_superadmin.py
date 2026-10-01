@@ -7,11 +7,16 @@ import uuid
 from collections.abc import Iterator
 from typing import Any
 
+import boto3
 import pytest
 from fastapi.testclient import TestClient
+from moto import mock_aws
+from pydantic import SecretStr
 from sqlalchemy import Engine, text
 
+from mhvp.core.release_gates import ReleaseGate
 from mhvp.main import create_app
+from mhvp.platform.gate_checklists import GATE_CHECKLISTS
 from tests.integration.conftest import Database
 from tests.integration.test_m2_platform import World, _settings, bearer, login
 
@@ -20,17 +25,42 @@ pytestmark = pytest.mark.integration
 
 @pytest.fixture
 def client(database: Database, redis_url: str) -> Iterator[TestClient]:
-    with TestClient(create_app(_settings(database, redis_url))) as test_client:
-        yield test_client
+    # GA14-03: evidence documents need the object store (moto, no network).
+    settings = _settings(
+        database,
+        redis_url,
+        s3_endpoint_url="https://s3.us-east-1.amazonaws.com",
+        s3_access_key_id=SecretStr("testing"),
+        s3_secret_access_key=SecretStr("testing"),
+        s3_bucket="mhvp-gate-superadmin",
+    )
+    with mock_aws():
+        boto3.client("s3", region_name="us-east-1").create_bucket(Bucket="mhvp-gate-superadmin")
+        with TestClient(create_app(settings)) as test_client:
+            yield test_client
 
 
 SETTINGS = "/api/v1/platform/settings"
 
 
 def _request_gate(client: TestClient, headers: dict[str, str], gate: str = "G2") -> str:
+    # GA14-03: G2 to G4 need the full checklist and an evidence document to be approvable.
+    doc = client.post(
+        "/api/v1/documents",
+        files={"file": ("nachweis.txt", uuid.uuid4().hex.encode(), "text/plain")},
+        headers=headers,
+    )
+    assert doc.status_code == 201, doc.text
+    checklist = dict.fromkeys(GATE_CHECKLISTS.get(ReleaseGate(gate), {}), "geprüft")
     created = client.post(
         "/api/v1/tenant/release-gates/requests",
-        json={"gate": gate, "scope": f"Pilot {uuid.uuid4().hex[:6]}", "evidence": "Prüfbericht"},
+        json={
+            "gate": gate,
+            "scope": f"Pilot {uuid.uuid4().hex[:6]}",
+            "evidence": "Prüfbericht",
+            "checklist": checklist,
+            "evidence_document_id": doc.json()["id"],
+        },
         headers=headers,
     )
     assert created.status_code == 201, created.text

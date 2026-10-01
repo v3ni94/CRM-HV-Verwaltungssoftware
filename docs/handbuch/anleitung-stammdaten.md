@@ -221,3 +221,6 @@ erscheint als Typ Wiedervorlage in der Fristenliste.
 * Fremdsystem-Kennungen: im Kontaktformular stehen Immoware24 Kennung und Lexware Office Kundennummer. Ein leeres Feld entfernt den Eintrag.
 * SEPA Mandate: unter Verträge die Schaltfläche SEPA Mandate. Filter nach Status, nie verwendet und Ablauf innerhalb von 90 Tagen. Abgelaufene Mandate setzt ein nächtlicher Lauf auf abgelaufen, der Lastschrifteinzug für die betroffenen Verträge endet dann wie beim Widerruf. Der Einzug selbst bleibt bis zur Freigabe Zahlungsanstoß gesperrt.
 * Zahlungszeilen und Zahlungspläne eines Vertrags lassen sich über die Schnittstelle korrigieren. Liegt bereits eine gebuchte Sollstellung vor, bleiben Betrag, Zeitraum und Art gesperrt, die Korrektur erfolgt dann über eine neue Position und den Storno im Buchungskreis.
+
+* Abrechnungszeiträume: in der Objektansicht zeigt die Tabelle den Status (Offen, Ergebnisse erstellt, Bestätigt, Abgeschlossen). Die Schaltfläche rechts daneben setzt den nächsten Status. Abschließen sperrt den Zeitraum, er lässt sich danach weder löschen noch zurücksetzen. Der Status bucht nichts.
+* Dokumente: Energieausweis am Gebäude sowie Wartungsposten und Dienstleisterverhältnisse nehmen Verweise auf Dokumente des Dokumentenarchivs auf (Schnittstelle, Feld documents).

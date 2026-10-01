@@ -481,3 +481,40 @@ def test_m13_03_vat_on_commercial_tenancy(
     assert [i["remaining"] for i in items] == ["1190.00"]
     assert _ok(closed.get(f"{A}/ledgers/{ledger}/checks", headers=h))["ok"] is True
     _rules(closed, h, enabled=False)
+
+
+def test_ga06_01_weg_owner_change_is_not_prorated_by_day(
+    clients: tuple[TestClient, TestClient], world: World
+) -> None:
+    """7.5 Satz 4: an owner change in the middle of the month stays a manual item even with
+    the released proration rules; nothing is computed by day (GA06-01, M13-01)."""
+    from tests.integration.test_m13_receivables import _contract
+
+    closed, _ = clients
+    h = bearer(login(closed, world, "m13rules"))
+    prop = _ok(
+        closed.post(
+            "/api/v1/properties",
+            json={"number": "749", "name": "WEG Wechsel", "management_type": "hoa"},
+            headers=h,
+        ),
+        201,
+    )
+    buyer = _contract(closed, h, prop["id"], "01", "2026-03-15")
+    full = _contract(closed, h, prop["id"], "02", "2020-01-01")
+    _rules(closed, h)
+    run = _run(closed, h, "2026-03-01", "property", prop["id"])
+    assert run["calculation"]["rules"]["enabled"] is True
+    mid = [i for i in run["items"] if i["contract_id"] == buyer["id"]]
+    assert len(mid) == 2  # hoa_fee and reserve, one item each, no day fraction
+    for item in mid:
+        assert item["status"] == "manual"
+        assert "Eigentümerwechsel" in item["message"]
+        assert item["net_amount"] is None
+        assert item["period_start"] is None
+        assert item["amount"] in ("300.00", "50.00")  # plan amount shown, not 17/31
+    assert not any(p["contract_number"] == buyer["number"] for p in run["calculation"]["items"])
+    # A full month ownership contract still follows the normal path (not manual for WEG).
+    others = [i for i in run["items"] if i["contract_id"] == full["id"]]
+    assert others
+    assert all("Eigentümerwechsel" not in (i["message"] or "") for i in others)

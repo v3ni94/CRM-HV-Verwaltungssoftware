@@ -12,6 +12,7 @@ from fastapi import APIRouter, Depends, Request
 from fastapi.responses import PlainTextResponse
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.communication import calendar_feed  # noqa: F401  (registers the token table)
 from mhvp.communication.models import Dispatch, Message
@@ -139,7 +140,9 @@ async def _create(
     if contact is None or document is None:
         raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
     channel = item.channel or (
-        contact.preferred_channel.value if contact.preferred_channel else "post"
+        contact.preferred_channel.value
+        if contact.preferred_channel
+        else await _tenant_default_channel(session)
     )
     row = Dispatch(
         tenant_id=principal.tenant_id,
@@ -541,3 +544,12 @@ async def calendar_ics(
             properties=principal.has("properties:read"),
         )
     return PlainTextResponse(body, media_type="text/calendar")
+
+
+async def _tenant_default_channel(session: AsyncSession) -> str:
+    """GA01-08: tenant wide default delivery channel (``tenant_settings.sources``), else post."""
+    from mhvp.platform.models import TenantSettings
+
+    sources = await session.scalar(select(TenantSettings.sources)) or {}
+    value = sources.get("default_delivery_channel")
+    return value if value in ("post", "email", "portal") else "post"

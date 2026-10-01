@@ -16,6 +16,7 @@ BANK_RULE_SUPERSEDED = "bank_rule.superseded"
 BANK_RULE_DOWNGRADED = "bank_rule.downgraded"
 
 # Transactions and decisions (S1).
+BANK_TRANSACTION_IMPORTED = "bank_transaction.imported"
 BANK_TRANSACTION_BOOKED = "bank_transaction.booked"
 BANK_TRANSACTION_IGNORED = "bank_transaction.ignored"
 BANK_TRANSACTION_REOPENED = "bank_transaction.reopened"

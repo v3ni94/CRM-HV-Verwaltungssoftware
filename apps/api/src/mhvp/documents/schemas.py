@@ -344,6 +344,18 @@ class TemplateIn(_In):
     subject: str = Field(min_length=1, max_length=2000)
     body: str = Field(min_length=1, max_length=100_000)
     category_id: uuid.UUID | None = None
+    master_template_id: uuid.UUID | None = None
+    context_types: list[str] = Field(default_factory=list, max_length=7)
+
+    @field_validator("context_types")
+    @classmethod
+    def _context_types(cls, value: list[str]) -> list[str]:
+        from mhvp.documents.models import TEMPLATE_CONTEXT_TYPES
+
+        unknown = [v for v in value if v not in TEMPLATE_CONTEXT_TYPES]
+        if unknown:
+            raise ValueError(f"Unbekannte Kontexttypen: {', '.join(unknown)}.")
+        return sorted(set(value))
 
 
 class TemplateOut(TemplateIn):
@@ -351,6 +363,28 @@ class TemplateOut(TemplateIn):
     id: uuid.UUID
     version: int
     active: bool
+    placeholders_used: list[str] = Field(default_factory=list)
+
+
+class GeneratedDocumentOut(_Out):
+    """Provenance of a produced document (GA04-11): template and version, context, recipient
+    and the dispatch record with channel and evidence."""
+
+    id: uuid.UUID
+    document_id: uuid.UUID
+    template_id: uuid.UUID | None
+    template_code: str | None
+    template_version: int | None
+    context_type: str | None
+    context_id: uuid.UUID | None
+    recipient_contact_id: uuid.UUID | None
+    dispatch_id: uuid.UUID | None
+    delivery_channel: str | None = None
+    delivery_status: str | None = None
+    delivery_evidence_kind: str | None = None
+    delivery_evidence_ref: str | None = None
+    delivered_at: datetime | None = None
+    created_at: datetime
 
 
 class LetterIn(_In):

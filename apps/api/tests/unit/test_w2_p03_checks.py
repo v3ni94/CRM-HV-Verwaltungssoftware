@@ -145,3 +145,10 @@ def test_s711_02_credit_note_xml_with_billing_reference() -> None:
     broken = xml.replace(b"<cbc:ID>HVM-2026-000001</cbc:ID>", b"<cbc:ID></cbc:ID>")
     assert [f.code for f in xc.check_credit_note(broken)] == ["BT-25"]
     assert xc.check_credit_note(x.build_xml(_data()))[0].code == "UBL"
+
+
+def test_reverse_charge_flags_13b_release_point() -> None:
+    """GA08-01: the flag adds an explicit § 13b UStG release point, never an automatic rule."""
+    out = ic.amount_findings(_inv(reverse_charge=True))
+    assert any("§ 13b UStG" in f and "keine Automatik" in f for f in out)
+    assert not any("§ 13b UStG" in f for f in ic.amount_findings(_inv(reverse_charge=False)))

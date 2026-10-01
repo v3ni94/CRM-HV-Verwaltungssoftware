@@ -127,7 +127,9 @@ export default async function HoaDetailPage({ params }: { params: Promise<{ prop
         </ul>
         <HoaCreate kind="meeting" legalEntityId={ctx.entity.id} basePath={base} />
         {meetingSettings ? (
-          <MeetingSettings weeks={Number(meetingSettings.invitation_weeks ?? 3)} virtualEnabled={Boolean(meetingSettings.virtual_meetings_enabled)} />
+          <MeetingSettings weeks={Number(meetingSettings.invitation_weeks ?? 3)} virtualEnabled={Boolean(meetingSettings.virtual_meetings_enabled)}
+            termLockEnabled={Boolean((meetingSettings as { virtual_basis_term_lock_enabled?: boolean }).virtual_basis_term_lock_enabled)}
+          />
         ) : null}
       </section>
       <section className="flex flex-col gap-2" data-testid="hoa-asset-reports">

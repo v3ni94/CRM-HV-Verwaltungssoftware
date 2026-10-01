@@ -57,11 +57,45 @@ export default async function AssetReportPage({ params }: { params: Promise<{ pr
   const report = (await response.json()) as Report;
   const snap = report.snapshot;
   const reserve = snap?.legal_minimum.reserve;
+  // GA07-02: provision log per owner (retrieval in the owner portal), only after issue.
+  const tp = await getTranslations("HoaProvision");
+  const provisionResponse = report.status === "issued" ? await serverFetch(`/api/v1/hoa/asset-reports/${encodeURIComponent(reportId)}/provisions`) : null;
+  const provisions = provisionResponse?.ok
+    ? ((await provisionResponse.json()) as { items: { contract_id: string; unit_number: string; first_retrieved_at: string | null; last_retrieved_at: string | null; retrievals: number }[]; note: string })
+    : null;
   return (
     <div className="flex flex-col gap-4">
       <PageHeader breadcrumb={[{ href: `/weg/${propertyId}/vermoegensbericht`, label: t("assetReports") }]} title={`${t("assetReport")} ${formatDate(report.as_of)} · ${t(`assetStatus.${report.status}`)}`} />
       {report.draft_notice ? <p className={ui.notice}>{report.draft_notice}</p> : null}
       <AssetReportActions id={report.id} status={report.status} manualItems={report.manual_items.map((m) => ({ ...m, amount: String(m.amount).replace(".", ",") }))} />
+      {provisions ? (
+        <section className={ui.card} data-testid="asset-provisions">
+          <h2 className={ui.h2}>{tp("title")}</h2>
+          <p className="mt-1 text-sm text-muted">{provisions.note}</p>
+          <div className="mt-2 overflow-x-auto">
+            <table className="mhvp-table">
+              <thead>
+                <tr>
+                  <th>{tp("unit")}</th>
+                  <th>{tp("firstRetrieved")}</th>
+                  <th>{tp("lastRetrieved")}</th>
+                  <th className="num">{tp("retrievals")}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {provisions.items.map((p) => (
+                  <tr key={p.contract_id}>
+                    <td>{p.unit_number}</td>
+                    <td>{p.first_retrieved_at ? formatDate(p.first_retrieved_at) : tp("notRetrieved")}</td>
+                    <td>{p.last_retrieved_at ? formatDate(p.last_retrieved_at) : ""}</td>
+                    <td className="num">{p.retrievals}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      ) : null}
       {!snap || !reserve ? (
         <p className="text-sm text-muted">{t("notCalculated")}</p>
       ) : (

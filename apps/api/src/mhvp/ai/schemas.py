@@ -313,6 +313,18 @@ class ContactChoice(_In):
     contact: dict[str, Any] | None = Field(
         default=None, description="geänderte Angaben (ContactIn)"
     )
+    role: (
+        Literal["eigentuemer", "mieter", "verwalter", "dienstleister", "bank", "sonstiges"] | None
+    ) = Field(
+        default=None,
+        description="Rolle dieser Zeile (ContactRoleCode); ersetzt die Rolle des Laufs nicht, "
+        "sie kommt hinzu (10.1 Schritt 4, GA10-05)",
+    )
+    merge_fields: bool | None = Field(
+        default=None,
+        description="bei link: leere Felder des vorhandenen Kontakts aus der Zeile ergänzen "
+        "(Standard aus)",
+    )
 
 
 class OnboardingBankAccountChoice(_In):

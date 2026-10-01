@@ -355,6 +355,7 @@ class AiKnowledgeEntry(IdMixin, TimestampMixin, TenantMixin, Base):
 class EmbeddingSourceKind(StrEnum):
     DOCUMENT = "document"
     KNOWLEDGE_ENTRY = "knowledge_entry"
+    AI_EXAMPLE = "ai_example"  # GA04-12: learning example, similarity based few-shot selection
 
 
 EMBEDDING_DIMENSIONS = 1536  # OpenAI text-embedding-3-small (M7-03)

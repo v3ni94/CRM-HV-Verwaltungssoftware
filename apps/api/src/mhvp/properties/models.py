@@ -397,6 +397,10 @@ class PropertyBillingPeriod(IdMixin, TimestampMixin, TenantMixin, Base):
             using="gist",
         ),
         CheckConstraint("valid_to >= valid_from", name="period_order"),
+        CheckConstraint(
+            "status IN ('open', 'results_created', 'confirmed', 'closed')",
+            name="period_status",
+        ),
     )
 
     property_id: Mapped[uuid.UUID] = _fk("property.id", ondelete="CASCADE")
@@ -407,6 +411,12 @@ class PropertyBillingPeriod(IdMixin, TimestampMixin, TenantMixin, Base):
     valid_to: Mapped[date] = mapped_column(Date, nullable=False)
     board_online_audit: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     notes: Mapped[str | None] = mapped_column(Text)
+    # GA02-01 (migration 0310): life cycle open, results_created, confirmed, closed; closed sets
+    # locked_at and blocks deleting the period. Master data flag, no posting.
+    status: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="open", server_default="open"
+    )
+    locked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
 
 class SubCommunity(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -489,6 +499,10 @@ class Building(IdMixin, TimestampMixin, TenantMixin, Base):
     energy_certificate_construction_year: Mapped[int | None] = mapped_column(Integer)
     energy_certificate_issued_on: Mapped[date | None] = mapped_column(Date)
     energy_certificate_valid_until: Mapped[date | None] = mapped_column(Date)
+    # GA02-03 (migration 0310): the certificate as a DMS document (reference only).
+    energy_certificate_document_id: Mapped[uuid.UUID | None] = _fk(
+        "document.id", nullable=True, ondelete="SET NULL"
+    )
     notes: Mapped[str | None] = mapped_column(Text)
     custom_fields: Mapped[dict[str, Any]] = mapped_column(JSONB, nullable=False, default=dict)
     version: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
@@ -711,6 +725,10 @@ class ServiceProviderRelation(IdMixin, TimestampMixin, TenantMixin, Base):
     creditor_account_id: Mapped[uuid.UUID | None] = _fk(
         "ledger_account.id", nullable=True, ondelete="SET NULL"
     )
+    # GA02-04 (migration 0310): document references (DMS ids), like deposit.documents.
+    documents: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class PropertyBankAccount(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -777,6 +795,10 @@ class MaintenanceItem(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
     done_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GA02-04 (migration 0310): document references (DMS ids), like deposit.documents.
+    documents: Mapped[list[str]] = mapped_column(
+        JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
 
 
 class PropertyCreditorSource(StrEnum):

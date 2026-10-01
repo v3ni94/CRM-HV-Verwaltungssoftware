@@ -194,3 +194,19 @@ Voraussetzung: Recht Dokumente lesen, für die Freigabe Dokumente freigeben, fü
 ## Aufbewahrung: Beschluss für den Fristbeginn wählen
 
 Ist ein Dokument mit einem Rechtsträger verknüpft, zeigt die Karte "Aufbewahrung und Sperren" ein Auswahlfeld mit den Beschlüssen aus der Beschluss-Sammlung. Für die Startregel "Beschluss der Eigentümer" ist die Auswahl Voraussetzung, sonst bleibt das Dokument gesperrt. Die Frist berechnet das System; die Auswahl ändert keine Rechtslage und ist zu prüfen.
+
+## Dokumenteingang: Zuordnung, Folgevorschläge und Direktablage (AA13)
+
+- Der Eingangsvorschlag erkennt zusätzlich Einheit (zum Beispiel "Einheit 12"), den am Dokumentdatum
+  gültigen Vertrag, die IBAN und die Kundennummer eines Kontakts. Beim Bestätigen werden Einheit und
+  Vertrag mit verknüpft.
+- Nach dem Bestätigen erscheinen Folgevorschläge je Dokumenttyp (Rechnung, Schadensfoto, Vertrag,
+  Protokoll). Sie sind Vorschläge: Mit der Bestätigung werden nur Ticket oder Vertrag verknüpft,
+  gebucht oder freigegeben wird nichts.
+- Direktablage: Ist der Mandantenschalter eingeschaltet (Standard aus), wird ein eindeutig
+  zugeordnetes Dokument nur mit dem Objekt verknüpft und als automatisch abgelegt gemeldet. Die
+  Ablage lässt sich mit "Automatische Ablage zurücknehmen" widerrufen.
+- Kontaktvorschau beim Import: je Zeile kann eine Rolle gewählt werden; beim Verknüpfen mit einem
+  vorhandenen Kontakt können leere Felder ergänzt werden.
+
+Vorlagen und erzeugte Dokumente (Version 1.57.0, 01.10.2026): Eine Vorlage kann auf Kontexte (Kontakt, Vertrag, Einheit, Objekt, Versammlung, Abrechnung, Ticket) beschränkt werden und auf eine Briefbogenvorlage verweisen. Die verwendeten Platzhalter werden beim Speichern ermittelt und an der Vorlage angezeigt. Die Vorlagenliste lässt sich nach Kontext filtern. Zu jedem erzeugten Brief zeigt `GET /generated-documents` die Vorlage mit Version, den Kontext, den Empfänger und den Versandnachweis. Die Bedienung in der CRM-Oberfläche folgt, bis dahin ist die Funktion über die API nutzbar.

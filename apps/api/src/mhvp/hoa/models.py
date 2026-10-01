@@ -7,6 +7,7 @@ from typing import Any
 
 from sqlalchemy import (
     Boolean,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -16,6 +17,7 @@ from sqlalchemy import (
     Numeric,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
@@ -87,6 +89,14 @@ class Resolution(IdMixin, TimestampMixin, TenantMixin, Base):
         UUID(as_uuid=True), ForeignKey("resolution.id", ondelete="RESTRICT")
     )
     vote_deadline_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GA03-03 (migration 0308): place of the decision, court notes (contest, annulment) and the
+    # time of entry into the Beschluss-Sammlung as evidence of the prompt entry; the entry is
+    # never deleted physically, status deleted or irrelevant is a note only.
+    location: Mapped[str | None] = mapped_column(String(300))
+    court_notes: Mapped[str | None] = mapped_column(Text)
+    entered_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, server_default=text("now()")
+    )
 
 
 class EconomicPlan(IdMixin, TimestampMixin, TenantMixin, Base):
@@ -276,6 +286,18 @@ class Meeting(IdMixin, TimestampMixin, TenantMixin, Base):
     close_requested_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     closed_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GA03-01 (migration 0308): end of the meeting, reference to the original meeting of a
+    # repeat or continuation meeting, templates of invitation, proxy and ballot, and the
+    # public (owner portal) and internal description.
+    ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    origin_meeting_id: Mapped[uuid.UUID | None] = _fk("owners_meeting.id", ondelete="RESTRICT")
+    invitation_template_id: Mapped[uuid.UUID | None] = _fk(
+        "document_template.id", ondelete="SET NULL"
+    )
+    proxy_template_id: Mapped[uuid.UUID | None] = _fk("document_template.id", ondelete="SET NULL")
+    ballot_template_id: Mapped[uuid.UUID | None] = _fk("document_template.id", ondelete="SET NULL")
+    public_description: Mapped[str | None] = mapped_column(Text)
+    internal_description: Mapped[str | None] = mapped_column(Text)
 
 
 class AgendaItem(IdMixin, TenantMixin, Base):
@@ -291,6 +313,13 @@ class AgendaItem(IdMixin, TenantMixin, Base):
     subject_type: Mapped[str | None] = mapped_column(String(32))
     subject_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     rule_id: Mapped[uuid.UUID | None] = _fk("majority_rule.id")
+    # GA03-02 (migration 0308): result per item (accepted, rejected from the announcement;
+    # deferred, no_vote recorded), minutes text and a voting principle that takes precedence
+    # over the meeting's principle (with documented basis).
+    result: Mapped[str | None] = mapped_column(String(16))
+    minutes_text: Mapped[str | None] = mapped_column(Text)
+    voting_principle: Mapped[str | None] = mapped_column(String(16))
+    voting_principle_basis: Mapped[str | None] = mapped_column(Text)
 
 
 class Attendance(IdMixin, TenantMixin, Base):
@@ -315,6 +344,11 @@ class Vote(IdMixin, TenantMixin, Base):
     excluded: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False
     )  # Stimmrechtsausschluss
+    # GA03-04 (migration 0308): channel of the vote, set from the attendance (presence,
+    # online) or circular for a meeting of kind circular_resolution.
+    channel: Mapped[str] = mapped_column(
+        String(16), nullable=False, default="presence", server_default="presence"
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=text("now()"), nullable=False
     )
@@ -624,3 +658,54 @@ class HoaAssetReport(IdMixin, TimestampMixin, TenantMixin, Base):
     snapshot_hash: Mapped[str | None] = mapped_column(String(64))
     issued_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     note: Mapped[str | None] = mapped_column(Text)
+
+
+class HoaAssetReportProvision(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Provision log of an issued asset report per owner (GA07-02, 7.8 W11): one row when an
+    owner opens or downloads the report in the portal, per ownership contract of the owner.
+    Indication of the retrieval only, no delivery and no legally assessed receipt."""
+
+    __tablename__ = "hoa_asset_report_provision"
+    __table_args__ = (
+        Index("ix_hoa_asset_report_provision_report", "tenant_id", "report_id", "occurred_at"),
+        CheckConstraint("kind IN ('opened', 'downloaded')", name="kind_values"),
+    )
+
+    report_id: Mapped[uuid.UUID] = _fk("hoa_asset_report.id", nullable=False)
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id", nullable=False)
+    account_id: Mapped[uuid.UUID] = _fk("portal_account.id", nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False)
+    snapshot_hash: Mapped[str | None] = mapped_column(String(64))
+    occurred_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+
+
+class HoaAcquisitionRelease(IdMixin, TimestampMixin, TenantMixin, Base):
+    """Four eyes release of a special acquisition in the statement year (GA07-03, 7.8 W07):
+    inheritance, forced sale, gift, other acquisition or special succession liability block the
+    statement package until a second person released it. Holds only a proposal for the
+    allocation, never a legal rule (OPEN_QUESTIONS AA07-01)."""
+
+    __tablename__ = "hoa_acquisition_release"
+    __table_args__ = (
+        Index("ix_hoa_acquisition_release_tenant_id", "tenant_id"),
+        UniqueConstraint(
+            "statement_id",
+            "contract_id",
+            name="uq_hoa_acquisition_release_statement_id_contract_id",
+        ),
+        CheckConstraint("released_by IS NULL OR released_by <> requested_by", name="four_eyes"),
+    )
+
+    statement_id: Mapped[uuid.UUID] = _fk("hoa_statement.id", nullable=False)
+    contract_id: Mapped[uuid.UUID] = _fk("contract.id", nullable=False)
+    acquisition_kind: Mapped[str | None] = mapped_column(String(32))
+    special_succession_liability: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default=text("false")
+    )
+    allocation_proposal: Mapped[str] = mapped_column(Text, nullable=False)
+    requested_by: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    request_note: Mapped[str | None] = mapped_column(Text)
+    released_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    released_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    release_note: Mapped[str | None] = mapped_column(Text)

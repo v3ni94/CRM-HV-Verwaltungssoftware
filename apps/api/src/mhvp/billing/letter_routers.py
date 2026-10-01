@@ -14,6 +14,7 @@ from fastapi import APIRouter, Depends, Request, Response
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from mhvp.billing import info_sheet
 from mhvp.billing import letters as tenant_letters
 from mhvp.billing.models import Statement, StatementSnapshot
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
@@ -38,6 +39,8 @@ class LettersIn(BaseModel):
     letter_date: date | None = None
     # One tenant (single PDF) or all tenants of the statement (bundled PDF, unit order).
     contract_id: uuid.UUID | None = None
+    # GA06-02: append the Informationsblatt after each letter of the preview (A07).
+    include_info_sheet: bool = False
 
 
 async def _statement_with_snapshot(
@@ -89,6 +92,12 @@ async def letters_preview(
 ) -> Response:
     async with tenant_tx(request, principal) as session:
         st, drafts = await _build(session, request, statement_id, body)
+        sheet = None
+        if body is not None and body.include_info_sheet:
+            sheet = await _info_sheet_pdf(session, request, st)
+    if sheet is not None:
+        for draft in drafts:
+            draft.pdf = tenant_letters.bundle_pdfs([draft.pdf, sheet])
     if len(drafts) == 1:
         pdf, filename = drafts[0].pdf, drafts[0].filename
     else:
@@ -100,6 +109,51 @@ async def letters_preview(
         headers={
             "Cache-Control": "no-store",
             "Content-Disposition": f'attachment; filename="{quote(filename)}"',
+        },
+    )
+
+
+async def _info_sheet_pdf(session: AsyncSession, request: Request, st: Statement) -> bytes:
+    from mhvp.documents import letters as doc_letters
+    from mhvp.documents import services as doc_services
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.properties.models import Property
+
+    st, snap = await _statement_with_snapshot(session, st.id)
+    head = await doc_services.letterhead(session, BlobStore(request.app.state.settings))
+    prop = await session.get(Property, st.property_id)
+    sheet = info_sheet.build(
+        period_from=st.period_from,
+        period_to=st.period_to,
+        object_line=f"Objekt {prop.number} {prop.name}" if prop else "das Objekt",
+        snapshot_inputs=snap.inputs,
+        snapshot_hash=snap.hash,
+        version=st.version,
+        letter_date=local_today(),
+    )
+    return doc_letters.render_pdf(head, sheet)
+
+
+@router.post(
+    "/{statement_id}/info-sheet/preview",
+    summary="Informationsblatt zur Abrechnung als PDF-Entwurf (eigene Ausgabe, kein Versand)",
+    response_class=Response,
+    responses={200: {"content": {"application/pdf": {}}}},
+)
+async def info_sheet_preview(
+    statement_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> Response:
+    async with tenant_tx(request, principal) as session:
+        st, _ = await _statement_with_snapshot(session, statement_id)
+        pdf = await _info_sheet_pdf(session, request, st)
+    return Response(
+        content=pdf,
+        media_type="application/pdf",
+        headers={
+            "Cache-Control": "no-store",
+            "Content-Disposition": (
+                f'attachment; filename="betriebskosten_{st.period_from.year}_informationsblatt.pdf"'
+            ),
         },
     )
 

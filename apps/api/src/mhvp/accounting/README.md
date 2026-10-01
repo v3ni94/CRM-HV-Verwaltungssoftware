@@ -317,3 +317,29 @@ Vorlagenzeilen tragen `allocation_split` (Schlüsselcode und Prozentanteil, Summ
 `_check_factual_links` also checks that work order, resolution, plan item and invoice plan
 belong to the property, legal entity or ledger of the invoice; otherwise 422
 `MHVP-ACC-0008`. Rule M14-02.
+
+## AA12 Regelregister und Prüfpunkte (01.10.2026)
+
+`rule_register.py`: Auswahl des Registereintrags nach Abrechnungsbeginn (`select_version`), Verweis im Snapshot, Entwurfs-Prüfpunkte für HeizkostenV §§ 5 und 12 sowie CO2KostAufG §§ 5a bis 5d über `POST /accounting/rule-versions/seed-checkpoints` (ohne Rechtsfolge, siehe OPEN_QUESTIONS AA12-02 bis AA12-04). Reverse Charge erzeugt zusätzlich den Hinweis auf § 13b UStG als gesonderten Freigabepunkt (AA12-01), keine Automatik.
+
+## AA10 Honorar, Rechnungsplan, Standardregel (01.10.2026, Migration 0312)
+
+- `admin_fee_setting` (GA03-06): neue Felder `manager_contact_id`, `termination_date`, `due_day_rule` (`day`, `last_day`, `day_next_month`) mit `due_day`, `account_id` (Erlöskonto) und `sev_fee_amount`. Das Kündigungsdatum begrenzt den Lauf (`admin_fees.effective_end`), die Fälligkeit steht in der Antwort der Rechnungsausstellung (`due_date`), bei einer SE-Gebühr (Schuldner gesetzt) gilt `sev_fee_amount` je Einheit statt `amounts_per_unit_type`. Ändern per `PATCH /accounting/admin-fees/{id}`.
+- `recurring_invoice_plan.auto_post` (GA03-07): Standard aus, nur setzbar bei freigeschalteter automatischer Buchung (sonst 409); Generierung erzeugt weiter nur Entwürfe (OPEN_QUESTIONS AA10-01).
+- `provider_rule.propose_default_rule` (GA02-05): bei `create_default_bank_rule` entsteht beim Anlegen des Dienstleisterverhältnisses eine Bankregel im Zustand `proposed` (IBAN Fingerprint, Kreditorenkonto, Priorität 900), idempotent, ohne Buchung (AA10-03).
+- ADR 0020 Formatversionen mit Pin Test `tests/unit/test_format_versions_pin.py` (GA03-09).
+
+## AA11 WEG owner change (01.10.2026)
+
+GA06-01: with `receivable_rules.enabled` an ownership contract with start, end or amount change
+within the month is not prorated; the item stays manual (`OWNERSHIP_CHANGE`), see rule M13-01.
+
+## AA01 Prüfbericht und Vermerke (01.10.2026)
+
+* `GET /accounting/ledgers/{id}/checks?as_of=`: `findings` now include number gaps per fiscal
+  year, counter against highest number (B04) and hard subledger invariants (B09); `subledger`
+  and `subledger_differences` reconcile open items per debtor and creditor account against the
+  ledger balance as of a date (differences are for review, they do not set `ok`).
+* `GET/POST /accounting/ledgers/{id}/entries/{id}/notes`: versioned, append only notes on
+  posted entries (`journal_entry_note`, migration 0303, errors `MHVP-ACC-0009`, `-0010`).
+* Rule `docs/rules/AA01-pruefbericht-vermerke-jobgates.md`.

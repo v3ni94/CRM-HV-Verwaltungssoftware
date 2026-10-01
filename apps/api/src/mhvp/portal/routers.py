@@ -36,7 +36,7 @@ from mhvp.core.escaping import content_disposition
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.portal import access, magic_link, read_receipts
-from mhvp.portal.models import ChangeRequest, PortalAccount
+from mhvp.portal.models import AccessGrant, ChangeRequest, PortalAccount
 from mhvp.portal.property_scope import (
     contact_visible,
     ensure_contact_visible,
@@ -208,6 +208,7 @@ async def provision_account(
                 secret = secrets.token_urlsafe(32)
                 existing.invitation_hash = _hash(secret)
                 existing.invitation_expires_at = now + timedelta(days=INVITE_DAYS)
+                existing.invited_at = now
                 grants = await access.sync_grants(session, existing)
                 await emit(
                     session,
@@ -275,6 +276,7 @@ async def provision_account(
             contact_id=contact_id,
             invitation_hash=_hash(secret),
             invitation_expires_at=datetime.now(UTC) + timedelta(days=INVITE_DAYS),
+            invited_at=datetime.now(UTC),
         )
         session.add(account)
         await session.flush()
@@ -300,6 +302,23 @@ async def provision_account(
         }
 
 
+def _user_locked(user: Any, now: datetime) -> bool:
+    return bool(not user.active or (user.locked_until is not None and user.locked_until > now))
+
+
+def effective_account_status(account: PortalAccount, user: Any, now: datetime) -> str:
+    """GA02-07: status as shown (6.1): ``expired`` for an unaccepted invitation past its
+    expiry and ``locked`` for an active account whose login is locked are derived when read;
+    the stored value stays invited or active. ``revoked`` is kept as the stored end state."""
+    if account.status == "invited" and (
+        account.invitation_expires_at is not None and account.invitation_expires_at < now
+    ):
+        return "expired"
+    if account.status == "active" and _user_locked(user, now):
+        return "locked"
+    return account.status
+
+
 class PortalAccountOut(BaseModel):
     """Portal account of a contact as the CRM sees it (A86). Never carries the invitation
     hash, a password hash or a token; ``status`` is the account status of the model
@@ -310,6 +329,7 @@ class PortalAccountOut(BaseModel):
     contact_id: uuid.UUID
     email: str
     status: str
+    roles: list[str]
     locked: bool
     invited_at: datetime
     invitation_expires_at: datetime | None
@@ -346,11 +366,10 @@ async def list_accounts(
                 id=account.id,
                 contact_id=account.contact_id,
                 email=user.email,
-                status=account.status,
-                locked=bool(
-                    not user.active or (user.locked_until is not None and user.locked_until > now)
-                ),
-                invited_at=account.created_at,
+                status=effective_account_status(account, user, now),
+                roles=list(account.roles or []),
+                locked=_user_locked(user, now),
+                invited_at=account.invited_at or account.created_at,
                 invitation_expires_at=account.invitation_expires_at,
                 activated_at=account.activated_at,
                 last_login_at=user.last_login_at,
@@ -385,6 +404,118 @@ async def resync(
         if account is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         return {"grants": await access.sync_grants(session, account)}
+
+
+class DocumentClassGrantIn(_In):
+    legal_entity_id: uuid.UUID
+    document_class: str = Field(min_length=1, max_length=63)
+    role: str = Field(pattern="^(tenant|owner|board|provider)$")
+    valid_from: date | None = None
+    valid_to: date | None = None
+
+
+class DocumentClassGrantOut(_In):
+    id: uuid.UUID
+    legal_entity_id: uuid.UUID
+    document_class: str
+    role: str
+    valid_from: date
+    valid_to: date | None
+
+
+@admin.get(
+    "/accounts/{account_id}/document-class-grants",
+    summary="Freigaben je Unterlagenklasse",
+    response_model=list[DocumentClassGrantOut],
+)
+async def list_document_class_grants(
+    account_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(MANAGE)
+) -> list[DocumentClassGrantOut]:
+    async with tenant_tx(request, principal) as session:
+        if await session.get(PortalAccount, account_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        rows = await session.scalars(
+            select(AccessGrant).where(
+                AccessGrant.account_id == account_id, AccessGrant.scope_type == "document_class"
+            )
+        )
+        return [
+            DocumentClassGrantOut(
+                id=g.id,
+                legal_entity_id=g.scope_id,
+                document_class=str(g.document_class),
+                role=g.role,
+                valid_from=g.valid_from,
+                valid_to=g.valid_to,
+            )
+            for g in rows
+        ]
+
+
+@admin.post(
+    "/accounts/{account_id}/document-class-grants",
+    status_code=201,
+    summary="Unterlagenklasse freigeben (6.9.6)",
+    response_model=DocumentClassGrantOut,
+)
+async def add_document_class_grant(
+    account_id: uuid.UUID,
+    body: DocumentClassGrantIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(MANAGE),
+) -> DocumentClassGrantOut:
+    """GA03-05: releases the documents of one class of a legal entity (e.g. statement vouchers
+    for the advisory board). The class must exist as a retention profile class."""
+    from mhvp.documents.models import RetentionProfile
+    from mhvp.properties.models import LegalEntity
+
+    async with tenant_tx(request, principal) as session:
+        if await session.get(PortalAccount, account_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        if await session.get(LegalEntity, body.legal_entity_id) is None:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        known = await session.scalar(
+            select(RetentionProfile.id)
+            .where(RetentionProfile.document_class == body.document_class)
+            .limit(1)
+        )
+        if known is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Unterlagenklasse unbekannt.")
+        start = body.valid_from or local_today()
+        if body.valid_to is not None and body.valid_to < start:
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Gültigkeitsende vor Beginn.")
+        grant = AccessGrant(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            account_id=account_id,
+            scope_type="document_class",
+            scope_id=body.legal_entity_id,
+            document_class=body.document_class,
+            right="read",
+            legal_basis="document_class_grant",
+            role=body.role,
+            valid_from=start,
+            valid_to=body.valid_to,
+        )
+        session.add(grant)
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="portal_account.document_class_grant_created",
+            entity_type="portal_account",
+            entity_id=account_id,
+            actor_user_id=principal.user_id,
+            payload={"legal_entity_id": str(body.legal_entity_id), "class": body.document_class},
+        )
+        return DocumentClassGrantOut(
+            id=grant.id,
+            legal_entity_id=body.legal_entity_id,
+            document_class=body.document_class,
+            role=body.role,
+            valid_from=start,
+            valid_to=body.valid_to,
+        )
 
 
 class PortalSecurityIn(_In):
@@ -480,6 +611,7 @@ async def invitation_letter(
         secret = secrets.token_urlsafe(32)
         account.invitation_hash = _hash(secret)
         account.invitation_expires_at = datetime.now(UTC) + timedelta(days=QR_INVITE_DAYS)
+        account.invited_at = datetime.now(UTC)
         token = f"{principal.tenant_id.hex}.{secret}"
         name: str | None
         try:
@@ -965,6 +1097,15 @@ async def accept(body: PortalAcceptIn, request: Request) -> dict[str, str]:
             None,
         )
         user_id = account.user_id
+        await emit(
+            session,
+            tenant_id=tenant_id,
+            type="portal_account.activated",
+            entity_type="portal_account",
+            entity_id=account.id,
+            actor_user_id=user_id,
+            payload={"account_id": str(account.id)},
+        )
     async with platform_transaction(factory) as session:
         user = await session.get(User, user_id)
         if user is None:  # pragma: no cover

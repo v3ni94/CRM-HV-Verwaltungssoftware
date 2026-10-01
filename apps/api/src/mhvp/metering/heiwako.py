@@ -49,6 +49,7 @@ __all__ = [
     "billing_results_from_d",
     "detect_file_kind",
     "parse_file",
+    "write_a_records",
 ]
 
 ENCODING = "iso-8859-15"
@@ -591,3 +592,45 @@ def billing_results_from_d(
 
 def _str(value: Decimal | None) -> str | None:
     return None if value is None else str(value)
+
+
+# Writer for the order reference record A (GA09-01) -----------------------------------------
+
+
+def _put_field(
+    buf: list[str], start: int, end: int, value: str | None, *, numeric: bool = False
+) -> None:
+    width = end - start + 1
+    text = value or ""
+    if len(text) > width:
+        raise ValueError(f"Wert '{text}' passt nicht in Feld {start}-{end}")
+    buf[start - 1 : end] = list(text.rjust(width, "0") if numeric and text else text.ljust(width))
+
+
+def write_a_records(
+    records: Sequence[ARecord], *, version: str = "03.10", encoding: str = ENCODING
+) -> bytes:
+    """Serialise ``A`` records (PDF page 14, 128 bytes, last byte ``A``, CR LF) for the file
+    ``DTA310_*.DAT``. Only fields documented in this module are written: version (2 to 6),
+    customer number (7 to 16, zero padded), provider key (17 to 18), provider reference
+    (19 to 31: 9 digit property plus 4 digit unit) and the client reference (32 to 51). All
+    other positions stay blank. Whether a provider expects this master data export is open
+    (docs/OPEN_QUESTIONS.md AA16-01); the writer is not wired into any transmission."""
+    lines: list[str] = []
+    for record in records:
+        buf = [" "] * RECORD_LENGTHS["A"]
+
+        header = record.header
+        _put_field(buf, 1, 1, "A")
+        _put_field(buf, 2, 6, version)
+        _put_field(buf, 7, 16, header.customer_number, numeric=True)
+        _put_field(buf, 17, 18, header.provider_key)
+        if header.provider_property_number is not None:
+            unit = header.provider_unit_number or "0000"
+            _put_field(
+                buf, 19, 31, header.provider_property_number.rjust(9, "0") + unit.rjust(4, "0")
+            )
+        _put_field(buf, 32, 51, record.client_ref)
+        buf[-1] = "A"
+        lines.append("".join(buf))
+    return "".join(f"{line}\r\n" for line in lines).encode(encoding)

@@ -1438,6 +1438,26 @@
  },
  {
   "kind": "page",
+  "title": "Zustellweg und Nummernkreise",
+  "source": "Einstellungen",
+  "href": "/einstellungen/nummernkreise",
+  "keywords": [
+   "nummernkreis",
+   "vertragsnummer",
+   "rechnungsnummer",
+   "zustellweg",
+   "standard versand",
+   "post",
+   "e-mail",
+   "portal"
+  ],
+  "permission": [
+   "tenant_settings:update"
+  ],
+  "excerpt": ""
+ },
+ {
+  "kind": "page",
   "title": "Regelvorschläge",
   "source": "Einstellungen",
   "href": "/einstellungen/regelvorschlaege",
@@ -1937,6 +1957,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Nach der Berechnung zeigt die Eigentümerabrechnung die möglichen nächsten Schritte: intern freigeben (nur eine zweite Person), Prüfung durch den Beirat erfassen, ausgeben, fällig stellen, als gebucht erfassen und sperren. Ausgeben, fällig stellen und als gebucht erfassen setzen d",
+  "file": "docs/handbuch/abrechnung-miete.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Fristausnahme, Informationsblatt und Belegmappe",
+  "source": "Handbuch: Abrechnung Miete (Betriebskosten, Eigentümerabrechnung)",
+  "href": "/abrechnung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der Betriebskostenabrechnung zeigt der Abschnitt \"Ausnahme von der Abrechnungsfrist\", ob eine Nachforderung nach Ablauf der Fristorientierung gesperrt ist. Im Entwurf werden Ausnahmegrund und die Dokument-ID des Nachweises erfasst; erst mit beiden ist die Ausnahme wirksam. Unt",
   "file": "docs/handbuch/abrechnung-miete.md"
  },
  {
@@ -3066,7 +3096,7 @@
   "href": "/einstellungen",
   "keywords": [],
   "permission": null,
-  "excerpt": "- Dauerhafter Testmodus: Eine aktive Regel mit Testmodus führt keine Aktion aus und schreibt je Ereignis einen Lauf mit Status Testlauf in das Protokoll. So lässt sich eine Regel im Betrieb beobachten, bevor sie wirkt. - Standardjobs je Mandant: Über die Schnittstelle /automation",
+  "excerpt": "- Dauerhafter Testmodus: Eine aktive Regel mit Testmodus führt keine Aktion aus und schreibt je Ereignis einen Lauf mit Status Testlauf in das Protokoll. So lässt sich eine Regel im Betrieb beobachten, bevor sie wirkt. Der Schalter heißt im Regelformular „Testmodus (nur Protokoll",
   "file": "docs/handbuch/automatisierung.md"
  },
  {
@@ -3911,6 +3941,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Vermerke zu gebuchten Sätzen und Prüfbericht (AA01)",
+  "source": "Handbuch: Buchhaltung",
+  "href": "/buchhaltung",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Journal hat jeder gebuchte Satz die Schaltfläche Vermerke. Dort lassen sich ergänzende Hinweise erfassen, etwa ein nachgereichter Beleg. Ein Vermerk ändert den Buchungsinhalt nicht. Wer einen Vermerk ändern möchte, wählt Neue Version; die frühere Fassung bleibt durchgestrichen",
+  "file": "docs/handbuch/buchhaltung.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Löschprofile",
   "source": "Handbuch: Datenschutz im CRM",
   "href": "/einstellungen/datenschutz",
@@ -4257,6 +4297,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Ist ein Dokument mit einem Rechtsträger verknüpft, zeigt die Karte \"Aufbewahrung und Sperren\" ein Auswahlfeld mit den Beschlüssen aus der Beschluss-Sammlung. Für die Startregel \"Beschluss der Eigentümer\" ist die Auswahl Voraussetzung, sonst bleibt das Dokument gesperrt. Die Frist",
+  "file": "docs/handbuch/dokumente-dms.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Dokumenteingang: Zuordnung, Folgevorschläge und Direktablage (AA13)",
+  "source": "Handbuch: Dokumente und DMS (Paperless, Belegeingang)",
+  "href": "/dms",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Der Eingangsvorschlag erkennt zusätzlich Einheit (zum Beispiel \"Einheit 12\"), den am Dokumentdatum gültigen Vertrag, die IBAN und die Kundennummer eines Kontakts. Beim Bestätigen werden Einheit und Vertrag mit verknüpft. - Nach dem Bestätigen erscheinen Folgevorschläge je Dokum",
   "file": "docs/handbuch/dokumente-dms.md"
  },
  {
@@ -4657,6 +4707,36 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Unter Einstellungen, Benachrichtigungen legt die Verwaltung für den Mandanten fest, was Benachrichtigungsmails enthalten. Voll (Standard) sendet Titel und Text. Hinweis sendet nur die Anzahl neuer Benachrichtigungen und einen Link ins CRM, ohne Titel und Text. Zum Ändern ist das ",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Zustellweg und Nummernkreise",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Unter Einstellungen, Zustellweg und Nummernkreise legt die Verwaltung den Standard-Zustellweg (Post, E-Mail, Portal) fest. Er gilt im Versand, wenn weder die Position noch der Kontakt einen Zustellweg vorgibt. Darunter lassen sich Präfix, Stellenzahl, Startwert und Jahresbezug de",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Ordnerschema der Google-Drive-Ablage",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "In der DMS-Anbindung bestimmt das Ordnerschema, in welche Ordner die Direktablage eines Dokuments zu einem Objekt schreibt, zum Beispiel {objekt}/{kategorie}/{jahr}. Leer bedeutet {objekt}/{jahr}.",
+  "file": "docs/handbuch/einstellungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Kundendomains und OIDC-Clients (Plattform)",
+  "source": "Handbuch: Einstellungen",
+  "href": "/einstellungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Plattformadministratoren pflegen unter Plattform, Domains die Hostnamen eines Mandanten (Zweck Portal, CRM oder API) mit Hinweis auf den CNAME-Eintrag und sperren oder entsperren den Mandanten. Unter Plattform, OIDC-Clients werden Clients der Anmeldung für Bestandstools angelegt,",
   "file": "docs/handbuch/einstellungen.md"
  },
  {
@@ -6241,6 +6321,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Freigabeantrag mit Checkliste und Nachweis (G2 bis G4)",
+  "source": "Handbuch: Plattform",
+  "href": "/plattform",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Zweck: Ein Antrag auf G2, G3 oder G4 dokumentiert die Voraussetzungen aus 18.0. Ablauf: Die Checkliste über GET /api/v1/tenant/release-gates/checklists abrufen, jeden Prüfpunkt mit einer kurzen Notiz bestätigen, das Nachweisdokument hochladen und im Antrag verknüpfen. Optional de",
+  "file": "docs/handbuch/plattform.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
   "href": null,
@@ -6326,7 +6416,7 @@
   "href": null,
   "keywords": [],
   "permission": null,
-  "excerpt": "Im CRM pflegt die Verwaltung am Objekt unter Schwarzes Brett Aushänge mit Titel, Text, Gültig ab, Gültig bis (leer = auf Weiteres), Zielgruppe (Mieter und Eigentümer, Mieter, Eigentümer) und optional einem Dokument des Objekts als Anlage (Recht Objekte ändern; Liste mit Objekte l",
+  "excerpt": "Im CRM pflegt die Verwaltung am Objekt unter Schwarzes Brett Aushänge mit Titel, Text, Gültig ab, Gültig bis (leer = auf Weiteres), Kategorie (Katalog), Hinweisstufe (neutral, Info, Warnung, Gefahr), Zielgruppen (Mieter, Eigentümer, Dienstleister, mehrere wählbar) und optional me",
   "file": "docs/handbuch/portal.md"
  },
  {
@@ -6511,6 +6601,16 @@
  },
  {
   "kind": "handbook",
+  "title": "Freigabe je Unterlagenklasse, Sprache, Dienstleisterinformationen (AA14)",
+  "source": "Handbuch: Portal (Mieter, Eigentümer, Beirat, Dienstleister)",
+  "href": null,
+  "keywords": [],
+  "permission": null,
+  "excerpt": "- Unterlagenklasse freigeben: Für einen Portalzugang kann die Verwaltung die Dokumente einer Klasse (zum Beispiel Abrechnungsbelege) eines Rechtsträgers freigeben, mit Rolle und Gültigkeit (POST /api/v1/portal-admin/accounts/{id}/document-class-grants). Sichtbar sind nur Dokument",
+  "file": "docs/handbuch/portal.md"
+ },
+ {
+  "kind": "handbook",
   "title": "Zweck",
   "source": "Handbuch: Rechnungen (Invoices)",
   "href": "/rechnungen",
@@ -6637,6 +6737,16 @@
   "keywords": [],
   "permission": null,
   "excerpt": "- In der Rechnungsansicht zeigt der Abschnitt \"Sachliche Prüfung (Befunde)\" den Abgleich gegen den verknüpften Auftrag (Angebotsbetrag, Kostengrenze, Status, Dienstleister, Objekt), den Dienstleistervertrag, den WEG Beschluss, die Wirtschaftsplanposition (Planansatz), den Rechnun",
+  "file": "docs/handbuch/rechnungen.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "E-Rechnung: Prüfergebnis im Belegeingang",
+  "source": "Handbuch: Rechnungen (Invoices)",
+  "href": "/rechnungen",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Im Belegeingang zeigt der Block \"E-Rechnung: Prüfergebnis\" Profil, Prüfer, Version, Ergebnis und Meldungen. Die interne formale Prüfung ist kein amtlicher Validator. Ein Reverse Charge Kennzeichen führt zum Hinweis auf einen möglichen Fall des § 13b UStG als gesonderten Freigabep",
   "file": "docs/handbuch/rechnungen.md"
  },
  {
@@ -7487,6 +7597,36 @@
   "keywords": [],
   "permission": null,
   "excerpt": "Beim Protokollabschluss wird das unterschriebene Protokoll nicht mehr als ID eingetippt. Über die Suche (mindestens 2 Zeichen) wird ein vorhandenes Dokument gewählt. Ein neues Protokoll wird zuvor im Dokumentenbereich hochgeladen. Beim Bestätigen durch die zweite Person ist die A",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Vermögensbericht im Eigentümerportal und Bereitstellungsprotokoll",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Ein ausgestellter Vermögensbericht (Status \"ausgestellt\") erscheint im Eigentümerportal unter Abrechnungen. Das PDF ist erst nach Freigabestufe G4 abrufbar. Jeder Abruf wird je Einheit vermerkt. In der Berichtsansicht zeigt der Abschnitt \"Bereitstellungsprotokoll je Eigentümer\" e",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Sondererwerb im Abrechnungsjahr freigeben",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Hat im Abrechnungsjahr ein Eigentümer durch Ersterwerb, Erbfall, Zwangsversteigerung, Schenkung oder sonstigen Erwerb übernommen, oder ist Sondernachfolgehaftung gekennzeichnet, sperrt das Abrechnungspaket mit dem Hinweis \"Erwerbsart im Abrechnungsjahr\". In der Hausgeldabrechnung",
+  "file": "docs/handbuch/weg.md"
+ },
+ {
+  "kind": "handbook",
+  "title": "Versammlungsart, Ergebnis je TOP und Beschluss-Sammlung (Stand 01.10.2026)",
+  "source": "Handbuch: WEG (Versammlung, Beschlüsse, Abrechnung, Prüfauftrag)",
+  "href": "/weg",
+  "keywords": [],
+  "permission": null,
+  "excerpt": "Beim Anlegen einer Versammlung wählen Sie die Art (ordentlich, außerordentlich, Teilversammlung, Umlaufverfahren); Wiederholung und Fortsetzung werden mit Bezug auf die Ursprungsversammlung über die Schnittstelle angelegt. In der Versammlung erfassen Sie unter \"Art, Dauer, Vorlag",
   "file": "docs/handbuch/weg.md"
  }
 ]

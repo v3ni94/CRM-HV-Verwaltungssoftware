@@ -61,6 +61,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^portal/consumption-info/${ID}$`) },
   // Schwarzes Brett (M21-01, A54): current notices of the own properties.
   { method: "GET", pattern: /^portal\/notices$/ },
+  { method: "POST", pattern: new RegExp(`^portal/notices/${ID}/read$`) },
   { method: "GET", pattern: /^portal\/work-orders$/ },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/decline$`) },
   { method: "POST", pattern: new RegExp(`^portal/work-orders/${ID}/quote$`) },

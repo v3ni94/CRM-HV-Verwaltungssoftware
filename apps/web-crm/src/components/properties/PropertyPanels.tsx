@@ -5,6 +5,9 @@
  *  die API. */
 import Link from "next/link";
 import { useTranslations } from "next-intl";
+import { useState } from "react";
+
+import { bff } from "@/lib/bff";
 
 import { formatDate } from "@/lib/format";
 import { ui } from "@/lib/ui";
@@ -23,7 +26,7 @@ export type BuildingRow = {
   energy_certificate_valid_until?: string | null;
 };
 
-export type BillingPeriodRow = { id: string; kind: string; valid_from: string; valid_to: string; board_online_audit: boolean; notes?: string | null };
+export type BillingPeriodRow = { id: string; property_id?: string; kind: string; valid_from: string; valid_to: string; board_online_audit: boolean; notes?: string | null; status?: string; locked_at?: string | null };
 export type SubCommunityRow = { id: string; code: string; name: string; notes?: string | null };
 export type PortalDocumentRow = { id: string; document_id: string; title?: string | null; visible_for: string[]; sort_order: number };
 export type ProviderRow = {
@@ -98,14 +101,40 @@ export function BuildingsPanel({ buildings }: { buildings: BuildingRow[] }) {
   );
 }
 
+const PERIOD_STEPS = ["open", "results_created", "confirmed", "closed"] as const;
+
 export function BillingPeriodsPanel({ periods }: { periods: BillingPeriodRow[] }) {
   const t = useTranslations("Properties.billingPeriods");
   const tc = useTranslations("Inline");
-  const kinds = [...new Set(periods.map((p) => p.kind))];
+  const [rows, setRows] = useState<BillingPeriodRow[]>(periods);
+  const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const kinds = [...new Set(rows.map((p) => p.kind))];
+
+  async function advance(row: BillingPeriodRow, target: string) {
+    setBusyId(row.id);
+    setError(null);
+    const res = await bff<BillingPeriodRow>(`/api/bff/properties/${row.property_id ?? ""}/billing-periods/${row.id}/status`, {
+      method: "POST",
+      body: JSON.stringify({ status: target }),
+    });
+    setBusyId(null);
+    if (!res.ok) {
+      setError(res.message);
+      return;
+    }
+    setRows((current) => current.map((r) => (r.id === row.id ? { ...r, ...res.data } : r)));
+  }
+
   return (
     <section className={ui.card} data-testid="property-billing-periods" aria-label={t("title")}>
       <h2 className={ui.h2}>{t("title")}</h2>
-      {periods.length === 0 ? (
+      {error && (
+        <p role="alert" className={ui.alert}>
+          {error}
+        </p>
+      )}
+      {rows.length === 0 ? (
         <Empty text={t("empty")} />
       ) : (
         kinds.map((kind) => (
@@ -117,21 +146,41 @@ export function BillingPeriodsPanel({ periods }: { periods: BillingPeriodRow[] }
                   <tr>
                     <th>{t("from")}</th>
                     <th>{t("to")}</th>
+                    <th>{t("status")}</th>
                     <th>{t("boardOnlineAudit")}</th>
                     <th>{t("notes")}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {periods
+                  {rows
                     .filter((p) => p.kind === kind)
-                    .map((p) => (
-                      <tr key={p.id}>
-                        <td>{formatDate(p.valid_from)}</td>
-                        <td>{formatDate(p.valid_to)}</td>
-                        <td>{p.board_online_audit ? tc("yes") : tc("no")}</td>
-                        <td>{p.notes ?? ""}</td>
-                      </tr>
-                    ))}
+                    .map((p) => {
+                      const status = p.status ?? "open";
+                      const index = PERIOD_STEPS.indexOf(status as (typeof PERIOD_STEPS)[number]);
+                      const next = index >= 0 && index < PERIOD_STEPS.length - 1 ? PERIOD_STEPS[index + 1] : null;
+                      return (
+                        <tr key={p.id}>
+                          <td>{formatDate(p.valid_from)}</td>
+                          <td>{formatDate(p.valid_to)}</td>
+                          <td>
+                            {t(`statuses.${status}`)}
+                            {p.locked_at ? ` (${t("lockedAt", { date: formatDate(p.locked_at) })})` : ""}
+                            {next && (
+                              <button
+                                type="button"
+                                className={`${ui.buttonSm} ml-2`}
+                                disabled={busyId === p.id}
+                                onClick={() => advance(p, next)}
+                              >
+                                {t(`advance.${next}`)}
+                              </button>
+                            )}
+                          </td>
+                          <td>{p.board_online_audit ? tc("yes") : tc("no")}</td>
+                          <td>{p.notes ?? ""}</td>
+                        </tr>
+                      );
+                    })}
                 </tbody>
               </table>
             </div>

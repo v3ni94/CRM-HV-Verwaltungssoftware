@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { MeetingClose } from "@/components/hoa/MeetingClose";
 import { MajorityRules, MeetingPanel, type MajorityRule } from "@/components/hoa/HoaForms";
 import { MeetingDeadlineForm } from "@/components/hoa/MeetingDeadlineForm";
+import { MeetingDetailsForm, type MeetingDetails } from "@/components/hoa/MeetingDetailsForm";
 import { MeetingFormPanel, type AttendanceRow, type MeetingFormData } from "@/components/hoa/MeetingFormPanel";
 import { MemberVoting } from "@/components/hoa/MemberVoting";
 import { ProtocolDraft } from "@/components/hoa/ProtocolDraft";
@@ -42,6 +43,7 @@ export default async function MeetingPage({ params }: { params: Promise<{ meetin
       </p>
       <p className={ui.notice}>{t("meetingNotice")}</p>
       <MeetingFormPanel meetingId={meetingId} data={data as unknown as MeetingFormData} attendance={attendance} />
+      <MeetingDetailsForm meetingId={meetingId} data={data as unknown as MeetingDetails} closed={String(data.status) === "closed"} />
       {data.mode === "virtual" ? (
         <MeetingDeadlineForm
           meetingId={meetingId}

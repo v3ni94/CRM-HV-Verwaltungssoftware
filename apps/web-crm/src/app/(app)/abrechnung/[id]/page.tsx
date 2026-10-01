@@ -3,6 +3,7 @@ import { getTranslations } from "next-intl/server";
 import { AdvanceProposalsPanel } from "@/components/billing/AdvanceProposalsPanel";
 import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
 import { AllocabilityHints, type AllocabilityHint } from "@/components/billing/AllocabilityHints";
+import { DeadlineExceptionPanel, type DeadlineException } from "@/components/billing/DeadlineExceptionPanel";
 import { HeatingPanel } from "@/components/billing/HeatingPanel";
 import { StatementLettersPanel } from "@/components/billing/StatementLettersPanel";
 import { ResultTable, StatementWorkbench } from "@/components/billing/StatementWorkbench";
@@ -81,6 +82,7 @@ export default async function StatementPage({ params }: { params: Promise<{ id: 
           ) : null}
         </>
       ) : null}
+      <DeadlineExceptionPanel id={id} status={String(data.status)} initial={data as unknown as DeadlineException} />
       <StatementLettersPanel id={id} status={String(data.status)} hasSnapshot={Boolean(snap)} />
       <AllocabilityHints id={id} initial={snap?.allocability_hints ?? null} />
       <AdvanceProposalsPanel id={id} hasSnapshot={Boolean(snap)} snapshotHash={snap?.hash ?? null} />

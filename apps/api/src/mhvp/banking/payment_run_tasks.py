@@ -15,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
 from mhvp.accounting.direct_debit_models import PaymentRunPreview, PaymentRunSetting
+from mhvp.automation.job_schedule import job_allowed, lock_job
 from mhvp.banking import payment_run
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
@@ -55,6 +56,18 @@ async def weekly_previews(settings: Settings) -> dict[str, int]:
                     )
                 )
                 if not enabled:
+                    continue
+                # GA12-01: per tenant job setting (switch and start time).
+                if not await job_allowed(session, tenant_id, "payments-payment-run-preview"):
+                    continue
+                # GA12-06: one scheduled preview per tenant and day, also against a parallel run.
+                await lock_job(session, tenant_id, "payments-payment-run-preview")
+                if await session.scalar(
+                    select(PaymentRunPreview.id).where(
+                        PaymentRunPreview.trigger == "schedule",
+                        PaymentRunPreview.as_of == local_today(),
+                    )
+                ):
                     continue
                 await store_preview(session, tenant_id, trigger="schedule", user_id=None)
                 runs += 1

@@ -9,10 +9,20 @@ import { ui } from "@/lib/ui";
 /** Mandanteneinstellung Einladungsfrist in Wochen (Entwurfswert 3, zu prüfen) und Schalter für
  *  virtuelle Versammlungen (V13, Standard aus). Keine Rechtsbehauptung; die Prüfung beim Versand
  *  warnt und verlangt einen dokumentierten Grund. */
-export function MeetingSettings({ weeks, virtualEnabled }: { weeks: number; virtualEnabled: boolean }) {
+export function MeetingSettings({
+  weeks,
+  virtualEnabled,
+  termLockEnabled = false,
+}: {
+  weeks: number;
+  virtualEnabled: boolean;
+  /** GA07-01: Sperre bei Geltungsdauer über drei Jahre, Standard aus (nur Hinweis). */
+  termLockEnabled?: boolean;
+}) {
   const t = useTranslations("HoaWork.meetingSettings");
   const [value, setValue] = useState(String(weeks));
   const [virtual, setVirtual] = useState(virtualEnabled);
+  const [termLock, setTermLock] = useState(termLockEnabled);
   const [state, setState] = useState<"idle" | "saving" | "saved" | "error">("idle");
   const [message, setMessage] = useState<string | null>(null);
 
@@ -27,7 +37,7 @@ export function MeetingSettings({ weeks, virtualEnabled }: { weeks: number; virt
     setState("saving");
     const result = await bff("/api/bff/hoa/meeting-settings", {
       method: "PUT",
-      body: JSON.stringify({ invitation_weeks: n, virtual_meetings_enabled: virtual }),
+      body: JSON.stringify({ invitation_weeks: n, virtual_meetings_enabled: virtual, virtual_basis_term_lock_enabled: termLock }),
     });
     if (result.ok) {
       setState("saved");
@@ -53,6 +63,11 @@ export function MeetingSettings({ weeks, virtualEnabled }: { weeks: number; virt
         {t("virtual")}
       </label>
       <p className="text-xs text-muted">{t("virtualHint")}</p>
+      <label className="flex items-center gap-2 text-sm">
+        <input type="checkbox" checked={termLock} onChange={(e) => setTermLock(e.target.checked)} data-testid="virtual-term-lock" />
+        {t("termLock")}
+      </label>
+      <p className="text-xs text-muted">{t("termLockHint")}</p>
       <div className={ui.formActions}>
         <button type="submit" className={ui.primary} disabled={state === "saving"}>
           {t("save")}

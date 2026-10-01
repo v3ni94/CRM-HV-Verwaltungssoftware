@@ -44,6 +44,8 @@ export type Rule = {
   name: string;
   description: string | null;
   active: boolean;
+  // GA12-03: permanent test mode, the rule only writes the log (status dry_run).
+  test_mode?: boolean;
   trigger_kind: TriggerKind;
   trigger_event_type: string | null;
   schedule: Schedule | null;
@@ -1392,6 +1394,9 @@ function RuleForm({
   const [ownerUserId, setOwnerUserId] = useState<string>(
     initial?.owner_user_id ?? "",
   );
+  const [testMode, setTestMode] = useState<boolean>(
+    initial?.test_mode ?? false,
+  );
   // Expertenansicht: JSON des gesamten Regelkerns; Pflicht, wenn der Bedingungsbaum verschachtelt ist.
   const [expert, setExpert] = useState(parsed === null);
   const [raw, setRaw] = useState(() => JSON.stringify(currentBody(), null, 2));
@@ -1453,6 +1458,7 @@ function RuleForm({
       name: name.trim(),
       description: description.trim() || null,
       owner_user_id: ownerUserId || null,
+      test_mode: testMode,
       ...core,
     };
     const res = initial
@@ -1513,6 +1519,18 @@ function RuleForm({
           ))}
         </select>
         <span className={ui.help}>{t("ownerHelp")}</span>
+      </label>
+      <label className="flex flex-col gap-1">
+        <span className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            aria-label={t("testMode")}
+            checked={testMode}
+            onChange={(e) => setTestMode(e.target.checked)}
+          />
+          <span className={ui.label}>{t("testMode")}</span>
+        </span>
+        <span className={ui.help}>{t("testModeHelp")}</span>
       </label>
       <div className="flex items-center justify-between gap-2">
         <p className={ui.help} data-testid="rule-sentence">
@@ -1785,6 +1803,10 @@ export function AutomationAdmin({
   const [rules, setRules] = useState(initialRules);
   const [runs, setRuns] = useState(initialRuns);
   const [runFilter, setRunFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const shownRuns = statusFilter
+    ? runs.filter((r) => r.status === statusFilter)
+    : runs;
   const [editingId, setEditingId] = useState<string | null>(null);
   const [testingId, setTestingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
@@ -1864,6 +1886,11 @@ export function AutomationAdmin({
                 {rule.active ? t("active") : t("inactive")}
               </span>
               <span className={ui.badge}>{triggerBadge(rule, t)}</span>
+              {rule.test_mode ? (
+                <span className={ui.badge} data-testid="rule-test-mode">
+                  {t("testModeBadge")}
+                </span>
+              ) : null}
               <span className="flex-1" />
               {canManage ? (
                 <>
@@ -1961,6 +1988,19 @@ export function AutomationAdmin({
               </option>
             ))}
           </select>
+          <select
+            aria-label={t("filterStatus")}
+            className={ui.input}
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+          >
+            <option value="">{t("allStatuses")}</option>
+            {["executed", "failed", "dry_run"].map((st) => (
+              <option key={st} value={st}>
+                {t(`statuses.${st}`)}
+              </option>
+            ))}
+          </select>
           <button
             type="button"
             className={ui.buttonSm}
@@ -1969,7 +2009,7 @@ export function AutomationAdmin({
             {t("refresh")}
           </button>
         </div>
-        {runs.length === 0 ? (
+        {shownRuns.length === 0 ? (
           <p className={ui.help}>{t("noRuns")}</p>
         ) : (
           <div className="overflow-x-auto">
@@ -1984,7 +2024,7 @@ export function AutomationAdmin({
               </tr>
             </thead>
             <tbody>
-              {runs.map((run) => (
+              {shownRuns.map((run) => (
                 <tr key={run.id}>
                   <td className="tabular-nums">{formatDateTime(run.started_at)}</td>
                   <td>{run.rule_name ?? run.rule_id}</td>
@@ -1994,7 +2034,9 @@ export function AutomationAdmin({
                       className={
                         run.status === "executed"
                           ? ui.badgeSuccess
-                          : ui.badgeDanger
+                          : run.status === "dry_run"
+                            ? ui.badge
+                            : ui.badgeDanger
                       }
                     >
                       {t(`statuses.${run.status}`)}

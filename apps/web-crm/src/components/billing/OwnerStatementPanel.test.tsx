@@ -80,4 +80,22 @@ describe("Blocks", () => {
     expect(screen.getAllByText("1.500,00 EUR").length).toBe(4); // deposits (2), liquidity, HOA cost share
     expect(screen.getByText("Keine Auffälligkeiten.")).toBeInTheDocument();
   });
+
+  it("shows receipts and § 35a blocks (GA03-08, GA06-03)", () => {
+    renderIntl(
+      <Blocks
+        results={{
+          ...RESULTS,
+          receipts: { lines: [], linked: 2, missing: 1, total: "199.50" },
+          section_35a: { lines: [{ unit_id: "u1", unit_number: "01", amount: "120.00" }], total: "120.00", note: "" },
+        }}
+        findings={[]}
+      />,
+    );
+    expect(screen.getByText("Belegmappe")).toBeInTheDocument();
+    expect(screen.getByText("Buchungen ohne Beleg")).toBeInTheDocument();
+    expect(screen.getByText("199,50 EUR")).toBeInTheDocument();
+    expect(screen.getByText(/35a EStG/)).toBeInTheDocument();
+    expect(screen.getByText("Einheit 01")).toBeInTheDocument();
+  });
 });

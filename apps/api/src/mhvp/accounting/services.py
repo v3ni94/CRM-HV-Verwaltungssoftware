@@ -900,4 +900,125 @@ async def checks(session: AsyncSession, ledger: Ledger) -> list[str]:
     d, c = total.one()
     if d != c:
         findings.append(f"Summen Soll {d} und Haben {c} weichen ab")
+    findings += await numbering_findings(session, ledger)
+    findings += await subledger_findings(session, ledger)
     return findings
+
+
+async def numbering_findings(session: AsyncSession, ledger: Ledger) -> list[str]:
+    """B04 sentence 3 (GA05-01): posted numbers per fiscal year run 1..n without gaps and the
+    counter row equals the highest assigned number."""
+    findings: list[str] = []
+    params = {"ledger": ledger.id}
+    gaps = await session.execute(
+        text(
+            """
+            WITH y AS (SELECT fiscal_year, max(number) AS hi FROM journal_entry WHERE
+            ledger_id = :ledger AND status = 'posted' GROUP BY fiscal_year)
+            SELECT y.fiscal_year, g.n FROM y CROSS JOIN LATERAL generate_series(1, y.hi) AS
+            g(n) WHERE NOT EXISTS (SELECT 1 FROM journal_entry e WHERE e.ledger_id = :ledger
+            AND e.fiscal_year = y.fiscal_year AND e.number = g.n AND e.status = 'posted')
+            ORDER BY 1, 2 LIMIT 1000
+            """
+        ),
+        params,
+    )
+    findings += [f"Nummernlücke {y}-{n} im Buchungsregister" for y, n in gaps.all()]
+    counter = await session.execute(
+        text(
+            """
+            SELECT coalesce(c.fiscal_year, m.fiscal_year), coalesce(c.last_number, 0),
+            coalesce(m.hi, 0) FROM (SELECT fiscal_year, last_number FROM
+            journal_number_counter WHERE ledger_id = :ledger) c FULL JOIN (SELECT
+            fiscal_year, max(number) AS hi FROM journal_entry WHERE ledger_id = :ledger AND
+            status = 'posted' GROUP BY fiscal_year) m ON m.fiscal_year = c.fiscal_year
+            WHERE coalesce(c.last_number, 0) <> coalesce(m.hi, 0) ORDER BY 1
+            """
+        ),
+        params,
+    )
+    findings += [
+        f"Zählerstand {last} weicht von höchster Nummer {hi} im Geschäftsjahr {y} ab"
+        for y, last, hi in counter.all()
+    ]
+    return findings
+
+
+async def subledger_findings(session: AsyncSession, ledger: Ledger) -> list[str]:
+    """B09 sentence 4 (GA05-03), hard invariants: per debtor or creditor account the open
+    items never exceed the postings on the account, settlements never exceed the opposite
+    side, and settlements are aggregated per item before summing (no double counting)."""
+    rows = await session.execute(
+        text(
+            """
+            WITH s AS (SELECT open_item_id, sum(amount) AS settled FROM open_item_settlement
+            GROUP BY open_item_id),
+            oi AS (SELECT i.account_id, sum(i.amount) AS amt, sum(coalesce(s.settled, 0)) AS
+            settled FROM open_item i LEFT JOIN s ON s.open_item_id = i.id WHERE i.ledger_id
+            = :ledger GROUP BY i.account_id),
+            gl AS (SELECT l.account_id, sum(l.debit) AS d, sum(l.credit) AS c FROM
+            journal_line l JOIN journal_entry e ON e.id = l.journal_entry_id WHERE
+            e.ledger_id = :ledger AND e.status = 'posted' GROUP BY l.account_id)
+            SELECT a.number, a.category::text, oi.amt, oi.settled, coalesce(gl.d, 0),
+            coalesce(gl.c, 0) FROM oi JOIN ledger_account a ON a.id = oi.account_id LEFT JOIN
+            gl ON gl.account_id = oi.account_id WHERE (a.category = 'debtor' AND (oi.amt >
+            coalesce(gl.d, 0) OR oi.settled > coalesce(gl.c, 0))) OR (a.category =
+            'creditor' AND (oi.amt > coalesce(gl.c, 0) OR oi.settled > coalesce(gl.d, 0)))
+            ORDER BY a.number
+            """
+        ),
+        {"ledger": ledger.id},
+    )
+    return [
+        f"Nebenbuch Konto {number} ({cat}) übersteigt Hauptbuch: Posten {amt}, "
+        f"Ausgleich {settled}, Soll {d}, Haben {c}"
+        for number, cat, amt, settled, d, c in rows.all()
+    ]
+
+
+async def subledger_reconciliation(
+    session: AsyncSession, ledger: Ledger, as_of: date | None = None
+) -> list[dict[str, Any]]:
+    """B09 sentence 4 (GA05-03): per debtor and creditor account the remaining open items
+    (receivable positive, payable negative, settlements aggregated per item) against the
+    general ledger balance (debit minus credit) as of a date. A difference is shown, it is
+    not automatically an error: unapplied payments and postings without open item are
+    legitimate and are listed for review."""
+    rows = await session.execute(
+        text(
+            """
+            WITH s AS (SELECT open_item_id, sum(amount) AS settled FROM open_item_settlement
+            WHERE (CAST(:as_of AS date) IS NULL OR date <= CAST(:as_of AS date))
+            GROUP BY open_item_id),
+            oi AS (SELECT i.account_id, sum(CASE WHEN i.kind = 'receivable' THEN 1 ELSE -1
+            END * (i.amount - coalesce(s.settled, 0))) AS remaining FROM open_item i LEFT
+            JOIN s ON s.open_item_id = i.id WHERE i.ledger_id = :ledger AND (CAST(:as_of AS
+            date) IS NULL OR i.booking_date <= CAST(:as_of AS date)) GROUP BY i.account_id),
+            gl AS (SELECT l.account_id, sum(l.debit - l.credit) AS bal FROM journal_line l
+            JOIN journal_entry e ON e.id = l.journal_entry_id WHERE e.ledger_id = :ledger AND
+            e.status = 'posted' AND (CAST(:as_of AS date) IS NULL OR e.booking_date <=
+            CAST(:as_of AS date)) GROUP BY l.account_id)
+            SELECT a.id, a.number, a.name, a.category::text, coalesce(gl.bal, 0),
+            coalesce(oi.remaining, 0) FROM ledger_account a LEFT JOIN gl ON gl.account_id =
+            a.id LEFT JOIN oi ON oi.account_id = a.id WHERE a.ledger_id = :ledger AND
+            a.category IN ('debtor', 'creditor') AND (gl.bal IS NOT NULL OR oi.remaining IS
+            NOT NULL) ORDER BY a.number
+            """
+        ),
+        {"ledger": ledger.id, "as_of": as_of},
+    )
+    out: list[dict[str, Any]] = []
+    for account_id, number, name, cat, bal, remaining in rows.all():
+        bal, remaining = Decimal(bal), Decimal(remaining)
+        out.append(
+            {
+                "account_id": str(account_id),
+                "number": number,
+                "name": name,
+                "category": cat,
+                "ledger_balance": str(bal),
+                "open_items_remaining": str(remaining),
+                "difference": str(bal - remaining),
+            }
+        )
+    return out

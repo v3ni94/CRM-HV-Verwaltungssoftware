@@ -130,8 +130,8 @@ Hinweise zur Verarbeitung:
 
 ## Testmodus und Jobzeiten
 
-- **Dauerhafter Testmodus**: Eine aktive Regel mit Testmodus führt keine Aktion aus und schreibt je Ereignis einen Lauf mit Status Testlauf in das Protokoll. So lässt sich eine Regel im Betrieb beobachten, bevor sie wirkt.
-- **Standardjobs je Mandant**: Über die Schnittstelle `/automation/job-schedules` lassen sich Standardjobs abschalten und mit einer Uhrzeit (Europa/Berlin) versehen. Die Anbindung der einzelnen Jobs an diese Einstellung erfolgt schrittweise.
+- **Dauerhafter Testmodus**: Eine aktive Regel mit Testmodus führt keine Aktion aus und schreibt je Ereignis einen Lauf mit Status Testlauf in das Protokoll. So lässt sich eine Regel im Betrieb beobachten, bevor sie wirkt. Der Schalter heißt im Regelformular „Testmodus (nur Protokoll)“; die Regelliste zeigt die Kennzeichnung „Testmodus“, und das Protokoll lässt sich nach dem Ergebnis „Testlauf“ filtern.
+- **Standardjobs je Mandant**: Unter Einstellungen, Automatisierung (Abschnitt „Standardjobs je Mandant“) lassen sich die Standardjobs (Bankabruf, Mahnlauf, Sollstellungslauf, Dokumenteneingang, Abstimmungsbericht, Zahllauf Vorschau und weitere) abschalten und mit einer Uhrzeit HH:MM (Europa/Berlin) versehen. Ohne Uhrzeit läuft der Job zum üblichen Zeitpunkt; mit Uhrzeit nur in der Stunde ab dieser Zeit. Das Abschalten oder Verschieben öffnet keine Sperre und kein Gate. Alle Mandantenjobs beachten die Einstellung; die Wiederherstellungsprüfung ist plattformweit und nicht je Mandant einstellbar.
 
 ## Aktionen Feld setzen und Entwurf an Dienstleister
 

@@ -53,6 +53,7 @@ async def file_document_in_property_year_folder(
         client_secret=str(secret.get("client_secret", "")),
         refresh_token=str(secret.get("refresh_token", "")),
         client=client,
+        folder_scheme=options.get("folder_scheme") or None,
     )
     meta = MirrorMeta(
         document_id=document.id,

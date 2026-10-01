@@ -7,6 +7,8 @@ import { useState } from "react";
 import { bff } from "@/lib/bff";
 import { ui } from "@/lib/ui";
 
+import { EntryNotes } from "./EntryNotes";
+
 export type EntryActionRow = {
   id: string;
   status: string;
@@ -99,6 +101,7 @@ export function EntryActions({
           </button>
         </form>
       ) : null}
+      {!draft ? <EntryNotes ledgerId={ledgerId} entryId={entry.id} canWrite={canCreate} /> : null}
       {error ? (
         <span role="alert" className={ui.error}>
           {error}

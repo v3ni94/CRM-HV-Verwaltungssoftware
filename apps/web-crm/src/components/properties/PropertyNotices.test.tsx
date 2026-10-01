@@ -15,8 +15,12 @@ function notice(overrides: Partial<PropertyNotice> = {}): PropertyNotice {
     body: "Ab Oktober freitags.",
     valid_from: "2026-09-20",
     valid_to: null,
-    audience: "all",
-    document_id: null,
+    category: null,
+    type: "neutral",
+    audiences: ["tenant", "owner"],
+    document_ids: [],
+    read_count: 1,
+    recipient_count: 3,
     ended_at: null,
     is_current: true,
     created_at: "2026-09-20T08:00:00Z",
@@ -38,12 +42,12 @@ describe("PropertyNotices", () => {
     fetchMock.mockResolvedValue(
       jsonResponse([
         notice(),
-        notice({ id: "01920000-0000-7000-8000-000000000002", title: "Beendet", ended_at: "2026-09-21T08:00:00Z", is_current: false, audience: "owner" }),
+        notice({ id: "01920000-0000-7000-8000-000000000002", title: "Beendet", ended_at: "2026-09-21T08:00:00Z", is_current: false, audiences: ["owner"] }),
       ]),
     );
     renderIntl(<PropertyNotices propertyId={PROPERTY} />);
     expect(await screen.findByText("Treppenhausreinigung")).toBeInTheDocument();
-    expect(screen.getByText(/Gültig 20\.09\.2026 bis auf Weiteres · Mieter und Eigentümer/)).toBeInTheDocument();
+    expect(screen.getByText(/Gültig 20\.09\.2026 bis auf Weiteres · Mieter, Eigentümer · neutral · gelesen 1 von 3/)).toBeInTheDocument();
     expect(screen.getByText("sichtbar")).toBeInTheDocument();
     expect(screen.getByText("beendet")).toBeInTheDocument();
     // An ended notice has no actions.
@@ -64,16 +68,18 @@ describe("PropertyNotices", () => {
     expect(await screen.findByRole("alert")).toHaveTextContent("Bitte einen Titel eingeben.");
     await user.type(screen.getByLabelText("Titel"), "Neu");
     await user.type(screen.getByLabelText("Text"), "Text des Aushangs");
-    await user.selectOptions(screen.getByLabelText("Zielgruppe"), "tenant");
+    await user.click(screen.getByLabelText("Eigentümer"));
+    await user.click(screen.getByLabelText("Dienstleister"));
+    await user.selectOptions(screen.getByLabelText("Hinweisstufe"), "warning");
     await user.click(screen.getByRole("button", { name: "Anlegen" }));
     await waitFor(() =>
       expect(fetchMock).toHaveBeenCalledWith(
         `/api/bff/properties/${PROPERTY}/notices`,
-        expect.objectContaining({ method: "POST", body: expect.stringContaining('"audience":"tenant"') }),
+        expect.objectContaining({ method: "POST", body: expect.stringContaining('"audiences":["tenant","provider"]') }),
       ),
     );
     const body = JSON.parse(String(fetchMock.mock.calls.find((c) => (c[1] as RequestInit | undefined)?.method === "POST")?.[1].body)) as Record<string, unknown>;
-    expect(body).toMatchObject({ title: "Neu", body: "Text des Aushangs", audience: "tenant", valid_to: null, document_id: null });
+    expect(body).toMatchObject({ title: "Neu", body: "Text des Aushangs", audiences: ["tenant", "provider"], type: "warning", category: null, document_ids: [], valid_to: null });
   });
 
   it("ends a notice after confirmation", async () => {
@@ -105,5 +111,32 @@ describe("PropertyNotices feedback (review 26.09.2026)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Beenden" }));
     await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Aushang beendet."));
     confirmSpy.mockRestore();
+  });
+});
+
+describe("PropertyNotices 6.2 fields", () => {
+  it("shows level, several attachments and the read quota", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse([notice({ type: "danger", audiences: ["provider"], document_ids: ["a", "b"], read_count: 0, recipient_count: 2 })]),
+    );
+    renderIntl(<PropertyNotices propertyId={PROPERTY} />);
+    expect(await screen.findByText(/Dienstleister · Gefahr · 2 Anlagen · gelesen 0 von 2/)).toBeInTheDocument();
+  });
+
+  it("refuses an empty audience and a malformed document id", async () => {
+    const user = userEvent.setup();
+    fetchMock.mockImplementation(() => Promise.resolve(jsonResponse([])));
+    renderIntl(<PropertyNotices propertyId={PROPERTY} />);
+    await user.click(await screen.findByRole("button", { name: "Aushang anlegen" }));
+    await user.type(screen.getByLabelText("Titel"), "T");
+    await user.type(screen.getByLabelText("Text"), "B");
+    await user.click(screen.getByLabelText("Mieter"));
+    await user.click(screen.getByLabelText("Eigentümer"));
+    await user.click(screen.getByRole("button", { name: "Anlegen" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Bitte mindestens eine Zielgruppe wählen.");
+    await user.click(screen.getByLabelText("Mieter"));
+    await user.type(screen.getByLabelText("Dokument-IDs (optional)"), "kaputt");
+    await user.click(screen.getByRole("button", { name: "Anlegen" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent("Eine Dokument-ID ist ungültig.");
   });
 });

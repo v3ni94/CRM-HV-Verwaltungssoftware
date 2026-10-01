@@ -50,8 +50,45 @@ def period_for(interval: str, day: date) -> tuple[date, date]:
     return start, end
 
 
+def effective_end(fee: AdminFeeSetting) -> date | None:
+    """Last day of the fee: the earlier of ``end_date`` and ``termination_date`` (GA03-06)."""
+    ends = [d for d in (fee.end_date, fee.termination_date) if d is not None]
+    return min(ends) if ends else None
+
+
+def fee_due_date(fee: AdminFeeSetting, period_start: date) -> date | None:
+    """Due date of the fee invoice from ``due_day_rule`` in the month of the service period
+    start (rules day, last_day, day_next_month); None without rule (the contract decides)."""
+    if fee.due_day_rule is None:
+        return None
+    return receivables.due_date(fee.due_day_rule, fee.due_day or 1, period_start)
+
+
+async def check_fee_refs(
+    session: AsyncSession,
+    property_id: uuid.UUID,
+    manager_contact_id: uuid.UUID | None,
+    account_id: uuid.UUID | None,
+) -> None:
+    """Manager contact and revenue account must exist; the account belongs to a ledger of the
+    property (RLS makes foreign tenants invisible)."""
+    from mhvp.accounting.models import Ledger, LedgerAccount
+    from mhvp.contacts.models import Contact
+
+    if manager_contact_id is not None and await session.get(Contact, manager_contact_id) is None:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Der Verwalterkontakt existiert nicht.")
+    if account_id is not None:
+        account = await session.get(LedgerAccount, account_id)
+        ledger = await session.get(Ledger, account.ledger_id) if account else None
+        if ledger is None or ledger.property_id not in (None, property_id):
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Das Erlöskonto gehört nicht zum Objekt."
+            )
+
+
 def check_period(fee: AdminFeeSetting, start: date, end: date) -> None:
-    if end < fee.start_date or (fee.end_date is not None and start > fee.end_date):
+    last = effective_end(fee)
+    if end < fee.start_date or (last is not None and start > last):
         raise ProblemError(
             ErrorCodes.VALIDATION,
             detail="Der Leistungszeitraum liegt außerhalb der Laufzeit des Verwalterhonorars.",
@@ -87,6 +124,12 @@ class AdminFeeSettingOut(BaseModel):
     amounts_per_unit_type: dict[str, str]
     invoice_debtor_party_id: uuid.UUID | None
     contract_document_id: uuid.UUID | None
+    manager_contact_id: uuid.UUID | None = None
+    termination_date: date | None = None
+    due_day_rule: str | None = None
+    due_day: int | None = None
+    account_id: uuid.UUID | None = None
+    sev_fee_amount: Decimal | None = None
     invoice_count: int = 0
 
 
@@ -99,6 +142,12 @@ class AdminFeeSettingPatch(BaseModel):
     max_amount: Decimal | None = Field(default=None, ge=0)
     amounts_per_unit_type: dict[str, Decimal] | None = None
     contract_document_id: uuid.UUID | None = None
+    manager_contact_id: uuid.UUID | None = None
+    termination_date: date | None = None
+    due_day_rule: str | None = Field(default=None, pattern="^(day|last_day|day_next_month)$")
+    due_day: int | None = Field(default=None, ge=1, le=31)
+    account_id: uuid.UUID | None = None
+    sev_fee_amount: Decimal | None = Field(default=None, ge=0)
 
 
 class AdminFeeInvoiceOut(BaseModel):
@@ -150,6 +199,12 @@ def _fee_out(row: AdminFeeSetting, count: int = 0) -> AdminFeeSettingOut:
         amounts_per_unit_type=dict(row.amounts_per_unit_type or {}),
         invoice_debtor_party_id=row.invoice_debtor_party_id,
         contract_document_id=row.contract_document_id,
+        manager_contact_id=row.manager_contact_id,
+        termination_date=row.termination_date,
+        due_day_rule=row.due_day_rule,
+        due_day=row.due_day,
+        account_id=row.account_id,
+        sev_fee_amount=row.sev_fee_amount,
         invoice_count=count,
     )
 
@@ -238,6 +293,8 @@ async def list_fees(
             query = query.where(
                 AdminFeeSetting.start_date <= active_on,
                 (AdminFeeSetting.end_date.is_(None)) | (AdminFeeSetting.end_date >= active_on),
+                (AdminFeeSetting.termination_date.is_(None))
+                | (AdminFeeSetting.termination_date >= active_on),
             )
         query = query.order_by(AdminFeeSetting.start_date, AdminFeeSetting.created_at)
         rows = await paginate(
@@ -286,6 +343,10 @@ async def patch_fee(
             data["amounts_per_unit_type"] = {
                 k: str(v) for k, v in data["amounts_per_unit_type"].items()
             }
+        if data.get("manager_contact_id") or data.get("account_id"):
+            await check_fee_refs(
+                session, row.property_id, data.get("manager_contact_id"), data.get("account_id")
+            )
         for key in ("interval", "vat_percent", "amounts_per_unit_type"):
             if key in data and data[key] is None:
                 del data[key]  # not nullable
@@ -348,7 +409,8 @@ async def period_preview(
         rows = []
         for fee in (await session.scalars(query)).all():
             start, end = period_for(fee.interval, day)
-            if end < fee.start_date or (fee.end_date is not None and start > fee.end_date):
+            last_day = effective_end(fee)
+            if end < fee.start_date or (last_day is not None and start > last_day):
                 continue
             existing = await issued_for_period(session, fee.id, start)
             counts = await receivables.fee_unit_counts(session, fee, min(end, day))

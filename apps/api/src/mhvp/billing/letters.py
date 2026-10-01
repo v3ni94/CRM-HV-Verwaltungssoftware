@@ -391,6 +391,17 @@ def bundle(drafts: list[TenantLetter]) -> bytes:
     return buffer.getvalue()
 
 
+def bundle_pdfs(parts: list[bytes]) -> bytes:
+    """Concatenate PDFs in the given order (letter plus Informationsblatt, GA06-02)."""
+    writer = PdfWriter()
+    for part in parts:
+        for page in PdfReader(io.BytesIO(part)).pages:
+            writer.add_page(page)
+    buffer = io.BytesIO()
+    writer.write(buffer)
+    return buffer.getvalue()
+
+
 async def store(
     session: AsyncSession,
     blobs: Any,

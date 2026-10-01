@@ -61,6 +61,7 @@ from mhvp.core.auth.scope import (
 )
 from mhvp.core.db.tenancy import after_commit
 from mhvp.core.events import emit
+from mhvp.core.listparams import ListParams, ListSpec, sparse
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.documents.blobs import BlobStore
 from mhvp.documents.models import Document
@@ -359,6 +360,26 @@ async def runs(
         return [SyncRunOut.model_validate(r) for r in rows.all()]
 
 
+_TX_LIST = ListSpec(
+    filters={
+        "status": BankTransaction.status,
+        "property_bank_account_id": BankTransaction.property_bank_account_id,
+        "legal_entity_id": BankTransaction.legal_entity_id,
+        "statement_id": BankTransaction.statement_id,
+        "booking_date": BankTransaction.booking_date,
+        "currency": BankTransaction.currency,
+        "journal_entry_id": BankTransaction.journal_entry_id,
+    },
+    sort={
+        "booking_date": BankTransaction.booking_date,
+        "value_date": BankTransaction.value_date,
+        "amount": BankTransaction.amount,
+        "counterpart_name": BankTransaction.counterpart_name,
+        "created_at": BankTransaction.created_at,
+    },
+)
+
+
 @router.get("/transactions", summary="Bankumsätze")
 async def transactions(
     request: Request,
@@ -368,10 +389,15 @@ async def transactions(
     end: date | None = None,
     limit: int = Query(default=200, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
+    params: ListParams = Depends(_TX_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
-) -> list[TransactionOut]:
+) -> Any:
     async with tenant_tx(request, principal) as session:
-        query = select(BankTransaction)
+        query = _TX_LIST.apply(
+            select(BankTransaction),
+            params,
+            (BankTransaction.booking_date, BankTransaction.created_at, BankTransaction.id),
+        )
         if bank_account_id:
             query = query.where(BankTransaction.property_bank_account_id == bank_account_id)
         visible = session_account_filter(session)  # M2-02/S16-02
@@ -383,12 +409,8 @@ async def transactions(
             query = query.where(BankTransaction.booking_date >= start)
         if end:
             query = query.where(BankTransaction.booking_date <= end)
-        rows = await session.scalars(
-            query.order_by(BankTransaction.booking_date, BankTransaction.created_at)
-            .offset(offset)
-            .limit(limit)
-        )
-        return [_tx_out(r) for r in rows.all()]
+        rows = await session.scalars(query.offset(offset).limit(limit))
+        return sparse([_tx_out(r) for r in rows.all()], params, TransactionOut)
 
 
 @router.post("/transactions/{tx_id}/review", summary="Möglichen Doppelumsatz klären")

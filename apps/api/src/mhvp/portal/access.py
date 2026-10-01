@@ -6,7 +6,7 @@ import uuid
 from datetime import date
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import delete, or_, select
+from sqlalchemy import delete, func, or_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.portal.models import AccessGrant, PortalAccount
@@ -19,7 +19,9 @@ if TYPE_CHECKING:
 # tenant wide staff grant (M2-08 entschieden, docs/rules/M2-07.md).
 # The board audit access (A52, docs/rules/M21-07.md) is granted per engagement in
 # mhvp.hoa.board and is not derived from contracts either.
-MANUAL_BASES = frozenset({"handover_participant", "staff_access", "board_audit"})
+MANUAL_BASES = frozenset(
+    {"handover_participant", "staff_access", "board_audit", "document_class_grant"}
+)
 # M21-05: grants of a representative (power of attorney) are derived again on every resync from
 # the active ``PortalRepresentation`` rows; they are read only and end with the power of attorney.
 REPRESENTATION_BASIS = "representation"
@@ -78,6 +80,8 @@ async def sync_grants(session: AsyncSession, account: PortalAccount) -> int:
                 grant(("legal_entity", hoa), "download", "hoa_member_right", "owner", c)
     rows.extend(await _representation_grants(session, account))
     session.add_all(rows)
+    # GA02-07: roles of the account follow the access matrix (tenant, owner).
+    account.roles = sorted({r.role for r in rows})
     await session.flush()
     return len(rows)
 
@@ -267,6 +271,46 @@ def _search_sort(query: Any, document: Any, q: str | None, sort: str | None) -> 
     return query.order_by(order, document.id)
 
 
+async def _document_class_ids(
+    session: AsyncSession, class_grants: dict[tuple[uuid.UUID, str], set[str]]
+) -> set[uuid.UUID]:
+    """Documents of granted classes (GA03-05, 6.9.6): linked to the legal entity of the grant,
+    class taken from the retention profile of the document (else of its category), released
+    for the role of the grant through ``Document.visibility``."""
+    if not class_grants:
+        return set()
+    from mhvp.documents.models import Document, DocumentCategory, DocumentLink, RetentionProfile
+
+    entity_ids = {entity for entity, _c in class_grants}
+    rows = (
+        await session.execute(
+            select(
+                DocumentLink.entity_id,
+                Document.id,
+                Document.visibility,
+                RetentionProfile.document_class,
+            )
+            .join(Document, Document.id == DocumentLink.document_id)
+            .outerjoin(DocumentCategory, DocumentCategory.id == Document.category_id)
+            .join(
+                RetentionProfile,
+                RetentionProfile.id
+                == func.coalesce(
+                    Document.retention_profile_id, DocumentCategory.retention_profile_id
+                ),
+            )
+            .where(
+                DocumentLink.entity_type == "legal_entity", DocumentLink.entity_id.in_(entity_ids)
+            )
+        )
+    ).all()
+    return {
+        document_id
+        for entity_id, document_id, visibility, doc_class in rows
+        if class_grants.get((entity_id, doc_class), set()) & set(visibility or [])
+    }
+
+
 async def visible_documents(
     session: AsyncSession,
     account: PortalAccount,
@@ -287,7 +331,13 @@ async def visible_documents(
 
     active = await grants(session, account, today)
     scopes: dict[tuple[str, uuid.UUID], set[str]] = {}
+    class_grants: dict[tuple[uuid.UUID, str], set[str]] = {}
     for g in active:
+        if g.scope_type == "document_class":
+            # GA03-05: scope_id is the legal entity, the class narrows the released documents
+            if g.document_class:
+                class_grants.setdefault((g.scope_id, g.document_class), set()).add(g.role)
+            continue
         scopes.setdefault((g.scope_type, g.scope_id), set()).add(g.role)
     links = (
         []
@@ -324,6 +374,7 @@ async def visible_documents(
     for document_id, entity_type, entity_id in links:
         if scopes[(entity_type, entity_id)] & visibility.get(document_id, set()):
             allowed.add(document_id)
+    allowed |= await _document_class_ids(session, class_grants)
     # Portal inbox (M23): documents dispatched to this contact via the portal and own uploads;
     # other documents merely linked to the contact stay internal.
     from mhvp.communication.models import Dispatch

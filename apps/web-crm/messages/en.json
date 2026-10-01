@@ -385,6 +385,7 @@
         "invited": "Invited, password not yet set",
         "active": "Access active",
         "locked": "locked",
+        "expired": "Invitation expired",
         "exists": "Portal access already exists",
         "loadError": "Status not available"
       },
@@ -676,6 +677,17 @@
     "questions": "Questions",
     "openQuestions": "Open questions",
     "toImport": "To the import run",
+    "rowRoleFor": "Role for {name}",
+    "rowRoleNone": "Role of the run",
+    "mergeFields": "Fill empty contact fields",
+    "contactRole": {
+      "eigentuemer": "Owner",
+      "mieter": "Tenant",
+      "verwalter": "Manager",
+      "dienstleister": "Service provider",
+      "bank": "Bank",
+      "sonstiges": "Other"
+    },
     "contactPreviewTitle": "Preview of the contacts",
     "contactLegend": "Traffic light: green new, yellow existing (possible duplicate), orange incomplete, red invalid.",
     "colStatus": "Status",
@@ -1703,6 +1715,9 @@
       "unanimous": "unanimous",
       "simple": "simple majority"
     },
+    "location": "Location",
+    "courtNotes": "Court notes",
+    "enteredAt": "Entered on",
     "noResolutions": "No resolutions recorded yet.",
     "number": "No.",
     "decidedOn": "Date",
@@ -1716,7 +1731,9 @@
       "contested": "contested",
       "annulled": "annulled",
       "legally_binding": "legally binding",
-      "void": "void"
+      "void": "void",
+      "deleted": "deleted (note)",
+      "irrelevant": "irrelevant"
     },
     "kinds": {
       "meeting": "Meeting",
@@ -2732,7 +2749,9 @@
         "hand_delivery": "Hand delivery",
         "email": "E-mail",
         "portal": "Portal"
-      }
+      },
+      "previewWithSheet": "Preview with information sheet",
+      "infoSheet": "Information sheet (PDF)"
     },
     "title": "Operating cost statement",
     "notice": "Cost items only with a basis. Heating costs come from the metering statement. Internal approval by a second person; issuing to tenants is locked until release gate G3.",
@@ -2892,6 +2911,18 @@
       "vacancyShare": "Vacancy share borne by the owner: {amount}",
       "trace": "Calculation trace {hash}",
       "loading": "Loading heating costs."
+    },
+    "deadlineException": {
+      "title": "Exception to the statement deadline",
+      "hint": "Late claims stay locked until the reason and an evidence document are recorded. The legal review is done by the operator.",
+      "effective": "Exception recorded with evidence",
+      "locked": "No effective exception: late claims locked",
+      "setAt": "Recorded on {date}",
+      "reason": "Reason",
+      "document": "Evidence document (document ID)",
+      "documentInvalid": "Please enter a valid document ID.",
+      "save": "Save exception",
+      "readOnly": "Editable in draft only, otherwise via a new version."
     }
   },
   "HoaWork": {
@@ -3207,6 +3238,48 @@
       "signedLinked": "The signed minutes stay linked.",
       "missing": "Not recorded"
     },
+    "meetingDetails": {
+      "title": "Kind, duration, templates and description",
+      "kind": "Kind of meeting",
+      "kinds": {
+        "ordinary": "ordinary",
+        "extraordinary": "extraordinary",
+        "repeat": "Repeat meeting",
+        "continuation": "Continuation",
+        "partial": "Partial meeting",
+        "circular_resolution": "Circular procedure"
+      },
+      "origin": "Original meeting",
+      "endsAt": "End",
+      "publicDescription": "Public description (owner portal)",
+      "internalDescription": "Internal description (management only)",
+      "invitationTemplate": "Invitation template (ID)",
+      "proxyTemplate": "Proxy template (ID)",
+      "ballotTemplate": "Ballot template (ID)",
+      "save": "Save details",
+      "saved": "Details saved.",
+      "endBeforeStart": "The end must be after the start.",
+      "termNotice": "Notice on the term of the enabling resolution"
+    },
+    "agendaResult": {
+      "result": "Result",
+      "results": {
+        "accepted": "accepted",
+        "rejected": "rejected",
+        "deferred": "deferred",
+        "no_vote": "no vote"
+      },
+      "none": "open",
+      "minutesText": "Minutes text of the item",
+      "setResult": "Set result",
+      "clearResult": "Clear deferral",
+      "saveMinutes": "Save minutes text",
+      "saved": "Saved.",
+      "allOwners": "Consent of all owners",
+      "majority": "Resolution rule",
+      "simple": "simple majority",
+      "channel": "Channel"
+    },
     "meetingForm": {
       "title": "Meeting form and invitation",
       "mode": "Form",
@@ -3248,6 +3321,8 @@
       "weeks": "Invitation period in weeks",
       "weeksInvalid": "Please enter 1 to 12 weeks.",
       "virtual": "Allow virtual meetings (V13)",
+      "termLock": "Lock when the term exceeds three years (enabling resolution for virtual meetings)",
+      "termLockHint": "Default off: notice only. Maximum term and transition rule need legal review (open question AA06-02).",
       "virtualHint": "Default off. Enable only after the operator's decision with legal advice; every virtual meeting also needs the owners' enabling resolution with a validity end.",
       "save": "Save setting",
       "saved": "Setting saved."
@@ -3925,6 +4000,19 @@
       }
     }
   },
+  "AutomationJobs": {
+    "title": "Standard jobs per tenant",
+    "description": "Switch and time of the automatic runs (Europe/Berlin). Without an entry the job runs as scheduled. Switching off or moving a job opens no lock and no gate.",
+    "job": "Job",
+    "enabled": "Active",
+    "runAt": "Time (HH:MM)",
+    "runAtHelp": "Empty: runs in the default window. With a time the job only runs in the hour from that time.",
+    "save": "Save",
+    "saved": "Saved",
+    "configured": "customised",
+    "default": "default",
+    "empty": "No jobs available."
+  },
   "Automation": {
     "title": "Automation",
     "pageDescription": "Rule engine: trigger (event or schedule), conditions and actions. Rules never post, pay, approve or send.",
@@ -4034,6 +4122,11 @@
       "setRecordField": "Set field: {target} {field} {value}"
     },
     "log": "Log",
+    "testMode": "Test mode (log only)",
+    "testModeHelp": "In test mode the rule evaluates trigger and conditions and only writes a log entry with the result test run. No effect is produced.",
+    "testModeBadge": "Test mode",
+    "filterStatus": "Filter result",
+    "allStatuses": "All results",
     "filterRule": "Filter rule",
     "allRules": "All rules",
     "refresh": "Refresh",
@@ -5163,6 +5256,19 @@
       "to": "To",
       "boardOnlineAudit": "Online audit by the advisory board",
       "notes": "Note",
+      "status": "Status",
+      "lockedAt": "locked on {date}",
+      "statuses": {
+        "open": "Open",
+        "results_created": "Results created",
+        "confirmed": "Confirmed",
+        "closed": "Closed"
+      },
+      "advance": {
+        "results_created": "Results created",
+        "confirmed": "Confirm",
+        "closed": "Close and lock"
+      },
       "kinds": {
         "hoa": "HOA statement",
         "operating_costs": "Operating cost statement",
@@ -5789,6 +5895,8 @@
       "full": "Full import",
       "migration": "Immoware24 migration",
       "learning": "Learning phase",
+      "domains": "Customer domains",
+      "oidcClients": "OIDC clients",
       "gateG5": "Gate G5 release",
       "rentLaw": "Rent law",
       "onboarding": "Onboarding",
@@ -7236,6 +7344,8 @@
     "disconnected": "Connection disconnected."
   },
   "DmsSettings": {
+    "folderScheme": "Filing folder scheme",
+    "folderSchemeHint": "Path template with the placeholders '{objekt}', '{jahr}' and '{kategorie}', levels separated by /. Empty means '{objekt}'/'{jahr}'.",
     "title": "DMS connection",
     "intro": "Connection between the CRM and document management. Immoware24 remains the master of record.",
     "paperlessTitle": "Paperless",
@@ -8445,6 +8555,22 @@
         "xrechnung": "E-invoice: XRechnung (XML)",
         "zugferd": "E-invoice: ZUGFeRD/Factur-X (PDF with XML)"
       },
+      "einvoiceValidation": {
+        "title": "E-invoice: validation result",
+        "profile": "Profile",
+        "validator": "Validator",
+        "version": "Version",
+        "kind": "Type",
+        "result": "Result",
+        "results": {
+          "ok": "no findings",
+          "findings": "with findings"
+        },
+        "official": "official validator",
+        "formal": "internal formal check, not an official validator",
+        "unknown": "not recognised",
+        "none": "No validation result stored yet."
+      },
       "einvoiceHint": "The structured part was read without AI. Formal validity does not prove a delivered service; factual, arithmetic and tax checks remain mandatory.",
       "conflicts": "Conflicts between XML and PDF",
       "conflictLine": "{field}: XML {xml}, {source} {other}.",
@@ -8523,7 +8649,9 @@
       "deposits": "Deposits (third party funds)",
       "liquidity": "Free liquidity",
       "result": "Result",
-      "sev": "Reconciliation HOA individual statement"
+      "sev": "Reconciliation HOA individual statement",
+      "s35a": "Documented labour shares § 35a EStG (information)",
+      "receipts": "Receipts"
     },
     "income": {
       "rent": "Rents",
@@ -8554,7 +8682,13 @@
       "ownerBurden": "Owner burden"
     },
     "accounting": "Accounting",
-    "noLedgers": "No ledger available. Without a ledger no owner statement can be created."
+    "noLedgers": "No ledger available. Without a ledger no owner statement can be created.",
+    "attachReceipts": "Attach receipts of posted expenses to the PDF output",
+    "unit": "Unit",
+    "receipts": {
+      "linked": "Entries with receipt",
+      "missing": "Entries without receipt"
+    }
   },
   "AiAutomation": {
     "title": "Automatic AI runs",
@@ -8691,8 +8825,14 @@
       "email": "E-mail",
       "phone": "Phone",
       "file": "File",
+      "address": "Address",
+      "location": "Location",
+      "signature": "Signature (name)",
+      "consent": "Consent",
+      "amount": "Amount in EUR",
       "heading": "Heading",
-      "info": "Information text"
+      "info": "Information text",
+      "divider": "Divider"
     },
     "save": "Save",
     "cancel": "Cancel",
@@ -9007,6 +9147,39 @@
       "noDismiss": "Dismissing requires permission communication:update."
     },
     "maskedHelp": "Full number only with permission contacts:read."
+  },
+  "HoaAcquisition": {
+    "title": "Special acquisition in the statement year",
+    "intro": "Acquisition other than purchase or special succession liability: the statement package stays blocked until a second person has released the case.",
+    "unit": "Unit {unit}",
+    "kind": "Acquisition: {kind}",
+    "succession": "Special succession liability flagged",
+    "proposal": "Allocation proposal",
+    "status": {
+      "open": "Release not requested",
+      "requested": "Requested, release by a second person pending",
+      "released": "Released"
+    },
+    "kinds": {
+      "first_acquisition": "First acquisition",
+      "inheritance": "Inheritance",
+      "foreclosure": "Forced sale",
+      "gift": "Gift",
+      "other": "Other acquisition"
+    },
+    "requestNote": "Note on the request",
+    "releaseNote": "Reason for the release",
+    "request": "Request release",
+    "release": "Release",
+    "sameUser": "The release must be given by a person other than the requester."
+  },
+  "HoaProvision": {
+    "title": "Provision log per owner",
+    "unit": "Unit",
+    "firstRetrieved": "First retrieval",
+    "lastRetrieved": "Last retrieval",
+    "retrievals": "Retrievals",
+    "notRetrieved": "Not retrieved yet"
   },
   "HoaFinance": {
     "loans": "Loans",
@@ -9416,7 +9589,7 @@
   },
   "Notices": {
     "title": "Notice board",
-    "intro": "Notices of the management with validity and audience, shown in the portal to tenants and owners of the property.",
+    "intro": "Notices of the management with validity, level and audiences, shown in the portal to tenants, owners and service providers of the property.",
     "create": "Create notice",
     "edit": "Edit",
     "end": "End",
@@ -9427,20 +9600,31 @@
     "empty": "No notices available.",
     "openEnd": "further notice",
     "withDocument": "with attachment",
+    "withDocuments": "{count, plural, one {# attachment} other {# attachments}}",
+    "readQuota": "read {read} of {total}",
+    "noCategory": "no category",
     "validity": "Valid {from} until {to}",
     "fields": {
       "title": "Title",
       "body": "Text",
       "validFrom": "Valid from",
       "validTo": "Valid until",
-      "audience": "Audience",
-      "document": "Document ID (optional)",
-      "documentHint": "ID of a document of the property shown as attachment."
+      "audience": "Audiences",
+      "type": "Level",
+      "category": "Category",
+      "document": "Document IDs (optional)",
+      "documentHint": "IDs of documents of the property, comma separated, shown as attachments."
     },
     "audience": {
-      "all": "Tenants and owners",
       "tenant": "Tenants",
-      "owner": "Owners"
+      "owner": "Owners",
+      "provider": "Service providers"
+    },
+    "types": {
+      "neutral": "Neutral",
+      "info": "Info",
+      "warning": "Warning",
+      "danger": "Danger"
     },
     "status": {
       "current": "visible",
@@ -9452,7 +9636,8 @@
       "body": "Please enter a text.",
       "validFrom": "Please enter a start date.",
       "validTo": "The end date lies before the start.",
-      "document": "The document ID is invalid."
+      "audiences": "Please select at least one audience.",
+      "document": "A document ID is invalid."
     },
     "endConfirm": "End the notice \"{title}\"? It will no longer be shown in the portal.",
     "saved": "Notice saved.",
@@ -13202,6 +13387,18 @@
     "balance": "Balance"
   },
   "Bookkeeping": {
+    "notes": {
+      "toggle": "Notes",
+      "empty": "No notes yet.",
+      "version": "Version {version} of {at}",
+      "superseded": "superseded",
+      "newVersion": "New version",
+      "form": "Add note",
+      "label": "New note",
+      "labelVersion": "New version of the note",
+      "save": "Save note",
+      "hint": "Notes never change the posted content. Every change is stored as a new version; earlier versions stay visible."
+    },
     "actions": {
       "title": "Actions",
       "post": "Post",
@@ -14156,7 +14353,7 @@
     "receipt": "Receipt",
     "receiptMissing": "Receipt missing",
     "showMovements": "Show entries",
-      "developmentHint": "Opening equals the prior year's closing, in the first year the entered opening balance. Information for statement and asset report, no posting."
+    "developmentHint": "Opening equals the prior year's closing, in the first year the entered opening balance. Information for statement and asset report, no posting."
   },
   "OnboardingExtras": {
     "decisionTitle": "Choose legal entity",
@@ -14405,5 +14602,82 @@
     "noEntity": "No legal entity is known for this ledger, resolutions cannot be loaded.",
     "planFirst": "Choose an economic plan first.",
     "loadFailed": "List could not be loaded: {reason}"
+  },
+  "AA17": {
+    "cardTitle": "Delivery channel and number circles",
+    "cardDescription": "Set the tenant default delivery channel and number circles.",
+    "domainsLink": "Customer domains",
+    "oidcLink": "OIDC clients",
+    "forbidden": "This area is open to platform administrators only.",
+    "delivery": {
+      "title": "Default delivery channel",
+      "intro": "Applies to dispatch and mail merge when the contact has no delivery channel of its own.",
+      "post": "Post",
+      "email": "Email",
+      "portal": "Portal",
+      "save": "Save",
+      "saved": "Saved."
+    },
+    "numbers": {
+      "title": "Number circles",
+      "intro": "Without changes the existing formats stay in place. The preview shows the next three numbers.",
+      "scope": "Number circle",
+      "prefix": "Prefix",
+      "digits": "Digits",
+      "start": "Start value",
+      "yearBased": "Include year",
+      "preview": "Preview",
+      "locked": "locked",
+      "lockedHint": "The invoice number circle carries VAT mandatory details and stays locked until the tax adviser has released it.",
+      "startHint": "The start value only applies to a number circle that has not been used yet.",
+      "save": "Save number circles",
+      "saved": "Saved.",
+      "scopes": {
+        "property": "Property",
+        "contract": "Contract",
+        "document": "Voucher",
+        "ticket": "Ticket",
+        "invoice": "Invoice"
+      }
+    },
+    "domains": {
+      "title": "Customer domains",
+      "intro": "Host names assigned to a tenant. The customer sets up a CNAME record pointing to the platform host.",
+      "tenant": "Tenant",
+      "host": "Host name",
+      "purpose": "Purpose",
+      "add": "Add domain",
+      "remove": "Remove",
+      "none": "No domain on file.",
+      "cname": "DNS hint",
+      "status": "Tenant status",
+      "active": "active",
+      "suspended": "suspended",
+      "suspend": "Suspend tenant",
+      "activate": "Reactivate tenant",
+      "confirmSuspend": "Really suspend the tenant?",
+      "purposes": {
+        "portal": "Portal",
+        "crm": "CRM",
+        "api": "API"
+      }
+    },
+    "oidc": {
+      "title": "OIDC clients",
+      "intro": "Existing tools sign in with authorization code and PKCE. The secret is shown only once.",
+      "clientId": "Client ID",
+      "name": "Name",
+      "redirectUris": "Redirect URIs (one per line, https)",
+      "public": "Public client (PKCE only, no secret)",
+      "create": "Create client",
+      "rotate": "Rotate secret",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "active": "active",
+      "inactive": "inactive",
+      "secretOnce": "Client secret (visible only now, store it in the target system at once):",
+      "none": "No clients created.",
+      "confirmRotate": "Rotate the secret? The previous secret stops working immediately."
+    }
   }
 }

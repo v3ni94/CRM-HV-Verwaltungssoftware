@@ -41,14 +41,15 @@ export function StatementLettersPanel({ id, status, hasSnapshot }: { id: string;
 
   if (!hasSnapshot) return <p className={ui.help}>{t("none")}</p>;
 
-  const preview = async () => {
+  const preview = async (path = "letters/preview", withSheet = false) => {
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/bff/statements/${id}/letters/preview`, {
+      const response = await fetch(`/api/bff/statements/${id}/${path}`, {
         method: "POST",
         credentials: "same-origin",
         cache: "no-store",
+        ...(withSheet ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify({ include_info_sheet: true }) } : {}),
       });
       if (!response.ok) {
         setError(problemMessage(await readProblem(response), response.status));
@@ -57,7 +58,7 @@ export function StatementLettersPanel({ id, status, hasSnapshot }: { id: string;
       const href = URL.createObjectURL(await response.blob());
       const a = document.createElement("a");
       a.href = href;
-      a.download = `betriebskosten-anschreiben-${id}.pdf`;
+      a.download = path === "letters/preview" ? `betriebskosten-anschreiben-${id}.pdf` : `betriebskosten-informationsblatt-${id}.pdf`;
       a.click();
       URL.revokeObjectURL(href);
     } catch {
@@ -96,8 +97,14 @@ export function StatementLettersPanel({ id, status, hasSnapshot }: { id: string;
       <h2 className={ui.h2}>{t("title")}</h2>
       <p className={ui.help}>{t("hint")}</p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" className={ui.button} onClick={preview} disabled={busy}>
+        <button type="button" className={ui.button} onClick={() => preview()} disabled={busy}>
           {t("preview")}
+        </button>
+        <button type="button" className={ui.button} onClick={() => preview("letters/preview", true)} disabled={busy}>
+          {t("previewWithSheet")}
+        </button>
+        <button type="button" className={ui.button} onClick={() => preview("info-sheet/preview")} disabled={busy}>
+          {t("infoSheet")}
         </button>
         <button type="button" className={ui.button} onClick={store} disabled={busy}>
           {t("store")}

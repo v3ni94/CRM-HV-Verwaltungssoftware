@@ -158,6 +158,33 @@ def build_letter(
             f"{fmt_eur(_d(sev['tenant_allocable_costs']))}, Eigentümerbelastung "
             f"{fmt_eur(_d(sev['owner_burden']))}."
         )
+    s35a = results.get("section_35a") or {}
+    if s35a.get("per_unit"):
+        # GA06-03: § 35a block taken over from the WEG individual statement (information only).
+        tables["s35a"] = letters.LetterTable(
+            header=["Belegte Lohnanteile § 35a EStG (Information)", "Betrag"],
+            rows=[
+                *[
+                    [
+                        f"Einheit {line['unit_number'] or line['unit_id'][:8]}",
+                        fmt_eur(_d(line["amount"])),
+                    ]
+                    for line in s35a.get("lines", [])
+                ],
+                ["Summe", fmt_eur(_d(s35a["total"]))],
+            ],
+            right_aligned=(1,),
+            total_row=True,
+            widths=(0.7, 0.3),
+        )
+        paragraphs += [letters.TABLE_MARKER.format(name="s35a"), str(s35a["note"])]
+    receipts = results.get("receipts") or {}
+    if st.attach_receipts and receipts.get("lines"):
+        paragraphs.append(
+            f"Anlage Belegmappe: {receipts['linked']} verknüpfte Belege"
+            + (f", {receipts['missing']} Buchungen ohne Beleg" if receipts.get("missing") else "")
+            + "."
+        )
     paragraphs.append(
         "Dieses Schreiben ist ein Entwurf; die Ausgabe erfolgt nach Prüfung und Freigabe."
     )

@@ -79,6 +79,12 @@ def _nf() -> ProblemError:
     return ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
 
 
+async def _check_energy_document(session: Any, document_id: uuid.UUID | None) -> None:
+    """GA02-03: the energy certificate document must exist in the tenant (reference only)."""
+    if document_id is not None:
+        await svc.check_documents_exist(session, [document_id], "Energieausweis")
+
+
 async def _get(session: Any, model: Any, entity_id: uuid.UUID) -> Any:
     row = await session.get(model, entity_id)
     if row is None:
@@ -463,6 +469,7 @@ async def create_building(
 ) -> s.BuildingOut:
     async with tenant_tx(request, principal) as session:
         prop = await _get(session, Property, property_id)
+        await _check_energy_document(session, body.energy_certificate_document_id)
         data = body.model_dump()
         data["custom_fields"] = await svc.check_custom_fields(
             session,
@@ -518,6 +525,7 @@ async def update_building(
         building = await _get(session, Building, building_id)
         _check_version(if_match, building.version)
         prop = await _get(session, Property, building.property_id)
+        await _check_energy_document(session, body.energy_certificate_document_id)
         await svc.check_custom_fields(
             session,
             "building",
@@ -1610,6 +1618,7 @@ async def add_provider(
         await svc.check_ledger_account(
             session, body.creditor_account_id, property_id, "Das Kreditorenkonto"
         )
+        await svc.check_documents_exist(session, body.documents, "Dokumente")
         row = ServiceProviderRelation(
             tenant_id=principal.tenant_id,
             property_id=property_id,
@@ -1622,6 +1631,10 @@ async def add_provider(
         from mhvp.accounting.ledger_ops import ensure_creditor_for_relation
 
         await ensure_creditor_for_relation(session, row)
+        # GA02-05: default bank rule as proposal (state proposed, no posting, G1 locked).
+        from mhvp.accounting.provider_rule import propose_default_rule
+
+        await propose_default_rule(session, row)
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -1658,6 +1671,7 @@ async def add_maintenance(
 ) -> s.MaintenanceOut:
     async with tenant_tx(request, principal) as session:
         await _get(session, Property, property_id)
+        await svc.check_documents_exist(session, body.documents, "Dokumente")
         row = MaintenanceItem(
             tenant_id=principal.tenant_id, property_id=property_id, **body.model_dump()
         )
@@ -1761,6 +1775,8 @@ async def delete_billing_period(
         row = await _get(session, PropertyBillingPeriod, period_id)
         if row.property_id != property_id:
             raise _nf()
+        if row.status == "closed":  # GA02-01: closed periods are locked
+            raise ProblemError(ErrorCodes.PROPERTY_BILLING_PERIOD_CLOSED)
         await session.delete(row)
         await _emit_simple(
             session,

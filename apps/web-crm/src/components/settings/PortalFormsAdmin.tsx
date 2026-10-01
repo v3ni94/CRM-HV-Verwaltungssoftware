@@ -21,8 +21,14 @@ export type PortalFormFieldType =
   | "email"
   | "phone"
   | "file"
+  | "address"
+  | "location"
+  | "signature"
+  | "consent"
+  | "amount"
   | "heading"
-  | "info";
+  | "info"
+  | "divider";
 const CHOICE_TYPES: PortalFormFieldType[] = ["select", "radio", "multiselect"];
 export type PortalFormField = {
   key: string;
@@ -59,8 +65,14 @@ const FIELD_TYPES: PortalFormFieldType[] = [
   "email",
   "phone",
   "file",
+  "address",
+  "location",
+  "signature",
+  "consent",
+  "amount",
   "heading",
   "info",
+  "divider",
 ];
 const AUDIENCES: PortalFormTemplate["audience"][] = ["all", "tenant", "owner"];
 

@@ -15,7 +15,8 @@ export type PortalAccount = {
   id: string;
   contact_id: string;
   email: string;
-  status: "invited" | "active" | string;
+  status: "not_invited" | "invited" | "active" | "locked" | "expired" | "revoked" | string;
+  roles?: string[];
   locked: boolean;
   invited_at: string;
   invitation_expires_at: string | null;
@@ -165,9 +166,10 @@ export function PortalAccessSection({
   const hasAccount = account !== null || exists;
   const expired =
     account !== null &&
-    account.status === "invited" &&
-    account.invitation_expires_at !== null &&
-    new Date(account.invitation_expires_at).getTime() <= Date.now();
+    (account.status === "expired" ||
+      (account.status === "invited" &&
+        account.invitation_expires_at !== null &&
+        new Date(account.invitation_expires_at).getTime() <= Date.now()));
   const status =
     loaded.state === "loading"
       ? t("status.loading")
@@ -176,9 +178,13 @@ export function PortalAccessSection({
           ? t("status.exists")
           : t("status.loadError")
         : account
-          ? `${account.status === "active" ? t("status.active") : t("status.invited")}${
-              account.locked ? `, ${t("status.locked")}` : ""
-            }`
+          ? account.status === "expired"
+            ? t("status.expired")
+            : account.status === "locked"
+              ? `${t("status.active")}, ${t("status.locked")}`
+              : `${account.status === "active" ? t("status.active") : t("status.invited")}${
+                  account.locked ? `, ${t("status.locked")}` : ""
+                }`
           : exists
             ? t("status.exists")
             : t("status.none");

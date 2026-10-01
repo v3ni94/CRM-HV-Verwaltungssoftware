@@ -9,9 +9,9 @@ No row means: runs as scheduled. Switching jobs off or moving them opens no rele
 
 import re
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.automation.models import JOB_CATALOG, TenantJobSchedule
@@ -29,12 +29,27 @@ def validate_job(job_key: str, run_at: str | None) -> None:
 
 
 def in_window(run_at: str | None, now: datetime) -> bool:
+    """True when ``now`` lies in the window of ``WINDOW_MINUTES`` after today's start time.
+
+    The start is resolved to one real instant (first occurrence, ``fold=0``) and compared in
+    UTC, so the repeated hour of the clock change on the last Sunday of October (02:00 to 03:00
+    twice) opens one window, not two, and the missing hour of March shifts the start to the
+    first valid instant instead of opening none (GA12-06)."""
     if run_at is None:
         return True
     local = now.astimezone(SCHEDULE_TZ)
     hour, minute = (int(x) for x in run_at.split(":"))
-    elapsed = (local.hour * 60 + local.minute) - (hour * 60 + minute)
-    return 0 <= elapsed < WINDOW_MINUTES
+    start = datetime(local.year, local.month, local.day, hour, minute, tzinfo=SCHEDULE_TZ, fold=0)
+    elapsed = now.astimezone(UTC) - start.astimezone(UTC)
+    return timedelta(0) <= elapsed < timedelta(minutes=WINDOW_MINUTES)
+
+
+async def lock_job(session: AsyncSession, tenant_id: uuid.UUID, job_key: str) -> None:
+    """Serialises the scheduled and a manual run of one job for one tenant until the end of the
+    transaction (advisory lock), so that a check for an existing run is safe (GA12-06)."""
+    await session.execute(
+        select(func.pg_advisory_xact_lock(func.hashtextextended(f"job:{job_key}:{tenant_id}", 0)))
+    )
 
 
 async def job_allowed(

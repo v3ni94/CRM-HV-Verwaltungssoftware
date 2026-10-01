@@ -8,12 +8,17 @@ called by ``mhvp.documents.mirror_deletion`` after the platform deletion (releas
 expired retention, no hold) and every call is logged as a domain event (A43).
 """
 
+import asyncio
 import json
 import uuid
 from dataclasses import dataclass, field
-from typing import Protocol
+from datetime import UTC, datetime
+from typing import TYPE_CHECKING, Protocol
 
 import httpx
+
+if TYPE_CHECKING:
+    from mhvp.documents.blobs import BlobStore
 
 DRIVE_FOLDERS = (
     "01_Legitimationsunterlagen",
@@ -66,6 +71,20 @@ class DocumentStore(Protocol):
     async def update_meta(self, ref: str, meta: MirrorMeta) -> bool:
         """Push changed metadata (title, category, link) to the copy (11.2, M6-06); False when
         the copy no longer exists."""
+        ...
+
+    async def get(self, ref: str) -> bytes:
+        """Original bytes of the copy (11.2 ``get``); raises ``DmsError`` when it is gone."""
+        ...
+
+    async def search(self, scope: str, keywords: list[str]) -> list["MirrorHit"]:
+        """Documents of one scope (object folder or object number) by keywords (11.2 ``search``).
+        Stores without a content index return an empty list; the platform index is searched."""
+        ...
+
+    async def list_changes(self, cursor: str | None) -> tuple[list["DriveChange"], str | None]:
+        """Changes since ``cursor`` and the cursor to store (11.2 ``subscribe_changes``, pull
+        variant). ``None`` starts a new cursor and returns no changes."""
         ...
 
 
@@ -181,6 +200,65 @@ class PaperlessStore:
         _raise_for(response, "delete")
         return True
 
+    async def get(self, ref: str) -> bytes:
+        if not ref.isdigit():
+            raise DmsError("get: reference is not a Paperless document id")
+        response = await self._client.get(
+            f"{self._base}/api/documents/{ref}/download/", headers=self._headers
+        )
+        if response.status_code == 404:
+            raise DmsError("get: document no longer exists")
+        _raise_for(response, "get")
+        return response.content
+
+    async def search(self, scope: str, keywords: list[str]) -> list["MirrorHit"]:
+        """Documents tagged ``objekt:<scope>`` whose title or content contains the keywords."""
+        params: dict[str, str] = {"fields": "id,title", "page_size": "50"}
+        if scope:
+            params["tags__name__iexact"] = f"objekt:{scope}"
+        if keywords:
+            params["title_content"] = " ".join(keywords)
+        response = await self._client.get(
+            f"{self._base}/api/documents/", params=params, headers=self._headers
+        )
+        _raise_for(response, "search")
+        return [
+            MirrorHit(
+                ref=str(item["id"]),
+                title=str(item.get("title") or ""),
+                url=f"{self._base}/documents/{item['id']}/details",
+            )
+            for item in response.json().get("results", [])
+        ]
+
+    async def list_changes(self, cursor: str | None) -> tuple[list["DriveChange"], str | None]:
+        """Documents modified after ``cursor`` (ISO 8601). Paperless reports no deletions here,
+        so ``removed`` is always False; deletions are caught by the mirror reconciliation."""
+        if cursor is None:
+            return [], datetime.now(UTC).isoformat()
+        response = await self._client.get(
+            f"{self._base}/api/documents/",
+            params={
+                "modified__gt": cursor,
+                "ordering": "modified",
+                "fields": "id,title,modified",
+                "page_size": "100",
+            },
+            headers=self._headers,
+        )
+        _raise_for(response, "changes")
+        changes = [
+            DriveChange(
+                file_id=str(item["id"]),
+                removed=False,
+                name=item.get("title"),
+                modified_at=item.get("modified"),
+            )
+            for item in response.json().get("results", [])
+        ]
+        latest = max((c.modified_at for c in changes if c.modified_at), default=cursor)
+        return changes, latest
+
     async def add_tag(self, ref: str, name: str) -> bool:
         """Assign the tag ``name`` (created when missing) to the Paperless document ``ref``.
 
@@ -264,8 +342,10 @@ class GoogleDriveStore:
         client_secret: str,
         refresh_token: str,
         client: httpx.AsyncClient,
+        folder_scheme: str | None = None,
     ) -> None:
         self._root = root_folder_id
+        self._folder_scheme = folder_scheme
         self._credentials = {
             "client_id": client_id,
             "client_secret": client_secret,
@@ -328,8 +408,12 @@ class GoogleDriveStore:
         instead, so `meta.property_folder` is required here."""
         if not meta.property_folder:
             raise DmsError("Kein Objektordner für die Jahresablage bekannt.")
-        parent = await self._folder(self._root, meta.property_folder)
-        parent = await self._folder(parent, str(year))
+        from mhvp.documents.folder_scheme import render_folder_path
+
+        # GA01-09: the tenant's folder scheme decides the levels (default Objekt/Jahr).
+        parent = self._root
+        for name in render_folder_path(self._folder_scheme, objekt=meta.property_folder, jahr=year):
+            parent = await self._folder(parent, name)
         return await self._upload(data, meta, parent)
 
     async def _upload(self, data: bytes, meta: MirrorMeta, parent: str) -> MirrorResult:
@@ -430,13 +514,19 @@ class GoogleDriveStore:
         _raise_for(response, "changes start token")
         return str(response.json()["startPageToken"])
 
+    async def get(self, ref: str) -> bytes:
+        """11.2 ``get``: alias of ``download``."""
+        return await self.download(ref)
+
     async def list_changes(
-        self, page_token: str, max_pages: int = 10
+        self, page_token: str | None, max_pages: int = 10
     ) -> tuple[list[DriveChange], str]:
         """Changes since ``page_token``; returns them and the cursor to store. When more than
         ``max_pages`` pages are waiting, the cursor of the next page is returned so the next
         run continues there."""
         changes: list[DriveChange] = []
+        if page_token is None:
+            return changes, await self.start_page_token()
         token = page_token
         for _ in range(max_pages):
             response = await self._client.get(
@@ -561,3 +651,47 @@ class GoogleDriveStore:
             MirrorHit(ref=str(f["id"]), title=str(f.get("name") or ""), url=f.get("webViewLink"))
             for f in response.json().get("files", [])
         ]
+
+
+class MinioStore:
+    """``DocumentStore`` adapter over the S3 ``BlobStore`` (11.2, MinIO).
+
+    The S3 original is the authoritative copy, so this adapter is the identity of the platform:
+    ``put`` writes the object under the tenant key, ``update_meta`` has nothing to push (the
+    index holds title, category and links), ``search`` returns nothing because objects carry no
+    content index (the platform index is searched) and ``list_changes`` reports no changes
+    because every write already goes through the platform."""
+
+    def __init__(self, blobs: "BlobStore", tenant_id: uuid.UUID) -> None:
+        self._blobs = blobs
+        self._tenant_id = tenant_id
+
+    async def put(self, data: bytes, meta: MirrorMeta) -> MirrorResult:
+        import hashlib
+
+        key = self._blobs.key(self._tenant_id, meta.document_id)
+        sha256 = hashlib.sha256(data).hexdigest()
+        await asyncio.to_thread(self._blobs.put, key, data, meta.mime_type, sha256)
+        return MirrorResult(ref=key, final=True)
+
+    async def resolve(self, ref: str) -> str | None:
+        return ref
+
+    async def get(self, ref: str) -> bytes:
+        try:
+            return await asyncio.to_thread(self._blobs.get, ref)
+        except Exception as exc:
+            raise DmsError("get: object not available") from exc
+
+    async def delete(self, ref: str) -> bool:
+        await asyncio.to_thread(self._blobs.delete, ref)
+        return True
+
+    async def update_meta(self, ref: str, meta: MirrorMeta) -> bool:
+        return True
+
+    async def search(self, scope: str, keywords: list[str]) -> list[MirrorHit]:
+        return []
+
+    async def list_changes(self, cursor: str | None) -> tuple[list[DriveChange], str | None]:
+        return [], cursor

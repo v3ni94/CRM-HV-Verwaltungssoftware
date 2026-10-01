@@ -641,16 +641,27 @@ async def apply_contacts(
             continue
         if choice.action == "link":
             linked += 1
-            role = preview.get("default_role")
-            if role and choice.contact_id is not None:
+            if choice.contact_id is not None:
                 existing = await session.get(Contact, choice.contact_id)
-                if existing is not None and role not in (existing.roles or []):
-                    existing.roles = sorted({*(existing.roles or []), role})
-                    roles_added += 1
+                if existing is not None:
+                    for role in (preview.get("default_role"), choice.role):
+                        if role and role not in (existing.roles or []):
+                            existing.roles = sorted({*(existing.roles or []), role})
+                            roles_added += 1
+                    if choice.merge_fields and row["contact"] is not None:
+                        # GA10-05: only fill empty scalar fields, never overwrite.
+                        for name in ("first_name", "last_name", "company_name", "salutation"):
+                            incoming = (row["contact"] or {}).get(name)
+                            if incoming and not getattr(existing, name, None):
+                                setattr(existing, name, incoming)
             continue
         if row["contact"] is None:
             raise ProblemError(ErrorCodes.VALIDATION, detail=f"Zeile {choice.index} ist ungültig.")
         data = cs.ContactIn.model_validate(choice.contact or row["contact"])
+        if choice.role:
+            from mhvp.contacts.models import ContactRoleCode
+
+            data.roles = sorted({*(data.roles or []), ContactRoleCode(choice.role)})
         contact = await create_contact(session, principal.tenant_id, principal.user_id, data)
         recorder.add("contact", contact.id)
         party = await create_party(session, principal.tenant_id, principal.user_id, [contact])

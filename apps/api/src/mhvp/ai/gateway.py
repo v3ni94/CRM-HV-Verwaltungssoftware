@@ -1000,6 +1000,25 @@ async def examples(session: AsyncSession, task: AiTask) -> list[dict[str, Any]]:
     return [{"merkmale": r.features, "bestaetigt": r.result} for r in rows]
 
 
+async def similar_examples(
+    session: AsyncSession,
+    task: AiTask,
+    text: str,
+    run: AiTaskRun,
+    recent: list[dict[str, Any]],
+) -> list[dict[str, Any]]:
+    """GA04-12: few-shot examples ordered by similarity to the input when the tenant has
+    embedded examples and a released embedding route; otherwise the recent ones stay."""
+    from mhvp.ai import embeddings
+
+    ranked = await embeddings.rank_examples(
+        session, task, text, tenant_id=run.tenant_id, actor=run.created_by, limit=FEW_SHOT
+    )
+    if not ranked:
+        return recent
+    return [{"merkmale": r.features, "bestaetigt": r.result} for r in ranked]
+
+
 def confidence_of(task: AiTask, data: dict[str, Any]) -> Decimal | None:
     items: list[Any] = []
     if task is AiTask.EXTRACT_CONTACTS:
@@ -1690,6 +1709,7 @@ async def execute(
             run.input_ref = {**run.input_ref, "deduplicated_from": str(previous.id)}
             return run
         shots = await examples(session, task)
+        shots = await similar_examples(session, task, item.text, run, shots)
         if task is AiTask.PROPOSE_POSTING:
             # M8-05: comparable entries of the migrated journal as read only few shot examples.
             shots = [*shots, *await journal_examples(session, item.text)]

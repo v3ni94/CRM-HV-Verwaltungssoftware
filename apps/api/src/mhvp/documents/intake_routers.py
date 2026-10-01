@@ -20,7 +20,7 @@ from mhvp.ai.models import AiExample, AiProposal, AiTask, Decision
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
 from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
-from mhvp.documents import intake
+from mhvp.documents import intake, intake_followup
 from mhvp.documents import services as svc
 from mhvp.documents.models import Document, DocumentCategory, DocumentLink, LinkRole
 
@@ -60,6 +60,8 @@ class IntakeAcceptIn(BaseModel):
     property_id: uuid.UUID | None = None
     contact_id: uuid.UUID | None = None
     category_id: uuid.UUID | None = None
+    unit_id: uuid.UUID | None = None
+    contract_id: uuid.UUID | None = None
     use_proposed: bool = Field(
         default=True, description="false: nur die hier angegebenen Werte übernehmen"
     )
@@ -188,12 +190,17 @@ async def accept_intake_proposal(
         proposed = proposal.proposed or {}
         chosen = {
             name: _pick(body, name, proposed)
-            for name in ("property_id", "contact_id", "category_id")
+            for name in ("property_id", "contact_id", "category_id", "unit_id", "contract_id")
         }
         if not any(chosen.values()):
             raise svc.invalid("Ohne Objekt, Kontakt oder Kategorie gibt es nichts zu übernehmen.")
         final: dict[str, Any] = {}
-        for entity_type, key in (("property", "property_id"), ("contact", "contact_id")):
+        for entity_type, key in (
+            ("property", "property_id"),
+            ("contact", "contact_id"),
+            ("unit", "unit_id"),
+            ("contract", "contract_id"),
+        ):
             entity_id = chosen[key]
             if entity_id is None:
                 continue
@@ -224,7 +231,7 @@ async def accept_intake_proposal(
             final["category_id"] = str(chosen["category_id"])
         unchanged = all(
             str(proposed.get(k) or "") == final.get(k, "")
-            for k in ("property_id", "contact_id", "category_id")
+            for k in ("property_id", "contact_id", "category_id", "unit_id", "contract_id")
         )
         proposal.decision = Decision.ACCEPTED if unchanged else Decision.MODIFIED
         proposal.decided_by = principal.user_id
@@ -239,6 +246,19 @@ async def accept_intake_proposal(
             actor_user_id=principal.user_id,
             payload={"decision": proposal.decision.value},
         )
+        category = (
+            await session.get(DocumentCategory, document.category_id)
+            if document.category_id
+            else None
+        )
+        text, _status = intake.document_text(document)
+        final["followups"] = await intake_followup.suggest(
+            session,
+            document,
+            category_name=category.name if category is not None else None,
+            text=text,
+            final=final,
+        )
         proposal.final = final
         await session.flush()
         await emit(
@@ -249,6 +269,137 @@ async def accept_intake_proposal(
             entity_id=document.id,
             actor_user_id=principal.user_id,
             payload={"proposal_id": str(proposal.id), "decision": proposal.decision.value, **final},
+        )
+        return _out(proposal, document)
+
+
+class IntakeFollowupConfirmIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    target_id: uuid.UUID | None = Field(
+        default=None, description="Ticket oder Vertrag, falls der Vorschlag keines nennt"
+    )
+
+
+@router.post(
+    "/documents/intake-proposals/{proposal_id}/followups/{kind}/confirm",
+    summary="Folgevorschlag bestätigen (nur Verknüpfung, keine Buchung)",
+)
+async def confirm_intake_followup(
+    proposal_id: uuid.UUID,
+    kind: str,
+    request: Request,
+    body: IntakeFollowupConfirmIn | None = None,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> IntakeProposalOut:
+    """Second human step after the filing (11.4). Ticket and contract file become a document
+    link; invoice and meeting are only marked as handed over, the receipt and meeting
+    workflows (with their own approvals) take it from there."""
+    body = body or IntakeFollowupConfirmIn()
+    async with tenant_tx(request, principal) as session:
+        proposal = await session.get(AiProposal, proposal_id)
+        if (
+            proposal is None
+            or proposal.entity_type != intake.ENTITY_TYPE
+            or proposal.decision not in (Decision.ACCEPTED, Decision.MODIFIED)
+        ):
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Vorschlag nicht gefunden.")
+        document = await session.get(Document, proposal.context_id) if proposal.context_id else None
+        final = dict(proposal.final or {})
+        followups = [dict(f) for f in final.get("followups", [])]
+        item = next((f for f in followups if f.get("kind") == kind), None)
+        if document is None or item is None:
+            raise ProblemError(
+                ErrorCodes.RESOURCE_NOT_FOUND, detail="Folgevorschlag nicht gefunden."
+            )
+        if item.get("status") != "proposed":
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Der Folgevorschlag ist bereits erledigt."
+            )
+        entity_type = intake_followup.LINKABLE_KINDS.get(kind)
+        if entity_type is not None:
+            raw = body.target_id or (
+                uuid.UUID(item["target_id"]) if item.get("target_id") else None
+            )
+            if raw is None:
+                raise svc.invalid("Für diesen Folgevorschlag ist ein Ziel anzugeben.")
+            await svc.check_link_target(session, entity_type, raw)
+            exists = await session.scalar(
+                select(DocumentLink.id).where(
+                    DocumentLink.document_id == document.id,
+                    DocumentLink.entity_type == entity_type,
+                    DocumentLink.entity_id == raw,
+                    DocumentLink.role == LinkRole.ATTACHMENT,
+                )
+            )
+            if exists is None:
+                session.add(
+                    DocumentLink(
+                        tenant_id=principal.tenant_id,
+                        document_id=document.id,
+                        entity_type=entity_type,
+                        entity_id=raw,
+                        role=LinkRole.ATTACHMENT,
+                    )
+                )
+            item["target_id"] = str(raw)
+        item["status"] = "confirmed"
+        proposal.final = {**final, "followups": followups}
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document.intake_followup_confirmed",
+            entity_type="document",
+            entity_id=document.id,
+            actor_user_id=principal.user_id,
+            payload={"proposal_id": str(proposal.id), "kind": kind},
+        )
+        return _out(proposal, document)
+
+
+@router.post(
+    "/documents/intake-proposals/{proposal_id}/revert-auto",
+    summary="Automatische Ablage zurücknehmen",
+)
+async def revert_auto_filed(
+    proposal_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(UPDATE)
+) -> IntakeProposalOut:
+    """GA10-03: undo a direct filing; the link is removed (unless it existed before) and the
+    proposal returns to the review list."""
+    async with tenant_tx(request, principal) as session:
+        proposal = await session.get(AiProposal, proposal_id)
+        if proposal is None or proposal.entity_type != intake.ENTITY_TYPE:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND, detail="Vorschlag nicht gefunden.")
+        final = proposal.final or {}
+        if not final.get("auto_filed"):
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Der Vorschlag wurde nicht automatisch abgelegt."
+            )
+        document = await session.get(Document, proposal.context_id) if proposal.context_id else None
+        if document is not None and not final.get("link_preexisted"):
+            link = await session.scalar(
+                select(DocumentLink).where(
+                    DocumentLink.document_id == document.id,
+                    DocumentLink.entity_type == "property",
+                    DocumentLink.entity_id == uuid.UUID(final["property_id"]),
+                    DocumentLink.role == LinkRole.ATTACHMENT,
+                )
+            )
+            if link is not None:
+                await session.delete(link)
+        proposal.decision = Decision.PENDING
+        proposal.decided_at = None
+        proposal.final = None
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="document.intake_auto_file_reverted",
+            entity_type="document",
+            entity_id=proposal.context_id,
+            actor_user_id=principal.user_id,
+            payload={"proposal_id": str(proposal.id)},
         )
         return _out(proposal, document)
 

@@ -4,16 +4,18 @@ report. Issuing requires the resolution bound to the snapshot; posting results n
 import uuid
 from datetime import UTC, date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Request, Response
+from fastapi import APIRouter, Depends, Header, Request, Response
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from mhvp.billing.status import StatementStatus, TransitionError, check_transition
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, tenant_tx
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.listparams import ListParams, ListSpec, sparse
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.core.release_gates import ReleaseGate, ensure_release_gate_open
 from mhvp.hoa import calc
@@ -109,14 +111,19 @@ class HoaVotesIn(HoaBaseIn):
     eligible: Decimal | None = Field(default=None, gt=0)
 
 
+# GA03-03: deleted and irrelevant are notes in the Beschluss-Sammlung (no physical deletion);
+# void stays accepted for existing entries until the operator decides its mapping (AA06-01).
+RESOLUTION_STATUS_PATTERN = (
+    "^(positive|negative|final|contested|annulled|legally_binding|deleted|irrelevant|void)$"
+)
+
+
 class HoaResolutionIn(HoaBaseIn):
     legal_entity_id: uuid.UUID
     decided_on: date
     subject: str = Field(min_length=3, max_length=2000)
     wording: str = Field(min_length=3, max_length=20000)
-    status: str = Field(
-        pattern="^(positive|negative|final|contested|annulled|legally_binding|void)$"
-    )
+    status: str = Field(pattern=RESOLUTION_STATUS_PATTERN)
     kind: str = Field(default="external", pattern="^(meeting|circular|court|external)$")
     snapshot_hash: str | None = Field(default=None, max_length=64)
     subject_type: str | None = Field(
@@ -126,12 +133,15 @@ class HoaResolutionIn(HoaBaseIn):
     majority_basis: str | None = Field(default=None, max_length=4000)
     subject_kind: str | None = Field(default=None, pattern=SUBJECT_PATTERN)
     votes: HoaVotesIn | None = None
+    location: str | None = Field(default=None, max_length=300)
+    court_notes: str | None = Field(default=None, max_length=20000)
 
 
 class HoaResolutionPatch(HoaBaseIn):
-    status: str = Field(
-        pattern="^(positive|negative|final|contested|annulled|legally_binding|void)$"
-    )
+    status: str | None = Field(default=None, pattern=RESOLUTION_STATUS_PATTERN)
+    # GA03-03: court notes (contest, annulment) and place of the decision
+    court_notes: str | None = Field(default=None, max_length=20000)
+    location: str | None = Field(default=None, max_length=300)
 
 
 class HoaStatementIn(HoaBaseIn):
@@ -350,55 +360,111 @@ async def patch_resolution(
     resolution_id: uuid.UUID,
     body: HoaResolutionPatch,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(APPROVE),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await session.get(Resolution, resolution_id, with_for_update=True)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
-        await emit(
-            session,
-            tenant_id=principal.tenant_id,
-            type="resolution.status_changed",
-            entity_type="resolution",
-            entity_id=row.id,
-            actor_user_id=principal.user_id,
-            payload={"from": row.status, "to": body.status},
-        )
-        row.status = body.status
+        check_if_match(if_match, row.updated_at)  # GA04-06
+        fields = body.model_dump(exclude_unset=True)
+        if not fields or ("status" in fields and fields["status"] is None):
+            raise ProblemError(ErrorCodes.VALIDATION, detail="Status oder Vermerk angeben.")
+        if "status" in fields:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="resolution.status_changed",
+                entity_type="resolution",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                payload={"from": row.status, "to": body.status},
+            )
+            row.status = fields["status"]
+        notes = {k: fields[k] for k in ("court_notes", "location") if k in fields}
+        if notes:
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="resolution.notes_changed",
+                entity_type="resolution",
+                entity_id=row.id,
+                actor_user_id=principal.user_id,
+                payload={k: {"from": getattr(row, k), "to": v} for k, v in notes.items()},
+            )
+            for key, value in notes.items():
+                setattr(row, key, value)
         await session.flush()
-        return {"id": row.id, "status": row.status}
+        await session.refresh(row, ["updated_at"])
+        response.headers["ETag"] = etag_of(row.updated_at)
+        return {
+            "id": row.id,
+            "status": row.status,
+            "court_notes": row.court_notes,
+            "location": row.location,
+        }
+
+
+_RESOLUTION_LIST = ListSpec(
+    filters={
+        "status": Resolution.status,
+        "kind": Resolution.kind,
+        "meeting_id": Resolution.meeting_id,
+        "subject_kind": Resolution.subject_kind,
+        "decided_on": Resolution.decided_on,
+    },
+    sort={
+        "number": Resolution.number,
+        "decided_on": Resolution.decided_on,
+        "status": Resolution.status,
+    },
+)
 
 
 @router.get("/resolutions", summary="Beschluss-Sammlung")
 async def list_resolutions(
-    legal_entity_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
-) -> list[dict[str, Any]]:
+    legal_entity_id: uuid.UUID,
+    request: Request,
+    params: ListParams = Depends(_RESOLUTION_LIST.dependency),
+    principal: TenantPrincipal = Depends(READ),
+) -> Any:
     async with tenant_tx(request, principal) as session:
         rows = await session.scalars(
-            select(Resolution)
-            .where(Resolution.legal_entity_id == legal_entity_id)
-            .order_by(Resolution.number)
+            _RESOLUTION_LIST.apply(
+                select(Resolution).where(Resolution.legal_entity_id == legal_entity_id),
+                params,
+                (Resolution.number, Resolution.id),
+            )
         )
-        return [
-            {
-                "id": r.id,
-                "number": r.number,
-                "decided_on": r.decided_on,
-                "subject": r.subject,
-                "wording": r.wording,
-                "status": r.status,
-                "kind": r.kind,
-                "votes": r.votes,
-                "majority_basis": r.majority_basis,
-                "subject_kind": r.subject_kind,
-                "majority_check": r.majority_check,
-                "allowed_majority": r.allowed_majority,
-                "enabling_resolution_id": r.enabling_resolution_id,
-                "vote_deadline_at": r.vote_deadline_at,
-            }
-            for r in rows.all()
-        ]
+        return sparse(_resolution_rows(rows.all()), params, None)
+
+
+def _resolution_rows(rows: Any) -> list[dict[str, Any]]:
+    return [
+        {
+            "id": r.id,
+            "number": r.number,
+            "decided_on": r.decided_on,
+            "subject": r.subject,
+            "wording": r.wording,
+            "status": r.status,
+            "kind": r.kind,
+            "votes": r.votes,
+            "majority_basis": r.majority_basis,
+            "subject_kind": r.subject_kind,
+            "majority_check": r.majority_check,
+            "allowed_majority": r.allowed_majority,
+            "enabling_resolution_id": r.enabling_resolution_id,
+            "vote_deadline_at": r.vote_deadline_at,
+            # GA03-03
+            "location": r.location,
+            "court_notes": r.court_notes,
+            "entered_at": r.entered_at,
+        }
+        for r in rows
+    ]
 
 
 # Economic plan ---------------------------------------------------------------------------

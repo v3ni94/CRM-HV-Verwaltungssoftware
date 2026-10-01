@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from mhvp.banking.camt import ParsedFile, RawTransaction
 from mhvp.banking.models import BankStatement, BankSyncRun, BankTransaction, TransactionStatus
 from mhvp.core import crypto
+from mhvp.core.events import emit
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 TRANSFER_WINDOW_DAYS = 5
@@ -28,6 +29,28 @@ def content_hash(iban_fp: str, tx: RawTransaction) -> str:
         tx.counterpart_iban or "",
     ]
     return hashlib.sha256("|".join(parts).encode()).hexdigest()
+
+
+async def _emit_imported(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    user_id: uuid.UUID | None,
+    run_id: uuid.UUID,
+    account_id: uuid.UUID,
+    count: int,
+) -> None:
+    """One bundled event per import run and account (GA04-02), no event flood."""
+    from mhvp.banking.event_types import BANK_TRANSACTION_IMPORTED
+
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type=BANK_TRANSACTION_IMPORTED,
+        entity_type="bank_account",
+        entity_id=account_id,
+        actor_user_id=user_id,
+        payload={"account_id": str(account_id), "sync_run_id": str(run_id), "count": count},
+    )
 
 
 async def import_file(
@@ -51,6 +74,7 @@ async def import_file(
     session.add(run)
     await session.flush()
     counts = {"new": 0, "duplicates": 0, "possible_duplicates": 0, "transfers": 0, "statements": 0}
+    account_new: dict[uuid.UUID, int] = {}
     for stmt in parsed.statements:
         account = await session.scalar(
             select(PropertyBankAccount).where(
@@ -144,6 +168,9 @@ async def import_file(
             counts["new"] += 1
             counts["possible_duplicates"] += int(same is not None)
             counts["transfers"] += int(await pair_transfer(session, row))
+            account_new[account.id] = account_new.get(account.id, 0) + 1
+    for account_id, n_new in account_new.items():
+        await _emit_imported(session, tenant_id, user_id, run.id, account_id, n_new)
     run.status, run.counts = "done", counts
     await session.flush()
     return run
@@ -216,6 +243,10 @@ async def import_finapi_transactions(
         counts["new"] += 1
         counts["possible_duplicates"] += int(same is not None)
         counts["transfers"] += int(await pair_transfer(session, row))
+    if counts["new"]:
+        await _emit_imported(
+            session, tenant_id, None, run.id, property_bank_account_id, counts["new"]
+        )
     return counts
 
 

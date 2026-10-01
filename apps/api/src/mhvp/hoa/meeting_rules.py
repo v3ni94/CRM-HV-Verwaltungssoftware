@@ -130,6 +130,37 @@ def short_notice_note(meeting: Meeting, weeks: int) -> str | None:
     )
 
 
+BASIS_TERM_YEARS = 3  # 7.8 W13 Satz 4; transition rule § 48 Abs. 6 WEG open (AA06-02)
+BASIS_TERM_NOTE = (
+    "Hinweis: Das Gültigkeitsende {valid_until} liegt mehr als drei Jahre nach dem "
+    "Beschlussdatum {decided_on} (spätestens {limit}). Höchstdauer und Übergangsregel sind "
+    "rechtlich zu prüfen (offene Frage AA06-02)."
+)
+
+
+def basis_term_limit(decided_on: date) -> date:
+    """Latest validity end of an enabling resolution: decision date plus three years
+    (29.02. maps to 28.02.)."""
+    try:
+        return decided_on.replace(year=decided_on.year + BASIS_TERM_YEARS)
+    except ValueError:
+        return decided_on.replace(year=decided_on.year + BASIS_TERM_YEARS, day=28)
+
+
+def basis_term_notice(decided_on: date, valid_until: date | None) -> str | None:
+    """Notice when the validity end exceeds the three year term, otherwise ``None``."""
+    if valid_until is None:
+        return None
+    limit = basis_term_limit(decided_on)
+    if valid_until <= limit:
+        return None
+    return BASIS_TERM_NOTE.format(
+        valid_until=f"{valid_until:%d.%m.%Y}",
+        decided_on=f"{decided_on:%d.%m.%Y}",
+        limit=f"{limit:%d.%m.%Y}",
+    )
+
+
 # Tenant settings ----------------------------------------------------------------------------
 
 
@@ -148,6 +179,18 @@ async def virtual_meetings_enabled(session: AsyncSession, tenant_id: uuid.UUID) 
     return bool(
         await session.scalar(
             select(TenantSettings.hoa_virtual_meetings_enabled).where(
+                TenantSettings.tenant_id == tenant_id
+            )
+        )
+    )
+
+
+async def virtual_basis_term_lock_enabled(session: AsyncSession, tenant_id: uuid.UUID) -> bool:
+    from mhvp.platform.models import TenantSettings
+
+    return bool(
+        await session.scalar(
+            select(TenantSettings.hoa_virtual_basis_term_lock_enabled).where(
                 TenantSettings.tenant_id == tenant_id
             )
         )
@@ -192,6 +235,10 @@ async def validate_virtual_basis(
             ErrorCodes.HOA_VIRTUAL_BASIS_RESOLUTION,
             detail=f"Zulassender Beschluss gilt nur bis {valid_until:%d.%m.%Y}.",
         )
+    # GA07-01: three year term; a lock only behind the tenant switch, otherwise a notice.
+    notice = basis_term_notice(basis.decided_on, valid_until)
+    if notice and await virtual_basis_term_lock_enabled(session, tenant_id):
+        raise ProblemError(ErrorCodes.HOA_VIRTUAL_BASIS_TERM, detail=notice)
     return basis
 
 
@@ -246,6 +293,8 @@ class MeetingSettingsIn(BaseModel):
 
     invitation_weeks: int = Field(ge=MIN_INVITATION_WEEKS, le=MAX_INVITATION_WEEKS)
     virtual_meetings_enabled: bool
+    # GA07-01: omitted keeps the stored value
+    virtual_basis_term_lock_enabled: bool | None = None
 
 
 class DialInIn(BaseModel):
@@ -273,6 +322,9 @@ async def get_meeting_settings(
             "virtual_meetings_enabled": await virtual_meetings_enabled(
                 session, principal.tenant_id
             ),
+            "virtual_basis_term_lock_enabled": await virtual_basis_term_lock_enabled(
+                session, principal.tenant_id
+            ),
             "note": SETTINGS_NOTE,
         }
 
@@ -289,6 +341,8 @@ async def put_meeting_settings(
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         row.hoa_invitation_weeks = body.invitation_weeks
         row.hoa_virtual_meetings_enabled = body.virtual_meetings_enabled
+        if body.virtual_basis_term_lock_enabled is not None:
+            row.hoa_virtual_basis_term_lock_enabled = body.virtual_basis_term_lock_enabled
         await emit(
             session,
             tenant_id=principal.tenant_id,
@@ -298,7 +352,10 @@ async def put_meeting_settings(
             actor_user_id=principal.user_id,
             payload=body.model_dump(),
         )
-        return body.model_dump() | {"note": SETTINGS_NOTE}
+        return body.model_dump() | {
+            "virtual_basis_term_lock_enabled": row.hoa_virtual_basis_term_lock_enabled,
+            "note": SETTINGS_NOTE,
+        }
 
 
 @router.put("/meetings/{meeting_id}/dial-in", summary="Einwahldaten (nur Eigentümer im Portal)")

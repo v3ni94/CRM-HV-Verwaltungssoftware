@@ -353,10 +353,10 @@ async def calculate(
                 "balance": str(balance),  # > 0 additional payment, < 0 credit
                 "late_claim_blocked": balance > 0
                 and today > period_deadline
-                and not statement.deadline_exception,
+                and not statement.deadline_exception_effective,
             }
         )
-    inputs = {
+    inputs: dict[str, Any] = {
         "period": [statement.period_from.isoformat(), statement.period_to.isoformat()],
         "occupants": [
             {
@@ -370,6 +370,17 @@ async def calculate(
         ],
         "positions": positions,
     }
+    # GA08-05 (7.12): the register entry that applies to the settlement period is kept in the
+    # snapshot; a later register entry never changes an issued statement.
+    from mhvp.accounting import rule_register
+
+    reference = rule_register.snapshot_reference(
+        await rule_register.version_for_period(
+            session, rule_register.SETTLEMENT_RULE_ID, statement.period_from
+        )
+    )
+    if reference is not None:
+        inputs["rule_register"] = reference
     output = {
         "results": results,
         "vacancy_owner_share": str(vacancy),
@@ -419,7 +430,7 @@ def check_issue(statement: Statement, snapshot: StatementSnapshot, delivered_at:
         for r in snapshot.results["results"]
         if Decimal(r["balance"]) > 0 and (r["late_claim_blocked"] or delivered_at > period_deadline)
     ]
-    if late and not statement.deadline_exception:
+    if late and not statement.deadline_exception_effective:
         raise ProblemError(
             ErrorCodes.CONFLICT,
             detail=(

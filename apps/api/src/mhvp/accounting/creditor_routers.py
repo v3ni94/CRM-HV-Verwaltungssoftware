@@ -68,6 +68,22 @@ def split_gross(gross: Decimal, vat_percent: Decimal) -> tuple[Decimal, Decimal]
     return net, gross - net
 
 
+async def check_auto_post(session: AsyncSession, requested: bool) -> None:
+    """GA03-07: ``auto_post`` may only be set while the tenant released automatic posting
+    (6.9.4, 7.4). The flag is a request: postings still need released G1 and an active rule,
+    and plan generation keeps creating drafts (OPEN_QUESTIONS AA10-01)."""
+    if not requested:
+        return
+    from mhvp.platform.models import TenantSettings
+
+    enabled = await session.scalar(select(TenantSettings.auto_posting_enabled))
+    if not enabled:
+        raise ProblemError(
+            ErrorCodes.CONFLICT,
+            detail="Automatische Buchung ist für den Mandanten nicht freigeschaltet.",
+        )
+
+
 async def check_contract(
     session: AsyncSession, contract_id: uuid.UUID | None, provider: uuid.UUID | None
 ) -> None:
@@ -252,6 +268,7 @@ class RecurringPlanOut(BaseModel):
     order_reference: str | None
     service_contract_id: uuid.UUID | None
     ended_at: date | None
+    auto_post: bool = False
 
 
 class RecurringPlanPatchIn(BaseModel):
@@ -264,6 +281,7 @@ class RecurringPlanPatchIn(BaseModel):
     text: str | None = Field(default=None, min_length=1, max_length=300)
     order_reference: str | None = Field(default=None, max_length=100)
     service_contract_id: uuid.UUID | None = None
+    auto_post: bool | None = None
 
 
 class RecurringPlanEndIn(BaseModel):
@@ -345,12 +363,19 @@ async def update_plan(
                 raise ProblemError(ErrorCodes.ACC_WRONG_ENTITY)
         if changes.get("service_contract_id") is not None:
             await check_contract(session, changes["service_contract_id"], plan.provider_contact_id)
+        if "auto_post" in changes:
+            await check_auto_post(session, bool(changes["auto_post"]))
         if changes.get("end_date") is not None and changes["end_date"] < plan.start_date:
             raise ProblemError(ErrorCodes.VALIDATION, detail="Ende liegt vor dem Beginn.")
         for key, value in changes.items():
-            if key in ("account_id", "gross", "vat_percent", "interval_months", "text") and (
-                value is None
-            ):
+            if key in (
+                "account_id",
+                "gross",
+                "vat_percent",
+                "interval_months",
+                "text",
+                "auto_post",
+            ) and (value is None):
                 continue
             setattr(plan, key, value)
         plan.updated_by = principal.user_id

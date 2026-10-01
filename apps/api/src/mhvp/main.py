@@ -85,6 +85,7 @@ from mhvp.handover.imports import router as handover_imports_router
 from mhvp.handover.portal import router as handover_portal_router
 from mhvp.handover.portal import staff_router as handover_staff_portal_router
 from mhvp.handover.routers import router as handover_router
+from mhvp.hoa.acquisition import router as hoa_acquisition_router
 from mhvp.hoa.assets import router as hoa_assets_router
 from mhvp.hoa.board import router as hoa_board_router
 from mhvp.hoa.finance import router as hoa_finance_router
@@ -126,6 +127,7 @@ from mhvp.objektakte.routers import router as objektakte_router
 from mhvp.objektakte.routers import sync_router as objektakte_sync_router
 from mhvp.objektakte.rules_routers import router as objektakte_rules_router
 from mhvp.objektakte.webhook import router as objektakte_webhook_router
+from mhvp.platform.admin_routers import router as platform_admin_additions_router
 from mhvp.platform.export_routers import router as tenant_export_job_router
 from mhvp.platform.gates import DbReleaseGateResolver
 from mhvp.platform.licensing import router as licensing_router
@@ -146,11 +148,14 @@ from mhvp.portal.mandates import router as portal_mandate_router
 from mhvp.portal.notice_routers import crm_router as notice_crm_router
 from mhvp.portal.notice_routers import portal_router as notice_portal_router
 from mhvp.portal.owner import router as portal_owner_router
+from mhvp.portal.owner_assets import router as portal_owner_assets_router
 from mhvp.portal.owner_extra import router as portal_owner_extra_router
 from mhvp.portal.owner_meetings import router as portal_owner_meetings_router
 from mhvp.portal.owner_overview import router as portal_owner_overview_router
 from mhvp.portal.owner_statements import router as portal_owner_statements_router
 from mhvp.portal.provider_einvoice import router as portal_provider_einvoice_router
+from mhvp.portal.provider_info import admin as portal_provider_info_admin_router
+from mhvp.portal.provider_info import router as portal_provider_info_router
 from mhvp.portal.routers import admin as portal_admin_router
 from mhvp.portal.routers import router as portal_router
 from mhvp.privacy.routers import router as privacy_router
@@ -308,6 +313,7 @@ def create_app(
     app.include_router(accounting_admin_fee_posting_router, prefix=API_PREFIX)
     app.include_router(accounting_audit_export_router, prefix=API_PREFIX)
     app.include_router(tenant_export_job_router, prefix=API_PREFIX)
+    app.include_router(platform_admin_additions_router, prefix=API_PREFIX)
     app.include_router(accounting_report_router, prefix=API_PREFIX)
     app.include_router(accounting_tax_router, prefix=API_PREFIX)
     app.include_router(rent_invoice_router, prefix=API_PREFIX)
@@ -342,6 +348,7 @@ def create_app(
     app.include_router(hoa_finance_router, prefix=API_PREFIX)
     app.include_router(hoa_inspection_router, prefix=API_PREFIX)
     app.include_router(hoa_assets_router, prefix=API_PREFIX)
+    app.include_router(hoa_acquisition_router, prefix=API_PREFIX)
     app.include_router(hoa_reserve_statement_router, prefix=API_PREFIX)
     app.include_router(hoa_reserves_router, prefix=API_PREFIX)
     app.include_router(rentindex_router, prefix=API_PREFIX)
@@ -400,7 +407,10 @@ def create_app(
     app.include_router(portal_owner_extra_router, prefix=API_PREFIX)
     app.include_router(portal_owner_overview_router, prefix=API_PREFIX)
     app.include_router(portal_owner_statements_router, prefix=API_PREFIX)
+    app.include_router(portal_owner_assets_router, prefix=API_PREFIX)
     app.include_router(portal_provider_einvoice_router, prefix=API_PREFIX)
+    app.include_router(portal_provider_info_router, prefix=API_PREFIX)
+    app.include_router(portal_provider_info_admin_router, prefix=API_PREFIX)
     app.include_router(portal_mandate_router, prefix=API_PREFIX)
     app.include_router(portal_mandate_admin_router, prefix=API_PREFIX)
     # Deprecation marks into the OpenAPI document after all routers (ADR 0009, A50).

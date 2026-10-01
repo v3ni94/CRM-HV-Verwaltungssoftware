@@ -84,3 +84,5 @@ Neue Typen werden nur ergänzt, nie umbenannt (ADR 0009).
   `tests/integration/test_a87_import_contact_events_apply.py`.
 * Das smart-einzug-Dossier (V1) bleibt offen; die Felder des Ereignisses sind allgemein und
   nicht auf smart-einzug zugeschnitten.
+
+Test für Eigentümerkontakte mit Zustellfehler und Neuzustellung (gleicher Idempotency-Key, signiert, ohne Namen, Adressen und IBAN): `apps/api/tests/integration/test_ga09_smart_einzug_contact_updated.py` (GA09-04).

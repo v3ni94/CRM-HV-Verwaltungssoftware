@@ -132,6 +132,39 @@ def check_template(source: str) -> None:
         raise PlaceholderError(str(exc)) from None
 
 
+def placeholders_of(*sources: str) -> list[str]:
+    """Placeholders used by the template sources, as sorted dotted paths such as
+    ``empfaenger.name`` or ``felder.betrag`` (GA04-10). Names that are assigned or looped
+    over inside the template are not placeholders. A malformed source raises
+    :class:`PlaceholderError`."""
+    from jinja2 import nodes
+
+    found: set[str] = set()
+    for source in sources:
+        try:
+            tree = _env.parse(source)
+        except TemplateError as exc:
+            raise PlaceholderError(str(exc)) from None
+        local: set[str] = set()
+        for target in (*tree.find_all(nodes.Assign), *tree.find_all(nodes.For)):
+            assigned: nodes.Node = target.target  # type: ignore[attr-defined]
+            local.update(
+                n.name
+                for n in (assigned, *assigned.find_all(nodes.Name))
+                if isinstance(n, nodes.Name)
+            )
+        for node in tree.find_all((nodes.Getattr, nodes.Name)):
+            parts: list[str] = []
+            current: nodes.Node = node
+            while isinstance(current, nodes.Getattr):
+                parts.append(current.attr)
+                current = current.node
+            if isinstance(current, nodes.Name) and current.name not in local:
+                found.add(".".join([current.name, *reversed(parts)]))
+    # Keep only the longest paths: ``a`` is dropped when ``a.b`` is present.
+    return sorted(p for p in found if not any(o.startswith(p + ".") for o in found))
+
+
 def _sender_line(company: dict[str, Any]) -> str:
     place = " ".join(p for p in (company.get("postal_code"), company.get("city")) if p)
     return ", ".join(p for p in (company.get("name"), company.get("street"), place) if p)

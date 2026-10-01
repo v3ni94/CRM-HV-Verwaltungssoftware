@@ -82,7 +82,7 @@ def test_choice_types_need_options_and_unknown_type_fails() -> None:
     with pytest.raises(ProblemError):
         forms.normalise_fields([{"key": "a", "label": "A", "type": "radio"}])
     with pytest.raises(ProblemError):
-        forms.normalise_fields([{"key": "a", "label": "A", "type": "signature"}])
+        forms.normalise_fields([{"key": "a", "label": "A", "type": "hologram"}])
 
 
 def test_delivery_rules() -> None:
@@ -103,3 +103,36 @@ def test_prequalification_rules_are_deterministic() -> None:
     assert calm["topics"] == []
     assert calm["urgent_hint"] is False
     assert calm["emergency_note"] is None
+
+
+def test_twenty_element_types_ga11_02() -> None:
+    assert len(forms.FIELD_TYPES) == 20
+    assert len(set(forms.FIELD_TYPES)) == 20
+
+
+def test_new_types_validate_and_render() -> None:
+    fields = forms.normalise_fields(
+        [
+            {"key": "a", "label": "Anschrift", "type": "address"},
+            {"key": "o", "label": "Ort", "type": "location"},
+            {"key": "u", "label": "Unterschrift", "type": "signature", "required": True},
+            {"key": "k", "label": "Einwilligung", "type": "consent", "required": True},
+            {"key": "b", "label": "Betrag", "type": "amount"},
+            {"key": "l", "label": "Linie", "type": "divider", "required": True},
+        ]
+    )
+    assert fields[-1]["required"] is False  # display type
+    values = {"a": "Weg 1\n12345 Ort", "u": "Max Muster", "k": "true", "b": "1234,5"}
+    assert forms.validate_values(fields, values)["b"] == "1234.5"
+    with pytest.raises(ProblemError):
+        forms.validate_values(fields, {**values, "b": "12,345"})
+    with pytest.raises(ProblemError):
+        forms.validate_values(fields, {**values, "k": "false"})
+    with pytest.raises(ProblemError):
+        forms.validate_values(fields, {**values, "u": "M"})
+    with pytest.raises(ProblemError):
+        forms.validate_values(fields, {**values, "l": "x"})
+    tpl = forms.PortalFormTemplate(name="T", fields=fields)
+    text = forms.render_values(tpl, forms.validate_values(fields, values), {})
+    assert "Betrag: 1.234,50 EUR" in text
+    assert "Einwilligung: ja" in text

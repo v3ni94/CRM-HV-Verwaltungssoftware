@@ -350,3 +350,41 @@ def test_import_files_reports_unknown_names_and_missing_period() -> None:
     assert any("Dateiname entspricht nicht dem Standard" in e for e in result.errors)
     assert any("nicht bestimmbar" in e for e in result.errors)
     assert not result.ok
+
+
+def test_write_a_records_roundtrip_through_the_parser() -> None:
+    """GA09-01: the A record writer produces 128 byte lines that the parser reads back."""
+    parsed = heiwako.parse_file(
+        heiwako.write_a_records(
+            [
+                heiwako.ARecord(
+                    header=heiwako._Header(
+                        record_type="A",
+                        version="03.10",
+                        customer_number="4711",
+                        provider_key="TE",
+                        provider_ref=None,
+                        provider_property_number="123456789",
+                        provider_unit_number="0012",
+                    ),
+                    client_ref="OBJ-0001/WE 12",
+                )
+            ]
+        ),
+        filename="DTA310_20261001120000000.DAT",
+    )
+    assert parsed.errors == []
+    (record,) = parsed.of_type("A")
+    assert record.client_ref == "OBJ-0001/WE 12"
+    assert record.header.customer_number == "0000004711"
+    assert record.header.provider_key == "TE"
+    assert record.header.provider_property_number == "123456789"
+    assert record.header.provider_unit_number == "0012"
+
+
+def test_write_a_records_rejects_oversized_reference() -> None:
+    bad = heiwako.ARecord(
+        header=heiwako._Header("A", "03.10", None, None, None, None, None), client_ref="x" * 21
+    )
+    with pytest.raises(ValueError, match="passt nicht"):
+        heiwako.write_a_records([bad])

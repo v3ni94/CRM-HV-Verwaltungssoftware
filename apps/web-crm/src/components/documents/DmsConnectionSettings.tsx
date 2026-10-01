@@ -23,6 +23,7 @@ const COMPANY_FIELD_KEY = "company_field_id";
 const COMPANY_OPTIONS_KEY = "company_options";
 const ROOT_FOLDER_KEY = "root_folder_id";
 const CLIENT_ID_KEY = "client_id";
+const FOLDER_SCHEME_KEY = "folder_scheme";
 
 /** DMS-Anbindung (Einstellungen): Paperless- und Google-Drive-Zugangsdaten pflegbar.
  *  Immoware24 bleibt Master der Stammdaten; hier wird nur die Anbindung des CRM an das
@@ -56,6 +57,7 @@ export function DmsConnectionSettings({
   const [gdEnabled, setGdEnabled] = useState(googleDrive?.enabled ?? false);
   const [rootFolderId, setRootFolderId] = useState(googleDrive?.options?.[ROOT_FOLDER_KEY] ?? "");
   const [clientId, setClientId] = useState(googleDrive?.options?.[CLIENT_ID_KEY] ?? "");
+  const [folderScheme, setFolderScheme] = useState(googleDrive?.options?.[FOLDER_SCHEME_KEY] ?? "");
   const [clientSecret, setClientSecret] = useState("");
   const [refreshToken, setRefreshToken] = useState("");
   const [gdError, setGdError] = useState<string | null>(null);
@@ -125,6 +127,8 @@ export function DmsConnectionSettings({
     else delete options[ROOT_FOLDER_KEY];
     if (clientId.trim()) options[CLIENT_ID_KEY] = clientId.trim();
     else delete options[CLIENT_ID_KEY];
+    if (folderScheme.trim()) options[FOLDER_SCHEME_KEY] = folderScheme.trim();
+    else delete options[FOLDER_SCHEME_KEY];
     const secret =
       clientSecret.trim() && refreshToken.trim()
         ? JSON.stringify({ client_secret: clientSecret.trim(), refresh_token: refreshToken.trim() })
@@ -291,6 +295,20 @@ export function DmsConnectionSettings({
           />
           <p className={ui.help}>{t("rootFolderIdHint")}</p>
           <p className={ui.help}>{t("rootFolderIdBeforeConnectHint")}</p>
+        </div>
+
+        <div>
+          <label htmlFor="dms-gd-folder-scheme" className={ui.label}>
+            {t("folderScheme")}
+          </label>
+          <input
+            id="dms-gd-folder-scheme"
+            className={ui.input}
+            value={folderScheme}
+            placeholder="{objekt}/{jahr}"
+            onChange={(e) => setFolderScheme(e.target.value)}
+          />
+          <p className={ui.help}>{t("folderSchemeHint")}</p>
         </div>
 
         {oauth.configured ? (

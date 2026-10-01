@@ -29,7 +29,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Any
 
-from sqlalchemy import Date, DateTime, Enum, Index, String, func, or_, select, text
+from sqlalchemy import Boolean, Date, DateTime, Enum, Index, String, func, or_, select, text
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
@@ -116,6 +116,10 @@ class OwnerStatement(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     posted_entry_ids: Mapped[list[str]] = mapped_column(
         JSONB, nullable=False, default=list, server_default=text("'[]'::jsonb")
+    )
+    # GA03-08 (6.5): option to append the linked receipts to the PDF output (migration 0313).
+    attach_receipts: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
     )
 
 
@@ -373,7 +377,70 @@ def build_results(inputs: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str
     if inputs.get("kind") == OwnerStatementKind.SEV_OWNER.value:
         results["sev_reconciliation"], sev_findings = _sev_reconciliation(inputs)
         findings.extend(sev_findings)
+    results["receipts"], receipt_findings = receipt_list(inputs.get("receipts", []))
+    findings.extend(receipt_findings)
+    results["section_35a"], s35a_findings = section_35a(inputs)
+    findings.extend(s35a_findings)
     return results, findings
+
+
+def receipt_list(entries: list[dict[str, Any]]) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    """GA03-08 (6.5 owner_statement, Belege anfügen): the posted cost entries of the period
+    with their receipt. An entry without a linked document is listed as missing; no receipt is
+    ever substituted or invented."""
+    lines = [
+        {
+            "journal_entry_id": e["journal_entry_id"],
+            "booking_date": e["booking_date"],
+            "text": e.get("text") or "",
+            "account_number": e.get("account_number"),
+            "amount": str(_d(e["amount"])),
+            "document_id": e.get("document_id"),
+            "receipt_linked": e.get("document_id") is not None,
+        }
+        for e in entries
+    ]
+    missing = [line for line in lines if not line["receipt_linked"]]
+    findings = []
+    if missing:
+        findings.append(
+            _finding(
+                "RECEIPT_MISSING",
+                "warning",
+                f"{len(missing)} gebuchte Ausgabe(n) ohne verknüpften Beleg: "
+                + ", ".join(f"{m['booking_date']} {m['text']}".strip() for m in missing[:10]),
+            )
+        )
+    return {
+        "lines": lines,
+        "linked": sum(1 for line in lines if line["receipt_linked"]),
+        "missing": len(missing),
+        "total": str(sum((_d(line["amount"]) for line in lines), ZERO)),
+    }, findings
+
+
+def section_35a(inputs: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, str]]]:
+    """GA06-03 (7.6 A06/A07): § 35a block of the owner statement as information only. Source
+    is the documented labour share of the WEG individual statement (M24-05) for the units of
+    the SEV owner; the software makes no tax assessment and computes no share of its own. A
+    rental owner statement has no released source (no labour share on rental expenses), so
+    the block stays empty with a note (OPEN_QUESTIONS AA11-02)."""
+    hoa = inputs.get("hoa_statement") or {}
+    per_unit = {k: str(_d(v)) for k, v in (hoa.get("section_35a_per_unit") or {}).items()}
+    total = sum((_d(v) for v in per_unit.values()), ZERO)
+    findings: list[dict[str, str]] = []  # an empty block is no finding (information only)
+    numbers = {u["unit_id"]: u.get("unit_number") for u in hoa.get("units", [])}
+    return {
+        "lines": [
+            {"unit_id": k, "unit_number": numbers.get(k), "amount": v} for k, v in per_unit.items()
+        ],
+        "source": "hoa_statement" if per_unit else None,
+        "hoa_statement_id": hoa.get("statement_id") if per_unit else None,
+        "per_unit": per_unit,
+        "total": str(total),
+        "note": "Ausweis der belegten Lohnanteile zur Information; die steuerliche "
+        "Beurteilung obliegt dem Eigentümer und seinem Steuerberater.",
+    }, findings
 
 
 def _sev_reconciliation(inputs: dict[str, Any]) -> tuple[dict[str, Any], list[dict[str, str]]]:
@@ -567,6 +634,12 @@ async def _hoa_statement(
         "version": hoa_st.version,
         "status": hoa_st.status.value,
         "units": [u for u in hoa_st.snapshot.get("units", []) if u["unit_id"] in unit_ids],
+        # GA06-03: documented § 35a labour shares (M24-05) of the owner's units only.
+        "section_35a_per_unit": {
+            k: v
+            for k, v in ((hoa_st.snapshot.get("section_35a") or {}).get("per_unit") or {}).items()
+            if k in unit_ids
+        },
     }
 
 
@@ -825,9 +898,54 @@ async def collect_inputs(
             JournalEntry.booking_date.between(start, end),
         )
     )
+    # GA03-08: posted cost entries of the period with their receipt (document) reference.
+    cost_accounts = {a.id: a.number for a in accounts if a.category is AccountCategory.COST}
+    receipts = []
+    if cost_accounts:
+        from mhvp.accounting.models import JournalLine
+
+        rows = (
+            await session.execute(
+                select(
+                    JournalEntry.id,
+                    JournalEntry.booking_date,
+                    JournalEntry.text,
+                    JournalEntry.document_id,
+                    JournalLine.account_id,
+                    func.sum(JournalLine.debit - JournalLine.credit),
+                )
+                .join(JournalLine, JournalLine.journal_entry_id == JournalEntry.id)
+                .where(
+                    JournalEntry.ledger_id == ledger.id,
+                    JournalEntry.status == EntryStatus.POSTED,
+                    JournalEntry.booking_date.between(start, end),
+                    JournalLine.account_id.in_(list(cost_accounts)),
+                )
+                .group_by(
+                    JournalEntry.id,
+                    JournalEntry.booking_date,
+                    JournalEntry.text,
+                    JournalEntry.document_id,
+                    JournalLine.account_id,
+                )
+                .order_by(JournalEntry.booking_date, JournalEntry.id)
+            )
+        ).all()
+        receipts = [
+            {
+                "journal_entry_id": str(entry_id),
+                "booking_date": booking_date.isoformat(),
+                "text": text_,
+                "document_id": str(document_id) if document_id else None,
+                "account_number": cost_accounts[account_id],
+                "amount": str(amount),
+            }
+            for entry_id, booking_date, text_, document_id, account_id, amount in rows
+        ]
     inputs: dict[str, Any] = {
         "period": [start.isoformat(), end.isoformat()],
         "kind": statement.kind.value,
+        "receipts": receipts,
         "ledger_id": str(ledger.id),
         "legal_entity_id": str(entity.id),
         "owner_party_id": str(entity.party_id) if entity.party_id else None,

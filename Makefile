@@ -4,7 +4,7 @@ SHELL := /bin/sh
 
 COMPOSE_DEV := docker compose --env-file .env -f infra/compose.yaml -f infra/compose.dev.yaml
 
-.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed ai-eval deploy staging-smoke backup backup-verify check-s3
+.PHONY: client-py help dev down migrate test test-api test-web e2e lint i18n-check typecheck openapi openapi-check db-bootstrap agent-docs seed seed-demo ai-eval deploy staging-smoke backup backup-verify check-s3
 
 help: ## Show available targets
 	@grep -E '^[a-z0-9-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  %-14s %s\n", $$1, $$2}'
@@ -76,6 +76,13 @@ ifeq ($(LOCAL),1)
 	cd apps/api && uv run python -m mhvp.platform.seed
 else
 	$(COMPOSE_DEV) run --rm api python -m mhvp.platform.seed
+endif
+
+seed-demo: ## Synthetic demo tenant (dev/staging only; needs MHVP_DEMO_ADMIN_PASSWORD, running API at MHVP_DEMO_API_URL)
+ifeq ($(LOCAL),1)
+	cd apps/api && MHVP_DEMO_SEED=1 uv run python -m mhvp.platform.demo_seed
+else
+	$(COMPOSE_DEV) run --rm -e MHVP_DEMO_SEED=1 -e MHVP_DEMO_ADMIN_PASSWORD -e MHVP_DEMO_API_URL=http://api:8000 api python -m mhvp.platform.demo_seed
 endif
 
 ai-eval: ## Offline AI evaluation with recorded answers (no live calls)

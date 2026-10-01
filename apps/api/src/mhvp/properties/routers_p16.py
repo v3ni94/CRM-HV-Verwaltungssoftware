@@ -7,7 +7,7 @@ VAT option history of a unit is readable. IBAN, account kind and legal entity st
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel
@@ -22,6 +22,7 @@ from mhvp.properties import schemas as s
 from mhvp.properties import services as svc
 from mhvp.properties.models import (
     PropertyBankAccount,
+    PropertyBillingPeriod,
     ServiceProviderRelation,
     Unit,
     UnitVatOption,
@@ -128,6 +129,10 @@ async def patch_provider(
             account = await _get(session, ContactBankAccount, data["contact_bank_account_id"])
             if account.contact_id != row.contact_id:
                 raise svc.invalid("Die Bankverbindung gehört nicht zum Dienstleister.")
+        if data.get("documents", []) is None:
+            raise svc.invalid("Die Dokumente dürfen nicht leer übergeben werden.")
+        if data.get("documents"):
+            await svc.check_documents_exist(session, data["documents"], "Dokumente")
         if "creditor_account_id" in data:
             await svc.check_ledger_account(
                 session, data["creditor_account_id"], property_id, "Das Kreditorenkonto"
@@ -167,3 +172,77 @@ async def list_vat_options(
             )
         ).all()
         return [s.VatOptionHistoryOut.model_validate(r) for r in rows]
+
+
+# Billing period life cycle (GA02-01) ---------------------------------------------------------
+
+_PERIOD_ORDER = ("open", "results_created", "confirmed", "closed")
+
+
+@router.post(
+    "/properties/{property_id}/billing-periods/{period_id}/status",
+    summary="Status eines Abrechnungszeitraums ändern",
+)
+async def transition_billing_period(
+    property_id: uuid.UUID,
+    period_id: uuid.UUID,
+    body: s.BillingPeriodTransitionIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> s.BillingPeriodOut:
+    """Moves a period one step along open, results_created, confirmed, closed (or one step
+    back). ``closed`` sets ``locked_at`` and is final; reopening a closed period needs a
+    decision of the operator (docs/OPEN_QUESTIONS.md, AA08-01). For operating cost periods
+    the step to ``results_created`` needs a statement of the property inside the period that
+    left the draft state, and ``closed`` needs that no draft statement is left in it. The
+    status is a master data flag; it posts nothing and releases no gate."""
+    from mhvp.billing.models import Statement
+    from mhvp.billing.status import StatementStatus
+
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, PropertyBillingPeriod, period_id)
+        if row.property_id != property_id:
+            raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
+        current, target = _PERIOD_ORDER.index(row.status), _PERIOD_ORDER.index(body.status)
+        if row.status == "closed" or abs(target - current) != 1:
+            raise ProblemError(
+                ErrorCodes.PROPERTY_BILLING_PERIOD_TRANSITION,
+                detail=f"Von {row.status} nach {body.status} ist kein Wechsel möglich.",
+            )
+        if row.kind.value == "operating_costs" and target > current:
+            statements = (
+                await session.scalars(
+                    select(Statement.status).where(
+                        Statement.property_id == property_id,
+                        Statement.period_from >= row.valid_from,
+                        Statement.period_to <= row.valid_to,
+                    )
+                )
+            ).all()
+            if body.status == "results_created" and not any(
+                st is not StatementStatus.DRAFT for st in statements
+            ):
+                raise ProblemError(
+                    ErrorCodes.PROPERTY_BILLING_PERIOD_TRANSITION,
+                    detail="Es liegt noch keine berechnete Abrechnung im Zeitraum vor.",
+                )
+            if body.status == "closed" and any(st is StatementStatus.DRAFT for st in statements):
+                raise ProblemError(
+                    ErrorCodes.PROPERTY_BILLING_PERIOD_TRANSITION,
+                    detail="Im Zeitraum liegt noch eine Abrechnung im Entwurf.",
+                )
+        previous = row.status
+        row.status = body.status
+        row.locked_at = datetime.now(UTC) if body.status == "closed" else None
+        row.updated_by = principal.user_id
+        await session.flush()
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="property.billing_period_status_changed",
+            entity_type="property",
+            entity_id=property_id,
+            actor_user_id=principal.user_id,
+            payload={"kind": row.kind.value, "from": previous, "to": body.status},
+        )
+        return s.BillingPeriodOut.model_validate(row)

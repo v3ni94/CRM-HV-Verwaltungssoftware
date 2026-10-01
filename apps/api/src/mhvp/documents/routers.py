@@ -44,6 +44,7 @@ from mhvp.documents.models import (
     DocumentMirrorDeletion,
     DocumentSource,
     DocumentTemplate,
+    GeneratedDocument,
     LinkRole,
     MirrorDeletionStatus,
     MirrorStatus,
@@ -1287,6 +1288,15 @@ async def put_connection(
     options = dict(body.options)
     if kind is StorageKind.PAPERLESS:
         options = _paperless_options(options)
+    if kind is StorageKind.GOOGLE_DRIVE and options.get("folder_scheme", "").strip():
+        from mhvp.documents.folder_scheme import validate_folder_scheme
+
+        try:
+            options["folder_scheme"] = validate_folder_scheme(options["folder_scheme"])
+        except ValueError as exc:
+            raise svc.invalid(str(exc)) from None
+    else:
+        options.pop("folder_scheme", None)
     if kind is StorageKind.GOOGLE_DRIVE and body.enabled:
         missing = [k for k in ("root_folder_id", "client_id") if not body.options.get(k)]
         if missing:
@@ -1333,16 +1343,32 @@ async def put_connection(
 
 @router.get("/document-templates", summary="Vorlagen")
 async def list_templates(
-    request: Request, principal: TenantPrincipal = Depends(READ)
+    request: Request,
+    context_type: Annotated[
+        str | None,
+        Query(description="Nur Vorlagen, die für diesen Kontext erlaubt sind (leer: alle)"),
+    ] = None,
+    principal: TenantPrincipal = Depends(READ),
 ) -> list[s.TemplateOut]:
+    from mhvp.documents.models import TEMPLATE_CONTEXT_TYPES
+
+    if context_type is not None and context_type not in TEMPLATE_CONTEXT_TYPES:
+        raise svc.invalid("Unbekannter Kontexttyp.")
     async with tenant_tx(request, principal) as session:
-        rows = (
-            await session.scalars(
-                select(DocumentTemplate)
-                .where(DocumentTemplate.active.is_(True))
-                .order_by(DocumentTemplate.name)
+        query = (
+            select(DocumentTemplate)
+            .where(DocumentTemplate.active.is_(True))
+            .order_by(DocumentTemplate.name)
+        )
+        if context_type is not None:
+            # A template without context types is unrestricted.
+            query = query.where(
+                or_(
+                    func.cardinality(DocumentTemplate.context_types) == 0,
+                    DocumentTemplate.context_types.contains([context_type]),
+                )
             )
-        ).all()
+        rows = (await session.scalars(query)).all()
         return [s.TemplateOut.model_validate(r) for r in rows]
 
 
@@ -1351,12 +1377,13 @@ async def create_template(
     body: s.TemplateIn, request: Request, principal: TenantPrincipal = Depends(SETTINGS)
 ) -> s.TemplateOut:
     """A new version keeps older ones, so generated letters stay traceable to their template."""
-    for part in (body.subject, body.body):
-        try:
-            letters.check_template(part)
-        except letters.PlaceholderError as exc:
-            raise ProblemError(ErrorCodes.PLACEHOLDER, detail=str(exc)) from None
+    try:
+        placeholders = letters.placeholders_of(body.subject, body.body)
+    except letters.PlaceholderError as exc:
+        raise ProblemError(ErrorCodes.PLACEHOLDER, detail=str(exc)) from None
     async with tenant_tx(request, principal) as session:
+        if body.master_template_id is not None:
+            await _get(session, DocumentTemplate, body.master_template_id)
         previous = (
             await session.scalars(
                 select(DocumentTemplate)
@@ -1369,6 +1396,7 @@ async def create_template(
         row = DocumentTemplate(
             tenant_id=principal.tenant_id,
             version=(previous[0].version + 1) if previous else 1,
+            placeholders_used=placeholders,
             **body.model_dump(),
         )
         session.add(row)
@@ -1394,6 +1422,16 @@ async def _letter(
     store: bool,
     represents: uuid.UUID | None = None,
 ) -> tuple[bytes, Document | None]:
+    given = {
+        k: v
+        for k, v in (("property", property_id), ("unit", unit_id), ("contract", contract_id))
+        if v is not None
+    }
+    not_allowed = [k for k in given if template.context_types and k not in template.context_types]
+    if not_allowed:
+        raise svc.invalid(
+            f"Die Vorlage ist für den Kontext {', '.join(not_allowed)} nicht vorgesehen."
+        )
     contact, lines, recipient = await svc.recipient(session, contact_id)
     context, info, links = await svc.entity_context(session, property_id, unit_id, contract_id)
     if represents is not None:
@@ -1439,6 +1477,24 @@ async def _letter(
         links=[("contact", contact.id, LinkRole.GENERATED)]
         + [(t, i, LinkRole.GENERATED) for t, i in links],
         created_by=principal.user_id,
+    )
+    # Most specific entity first (contract, unit, property), else the recipient (GA04-11).
+    context_type, context_id = next(
+        ((k, given[k]) for k in ("contract", "unit", "property") if k in given),
+        ("contact", contact.id),
+    )
+    session.add(
+        GeneratedDocument(
+            tenant_id=principal.tenant_id,
+            created_by=principal.user_id,
+            document_id=document.id,
+            template_id=template.id,
+            template_code=template.code,
+            template_version=template.version,
+            context_type=context_type,
+            context_id=context_id,
+            recipient_contact_id=contact.id,
+        )
     )
     await _event(
         session,
@@ -1568,6 +1624,54 @@ async def serial_letter(
             assert document is not None  # noqa: S101 - store=True
             documents.append(await _out(session, document))
         return s.SerialLetterOut(documents=documents)
+
+
+@router.get("/generated-documents", summary="Erzeugte Dokumente mit Herkunft und Zustellung")
+async def list_generated_documents(
+    request: Request,
+    document_id: uuid.UUID | None = None,
+    context_type: Annotated[str | None, Query(max_length=32)] = None,
+    context_id: uuid.UUID | None = None,
+    recipient_contact_id: uuid.UUID | None = None,
+    limit: Annotated[int, Query(ge=1, le=200)] = 50,
+    offset: Annotated[int, Query(ge=0)] = 0,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[s.GeneratedDocumentOut]:
+    """Provenance of produced letters: template and version, context entity, recipient and
+    the dispatch record (channel, status, evidence). Only documents the caller may see."""
+    from mhvp.communication.models import Dispatch
+
+    async with tenant_tx(request, principal) as session:
+        query = (
+            select(GeneratedDocument, Dispatch)
+            .join(Document, Document.id == GeneratedDocument.document_id)
+            .join(Dispatch, Dispatch.id == GeneratedDocument.dispatch_id, isouter=True)
+            .order_by(GeneratedDocument.created_at.desc(), GeneratedDocument.id)
+            .limit(limit)
+            .offset(offset)
+        )
+        for scope in (_scope_filter(session), _property_scope_filter(session)):
+            if scope is not None:
+                query = query.where(GeneratedDocument.document_id.in_(scope))
+        if document_id is not None:
+            query = query.where(GeneratedDocument.document_id == document_id)
+        if context_type is not None:
+            query = query.where(GeneratedDocument.context_type == context_type)
+        if context_id is not None:
+            query = query.where(GeneratedDocument.context_id == context_id)
+        if recipient_contact_id is not None:
+            query = query.where(GeneratedDocument.recipient_contact_id == recipient_contact_id)
+        out: list[s.GeneratedDocumentOut] = []
+        for row, dispatch in (await session.execute(query)).all():
+            item = s.GeneratedDocumentOut.model_validate(row)
+            if dispatch is not None:
+                item.delivery_channel = dispatch.channel
+                item.delivery_status = dispatch.status
+                item.delivery_evidence_kind = dispatch.evidence_kind
+                item.delivery_evidence_ref = dispatch.evidence_ref
+                item.delivered_at = dispatch.delivered_at or dispatch.sent_at
+            out.append(item)
+        return out
 
 
 # Paperless-Dokumente in Ticket- und Objektansicht (M31) -----------------------------------

@@ -11,7 +11,7 @@ from sqlalchemy.pool import NullPool
 
 from mhvp.accounting import dunning
 from mhvp.accounting.models import DunningRun, Ledger
-from mhvp.automation.job_schedule import job_allowed
+from mhvp.automation.job_schedule import job_allowed, lock_job
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
 from mhvp.core.db.tenancy import platform_transaction, tenant_transaction
@@ -37,6 +37,17 @@ async def dunning_previews(settings: Settings) -> dict[str, int]:
                     if not await job_allowed(session, tenant_id, "accounting-dunning-run"):
                         continue
                     if await session.scalar(select(Ledger.id).limit(1)) is None:
+                        continue
+                    # GA12-06: one scheduled preview per tenant and day, also against a
+                    # parallel run (advisory lock, then check for a run without author).
+                    await lock_job(session, tenant_id, "accounting-dunning-run")
+                    if await session.scalar(
+                        select(DunningRun.id).where(
+                            DunningRun.run_date == local_today(),
+                            DunningRun.created_by.is_(None),
+                            DunningRun.status != "failed",
+                        )
+                    ):
                         continue
                     await dunning.preview(
                         session, tenant_id=tenant_id, user_id=None, run_date=local_today()

@@ -173,3 +173,7 @@ zeigt Details, Zuordnung, Prüfbefunde und Übernahme.
 ## Statuswechsel der Eigentümerabrechnung
 
 Nach der Berechnung zeigt die Eigentümerabrechnung die möglichen nächsten Schritte: intern freigeben (nur eine zweite Person), Prüfung durch den Beirat erfassen, ausgeben, fällig stellen, als gebucht erfassen und sperren. Ausgeben, fällig stellen und als gebucht erfassen setzen die Freigabestufe G3 voraus; ist sie nicht erteilt, lehnt das System den Schritt mit Begründung ab. Als gebucht erfassen verlangt die IDs bereits gebuchter Buchungen dieses Buchungskreises und bucht selbst nichts. Jeder Schritt erscheint mit Datum und Notiz im Statusverlauf.
+
+## Fristausnahme, Informationsblatt und Belegmappe
+
+In der Betriebskostenabrechnung zeigt der Abschnitt "Ausnahme von der Abrechnungsfrist", ob eine Nachforderung nach Ablauf der Fristorientierung gesperrt ist. Im Entwurf werden Ausnahmegrund und die Dokument-ID des Nachweises erfasst; erst mit beiden ist die Ausnahme wirksam. Unter "Anschreiben" stehen die Vorschau mit Informationsblatt und das Informationsblatt als eigenes PDF bereit; die Texte zu Belegeinsicht und Einwendungen erscheinen erst nach Freigabe durch den Betreiber. In der Eigentümerabrechnung fügt die Option "Belege der gebuchten Ausgaben an die PDF-Ausgabe anfügen" die verknüpften PDF-Belege an; Buchungen ohne Beleg stehen im Block "Belegmappe" und auf einer Schlussseite. Für SEV-Eigentümer erscheinen die belegten Lohnanteile nach § 35a EStG aus der WEG-Abrechnung zur Information.

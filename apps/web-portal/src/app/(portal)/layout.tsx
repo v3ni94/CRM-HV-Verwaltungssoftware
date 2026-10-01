@@ -6,6 +6,7 @@ import { InstallHint } from "@/components/shell/InstallHint";
 import { LogoutButton } from "@/components/shell/LogoutButton";
 import { RoleSwitcher } from "@/components/shell/RoleSwitcher";
 import { PortalNav } from "@/components/shell/PortalNav";
+import { LanguageSwitch } from "@/components/shell/LanguageSwitch";
 import { ThemeSwitch } from "@/components/shell/ThemeToggle";
 import { type Me, showsHandover } from "@/components/portal/types";
 import { BrandMark, LegalLinks } from "@/components/shell/Branding";
@@ -42,7 +43,10 @@ export default async function PortalLayout({ children }: { children: React.React
   const board = Boolean(me?.roles.includes("board"));
   const boardOnly = board && !me?.roles.some((role) => role !== "board");
   const links: { href: string; label: string }[] = provider
-    ? [{ href: "/auftraege", label: t("nav.orders") }]
+    ? [
+        { href: "/auftraege", label: t("nav.orders") },
+        { href: "/rahmenvertraege", label: t("nav.framework") },
+      ]
     : boardOnly
       ? [{ href: "/pruefung", label: t("nav.audit") }]
       : [
@@ -102,6 +106,7 @@ export default async function PortalLayout({ children }: { children: React.React
             {/* Darstellung Hell, Dunkel, Automatisch (stored in this browser) next to Abmelden. */}
             <div className="flex flex-wrap items-center gap-2">
               <RoleSwitcher roles={portalRoles} current={view} />
+              <LanguageSwitch />
               <ThemeSwitch />
               <LogoutButton />
             </div>

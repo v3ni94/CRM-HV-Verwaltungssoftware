@@ -604,6 +604,11 @@ class TenantSettings(IdMixin, TimestampMixin, TenantMixin, Base):
     hoa_virtual_meetings_enabled: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=False, server_default="false"
     )
+    # GA07-01 (migration 0308): lock a virtual meeting whose enabling resolution is valid for
+    # more than three years after its date; default off (only a notice), legal question open.
+    hoa_virtual_basis_term_lock_enabled: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
     # Rückkanal Gmail zu Plattform (rule M20-08, migration 0224, docs/rules/M20-08): mode
     # ``off`` (label changes are ignored), ``record_only`` (default: states and events are
     # recorded, nothing changes status) or ``done`` (a mail archived in Gmail by the
@@ -751,6 +756,24 @@ class ReleaseGateRequest(IdMixin, TimestampMixin, TenantMixin, Base):
     four_eyes: Mapped[bool] = mapped_column(
         Boolean, nullable=False, default=True, server_default=text("true")
     )
+    # GA14-04, migration 0304: opening and revocation are kept separately so a revocation
+    # never overwrites who opened the gate; ``evidence_document_id`` links the evidence.
+    opened_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    opened_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoked_by: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    revoke_comment: Mapped[str | None] = mapped_column(Text)
+    evidence_document_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("document.id", ondelete="RESTRICT", name="fk_release_gate_request_evidence_doc"),
+    )
+    # GA14-02: structured scope, NULL means all (default); GA14-03: checklist code -> note.
+    scope_property_ids: Mapped[list[uuid.UUID] | None] = mapped_column(ARRAY(UUID(as_uuid=True)))
+    scope_legal_entity_ids: Mapped[list[uuid.UUID] | None] = mapped_column(
+        ARRAY(UUID(as_uuid=True))
+    )
+    scope_functions: Mapped[list[str] | None] = mapped_column(ARRAY(String(64)))
+    checklist: Mapped[dict[str, Any] | None] = mapped_column(JSONB)
 
 
 class TenantExportJob(IdMixin, TimestampMixin, TenantMixin, Base):

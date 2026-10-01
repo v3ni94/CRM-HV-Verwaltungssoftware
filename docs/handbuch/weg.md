@@ -411,3 +411,27 @@ Sobald die Abrechnung des Anfangsjahres berechnet oder freigegeben ist, lassen s
 ## Protokollabschluss: Dokument auswählen
 
 Beim Protokollabschluss wird das unterschriebene Protokoll nicht mehr als ID eingetippt. Über die Suche (mindestens 2 Zeichen) wird ein vorhandenes Dokument gewählt. Ein neues Protokoll wird zuvor im Dokumentenbereich hochgeladen. Beim Bestätigen durch die zweite Person ist die Auswahl gesperrt. Der Status einer Versammlung kann auch "gestört" lauten; dann sind Abschluss und Beschlussfassung nicht möglich.
+
+## Vermögensbericht im Eigentümerportal und Bereitstellungsprotokoll
+
+Ein ausgestellter Vermögensbericht (Status "ausgestellt") erscheint im Eigentümerportal unter Abrechnungen. Das PDF ist erst nach Freigabestufe G4 abrufbar. Jeder Abruf wird je Einheit vermerkt. In der Berichtsansicht zeigt der Abschnitt "Bereitstellungsprotokoll je Eigentümer" ersten und letzten Abruf und die Anzahl. Der Vermerk ist ein Indiz und keine Zustellung; Eigentümer ohne Abruf erhalten den Bericht auf anderem Weg (Brief). Ob der Portalabruf rechtlich genügt, ist offen (AA07-02).
+
+## Sondererwerb im Abrechnungsjahr freigeben
+
+Hat im Abrechnungsjahr ein Eigentümer durch Ersterwerb, Erbfall, Zwangsversteigerung, Schenkung oder sonstigen Erwerb übernommen, oder ist Sondernachfolgehaftung gekennzeichnet, sperrt das Abrechnungspaket mit dem Hinweis "Erwerbsart im Abrechnungsjahr". In der Hausgeldabrechnung erscheint der Abschnitt "Sondererwerb im Abrechnungsjahr" mit einem Zuordnungsvorschlag zur Prüfung. Eine Person beantragt die Freigabe, eine andere Person gibt sie mit Begründung frei. Der Vorschlag ist keine Rechtsregel; die Berechnung ändert sich nicht (offen: AA07-01). Bei einer neuen Abrechnungsversion ist die Freigabe erneut nötig.
+
+## Versammlungsart, Ergebnis je TOP und Beschluss-Sammlung (Stand 01.10.2026)
+
+Beim Anlegen einer Versammlung wählen Sie die Art (ordentlich, außerordentlich, Teilversammlung,
+Umlaufverfahren); Wiederholung und Fortsetzung werden mit Bezug auf die Ursprungsversammlung
+über die Schnittstelle angelegt. In der Versammlung erfassen Sie unter "Art, Dauer, Vorlagen
+und Beschreibung" das Ende, die Vorlagen sowie eine öffentliche Beschreibung, die Eigentümer im
+Portal sehen, und eine interne Beschreibung, die nur die Verwaltung sieht. Für einen TOP wählen
+Sie die Beschlussregel "Zustimmung aller Eigentümer", wenn alle stimmberechtigten Eigentümer
+zustimmen müssen, nicht nur die anwesenden. Nach der Einladung setzen Sie je TOP das Ergebnis
+"vertagt" oder "ohne Abstimmung" und hinterlegen den Protokolltext; angenommen und abgelehnt
+ergeben sich aus der Verkündung. Jede Stimme trägt ihren Kanal (Präsenz, online, Umlauf). Die
+Beschluss-Sammlung zeigt Ort, Eintragungszeit und gerichtliche Vermerke; "gelöscht" und
+"gegenstandslos" sind Vermerke, der Eintrag bleibt erhalten. In den Versammlungseinstellungen
+schalten Sie optional die Sperre bei einer Geltungsdauer des Grundlagenbeschlusses über drei
+Jahre ein; ohne Schalter erscheint nur ein Hinweis (rechtlich zu prüfen).

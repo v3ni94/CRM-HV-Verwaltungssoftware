@@ -90,3 +90,26 @@ Aufruf: `MHVP_PERF=1 uv run pytest tests/integration/test_u07_document_search_pe
 Messwert 01.10.2026 (Entwicklungsumgebung, 4 Kerne, geteilt, nicht repräsentativ): `PERF portal_receipt_search docs=5000 median=3.6ms max=9.5ms` (Schwelle 300 ms).
 
 Befund zur Indexnutzung (EXPLAIN im Test): Unter Row Level Security nutzt die Abfrage den Mandantenindex `ix_document_tenant_created_at`, nicht die Trigramm-Indizes. Ursache: `lower()` und `LIKE` sind in PostgreSQL nicht als leakproof markiert, daher dürfen sie bei aktiver Mandantenrichtlinie nicht als Indexbedingung vorgezogen werden. Ohne diese Schranke (Probe auf einer temporären Kopie mit denselben Indizes) wählt der Planer einen BitmapOr über beide Trigramm-Indizes, sie sind also korrekt definiert. Die Abfrage lässt sich ohne Schemaänderung nicht anpassen; bei 5.000 Belegen je Mandant genügt der Mandantenindex mit Filter. Ob bei deutlich größeren Beständen eine Anpassung nötig wird (zum Beispiel leakproof-Wrapperfunktion, Betreiberentscheidung mit Superuser-Rechten), ist mit Staging-Daten zu klären.
+
+## Detailseiten und wiederholbarer Nachweis (GA12-07)
+
+Vorgabe aus Abschnitt 16: Detailseiten unter 500 ms (P95). Der Test `apps/api/tests/integration/test_ga12_perf.py` misst die Detailendpunkte eines Objekts (`/properties/{id}`, 30 Einheiten), eines Eigentümervertrags (`/contracts/{id}`) und eines Tickets (`/tickets/{id}`, 12 Tickets im Mandanten) mit je 40 Abrufen nach einem Vorlauf. Aufruf:
+
+```
+cd apps/api
+MHVP_PERF=1 uv run pytest tests/integration/test_ga12_perf.py -m slow -s --no-cov
+```
+
+Jede Messung schreibt eine Zeile `PERF property_detail|contract_detail|ticket_detail ... p95=...ms target=500ms`.
+
+Wiederholung in CI: der Workflow `.github/workflows/perf.yml` läuft wöchentlich (montags 03:17 UTC) und manuell (`workflow_dispatch`, Eingabe Schwelle in Sekunden). Er setzt `MHVP_PERF=1`, führt diesen Test und `test_p15_perf.py` aus und schreibt die `PERF`-Zeilen in die Job-Zusammenfassung. Die Regressionsschwelle ist mit 1 Sekunde (Variable `MHVP_PERF_DETAIL_LIMIT`) bewusst großzügig, weil geteilte Runner schwanken; sie fängt grobe Rückschritte ab (zum Beispiel N+1 Abfragen), nicht den Wert von 500 ms. Die Prüfung gegen 500 ms erfolgt auf dem Staging-Server mit `MHVP_PERF_DETAIL_LIMIT=0.5`.
+
+Messwerte 01.10.2026 (Entwicklungsumgebung, 4 Kerne, mit etwa 20 gleichzeitigen Läufen geteilt, nicht repräsentativ):
+
+```
+PERF property_detail samples=40 median=36ms p95=48ms target=500ms
+PERF contract_detail samples=40 median=67ms p95=96ms target=500ms
+PERF ticket_detail samples=40 median=81ms p95=125ms target=500ms
+```
+
+Offen: Messung mit produktionsnahem Bestand (Betreiber, Staging), siehe oben.

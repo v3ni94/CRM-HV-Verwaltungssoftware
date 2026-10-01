@@ -575,3 +575,42 @@ describe("displayValue", () => {
     expect(displayValue("net", null)).toBe("");
   });
 });
+
+describe("GA08-07 e-invoice validation block", () => {
+  it("shows profile, validator, version, result and messages", () => {
+    renderIntake(
+      [
+        makeDraft({
+          e_invoice_format: "xrechnung",
+          e_invoice_profile:
+            "urn:cen.eu:en16931:2017#compliant#urn:xeinkauf.de:kosit:xrechnung_3.0",
+          validation: {
+            validator: "mhvp-formal-check",
+            validator_version: "1.0",
+            official: false,
+            result: "findings",
+            messages: ["Fälligkeit fehlt"],
+          },
+        }),
+      ],
+      "draft-1",
+    );
+    const block = screen.getByTestId("receipt-einvoice-validation");
+    expect(within(block).getByText("mhvp-formal-check")).toBeInTheDocument();
+    expect(within(block).getByText("1.0")).toBeInTheDocument();
+    expect(within(block).getByText("mit Befunden")).toBeInTheDocument();
+    expect(
+      within(block).getByText(/kein amtlicher Validator/),
+    ).toBeInTheDocument();
+    expect(within(block).getByText("Fälligkeit fehlt")).toBeInTheDocument();
+  });
+
+  it("states that no result is stored yet", () => {
+    renderIntake([makeDraft({ e_invoice_format: "zugferd" })], "draft-1");
+    expect(
+      within(screen.getByTestId("receipt-einvoice-validation")).getByText(
+        "Noch kein Prüfergebnis gespeichert.",
+      ),
+    ).toBeInTheDocument();
+  });
+});

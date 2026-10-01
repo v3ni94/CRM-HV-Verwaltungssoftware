@@ -14,6 +14,9 @@ export type ResolutionRow = {
   majority_check?: MajorityCheck | null;
   allowed_majority?: string | null;
   vote_deadline_at?: string | null;
+  location?: string | null;
+  court_notes?: string | null;
+  entered_at?: string | null;
 };
 
 /** Beschluss-Sammlung (M24, M25): number, date, subject, status; read only. */
@@ -46,6 +49,18 @@ export function ResolutionTable({ rows }: { rows: ResolutionRow[] }) {
                 </span>
               ) : null}
               {r.majority_check ? <MajorityCheckLine check={r.majority_check} /> : null}
+              {r.location || r.entered_at ? (
+                <span className="block text-xs text-muted" data-testid="resolution-entry">
+                  {r.location ? `${t("location")}: ${r.location}` : ""}
+                  {r.location && r.entered_at ? " · " : ""}
+                  {r.entered_at ? `${t("enteredAt")}: ${formatDate(r.entered_at)}` : ""}
+                </span>
+              ) : null}
+              {r.court_notes ? (
+                <span className="block whitespace-pre-line text-xs" data-testid="resolution-court-notes">
+                  {t("courtNotes")}: {r.court_notes}
+                </span>
+              ) : null}
             </td>
             <td>{t(`kinds.${r.kind}`)}</td>
             <td>{t(`statuses.${r.status}`)}</td>

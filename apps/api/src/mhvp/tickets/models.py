@@ -185,6 +185,9 @@ class Ticket(IdMixin, TimestampMixin, TenantMixin, Base):
     contact_id: Mapped[uuid.UUID | None] = _fk("contact.id")
     template_id: Mapped[uuid.UUID | None] = _fk("ticket_template.id")
     category: Mapped[str | None] = mapped_column(String(100))
+    # Category catalog (GA04-08, migration 0305): the catalog is ``ticket_template``; the free
+    # text ``category`` stays as fallback and is kept by the template on rename.
+    category_id: Mapped[uuid.UUID | None] = _fk("ticket_template.id", ondelete="SET NULL")
     # Thema (operator 25.09.2026): Code aus dem Kompetenzkatalog, s. TicketTemplate.topic.
     topic: Mapped[str | None] = mapped_column(String(32))
     title: Mapped[str] = mapped_column(String(300), nullable=False)
@@ -315,6 +318,10 @@ class WorkOrder(IdMixin, TimestampMixin, TenantMixin, Base):
     description: Mapped[str] = mapped_column(Text, nullable=False)
     budget_limit: Mapped[Decimal | None] = mapped_column(MONEY)
     requires_board_approval: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    # GA04-07 (6.6): reference to the approval workflow of the order. No FK: the platform has
+    # no workflow table yet (docs/OPEN_QUESTIONS.md AA05-01); the board vote (tickets.board)
+    # stays the effective approval until decided.
+    approval_workflow_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     status: Mapped[OrderStatus] = mapped_column(
         _enum(OrderStatus, "work_order_status"), nullable=False, default=OrderStatus.DRAFT
     )

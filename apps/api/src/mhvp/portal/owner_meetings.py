@@ -67,6 +67,9 @@ async def meetings(request: Request, ctx: Portal = Depends(portal_user)) -> list
                     "mode_label": MODE_LABEL.get(m.mode, m.mode),
                     "scheduled_at": m.scheduled_at,
                     "location": m.location,
+                    # GA03-01: only the public description reaches the portal
+                    "public_description": m.public_description,
+                    "ends_at": m.ends_at,
                     "status": m.status,
                     "invited_at": m.invited_at,
                     "notice": meeting_rules.invitation_notice(m, basis),

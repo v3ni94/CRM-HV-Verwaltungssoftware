@@ -398,8 +398,14 @@ export type PortalFormField = {
     | "email"
     | "phone"
     | "file"
+    | "address"
+    | "location"
+    | "signature"
+    | "consent"
+    | "amount"
     | "heading"
-    | "info";
+    | "info"
+    | "divider";
   required: boolean;
   options?: string[] | null;
   help?: string | null;

@@ -14,8 +14,9 @@ from sqlalchemy import (
     String,
     Text,
     UniqueConstraint,
+    text,
 )
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.dialects.postgresql import ARRAY, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from mhvp.core.crypto import EncryptedText
@@ -34,6 +35,10 @@ class PortalAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     __table_args__ = (
         UniqueConstraint("tenant_id", "user_id"),
         UniqueConstraint("tenant_id", "contact_id"),
+        CheckConstraint(
+            "status IN ('not_invited', 'invited', 'active', 'locked', 'expired', 'revoked')",
+            name="status",
+        ),
     )
 
     user_id: Mapped[uuid.UUID] = _fk("app_user.id")
@@ -42,6 +47,13 @@ class PortalAccount(IdMixin, TimestampMixin, TenantMixin, Base):
     invitation_hash: Mapped[str | None] = mapped_column(String(64), index=True)
     invitation_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     activated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    # GA02-07 (migration 0310): roles derived from the access grants (tenant, owner), time of
+    # the invitation. ``expired`` and ``locked`` are derived when read (invitation_expires_at,
+    # user lock), not stored.
+    roles: Mapped[list[str]] = mapped_column(
+        ARRAY(String(16)), nullable=False, default=list, server_default=text("'{}'")
+    )
+    invited_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     # M21-01: optional second factor by e-mail code on top of the magic link login, switched on
     # per account by the management (portal-admin); off by default (Produktschutz, docs/rules).
     magic_link_2fa: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
@@ -51,13 +63,22 @@ class AccessGrant(IdMixin, TimestampMixin, TenantMixin, Base):
     """6.9.6: one matrix for UI, API, downloads, search and exports."""
 
     __tablename__ = "access_grant"
-    __table_args__ = (Index("ix_access_grant_subject", "tenant_id", "account_id"),)
+    __table_args__ = (
+        Index("ix_access_grant_subject", "tenant_id", "account_id"),
+        # GA03-05: a document_class grant names the class (scope_id is then the legal entity).
+        CheckConstraint(
+            "scope_type <> 'document_class' OR document_class IS NOT NULL",
+            name="document_class_scope",
+        ),
+    )
 
     account_id: Mapped[uuid.UUID] = _fk("portal_account.id", ondelete="CASCADE")
     scope_type: Mapped[str] = mapped_column(
         String(16), nullable=False
-    )  # unit, contract, property, legal_entity
+    )  # unit, contract, property, legal_entity, document_class (6.9.6)
     scope_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
+    # GA03-05: document class (retention profile class) for scope_type document_class
+    document_class: Mapped[str | None] = mapped_column(String(63))
     right: Mapped[str] = mapped_column(String(16), nullable=False)  # read, download, comment
     legal_basis: Mapped[str] = mapped_column(String(32), nullable=False)
     role: Mapped[str] = mapped_column(String(16), nullable=False)  # tenant, owner
@@ -244,3 +265,21 @@ class PortalSupportAccess(IdMixin, TimestampMixin, TenantMixin, Base):
     staff_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     reason: Mapped[str] = mapped_column(String(500), nullable=False)
     areas: Mapped[str] = mapped_column(String(200), nullable=False)
+
+
+class ProviderAvailability(IdMixin, TimestampMixin, TenantMixin, Base):
+    """GA11-04 (14, Dienstleister Phase 4): availability window of a service provider, entered
+    by the management and shown read only in the portal of the provider."""
+
+    __tablename__ = "provider_availability"
+    __table_args__ = (
+        Index("ix_provider_availability_provider", "tenant_id", "provider_contact_id", "starts_at"),
+        CheckConstraint("ends_at > starts_at", name="window"),
+        CheckConstraint("kind IN ('available', 'unavailable')", name="kind"),
+    )
+
+    provider_contact_id: Mapped[uuid.UUID] = _fk("contact.id")
+    starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    ends_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    kind: Mapped[str] = mapped_column(String(16), nullable=False, default="available")
+    note: Mapped[str | None] = mapped_column(String(300))

@@ -38,6 +38,12 @@ from mhvp.accounting.models import (
 from mhvp.core.problems import ErrorCodes, ProblemError
 
 PRORATION = "Unterjähriger Beginn oder Wechsel: zeitanteilige Regel nicht freigegeben"
+# GA06-01 (7.5 Satz 4): a WEG owner change is not prorated like a tenancy change by day; the
+# released proration rules (M13-01) do not apply to ownership contracts until a WEG rule exists.
+OWNERSHIP_CHANGE = (
+    "Eigentümerwechsel oder Betragswechsel im Monat (WEG): keine zeitanteilige Berechnung "
+    "wie bei Mietwechsel, eigene Regel nicht freigegeben"
+)
 VAT_MANUAL = "Umsatzsteuer auf Sollstellung: Steuerbehandlung nicht freigegeben"
 WORKDAY = "Fälligkeit nach Werktag: Feiertagskalender offen"
 # Reserved payment type code of ``PaymentTypeAccount`` for the output tax account (M13-03).
@@ -193,7 +199,15 @@ async def compute(
         partial_contract = contract.start_date > first or (
             contract.end_date is not None and contract.end_date < last
         )
-        if rules["enabled"]:
+        ownership = getattr(contract.kind, "value", contract.kind) == "ownership"
+        ownership_partial = ownership and (
+            partial_contract
+            or any(
+                p.valid_from > first or (p.valid_to is not None and p.valid_to < last)
+                for p in payments
+            )
+        )
+        if rules["enabled"] and not ownership_partial:
             items.extend(
                 _compute_with_rules(
                     contract, list(payments), schedule, ledger, mapping, posted, first, rules
@@ -236,7 +250,7 @@ async def compute(
                 or p.valid_from > first
                 or (p.valid_to is not None and p.valid_to < last)
             ):
-                mark(ItemStatus.MANUAL, PRORATION)
+                mark(ItemStatus.MANUAL, OWNERSHIP_CHANGE if ownership else PRORATION)
             if ledger is None:
                 mark(ItemStatus.BLOCKED, "Kein Buchungskreis für den Gläubiger")
             elif (ledger.id, p.payment_type_code) not in mapping:
@@ -632,6 +646,11 @@ def admin_fee(setting: Any, unit_counts: dict[str, int]) -> dict[str, Any]:
     net = Decimal("0.00")
     for unit_type, count in sorted(unit_counts.items()):
         rate = setting.amounts_per_unit_type.get(unit_type)
+        # GA03-06: an SE fee (debtor party set) with ``sev_fee_amount`` charges that net amount
+        # per unit instead of the per unit type amounts.
+        sev_amount = getattr(setting, "sev_fee_amount", None)
+        if sev_amount is not None and setting.invoice_debtor_party_id is not None:
+            rate = str(sev_amount)
         if rate is None or count == 0:
             continue
         amount = (Decimal(rate) * count).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)

@@ -135,6 +135,10 @@ async def _out(session: AsyncSession, st: Statement) -> dict[str, Any]:
         "include_heating": st.include_heating,
         "settings": st.settings,
         "deadline_exception": st.deadline_exception,
+        "deadline_exception_document_id": st.deadline_exception_document_id,
+        "deadline_exception_set_by": st.deadline_exception_set_by,
+        "deadline_exception_set_at": st.deadline_exception_set_at,
+        "deadline_exception_effective": st.deadline_exception_effective,
         "result_entry_ids": st.result_entry_ids,
         "locked_at": st.locked_at,
         "deadline_orientation": calc.deadline(st.period_to),
@@ -339,6 +343,9 @@ async def new_version(
             include_heating=old.include_heating,
             settings=old.settings,
             deadline_exception=old.deadline_exception,
+            deadline_exception_document_id=old.deadline_exception_document_id,
+            deadline_exception_set_by=old.deadline_exception_set_by,
+            deadline_exception_set_at=old.deadline_exception_set_at,
         )
         session.add(new)
         await session.flush()

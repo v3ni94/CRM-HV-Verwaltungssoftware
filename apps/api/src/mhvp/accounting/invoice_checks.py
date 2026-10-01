@@ -113,6 +113,11 @@ def amount_findings(invoice: Invoice) -> list[str]:
         out.append("Abzüge, Anzahlungen und Einbehalt übersteigen den Rechnungsbetrag")
     if invoice.reverse_charge:
         out.append("Reverse Charge gekennzeichnet: Fachprüfung durch Steuerberater (PÜ03, R23)")
+        # GA08-01 (7.11 S01): own release point, never an automatic application.
+        out.append(
+            "Möglicher Fall des § 13b UStG: gesonderter Freigabepunkt (R23), keine Automatik; "
+            "Normzuordnung und Steuerschuldnerschaft vor der Freigabe vom Steuerberater bestätigen"
+        )
         if invoice.vat != 0:
             out.append("Reverse Charge gekennzeichnet, aber Umsatzsteuer ausgewiesen")
     if invoice.construction_withholding:

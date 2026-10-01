@@ -164,6 +164,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^contact-merges/${ID}/(reject|execute)$`) },
   { method: "POST", pattern: new RegExp(`^contact-tags/${ID}/merge$`) },
   { method: "PATCH", pattern: new RegExp(`^properties/${ID}/(bank-accounts|service-providers)/${ID}$`) },
+  { method: "POST", pattern: new RegExp(`^properties/${ID}/billing-periods/${ID}/status$`) },
   { method: "GET", pattern: new RegExp(`^properties/${ID}/takeover-checklist$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/takeover-checklist$`) },
   { method: "POST", pattern: new RegExp(`^properties/${ID}/takeover-checklist/tickets$`) },
@@ -498,6 +499,9 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries(/cost-transfer|/interest)?$`) },
   { method: "DELETE", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/(post|approve|reverse)$`) },
+  // GA05-02: versioned notes on posted entries (read accounting:read, write accounting:update).
+  { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/notes$`) },
+  { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/entries/${ID}/notes$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/(lock|sync-creditors)$`) },
   { method: "GET", pattern: new RegExp(`^accounting/ledgers/${ID}/year-carryover$`) },
   { method: "POST", pattern: new RegExp(`^accounting/ledgers/${ID}/year-carryover$`) },
@@ -638,6 +642,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "GET", pattern: new RegExp(`^statements/${ID}/(results|diff|inspections)$`) },
   { method: "PUT", pattern: new RegExp(`^statements/${ID}/results/${ID}/delivery$`) },
   { method: "POST", pattern: new RegExp(`^statements/${ID}/(letters|letters/preview|result-entries|inspections)$`) },
+  // GA06-02: Informationsblatt zur Abrechnung (PDF draft).
+  { method: "POST", pattern: new RegExp(`^statements/${ID}/info-sheet/preview$`) },
   { method: "PATCH", pattern: new RegExp(`^statements/${ID}/inspections/${ID}$`) },
   // Draft heating statement (M17-02): inputs, consumption import, preview and feed; G3 unchanged.
   { method: "GET", pattern: new RegExp(`^statements/${ID}/heating(/consumption-info)?$`) },
@@ -668,6 +674,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^billing/owner-statements/${ID}/(calculate|approve)$`) },
   // S69-01: status model of owner and reserve statements.
   { method: "POST", pattern: new RegExp(`^billing/owner-statements/${ID}/transition$`) },
+  // GA03-08: output options (attach receipts).
+  { method: "PATCH", pattern: new RegExp(`^billing/owner-statements/${ID}/options$`) },
   { method: "GET", pattern: /^hoa\/reserve-statements$/ },
   { method: "GET", pattern: new RegExp(`^hoa/reserve-statements/${ID}$`) },
   { method: "POST", pattern: /^hoa\/reserve-statements$/ },
@@ -702,6 +710,8 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   // W2 P07 (M24-01, M24-02): reserves, reserve movements, costs from the ledger.
   { method: "POST", pattern: /^hoa\/reserves$/ },
   { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/(reserve-movements|costs/from-ledger)$`) },
+  // GA07-03: Sondererwerb im Abrechnungsjahr beantragen und freigeben (vier Augen).
+  { method: "POST", pattern: new RegExp(`^hoa/statements/${ID}/acquisitions/${ID}/(request|release)$`) },
   // T09 (M24-01): reserve detail, change, development per year, movements of a statement.
   { method: "GET", pattern: new RegExp(`^hoa/reserves/${ID}(/development)?$`) },
   { method: "PATCH", pattern: new RegExp(`^hoa/reserves/${ID}$`) },
@@ -723,6 +733,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/votes$`) },
   { method: "GET", pattern: new RegExp(`^hoa/agenda/${ID}/tally$`) },
   { method: "POST", pattern: new RegExp(`^hoa/agenda/${ID}/announce$`) },
+  { method: "PATCH", pattern: new RegExp(`^hoa/agenda/${ID}$`) }, // GA03-02
   // Einsichtsanfragen außerhalb des Portals (A61): Erfassung, Statuswechsel, Rückfragen, Paket.
   { method: "GET", pattern: /^hoa\/inspection-requests$/ },
   { method: "POST", pattern: /^hoa\/inspection-requests$/ },
@@ -1108,6 +1119,7 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^properties/${ID}/notices$`) },
   { method: "PATCH", pattern: new RegExp(`^notices/${ID}$`) },
   { method: "POST", pattern: new RegExp(`^notices/${ID}/end$`) },
+  { method: "GET", pattern: new RegExp(`^notices/${ID}/reads$`) },
   // Messdienstleister (mhvp.metering Stufe 1): Verbindungen, Zuordnungen, Abruf, Klärung, CSV.
   { method: "GET", pattern: /^metering\/(providers|connections|assignments|sync-jobs|clearing-items|assignments-export|assignments-import\/template)$/ },
   { method: "POST", pattern: /^metering\/(connections|assignments|sync-jobs)$/ },
@@ -1243,6 +1255,19 @@ const ALLOWED: { method: string; pattern: RegExp }[] = [
   { method: "POST", pattern: new RegExp(`^platform/licenses/${ID}/end$`) },
   { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/(billing-preview|usage/history)$`) },
   { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/usage$`) },
+  // AA17: Standard-Zustellweg, Nummernkreise, Kundendomains, Mandantenstatus, OIDC-Clients.
+  { method: "GET", pattern: /^tenant\/delivery-default$/ },
+  { method: "PUT", pattern: /^tenant\/delivery-default$/ },
+  { method: "GET", pattern: /^tenant\/number-formats$/ },
+  { method: "PUT", pattern: /^tenant\/number-formats$/ },
+  { method: "POST", pattern: /^tenant\/number-formats\/preview$/ },
+  { method: "GET", pattern: new RegExp(`^platform/tenants/${ID}/domains$`) },
+  { method: "POST", pattern: new RegExp(`^platform/tenants/${ID}/domains$`) },
+  { method: "DELETE", pattern: new RegExp(`^platform/tenants/${ID}/domains/${ID}$`) },
+  { method: "PATCH", pattern: new RegExp(`^platform/tenants/${ID}$`) },
+  { method: "GET", pattern: /^platform\/oidc-clients$/ },
+  { method: "POST", pattern: /^platform\/oidc-clients$/ },
+  { method: "POST", pattern: /^platform\/oidc-clients\/[a-z0-9][a-z0-9._-]{1,99}\/(rotate-secret|activate|deactivate)$/ },
 ];
 
 /** Paths whose POST body is forwarded as multipart/form-data instead of JSON. */

@@ -239,6 +239,11 @@ def test_notices_maintenance_and_portal_visibility(client: TestClient, world: Wo
     assert owner_rows["WEG Hausordnung"]["is_new"] is True
     assert owner_rows["WEG Hausordnung"]["property_number"] == "821"
     assert set(owner_rows["WEG alle"]) == {
+        "category",
+        "documents",
+        "read",
+        "read_at",
+        "type",
         "id",
         "property_id",
         "property_number",

@@ -11,7 +11,11 @@ import { ui } from "@/lib/ui";
 import { ImportResult } from "./ImportResult";
 
 type Action = "create" | "link" | "skip";
-type RowChoice = { action: Action; contactId: string | null };
+type RoleCode = "eigentuemer" | "mieter" | "verwalter" | "dienstleister" | "bank" | "sonstiges";
+/** The generated client type gains `role` and `merge_fields` with the next `make openapi`. */
+type ContactChoiceIn = ContactChoice & { role?: RoleCode; merge_fields?: boolean };
+type RowChoice = { action: Action; contactId: string | null; role: RoleCode | ""; merge: boolean };
+const ROLES: RoleCode[] = ["eigentuemer", "mieter", "verwalter", "dienstleister", "bank", "sonstiges"];
 
 const LIGHT: Record<ContactRow["status"], string> = {
   new: "bg-signal-ok",
@@ -21,9 +25,10 @@ const LIGHT: Record<ContactRow["status"], string> = {
 };
 
 function defaultChoice(row: ContactRow): RowChoice {
-  if (row.status === "invalid") return { action: "skip", contactId: null };
-  if (row.status === "existing" && row.duplicates[0]) return { action: "link", contactId: row.duplicates[0].contact_id };
-  return { action: "create", contactId: null };
+  if (row.status === "invalid") return { action: "skip", contactId: null, role: "", merge: false };
+  if (row.status === "existing" && row.duplicates[0])
+    return { action: "link", contactId: row.duplicates[0].contact_id, role: "", merge: false };
+  return { action: "create", contactId: null, role: "", merge: false };
 }
 
 /** Preview of extracted contacts (10.1 step 4): traffic light, notes and a choice per row. */
@@ -43,11 +48,12 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
   const apply = async () => {
     setBusy(true);
     setError(null);
-    const contacts: ContactChoice[] = preview.rows.map((row, i) => {
+    const contacts: ContactChoiceIn[] = preview.rows.map((row, i) => {
       const c = choices[i]!;
+      const role = c.role ? { role: c.role } : {};
       return c.action === "link"
-        ? { index: row.index, action: "link", contact_id: c.contactId }
-        : { index: row.index, action: c.action };
+        ? { index: row.index, action: "link", contact_id: c.contactId, ...(c.merge ? { merge_fields: true } : {}), ...role }
+        : { index: row.index, action: c.action, ...role };
     });
     const res = await bff<ImportRun>(`/api/bff/ai/proposals/${proposal.id}/apply`, {
       method: "POST",
@@ -135,6 +141,20 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
                   </td>
                   <td>
                     {row.role ? t(`role.${row.role}`) : ""}
+                    <select
+                      aria-label={t("rowRoleFor", { name })}
+                      className={`${ui.input} mt-1`}
+                      value={choice.role}
+                      disabled={decision !== "pending" || choice.action === "skip"}
+                      onChange={(e) => set(i, { role: e.target.value as RoleCode | "" })}
+                    >
+                      <option value="">{t("rowRoleNone")}</option>
+                      {ROLES.map((r) => (
+                        <option key={r} value={r}>
+                          {t(`contactRole.${r}`)}
+                        </option>
+                      ))}
+                    </select>
                     {row.unit_number ? <div className="text-xs text-muted">{t("unit", { number: row.unit_number })}</div> : null}
                   </td>
                   <td>{formatConfidence(row.confidence)}</td>
@@ -182,6 +202,17 @@ export function ContactProposal({ proposal, onDecided }: { proposal: Proposal; o
                           </option>
                         ))}
                       </select>
+                    ) : null}
+                    {choice.action === "link" ? (
+                      <label className="mt-1 flex items-center gap-1 text-xs">
+                        <input
+                          type="checkbox"
+                          checked={choice.merge}
+                          disabled={decision !== "pending"}
+                          onChange={(e) => set(i, { merge: e.target.checked })}
+                        />
+                        {t("mergeFields")}
+                      </label>
                     ) : null}
                   </td>
                 </tr>

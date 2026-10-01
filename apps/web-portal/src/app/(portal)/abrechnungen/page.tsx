@@ -14,6 +14,13 @@ type StatementItem = {
   unit_number: string;
 };
 
+type AssetReportItem = { report_id: string; as_of: string; issued_at: string | null };
+
+function formatDate(iso: string): string {
+  const [year, month, day] = iso.slice(0, 10).split("-");
+  return `${day}.${month}.${year}`;
+}
+
 /** Einzelabrechnung Hausgeld (M24-03, Rolle Eigentümer): nur nach Freigabe durch die Verwaltung
  *  und nur für eigene Einheiten; die PDF-Datei läuft über /api/portal-files. */
 export default async function StatementsPage() {
@@ -30,6 +37,11 @@ export default async function StatementsPage() {
   }
   if (!response.ok) throw new Error(`HTTP ${response.status}`);
   const { items, note } = (await response.json()) as { items: StatementItem[]; note: string };
+  // GA07-02: Vermögensbericht der Gemeinschaft (nur freigegebene Berichte, Abruf wird vermerkt).
+  const assetResponse = await serverFetch("/api/v1/portal/owner/asset-reports");
+  const assets = assetResponse.ok
+    ? ((await assetResponse.json()) as { items: AssetReportItem[]; note: string })
+    : { items: [], note: "" };
   return (
     <div className={ui.pageGap}>
       <h1 className={ui.title}>{t("title")}</h1>
@@ -44,6 +56,22 @@ export default async function StatementsPage() {
             </span>
             <a
               href={`/api/portal-files/portal/owner/statements/${item.statement_id}/units/${item.unit_id}/pdf`}
+              className={ui.buttonSm}
+            >
+              {t("download")}
+            </a>
+          </li>
+        ))}
+      </ul>
+      <h2 className="text-lg font-semibold">{t("assetTitle")}</h2>
+      {assets.note ? <p className="text-xs text-subtle">{assets.note}</p> : null}
+      {assets.items.length === 0 ? <p className={ui.notice}>{t("assetEmpty")}</p> : null}
+      <ul className="flex flex-col gap-3">
+        {assets.items.map((report) => (
+          <li key={report.report_id} className={`${ui.card} flex flex-wrap items-center justify-between gap-2`}>
+            <span className="font-medium">{t("assetRow", { date: formatDate(report.as_of) })}</span>
+            <a
+              href={`/api/portal-files/portal/owner/asset-reports/${report.report_id}/pdf`}
               className={ui.buttonSm}
             >
               {t("download")}

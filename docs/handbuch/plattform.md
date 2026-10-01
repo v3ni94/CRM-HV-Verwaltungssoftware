@@ -121,3 +121,13 @@ Nur für Plattformadministratoren. Rein lesende Sicht über die Mandanten, in de
 * Kennzahlen je Mandant und als Summe: Objekte, Einheiten, offene Tickets, Fristen (fällig in 30 Tagen), offene Freigaben.
 * Listen: offene Tickets nach Dringlichkeit (Nummer, Titel, Priorität, Status, SLA fällig) und Objekte (Nummer, Name, Ort, Einheiten, offene Tickets). Der Mandantenwähler schränkt auf einen Mandanten ein.
 * Die Übersicht zeigt keine Buchungen, Forderungen, Bankbestände oder Belege. Bearbeiten ist erst nach dem Wechsel über Im Mandanten öffnen möglich.
+
+## Freigabeantrag mit Checkliste und Nachweis (G2 bis G4)
+
+Zweck: Ein Antrag auf G2, G3 oder G4 dokumentiert die Voraussetzungen aus 18.0. Ablauf: Die
+Checkliste über `GET /api/v1/tenant/release-gates/checklists` abrufen, jeden Prüfpunkt mit einer
+kurzen Notiz bestätigen, das Nachweisdokument hochladen und im Antrag verknüpfen. Optional den
+Umfang auf Objekte, Rechtsträger oder Funktionen begrenzen. Eine zweite Person genehmigt. Fehlt ein
+Punkt oder das Dokument, bleibt der Antrag offen. Beim Widerruf bleiben öffnende Person und
+Zeitpunkt sichtbar. Grenzen: Eine begrenzte Freigabe öffnet die Stufe nicht für den ganzen
+Mandanten. Alle Stufen bleiben bis zur Entscheidung des Betreibers geschlossen.

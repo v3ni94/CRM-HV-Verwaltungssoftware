@@ -49,6 +49,15 @@ records `opened` and `downloaded` per account as an indication only; the CRM rea
 `GET /portal/notices/{id}/document`): properties of the active grants, matching audience, valid
 on the local day; reading writes nothing.
 
+Schwarzes Brett nach 6.2 (GA02-02, docs/rules/AA09-schwarzes-brett.md, migration 0311):
+`PropertyNotice` carries `category` (catalogue `notice_category`), `type` (neutral, info,
+warning, danger, CHECK), `audiences` (list of tenant, owner, provider; the old `audience` value
+is still accepted on input and echoed on output) and `document_ids` (several attachments, each
+released for every audience). `NoticeBoardRead` (`notice_board_read`, unique per notice and
+account) is written by `POST /portal/notices/{id}/read`; `GET /notices/{id}/reads` and the
+`read_count`/`recipient_count` fields give the CRM the read quota. An indication only, no
+delivery. Providers see notices of properties where they hold a work order.
+
 
 Board audit room (A52, docs/rules/M21-07.md): `board.py` holds the role `board` (grant
 `board_audit` per audit engagement, tables `board_access`, `board_audit_note`) and the portal
@@ -144,3 +153,23 @@ Rule `docs/rules/P13-portal-w2.md`, migration 0262.
 
 Mandatsvorschläge der Portalverwaltung folgen dem Objekt ihres Vertrags: Liste gefiltert,
 Entscheidung außerhalb der Zuordnung 404.
+
+## Portal account fields (AA08, GA02-07)
+
+`portal_account.roles` (from the access grants), `invited_at`, status CHECK with not_invited,
+invited, active, locked, expired, revoked (migration 0310). `GET /portal-admin/accounts` returns
+`roles` and the derived status (`expired`, `locked`); see `docs/rules/AA08-abrechnungszeitraum-status.md`.
+
+## Access grants by document class, provider information (AA14)
+
+* `AccessGrant.scope_type = "document_class"` (migration 0316, GA03-05): `scope_id` is the legal
+  entity, `document_class` the class; `access._document_class_ids` releases documents linked to
+  the entity whose retention profile class matches and whose `visibility` contains the grant
+  role. Endpoints `GET/POST /portal-admin/accounts/{id}/document-class-grants`; legal basis
+  `document_class_grant` survives `sync_grants`.
+* `provider_info.py` (GA11-04): `GET /portal/provider/framework-contracts` (own service
+  contracts, no internal notes), `GET /portal/provider/availability`, management side
+  `GET/POST/DELETE /portal-admin/provider-availability`; table `provider_availability`.
+* `forms.py` knows 20 element types (GA11-02), see rule AA14 and A-AA14-01.
+* Access path protocol: `tests/integration/test_aa14_access_paths.py` (list, detail, download,
+  bundle, search, export, CRM API, AI scope and AI input).

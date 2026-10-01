@@ -87,4 +87,18 @@ describe("ContactProposal", () => {
     expect(await screen.findByText("Ergebnis des Imports")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Rückgängig" })).toBeInTheDocument();
   });
+
+  it("sends a role per row and the field merge for linked duplicates (GA10-05)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      jsonResponse({ id: "01920000-0000-7000-8000-0000000000i1", source: "ai:extract_contacts", status: "applied", summary: {}, created_at: "2026-09-23T08:00:00Z", undone_at: null, items: [] }, 201),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    renderIntl(<ContactProposal proposal={proposal} />);
+    await userEvent.selectOptions(screen.getByLabelText("Rolle für Anna Neu"), "dienstleister");
+    await userEvent.click(within(screen.getByTestId("contact-row-1")).getByLabelText("Leere Felder des Kontakts ergänzen"));
+    await userEvent.click(screen.getByRole("button", { name: "Bestätigen und übernehmen" }));
+    const body = JSON.parse(fetchMock.mock.calls[0]![1].body as string);
+    expect(body.contacts[0]).toEqual({ index: 0, action: "create", role: "dienstleister" });
+    expect(body.contacts[1]).toEqual({ index: 1, action: "link", contact_id: EXISTING, merge_fields: true });
+  });
 });

@@ -8,9 +8,9 @@ from collections.abc import Callable
 from datetime import UTC, date, datetime, timedelta
 from email.message import EmailMessage
 from email.utils import make_msgid
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Query, Request, Response
+from fastapi import APIRouter, Depends, Header, Query, Request, Response
 from fastapi.responses import HTMLResponse, RedirectResponse
 from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from sqlalchemy import delete, exists, func, or_, select
@@ -33,7 +33,9 @@ from mhvp.communication.models import MailApprovalDeputy, Mailbox, MailboxUser, 
 from mhvp.core.auth.principal import TenantPrincipal, require_permission, sessions, tenant_tx
 from mhvp.core.db.tenancy import after_commit, platform_transaction, tenant_transaction
 from mhvp.core.escaping import LIKE_ESCAPE, escape_like
+from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.listparams import ListParams, ListSpec, sparse
 from mhvp.core.problems import ErrorCodes, ProblemError
 from mhvp.integrations.lexoffice_ext import invoice_copy as lexoffice_invoice_copy
 from mhvp.platform.services import gate_superadmin_bypass_enabled
@@ -229,6 +231,9 @@ _LIST_FIELDS = (
     "author_approval_reason",
     "rejection_note",
     "gmail_message_id",
+    "delivered_at",
+    "read_at",
+    "provider_message_id",
     "archive_status",
     "archive_error",
     "archive_attempted_at",
@@ -1003,6 +1008,16 @@ def _sync_state_condition(sync_state: str) -> Any:
     )
 
 
+_MESSAGE_LIST = ListSpec(
+    filters={
+        "channel": Message.channel,
+        "direction": Message.direction,
+        "mailbox_id": Message.mailbox_id,
+        "status": Message.status,
+    },
+)
+
+
 @router.get(
     "/messages",
     summary="Vorgangsliste (ohne Text, mit Vorschau)",
@@ -1055,8 +1070,9 @@ async def messages(
         pattern="^(abweichend|ausstehend|geloescht)$",
         description="Abgleichstand mit Gmail (Rückkanal M20-08)",
     ),
+    params: ListParams = Depends(_MESSAGE_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
-) -> list[dict[str, Any]]:
+) -> Any:
     """Rows carry ``body_preview`` (200 characters) instead of ``body`` and ``body_html``
     (Review 26.09.2026, M3); ``GET /mail/messages/{id}`` delivers the full text.
 
@@ -1077,6 +1093,7 @@ async def messages(
             include_duplicates=include_duplicates,
             sync_state=sync_state,
         )
+        query = _MESSAGE_LIST.apply(query, params, ()).order_by(None)  # GA04-05: filters only
         size = page_size or limit
         total = (
             await session.scalar(select(func.count()).select_from(query.order_by(None).subquery()))
@@ -1092,7 +1109,12 @@ async def messages(
         response.headers["X-Total-Count"] = str(total)
         response.headers["X-Page"] = str(page)
         response.headers["X-Page-Size"] = str(size)
-        return [_list_out(m, states.get(m.id), sync.get(m.id)) for m in rows]
+        return sparse(
+            [_list_out(m, states.get(m.id), sync.get(m.id)) for m in rows],
+            params,
+            None,
+            response=response,
+        )
 
 
 @router.get("/messages/count", summary="Anzahl der Nachrichten je Filter")
@@ -1123,13 +1145,17 @@ async def messages_count(
 
 @router.get("/messages/{message_id}", summary="Einzelne Nachricht")
 async def get_message(
-    message_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    message_id: uuid.UUID,
+    request: Request,
+    response: Response,
+    principal: TenantPrincipal = Depends(READ),
 ) -> dict[str, Any]:
     async with tenant_tx(request, principal) as session:
         row = await session.get(Message, message_id)
         if row is None:
             raise ProblemError(ErrorCodes.RESOURCE_NOT_FOUND)
         await assert_message_accessible(session, principal, row)
+        response.headers["ETag"] = etag_of(row.updated_at)  # GA04-06
         states = await progress.progress_for(session, [row])
         sync = await _sync_for(session, principal, [row])
         return _out(row, states.get(row.id), sync.get(row.id))
@@ -1277,6 +1303,8 @@ async def assign(
     message_id: uuid.UUID,
     body: MailAssignIn,
     request: Request,
+    response: Response,
+    if_match: Annotated[str | None, Header()] = None,
     principal: TenantPrincipal = Depends(UPDATE),
 ) -> dict[str, Any]:
     from mhvp.communication.gmail_done import reopen_from_crm
@@ -1284,6 +1312,7 @@ async def assign(
 
     async with tenant_tx(request, principal) as session:
         row = await _message(session, message_id, principal)
+        check_if_match(if_match, row.updated_at)  # GA04-06
         was_done = row.status == "done"
         for key, value in body.model_dump(exclude_none=True).items():
             setattr(row, key, value)
@@ -1300,6 +1329,8 @@ async def assign(
                 session, request.app.state.settings, row, actor_user_id=principal.user_id
             )
         sync = await _sync_for(session, principal, [row])
+        await session.refresh(row, ["updated_at"])
+        response.headers["ETag"] = etag_of(row.updated_at)
         return _out(row, None, sync.get(row.id))
 
 

@@ -10,6 +10,7 @@ import {
   ruleSentence,
   type Pickers,
   type Rule,
+  type Run,
 } from "./AutomationAdmin";
 
 const pickers: Pickers = {
@@ -457,7 +458,7 @@ describe("AutomationAdmin", () => {
     );
     expect(activateBody).toEqual({ active: true });
 
-    await userEvent.click(screen.getByText("Testlauf"));
+    await userEvent.click(screen.getByRole("button", { name: "Testlauf" }));
     await userEvent.click(screen.getByText("Testlauf starten"));
     expect(
       await screen.findByText("Regel greift. Vorschau der Aktionen:"),
@@ -479,5 +480,48 @@ describe("AutomationAdmin", () => {
     ).toBeInTheDocument();
     expect(screen.queryByText("Neue Regel")).toBeNull();
     expect(screen.queryByText("Aktivieren")).toBeNull();
+  });
+
+  it("sets the permanent test mode and marks the rule (GA12-03)", async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async () =>
+        jsonResponse({ ...rule, id: "r-tm", test_mode: true }, 201),
+      );
+    const dry: Run = {
+      id: "run-1",
+      rule_id: "r-tm",
+      rule_name: "Testregel",
+      event_id: "e-1",
+      event_type: "ticket.created",
+      started_at: "2026-09-26T08:00:00Z",
+      finished_at: null,
+      status: "dry_run",
+      error: null,
+      actions: [],
+    };
+    const done: Run = { ...dry, id: "run-2", status: "executed" };
+    renderIntl(
+      <AutomationAdmin
+        initialRules={[{ ...rule, id: "r-tm", test_mode: true }]}
+        initialRuns={[dry, done]}
+        pickers={pickers}
+        canManage={true}
+      />,
+    );
+    expect(screen.getByTestId("rule-test-mode")).toBeInTheDocument();
+    expect(screen.getAllByText("Testlauf", { selector: "span" }).length).toBeGreaterThan(0);
+    await userEvent.selectOptions(
+      screen.getByLabelText("Ergebnis filtern"),
+      "dry_run",
+    );
+    expect(screen.queryByText("ausgeführt", { selector: "span" })).toBeNull();
+    await userEvent.click(screen.getByText("Neue Regel"));
+    await userEvent.type(screen.getByLabelText("Name"), "Nur Protokoll");
+    await userEvent.click(screen.getByLabelText("Testmodus (nur Protokoll)"));
+    await userEvent.click(screen.getByText("Speichern"));
+    await waitFor(() => expect(fetchMock).toHaveBeenCalled());
+    const body = JSON.parse(fetchMock.mock.calls[0]![1]?.body as string);
+    expect(body.test_mode).toBe(true);
   });
 });

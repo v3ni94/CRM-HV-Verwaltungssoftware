@@ -34,7 +34,7 @@ import logging
 import re
 import uuid
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any
 
@@ -45,9 +45,17 @@ from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.pool import NullPool
 
-from mhvp.ai.models import AiExample, AiProposal, AiTask, AiTaskRun, RunStatus
+from mhvp.ai.models import AiExample, AiProposal, AiTask, AiTaskRun, Decision, RunStatus
+from mhvp.automation.job_schedule import job_allowed
 from mhvp.communication.models import Message
-from mhvp.contacts.models import Contact, ContactEmail
+from mhvp.contacts.models import (
+    Contact,
+    ContactBankAccount,
+    ContactEmail,
+    ContactIdentifier,
+    IdentifierKind,
+)
+from mhvp.contracts.models import Contract
 from mhvp.core import crypto
 from mhvp.core.config import Settings, get_settings
 from mhvp.core.db.engine import create_session_factory
@@ -65,6 +73,7 @@ from mhvp.documents.models import (
     DocumentLink,
     DocumentMirror,
     DocumentSource,
+    LinkRole,
     MirrorStatus,
     StorageKind,
     TextStatus,
@@ -73,7 +82,7 @@ from mhvp.documents.paperless_search import PaperlessSearch, PaperlessSearchErro
 from mhvp.documents.text import ALLOWED_MIME_TYPES
 from mhvp.objektakte.classification import rule_candidates
 from mhvp.platform.models import Tenant, TenantSettings, TenantStatus
-from mhvp.properties.models import Property
+from mhvp.properties.models import Property, Unit
 
 log = logging.getLogger(__name__)
 
@@ -95,6 +104,15 @@ TEXT_LIMIT = 200_000
 OBJECT_HINT_RE = re.compile(r"\bObj(?:ekt)?(?:nummer|\.|\s*Nr\.?)?\s*[:#]?\s*(\d{3})\b", re.I)
 THREE_DIGITS_RE = re.compile(r"(?<![\d,.])(\d{3})(?![\d,.])")
 EMAIL_RE = re.compile(r"[\w.+-]+@[\w-]+(?:\.[\w-]+)+")
+# GA10-01: "Einheit 12", "WE 3a", "Whg. 14", "Wohnung Nr. 7" (unit number up to 20 characters).
+UNIT_HINT_RE = re.compile(
+    r"\b(?:Einheit|Wohneinheit|WE|Whg|Wohnung|Top)\.?\s*(?:Nr\.?|Nummer)?\s*[:#]?\s*"
+    r"([A-Za-z0-9][A-Za-z0-9./-]{0,19})",
+    re.I,
+)
+IBAN_RE = re.compile(r"\b[A-Z]{2}\d{2}(?:[ ]?[A-Z0-9]{4}){2,7}(?:[ ]?[A-Z0-9]{1,3})?\b")
+AUTO_FILE_KEY = "document_intake_auto_file"  # GA10-03: {"enabled": bool, "threshold": float}
+AUTO_FILE_DEFAULT_THRESHOLD = 0.9
 
 
 @dataclass
@@ -121,6 +139,8 @@ class IntakeResult:
     category_candidates: list[Candidate] = field(default_factory=list)
     property_candidates: list[Candidate] = field(default_factory=list)
     contact_candidates: list[Candidate] = field(default_factory=list)
+    unit_candidates: list[Candidate] = field(default_factory=list)
+    contract_candidates: list[Candidate] = field(default_factory=list)
     reasons: list[str] = field(default_factory=list)
 
     @property
@@ -136,6 +156,8 @@ class IntakeResult:
         best_cat = self.category_candidates[0] if self.category_candidates else None
         best_prop = self.property_candidates[0] if self.property_candidates else None
         best_contact = self.contact_candidates[0] if self.contact_candidates else None
+        best_unit = self.unit_candidates[0] if self.unit_candidates else None
+        best_contract = self.contract_candidates[0] if self.contract_candidates else None
         return {
             "source": self.source,
             "text_status": self.text_status,
@@ -148,7 +170,13 @@ class IntakeResult:
             "property_number": best_prop.label if best_prop else None,
             "contact_id": best_contact.id if best_contact else None,
             "contact_name": best_contact.label if best_contact else None,
+            "unit_id": best_unit.id if best_unit else None,
+            "unit_number": best_unit.label if best_unit else None,
+            "contract_id": best_contract.id if best_contract else None,
+            "contract_number": best_contract.label if best_contract else None,
             "candidates": {
+                "units": [c.as_dict() for c in self.unit_candidates],
+                "contracts": [c.as_dict() for c in self.contract_candidates],
                 "categories": [c.as_dict() for c in self.category_candidates],
                 "properties": [c.as_dict() for c in self.property_candidates],
                 "contacts": [c.as_dict() for c in self.contact_candidates],
@@ -327,6 +355,39 @@ async def match_contacts(
         )
         if contact is not None:
             add(contact, 0.8, f"Korrespondent '{correspondent}' entspricht dem Kontaktnamen.")
+    # GA10-01: IBAN (keyed fingerprint, no decryption) and customer number from the text.
+    for raw in {m.group(0) for m in IBAN_RE.finditer(text.upper())}:
+        try:
+            print_ = crypto.fingerprint(raw.replace(" ", ""))
+        except Exception:
+            break
+        for contact_id in (
+            await session.scalars(
+                select(ContactBankAccount.contact_id).where(
+                    ContactBankAccount.iban_fingerprint == print_
+                )
+            )
+        ).all():
+            contact = await session.get(Contact, contact_id)
+            if contact is not None and contact.deleted_at is None:
+                add(
+                    contact,
+                    0.95,
+                    f"IBAN endet auf {raw.replace(' ', '')[-4:]} und ist beim Kontakt hinterlegt.",
+                )
+    identifiers = (
+        await session.execute(
+            select(ContactIdentifier.contact_id, ContactIdentifier.value).where(
+                ContactIdentifier.kind == IdentifierKind.CUSTOMER_NUMBER
+            )
+        )
+    ).all()
+    for contact_id, value in identifiers:
+        number = (value or "").strip()
+        if len(number) >= 4 and re.search(rf"(?<![\w]){re.escape(number)}(?![\w])", text, re.I):
+            contact = await session.get(Contact, contact_id)
+            if contact is not None and contact.deleted_at is None:
+                add(contact, 0.9, f"Kundennummer {number} kommt im Text vor.")
     if not found:
         lowered = text.lower()
         contacts = (
@@ -347,6 +408,66 @@ async def match_contacts(
     else:
         reasons.append("Kein Absender und kein Kontaktname erkannt.")
     return candidates, reasons
+
+
+async def match_units(
+    session: AsyncSession, text: str, properties: list[Candidate]
+) -> tuple[list[Candidate], list[str]]:
+    """Unit number with a hint word ("Einheit 12", "WE 3") inside the best matching objects
+    (GA10-01). Without an object there is no unit: unit numbers repeat across objects."""
+    hits = {m.group(1).rstrip(".,;").lower() for m in UNIT_HINT_RE.finditer(text)}
+    found: list[Candidate] = []
+    if not hits or not properties:
+        return found, []
+    top = [c for c in properties if c.confidence >= 0.7][:3]
+    for prop in top:
+        units = (
+            await session.scalars(select(Unit).where(Unit.property_id == uuid.UUID(prop.id)))
+        ).all()
+        for unit in units:
+            if unit.number.lower() in hits:
+                found.append(
+                    Candidate(
+                        str(unit.id),
+                        f"{prop.label}/{unit.number}",
+                        round(min(prop.confidence, 0.9) - 0.05, 2),
+                        f"Einheit {unit.number} mit Hinweis im Text, Objekt {prop.label}.",
+                    )
+                )
+    found.sort(key=lambda c: (-c.confidence, c.label))
+    reasons = [f"Einheit {found[0].label}: {found[0].reason}"] if found else []
+    return found, reasons
+
+
+async def match_contracts(
+    session: AsyncSession, units: list[Candidate], on: date
+) -> tuple[list[Candidate], list[str]]:
+    """Contracts of the matched unit that are valid on the document date (unit and period,
+    GA10-01). Several valid contracts (tenancy and ownership) are all offered."""
+    found: list[Candidate] = []
+    for unit in units[:3]:
+        rows = (
+            await session.scalars(
+                select(Contract).where(
+                    Contract.unit_id == uuid.UUID(unit.id),
+                    Contract.start_date <= on,
+                    (Contract.end_date.is_(None)) | (Contract.end_date >= on),
+                )
+            )
+        ).all()
+        for contract in rows:
+            found.append(
+                Candidate(
+                    str(contract.id),
+                    contract.number,
+                    round(unit.confidence - 0.05, 2),
+                    f"Vertrag {contract.number} ist am {on.strftime('%d.%m.%Y')} gültig "
+                    f"(Einheit {unit.label}).",
+                )
+            )
+    found.sort(key=lambda c: (-c.confidence, c.label))
+    reasons = [f"Vertrag {found[0].label}: {found[0].reason}"] if found else []
+    return found, reasons
 
 
 async def analyse(
@@ -372,6 +493,11 @@ async def analyse(
     result.property_candidates, reasons = await match_properties(session, text, head_text)
     result.reasons.extend(reasons)
     result.contact_candidates, reasons = await match_contacts(session, text, sender, correspondent)
+    result.reasons.extend(reasons)
+    result.unit_candidates, reasons = await match_units(session, text, result.property_candidates)
+    result.reasons.extend(reasons)
+    on = (document.created_at or datetime.now(UTC)).date()
+    result.contract_candidates, reasons = await match_contracts(session, result.unit_candidates, on)
     result.reasons.extend(reasons)
     return result
 
@@ -428,7 +554,80 @@ async def propose(
             "confidence": result.confidence,
         },
     )
+    await auto_file(session, tenant_id, document, proposal, result)
     return proposal
+
+
+async def auto_file_config(session: AsyncSession) -> tuple[bool, float]:
+    """Tenant switch for direct filing (GA10-03, default off) and its confidence threshold."""
+    row = await session.scalar(select(TenantSettings))
+    raw = (row.sources or {}).get(AUTO_FILE_KEY) if row is not None else None
+    if not isinstance(raw, dict) or raw.get("enabled") is not True:
+        return False, AUTO_FILE_DEFAULT_THRESHOLD
+    try:
+        threshold = float(raw.get("threshold", AUTO_FILE_DEFAULT_THRESHOLD))
+    except (TypeError, ValueError):
+        threshold = AUTO_FILE_DEFAULT_THRESHOLD
+    return True, min(max(threshold, 0.5), 1.0)
+
+
+async def auto_file(
+    session: AsyncSession,
+    tenant_id: uuid.UUID,
+    document: Document,
+    proposal: AiProposal,
+    result: IntakeResult,
+) -> bool:
+    """GA10-03: file a clear assignment directly, only when the tenant switched it on.
+
+    Effect is a plain link of the document to the object (no payment, booking or visibility
+    effect, no category, no contact). Conditions: text available, exactly one object candidate
+    above the threshold. The proposal is marked accepted without a person (``decided_by`` None,
+    ``final.auto_filed``) and can be reverted via ``intake_routers`` (revert-auto)."""
+    enabled, threshold = await auto_file_config(session)
+    if not enabled or result.text_status == TextStatus.PENDING.value:
+        return False
+    strong = [c for c in result.property_candidates if c.confidence >= threshold]
+    if len(strong) != 1:
+        return False
+    prop_id = uuid.UUID(strong[0].id)
+    exists = await session.scalar(
+        select(DocumentLink.id).where(
+            DocumentLink.document_id == document.id,
+            DocumentLink.entity_type == "property",
+            DocumentLink.entity_id == prop_id,
+            DocumentLink.role == LinkRole.ATTACHMENT,
+        )
+    )
+    if exists is None:
+        session.add(
+            DocumentLink(
+                tenant_id=tenant_id,
+                document_id=document.id,
+                entity_type="property",
+                entity_id=prop_id,
+                role=LinkRole.ATTACHMENT,
+            )
+        )
+    proposal.decision = Decision.ACCEPTED
+    proposal.decided_at = datetime.now(UTC)
+    proposal.final = {
+        "property_id": str(prop_id),
+        "auto_filed": True,
+        "threshold": threshold,
+        "link_preexisted": exists is not None,
+    }
+    await session.flush()
+    await emit(
+        session,
+        tenant_id=tenant_id,
+        type="document.intake_auto_filed",
+        entity_type="document",
+        entity_id=document.id,
+        actor_user_id=None,
+        payload={"proposal_id": str(proposal.id), "property_id": str(prop_id)},
+    )
+    return True
 
 
 # Sources ------------------------------------------------------------------------------------
@@ -774,6 +973,9 @@ async def process_inbox_once(
             log.exception("document_intake_distribution_failed")
         for tenant_id in tenant_ids:
             async with tenant_transaction(factory, tenant_id) as session:
+                # GA12-01: per tenant job setting (switch and start time).
+                if not await job_allowed(session, tenant_id, "documents-process-inbox"):
+                    continue
                 counts = await process_tenant_inbox(session, store, settings, tenant_id, http)
             for key, value in counts.items():
                 totals[key] += value

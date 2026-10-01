@@ -1,0 +1,89 @@
+name: Leistungsmessung
+
+# GA12-07: wöchentliche oder manuelle Messung der Detailseiten (P95) mit MHVP_PERF=1.
+# Nicht Teil des regulären CI-Laufs. Die Schwelle ist großzügig (MHVP_PERF_DETAIL_LIMIT,
+# Standard 1 Sekunde), weil geteilte Runner schwanken. Das Ziel aus Abschnitt 16 (500 ms) wird auf
+# dem Staging-Server geprüft, siehe docs/runbooks/leistungsmessung.md.
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit_seconds:
+        description: Schwelle P95 in Sekunden
+        default: "1.0"
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+env:
+  CI_POSTGRES_PASSWORD: ci-postgres-pw
+  CI_MIGRATOR_PASSWORD: ci-migrator-pw
+  CI_APP_PASSWORD: ci-app-pw
+
+jobs:
+  perf:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    services:
+      postgres:
+        image: pgvector/pgvector:0.8.1-pg16
+        env:
+          POSTGRES_PASSWORD: ci-postgres-pw
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s --health-timeout 5s --health-retries 20
+      redis:
+        image: redis:7.4-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 20
+    env:
+      MHVP_ENV: test
+      MHVP_PERF: "1"
+      MHVP_PERF_DETAIL_LIMIT: ${{ github.event.inputs.limit_seconds || '1.0' }}
+      MHVP_DATABASE_URL: postgresql+psycopg://mhvp_app:ci-app-pw@localhost:5432/mhvp
+      MHVP_MIGRATION_DATABASE_URL: postgresql+psycopg://mhvp_migrator:ci-migrator-pw@localhost:5432/mhvp
+      MHVP_REDIS_URL: redis://localhost:6379/0
+      MHVP_CELERY_BROKER_URL: redis://localhost:6379/1
+      MHVP_CELERY_RESULT_BACKEND: redis://localhost:6379/2
+      MHVP_S3_ENDPOINT_URL: http://localhost:8333
+      MHVP_S3_REGION: us-east-1
+      MHVP_S3_ACCESS_KEY_ID: ci-dummy
+      MHVP_S3_SECRET_ACCESS_KEY: ci-dummy
+      MHVP_S3_BUCKET: mhvp
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@c18668ad3cf93ea998bef934396af7bb5c839dc7 # v10.2.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: apps/api/uv.lock
+      - name: Ensure psql
+        run: command -v psql || (sudo apt-get update && sudo apt-get install -y --no-install-recommends postgresql-client)
+      - name: Bootstrap database roles (ADR 0002)
+        env:
+          PGHOST: localhost
+          PGUSER: postgres
+          PGPASSWORD: ${{ env.CI_POSTGRES_PASSWORD }}
+          MHVP_DB_MIGRATOR_PASSWORD: ${{ env.CI_MIGRATOR_PASSWORD }}
+          MHVP_DB_APP_PASSWORD: ${{ env.CI_APP_PASSWORD }}
+        run: sh infra/postgres/bootstrap.sh
+      - name: Install
+        working-directory: apps/api
+        run: uv sync --locked
+      - name: Migrationen
+        working-directory: apps/api
+        run: uv run alembic upgrade head
+      - name: Messung Detailseiten und Listen
+        working-directory: apps/api
+        run: uv run pytest tests/integration/test_ga12_perf.py tests/integration/test_p15_perf.py -m slow -s --no-cov | tee perf.txt
+      - name: Messzeilen
+        working-directory: apps/api
+        run: grep '^PERF' perf.txt >> "$GITHUB_STEP_SUMMARY" || true

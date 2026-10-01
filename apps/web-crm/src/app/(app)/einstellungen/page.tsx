@@ -17,6 +17,7 @@ export default async function SettingsPage() {
   const tm = await getTranslations("Metering");
   const tq = await getTranslations("SettingsQ05");
   const tn = await getTranslations("NotificationSettings");
+  const ta = await getTranslations("AA17");
   const me = await getMe();
   redirectIfUnauthenticated(me.response);
   const can = (p: string) => me.data?.permissions.includes(p) ?? false;
@@ -28,6 +29,7 @@ export default async function SettingsPage() {
     { href: "/einstellungen/ki", title: t("ai.title"), description: t("ai.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/wissen", title: t("knowledge.title"), description: t("knowledge.description"), show: can("tenant_settings:read") },
     { href: "/einstellungen/postfaecher", title: t("mail.title"), description: t("mail.description"), show: can("tenant_settings:update") },
+    { href: "/einstellungen/nummernkreise", title: ta("cardTitle"), description: ta("cardDescription"), show: can("tenant_settings:update") },
     { href: "/einstellungen/dms", title: t("dms.title"), description: t("dms.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/aufbewahrung", title: t("retention.title"), description: t("retention.description"), show: can("tenant_settings:update") },
     { href: "/einstellungen/dokumentkategorien", title: t("documentCategories.title"), description: t("documentCategories.description"), show: can("tenant_settings:update") },

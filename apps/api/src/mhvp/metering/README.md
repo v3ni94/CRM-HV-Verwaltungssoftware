@@ -191,3 +191,10 @@ All write endpoints require `tenant_settings.metering_module_enabled` (403 `MHVP
   is not executed (M40-01).
 * The document store has no malware scanner; `check_upload` (size, MIME allow list, content
   sniffing) is the existing check that is applied.
+
+## HeiWaKo A record writer (GA09-01)
+
+`heiwako.write_a_records` serialises `ARecord` objects to the `DTA310_*.DAT` layout (128 bytes,
+ISO 8859-15, CR LF) using only the fields documented in the module docstring (Q14). Round trip
+test in `tests/unit/test_m40_metering_heiwako.py`. Not wired into any transmission; whether the
+providers expect a master data delivery in this format is open (`docs/OPEN_QUESTIONS.md` AA16-01).

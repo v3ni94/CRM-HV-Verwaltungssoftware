@@ -44,6 +44,13 @@ from mhvp.core.webhooks import (
     redeliver,
 )
 from mhvp.platform import gates
+from mhvp.platform.gate_checklists import (
+    GATE_CHECKLISTS,
+    GATE_FUNCTIONS,
+    missing_checklist_items,
+    unknown_checklist_items,
+    unknown_functions,
+)
 from mhvp.platform.models import (
     ApiKey,
     GateRequestStatus,
@@ -70,6 +77,8 @@ from mhvp.platform.schemas import (
     CompanyData,
     DeliveryOut,
     EventOut,
+    GateChecklistItemOut,
+    GateChecklistOut,
     GateDecision,
     GateRequestCreate,
     GateRequestOut,
@@ -334,9 +343,23 @@ async def _decide(
             from mhvp.platform.market_readiness import ensure_g5_release_allowed
 
             await ensure_g5_release_allowed(session, tenant_id, principal)
+        if approve and ReleaseGate(item.gate) in GATE_CHECKLISTS:
+            # GA14-03: G2 to G4 need the complete 18.0 checklist and an evidence document.
+            missing = missing_checklist_items(ReleaseGate(item.gate), item.checklist)
+            if item.evidence_document_id is None:
+                missing.append("evidence_document")
+            if missing:
+                raise ProblemError(
+                    ErrorCodes.GATE_CHECKLIST_INCOMPLETE,
+                    detail="Offene Voraussetzungen: " + ", ".join(missing),
+                    extensions={"missing": missing},
+                )
         item.status = GateRequestStatus.APPROVED if approve else GateRequestStatus.REJECTED
         item.decided_by = principal.user_id
         item.decided_at = gates.now()
+        if approve:
+            item.opened_by = principal.user_id
+            item.opened_at = item.decided_at
         item.decision_comment = comment
         item.four_eyes = not bypass
         changes: dict[str, Any] = {"status": {"old": "requested", "new": item.status.value}}
@@ -1580,11 +1603,9 @@ async def revoke_staff_portal_access(
             )
         )
         disabled = False
-        if (
-            not await access.has_external_grant(session, account.id)
-            and account.status != "disabled"
-        ):
-            account.status = "disabled"
+        if not await access.has_external_grant(session, account.id) and account.status != "revoked":
+            # 6.2 status model (migration 0310): a revoked account, no "disabled" value.
+            account.status = "revoked"
             disabled = True
         await emit(
             session,
@@ -2347,6 +2368,16 @@ def _gate_out(item: ReleaseGateRequest) -> GateRequestOut:
         decided_at=item.decided_at,
         decision_comment=item.decision_comment,
         four_eyes=item.four_eyes,
+        opened_by=item.opened_by,
+        opened_at=item.opened_at,
+        revoked_by=item.revoked_by,
+        revoked_at=item.revoked_at,
+        revoke_comment=item.revoke_comment,
+        evidence_document_id=item.evidence_document_id,
+        scope_property_ids=item.scope_property_ids,
+        scope_legal_entity_ids=item.scope_legal_entity_ids,
+        scope_functions=item.scope_functions,
+        checklist=item.checklist,
     )
 
 
@@ -2358,12 +2389,36 @@ async def gate_state(
         result = []
         for gate in ReleaseGate:
             scopes = await gates.approved_scopes(session, principal.tenant_id, gate)
+            fully = await gates.open_without_context(session, principal.tenant_id, gate)
             result.append(
                 GateStateOut(
-                    gate=gate.value, label=GATE_LABELS[gate], open=bool(scopes), scopes=scopes
+                    gate=gate.value,
+                    label=GATE_LABELS[gate],
+                    open=fully,
+                    scopes=scopes,
+                    partially_open=bool(scopes) and not fully,
                 )
             )
         return result
+
+
+@tenant_router.get("/release-gates/checklists", summary="Voraussetzungen der Freigabestufen (18.0)")
+async def gate_checklists(
+    principal: TenantPrincipal = Depends(require_permission("release_gates:read")),
+) -> list[GateChecklistOut]:
+    return [
+        GateChecklistOut(
+            gate=gate.value,
+            label=GATE_LABELS[gate],
+            items=[
+                GateChecklistItemOut(code=code, label=label)
+                for code, label in GATE_CHECKLISTS.get(gate, {}).items()
+            ],
+            functions=list(GATE_FUNCTIONS.get(gate, ())),
+            evidence_document_required=gate in GATE_CHECKLISTS,
+        )
+        for gate in ReleaseGate
+    ]
 
 
 @tenant_router.get("/release-gates/requests", summary="Freigabeanträge")
@@ -2391,12 +2446,35 @@ async def request_gate(
         raise ProblemError(
             ErrorCodes.FORBIDDEN, developer_message="Gate requests need a person, not an API key."
         )
+    gate = ReleaseGate(body.gate)
+    bad = unknown_checklist_items(gate, body.checklist) + unknown_functions(
+        gate, body.scope_functions
+    )
+    if bad:
+        raise ProblemError(
+            ErrorCodes.GATE_SCOPE_INVALID,
+            detail="Unbekannte Codes: " + ", ".join(bad),
+            extensions={"unknown": bad},
+        )
     async with tenant_tx(request, principal) as session:
+        if body.evidence_document_id is not None:
+            from mhvp.documents.models import Document
+
+            doc = await session.get(Document, body.evidence_document_id)
+            if doc is None or doc.tenant_id != principal.tenant_id:
+                raise ProblemError(
+                    ErrorCodes.GATE_SCOPE_INVALID, detail="Nachweisdokument nicht gefunden."
+                )
         item = ReleaseGateRequest(
             tenant_id=principal.tenant_id,
             gate=body.gate,
             scope=body.scope,
             evidence=body.evidence,
+            scope_property_ids=body.scope_property_ids,
+            scope_legal_entity_ids=body.scope_legal_entity_ids,
+            scope_functions=body.scope_functions,
+            checklist=body.checklist,
+            evidence_document_id=body.evidence_document_id,
             requested_by=principal.user_id,
             created_by=principal.user_id,
         )
@@ -2429,9 +2507,13 @@ async def revoke_gate(
             raise ProblemError(ErrorCodes.GATE_STATE)
         old = item.status.value
         item.status = GateRequestStatus.REVOKED
-        item.decided_by = principal.user_id
-        item.decided_at = gates.now()
-        item.decision_comment = body.comment
+        # GA14-04: the revocation keeps decided_* and opened_* of the approval.
+        item.revoked_by = principal.user_id
+        item.revoked_at = gates.now()
+        item.revoke_comment = body.comment
+        if old == "requested":
+            item.decided_by = principal.user_id
+            item.decided_at = item.revoked_at
         await emit(
             session,
             tenant_id=principal.tenant_id,

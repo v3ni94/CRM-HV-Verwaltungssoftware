@@ -5,6 +5,89 @@ Schema MAJOR.MINOR.PATCH: erste Stelle (2.0, 3.0) für grundlegende Umbauten, zw
 Korrekturen. Die aktuelle Nummer steht in `VERSION`, die Oberfläche zeigt sie im Footer und
 unter `/version` (Quelle `apps/web-crm/src/lib/changelog.ts`). Neue Einträge oben anfügen.
 
+## 1.57.0 (01.10.2026) Welle 12 der zweiten Lückenanalyse: Freigabestufen, Buchhaltungsprüfungen, WEG-Versammlung und Vermögensbericht, Schwarzes Brett, Portal, Automatisierung
+
+- Übersicht: Welle 12 der zweiten Lückenanalyse (Lückenliste vom 01.10.2026) mit 17 Paketen AA01 bis AA17, Migrationen 0303 bis 0319, davon 0303, 0304, 0305, 0307, 0308, 0309, 0310, 0311, 0312, 0313 und 0316 als echte Migrationen und die übrigen (0306, 0314, 0315, 0317, 0318, 0319) als Platzhalter ohne Schemaänderung. Neue offene Entscheidungen: AA01-01, AA02-01 bis AA02-03, AA03-01, AA04-01, AA05-01 bis AA05-03, AA06-01, AA06-02, AA07-01, AA07-02, AA08-01, AA10-01 bis AA10-03, AA11-01 bis AA11-03, AA12-01 bis AA12-04, AA13-01, AA14-01 bis AA14-03, AA15-01, AA15-02, AA16-01 bis AA16-03, AA17-01 bis AA17-03.
+- Buchhaltung: Die Konsistenzprüfung meldet Lücken in der Nummernfolge je Geschäftsjahr und Abweichungen des Nummernzählers (B04).
+- Buchhaltung: Die Konsistenzprüfung gleicht je Debitor und Kreditor die offenen Posten mit dem Hauptbuchsaldo zum Stichtag ab und zeigt Differenzen zur Prüfung (B09).
+- Buchhaltung: Gebuchte Sätze erhalten versionierte, unveränderliche Vermerke getrennt vom Buchungsinhalt, mit Anzeige und Erfassung im Journal des CRM (B03, Migration 0303).
+- Buchhaltung: Verwalterhonorar um Verwalterkontakt, Kündigungsdatum, Fälligkeitsregel, Erlöskonto und SE-Gebührenbetrag erweitert (Migration 0312), Kündigungsdatum begrenzt den Lauf.
+- Buchhaltung: Rechnungsplan mit Kennzeichen auto_post (Standard aus, nur bei freigeschalteter Automatik setzbar, bucht nichts).
+- Buchhaltung: Beim Anlegen eines Dienstleisterverhältnisses mit create_default_bank_rule entsteht eine Standard-Bankregel als Vorschlag.
+- Buchhaltung: Eigentümerwechsel und Betragswechsel im Monat bei Eigentumsverträgen (WEG) werden auch mit freigegebener Zeitanteilsregel nicht tageweise berechnet, sondern als manueller Posten ausgewiesen (GA06-01).
+- Buchhaltung: Fristausnahme mit Nachweisdokument, Erfasser und Zeitpunkt; eine Nachforderung nach Fristablauf wird nur mit Grund und Nachweis freigegeben, CRM-Abschnitt in der Abrechnungsansicht (GA06-04).
+- Buchhaltung: Informationsblatt zur Abrechnung als eigenes PDF und wahlweise hinter jedem Anschreiben, Texte zu Belegeinsicht und Einwendungen bis zur Freigabe als Platzhalter (GA06-02).
+- Buchhaltung: Belegliste der gebuchten Ausgaben mit Hinweis auf fehlende Belege, Option zum Anfügen der Belege an die PDF-Ausgabe (GA03-08).
+- Buchhaltung: belegte Lohnanteile nach § 35a EStG aus der WEG-Einzelabrechnung als Information in Abrechnung, PDF und CRM (GA06-03).
+- Buchhaltung: Regelregister mit Auswahl nach Abrechnungsbeginn, Abrechnungs-Snapshot hält den wirksamen Registereintrag fest.
+- Buchhaltung: Entwurfs-Prüfpunkte für HeizkostenV §§ 5 und 12 sowie CO2KostAufG §§ 5a bis 5d über rule-versions/seed-checkpoints, ohne Rechtsfolge.
+- Buchhaltung: Reverse Charge erzeugt Hinweis auf § 13b UStG als gesonderten Freigabepunkt ohne Automatik.
+- Buchhaltung: Block E-Rechnung zeigt Profil, Prüfer, Version, Ergebnis und Meldungen.
+- WEG: Beschlussstatus und Nachrichtenänderung prüfen If-Match (412 bei veraltetem Stand) und liefern ETag.
+- WEG: Versammlungsarten Wiederholung, Fortsetzung (mit Ursprungsversammlung), Teilversammlung und Umlaufverfahren sowie Ende, Vorlagen für Einladung, Vollmacht und Stimmzettel und öffentliche und interne Beschreibung ergänzt.
+- WEG: Ergebnis je TOP (angenommen, abgelehnt, vertagt, ohne Abstimmung), Protokolltext je TOP, Stimmprinzip je TOP und Beschlussregel Zustimmung aller Eigentümer ergänzt.
+- WEG: Jede Stimme trägt ihren Kanal (Präsenz, online, Umlauf); Auszählung und Mitgliederliste zeigen ihn.
+- WEG: Ort, gerichtliche Vermerke, Eintragungszeitpunkt sowie die Status gelöscht und gegenstandslos als Vermerk ergänzt.
+- WEG: Hinweis bei einer Geltungsdauer des Grundlagenbeschlusses über drei Jahre, Sperre nur mit Mandantenschalter (Standard aus).
+- WEG: Vermögensbericht wird nach Ausstellung im Eigentümerportal bereitgestellt (Liste und PDF hinter G4), der Abruf wird je Eigentumsvertrag protokolliert und im CRM als Bereitstellungsprotokoll angezeigt (Migration 0309).
+- WEG: Sondererwerbe im Abrechnungsjahr (Ersterwerb, Erbfall, Zwangsversteigerung, Schenkung, sonstiger Erwerb, Sondernachfolgehaftung) sperren das Abrechnungspaket, bis eine zweite Person die beantragte Freigabe erteilt hat; der Zuordnungsvorschlag je Erwerbsart ist nur ein Text ohne Rechtsregel.
+- Portal: Seite Abrechnungen zeigt den freigegebenen Vermögensbericht der Gemeinschaft mit PDF-Abruf.
+- Portal: Portalzugänge führen Rollen und den Einladungszeitpunkt; abgelaufene Einladungen und gesperrte Zugänge erscheinen mit den Status expired und locked.
+- Portal: Aushänge haben jetzt Kategorie, Hinweisstufe (neutral, Info, Warnung, Gefahr), mehrere Zielgruppen (Mieter, Eigentümer, Dienstleister) und mehrere Anlagen (Migration 0311).
+- Portal: Mieter, Eigentümer und Dienstleister können einen Aushang im Portal als gelesen bestätigen, das CRM zeigt die Lesequote und die einzelnen Bestätigungen als Hinweis auf die Kenntnisnahme, nicht als Zustellung.
+- Portal: Aushänge zeigen die Hinweisstufe farbig mit Text und bieten jede Anlage einzeln zum Download an.
+- Portal: Zugriffsmatrix um den Bereich document_class erweitert, Freigabe einer Unterlagenklasse je Rechtsträger und Rolle (Migration 0316).
+- Portal: Sprachwahl Deutsch und English im Kopf, weitere Sprachen allein über Übersetzungsdateien.
+- Portal: Formularbaukasten auf 20 Elementtypen erweitert (Anschrift, Standort, Unterschrift, Einwilligung, Betrag, Trennlinie).
+- Portal: Dienstleister sehen Rahmenverträge und Verfügbarkeitskalender lesend, die Verwaltung erfasst die Zeitfenster.
+- Portal: Zugriffspfadprotokoll als Test über Liste, Download, Sammel-Download, Suche, Export und KI-Abruf.
+- Portal: Sprachermittlung robust bei leerem Accept-Language-Eintrag
+- Plattform: Hintergrundjobs lesen die Freigabestufe je Mandant aus der Datenbank, ein geöffnetes G1 wird im Worker erkannt, andere Mandanten bleiben geschlossen.
+- Plattform: Ein Register gate-pflichtiger Routen mit Test verhindert, dass neue Geld-, Abrechnungs- oder Versandrouten ohne Gate-Prüfung unbemerkt hinzukommen.
+- Plattform: Freigabeanträge G2 bis G4 lassen sich nur mit vollständiger Checkliste aus 18.0 und verknüpftem Nachweisdokument genehmigen, Checkliste abrufbar unter /tenant/release-gates/checklists.
+- Plattform: Freigaben speichern Öffnung (opened_by, opened_at) und Widerruf (revoked_by, revoked_at, Kommentar) getrennt, Migration 0304.
+- Plattform: Freigaben lassen sich auf Objekte, Rechtsträger und Funktionen begrenzen; eine begrenzte Freigabe öffnet die Stufe nicht für den ganzen Mandanten.
+- Plattform: ticket.category_id verweist auf den Kategoriekatalog (vorhandene Vorlagen), der Freitext bleibt Fallback.
+- Plattform: Neuer Listenbaustein ListSpec lehnt nicht angebotene Parameter, Filter, Sortierungen und Stichtage mit 422 ab und unterstützt as_of für zeitlich gültige Daten.
+- Plattform: Aufträge haben die optionale Verweisspalte approval_workflow_id (Migration 0307).
+- Plattform: Abrechnungszeiträume haben einen Status (offen, Ergebnisse erstellt, bestätigt, abgeschlossen) mit Statuswechsel-Endpunkt, Sperrzeitpunkt und Löschschutz nach Abschluss; die Objektansicht zeigt den Status mit Schaltfläche für den nächsten Schritt.
+- Plattform: Der Energieausweis eines Gebäudes lässt sich mit einem Dokument des Dokumentenarchivs verknüpfen.
+- Plattform: Wartungsposten und Dienstleisterverhältnisse nehmen Dokumentverweise auf.
+- Plattform: make seed-demo legt einen Demo-Mandanten mit erfundenen Daten an (3 Objekte, 40 Einheiten, 60 Kontakte, 36 Buchungsentwürfe, 200 Bankumsätze), nur in dev, test und staging.
+- Plattform: Neuer Standard-Zustellweg je Mandant (Post, E-Mail, Portal), der im Versand gilt, wenn Position und Kontakt keinen Zustellweg vorgeben.
+- Plattform: Neue Seite Nummernkreise mit Präfix, Stellenzahl, Startwert, Jahresbezug und Vorschau; wirkt bei Vertragsnummern, der Rechnungsnummernkreis bleibt gesperrt.
+- Plattform: Neue Seite Domains zum Pflegen der Kundendomains je Mandant mit CNAME-Hinweis und zum Sperren oder Entsperren eines Mandanten.
+- Plattform: Neue Seite OIDC-Clients zum Anlegen, Secret erneuern und (de)aktivieren per API und Oberfläche.
+- Dokumente: Vorlagen tragen Kontexttypen, Briefbogenvorlage und berechnete Platzhalter, die Vorlagenliste filtert nach Kontext und ein Brief mit nicht erlaubtem Kontext wird abgelehnt.
+- Dokumente: Neue Tabelle generated_document hält Vorlage, Version, Kontext, Empfänger und Versandvorgang erzeugter Briefe fest, abrufbar über GET /generated-documents.
+- Dokumente: Der Eingangsvorschlag ordnet zusätzlich Einheit, am Dokumentdatum gültigen Vertrag, IBAN und Kundennummer zu und verknüpft Einheit und Vertrag beim Bestätigen.
+- Dokumente: Nach dem Bestätigen entstehen Folgevorschläge für Rechnung, Schadensfoto, Vertrag und Protokoll, die nur Ticket oder Vertrag verknüpfen und nichts buchen.
+- Dokumente: Direktablage eindeutiger Zuordnungen hinter einem Mandantenschalter (Standard aus) mit Meldung und Rücknahme.
+- Dokumente: Das DocumentStore-Protokoll umfasst get, search und list_changes, dazu ein MinioStore-Adapter.
+- Kommunikation: Nachrichten führen delivered_at, read_at und provider_message_id (Migration 0305).
+- Automatisierung: Dokumenteneingang, Abstimmungsbericht und Zahllauf Vorschau beachten die Jobeinstellung je Mandant (Schalter und Uhrzeit), der Zahllauf ist im Jobkatalog, die plattformweite Wiederherstellungsprüfung nicht mehr.
+- Automatisierung: Einstellungen, Automatisierung zeigt die Standardjobs je Mandant mit Schalter und Uhrzeit sowie im Regelformular den Schalter Testmodus (nur Protokoll) mit Kennzeichnung und Ergebnisfilter im Protokoll.
+- Automatisierung: Die Jobzeitfenster öffnen bei der Zeitumstellung (29.03. und 25.10.) genau einmal, Mahnlauf und Zahllauf Vorschau legen je Mandant und Tag nur einen geplanten Lauf an, auch bei parallelem Aufruf; Tests für Sommerzeit, Wiederholung und parallele Läufe.
+- Import: Schreiber für HeiWaKo-Satzart A (Ordnungsbegriffe) mit Roundtrip-Test ergänzt, nicht an eine Übermittlung angebunden.
+- Betrieb: optionaler Job xrechnung-kosit prüft Generatorrechnungen mit dem KoSIT-Validator, sobald Version und Prüfsummen hinterlegt sind.
+- Betrieb: Folgefälligkeit wiederkehrender Wartungen und Historie der Umsatzsteueroption (Überlappung, Wechsel Leerstand zu Vertrag) sind durch Integrationstests abgedeckt.
+- Betrieb: Runbook Vorfall (docs/runbooks/incident.md), Messung der Detailseiten (P95) mit wöchentlichem Workflow perf.yml.
+- Betrieb: Playwright-Spec für Objekt-Formular, Vertragsformular und Dokument-Upload ergänzt (nicht ausgeführt).
+- Doku: ADR 0020 Formatversionen mit Kompatibilitätstest der nebeneinander genutzten pain-Versionen.
+- Doku: Übersicht der Bestandstools mit Zweck, Schnittstelle, Status und offenen Punkten sowie Abgleich der Hub-Parser dokumentiert.
+- API: ticket.commented (ohne Kommentartext), bank_transaction.imported (gebündelt je Importlauf und Konto), portal_account.activated sowie contract.changed und contract_payment.changed werden erzeugt und per Webhook zugestellt.
+- API: Bankumsätze, Beschluss-Sammlung, Mahnläufe und Vorgangsliste unterstützen filter[feld], sort und fields (Vorgangsliste ohne sort).
+- API: Test für contact.updated bei Eigentümerkontakten mit Fehlzustellung und Neuzustellung ergänzt.
+- API: Ereigniskatalog der Webhooks bereinigt (doppelter Schlüssel contract_payment.changed)
+- KI: Lernbeispiele werden eingebettet und als Few-Shot nach Ähnlichkeit ausgewählt, nur bei freigegebener Einbettungsroute.
+- KI: Die Kontaktvorschau erlaubt eine Rolle je Zeile und die Übernahme leerer Felder beim Verknüpfen.
+- KI: Feld merge_fields der Kontaktzuordnung optional (Kompatibilität des API-Clients)
+- DMS: Konfigurierbares Ordnerschema der Google-Drive-Direktablage (Platzhalter objekt, jahr, kategorie) in der DMS-Maske.
+- DMS: Hilfetext der Pfadvorlage zeigt Platzhalter korrekt an
+- Betrieb: Celery-App für Konfigurationsprüfungen ohne Umschalten der aktiven App (create_celery mit set_as_current), behebt Testüberlagerung zwischen Beat-Prüfung und FinTS
+- Portal: Entzug des Mitarbeiterzugangs setzt den Kontostatus auf revoked statt disabled (Statusmodell 6.2, Migration 0310 bereinigt Altwerte)
+- KI-Chat: Seitenkontext und Einstellungssuche kennen die neuen Seiten Kundendomains, OIDC-Clients und Nummernkreise
+
 ## 1.56.0 (01.10.2026) Welle 10 der Lückenliste: Objektzuordnung Restbereiche, finAPI-Abgleich, Mailinhalt, Prüfung der Wellen 7 bis 9
 
 - Übersicht: Welle 10 der Lückenliste vom 30.09.2026 mit 5 Paketen, keine Migration: Restbereiche der Objektzuordnung (Mandatsvorschläge, Abgleichberichte, historische Bankverknüpfungen, Immoware24-Importe nur für unbeschränkte Mitglieder), täglicher finAPI-Zustimmungsabgleich hinter Mandantenschalter, Inhaltsmodus der Benachrichtigungsmails, Sicherheits- und Geldflussprüfung der Wellen 7 bis 9 mit sechs Behebungen (docs/reviews/REVIEW-W79-2026-10-01.md), Dokumentation der Wellen 7 bis 9. Neue Entscheidungen: T14-01a, U15-05, Y02-01, Y04-01, Y04-02.

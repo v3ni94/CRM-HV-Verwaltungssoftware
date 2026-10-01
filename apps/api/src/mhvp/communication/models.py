@@ -270,6 +270,12 @@ class Message(IdMixin, TimestampMixin, TenantMixin, Base):
     )
     author_approval_reason: Mapped[str | None] = mapped_column(String(32))
     gmail_message_id: Mapped[str | None] = mapped_column(String(64))
+    # Spec 6.6 message (GA04-09, migration 0305): delivery and read evidence and the provider
+    # id (Gmail or other provider id, separate from the Message-ID header). The spec field
+    # ``ai_classification`` is the existing ``classification`` / ``suggestion`` pair.
+    delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+    provider_message_id: Mapped[str | None] = mapped_column(String(255))
     # Gmail-Thread der eingehenden Mail (Review 26.09.2026, M7): Rückfall für die Zuordnung,
     # wenn weder ``In-Reply-To`` noch ``References`` eine bekannte Nachricht treffen.
     gmail_thread_id: Mapped[str | None] = mapped_column(String(64))

@@ -138,3 +138,14 @@ Nicht verarbeitet: B- und K-Sätze (Brennstoffe und Kosten, Richtung Wohnungswir
 Prüfung im CRM: `POST /api/v1/metering/connections/{id}/heiwako-import/preview` (Recht `metering_sync:run`, bis zu zehn Dateien je Aufruf, optional `period_from` für D-Sätze ohne begleitende DTM-Datei) liefert je Datei die Satzanzahl, Fehler und die für den Anbieter öffentlich nicht belegten Satzarten (Techem nennt LM und E898, nicht D; BRUNATA-METRONA nennt keinen Dateiaustausch), dazu die Abrechnungsergebnisse und Nutzer als Vorschau. Es wird nichts gespeichert: die Übernahme in `metering_billing_result` (mit Zuordnung über Abrechnungseinheit und Zeitraum wie beim Online-Abruf, Klärungsbereich bei unklarer Zuordnung) wird erst freigeschaltet, wenn der Betreiber je Anbieter eine echte Beispieldatei beigebracht hat und der Parser daran bestätigt wurde. Tests mit synthetischen Dateien: `apps/api/tests/unit/test_m40_metering_heiwako.py`.
 
 Zu prüfen (Betreiber, M40-02): Zugang zum Techem DXS Filetransfer Service beziehungsweise DXS Connector, Zugang zu Minol direct, Bestätigung durch BRUNATA-METRONA, ob Dateien nach bved 3.10 geliefert werden; je Anbieter mindestens eine Beispieldatei DTD310 und DTM310 (und, falls geliefert, DTA310 und DTE898) einer bereits abgerechneten Liegenschaft; Bestätigung des Versionsstands (3.10 oder älter, dann abweichende Satzlängen möglich); Tabellen K, E, S und U des bved (Kostenarten, Einheiten, Ablesekennzeichen, Abrechnungsunternehmen) für die Anzeige der Schlüssel im CRM; Jahrhundertregel für zweistellige Jahre (ASSUMPTIONS A-062).
+
+### 7.8 Stammdatenexport im HeiWaKo-Format (GA09-01, Stand 01.10.2026)
+
+`write_a_records` (`apps/api/src/mhvp/metering/heiwako.py`) schreibt die Satzart A (128 Byte,
+`DTA310_*.DAT`, ISO 8859-15, CR LF) mit den belegten Feldern 1 bis 6 und 7 bis 31 aus Q14.
+Alle übrigen Stellen bleiben leer. Satzarten L und M (Stammdaten der Liegenschaft und Nutzer)
+werden nicht geschrieben, weil nur der Lesepfad aus Q14 belegt ist und ein Schreiber Felder
+erfinden müsste. Der Writer ist an keine Übermittlung angebunden. Ob die Messdienste eine
+Stammdatenlieferung in diesem Format erwarten, ist offen (AA16-01 in `docs/OPEN_QUESTIONS.md`);
+bis dahin bleibt der CSV-Export der Zuordnungen und die Rollenübermittlung per bved-API der
+Stammdatenweg. Roundtrip-Test: `apps/api/tests/unit/test_m40_metering_heiwako.py`.

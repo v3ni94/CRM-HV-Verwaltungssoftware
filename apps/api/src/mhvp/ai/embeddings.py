@@ -18,6 +18,7 @@
 
 import asyncio
 import hashlib
+import json
 import uuid
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
@@ -30,6 +31,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from mhvp.ai import gateway, providers
 from mhvp.ai.models import (
     AiEmbedding,
+    AiExample,
     AiKnowledgeEntry,
     AiProvider,
     AiProviderConfig,
@@ -244,8 +246,17 @@ def chunk_text(text: str, size: int = CHUNK_CHARS, overlap: int = CHUNK_OVERLAP)
     return chunks
 
 
-def masked_source_text(kind: EmbeddingSourceKind, row: Document | AiKnowledgeEntry) -> str:
-    if isinstance(row, AiKnowledgeEntry):
+def masked_source_text(
+    kind: EmbeddingSourceKind, row: Document | AiKnowledgeEntry | AiExample
+) -> str:
+    if isinstance(row, AiExample):
+        # GA04-12: features and confirmed result as compact JSON, masked like every source.
+        raw = json.dumps(
+            {"task": row.task.value, "merkmale": row.features, "ergebnis": row.result},
+            ensure_ascii=False,
+            sort_keys=True,
+        )
+    elif isinstance(row, AiKnowledgeEntry):
         raw = f"{row.title}\n{row.content}"
     else:
         raw = f"{row.title}\n{row.ocr_text or ''}"
@@ -293,6 +304,11 @@ def _pending_knowledge() -> Any:
     return _knowledge_live().where(or_(embedded.is_(None), embedded < AiKnowledgeEntry.updated_at))
 
 
+def _pending_examples() -> Any:
+    embedded = _embedded_at(EmbeddingSourceKind.AI_EXAMPLE, AiExample.id)
+    return select(AiExample).where(or_(embedded.is_(None), embedded < AiExample.updated_at))
+
+
 async def _count(session: AsyncSession, query: Any) -> int:
     value = await session.scalar(select(func.count()).select_from(query.subquery()))
     return int(value or 0)
@@ -306,6 +322,8 @@ async def status(session: AsyncSession) -> dict[str, Any]:
     docs_pending = await _count(session, _pending_documents())
     kb_total = await _count(session, _knowledge_live())
     kb_pending = await _count(session, _pending_knowledge())
+    ex_total = await _count(session, select(AiExample))
+    ex_pending = await _count(session, _pending_examples())
     chunks = int(await session.scalar(select(func.count()).select_from(AiEmbedding)) or 0)
     last = await session.scalar(
         select(AiTaskRun)
@@ -323,6 +341,9 @@ async def status(session: AsyncSession) -> dict[str, Any]:
         "knowledge_total": kb_total,
         "knowledge_embedded": kb_total - kb_pending,
         "knowledge_pending": kb_pending,
+        "examples_total": ex_total,
+        "examples_embedded": ex_total - ex_pending,
+        "examples_pending": ex_pending,
         "chunks": chunks,
         "last_run_at": last.created_at if last else None,
         "last_run_status": last.status.value if last else None,
@@ -391,6 +412,16 @@ async def _load_pending(session: AsyncSession, limit: int) -> list[_Pending]:
             items.append(
                 _Pending(EmbeddingSourceKind.KNOWLEDGE_ENTRY, entry.id, text, chunk_text(text))
             )
+    remaining = limit - len(items)
+    if remaining > 0:
+        shots = (
+            await session.scalars(
+                _pending_examples().order_by(AiExample.updated_at).limit(remaining)
+            )
+        ).all()
+        for shot in shots:
+            text = masked_source_text(EmbeddingSourceKind.AI_EXAMPLE, shot)
+            items.append(_Pending(EmbeddingSourceKind.AI_EXAMPLE, shot.id, text, chunk_text(text)))
     return items
 
 
@@ -692,3 +723,38 @@ async def rank_knowledge(
         return None
     by_id = {e.id: e for e in entries}
     return [by_id[source_id] for source_id, _d in hits if source_id in by_id]
+
+
+async def rank_examples(
+    session: AsyncSession,
+    task: AiTask,
+    text: str,
+    *,
+    tenant_id: uuid.UUID,
+    actor: uuid.UUID | None,
+    limit: int,
+) -> list[AiExample] | None:
+    """GA04-12: the learning examples of ``task`` most similar to ``text`` (cosine distance of
+    the masked example text, only embedded examples). ``None`` keeps the caller's recency
+    order: no embeddings, no released route (AVV, rule 13), budget reached, provider error or
+    nothing under the distance cut-off."""
+    if not text.strip() or not await has_embeddings(session, EmbeddingSourceKind.AI_EXAMPLE):
+        return None
+    ids = list((await session.scalars(select(AiExample.id).where(AiExample.task == task))).all())
+    if not ids:
+        return None
+    vector = await embed_query(session, text, tenant_id=tenant_id, actor=actor)
+    if vector is None:
+        return None
+    hits = await similar_sources(
+        session, EmbeddingSourceKind.AI_EXAMPLE, vector, limit=limit, only_ids=ids
+    )
+    if not hits:
+        return None
+    rows = {
+        r.id: r
+        for r in (
+            await session.scalars(select(AiExample).where(AiExample.id.in_([i for i, _ in hits])))
+        ).all()
+    }
+    return [rows[i] for i, _d in hits if i in rows]

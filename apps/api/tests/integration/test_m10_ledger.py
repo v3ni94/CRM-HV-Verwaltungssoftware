@@ -293,7 +293,7 @@ def test_ledger_per_legal_entity_open_items_and_reversal(client: TestClient, wor
         sheet["credit"]
     ) == Decimal(sheet["closing_balance"])
     checks = _ok(client.get(f"{A}/ledgers/{ledger}/checks", headers=h))
-    assert checks == {"ok": True, "findings": []}
+    assert (checks["ok"], checks["findings"]) == (True, [])
 
     # B01: a second legal entity has its own ledger; no cross postings or settlements.
     other_ledger, other_acc, _ = _hoa_ledger(client, h, "702")
@@ -613,7 +613,6 @@ def test_d49_historical_open_items_after_later_payment_and_reversal(
         )
     )
     assert len(posted) == 4  # receivable, payment and two reversals; nothing deleted
-    assert _ok(client.get(f"{A}/ledgers/{ledger}/checks", headers=h)) == {
-        "ok": True,
-        "findings": [],
-    }
+    final_checks = _ok(client.get(f"{A}/ledgers/{ledger}/checks", headers=h))
+    assert (final_checks["ok"], final_checks["findings"]) == (True, [])
+    assert final_checks["subledger_differences"] == []

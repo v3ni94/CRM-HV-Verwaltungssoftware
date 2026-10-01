@@ -232,7 +232,15 @@ def test_dunning_preview_and_locks(
     async def boom(*args: Any, **kwargs: Any) -> None:
         raise RuntimeError("synthetic failure")
 
-    with patch("mhvp.accounting.tasks.dunning.preview", boom):
+    # GA12-06: one scheduled run per tenant and day, so the failing run uses the next day.
+    from datetime import timedelta
+
+    from mhvp.workspace.services import local_today
+
+    with (
+        patch("mhvp.accounting.tasks.dunning.preview", boom),
+        patch("mhvp.accounting.tasks.local_today", lambda: local_today() + timedelta(days=1)),
+    ):
         result = asyncio.run(dunning_previews(_settings(database, redis_url)))
     assert result["failed"] >= 1
     statuses = {r["status"] for r in _ok(client.get(f"{A}/dunning-runs", headers=acc_user))}

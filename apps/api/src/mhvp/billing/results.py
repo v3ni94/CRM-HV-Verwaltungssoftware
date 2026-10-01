@@ -145,7 +145,11 @@ async def create_result_drafts(
         balance = Decimal(row["balance"])
         if balance == 0:
             continue
-        if balance > 0 and row.get("late_claim_blocked") and not statement.deadline_exception:
+        if (
+            balance > 0
+            and row.get("late_claim_blocked")
+            and not statement.deadline_exception_effective
+        ):
             raise ProblemError(
                 ErrorCodes.CONFLICT,
                 detail=f"Einheit {row['unit_number']}: Nachforderung nach Fristablauf gesperrt.",

@@ -156,7 +156,9 @@ def test_beat_time_from_settings(settings: Settings) -> None:
     assert beat_time(settings) == (5, 30)
     custom = make_settings(import_reconciliation_time="06:15")
     assert beat_time(custom) == (6, 15)
-    entry = create_celery(custom).conf.beat_schedule["imports-reconciliation-report"]
+    entry = create_celery(custom, set_as_current=False).conf.beat_schedule[
+        "imports-reconciliation-report"
+    ]
     assert entry["task"] == "mhvp.imports.reconciliation_all"
     assert entry["schedule"] == crontab(hour=6, minute=15)
     with pytest.raises(ValueError, match="import_reconciliation_time"):

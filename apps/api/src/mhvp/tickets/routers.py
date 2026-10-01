@@ -328,6 +328,8 @@ class WorkOrderIn(_In):
     description: str = Field(min_length=3, max_length=20000)
     budget_limit: Decimal | None = Field(default=None, ge=0)
     requires_board_approval: bool = False
+    # GA04-07: reference to the approval workflow (no workflow table yet, AA05-01).
+    approval_workflow_id: uuid.UUID | None = None
 
 
 class OrderStep(_In):
@@ -372,6 +374,7 @@ def _ticket_out(t: Ticket) -> dict[str, Any]:
             "contact_id",
             "template_id",
             "category",
+            "category_id",
             "topic",
             "title",
             "public_description",
@@ -460,6 +463,7 @@ def _order_out(o: WorkOrder) -> dict[str, Any]:
             "description",
             "budget_limit",
             "requires_board_approval",
+            "approval_workflow_id",
             "status",
             "quote_amount",
             "quote_document_id",
@@ -1708,6 +1712,7 @@ async def create_ticket_in_session(
     )
     session.add(ticket)
     await session.flush()
+    await session.refresh(ticket, ["category_id"])  # set by trigger (GA04-08)
     from mhvp.sla.service import start_clock
 
     await start_clock(
@@ -2771,6 +2776,20 @@ async def comment(
         )
         session.add(row)
         await session.flush()
+        # GA04-01: internal comments carry no text in the payload.
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="ticket.commented",
+            entity_type="ticket",
+            entity_id=ticket.id,
+            actor_user_id=principal.user_id,
+            payload={
+                "ticket_id": str(ticket.id),
+                "comment_id": str(row.id),
+                "internal": row.internal,
+            },
+        )
         return {"id": row.id, "internal": row.internal}
 
 

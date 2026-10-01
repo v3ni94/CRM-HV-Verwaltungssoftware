@@ -1,6 +1,7 @@
 import { getTranslations } from "next-intl/server";
 
 import { AiPlausibilityCard } from "@/components/billing/AiPlausibilityCard";
+import { AcquisitionReleases, type AcquisitionItem } from "@/components/hoa/AcquisitionReleases";
 import { LoanAllocationForm, type LoanAllocationRow } from "@/components/hoa/AssetReportForms";
 import { ReconciliationNotes } from "@/components/hoa/FinanceForms";
 import { HoaItemForm, HoaSteps } from "@/components/hoa/HoaForms";
@@ -8,7 +9,7 @@ import { ReserveYearsTable, type ReserveYearRow } from "@/components/hoa/Reserve
 import { StatementPdfButton } from "@/components/hoa/StatementPdfButton";
 import { StatementVersionDiff, type StatementDiff } from "@/components/hoa/StatementVersionDiff";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { redirectIfUnauthenticated } from "@/lib/api-server";
+import { redirectIfUnauthenticated, serverFetch } from "@/lib/api-server";
 import { formatDate, formatEur } from "@/lib/format";
 import { hoaContext } from "@/lib/hoa";
 import { problemMessage, type Problem } from "@/lib/problem";
@@ -42,6 +43,11 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
   const costAccounts = ((accounts.data ?? []) as { id: string; number: string; name: string; category: string }[])
     .filter((a) => a.category === "cost")
     .map((a) => ({ id: a.id, number: a.number, name: a.name }));
+  // GA07-03: special acquisitions of the year (release by a second person).
+  const acquisitionResponse = await serverFetch(`/api/v1/hoa/statements/${encodeURIComponent(stId)}/acquisitions`);
+  const acquisitions = acquisitionResponse.ok
+    ? ((await acquisitionResponse.json()) as { items: AcquisitionItem[]; note: string })
+    : { items: [] as AcquisitionItem[], note: "" };
   const blocking = ((pkg.data?.blocking ?? []) as { code: string; detail: string }[]);
   const recon = (pkg.data?.reconciliation ?? null) as Recon | null;
   const notes = ((data?.reconciliation_notes ?? []) as { code: string; amount: string; note: string }[]);
@@ -89,6 +95,7 @@ export default async function HoaStatementPage({ params }: { params: Promise<{ p
           </ul>
         </div>
       ) : null}
+      <AcquisitionReleases statementId={stId} items={acquisitions.items} note={acquisitions.note} />
       <div className="overflow-x-auto">
 <table className="mhvp-table">
         <tbody>

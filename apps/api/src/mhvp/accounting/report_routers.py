@@ -509,6 +509,22 @@ async def effective_rule_version(
         return RuleVersionOut.model_validate(row)
 
 
+@router.post("/rule-versions/seed-checkpoints", summary="Datierte Prüfpunkte als Entwurf anlegen")
+async def seed_rule_checkpoints(
+    request: Request,
+    principal: TenantPrincipal = Depends(APPROVE),
+) -> list[RuleVersionOut]:
+    """GA08-02/03: HeizkostenV §§ 5 und 12 and CO2KostAufG §§ 5a to 5d as draft entries with a
+    note and no legal consequence (7.10 H03, H05). Existing entries are kept."""
+    from mhvp.accounting import rule_register
+
+    async with tenant_tx(request, principal) as session:
+        rows = await rule_register.seed_checkpoints(
+            session, tenant_id=principal.tenant_id, user_id=principal.user_id, today=local_today()
+        )
+        return [RuleVersionOut.model_validate(r) for r in rows]
+
+
 @router.post("/rule-versions", status_code=201, summary="Regelversion als Entwurf erfassen")
 async def create_rule_version(
     body: RuleVersionIn,

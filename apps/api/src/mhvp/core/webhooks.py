@@ -61,11 +61,13 @@ EVENT_TYPES: dict[str, str] = {
     "contract.created": "Vertrag angelegt (Vertrags-ID)",
     "contract.updated": "Vertrag geändert (Vertrags-ID, Namen der geänderten Felder)",
     "contract.terminated": "Vertrag beendet (Vertrags-ID, Beendigungsdatum)",
-    "contract.changed": "Vertrag fachlich geändert (Vertrags-ID, Art der Änderung)",
-    "contract_payment.changed": "Zahlungsvereinbarung eines Vertrags geändert (Vertrags-ID)",
+    "contract.changed": "Vertrag fachlich geändert (Vertrags-ID, auslösender Ereignistyp)",
+    "contract_payment.changed": "Zahlungsvereinbarung geändert (Vertrags-ID, auslösender "
+    "Ereignistyp)",
     "journal_entry.posted": "Buchung festgeschrieben (Buchungs-ID, Datum, Betrag)",
     "journal_entry.reversed": "Buchung storniert (Buchungs-ID, Stornobuchungs-ID)",
-    "bank_transaction.imported": "Bankumsatz importiert (Umsatz-ID, Konto-ID, Betrag)",
+    "bank_transaction.imported": "Bankumsätze importiert (Konto-ID, Importlauf-ID, Anzahl neuer "
+    "Umsätze)",
     "invoice.received": "Eingangsrechnung erfasst (Rechnungs-ID)",
     "invoice.approved": "Eingangsrechnung freigegeben (Rechnungs-ID)",
     "invoice.paid": "Eingangsrechnung bezahlt (Rechnungs-ID)",

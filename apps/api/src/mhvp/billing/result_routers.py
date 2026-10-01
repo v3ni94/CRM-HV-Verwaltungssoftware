@@ -6,7 +6,7 @@ Editing is allowed in ``draft`` only; after ``calculated`` a change needs a new 
 """
 
 import uuid
-from datetime import date
+from datetime import UTC, date, datetime
 from decimal import Decimal
 from typing import Any, Literal
 
@@ -64,6 +64,8 @@ class StatementPatchIn(_In):
     include_heating: bool | None = None
     settings: StatementSettingsIn | None = None
     deadline_exception: str | None = Field(default=None, min_length=3, max_length=2000)
+    # GA06-04: evidence document of the exception (7.6 A04); without it the lock stays.
+    deadline_exception_document_id: uuid.UUID | None = None
 
 
 class StatementCostItemUpdateIn(_In):
@@ -154,8 +156,29 @@ async def patch_statement(
                 setattr(st, field, data[field])
         if "purpose" in data:
             st.purpose = data["purpose"]
-        if "deadline_exception" in data:
-            st.deadline_exception = data["deadline_exception"]
+        if "deadline_exception" in data or "deadline_exception_document_id" in data:
+            if "deadline_exception" in data:
+                st.deadline_exception = data["deadline_exception"]
+            if "deadline_exception_document_id" in data:
+                await _document_exists(session, data["deadline_exception_document_id"])
+                st.deadline_exception_document_id = data["deadline_exception_document_id"]
+            st.deadline_exception_set_by = principal.user_id
+            st.deadline_exception_set_at = datetime.now(UTC)
+            await emit(
+                session,
+                tenant_id=principal.tenant_id,
+                type="statement.deadline_exception_set",
+                entity_type="statement",
+                entity_id=st.id,
+                actor_user_id=principal.user_id,
+                payload={
+                    "reason": st.deadline_exception,
+                    "document_id": str(st.deadline_exception_document_id)
+                    if st.deadline_exception_document_id
+                    else None,
+                    "effective": st.deadline_exception_effective,
+                },
+            )
         if body.settings is not None:
             st.settings = {**st.settings, **body.settings.model_dump(exclude_none=True)}
         check_period(st.period_from, st.period_to, st.interim, st.purpose)

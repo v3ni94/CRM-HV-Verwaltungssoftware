@@ -7,6 +7,10 @@ import {
   type Rule,
   type Run,
 } from "@/components/settings/AutomationAdmin";
+import {
+  JobSchedulesAdmin,
+  type JobSchedule,
+} from "@/components/settings/JobSchedulesAdmin";
 import { PageHeader } from "@/components/ui/PageHeader";
 import {
   redirectIfUnauthenticated,
@@ -42,6 +46,7 @@ export default async function AutomationPage() {
     teamsRes,
     replyRes,
     lettersRes,
+    jobsRes,
   ] = await Promise.all([
     serverFetch("/api/v1/automation/rules"),
     serverFetch("/api/v1/automation/runs?limit=50"),
@@ -56,7 +61,9 @@ export default async function AutomationPage() {
     canManage
       ? serverFetch("/api/v1/document-templates")
       : Promise.resolve(null),
+    serverFetch("/api/v1/automation/job-schedules"),
   ]);
+  const jobSchedules = jobsRes.ok ? ((await jobsRes.json()) as JobSchedule[]) : [];
   const rules = rulesRes.ok ? ((await rulesRes.json()) as Rule[]) : [];
   const runs = runsRes.ok
     ? ((await runsRes.json()) as { items: Run[] }).items
@@ -130,6 +137,7 @@ export default async function AutomationPage() {
         }}
         canManage={canManage}
       />
+      <JobSchedulesAdmin initial={jobSchedules} canManage={canManage} />
     </div>
   );
 }

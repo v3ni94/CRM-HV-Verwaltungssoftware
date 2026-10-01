@@ -452,3 +452,15 @@ Die Änderung gilt nur für Tickets, die nach dem Speichern aus der Checkliste a
 ## Inhalt der Benachrichtigungsmails (Mandant)
 
 Unter Einstellungen, Benachrichtigungen legt die Verwaltung für den Mandanten fest, was Benachrichtigungsmails enthalten. Voll (Standard) sendet Titel und Text. Hinweis sendet nur die Anzahl neuer Benachrichtigungen und einen Link ins CRM, ohne Titel und Text. Zum Ändern ist das Recht tenant_settings:update erforderlich. Welcher Modus gelten soll, ist eine Datenschutzentscheidung (Offene Frage U15-05).
+
+## Zustellweg und Nummernkreise
+
+Unter Einstellungen, Zustellweg und Nummernkreise legt die Verwaltung den Standard-Zustellweg (Post, E-Mail, Portal) fest. Er gilt im Versand, wenn weder die Position noch der Kontakt einen Zustellweg vorgibt. Darunter lassen sich Präfix, Stellenzahl, Startwert und Jahresbezug der Nummernkreise einstellen; die Vorschau zeigt die nächsten drei Nummern. Derzeit wirkt die Einstellung bei Vertragsnummern. Der Rechnungsnummernkreis ist bis zur Freigabe durch den Steuerberater gesperrt (Offene Frage AA17-01). Zum Ändern ist das Recht tenant_settings:update erforderlich.
+
+## Ordnerschema der Google-Drive-Ablage
+
+In der DMS-Anbindung bestimmt das Ordnerschema, in welche Ordner die Direktablage eines Dokuments zu einem Objekt schreibt, zum Beispiel {objekt}/{kategorie}/{jahr}. Leer bedeutet {objekt}/{jahr}.
+
+## Kundendomains und OIDC-Clients (Plattform)
+
+Plattformadministratoren pflegen unter Plattform, Domains die Hostnamen eines Mandanten (Zweck Portal, CRM oder API) mit Hinweis auf den CNAME-Eintrag und sperren oder entsperren den Mandanten. Unter Plattform, OIDC-Clients werden Clients der Anmeldung für Bestandstools angelegt, das Secret erneuert und Clients deaktiviert. Das Secret wird nur einmal angezeigt.

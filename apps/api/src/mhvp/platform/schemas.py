@@ -625,6 +625,13 @@ class GateRequestCreate(BaseModel):
         min_length=10, max_length=2000, description="Freigegebener Funktionsumfang und Objektgruppe"
     )
     evidence: str = Field(min_length=5, max_length=2000, description="Verweis auf Prüfnachweis")
+    # GA14-02: structured scope; omitted means all (default).
+    scope_property_ids: list[uuid.UUID] | None = Field(default=None, max_length=500)
+    scope_legal_entity_ids: list[uuid.UUID] | None = Field(default=None, max_length=100)
+    scope_functions: list[str] | None = Field(default=None, max_length=20)
+    # GA14-03/GA14-04: checklist code -> confirmation note, linked evidence document.
+    checklist: dict[str, str] | None = Field(default=None, max_length=30)
+    evidence_document_id: uuid.UUID | None = None
 
 
 class GateDecision(BaseModel):
@@ -643,6 +650,29 @@ class GateRequestOut(BaseModel):
     decision_comment: str | None
     # False only for an approval by the superadmin without a second person (ADR 0011).
     four_eyes: bool = True
+    opened_by: uuid.UUID | None = None
+    opened_at: datetime | None = None
+    revoked_by: uuid.UUID | None = None
+    revoked_at: datetime | None = None
+    revoke_comment: str | None = None
+    evidence_document_id: uuid.UUID | None = None
+    scope_property_ids: list[uuid.UUID] | None = None
+    scope_legal_entity_ids: list[uuid.UUID] | None = None
+    scope_functions: list[str] | None = None
+    checklist: dict[str, str] | None = None
+
+
+class GateChecklistItemOut(BaseModel):
+    code: str
+    label: str
+
+
+class GateChecklistOut(BaseModel):
+    gate: str
+    label: str
+    items: list[GateChecklistItemOut]
+    functions: list[str]
+    evidence_document_required: bool
 
 
 class PlatformSettingsOut(BaseModel):
@@ -669,3 +699,5 @@ class GateStateOut(BaseModel):
     label: str
     open: bool
     scopes: list[str]
+    # GA14-02: approvals restricted to properties, legal entities or functions only.
+    partially_open: bool = False

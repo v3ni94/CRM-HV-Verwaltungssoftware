@@ -19,7 +19,9 @@ from mhvp.core.telemetry import instrument_celery
 QUEUES: tuple[str, ...] = ("default", "io", "ocr", "ai", "bank", "mail", "beat")
 
 
-def create_celery(settings: Settings | None = None) -> Celery:
+def create_celery(settings: Settings | None = None, *, set_as_current: bool = True) -> Celery:
+    """Build the Celery app. ``set_as_current=False`` is for inspecting the configuration
+    (tests, tooling) without rebinding the ``shared_task`` proxies to the new instance."""
     settings = settings or get_settings()
     backend = settings.celery_result_backend
     reconciliation_hour, reconciliation_minute = (
@@ -27,6 +29,7 @@ def create_celery(settings: Settings | None = None) -> Celery:
     )
     app = Celery(
         "mhvp",
+        set_as_current=set_as_current,
         broker=settings.celery_broker_url.get_secret_value(),
         backend=backend.get_secret_value() if backend else None,
         include=[
@@ -410,6 +413,17 @@ def get_celery() -> Celery:
 @signals.setup_logging.connect
 def _configure_worker_logging(**_: Any) -> None:
     configure_logging(get_settings())
+
+
+@signals.worker_init.connect
+@signals.worker_process_init.connect
+def _install_job_gate_resolver(**_: Any) -> None:
+    """Jobs resolve release gates from the database per tenant (GA14-01, rule 0.1.4)."""
+    from mhvp.core.release_gates import JobDbReleaseGateResolver, install_job_release_gate_resolver
+
+    install_job_release_gate_resolver(
+        JobDbReleaseGateResolver(get_settings().database_url.get_secret_value())
+    )
 
 
 @signals.worker_process_init.connect

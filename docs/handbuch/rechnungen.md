@@ -178,3 +178,7 @@ Beim Erfassen einer Rechnung können unter "Weitere Angaben zur Prüfung am Bele
 - In der Rechnungserfassung wählen Sie Auftrag, Beschluss, Wirtschaftsplanposition und
   Rechnungsplan im aufklappbaren Bereich "Verknüpfungen für die sachliche Prüfung" aus. Die
   Listen laden erst beim Öffnen und gelten je Buchungskreis; alle Angaben sind optional.
+
+## E-Rechnung: Prüfergebnis im Belegeingang
+
+Im Belegeingang zeigt der Block "E-Rechnung: Prüfergebnis" Profil, Prüfer, Version, Ergebnis und Meldungen. Die interne formale Prüfung ist kein amtlicher Validator. Ein Reverse Charge Kennzeichen führt zum Hinweis auf einen möglichen Fall des § 13b UStG als gesonderten Freigabepunkt; die Einordnung nimmt der Steuerberater vor.

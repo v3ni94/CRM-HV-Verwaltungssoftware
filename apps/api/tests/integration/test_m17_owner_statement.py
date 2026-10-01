@@ -435,6 +435,30 @@ def test_rental_owner_statement(clients: tuple[TestClient, TestClient], world: W
     assert pdf.headers["content-type"].startswith("application/pdf")
     assert pdf.content.startswith(b"%PDF")
 
+    # GA03-08: receipt list in the snapshot; the cost entry has no receipt (listed, never
+    # invented); the option appends the receipts and a page naming the missing ones.
+    receipts = r["receipts"]
+    assert (receipts["missing"], receipts["linked"], receipts["total"]) == (1, 0, "150.00")
+    assert receipts["lines"][0]["account_number"] == "040100"
+    assert any(f["code"] == "RECEIPT_MISSING" for f in st["findings"])
+    assert r["section_35a"]["per_unit"] == {}  # rental owner: no released source (AA11-02)
+    assert st["attach_receipts"] is False
+    opt = f"{O}/{st['id']}/options"
+    assert client.patch(opt, json={"attach_receipts": True}, headers=clerk).status_code == 403
+    assert client.patch(opt, json={"attach_receipts": True}, headers=other).status_code == 404
+    assert client.patch(opt, json={"attach_receipts": "x"}, headers=h).status_code == 422
+    assert _ok(client.patch(opt, json={"attach_receipts": True}, headers=h))["attach_receipts"]
+    with_receipts = gated.get(f"{O}/{st['id']}/pdf", headers=h_open)
+    assert with_receipts.status_code == 200, with_receipts.text
+    from io import BytesIO
+
+    from pypdf import PdfReader
+
+    pages = len(PdfReader(BytesIO(pdf.content)).pages)
+    bundle = PdfReader(BytesIO(with_receipts.content))
+    assert len(bundle.pages) == pages + 1
+    assert "kein Beleg verknüpft" in (bundle.pages[-1].extract_text() or "")
+
 
 def test_sev_owner_statement_with_reconciliation(
     clients: tuple[TestClient, TestClient], world: World

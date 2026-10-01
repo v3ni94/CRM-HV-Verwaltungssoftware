@@ -66,7 +66,10 @@ Ja {{ top.ja }}, Nein {{ top.nein }}, Enthaltung {{ top.enthaltung }}\
 Mehrheitserfordernis: {{ top.mehrheit }}
 
 Verkündung: {{ top.verkuendung }}
-
+{% if top.ergebnis %}Ergebnis: {{ top.ergebnis }}
+{% endif %}{% if top.protokolltext %}
+{{ top.protokolltext }}
+{% endif %}
 {% endfor %}Unterschriften
 
 Versammlungsleitung: ______________________________ ({{ leitung.name }})
@@ -76,7 +79,20 @@ Vorsitz des Verwaltungsbeirats: ______________________________
 Weiteres Mitglied des Verwaltungsbeirats oder Protokollführung: ______________________________
 """
 
-MEETING_KIND = {"ordinary": "ordentlichen", "extraordinary": "außerordentlichen"}
+MEETING_KIND = {
+    "ordinary": "ordentlichen",
+    "extraordinary": "außerordentlichen",
+    "repeat": "wiederholten",
+    "continuation": "fortgesetzten",
+    "partial": "auf eine Untergemeinschaft beschränkten",
+    "circular_resolution": "im Umlaufverfahren geführten",
+}
+ITEM_RESULT = {
+    "accepted": "angenommen",
+    "rejected": "abgelehnt",
+    "deferred": "vertagt",
+    "no_vote": "ohne Abstimmung",
+}
 MEETING_MODE = {"presence": "Präsenz", "hybrid": "Hybrid", "virtual": "Virtuell"}
 PRINCIPLE = {
     "head": "Kopfprinzip (eine Stimme je Eigentümer)",
@@ -88,6 +104,7 @@ MAJORITY = {
     "simple": "einfache Mehrheit",
     "qualified": "qualifizierte Mehrheit",
     "unanimous": "Einstimmigkeit",
+    "all_owners": "Zustimmung aller Eigentümer",
 }
 STATUS = {"positive": "angenommen", "negative": "abgelehnt"}
 PLACEHOLDER = "nicht erfasst"
@@ -220,6 +237,9 @@ async def build_context(
                 "ausgeschlossen": int(tally["excluded"]),
                 "mehrheit": rule["label"] if rule else MAJORITY.get(item.majority, item.majority),
                 "verkuendung": announcement,
+                # GA03-02
+                "ergebnis": ITEM_RESULT.get(item.result or ""),
+                "protokolltext": item.minutes_text,
             }
         )
         if not item.proposal:

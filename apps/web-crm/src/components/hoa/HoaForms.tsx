@@ -5,6 +5,7 @@ import { useTranslations } from "next-intl";
 import { useState } from "react";
 
 import { MajorityCheckLine, type MajorityCheck } from "@/components/hoa/MajorityCheckLine";
+import { AgendaResultForm, MEETING_KINDS } from "@/components/hoa/MeetingDetailsForm";
 import { SUBJECT_KINDS } from "@/components/settings/MajorityRulesAdmin";
 import { bff } from "@/lib/bff";
 import { formatDate, formatEur } from "@/lib/format";
@@ -65,6 +66,8 @@ export function HoaCreate({
   const [rhythm, setRhythm] = useState("monthly");
   const [dueDay, setDueDay] = useState("3");
   const [basisPlan, setBasisPlan] = useState("");
+  const [meetingKind, setMeetingKind] = useState("ordinary");
+  const tKinds = useTranslations("HoaWork.meetingDetails");
   const create = async () => {
     const body =
       kind === "plan"
@@ -78,7 +81,11 @@ export function HoaCreate({
           }
         : kind === "statement"
           ? { ledger_id: ledgerId, year: Number(value) }
-          : { legal_entity_id: legalEntityId, scheduled_at: new Date(value).toISOString() };
+          : {
+              legal_entity_id: legalEntityId,
+              scheduled_at: new Date(value).toISOString(),
+              ...(meetingKind !== "ordinary" ? { kind: meetingKind } : {}),
+            };
     const path = kind === "plan" ? "plans" : kind === "statement" ? "statements" : "meetings";
     const res = await call<{ id: string }>(path, body);
     if (res) router.push(`${basePath}/${kind === "plan" ? "plan" : kind === "statement" ? "abrechnung" : "versammlung"}/${res.id}`);
@@ -95,6 +102,19 @@ export function HoaCreate({
             onChange={(e) => setValue(e.target.value)}
           />
         </label>
+        {kind === "meeting" ? (
+          <label className="flex flex-col gap-1">
+            <span className={ui.label}>{tKinds("kind")}</span>
+            <select className={ui.input} value={meetingKind} onChange={(e) => setMeetingKind(e.target.value)} data-testid="meeting-kind-select">
+              {/* repeat and continuation need the original meeting (API) */}
+              {MEETING_KINDS.filter((k) => k !== "repeat" && k !== "continuation").map((k) => (
+                <option key={k} value={k}>
+                  {tKinds(`kinds.${k}`)}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
         {kind === "plan" ? (
           <>
             <label className="flex flex-col gap-1">
@@ -545,7 +565,15 @@ export function MeetingPanel({
   id: string;
   status: string;
   rules?: MajorityRule[];
-  agenda: { id: string; position: number; title: string; majority: string; resolution: { number: number; status: string } | null }[];
+  agenda: {
+    id: string;
+    position: number;
+    title: string;
+    majority: string;
+    resolution: { number: number; status: string } | null;
+    result?: string | null;
+    minutes_text?: string | null;
+  }[];
 }) {
   const t = useTranslations("HoaWork");
   const tr = useTranslations("MajorityRules");
@@ -553,6 +581,8 @@ export function MeetingPanel({
   const [title, setTitle] = useState("");
   const [proposal, setProposal] = useState("");
   const [ruleId, setRuleId] = useState("");
+  const [majority, setMajority] = useState("simple");
+  const tAgenda = useTranslations("HoaWork.agendaResult");
   const [invitedAt, setInvitedAt] = useState("");
   const [urgency, setUrgency] = useState("");
   const [tallies, setTallies] = useState<Record<string, { yes: string; no: string; abstain: string; proposal: string | null; manual_check: boolean }>>({});
@@ -588,7 +618,7 @@ export function MeetingPanel({
                   {t("announced", { number: a.resolution.number, status: t(`resolutionStatus.${a.resolution.status}`) })}
                   {checks[a.id] ? <MajorityCheckLine check={checks[a.id] as MajorityCheck} /> : null}
                 </div>
-              ) : status === "held" ? (
+              ) : status === "held" && (a.result === "deferred" || a.result === "no_vote") ? null : status === "held" ? (
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <button type="button" className={ui.button} onClick={() => tally(a.id)}>
                     {t("tally")}
@@ -627,6 +657,9 @@ export function MeetingPanel({
                   ) : null}
                 </div>
               ) : null}
+              {status === "held" || status === "closed" ? (
+                <AgendaResultForm itemId={a.id} result={a.result ?? null} minutesText={a.minutes_text ?? null} closed={status === "closed"} />
+              ) : null}
             </li>
           );
         })}
@@ -661,6 +694,15 @@ export function MeetingPanel({
                 </select>
               </label>
             ) : null}
+            {ruleId ? null : (
+              <label className="flex flex-col gap-1">
+                <span className={ui.label}>{tAgenda("majority")}</span>
+                <select className={ui.input} value={majority} onChange={(e) => setMajority(e.target.value)} data-testid="agenda-majority">
+                  <option value="simple">{tAgenda("simple")}</option>
+                  <option value="all_owners">{tAgenda("allOwners")}</option>
+                </select>
+              </label>
+            )}
             <button
               type="button"
               className={ui.button}
@@ -669,7 +711,7 @@ export function MeetingPanel({
                 if ((await call(`meetings/${id}/agenda`, {
                     title: title.trim(),
                     proposal: proposal.trim() || null,
-                    ...(ruleId ? { rule_id: ruleId } : {}),
+                    ...(ruleId ? { rule_id: ruleId } : majority !== "simple" ? { majority } : {}),
                   })) !== null) {
                   setTitle("");
                   setProposal("");

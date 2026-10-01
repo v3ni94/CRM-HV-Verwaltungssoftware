@@ -8,11 +8,11 @@ import uuid
 from collections.abc import Sequence
 from datetime import date, timedelta
 from decimal import Decimal
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal, Self
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Header, Query, Request, Response
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 from sqlalchemy import func, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -52,6 +52,7 @@ from mhvp.accounting.models import (
     InvoiceLine,
     InvoiceReview,
     JournalEntry,
+    JournalEntryNote,
     JournalLine,
     LeadingSystem,
     Ledger,
@@ -95,9 +96,11 @@ from mhvp.core.auth.scope import (
 )
 from mhvp.core.etag import check_if_match, etag_of
 from mhvp.core.events import emit
+from mhvp.core.ids import uuid7
 from mhvp.core.listparams import (
     LIST_PARAMS_DOC,
     ListParams,
+    ListSpec,
     apply_filters,
     apply_sort,
     check_include,
@@ -605,6 +608,119 @@ async def get_entry(
         )
 
 
+class AccountingEntryNoteIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    body: str = Field(min_length=1, max_length=4000)
+    supersedes_id: uuid.UUID | None = None
+
+    @model_validator(mode="after")
+    def _not_blank(self) -> Self:
+        if not self.body.strip():
+            raise ValueError("body must not be blank")
+        return self
+
+
+class AccountingEntryNoteOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+    id: uuid.UUID
+    journal_entry_id: uuid.UUID
+    note_key: uuid.UUID
+    version: int
+    supersedes_id: uuid.UUID | None
+    body: str
+    created_at: Any
+    created_by: uuid.UUID | None
+    is_current: bool = True
+
+
+@router.get(
+    "/ledgers/{ledger_id}/entries/{entry_id}/notes",
+    summary="Vermerke zum Buchungssatz (alle Versionen)",
+)
+async def list_entry_notes(
+    ledger_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+) -> list[AccountingEntryNoteOut]:
+    async with tenant_tx(request, principal) as session:
+        entry = await _entry(session, await _ledger(session, ledger_id), entry_id)
+        notes = list(
+            await session.scalars(
+                select(JournalEntryNote)
+                .where(JournalEntryNote.journal_entry_id == entry.id)
+                .order_by(JournalEntryNote.created_at, JournalEntryNote.version)
+            )
+        )
+        superseded = {n.supersedes_id for n in notes if n.supersedes_id is not None}
+        out = []
+        for note in notes:
+            row = AccountingEntryNoteOut.model_validate(note)
+            row.is_current = note.id not in superseded
+            out.append(row)
+        return out
+
+
+@router.post(
+    "/ledgers/{ledger_id}/entries/{entry_id}/notes",
+    status_code=201,
+    summary="Vermerk ergänzen oder als neue Version fortschreiben",
+)
+async def add_entry_note(
+    ledger_id: uuid.UUID,
+    entry_id: uuid.UUID,
+    body: AccountingEntryNoteIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(UPDATE),
+) -> AccountingEntryNoteOut:
+    """Notes never change the financial content of the entry (B03); every change is a new
+    version, earlier versions stay readable (GA05-02). No release gate: a note is no posting."""
+    async with tenant_tx(request, principal) as session:
+        entry = await _entry(session, await _ledger(session, ledger_id), entry_id)
+        if entry.status is not EntryStatus.POSTED:
+            raise ProblemError(ErrorCodes.ACC_NOTE_ENTRY_NOT_POSTED)
+        note_key, version = uuid7(), 1
+        if body.supersedes_id is not None:
+            prev = await session.scalar(
+                select(JournalEntryNote)
+                .where(JournalEntryNote.id == body.supersedes_id)
+                .with_for_update()
+            )
+            if prev is None or prev.journal_entry_id != entry.id:
+                raise ProblemError(ErrorCodes.ACC_NOTE_VERSION_CONFLICT)
+            successor = await session.scalar(
+                select(JournalEntryNote.id).where(JournalEntryNote.supersedes_id == prev.id)
+            )
+            if successor is not None:
+                raise ProblemError(ErrorCodes.ACC_NOTE_VERSION_CONFLICT)
+            note_key, version = prev.note_key, prev.version + 1
+        note = JournalEntryNote(
+            tenant_id=principal.tenant_id,
+            journal_entry_id=entry.id,
+            note_key=note_key,
+            version=version,
+            supersedes_id=body.supersedes_id,
+            body=body.body,
+            created_by=principal.user_id,
+        )
+        session.add(note)
+        try:
+            await session.flush()
+        except IntegrityError:
+            raise ProblemError(ErrorCodes.ACC_NOTE_VERSION_CONFLICT) from None
+        await session.refresh(note)
+        await emit(
+            session,
+            tenant_id=principal.tenant_id,
+            type="journal_entry.note_added",
+            entity_type="journal_entry",
+            entity_id=entry.id,
+            actor_user_id=principal.user_id,
+            payload={"note_id": str(note.id), "version": note.version},
+        )
+        return AccountingEntryNoteOut.model_validate(note)
+
+
 @router.post(
     "/ledgers/{ledger_id}/entries/{entry_id}/approve",
     summary="Anfangsbestand prüfen (zweite Person)",
@@ -1000,11 +1116,24 @@ async def settlement_confirm(
 
 @router.get("/ledgers/{ledger_id}/checks", summary="Konsistenzprüfung B02, B07, B09")
 async def checks(
-    ledger_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+    ledger_id: uuid.UUID,
+    request: Request,
+    principal: TenantPrincipal = Depends(READ),
+    as_of: date | None = None,
 ) -> dict[str, Any]:
+    """``findings`` are hard violations (B02, B04 numbering, B07, B09); ``subledger`` lists
+    per debtor and creditor account the open items against the ledger balance as of
+    ``as_of`` (GA05-03). A difference there is shown for review, it does not set ``ok``."""
     async with tenant_tx(request, principal) as session:
-        findings = await svc.checks(session, await _ledger(session, ledger_id))
-        return {"ok": not findings, "findings": findings}
+        ledger = await _ledger(session, ledger_id)
+        findings = await svc.checks(session, ledger)
+        subledger = await svc.subledger_reconciliation(session, ledger, as_of)
+        return {
+            "ok": not findings,
+            "findings": findings,
+            "subledger": subledger,
+            "subledger_differences": [r for r in subledger if Decimal(r["difference"]) != 0],
+        }
 
 
 # Receivable runs and management fee (M13, 7.5) ----------------------------------------
@@ -1040,6 +1169,21 @@ class FeeIn(BaseModel):
     amounts_per_unit_type: dict[str, Decimal]
     invoice_debtor_party_id: uuid.UUID | None = None
     contract_document_id: uuid.UUID | None = None
+    # GA03-06
+    manager_contact_id: uuid.UUID | None = None
+    termination_date: date | None = None
+    due_day_rule: Literal["day", "last_day", "day_next_month"] | None = None
+    due_day: int | None = Field(default=None, ge=1, le=31)
+    account_id: uuid.UUID | None = None
+    sev_fee_amount: Decimal | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def _due_rule(self) -> Self:
+        if self.due_day_rule in ("day", "day_next_month") and self.due_day is None:
+            raise ValueError("Für diese Fälligkeitsregel ist ein Tag anzugeben.")
+        if self.termination_date is not None and self.termination_date < self.start_date:
+            raise ValueError("Das Kündigungsdatum liegt vor dem Beginn.")
+        return self
 
 
 def _run_out(run: ReceivableRun, items: list[ReceivableItem]) -> dict[str, Any]:
@@ -1269,11 +1413,15 @@ async def reverse_run(
 async def create_fee(
     body: FeeIn, request: Request, principal: TenantPrincipal = Depends(APPROVE)
 ) -> dict[str, Any]:
+    from mhvp.accounting import admin_fees
     from mhvp.contacts.models import Party
 
     async with tenant_tx(request, principal) as session:
         if body.invoice_debtor_party_id is not None:
             await _get(session, Party, body.invoice_debtor_party_id)  # D58: debtor must exist
+        await admin_fees.check_fee_refs(
+            session, body.property_id, body.manager_contact_id, body.account_id
+        )
         data = body.model_dump()
         data["amounts_per_unit_type"] = {k: str(v) for k, v in body.amounts_per_unit_type.items()}
         row = AdminFeeSetting(tenant_id=principal.tenant_id, created_by=principal.user_id, **data)
@@ -1364,6 +1512,7 @@ async def fee_issue(
         draft["period_end"] = period[1] if period else None
         draft["number"] = number
         draft["invoice_date"] = issue_date
+        draft["due_date"] = admin_fees.fee_due_date(fee, period[0] if period else issue_date)
         draft["status"] = issued.status.value
         draft["xrechnung_url"] = f"/api/v1/accounting/invoices/{issued.id}/xrechnung.xml"
         # A69: outgoing event for subscribers (section 12, docs/integrations/webhooks.md).
@@ -2160,6 +2309,8 @@ class PlanIn(BaseModel):
     service_contract_id: uuid.UUID | None = None
     order_reference: str | None = Field(default=None, max_length=100)
     vat_percent: Decimal = Field(default=Decimal(0), ge=0, le=100)
+    # GA03-07: request for automatic posting; default off, needs the tenant switch.
+    auto_post: bool = False
 
 
 @router.post("/recurring-invoices", status_code=201, summary="Rechnungsplan anlegen")
@@ -2174,6 +2325,7 @@ async def create_plan(
         await creditor_routers.check_contract(
             session, body.service_contract_id, body.provider_contact_id
         )
+        await creditor_routers.check_auto_post(session, body.auto_post)
         plan = RecurringInvoicePlan(
             tenant_id=principal.tenant_id,
             created_by=principal.user_id,
@@ -2632,18 +2784,27 @@ async def dunning_preview(
         return await _dunning_out(session, run, cases)
 
 
+_DUNNING_RUN_LIST = ListSpec(
+    filters={"status": DunningRun.status, "run_date": DunningRun.run_date},
+    sort={"run_date": DunningRun.run_date, "created_at": DunningRun.created_at},
+)
+
+
 @router.get("/dunning-runs", summary="Mahnläufe (neueste zuerst)")
 async def dunning_runs(
     request: Request,
     limit: int = Query(default=20, ge=1, le=200),
+    params: ListParams = Depends(_DUNNING_RUN_LIST.dependency),
     principal: TenantPrincipal = Depends(READ),
 ) -> list[dict[str, Any]]:
     async with tenant_tx(request, principal) as session:
         runs = (
             await session.scalars(
-                select(DunningRun)
-                .order_by(DunningRun.run_date.desc(), DunningRun.created_at.desc())
-                .limit(limit)
+                _DUNNING_RUN_LIST.apply(
+                    select(DunningRun),
+                    params,
+                    (DunningRun.run_date.desc(), DunningRun.created_at.desc(), DunningRun.id),
+                ).limit(limit)
             )
         ).all()
         return [

@@ -33,6 +33,10 @@ CREATE = require_permission("accounting:create")
 APPROVE = require_permission("accounting:approve")
 ZERO = Decimal("0.00")
 STATUSES = ("draft", "calculated", "issued")
+PROVISION_NOTE = (
+    "Indiz für den Abruf im Eigentümerportal je Einheit. Keine Zustellung und kein rechtlich "
+    "bewerteter Zugang; wer nicht abgerufen hat, erhält den Bericht auf anderem Weg (Brief)."
+)
 DRAFT_NOTICE = (
     "Entwurf ohne Rechtsfolge. Gliederung und Inhalt des Vermögensberichts sind mit der "
     "Rechtsberatung abzustimmen (M24-02); Ausgabe an Eigentümer erst mit Freigabestufe G4."
@@ -731,25 +735,29 @@ def compose_pdf(
     )
 
 
-@router.get("/asset-reports/{report_id}/pdf", summary="Vermögensbericht als PDF (Entwurf bis G4)")
-async def asset_report_pdf(
-    report_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
-) -> Response:
+async def render_report_pdf(session: AsyncSession, settings: Any, row: HoaAssetReport) -> bytes:
+    """PDF of a calculated report on the letterhead; shared by the CRM and the owner portal."""
+    from mhvp.documents import letters
     from mhvp.documents import services as docs
     from mhvp.documents.blobs import BlobStore
     from mhvp.properties.models import LegalEntity
 
+    if row.snapshot is None:
+        raise ProblemError(ErrorCodes.CONFLICT, detail="Erst berechnen.")
+    head = await docs.letterhead(session, BlobStore(settings))
+    entity = await session.get(LegalEntity, row.legal_entity_id)
+    name = entity.name if entity is not None else "Gemeinschaft der Wohnungseigentümer"
+    letter = compose_pdf(row, row.snapshot, name, datetime.now(UTC).date())
+    return letters.render_pdf(head, letter)
+
+
+@router.get("/asset-reports/{report_id}/pdf", summary="Vermögensbericht als PDF (Entwurf bis G4)")
+async def asset_report_pdf(
+    report_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> Response:
     async with tenant_tx(request, principal) as session:
         row = await _get(session, report_id)
-        if row.snapshot is None:
-            raise ProblemError(ErrorCodes.CONFLICT, detail="Erst berechnen.")
-        head = await docs.letterhead(session, BlobStore(request.app.state.settings))
-        entity = await session.get(LegalEntity, row.legal_entity_id)
-        name = entity.name if entity is not None else "Gemeinschaft der Wohnungseigentümer"
-        letter = compose_pdf(row, row.snapshot, name, datetime.now(UTC).date())
-        from mhvp.documents import letters
-
-        pdf = letters.render_pdf(head, letter)
+        pdf = await render_report_pdf(session, request.app.state.settings, row)
         stamp = row.as_of.isoformat()
         return Response(
             content=pdf,
@@ -758,3 +766,63 @@ async def asset_report_pdf(
                 "Content-Disposition": f'attachment; filename="vermoegensbericht-{stamp}.pdf"'
             },
         )
+
+
+@router.get(
+    "/asset-reports/{report_id}/provisions",
+    summary="Bereitstellungsprotokoll je Eigentümer (GA07-02)",
+)
+async def asset_report_provisions(
+    report_id: uuid.UUID, request: Request, principal: TenantPrincipal = Depends(READ)
+) -> dict[str, Any]:
+    """Per ownership contract of the reporting date: first and last retrieval in the portal.
+    Indication only; a missing retrieval is no proof of non delivery, a retrieval no delivery."""
+    from sqlalchemy import or_
+
+    from mhvp.contracts.models import Contract, ContractKind
+    from mhvp.hoa.models import HoaAssetReportProvision
+    from mhvp.properties.models import Unit
+
+    async with tenant_tx(request, principal) as session:
+        row = await _get(session, report_id)
+        contracts = (
+            await session.execute(
+                select(Contract, Unit.number)
+                .join(Unit, Unit.id == Contract.unit_id)
+                .where(
+                    Contract.legal_entity_id == row.legal_entity_id,
+                    Contract.kind == ContractKind.OWNERSHIP,
+                    Contract.start_date <= row.as_of,
+                    or_(Contract.end_date.is_(None), Contract.end_date >= row.as_of),
+                )
+                .order_by(Unit.number)
+            )
+        ).all()
+        seen = {
+            cid: (first, last, count)
+            for cid, first, last, count in (
+                await session.execute(
+                    select(
+                        HoaAssetReportProvision.contract_id,
+                        func.min(HoaAssetReportProvision.occurred_at),
+                        func.max(HoaAssetReportProvision.occurred_at),
+                        func.count(),
+                    )
+                    .where(HoaAssetReportProvision.report_id == row.id)
+                    .group_by(HoaAssetReportProvision.contract_id)
+                )
+            ).all()
+        }
+        items = [
+            {
+                "contract_id": c.id,
+                "contract_number": c.number,
+                "unit_number": number,
+                "party_id": c.party_id,
+                "first_retrieved_at": seen[c.id][0] if c.id in seen else None,
+                "last_retrieved_at": seen[c.id][1] if c.id in seen else None,
+                "retrievals": seen[c.id][2] if c.id in seen else 0,
+            }
+            for c, number in contracts
+        ]
+        return {"report_id": row.id, "status": row.status, "items": items, "note": PROVISION_NOTE}

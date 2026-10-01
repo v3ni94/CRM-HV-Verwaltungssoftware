@@ -1,4 +1,5 @@
-import { screen } from "@testing-library/react";
+import { screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 
 import { renderIntl } from "@/test/intl";
 
@@ -44,5 +45,35 @@ describe("NoticeList", () => {
     expect(screen.getAllByText("Neu")).toHaveLength(1);
     const link = screen.getByRole("link", { name: "Anlage herunterladen" });
     expect(link).toHaveAttribute("href", "/api/portal-files/portal/notices/01920000-0000-7000-8000-000000000001/document");
+  });
+
+  it("shows the level, several attachments and confirms the reading once", async () => {
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(new Response("{}", { status: 200, headers: { "content-type": "application/json" } })));
+    vi.stubGlobal("fetch", fetchMock);
+    const id = "01920000-0000-7000-8000-000000000009";
+    renderIntl(
+      <NoticeList
+        notices={[
+          notice({
+            id,
+            type: "danger",
+            has_document: true,
+            documents: [
+              { id: "d1", filename: "Plan.pdf" },
+              { id: "d2", filename: "Skizze.pdf" },
+            ],
+            read: false,
+          }),
+        ]}
+      />,
+    );
+    expect(screen.getByText("Gefahr")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Anlage herunterladen: Plan.pdf" })).toHaveAttribute("href", `/api/portal-files/portal/notices/${id}/documents/d1`);
+    expect(screen.getByRole("link", { name: "Anlage herunterladen: Skizze.pdf" })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Als gelesen bestätigen" }));
+    await waitFor(() => expect(screen.getByText(/Als gelesen bestätigt/)).toBeInTheDocument());
+    expect(fetchMock).toHaveBeenCalledWith(`/api/bff/portal/notices/${id}/read`, expect.objectContaining({ method: "POST" }));
+    expect(screen.queryByRole("button", { name: "Als gelesen bestätigen" })).toBeNull();
+    vi.unstubAllGlobals();
   });
 });

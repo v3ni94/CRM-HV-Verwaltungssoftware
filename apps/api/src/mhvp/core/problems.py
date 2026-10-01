@@ -177,6 +177,20 @@ class ErrorCodes:
         "G5 needs every evidence item done with a linked document and the superadmin as "
         "approver (M27-02); the request stays open until then.",
     )
+    GATE_CHECKLIST_INCOMPLETE = ErrorCode(
+        "MHVP-GATE-0006",
+        409,
+        "Voraussetzungen der Freigabestufe unvollständig",
+        "G2 to G4 need every checklist item of 18.0 confirmed and a linked evidence document "
+        "(GA14-03); the request stays open until then.",
+    )
+    GATE_SCOPE_INVALID = ErrorCode(
+        "MHVP-GATE-0007",
+        422,
+        "Freigabeumfang oder Nachweis ungültig",
+        "Unknown checklist code or function code, or the evidence document is not a "
+        "document of the tenant (GA14-02, GA14-04).",
+    )
     RETENTION_LOCKED = ErrorCode(
         "MHVP-DOC-0001",
         409,
@@ -311,6 +325,21 @@ class ErrorCodes:
         (
             "A link of the factual review (work order, resolution, plan item, invoice plan) "
             "belongs to another property, community or ledger than the invoice (U15-02)."
+        ),
+    )
+    ACC_NOTE_ENTRY_NOT_POSTED = ErrorCode(
+        "MHVP-ACC-0009",
+        409,
+        "Vermerk nur zu gebuchten Sätzen",
+        "Notes are kept for posted entries; drafts are changed directly (B03, GA05-02).",
+    )
+    ACC_NOTE_VERSION_CONFLICT = ErrorCode(
+        "MHVP-ACC-0010",
+        409,
+        "Vermerk wurde bereits fortgeschrieben",
+        (
+            "Only the latest version of a note can be superseded; the referenced version "
+            "already has a successor or belongs to another entry (GA05-02)."
         ),
     )
     AI_POSTING_NOT_RELEASED = ErrorCode(
@@ -822,6 +851,20 @@ class ErrorCodes:
         "Wartung ist bereits erledigt",
         "A maintenance item without interval that is already done cannot be completed again.",
     )
+    # Objekte: Abrechnungszeitraum mit Status (GA02-01).
+    PROPERTY_BILLING_PERIOD_TRANSITION = ErrorCode(
+        "MHVP-PROP-0006",
+        409,
+        "Statuswechsel des Abrechnungszeitraums nicht möglich",
+        "Only one step forward or back is allowed, a closed period stays closed, and the "
+        "step needs the matching statements of the property.",
+    )
+    PROPERTY_BILLING_PERIOD_CLOSED = ErrorCode(
+        "MHVP-PROP-0007",
+        409,
+        "Abrechnungszeitraum ist abgeschlossen",
+        "A closed billing period (locked_at set) cannot be deleted.",
+    )
     # lexoffice (M13-lexoffice, docs/integrations/lexoffice.md).
     LEXOFFICE_NOT_CONFIGURED = ErrorCode(
         "MHVP-LEXO-0001",
@@ -1227,6 +1270,16 @@ class ErrorCodes:
             "virtual meetings, with a validity end on or after the meeting day (M25-03)."
         ),
     )
+    # GA07-01 (AA06): term of the enabling resolution, lock only behind a tenant switch.
+    HOA_VIRTUAL_BASIS_TERM = ErrorCode(
+        "MHVP-HOA-0030",
+        422,
+        "Zulassender Beschluss gilt länger als drei Jahre nach Beschlussdatum",
+        (
+            "tenant_settings.hoa_virtual_basis_term_lock_enabled is true and the validity end "
+            "lies more than three years after the date of the enabling resolution (GA07-01)."
+        ),
+    )
     HOA_RESERVE_OPENING_LOCKED = ErrorCode(
         "MHVP-HOA-0005",
         409,
@@ -1235,6 +1288,13 @@ class ErrorCodes:
             "A statement of the opening year is calculated or approved; opening balance and "
             "opening year stay unchanged, corrections go through a new movement (U15-03)."
         ),
+    )
+    HOA_ACQUISITION_FOUR_EYES = ErrorCode(
+        "MHVP-HOA-0020",
+        409,
+        "Freigabe des Sondererwerbs braucht eine zweite Person",
+        "The person who requested the release of a special acquisition cannot release it "
+        "(four eyes, GA07-03).",
     )
     # Bankverbindungen am Kontakt (CRM screen, M5-01 addendum 28.09.2026).
     CONTACT_BANK_ACCOUNT_ENDED = ErrorCode(

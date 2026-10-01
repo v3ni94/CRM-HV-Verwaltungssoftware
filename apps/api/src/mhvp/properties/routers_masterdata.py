@@ -139,6 +139,7 @@ async def _check_maintenance_refs(
     session: Any, item: MaintenanceItem, merged: s.MaintenanceIn
 ) -> None:
     await _unit_of_property(session, merged.unit_id, item.property_id)
+    await svc.check_documents_exist(session, merged.documents, "Dokumente")
     if merged.provider_relation_id is not None:
         relation = await _get(session, ServiceProviderRelation, merged.provider_relation_id)
         if relation.property_id != item.property_id:

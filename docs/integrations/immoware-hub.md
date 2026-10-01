@@ -271,3 +271,16 @@ Hubs können übernommen werden, wenn sie gegen den Paperless-Server geprüft si
 (keine positive Zahl als Feld-ID, Zeile ohne `=`, doppelte Options-ID) weist das CRM beim Speichern
 ab.
 
+
+## 8. Abgleich Hub-Parser gegen mhvp.imports (Entscheidung, GA09-03)
+
+Entscheidung (zur Bestätigung durch den Betreiber, AA16-02): Die Hub-Parser (Exporttypen
+`properties`, Einheiten, Eigentümer, Mieter, Verträge, offene Posten, DATEV-Buchungsstapel,
+CAMT.053, siehe Abschnitt 3) bleiben bis zur Ablösung im Hub und werden nicht nach
+`mhvp.imports` übernommen. `mhvp.imports` ist ein Neubau mit Staging, Testlauf und Rückgängig
+und liest die Immoware24-Exporte selbst. Grund: Eine zweite Verarbeitung desselben Exports
+erzeugte zwei Stände (Abschnitt 7). Nach der Betreiberentscheidung B27 (01.10.2026) ist die
+Übernahme der Immoware24-Daten einmalig; ein laufender Hub-Import entfällt damit ohnehin.
+Ein Abgleich Zeile für Zeile der Spaltenzuordnung je Berichtsart setzt den PHP-Quelltext
+des Hubs voraus, der dem Repo nicht vorliegt. Fehlt in `mhvp.imports` später eine
+Berichtsart, die der Hub kennt, wird sie dort neu gebaut, nicht aus dem Hub kopiert.

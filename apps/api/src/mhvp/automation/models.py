@@ -152,6 +152,7 @@ class AutomationRule(IdMixin, TimestampMixin, TenantMixin, Base):
 # Standard jobs of section 15.1 whose activation and time a tenant can configure (S15-03,
 # decision 12 a). The key is the beat entry name in ``mhvp.worker``; a job without a row runs as
 # scheduled globally. Switching a job off or moving it never opens a release gate.
+# ops-backup-verify is platform wide (not per tenant) and therefore not part of the catalog.
 JOB_CATALOG: dict[str, str] = {
     "documents-process-inbox": "Dokumenteneingang prüfen (Vorschläge)",
     "banking-sync-all": "Bankabruf",
@@ -164,7 +165,7 @@ JOB_CATALOG: dict[str, str] = {
     "workspace-digest": "Tagesübersicht",
     "workspace-compliance-deadlines": "Fristenhinweise",
     "imports-reconciliation-report": "Abstimmungsbericht Übernahme",
-    "ops-backup-verify": "Wiederherstellungsprüfung",
+    "payments-payment-run-preview": "Zahllauf Vorschau (nur Vorschau, keine Zahlung)",
 }
 
 

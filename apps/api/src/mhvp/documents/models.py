@@ -374,6 +374,50 @@ class DocumentTemplate(IdMixin, TimestampMixin, TenantMixin, Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     category_id: Mapped[uuid.UUID | None] = _fk("document_category.id", nullable=True)
     active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    # GA04-10 (6.6): letterhead template, the entity kinds the template may be used with
+    # (empty: unrestricted) and the placeholders found in subject and body (computed on save).
+    master_template_id: Mapped[uuid.UUID | None] = _fk(
+        "document_template.id", nullable=True, ondelete="SET NULL"
+    )
+    context_types: Mapped[list[str]] = mapped_column(
+        ARRAY(String(32)), nullable=False, default=list, server_default=sa_text("'{}'")
+    )
+    placeholders_used: Mapped[list[str]] = mapped_column(
+        ARRAY(String(100)), nullable=False, default=list, server_default=sa_text("'{}'")
+    )
+
+
+TEMPLATE_CONTEXT_TYPES = (
+    "contact",
+    "contract",
+    "unit",
+    "property",
+    "meeting",
+    "statement",
+    "ticket",
+)
+
+
+class GeneratedDocument(IdMixin, TimestampMixin, TenantMixin, Base):
+    """A document produced from a template or a built-in letter (GA04-11, 6.6): which template
+    and version, which entity formed the context, who received it and the dispatch record
+    (channel and evidence live on ``dispatch``). The document itself stays in ``document``."""
+
+    __tablename__ = "generated_document"
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "document_id", name="uq_generated_document_document"),
+        Index("ix_generated_document_context", "tenant_id", "context_type", "context_id"),
+    )
+
+    document_id: Mapped[uuid.UUID] = _fk("document.id")
+    template_id: Mapped[uuid.UUID | None] = _fk("document_template.id", nullable=True)
+    # Template code and version, or the name of the built-in letter (origin) when no template.
+    template_code: Mapped[str | None] = mapped_column(String(63))
+    template_version: Mapped[int | None] = mapped_column(Integer)
+    context_type: Mapped[str | None] = mapped_column(String(32))
+    context_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
+    recipient_contact_id: Mapped[uuid.UUID | None] = _fk("contact.id", nullable=True)
+    dispatch_id: Mapped[uuid.UUID | None] = _fk("dispatch.id", nullable=True)
 
 
 class DeletionProposalStatus(StrEnum):

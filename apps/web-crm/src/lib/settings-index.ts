@@ -634,6 +634,14 @@ export const settingsSearchIndex: SettingsSearchEntry[] = [
     permission: ["tenant_settings:read", "tickets:read"],
   },
   {
+    id: "nummernkreise",
+    title: "Zustellweg und Nummernkreise",
+    breadcrumb: [ROOT, "Zustellweg und Nummernkreise"],
+    href: "/einstellungen/nummernkreise",
+    keywords: ["nummernkreis", "vertragsnummer", "rechnungsnummer", "zustellweg", "standard versand", "post", "e-mail", "portal"],
+    permission: ["tenant_settings:update"],
+  },
+  {
     id: "regelvorschlaege",
     title: "Regelvorschläge",
     breadcrumb: [ROOT, "Regelvorschläge"],

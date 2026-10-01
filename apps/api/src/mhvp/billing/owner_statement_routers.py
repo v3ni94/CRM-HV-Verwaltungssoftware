@@ -48,6 +48,15 @@ class OwnerStatementIn(BaseModel):
     ledger_id: uuid.UUID
     period_from: date
     period_to: date
+    # GA03-08: append the linked receipts of the posted expenses to the PDF output.
+    attach_receipts: bool = False
+
+
+class OwnerStatementOptionsIn(BaseModel):
+    """GA03-08: output options of the statement (no effect on the calculation)."""
+
+    model_config = ConfigDict(extra="forbid")
+    attach_receipts: bool
 
 
 class OwnerStatementTransitionIn(BaseModel):
@@ -85,6 +94,7 @@ def _out(st: OwnerStatement, *, with_snapshot: bool = True) -> dict[str, Any]:
         "created_by": st.created_by,
         "status_log": list(st.status_log or []),
         "posted_entry_ids": list(st.posted_entry_ids or []),
+        "attach_receipts": st.attach_receipts,
     }
     if with_snapshot:
         snap = st.snapshot or {}
@@ -128,6 +138,7 @@ async def create(
             kind=kinds[entity.kind],
             period_from=body.period_from,
             period_to=body.period_to,
+            attach_receipts=body.attach_receipts,
         )
         session.add(st)
         await session.flush()
@@ -265,6 +276,91 @@ async def transition(
         return _out(st)
 
 
+@router.patch(
+    "/{statement_id}/options", summary="Ausgabeoptionen der Eigentümerabrechnung (Belege anfügen)"
+)
+async def options(
+    statement_id: uuid.UUID,
+    body: OwnerStatementOptionsIn,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        st = await _statement(session, statement_id)
+        if st.status in (OwnerStatementStatus.POSTED, OwnerStatementStatus.LOCKED):
+            raise ProblemError(
+                ErrorCodes.CONFLICT, detail="Gebuchte oder gesperrte Abrechnung nicht änderbar."
+            )
+        st.attach_receipts = body.attach_receipts
+        st.updated_by = principal.user_id
+        await session.flush()
+        return _out(st)
+
+
+async def receipts_bundle(
+    session: AsyncSession, request: Request, st: OwnerStatement, statement_pdf: bytes
+) -> bytes:
+    """GA03-08: statement PDF followed by the linked receipts (PDF documents only) in booking
+    order. A missing or non PDF receipt is listed on a closing page, never replaced."""
+    from pypdf import PdfReader, PdfWriter
+    from reportlab.lib.pagesizes import A4
+    from reportlab.pdfgen.canvas import Canvas
+
+    from mhvp.documents.blobs import BlobStore
+    from mhvp.documents.models import Document, StorageKind
+
+    blobs: BlobStore | None = None
+    writer = PdfWriter()
+    for page in PdfReader(io.BytesIO(statement_pdf)).pages:
+        writer.add_page(page)
+    lines = ((st.snapshot or {}).get("results") or {}).get("receipts", {}).get("lines", [])
+    seen: set[str] = set()
+    gaps: list[str] = []
+    for line in lines:
+        label = f"{line['booking_date']} {line.get('text') or ''} {_eur(line['amount'])}".strip()
+        doc_id = line.get("document_id")
+        if doc_id is None:
+            gaps.append(f"{label}: kein Beleg verknüpft")
+            continue
+        if doc_id in seen:
+            continue
+        seen.add(doc_id)
+        document = await session.get(Document, uuid.UUID(doc_id))
+        if document is None or document.storage is StorageKind.GOOGLE_DRIVE:
+            gaps.append(f"{label}: Beleg nicht lokal verfügbar")
+            continue
+        if document.mime_type != "application/pdf":
+            gaps.append(f"{label}: Beleg {document.filename} ist kein PDF, gesondert beifügen")
+            continue
+        try:
+            blobs = blobs or BlobStore(request.app.state.settings)
+            for page in PdfReader(io.BytesIO(blobs.get(document.storage_ref))).pages:
+                writer.add_page(page)
+        except Exception:  # unreadable receipt is listed, never dropped silently
+            gaps.append(f"{label}: Beleg {document.filename} nicht lesbar")
+    if gaps:
+        buffer = io.BytesIO()
+        c = Canvas(buffer, pagesize=A4)
+        y = A4[1] - 60
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(50, y, "Belegmappe: nicht beigefügte Belege")
+        c.setFont("Helvetica", 9)
+        for gap in gaps:
+            y -= 14
+            if y < 60:
+                c.showPage()
+                c.setFont("Helvetica", 9)
+                y = A4[1] - 60
+            c.drawString(50, y, gap[:120])
+        c.showPage()
+        c.save()
+        for page in PdfReader(io.BytesIO(buffer.getvalue())).pages:
+            writer.add_page(page)
+    out = io.BytesIO()
+    writer.write(out)
+    return out.getvalue()
+
+
 def _eur(value: str) -> str:
     amount = Decimal(value)
     text = f"{amount:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
@@ -355,8 +451,11 @@ async def pdf(
         st = await _statement(session, statement_id)
         if StatementStatus(st.status.value) not in lifecycle.APPROVED_OR_LATER:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Ausgabe nur nach interner Freigabe.")
+        content = await render_letter_pdf(session, request, st)
+        if st.attach_receipts:
+            content = await receipts_bundle(session, request, st, content)
         return Response(
-            content=await render_letter_pdf(session, request, st),
+            content=content,
             media_type="application/pdf",
             headers={
                 "Content-Disposition": f'attachment; filename="eigentuemerabrechnung-{st.id}.pdf"'

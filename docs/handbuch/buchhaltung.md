@@ -320,3 +320,15 @@ Auf der Seite eines Buchungskreises zeigt "Jahresübernahme" nach Eingabe des Ge
 ## Art der Abrechnung und Verteilung je Konto
 
 Im Kontenplan zeigt die Spalte "Art der Abrechnung" je Konto Hausgeld, Rücklage, Betriebskosten, Sonderumlage, Heizkosten oder keine. Bei Kostenkonten blendet "Verteilung" die hinterlegte Mehrschlüsselverteilung mit Anteilen und Summe ein. Die Pflege der Verteilung erfolgt weiterhin über die API.
+
+## Vermerke zu gebuchten Sätzen und Prüfbericht (AA01)
+
+Im Journal hat jeder gebuchte Satz die Schaltfläche **Vermerke**. Dort lassen sich ergänzende
+Hinweise erfassen, etwa ein nachgereichter Beleg. Ein Vermerk ändert den Buchungsinhalt nicht.
+Wer einen Vermerk ändern möchte, wählt **Neue Version**; die frühere Fassung bleibt
+durchgestrichen sichtbar. Entwürfe haben keine Vermerke, sie werden direkt geändert.
+
+Die Konsistenzprüfung des Buchungskreises meldet zusätzlich Lücken in der Nummernfolge je
+Geschäftsjahr und Abweichungen des Nummernzählers. Der Nebenbuchabgleich zeigt je Debitor und
+Kreditor den Kontensaldo, den Restbetrag der offenen Posten und die Differenz zum Stichtag.
+Eine Differenz ist ein Prüfhinweis, zum Beispiel für eine noch nicht zugeordnete Zahlung.

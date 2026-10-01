@@ -32,6 +32,8 @@ type Results = {
     owner_burden: string;
     hoa_statement: { statement_id: string; year: number; version: number } | null;
   };
+  receipts?: { lines: { journal_entry_id: string; booking_date: string; text: string; amount: string; receipt_linked: boolean }[]; linked: number; missing: number; total: string };
+  section_35a?: { lines: { unit_id: string; unit_number: string | null; amount: string }[]; total: string; note: string };
 };
 export type OwnerStatement = {
   id: string;
@@ -44,6 +46,7 @@ export type OwnerStatement = {
   status_log?: StatusLogEntry[];
   results?: Results | null;
   findings?: Finding[];
+  attach_receipts?: boolean;
 };
 
 const BASE = "/api/bff/billing/owner-statements";
@@ -97,6 +100,18 @@ export function OwnerStatementPanel({ ledgers }: { ledgers: { id: string; name: 
       setSelected(res.data);
       await load();
     } else setError(res.message);
+  };
+  const toggleReceipts = async (value: boolean) => {
+    if (!selected) return;
+    setBusy(true);
+    setError(null);
+    const res = await bff<OwnerStatement>(`${BASE}/${selected.id}/options`, {
+      method: "PATCH",
+      body: JSON.stringify({ attach_receipts: value }),
+    });
+    setBusy(false);
+    if (res.ok) setSelected(res.data);
+    else setError(res.message);
   };
   const ledgerName = (id: string) => ledgers.find((l) => l.id === id)?.name ?? id;
 
@@ -175,6 +190,12 @@ export function OwnerStatementPanel({ ledgers }: { ledgers: { id: string; name: 
             <button type="button" className={`${ui.secondary} mt-3`} onClick={calculate} disabled={busy}>
               {t("calculate")}
             </button>
+          ) : null}
+          {selected.status !== "posted" && selected.status !== "locked" ? (
+            <label className="mt-3 flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={Boolean(selected.attach_receipts)} disabled={busy} onChange={(e) => void toggleReceipts(e.target.checked)} />
+              {t("attachReceipts")}
+            </label>
           ) : null}
           {selected.results ? <Blocks results={selected.results} findings={selected.findings ?? []} /> : <p className={`${ui.help} mt-3`}>{t("notCalculated")}</p>}
           {selected.status !== "draft" ? (
@@ -255,6 +276,27 @@ export function Blocks({ results, findings }: { results: Results; findings: Find
           <Row label={t("sev.hoaResult")} value={sev.hoa_result} />
           <Row label={t("sev.tenantCosts")} value={sev.tenant_allocable_costs} />
           <Row label={t("sev.ownerBurden")} value={sev.owner_burden} />
+        </Block>
+      ) : null}
+      {results.section_35a && results.section_35a.lines.length > 0 ? (
+        <Block title={t("blocks.s35a")}>
+          {results.section_35a.lines.map((l) => (
+            <Row key={l.unit_id} label={`${t("unit")} ${l.unit_number ?? l.unit_id.slice(0, 8)}`} value={l.amount} />
+          ))}
+          <Row label={t("total")} value={results.section_35a.total} />
+        </Block>
+      ) : null}
+      {results.receipts ? (
+        <Block title={t("blocks.receipts")}>
+          <tr>
+            <td>{t("receipts.linked")}</td>
+            <td className="num">{results.receipts.linked}</td>
+          </tr>
+          <tr>
+            <td>{t("receipts.missing")}</td>
+            <td className="num">{results.receipts.missing}</td>
+          </tr>
+          <Row label={t("total")} value={results.receipts.total} />
         </Block>
       ) : null}
       <div className="md:col-span-2">

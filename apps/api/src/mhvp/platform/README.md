@@ -91,3 +91,15 @@ Checked against the folder contents on 26.09.2026, the following files were not 
 ### Wartungsendpunkt (S16-03-01)
 
 `POST /api/v1/platform/maintenance/self-disclosure-token-hash` (nur Plattform-Administrator) führt die Umstellung der Selbstauskunft-Token aus, siehe `letting/README.md`.
+
+## Freigabestufen: Umfang, Checklisten, Nachweis (AA02, GA14-02 bis GA14-04)
+
+- `gate_checklists.py`: Checklisten G2 bis G4 aus 18.0, Funktionscodes, Umfangsprüfung.
+- `GET /api/v1/tenant/release-gates/checklists`; der Antrag nimmt `scope_property_ids`,
+  `scope_legal_entity_ids`, `scope_functions`, `checklist` und `evidence_document_id`.
+- `_decide` lehnt G2 bis G4 ohne vollständige Checkliste und Nachweisdokument ab
+  (`MHVP-GATE-0006`); ungültige Codes `MHVP-GATE-0007`.
+- `DbReleaseGateResolver.is_open` zählt nur unbegrenzte Freigaben, `is_open_for` prüft Kontext.
+- Migration 0304: `opened_by/at`, `revoked_by/at`, `revoke_comment`, `evidence_document_id`,
+  Umfangsspalten, `checklist`. Details: `docs/plans/GATE-CHECKLISTEN.md`.
+* AA17 (GA01-07, 08, 10, 12): `admin_routers.py` holds `/tenant/delivery-default`, `/tenant/number-formats` (+ `/preview`), `/platform/tenants/{id}/domains`, `PATCH /platform/tenants/{id}` (status) and `/platform/oidc-clients` (create, rotate-secret, activate, deactivate; reuses `core.auth.oidc_clients`). Number formats live in `mhvp.core.number_format` (invoice scope locked, OPEN_QUESTIONS AA17-01). Migration 0319 is a no-op. Rule `docs/rules/AA17-tenant-config.md`.

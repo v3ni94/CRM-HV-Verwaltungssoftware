@@ -49,6 +49,9 @@
     "title": "Portal",
     "handover": "Handover protocols",
     "logout": "Sign out",
+    "language": {
+      "label": "Language"
+    },
     "theme": {
       "group": "Appearance",
       "day": "Light",
@@ -67,6 +70,7 @@
       "data": "Data change",
       "mandate": "Direct debit",
       "orders": "Orders",
+      "framework": "Framework contracts",
       "audit": "Audit room",
       "resolutions": "Resolutions",
       "meetings": "Meetings",
@@ -755,7 +759,16 @@
     "new": "New",
     "validUntil": "Valid until {date}",
     "validFrom": "Since {date}",
-    "download": "Download attachment"
+    "download": "Download attachment",
+    "downloadNamed": "Download attachment: {name}",
+    "confirmRead": "Confirm as read",
+    "readDone": "Confirmed as read. This indicates acknowledgement only and is no delivery.",
+    "levels": {
+      "neutral": "Notice",
+      "info": "Info",
+      "warning": "Warning",
+      "danger": "Danger"
+    }
   },
   "BoardSubmissions": {
     "title": "Submissions to the advisory board",
@@ -1027,11 +1040,29 @@
     "empty": "No released individual statement yet.",
     "row": "Individual statement {year}, unit {unit}",
     "version": "Version {version}",
-    "download": "Download PDF"
+    "download": "Download PDF",
+    "assetTitle": "Asset report of the community",
+    "assetEmpty": "No released asset report yet.",
+    "assetRow": "Asset report as of {date}"
   },
   "Branding": {
     "logoAlt": "Logo {name}",
     "imprint": "Legal notice",
     "privacy": "Privacy policy"
+  },
+  "ProviderInfo": {
+    "title": "Framework contracts and availability",
+    "contracts": "Framework contracts",
+    "noContracts": "No framework contracts on file.",
+    "open": "open ended",
+    "active": "Active",
+    "inactive": "Ended",
+    "availability": "Availability calendar",
+    "availabilityHelp": "The property management maintains the time windows. Please tell the management about changes.",
+    "noWindows": "No time windows entered.",
+    "kind": {
+      "available": "Available",
+      "unavailable": "Not available"
+    }
   }
 }

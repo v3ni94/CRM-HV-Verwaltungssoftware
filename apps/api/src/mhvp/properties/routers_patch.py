@@ -115,6 +115,10 @@ async def patch_building(
         _check_version(if_match, building.version)
         merged: s.BuildingIn = _merge(s.BuildingIn, building, body)
         prop = await _get(session, Property, building.property_id)
+        if merged.energy_certificate_document_id is not None:
+            await svc.check_documents_exist(
+                session, [merged.energy_certificate_document_id], "Energieausweis"
+            )
         await svc.check_custom_fields(
             session,
             "building",

@@ -188,3 +188,11 @@ Objektbezug, Fälligkeit als `due_on`), speichert `ticket_id` am Punkt und ist i
 sind `properties:update` und `tickets:create`. Regel: `docs/rules/R03-onboarding-uebernahme.md`.
 
 Paket Q05 (Welle 3): CRM-Oberflächen für die Historie der Umsatzsteueroptionen (Einheitenseite), die Bildgalerie (Feld `images`, Änderung per `PATCH /properties/{id}` mit If-Match, Upload über `POST /documents` mit Verknüpfung `property`) und die Belegungsliste mit Stichtag (`GET /properties/{id}/occupancy`). Regel: `docs/rules/Q05-crm-oberflaechen.md`.
+
+## AA08 status and documents (GA02-01, 03, 04)
+
+`POST /properties/{id}/billing-periods/{id}/status` moves a billing period along open,
+results_created, confirmed, closed (one step, back allowed, never out of closed; closed sets
+`locked_at` and blocks delete, codes `MHVP-PROP-0006/0007`). New columns (migration 0310):
+`building.energy_certificate_document_id`, `documents` on `maintenance_item` and
+`service_provider_relation` (tenant checked). Rule: `docs/rules/AA08-abrechnungszeitraum-status.md`.

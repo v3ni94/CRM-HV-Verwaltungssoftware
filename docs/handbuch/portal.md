@@ -133,15 +133,19 @@ und kein Nachweis der Zustellung (Kapitel Abrechnung Miete, Abschnitt Verbrauchs
 ## Schwarzes Brett (Aushänge)
 
 Im CRM pflegt die Verwaltung am Objekt unter Schwarzes Brett Aushänge mit Titel, Text,
-Gültig ab, Gültig bis (leer = auf Weiteres), Zielgruppe (Mieter und Eigentümer, Mieter,
-Eigentümer) und optional einem Dokument des Objekts als Anlage (Recht Objekte ändern;
-Liste mit Objekte lesen). Beenden nimmt einen Aushang sofort aus dem Portal, der Eintrag
-bleibt erhalten.
+Gültig ab, Gültig bis (leer = auf Weiteres), Kategorie (Katalog), Hinweisstufe (neutral,
+Info, Warnung, Gefahr), Zielgruppen (Mieter, Eigentümer, Dienstleister, mehrere wählbar) und
+optional mehreren Dokumenten des Objekts als Anlagen, kommagetrennt als Dokument-IDs (Recht
+Objekte ändern; Liste mit Objekte lesen). Jedes Dokument muss für alle gewählten Zielgruppen
+freigegeben sein. Beenden nimmt einen Aushang sofort aus dem Portal, der Eintrag bleibt
+erhalten. In der Liste steht je Aushang die Lesequote (gelesen x von y).
 
 Im Portal zeigt Aushänge die gültigen Aushänge der eigenen Objekte für die passende
-Zielgruppe; neue Aushänge (14 Tage ab Anlage) sind als Neu markiert, die Übersicht meldet
-neue Aushänge. Ein Aushang ist eine Information der Verwaltung, keine Zustellung und keine
-Fristauslösung.
+Zielgruppe; Dienstleister sehen Aushänge für Objekte, an denen sie einen Auftrag haben. Die
+Hinweisstufe ist farblich und als Text gekennzeichnet, neue Aushänge (14 Tage ab Anlage) sind
+als Neu markiert, die Übersicht meldet neue Aushänge. Mit Als gelesen bestätigen hinterlegt
+das Konto eine Lesebestätigung. Sie ist ein Hinweis auf die Kenntnisnahme, keine Zustellung
+und keine Fristauslösung; ein Aushang ist eine Information der Verwaltung.
 
 ## Formulare
 
@@ -333,3 +337,10 @@ Konten mit einer Vollmacht sehen im Portal den Menüpunkt "Vertretung" und im An
 ## Einladung erneuern (V03)
 
 Ist die Einladung eines Kontakts abgelaufen und nicht angenommen, zeigt der Abschnitt "Portalzugang" am Kontakt die Schaltfläche "Einladung erneuern". Sie stellt für dasselbe Konto einen neuen Code mit neuer Frist aus; der Code erscheint einmalig als Code, Link und QR-Code. Aktive, gesperrte und noch gültige Einladungen lassen sich nicht erneuern.
+
+## Freigabe je Unterlagenklasse, Sprache, Dienstleisterinformationen (AA14)
+
+- Unterlagenklasse freigeben: Für einen Portalzugang kann die Verwaltung die Dokumente einer Klasse (zum Beispiel Abrechnungsbelege) eines Rechtsträgers freigeben, mit Rolle und Gültigkeit (`POST /api/v1/portal-admin/accounts/{id}/document-class-grants`). Sichtbar sind nur Dokumente dieser Klasse mit Verknüpfung zum Rechtsträger und Freigabe für die Rolle; die Freigabe bleibt bei der Neuableitung der Rechte erhalten. Welche Rolle welche Klasse erhält, entscheidet die Verwaltung (offen: AA14-03).
+- Sprache: Im Kopf des Portals wählt der Nutzer Deutsch oder English; ohne Wahl gilt die Browsersprache, sonst Deutsch. Eine weitere Sprache erfordert nur eine Übersetzungsdatei.
+- Formulare: Der Formularbaukasten bietet 20 Elementtypen (neu: Anschrift, Standort, Unterschrift als Name, Einwilligung, Betrag, Trennlinie).
+- Dienstleister: Die Seite Rahmenverträge zeigt die eigenen Rahmenverträge und den Verfügbarkeitskalender (nur lesend). Zeitfenster erfasst die Verwaltung über `POST /api/v1/portal-admin/provider-availability`.

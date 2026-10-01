@@ -241,6 +241,11 @@ async def refresh_proposals(
             warnings.append("Buchungskreis ohne Umsatzsteueroption (vat_mode none), Widerspruch")
     else:
         data.deductible_percent, data.deductible_input_tax = None, None
+    if data.reverse_charge:
+        warnings.append(
+            "Möglicher Fall des § 13b UStG: gesonderter Freigabepunkt, keine Automatik "
+            "(Normzuordnung durch den Steuerberater, R23)"
+        )
     if data.reverse_charge and invoice.vat:
         warnings.append("Reverse Charge gekennzeichnet, Rechnung weist dennoch Steuer aus")
     supplier = await session.scalar(

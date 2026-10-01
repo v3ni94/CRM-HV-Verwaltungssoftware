@@ -239,6 +239,10 @@ async def blocking_checks(session: AsyncSession, st: HoaStatement) -> list[dict[
                 "ergeben nicht den Endbestand (W04).",
             }
         )
+    # GA07-03 (W07): special acquisitions in the year need a four eyes release.
+    from mhvp.hoa import acquisition
+
+    findings.extend(await acquisition.blocking_findings(session, st))
     return findings
 
 

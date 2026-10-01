@@ -54,7 +54,10 @@ class MeetingBaseIn(BaseModel):
 
 class MeetingIn(MeetingBaseIn):
     legal_entity_id: uuid.UUID
-    kind: str = Field(default="ordinary", pattern="^(ordinary|extraordinary)$")
+    kind: str = Field(
+        default="ordinary",
+        pattern="^(ordinary|extraordinary|repeat|continuation|partial|circular_resolution)$",
+    )
     mode: str = Field(default="presence", pattern="^(presence|hybrid|virtual)$")
     scheduled_at: datetime
     location: str | None = Field(default=None, max_length=300)
@@ -64,13 +67,83 @@ class MeetingIn(MeetingBaseIn):
     virtual_basis_valid_until: date | None = None
     resolution_deadline_at: date | None = None
     resolution_deadline_source: str | None = Field(default=None, max_length=4000)
+    # GA03-01
+    ends_at: datetime | None = None
+    origin_meeting_id: uuid.UUID | None = None
+    invitation_template_id: uuid.UUID | None = None
+    proxy_template_id: uuid.UUID | None = None
+    ballot_template_id: uuid.UUID | None = None
+    public_description: str | None = Field(default=None, max_length=20000)
+    internal_description: str | None = Field(default=None, max_length=20000)
 
 
 class MeetingPatch(MeetingBaseIn):
-    """Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields."""
+    """Resolution deadline of a virtual meeting (M9-07). ``null`` clears both fields.
+    GA03-01: end, templates and descriptions; omitted fields stay unchanged."""
 
     resolution_deadline_at: date | None = None
     resolution_deadline_source: str | None = Field(default=None, max_length=4000)
+    ends_at: datetime | None = None
+    invitation_template_id: uuid.UUID | None = None
+    proxy_template_id: uuid.UUID | None = None
+    ballot_template_id: uuid.UUID | None = None
+    public_description: str | None = Field(default=None, max_length=20000)
+    internal_description: str | None = Field(default=None, max_length=20000)
+
+
+MEETING_DETAIL_FIELDS = (
+    "ends_at",
+    "invitation_template_id",
+    "proxy_template_id",
+    "ballot_template_id",
+    "public_description",
+    "internal_description",
+)
+TEMPLATE_FIELDS = ("invitation_template_id", "proxy_template_id", "ballot_template_id")
+ORIGIN_KINDS = frozenset({"repeat", "continuation"})
+
+
+async def validate_meeting_details(
+    session: AsyncSession,
+    *,
+    legal_entity_id: uuid.UUID,
+    kind: str,
+    scheduled_at: datetime,
+    fields: dict[str, Any],
+    meeting_id: uuid.UUID | None = None,
+) -> None:
+    """GA03-01: end after the start, templates of the tenant, origin meeting of the same
+    community for a repeat or continuation meeting (and only there)."""
+    from mhvp.documents.models import DocumentTemplate
+
+    ends_at = fields.get("ends_at")
+    if ends_at is not None and ends_at <= scheduled_at:
+        raise ProblemError(ErrorCodes.VALIDATION, detail="Ende muss nach dem Beginn liegen.")
+    for name in TEMPLATE_FIELDS:
+        ref = fields.get(name)
+        if ref is not None and await session.get(DocumentTemplate, ref) is None:
+            raise ProblemError(ErrorCodes.VALIDATION, detail=f"Vorlage {name} nicht gefunden.")
+    if "origin_meeting_id" not in fields:
+        return
+    origin_id = fields.get("origin_meeting_id")
+    if kind in ORIGIN_KINDS:
+        origin = await session.get(Meeting, origin_id) if origin_id else None
+        if (
+            origin is None
+            or origin.legal_entity_id != legal_entity_id
+            or origin.id == meeting_id
+            or origin.scheduled_at >= scheduled_at
+        ):
+            raise ProblemError(
+                ErrorCodes.VALIDATION,
+                detail="Wiederholung oder Fortsetzung braucht eine frühere Ursprungsversammlung "
+                "derselben GdWE.",
+            )
+    elif origin_id is not None:
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Ursprungsversammlung nur bei Wiederholung oder Fortsetzung.",
+        )
 
 
 def validate_resolution_deadline(mode: str, deadline: date | None, source: str | None) -> None:
@@ -99,12 +172,37 @@ def validate_resolution_deadline(mode: str, deadline: date | None, source: str |
 class AgendaIn(MeetingBaseIn):
     title: str = Field(min_length=3, max_length=300)
     proposal: str | None = Field(default=None, max_length=20000)
-    majority: str = Field(default="simple", pattern="^(simple|qualified|unanimous|rule)$")
+    majority: str = Field(
+        default="simple", pattern="^(simple|qualified|unanimous|all_owners|rule)$"
+    )
     subject_type: str | None = Field(
         default=None, pattern="^(economic_plan|hoa_statement|special_levy|other)$"
     )
     subject_id: uuid.UUID | None = None
     rule_id: uuid.UUID | None = None
+    # GA03-02: voting principle of this item (precedence over the meeting) and minutes text
+    voting_principle: str | None = Field(default=None, pattern="^(head|mea|unit)$")
+    voting_principle_basis: str | None = Field(default=None, max_length=4000)
+    minutes_text: str | None = Field(default=None, max_length=50000)
+
+
+class AgendaPatch(MeetingBaseIn):
+    """GA03-02: result deferred or no_vote (accepted and rejected only by the announcement)
+    and minutes text; ``result: null`` clears a recorded deferral."""
+
+    result: str | None = Field(default=None, pattern="^(deferred|no_vote)$")
+    minutes_text: str | None = Field(default=None, max_length=50000)
+
+
+ITEM_RESULT = {"positive": "accepted", "negative": "rejected"}
+
+
+def _validate_item_principle(principle: str | None, basis: str | None) -> None:
+    if principle not in (None, "head") and not (basis and basis.strip()):
+        raise ProblemError(
+            ErrorCodes.VALIDATION,
+            detail="Abweichendes Stimmprinzip nur mit dokumentierter Grundlage.",
+        )
 
 
 class MajorityRuleIn(MeetingBaseIn):
@@ -146,6 +244,9 @@ class VoteIn(MeetingBaseIn):
     contract_id: uuid.UUID
     choice: str = Field(pattern="^(yes|no|abstain)$")
     excluded: bool = False
+    # GA03-04: only "circular" may be given (meeting kind circular_resolution); presence and
+    # online are set from the attendance.
+    channel: str | None = Field(default=None, pattern="^(presence|online|circular)$")
 
 
 class AnnounceIn(MeetingBaseIn):
@@ -312,6 +413,14 @@ def _meeting_out(m: Meeting, *, weeks: int | None = None) -> dict[str, Any]:
         "invitation_short_notice_reason": m.invitation_short_notice_reason,
         "has_dial_in": bool(m.dial_in_url or m.dial_in_access),
         # R07-01
+        # GA03-01
+        "ends_at": m.ends_at,
+        "origin_meeting_id": m.origin_meeting_id,
+        "invitation_template_id": m.invitation_template_id,
+        "proxy_template_id": m.proxy_template_id,
+        "ballot_template_id": m.ballot_template_id,
+        "public_description": m.public_description,
+        "internal_description": m.internal_description,
         "close_requested_by": m.close_requested_by,
         "close_requested_at": m.close_requested_at,
         "closed_by": m.closed_by,
@@ -343,13 +452,30 @@ async def create_meeting(
         validate_resolution_deadline(
             body.mode, body.resolution_deadline_at, body.resolution_deadline_source
         )
+        await validate_meeting_details(
+            session,
+            legal_entity_id=body.legal_entity_id,
+            kind=body.kind,
+            scheduled_at=body.scheduled_at,
+            fields=body.model_dump(),
+        )
+        basis = (
+            await session.get(Resolution, body.virtual_basis_resolution_id)
+            if body.virtual_basis_resolution_id
+            else None
+        )
+        term_notice = (
+            meeting_rules.basis_term_notice(basis.decided_on, body.virtual_basis_valid_until)
+            if basis
+            else None
+        )
         row = Meeting(
             tenant_id=principal.tenant_id, created_by=principal.user_id, **body.model_dump()
         )
         session.add(row)
         await session.flush()
         weeks = await meeting_rules.invitation_weeks(session, principal.tenant_id)
-        return _meeting_out(row, weeks=weeks)
+        return _meeting_out(row, weeks=weeks) | {"virtual_basis_term_notice": term_notice}
 
 
 @router.patch("/meetings/{meeting_id}", summary="Beschlussfrist der Versammlung (M9-07)")
@@ -372,6 +498,17 @@ async def patch_meeting(
         ):
             source = None
         validate_resolution_deadline(row.mode, deadline, source)
+        details = {k: v for k, v in fields.items() if k in MEETING_DETAIL_FIELDS}
+        await validate_meeting_details(
+            session,
+            legal_entity_id=row.legal_entity_id,
+            kind=row.kind,
+            scheduled_at=row.scheduled_at,
+            fields=details,
+            meeting_id=row.id,
+        )
+        for key, value in details.items():
+            setattr(row, key, value)
         row.resolution_deadline_at = deadline
         row.resolution_deadline_source = source.strip() if source else None
         await session.flush()
@@ -402,6 +539,7 @@ async def add_agenda(
             rule = await session.get(MajorityRule, body.rule_id)
             if rule is None or rule.legal_entity_id != meeting.legal_entity_id:
                 raise ProblemError(ErrorCodes.VALIDATION, detail="Regel gehört nicht zur GdWE.")
+        _validate_item_principle(body.voting_principle, body.voting_principle_basis)
         row = AgendaItem(
             tenant_id=principal.tenant_id,
             meeting_id=meeting.id,
@@ -410,7 +548,40 @@ async def add_agenda(
         )
         session.add(row)
         await session.flush()
-        return {"id": row.id, "position": row.position, "majority": row.majority}
+        return {
+            "id": row.id,
+            "position": row.position,
+            "majority": row.majority,
+            "voting_principle": row.voting_principle,
+        }
+
+
+@router.patch("/agenda/{item_id}", summary="Ergebnis vertagt/ohne Abstimmung, Protokolltext")
+async def patch_agenda(
+    item_id: uuid.UUID,
+    body: AgendaPatch,
+    request: Request,
+    principal: TenantPrincipal = Depends(CREATE),
+) -> dict[str, Any]:
+    async with tenant_tx(request, principal) as session:
+        item = await _get(session, AgendaItem, item_id)
+        meeting = await _get(session, Meeting, item.meeting_id)
+        _ensure_not_closed(meeting)
+        fields = body.model_dump(exclude_unset=True)
+        if "result" in fields:
+            if item.result in ITEM_RESULT.values():
+                raise ProblemError(ErrorCodes.CONFLICT, detail="Ergebnis bereits verkündet.")
+            if fields["result"] is not None and await session.scalar(
+                select(Vote.id).where(Vote.agenda_item_id == item.id).limit(1)
+            ):
+                raise ProblemError(
+                    ErrorCodes.CONFLICT, detail="Stimmen erfasst: Ergebnis nur durch Verkündung."
+                )
+            item.result = fields["result"]
+        if "minutes_text" in fields:
+            item.minutes_text = fields["minutes_text"]
+        await session.flush()
+        return {"id": item.id, "result": item.result, "minutes_text": item.minutes_text}
 
 
 @router.post("/meetings/{meeting_id}/invite", summary="Einladung erfassen (Fristprüfung)")
@@ -600,8 +771,26 @@ async def cast_vote(
                 Attendance.meeting_id == meeting.id, Attendance.contract_id == body.contract_id
             )
         )
-        if att is None or not (att.present or att.proxy_contact_id):
+        circular = meeting.kind == "circular_resolution"
+        if body.channel == "circular" and not circular:
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Kanal Umlauf nur bei Umlaufbeschlussverfahren."
+            )
+        if body.channel in ("presence", "online"):
+            raise ProblemError(
+                ErrorCodes.VALIDATION, detail="Kanal wird aus der Anwesenheit gesetzt."
+            )
+        if not circular and (att is None or not (att.present or att.proxy_contact_id)):
             raise ProblemError(ErrorCodes.VALIDATION, detail="Nicht anwesend oder vertreten.")
+        if circular:
+            prop = await _hoa_property(session, meeting.legal_entity_id)
+            members = await _members(session, prop, meeting.scheduled_at.date())
+            if body.contract_id not in {c.id for c in members}:
+                raise ProblemError(
+                    ErrorCodes.VALIDATION, detail="Kein stimmberechtigter Eigentümer."
+                )
+        if item.result in ("deferred", "no_vote"):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="TOP vertagt oder ohne Abstimmung.")
         if await session.scalar(
             select(Resolution.id).where(
                 Resolution.subject_type == "agenda_item", Resolution.subject_id == item.id
@@ -613,10 +802,18 @@ async def cast_vote(
         )
         if existing is not None:
             raise ProblemError(ErrorCodes.CONFLICT, detail="Stimme bereits erfasst.")
-        row = Vote(tenant_id=principal.tenant_id, agenda_item_id=item.id, **body.model_dump())
+        if circular:
+            channel = "circular"
+        else:
+            channel = "online" if att is not None and att.online else "presence"
+        row = Vote(
+            tenant_id=principal.tenant_id,
+            agenda_item_id=item.id,
+            **(body.model_dump() | {"channel": channel}),
+        )
         session.add(row)
         await session.flush()
-        return {"id": row.id}
+        return {"id": row.id, "channel": row.channel}
 
 
 async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> dict[str, Any]:
@@ -625,9 +822,12 @@ async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> d
     prop = await _hoa_property(session, meeting.legal_entity_id)
     day = meeting.scheduled_at.date()
     rule = await session.get(MajorityRule, item.rule_id) if item.rule_id else None
-    principle = rule.principle if rule else meeting.voting_principle
+    principle = rule.principle if rule else (item.voting_principle or meeting.voting_principle)
     votes = (await session.scalars(select(Vote).where(Vote.agenda_item_id == item.id))).all()
     sums = {"yes": ZERO, "no": ZERO, "abstain": ZERO}
+    channels: dict[str, int] = {}
+    for v in votes:
+        channels[v.channel] = channels.get(v.channel, 0) + 1
     seen_heads: dict[uuid.UUID, str] = {}
     yes_contracts: set[uuid.UUID] = set()
     excluded = 0
@@ -685,6 +885,16 @@ async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> d
         proposal = "positive" if ok else "negative"
     elif item.majority == "simple":
         proposal = "positive" if sums["yes"] > sums["no"] else "negative"
+    elif item.majority == "all_owners":
+        # GA03-02: consent of all owners entitled to vote, not only of those present
+        members = await _members(session, prop, day)
+        passed = bool(members) and all(c.id in yes_contracts for c in members)
+        checks["all_owners"] = {
+            "passed": passed,
+            "members": len(members),
+            "yes": len(yes_contracts),
+        }
+        proposal = "positive" if passed else "negative"
     return {
         "principle": principle,
         "yes": f"{sums['yes'].normalize():f}",
@@ -696,6 +906,7 @@ async def _tally(session: AsyncSession, item: AgendaItem, meeting: Meeting) -> d
         "checks": checks,
         "proposal": proposal,
         "manual_check": proposal is None,
+        "channels": channels,
     }
 
 
@@ -721,6 +932,8 @@ async def announce(
         item = await _get(session, AgendaItem, item_id)
         meeting = await _get(session, Meeting, item.meeting_id)
         _ensure_not_disrupted(meeting)
+        if item.result in ("deferred", "no_vote"):
+            raise ProblemError(ErrorCodes.CONFLICT, detail="TOP vertagt oder ohne Abstimmung.")
         result = await _tally(session, item, meeting)
         if result["proposal"] and result["proposal"] != body.outcome:
             raise ProblemError(
@@ -756,8 +969,10 @@ async def announce(
             majority_basis=body.majority_basis,
             votes=result,
             subject_kind=body.subject_kind,
+            location=meeting.location,
         )
         session.add(row)
+        item.result = ITEM_RESULT[body.outcome]
         await session.flush()
         check = await check_resolution(session, principal, row) if body.subject_kind else None
         return {
@@ -1621,6 +1836,9 @@ async def get_meeting(
                     "proposal": i.proposal,
                     "majority": i.majority,
                     "resolution": announced.get(i.id),
+                    "result": i.result,
+                    "minutes_text": i.minutes_text,
+                    "voting_principle": i.voting_principle,
                 }
                 for i in items
             ],
@@ -1657,11 +1875,13 @@ async def meeting_members(
             ).all()
         ]
         votes: dict[uuid.UUID, dict[str, str]] = {}
+        vote_channels: dict[uuid.UUID, dict[str, str]] = {}
         if items:
             for v in (
                 await session.scalars(select(Vote).where(Vote.agenda_item_id.in_(items)))
             ).all():
                 votes.setdefault(v.contract_id, {})[str(v.agenda_item_id)] = v.choice
+                vote_channels.setdefault(v.contract_id, {})[str(v.agenda_item_id)] = v.channel
         out = []
         for c in members:
             unit = await session.get(Unit, c.unit_id)
@@ -1677,6 +1897,7 @@ async def meeting_members(
                     "proxy": bool(att and att.proxy_contact_id),
                     "channel": meeting_rules.attendance_channel(att),
                     "votes": votes.get(c.id, {}),
+                    "vote_channels": vote_channels.get(c.id, {}),
                 }
             )
         return out

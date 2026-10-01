@@ -244,3 +244,79 @@ LIST_PARAMS_DOC = (
     "`sort=feld,-feld`, `fields=a,b` (Sparantwort, `id` bleibt), `include=relation`. "
     "Nicht angebotene Felder werden mit 422 abgelehnt."
 )
+
+
+# Generic list parameters for all list routers (GA04-05) ---------------------------------
+
+GENERIC_LIST_KEYS = frozenset({"sort", "fields", "include", "as_of"})
+
+
+@dataclass(frozen=True)
+class ListSpec:
+    """Declares the allowed filter, sort and include names of one list.
+
+    ``dependency`` parses the generic parameters and rejects with 422 any query parameter
+    the route neither declares nor offers (no silent ignoring). ``apply`` narrows and orders
+    a query; ``as_of`` (ISO date) keeps rows valid on that day when ``valid_from`` and
+    ``valid_to`` columns are given, otherwise it is rejected with 422.
+    """
+
+    filters: Mapping[str, InstrumentedAttribute[Any]] = field(default_factory=dict)
+    sort: Mapping[str, InstrumentedAttribute[Any]] = field(default_factory=dict)
+    includes: tuple[str, ...] = ()
+    valid_from: InstrumentedAttribute[Any] | None = None
+    valid_to: InstrumentedAttribute[Any] | None = None
+
+    def dependency(self, request: Request) -> ListParams:
+        params = list_params(request)
+        route = request.scope.get("route")
+        dependant = getattr(route, "dependant", None)
+        declared: set[str] = set()
+        if dependant is not None:
+            stack = [dependant]
+            while stack:
+                dep = stack.pop()
+                declared.update(p.alias for p in dep.query_params)
+                stack.extend(dep.dependencies)
+        for key in request.query_params:
+            if key.startswith("filter[") or key in GENERIC_LIST_KEYS or key in declared:
+                continue
+            raise _invalid(key, f"Parameter '{key}' wird von dieser Liste nicht angeboten.")
+        for name in params.filters:
+            if name not in self.filters:
+                offer = ", ".join(sorted(self.filters)) or "keine"
+                raise _invalid(
+                    f"filter[{name}]", f"Filter '{name}' nicht erlaubt. Erlaubt: {offer}."
+                )
+        for name, _desc in params.sort:
+            if name not in self.sort:
+                offer = ", ".join(sorted(self.sort)) or "keine"
+                raise _invalid("sort", f"Sortierung nach '{name}' nicht erlaubt. Erlaubt: {offer}.")
+        check_include(params, self.includes)
+        if "as_of" in request.query_params:
+            if self.valid_from is None:
+                raise _invalid("as_of", "Stichtag (as_of) wird von dieser Liste nicht angeboten.")
+            try:
+                date.fromisoformat(request.query_params["as_of"])
+            except ValueError as exc:
+                raise _invalid("as_of", "Stichtag muss ein Datum JJJJ-MM-TT sein.") from exc
+        return params
+
+    def apply(
+        self,
+        query: Select[Any],
+        params: ListParams,
+        default: Sequence[Any],
+        request: Request | None = None,
+    ) -> Select[Any]:
+        query = apply_filters(query, params, self.filters)
+        if request is not None and self.valid_from is not None:
+            raw = request.query_params.get("as_of")
+            if raw:
+                day = date.fromisoformat(raw)
+                query = query.where((self.valid_from.is_(None)) | (self.valid_from <= day))
+                if self.valid_to is not None:
+                    query = query.where((self.valid_to.is_(None)) | (self.valid_to >= day))
+        if params.sort:
+            return apply_sort(query, params, self.sort, default)
+        return query.order_by(None).order_by(*default)
